@@ -1,0 +1,17 @@
+{
+  "description": "Keep derived artefacts honest: after editing a hardware design or its firmware, check that everything still describes the same board.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'case \"$CLAUDE_FILE_PATHS\" in *.tsx|*config.py|*.kicad_sch|*mapping.ts) [ -f Makefile ] && grep -q \"^check:\" Makefile && make check 2>&1 | tail -20 ;; esac; exit 0'",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

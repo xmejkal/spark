@@ -1,0 +1,22 @@
+{
+  "name": "spark",
+  "version": "0.4.0",
+  "description": "AI electronics design. Describe a circuit (or hand it a board photo) and get a verified tscircuit schematic and PCB. Bundles ESP32/PCB design-rule checklists, a verified-parts library, vendor-knowledge ingestion (Espressif, Seeed and DFRobot datasheets, pin maps, EDA files and code examples), a photo-to-schematic reverse-engineering procedure, and a verification gate that refuses to emit a board with unverified part pins. Wires up the Espressif docs, part-lookup, bench-instrument and KiCad MCP servers.",
+  "author": {
+    "name": "Petr Smejkal"
+  },
+  "license": "MIT",
+  "keywords": [
+    "electronics",
+    "pcb",
+    "circuit-design",
+    "tscircuit",
+    "esp32",
+    "kicad",
+    "reverse-engineering",
+    "hardware",
+    "espressif",
+    "seeed",
+    "dfrobot"
+  ]
+}

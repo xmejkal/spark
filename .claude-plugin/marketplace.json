@@ -1,0 +1,11 @@
+{
+  "name": "petr-local",
+  "owner": { "name": "Petr Smejkal" },
+  "plugins": [
+    {
+      "name": "spark",
+      "source": "./",
+      "description": "AI electronics design: describe a circuit or hand it a board photo and get a verified tscircuit schematic and PCB, with the design rules, verified-parts library and simulation knowledge in the loop."
+    }
+  ]
+}

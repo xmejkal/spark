@@ -1,0 +1,41 @@
+{
+  "mcpServers": {
+    "espressif-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.espressif.com/docs"
+      ]
+    },
+    "jlcpcb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@jlcpcb/mcp"
+      ]
+    },
+    "sigrok": {
+      "command": "sigrok-mcp-server",
+      "args": [],
+      "env": {
+        "SIGROK_CLI_PATH": "sigrok-cli"
+      }
+    },
+    "kicad": {
+      "command": "uvx",
+      "args": [
+        "kicad-mcp"
+      ]
+    },
+    "wokwi": {
+      "command": "wokwi-cli",
+      "args": [
+        "mcp"
+      ],
+      "env": {
+        "WOKWI_CLI_TOKEN": "${WOKWI_CLI_TOKEN}"
+      }
+    }
+  }
+}
