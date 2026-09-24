@@ -47,6 +47,10 @@ DEFAULT_BODY_MM = (16, 12)
 #: Rails every design has, and what they are called.
 RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker": "SPEAKER"}
 
+#: What a `polarity` becomes in a net name, so a differential pair reads as one.
+POLARITY_SUFFIX = {"+": "_P", "-": "_N"}
+
+
 #: Fabrication defaults, set rather than inherited.
 #:
 #: A tool's floor is what you get when nothing is stated, and on a real board that produced
@@ -59,6 +63,23 @@ BOARD_THICKNESS_MM = 1.6
 #: Rails the microcontroller module itself supplies, so a design made only of consumers still
 #: has a source for them.
 RAILS_THE_MODULE_PROVIDES = ("V33", "GND")
+
+
+def net_for(supply):
+    """
+    The net a power pin belongs on.
+
+    An INPUT joins the shared rail — several parts on V33, several pins on GND, which is the
+    point of a rail. An OUTPUT gets its own net, because two outputs on one net is a short. That
+    distinction did not exist here: both halves of a bridged class-D amplifier declared
+    `"rail": "speaker"`, both were mapped to `net.SPEAKER`, and the generated board wired them
+    together — printing the part file's own warning, "never ground either side", on the trace
+    that did it.
+    """
+    net = RAIL_NETS.get(supply.get("rail"))
+    if net and supply.get("direction") == "out":
+        return net + POLARITY_SUFFIX.get(supply.get("polarity"), "")
+    return net
 
 
 def body_of(part):
@@ -131,7 +152,11 @@ def rails_without_a_source(part_list):
     consumed = set()
     for part in part_list:
         for power in part.get("power") or []:
-            net = RAIL_NETS.get(power.get("rail"))
+            # An OUTPUT is not a rail anything has to source — the part is the source. It is
+            # still a net with one member, which is worth saying, but for the opposite reason.
+            if power.get("direction") == "out":
+                continue
+            net = net_for(power)
             if net and net not in RAILS_THE_MODULE_PROVIDES:
                 consumed.add(net)
     return sorted(consumed)
@@ -216,7 +241,7 @@ def emit(board, part_list, assignments, placements, width, height):
     for part in part_list:
         name = component_name(part)
         for power in part.get("power") or []:
-            net = RAIL_NETS.get(power.get("rail"))
+            net = net_for(power)
             if not net:
                 continue
             note = ("  {/* %s */}" % power["note"]) if power.get("note") else ""

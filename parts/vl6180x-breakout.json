@@ -4,21 +4,49 @@
   "name": "VL6180X time-of-flight rangefinder breakout",
   "//": "A carrier for ST's VL6180X. WHICH carrier matters more than usual and most of the unknowns below are about that, not about the chip.",
   "kind": "rangefinder",
-
   "needs": [
-    { "signal": "SDA", "pin": "SDA", "direction": "bidirectional", "bus": "i2c" },
-    { "signal": "SCL", "pin": "SCL", "direction": "bidirectional", "bus": "i2c" },
-    { "signal": "TOF_INT", "pin": "GPIO1", "direction": "out", "needs": ["wake"],
+    {
+      "signal": "SDA",
+      "pin": "SDA",
+      "direction": "bidirectional",
+      "bus": "i2c"
+    },
+    {
+      "signal": "SCL",
+      "pin": "SCL",
+      "direction": "bidirectional",
+      "bus": "i2c"
+    },
+    {
+      "signal": "TOF_INT",
+      "pin": "GPIO1",
+      "direction": "out",
+      "needs": [
+        "wake"
+      ],
       "optional": true,
-      "note": "Only needed if the sensor is to wake the host from sleep. It ranges continuously by itself and asserts this pin on a threshold, which is the only way a sleeping host can be told about a hand." }
+      "note": "Only needed if the sensor is to wake the host from sleep. It ranges continuously by itself and asserts this pin on a threshold, which is the only way a sleeping host can be told about a hand."
+    }
   ],
   "power": [
-    { "pin": "VIN", "rail": "logic", "note": "the carrier regulates down to the die's 2.8 V" },
-    { "pin": "GND", "rail": "ground" }
+    {
+      "pin": "VIN",
+      "rail": "logic",
+      "note": "the carrier regulates down to the die's 2.8 V",
+      "direction": "in"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
   ],
-
   "facts": {
-    "i2c_address": { "value": "0x29", "verified": true, "source": "ST VL6180X datasheet, default" },
+    "i2c_address": {
+      "value": "0x29",
+      "verified": true,
+      "source": "ST VL6180X datasheet, default"
+    },
     "die_supply_v": {
       "value": 2.8,
       "verified": true,
@@ -35,23 +63,29 @@
       "value": null,
       "verified": false,
       "source": "unknown",
-      "why_it_matters": "If GPIO1 is open-drain and the carrier has no pull-up, the host's interrupt pin FLOATS while awake — and a floating pin reads low about as often as not, so the lid opens at random with nothing in front of it. One meter reading settles it."
+      "why_it_matters": "If GPIO1 is open-drain and the carrier has no pull-up, the host's interrupt pin FLOATS while awake \u2014 and a floating pin reads low about as often as not, so the lid opens at random with nothing in front of it. One meter reading settles it."
     },
-    "idle_current_ma": { "value": null, "verified": false, "source": "not measured",
-      "why_it_matters": "It free-runs while the host sleeps, so on a battery design it is one of the two or three loads that decide the answer." }
+    "idle_current_ma": {
+      "value": null,
+      "verified": false,
+      "source": "not measured",
+      "why_it_matters": "It free-runs while the host sleeps, so on a battery design it is one of the two or three loads that decide the answer."
+    }
   },
-
   "host_requirements": [
     "I2C needs pull-ups. The host's own internal pull-ups are tens of kiloohms and far too weak; size them against the bus speed and the cable, not by habit.",
     "If this sits on a ribbon away from the board, the ribbon's capacitance is part of the bus and belongs in the rise-time budget.",
-    "Behind a window, range-ignore must be calibrated or the window's own reflection reads as a target — and on an interrupt-driven design that is a wake loop, which is worse for the battery than never sleeping."
+    "Behind a window, range-ignore must be calibrated or the window's own reflection reads as a target \u2014 and on an interrupt-driven design that is a wake loop, which is worse for the battery than never sleeping."
   ],
-
   "footprint": "pinrow5",
   "on_board": false,
   "//on_board": "It has to look out through the enclosure, so it is never on the PCB. The board carries the mating header and no body is drawn for it.",
   "sources": {
     "datasheet": "ST VL6180X datasheet",
-    "carriers": ["Adafruit 3316", "Pololu 2489", "generic GY-VL6180"]
+    "carriers": [
+      "Adafruit 3316",
+      "Pololu 2489",
+      "generic GY-VL6180"
+    ]
   }
 }

@@ -27,11 +27,13 @@
     {
       "pin": "VCC",
       "rail": "motor",
-      "note": "2.5-12 V; this is the MOTOR supply, not logic"
+      "note": "2.5-12 V; this is the MOTOR supply, not logic",
+      "direction": "in"
     },
     {
       "pin": "GND",
-      "rail": "ground"
+      "rail": "ground",
+      "direction": "in"
     }
   ],
   "unused_pins": [

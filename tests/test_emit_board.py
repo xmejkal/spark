@@ -104,6 +104,57 @@ class WhatItAdmitsTest(unittest.TestCase):
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", self.tsx)
 
 
+class TwoOutputsNeverShareANetTest(unittest.TestCase):
+    """
+    The generator emitted a board that would destroy a part.
+
+    `RAIL_NETS` mapped a rail name to exactly one net, and both halves of a bridged class-D
+    amplifier declared `"rail": "speaker"` — so both landed on `net.SPEAKER`, shorting the
+    amplifier to itself, with the part file's own warning ("never ground either side") printed on
+    the trace that did it. Under a banner reading "Nothing here is guessed."
+
+    A rail is shared BY DEFINITION and an output must never be. Several GND pins on one net is
+    how ground works; two outputs on one net is a short. Direction is the whole difference, and
+    the schema did not carry it.
+    """
+
+    def _emit(self, part_ids):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        part_list = [parts.load(part_id) for part_id in part_ids]
+        assignments, _ = assign_pins.assign(board, parts.signals_for(part_ids))
+        placements, width, height = emit_board.place(board, part_list)
+        return emit_board.emit(board, part_list, assignments, placements, width, height)
+
+    def test_a_bridged_output_pair_lands_on_two_nets(self):
+        tsx = self._emit(["dfr0534-module"])
+        self.assertIn('.SPKP" to="net.SPEAKER_P"', tsx)
+        self.assertIn('.SPKN" to="net.SPEAKER_N"', tsx)
+
+    def test_no_two_outputs_of_one_part_ever_share_a_net(self):
+        # The general property, so this cannot be fixed for the speaker and left broken for the
+        # next differential output somebody adds.
+        for part_id in parts.available():
+            part = parts.load(part_id)
+            nets = [emit_board.net_for(supply) for supply in part.get("power") or []
+                    if supply.get("direction") == "out"]
+            with self.subTest(part=part_id):
+                self.assertEqual(len(nets), len(set(nets)),
+                                 "%s drives two outputs onto one net" % part_id)
+
+    def test_inputs_still_share_the_rail_they_name(self):
+        # The other half: if outputs getting their own net turned into every pin getting its own
+        # net, nothing would connect to anything.
+        tsx = self._emit(["dfr0534-module", "l9110s-module"])
+        self.assertEqual(tsx.count('to="net.GND"'), 2)
+
+    def test_the_contract_refuses_two_outputs_that_cannot_be_told_apart(self):
+        broken = json.loads((ROOT / "parts" / "dfr0534-module.json").read_text())
+        for supply in broken["power"]:
+            supply.pop("polarity", None)
+        problems = parts.validate(broken, ROOT / "parts" / "dfr0534-module.json")
+        self.assertTrue(any("short into each other" in p for p in problems), problems)
+
+
 class RailsWithoutASourceTest(unittest.TestCase):
     def test_a_rail_the_module_supplies_is_not_reported(self):
         # The microcontroller module provides 3V3 and ground, so consuming those is fine.

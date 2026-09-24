@@ -16,20 +16,28 @@
     {
       "pin": "VCC",
       "rail": "logic",
-      "note": "3.3-5 V"
+      "note": "3.3-5 V",
+      "direction": "in"
     },
     {
       "pin": "GND",
-      "rail": "ground"
+      "rail": "ground",
+      "direction": "in"
     },
     {
       "pin": "SPKP",
       "rail": "speaker",
-      "note": "bridged amplifier output \u2014 never ground either side"
+      "note": "bridged amplifier output \u2014 never ground either side",
+      "direction": "out",
+      "//direction": "An OUTPUT, not a supply. Both halves of a bridged amplifier: they swing in opposite directions and the speaker sits across them. Wiring them to one net shorts the amplifier to itself.",
+      "polarity": "+"
     },
     {
       "pin": "SPKN",
-      "rail": "speaker"
+      "rail": "speaker",
+      "direction": "out",
+      "//direction": "An OUTPUT, not a supply. Both halves of a bridged amplifier: they swing in opposite directions and the speaker sits across them. Wiring them to one net shorts the amplifier to itself.",
+      "polarity": "-"
     }
   ],
   "facts": {

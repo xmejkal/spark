@@ -130,6 +130,35 @@ def validate(part: dict, path: Path) -> list:
                 problems.append("body_mm is unverified with no why_it_matters; say what depends "
                                 "on it — here, whether the modules physically fit the board")
 
+    # A power pin's DIRECTION is what says whether sharing a net is normal or fatal. Several GND
+    # pins on one net is how ground works; two amplifier outputs on one net is a short. Both
+    # looked identical in this schema — a `rail` and nothing else — and the generator duly wired
+    # both halves of a bridged class-D output together, under the part's own note saying never to.
+    outputs_by_rail = {}
+    for index, supply in enumerate(part.get("power") or []):
+        where = "power[%d]" % index
+        if not supply.get("pin"):
+            problems.append("%s has no pin" % where)
+        direction = supply.get("direction")
+        if direction not in ("in", "out"):
+            problems.append(
+                "%s direction is %r; a power pin is 'in' (it consumes a rail, and sharing one is "
+                "normal) or 'out' (it drives a load, and sharing a net is a short)"
+                % (where, direction))
+        elif direction == "out":
+            # Keyed on the NET it would land on, which for an output is the load plus which side
+            # of it this pin drives. Two outputs on one load are the normal case — that is what a
+            # differential pair is — and they are only a short if nothing distinguishes them.
+            outputs_by_rail.setdefault(
+                (supply.get("rail"), supply.get("polarity")), []).append(supply["pin"])
+
+    for (rail, polarity), pins in outputs_by_rail.items():
+        if len(pins) > 1:
+            problems.append(
+                "power pins %s are outputs driving %r with the same polarity (%r), so they would "
+                "land on one net and short into each other. Give each its own `polarity`, or they "
+                "are not separate outputs" % (", ".join(pins), rail, polarity))
+
     for name, fact in (part.get("facts") or {}).items():
         if not isinstance(fact, dict):
             problems.append("facts.%s is not an object; every fact needs a value, a source and "
