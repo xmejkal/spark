@@ -113,6 +113,49 @@ real defects, including several that would have cost a fabrication run.
 
 ---
 
+## 4b. What the evals actually say, and what it changes
+
+**2026-09-24, `finds-assembly-problems`: with-plugin 0.67, no-plugin baseline 1.00, delta −0.33.**
+
+The baseline scored perfect. It independently found the mating 2-pin connectors, the crimp order
+that puts 6 V across the H-bridge outputs, the absent mounting holes and the consequences of each
+— unprompted, with no plugin loaded. This is the second eval to say the same thing: the earlier
+`deep-sleep-pins` case scored 1/1 in both arms.
+
+**The conclusion is uncomfortable and it should be acted on: the model does not need help
+reviewing. Asking it to review better is not where this product's value is.**
+
+That kills a line of work. Writing more reviewer dimensions, tuning reviewer prompts and
+sharpening rubrics is effort spent on the half the model already does well — and the extra
+context may actively cost something, which is what a negative delta means.
+
+What the model demonstrably cannot do, and what every defect this week that a review MISSED had
+in common:
+
+| Found by | Examples |
+| --- | --- |
+| **A script, never by a reviewer** | a BOM ordering 100 nF where the schematic said 1 µF; capacitors with no voltage rating at all; a 0.9 mm drill against a 0.905 mm pin; vias left at a tool's floor; a board file disagreeing with its vendor's own header |
+| **A library with provenance** | that the L9110S's input threshold is absolute and not ratiometric — the fact that decides whether 3.3 V logic drives a 6 V part at all |
+| **Being run at all** | the checks only catch what runs; a review that does not happen catches nothing |
+
+A model asked to review will *sometimes* notice a wrong drill. A script notices every time, in a
+second, for free. That difference — not cleverness — is the product.
+
+**So the priorities change:**
+
+1. **Deterministic checks first.** Every defect class that can be settled by arithmetic should be,
+   and should move out of the reviewer's remit when it is.
+2. **Libraries with provenance second.** Facts the model would otherwise invent, carrying sources
+   and an honest `verified: false`.
+3. **Generators third.** Artifacts, not opinions.
+4. **Reviewers last, and unchanged.** They are already good enough. Leave them alone.
+
+**And the evals change shape.** Grading review QUALITY measures the model, not the product. What
+needs grading is whether the workflow fires and uses the tools — `tool_used` graders on the skill
+and on `check_all.py` — because that is the thing that varies and the thing the plugin controls.
+
+---
+
 ## 5. Backlog
 
 Ordered by value. Each item says what it is worth and how we will know it worked.
