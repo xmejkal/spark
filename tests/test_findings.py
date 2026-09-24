@@ -275,16 +275,33 @@ class AnchorNamespaceTest(unittest.TestCase):
         self.assertIn("port:XIAO.VCC", namespace)
 
     def test_it_is_built_from_the_real_circuit_json(self):
+        """
+        A real export produces anchors of every kind, and only real ones.
+
+        This deliberately asserts SHAPE, not contents. It used to require `net:VBAT`, and when
+        that rail was deleted from the board this plugin was written against, a test belonging
+        to the plugin failed for a design decision made in a different repository. A reusable
+        tool whose tests know one project's net names is not reusable — and worse, it reports a
+        correct change as a defect.
+        """
         import json
         circuit_path = ROOT.parent / "smartbin-local" / "dist" / "board" / "circuit.json"
         if not circuit_path.exists():
-            self.skipTest("the bin has not been built")
+            self.skipTest("no real design available to read")
 
         namespace = findings.anchor_namespace(json.loads(circuit_path.read_text()))
-        self.assertIn("comp:Mp3Player", namespace)
-        self.assertIn("net:VBAT", namespace)
-        self.assertIn("port:Mp3Player.VCC", namespace)
-        self.assertNotIn("net:V5_SW", namespace)
+        kinds = {anchor.split(":", 1)[0] for anchor in namespace}
+        self.assertEqual(kinds, {"comp", "net", "port"})
+
+        # Every port anchor names a component that also appears on its own.
+        for anchor in namespace:
+            if anchor.startswith("port:"):
+                owner = anchor.split(":", 1)[1].rsplit(".", 1)[0]
+                self.assertIn("comp:" + owner, namespace,
+                              "port anchor %s names a component with no anchor" % anchor)
+
+        # And an anchor that was never in the design is not invented.
+        self.assertNotIn("net:DEFINITELY_NOT_A_NET", namespace)
 
 
 if __name__ == "__main__":
