@@ -1,7 +1,7 @@
 ---
 name: spark-check
 description: Check a design made of modules plugged into a dev board, before it is built. Catches a wake source on a pin that cannot wake the chip, an analogue input on a digital-only pin, two parts on one pin, a serial module on the boot-log UART, and two I2C devices at the same address. Use when the user has chosen parts and pins and asks to "check the wiring", "will this work", "review my pin assignments", or is about to order or solder.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_pins.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_design.py *)
 ---
 
 # spark-check
@@ -14,7 +14,7 @@ is somebody else's solved problem; use their tool.
 ## Run it
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/check_pins.py <design.json>
+${CLAUDE_PLUGIN_ROOT}/scripts/check_design.py <design.json>
 ```
 
 Exit 0 means sound, 1 means problems, and every problem names the part, the pin and the reason.
