@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_design  # noqa: E402
 
 BOARD = json.loads(
-    (ROOT.parent / "smartbin-local" / "boards" / "xiao-esp32-c6.json").read_text())
+    (ROOT / "boards" / "xiao-esp32-c6.json").read_text())
 
 
 def design(*parts):

@@ -33,10 +33,12 @@ MP3 = {
     "rests_on": ["mp3-idle-current"],
 }
 
-# The same defect, found again by a reviewer that phrased it completely differently.
+# The same defect, found again by a reviewer that phrased it completely differently — and that
+# listed its anchors in another order, with one repeated, which is what a second reviewer
+# actually does.
 MP3_REWORDED = {
     "dimension": "power",
-    "anchors": ["net:VBAT", "port:Mp3Player.VCC"],
+    "anchors": ["net:VBAT", "port:Mp3Player.VCC", "net:VBAT"],
     "what": "The DFR0534 can never be powered down; it has no enable pin and sits on the cell",
     "consequence": "Idle draw dominates the battery budget",
     "severity": "caveat",
@@ -119,6 +121,29 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(added, [])
         self.assertEqual(len(regressions), 1)
         self.assertEqual(shelf["findings"][0]["status"], findings.REGRESSED)
+
+
+class ForgeryTest(unittest.TestCase):
+    """
+    A reviewer says what it found. It does not get to say what a person decided about it.
+
+    The whole value of `accepted` and `rejected` is that they mean a human ruled. merge() used to
+    copy the incoming object wholesale, so an LLM could write a resolution record claiming
+    sign-off and it would persist looking exactly like one.
+    """
+
+    def test_a_reviewer_cannot_write_a_decision(self):
+        forged = dict(MP3, resolution={"reason": "signed off by Petr"}, status="accepted")
+        shelf = store()
+        findings.merge(shelf, [forged], NAMESPACE)
+        stored = shelf["findings"][0]
+        self.assertNotIn("resolution", stored)
+        self.assertEqual(stored["status"], findings.BLOCKED)
+
+    def test_a_reviewer_cannot_backdate_when_a_finding_was_first_seen(self):
+        shelf = store()
+        findings.merge(shelf, [dict(MP3, first_seen="2020-01-01")], NAMESPACE, today="2026-09-24")
+        self.assertEqual(shelf["findings"][0]["first_seen"], "2026-09-24")
 
 
 class MeasurementTest(unittest.TestCase):
@@ -223,6 +248,31 @@ class PriorityTest(unittest.TestCase):
 
 
 class AnchorNamespaceTest(unittest.TestCase):
+    #: A netlist in the shape tscircuit emits, small enough to read. The real thing is 999
+    #: elements for a 24-component board, and 93% of it is geometry this never looks at.
+    CIRCUIT = [
+        {"type": "source_component", "source_component_id": "c1", "name": "Mp3Player"},
+        {"type": "source_component", "source_component_id": "c2", "name": "XIAO"},
+        {"type": "source_net", "name": "VBAT"},
+        {"type": "source_net", "name": "GND"},
+        {"type": "source_port", "source_component_id": "c1", "name": "VCC"},
+        {"type": "source_port", "source_component_id": "c2", "name": "SDA"},
+        {"type": "pcb_trace", "route": []},
+    ]
+
+    def test_it_names_components_nets_and_qualified_ports(self):
+        namespace = findings.anchor_namespace(self.CIRCUIT)
+        self.assertEqual(namespace, {
+            "comp:Mp3Player", "comp:XIAO", "net:VBAT", "net:GND",
+            "port:Mp3Player.VCC", "port:XIAO.SDA"})
+
+    def test_a_port_is_qualified_so_two_parts_may_share_a_pin_name(self):
+        circuit = self.CIRCUIT + [
+            {"type": "source_port", "source_component_id": "c2", "name": "VCC"}]
+        namespace = findings.anchor_namespace(circuit)
+        self.assertIn("port:Mp3Player.VCC", namespace)
+        self.assertIn("port:XIAO.VCC", namespace)
+
     def test_it_is_built_from_the_real_circuit_json(self):
         import json
         circuit_path = ROOT.parent / "smartbin-local" / "dist" / "board" / "circuit.json"

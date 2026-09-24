@@ -62,14 +62,17 @@ def resolve_board(reference, design_path):
     as_path = Path(reference)
     if not as_path.is_absolute():
         beside_design = (design_path.parent / as_path).resolve()
-        if beside_design.exists():
+        if beside_design.is_file():
             return beside_design
-    elif as_path.exists():
+    elif as_path.is_file():
         return as_path
 
-    shipped = BOARDS / ("%s.json" % reference.removesuffix(".json"))
-    if shipped.exists():
-        return shipped
+    # Only a bare id looks in the shipped set; a path that did not resolve is a path, and saying
+    # so beats silently treating it as the name of a board we ship.
+    if "/" not in reference and not as_path.is_absolute():
+        shipped = BOARDS / ("%s.json" % reference.removesuffix(".json"))
+        if shipped.is_file():
+            return shipped
 
     known = sorted(p.stem for p in BOARDS.glob("*.json")) if BOARDS.exists() else []
     raise SystemExit(
@@ -167,6 +170,20 @@ def check_pin_capability(design, board):
     return problems
 
 
+def as_address(value):
+    """
+    One address, however it was written.
+
+    `"0x29"`, `"0X29"`, `" 0x29"` and `41` are the same seven bits on the wire. Comparing them as
+    strings — which this did — let a real clash through: two devices at 0x29 and 41 on one bus
+    were reported as fine. That is the exact failure this check exists to catch.
+    """
+    try:
+        return int(str(value).strip(), 0)
+    except (TypeError, ValueError):
+        return None
+
+
 def check_i2c_addresses(design):
     """
     No two devices on one bus answer to the same address.
@@ -183,14 +200,20 @@ def check_i2c_addresses(design):
             continue
         ref = part.get("ref", "<unnamed part>")
         bus = i2c.get("bus", "i2c0")
-        address = str(i2c.get("address", "")).lower()
-        if not address:
+        raw = i2c.get("address")
+        if raw in (None, ""):
+            continue
+        address = as_address(raw)
+        if address is None:
+            problems.append(Problem(
+                ref, "has an I2C address of %r, which is not a number" % raw,
+                "write it as 0x29 or 41"))
             continue
 
         key = (bus, address)
         if key in seen:
             problems.append(Problem(
-                ref, "answers to %s on %s, and so does %s" % (address, bus, seen[key]),
+                ref, "answers to 0x%02x on %s, and so does %s" % (address, bus, seen[key]),
                 "one of them needs its address strap changed, or its own bus"))
         else:
             seen[key] = ref
