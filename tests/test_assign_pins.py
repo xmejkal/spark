@@ -1,0 +1,210 @@
+"""
+Proof that pins are spent in the right order, and that an impossible request is refused.
+
+The thing being tested is a judgement, not a calculation: which pin a signal *should* get when
+several would work. Getting it wrong is not an error, it is a worse board — an ADC pin burned on
+an LED, and then a sensor with nowhere to go.
+
+Two properties carry the whole design and both are asserted below.
+
+**Scarce last.** A signal that needs nothing special must never take a pin that can do something,
+while a plainer pin is free. Otherwise the order signals happen to be listed decides the board.
+
+**A refusal, not a partial answer.** A set of requirements that cannot be met comes back as an
+explanation naming what could have served it. A tool that assigns most of them and exits zero is
+how a board gets built around a pin map that was never satisfiable.
+
+    python3 -m unittest discover -s tests
+"""
+
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import assign_pins  # noqa: E402
+
+
+def board(**overrides):
+    """
+    A small board with one of each kind of pin, so a test can be read at a glance.
+
+      P0, P1  plain          — nothing special, the cheapest thing to spend
+      W0, W1  wake only
+      A0      wake and adc   — the most capable, and so the last resort
+      S0      strapping      — never assignable
+      U0      console UART   — assignable, but it costs you the serial console
+      B0      onboard button — assignable, but something is already wired to it
+    """
+    return dict({
+        "schema": 1, "id": "test", "name": "Test Board", "chip": "esp32",
+        "pins": {"P0": 0, "P1": 1, "W0": 2, "W1": 3, "A0": 4, "S0": 5, "U0": 6, "B0": 7},
+        "wake_capable_gpio": [2, 3, 4],
+        "adc_gpio": [4],
+        "pin_roles": {
+            "strapping": {"gpio": [5], "note": "sampled at reset"},
+            "console_uart": {"gpio": [6], "note": "the serial console"},
+            "onboard_button": {"gpio": [7], "note": "a button is already on it"},
+        },
+    }, **overrides)
+
+
+def placed(assignments):
+    return {entry["signal"]: entry["pin"] for entry in assignments}
+
+
+class ScarceLastTest(unittest.TestCase):
+    def test_a_plain_signal_takes_a_plain_pin(self):
+        assignments, _ = assign_pins.assign(board(), [{"name": "LED", "needs": []}])
+        self.assertIn(placed(assignments)["LED"], ("P0", "P1"))
+
+    def test_a_plain_signal_does_not_burn_the_adc_pin(self):
+        signals = [{"name": "L%d" % n, "needs": []} for n in range(4)]
+        assignments, _ = assign_pins.assign(board(), signals)
+        self.assertNotIn("A0", placed(assignments).values(),
+                         "the only ADC pin was spent on a signal that did not need it")
+
+    def test_the_order_signals_are_listed_in_does_not_decide_the_board(self):
+        # Most-constrained-first, so a greedy pass cannot strand the hard requirement.
+        hard_last = [{"name": "LED", "needs": []}, {"name": "SENSE", "needs": ["adc"]}]
+        hard_first = list(reversed(hard_last))
+        self.assertEqual(placed(assign_pins.assign(board(), hard_last)[0])["SENSE"],
+                         placed(assign_pins.assign(board(), hard_first)[0])["SENSE"])
+
+    def test_a_signal_that_needs_wake_gets_a_wake_pin(self):
+        assignments, _ = assign_pins.assign(board(), [{"name": "INT", "needs": ["wake"]}])
+        self.assertIn(placed(assignments)["INT"], ("W0", "W1"),
+                      "a wake signal took the ADC pin while plain wake pins were free")
+
+    def test_a_signal_that_needs_adc_gets_the_adc_pin(self):
+        assignments, _ = assign_pins.assign(board(), [{"name": "SENSE", "needs": ["adc"]}])
+        self.assertEqual(placed(assignments)["SENSE"], "A0")
+
+
+class PinsWithAnotherJobTest(unittest.TestCase):
+    def test_a_strapping_pin_is_never_assigned(self):
+        # Hold a button on a strapping pin during a reset and the board enters its bootloader.
+        signals = [{"name": "S%d" % n, "needs": []} for n in range(7)]
+        assignments, _ = assign_pins.assign(board(), signals)
+        self.assertNotIn("S0", placed(assignments).values())
+
+    def test_the_console_is_kept_free_for_longer_than_a_wake_pin(self):
+        # This board has three wake-capable pins and one console. Losing the console costs you
+        # bring-up; losing a wake pin costs you one of three.
+        signals = [{"name": "S%d" % n, "needs": []} for n in range(4)]
+        assignments, _ = assign_pins.assign(board(), signals)
+        self.assertNotIn("U0", placed(assignments).values())
+
+    def test_an_encumbered_pin_is_used_when_nothing_else_is_left(self):
+        # It is a worse choice, not a forbidden one — and the answer has to say why.
+        signals = [{"name": "S%d" % n, "needs": []} for n in range(6)]
+        assignments, _ = assign_pins.assign(board(), signals)
+        taken = set(placed(assignments).values())
+        self.assertTrue({"U0", "B0"} & taken)
+        shared = [a for a in assignments if a["pin"] in ("U0", "B0")]
+        self.assertTrue(all("already wired here" in a["why"] for a in shared))
+
+    def test_every_assignment_explains_itself(self):
+        assignments, _ = assign_pins.assign(
+            board(), [{"name": "A", "needs": ["adc"]}, {"name": "B", "needs": []}])
+        self.assertTrue(all(entry["why"] for entry in assignments))
+
+
+class PinsAskedForByNameTest(unittest.TestCase):
+    def test_a_named_pin_is_honoured_without_argument(self):
+        # Dedicated hardware — an I2C bus — is a fact about the board, not a choice to optimise.
+        assignments, _ = assign_pins.assign(board(), [{"name": "SDA", "pin": "A0"}])
+        self.assertEqual(placed(assignments)["SDA"], "A0")
+
+    def test_a_named_pin_the_board_does_not_have_is_refused(self):
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(board(), [{"name": "SDA", "pin": "NOPE"}])
+        self.assertIn("does not bring out", str(refused.exception))
+
+    def test_two_signals_on_one_named_pin_are_refused(self):
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.assign(board(), [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "P0"}])
+
+    def test_a_named_pin_is_taken_out_of_play_for_everyone_else(self):
+        assignments, free = assign_pins.assign(
+            board(), [{"name": "SDA", "pin": "P0"}, {"name": "LED", "needs": []}])
+        self.assertEqual(placed(assignments)["LED"], "P1")
+        self.assertNotIn("P0", free)
+
+
+class RefusalTest(unittest.TestCase):
+    def test_more_wake_signals_than_wake_pins_is_refused_with_the_reason(self):
+        signals = [{"name": "W%d" % n, "needs": ["wake"]} for n in range(4)]
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(board(), signals)
+        message = str(refused.exception)
+        self.assertIn("needs wake", message)
+        self.assertIn("already taken", message)
+        # It must name the pins that could have served it, or the reader has nothing to act on.
+        self.assertTrue(any(pin in message for pin in ("W0", "W1", "A0")))
+
+    def test_a_capability_no_pin_has_is_refused_plainly(self):
+        flat = board(wake_capable_gpio=[], adc_gpio=[])
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(flat, [{"name": "INT", "needs": ["wake"]}])
+        self.assertIn("no pin on this board can do that", str(refused.exception))
+
+    def test_an_unknown_requirement_is_refused_rather_than_ignored(self):
+        # A typo'd requirement that is silently dropped produces a board that is wrong in exactly
+        # the way the requirement existed to prevent.
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(board(), [{"name": "X", "needs": ["waek"]}])
+        self.assertIn("not something a pin can be asked for", str(refused.exception))
+
+    def test_nothing_is_assigned_when_the_set_is_impossible(self):
+        # Partial answers are the failure mode: a board gets built around a map that was never
+        # satisfiable, and the missing signal is discovered on the bench.
+        signals = [{"name": "W%d" % n, "needs": ["wake"]} for n in range(4)]
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.assign(board(), signals)
+
+
+class AgainstARealBoardTest(unittest.TestCase):
+    """The board this was written against, with the signals it actually carries."""
+
+    SIGNALS = [
+        {"name": "TOF_INT", "needs": ["wake"]}, {"name": "BTN_OPEN", "needs": ["wake"]},
+        {"name": "MOTOR_SENSE", "needs": ["adc"]},
+        {"name": "SDA", "pin": "SDA"}, {"name": "SCL", "pin": "SCL"},
+        {"name": "MOTOR_IA"}, {"name": "MOTOR_IB"}, {"name": "MP3_TX"},
+        {"name": "MP3_ENABLE"}, {"name": "BTN_MODE"}, {"name": "LED_RED"},
+        {"name": "LED_GREEN"},
+    ]
+
+    def setUp(self):
+        import json
+        self.board = json.loads(
+            (ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def test_it_places_every_signal(self):
+        assignments, _ = assign_pins.assign(self.board, self.SIGNALS)
+        self.assertEqual(len(assignments), len(self.SIGNALS))
+
+    def test_it_keeps_the_console_and_the_onboard_button_free(self):
+        _, free = assign_pins.assign(self.board, self.SIGNALS)
+        self.assertIn("TX", free)
+        self.assertIn("RX", free)
+        self.assertIn("D14", free)
+
+    def test_it_spends_exactly_one_adc1_pin(self):
+        # Only MOTOR_SENSE asked for one, and ADC1 is the scarce resource on this chip.
+        assignments, _ = assign_pins.assign(self.board, self.SIGNALS)
+        adc1 = set(self.board["adc_gpio"])
+        spent = [a for a in assignments if a["gpio"] in adc1 and a["signal"] not in ("SDA", "SCL")]
+        self.assertEqual([a["signal"] for a in spent], ["MOTOR_SENSE"])
+
+    def test_no_signal_lands_on_a_strapping_pin(self):
+        assignments, _ = assign_pins.assign(self.board, self.SIGNALS)
+        strapping = set(self.board["pin_roles"]["strapping"]["gpio"])
+        self.assertEqual([a for a in assignments if a["gpio"] in strapping], [])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -73,7 +73,7 @@ Four rungs. A thing is only as trustworthy as the highest rung it has climbed.
 
 | Rung | Question | Mechanism |
 | --- | --- | --- |
-| 1. Unit test | Does the check bite? | 142 tests. **Every check must have a design that violates it** |
+| 1. Unit test | Does the check bite? | 163 tests. **Every check must have a design that violates it** |
 | 2. Self-refutation | Can it cry wolf? | Each rule needs a case that looks wrong and is fine |
 | 3. Eval | Does the *agent* find it? | `evals/`, reported as a rate over *n* runs, with a no-plugin baseline |
 | 4. Reality | Did it hold? | The bin: `make check`, and eventually a bench |
@@ -86,7 +86,7 @@ for this.
 
 ## 4. Done
 
-Evidence, not assertion. 142 tests, 6 skills, 10 scripts, 1 agent (5 dimensions), 3 evals,
+Evidence, not assertion. 163 tests, 6 skills, 11 scripts, 1 agent (5 dimensions), 4 evals,
 and a library of verified board definitions.
 
 | Capability | Proven by |
@@ -103,6 +103,7 @@ and a library of verified board definitions.
 | **The order** | `check_bom.py` — found one supplier part ordered for two capacitances |
 | **One call for all of it** | `check_all.py` — six checks, four outcomes, so "not asked" never reads as "clean" |
 | **A board library** | `boards/` + `scripts/boards.py` — adopt a verified board with one line; the contract refuses decisions in a facts file |
+| **Pin assignment** | `assign_pins.py` — spends the scarce pins last and explains every choice; refuses rather than half-assigning |
 | Measurement discipline | `bench_sim.py` marks everything `simulated`; nothing that costs money may rest on it |
 
 **The proof it works:** applied to a real board, this stack plus a four-lens review found 20+
@@ -145,8 +146,18 @@ The resolver writes `.spark/board.json` and every consumer reads that, which del
 partial implementation of the same lookup in TypeScript rather than growing it to search two
 directories.
 
-**S5 — Use case B end to end: modules in, schematic out.**
-The largest gap between what the skills describe and what they drive.
+**S5 — Use case B end to end: modules in, schematic out.** *in progress.*
+The hardest step is done: `scripts/assign_pins.py` works out which pin each signal should go on,
+and says what each choice cost. It beat the hand-made map on the project it was written against
+— it keeps the console UART and the on-board button free, which the hand map spent.
+
+The judgement it encodes is one number: what an unused capability costs against what a pin's
+existing job costs. Ranking those separately meant a zero-capability console pin always beat a
+plain wake-capable pin, which is backwards on a chip with twenty-two wake pins and one console.
+
+*Still to do:* turn an assignment plus a module list into a `board.tsx` that builds. That needs
+per-module pin requirements — what an L9110S or a VL6180X actually asks for — which is the
+`verified-parts` library's job and does not exist as data yet.
 *Done when:* "I have a FireBeetle, an L9110S and a VL6180X" produces a `board.tsx` that builds
 and passes every check, without hand-holding.
 
