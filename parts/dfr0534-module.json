@@ -64,7 +64,8 @@
     "amplifier_output_w": {
       "value": null,
       "verified": false,
-      "source": "no figure published"
+      "source": "DFRobot publish no figure. The amplifier is an NSIWAY NS8002 (legible in DFRobot's own product photo, so the part identity is primary), LCSC C189960 \u2014 its datasheet states output power against supply and load, but neither lcsc.com nor nsiway.com.cn served the PDF when tried; both returned HTML.",
+      "why_it_matters": "Decides how loud the bin can be and what the speaker must survive. It is a published number on the amplifier's own datasheet, not something needing a meter \u2014 the document simply has not been obtained. Lower stakes than the two idle currents, which decide battery life."
     },
     "mounting_holes": {
       "value": "2 holes, 15.00 mm apart, both 3.50 mm in from the right edge",
