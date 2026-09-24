@@ -48,15 +48,27 @@
       "why_it_matters": "It cannot be told to sleep. On a battery design the only way to stop it drawing is to cut its rail, which is a decision the BOARD has to make before it is fabricated."
     },
     "idle_current_ma": {
-      "value": null,
+      "value": 18,
       "verified": false,
-      "source": "DFRobot publish no figure; not measured",
-      "why_it_matters": "Its class idles somewhere near 15-25 mA, which would be tens of times everything else on a sleeping battery board combined. Until it is measured, no battery-life claim about a design containing this part means anything."
+      "source": "third-party measurement of a JQ8400 board, the same decoder this module uses (github.com/arduino12/mp3_player_module_wire): 18 mA idle, 4.5 mA after the one-wire sleep command, and 140 uA only after removing the BUSY LED and cutting the amplifier's SD pin to a GPIO. DFRobot publish no figure for the DFR0534 itself and no schematic, so its floor cannot be known from documentation",
+      "why_it_matters": "Even the optimistic 4.5 mA is roughly ten times the entire rest of a sleeping battery board. With no standby command and no schematic, the module's power has to be switched in hardware \u2014 which is a board decision, not a firmware one."
     },
     "amplifier_output_w": {
       "value": null,
       "verified": false,
       "source": "no figure published"
+    },
+    "mounting_holes": {
+      "value": "2 holes, 15.00 mm apart, both 3.50 mm in from the right edge",
+      "verified": true,
+      "source": "DFRobot's own dimension drawing, https://dfimg.dfrobot.com/wiki/19342/DFR0534_mp3-player-module_dimension_V1.0.pdf (agrees with the datasheet p.1 and the wiki)",
+      "note": "Drill measures ~2.5 mm off the drawing, which is M2 clearance \u2014 NOT M3. DFRobot does not label the diameter, so treat the size as unconfirmed even though the spacing is dimensioned."
+    },
+    "has_uart_standby_command": {
+      "value": false,
+      "verified": true,
+      "source": "DFRobot's 11-page datasheet and the JQ8400 manual both document opcodes 0x01-0x26 and neither includes sleep or standby; the JQ8400 manual says sleep is entered over a one-wire protocol it then describes as untested",
+      "note": "Settles an open question: there is no software way to put this module to sleep, so cutting its power in hardware is the only option."
     }
   },
   "host_requirements": [
@@ -66,11 +78,11 @@
   ],
   "footprint": "headermodule6",
   "body_mm": {
-    "width": 30,
-    "height": 22,
-    "verified": false,
-    "source": "unknown \u2014 carried since the first draft with no source recorded",
-    "why_it_matters": "Decides whether this module and the motor driver both fit beside the microcontroller, and how big the generated board is. A wrong outline is found at assembly, after the boards are paid for."
+    "width": 30.0,
+    "height": 22.0,
+    "verified": true,
+    "source": "DFRobot's own dimension drawing, https://dfimg.dfrobot.com/wiki/19342/DFR0534_mp3-player-module_dimension_V1.0.pdf (agrees with the datasheet p.1 and the wiki)",
+    "note": "Thickness and component height are NOT published by DFRobot. The tallest features are the two side-entry JST-PH sockets and the micro-USB; measure them before designing an enclosure."
   },
   "sources": {
     "vendor": "https://wiki.dfrobot.com/Voice_Module_SKU__DFR0534"
