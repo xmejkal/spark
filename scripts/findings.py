@@ -135,8 +135,9 @@ def project_root(start=None):
         if (directory / SPARK_DIR).is_dir():
             return directory
     raise SystemExit(
-        "no %s/ directory here or above %s. Run `spark init`, or create it, so there is one "
-        "store rather than one per directory you happen to be standing in." % (SPARK_DIR, here))
+        "no %s/ directory here or above %s. Run `/spark:init`, or the script behind it, so there "
+        "is one store rather than one per directory you happen to be standing in. (This used to "
+        "say `spark init`, which existed nowhere but in this sentence.)" % (SPARK_DIR, here))
 
 
 class Store:
