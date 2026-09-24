@@ -84,6 +84,25 @@ class PinCapabilityTest(unittest.TestCase):
         self.assertEqual(can_wake, ["D0", "D1", "D2"])
 
 
+class BoardResolutionTest(unittest.TestCase):
+    """A design should name a board the way a person would, not by where it sits on this disk."""
+
+    def test_a_board_id_resolves_to_a_shipped_definition(self):
+        found = check_design.resolve_board("xiao-esp32-c6", Path("/nowhere/design.json"))
+        self.assertTrue(found.exists())
+        self.assertEqual(json.loads(found.read_text())["id"], "xiao-esp32-c6")
+
+    def test_an_unknown_board_says_which_ones_exist(self):
+        with self.assertRaises(SystemExit) as raised:
+            check_design.resolve_board("firebeetle2-s3", Path("/nowhere/design.json"))
+        self.assertIn("xiao-esp32-c6", str(raised.exception))
+
+    def test_a_path_beside_the_design_still_wins(self):
+        found = check_design.resolve_board(
+            "boards/xiao-esp32-c6.json", ROOT / "design.json")
+        self.assertEqual(found, (ROOT / "boards" / "xiao-esp32-c6.json").resolve())
+
+
 class I2cAddressTest(unittest.TestCase):
     def test_two_devices_at_one_address_are_caught(self):
         problems = check_design.check_i2c_addresses(design(

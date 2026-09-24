@@ -122,29 +122,91 @@ class RegressionTest(unittest.TestCase):
 
 
 class MeasurementTest(unittest.TestCase):
-    def test_supplying_a_number_unblocks_what_rested_on_it(self):
-        """What makes 'assume it for now' a bookmark rather than a risk."""
+    """
+    A number in the store must be a number somebody obtained, and must say how.
+
+    This is not paperwork. The example value from the documentation once walked into a real
+    project's store and sat there looking exactly like a reading, while the handover note still
+    said the number had never been taken. Every test here exists because of that.
+    """
+
+    def test_a_finding_waiting_on_a_number_is_blocked_on_arrival(self):
+        """Otherwise the reopen path can never fire, and the whole loop is decorative."""
         shelf = store()
         findings.merge(shelf, [MP3], NAMESPACE)
-        shelf["findings"][0]["status"] = findings.BLOCKED
+        self.assertEqual(shelf["findings"][0]["status"], findings.BLOCKED)
+
+    def test_a_finding_resting_on_nothing_is_simply_open(self):
+        shelf = store()
+        findings.merge(shelf, [dict(MP3, rests_on=[])], NAMESPACE)
+        self.assertEqual(shelf["findings"][0]["status"], findings.OPEN)
+
+    def test_supplying_a_number_unblocks_what_rested_on_it(self):
+        shelf = store()
+        findings.merge(shelf, [MP3], NAMESPACE)
 
         reopened = findings.record_measurement(
-            shelf, "mp3-idle-current", "18.4", "mA", "DMM in series with VBAT")
+            shelf, "mp3-idle-current", "18.4", "mA", "measured", "DMM in series with VBAT")
 
         self.assertEqual(len(reopened), 1)
         self.assertEqual(shelf["findings"][0]["status"], findings.OPEN)
-        self.assertEqual(shelf["measurements"]["mp3-idle-current"]["value"], "18.4")
+        self.assertEqual(shelf["measurements"]["mp3-idle-current"]["source"], "measured")
+
+    def test_a_measurement_must_say_where_it_came_from(self):
+        with self.assertRaises(ValueError) as refused:
+            findings.record_measurement(store(), "x", "18.4", "mA", "DMM in series")
+        self.assertIn("source must be one of", str(refused.exception))
+
+    def test_a_measured_value_must_name_its_instrument(self):
+        """A reading with no instrument is not reproducible, so it is not a reading."""
+        with self.assertRaises(ValueError) as refused:
+            findings.record_measurement(store(), "x", "18.4", "mA", "measured")
+        self.assertIn("instrument", str(refused.exception))
+
+    def test_an_estimate_needs_no_instrument_and_is_marked_as_one(self):
+        shelf = store()
+        findings.record_measurement(shelf, "x", "15", "mA", "estimate")
+        self.assertEqual(shelf["measurements"]["x"]["source"], "estimate")
+
+    def test_replacing_a_number_keeps_the_one_it_replaced(self):
+        """A second reading that disagrees with the first is information, not a correction."""
+        shelf = store()
+        findings.record_measurement(shelf, "x", "15", "mA", "estimate")
+
+        with self.assertRaises(ValueError) as refused:
+            findings.record_measurement(shelf, "x", "18.4", "mA", "measured", "DMM")
+        self.assertIn("--supersede", str(refused.exception))
+
+        findings.record_measurement(
+            shelf, "x", "18.4", "mA", "measured", "DMM", supersede=True)
+        entry = shelf["measurements"]["x"]
+        self.assertEqual(entry["value"], "18.4")
+        self.assertEqual(entry["superseded"][0]["value"], "15")
+
+    def test_a_number_that_moves_regresses_what_was_fixed_on_it(self):
+        shelf = store()
+        findings.merge(shelf, [MP3], NAMESPACE)
+        shelf["findings"][0]["status"] = findings.RESOLVED
+
+        findings.record_measurement(
+            shelf, "mp3-idle-current", "2.1", "mA", "measured", "DMM")
+        self.assertEqual(shelf["findings"][0]["status"], findings.REGRESSED)
 
     def test_an_unrelated_measurement_changes_nothing(self):
         shelf = store()
         findings.merge(shelf, [MP3], NAMESPACE)
-        shelf["findings"][0]["status"] = findings.BLOCKED
-        self.assertEqual(findings.record_measurement(shelf, "motor-stall", "350", "mA", "DMM"), [])
+        self.assertEqual(
+            findings.record_measurement(shelf, "motor-stall", "350", "mA", "estimate"), [])
         self.assertEqual(shelf["findings"][0]["status"], findings.BLOCKED)
+
+    def test_unfilled_says_which_numbers_are_still_missing(self):
+        shelf = store()
+        findings.merge(shelf, [MP3], NAMESPACE)
+        self.assertEqual(findings.unfilled(shelf["findings"][0], shelf), ["mp3-idle-current"])
 
 
 class PriorityTest(unittest.TestCase):
-    def test_blocked_work_comes_first_because_clearing_it_is_cheap(self):
+    def test_blocked_work_comes_first_because_clearing_it_is_cheap(self):  # noqa: D102
         ordered = findings.rank([
             dict(MP3, key="a", status=findings.OPEN, severity="caveat"),
             dict(MP3, key="b", status=findings.BLOCKED, severity="caveat"),

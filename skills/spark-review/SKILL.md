@@ -109,10 +109,18 @@ nobody reads.
 3. When a number arrives, feed it back:
 
 ```
-findings.py measure mp3-idle-current --value 18.4 --unit mA --instrument "DMM in series"
+findings.py measure <measurement-id> --value <what you read> --unit mA \
+    --source measured --instrument "how you read it"
 ```
 
-Everything that was blocked on it reopens, and you are told what changed.
+Every number says where it came from — `measured`, `datasheet` or `estimate` — and a measured
+one must name the instrument, because a reading without one is not reproducible. Everything
+blocked on it reopens; anything already *resolved* on the strength of a different number
+regresses, because a fix justified by a number that has since moved needs looking at again.
+
+**Never paste an example value into a real store.** That has already happened once here: the
+sample figure from this document ended up in a live project, indistinguishable from a reading,
+while the handover note still said the number had never been taken.
 
 ## What this does not do
 

@@ -2,7 +2,7 @@
 """
 Two checks on a design made of modules plugged into a dev board.
 
-    check_pins.py design.json
+    check_design.py design.json
 
 Exit 0 if the design is sound, 1 if it is not. Every problem names the part, the pin and the
 reason, because "the design is invalid" is not something you can act on at a bench.
@@ -12,13 +12,16 @@ format models them. KiCad will happily route a wake source to a pin that cannot 
 and no netlist format in existence has a field for an I2C address. Everything else worth checking
 — ERC, DRC, footprint sanity — is already somebody else's solved problem.
 
-The board's own facts come from a board definition file (see boards/README.md in the smart-bin
-project for the schema). Nothing here is specific to one board or one project.
+The board's own facts come from a board definition. A design names one by id — "xiao-esp32-c6",
+one of the definitions in boards/ — or by path for a board nobody has written down yet. Nothing
+here is specific to one board or one project; see boards/README.md for the schema.
 """
 
 import json
 import sys
 from pathlib import Path
+
+BOARDS = Path(__file__).resolve().parent.parent / "boards"
 
 EXIT_OK = 0
 EXIT_PROBLEMS = 1
@@ -46,6 +49,32 @@ def load_json(path, what):
         raise SystemExit("no %s at %s" % (what, path))
     except ValueError as error:
         raise SystemExit("%s at %s is not valid JSON: %s" % (what, path, error))
+
+
+def resolve_board(reference, design_path):
+    """
+    Find a board definition, by id or by path.
+
+    `"board": "xiao-esp32-c6"` names one of the definitions this tool ships, so a design works on
+    someone else's machine without knowing where anything lives. A path still works and wins, for
+    a board nobody has written down yet.
+    """
+    as_path = Path(reference)
+    if not as_path.is_absolute():
+        beside_design = (design_path.parent / as_path).resolve()
+        if beside_design.exists():
+            return beside_design
+    elif as_path.exists():
+        return as_path
+
+    shipped = BOARDS / ("%s.json" % reference.removesuffix(".json"))
+    if shipped.exists():
+        return shipped
+
+    known = sorted(p.stem for p in BOARDS.glob("*.json")) if BOARDS.exists() else []
+    raise SystemExit(
+        "no board definition for %r.\n  shipped: %s\n  or give a path to one."
+        % (reference, ", ".join(known) or "none"))
 
 
 def usable_pins(board):
@@ -180,10 +209,7 @@ def main(argv):
 
     design_path = Path(argv[1])
     design = load_json(design_path, "design")
-
-    board_path = Path(design["board"])
-    if not board_path.is_absolute():
-        board_path = (design_path.parent / board_path).resolve()
+    board_path = resolve_board(design["board"], design_path)
     board = load_json(board_path, "board definition")
 
     problems = run(design, board)

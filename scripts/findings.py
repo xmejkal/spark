@@ -6,7 +6,7 @@ The findings store: what is wrong with a design, in a form that survives being w
     findings.py append <file.json>          add findings, deduped and validated
     findings.py list [--status open]        what is on the board
     findings.py status <key> <status> --reason "..."
-    findings.py measure <id> --value 18.4 --unit mA --instrument "DMM in series"
+    findings.py measure <id> --value <n> --unit mA --source measured --instrument "..."
     findings.py validate                    mark findings whose anchors no longer resolve
     findings.py next                        the one thing to do now
 
@@ -152,7 +152,9 @@ def merge(store, incoming, namespace, found_against=None, today=None):
 
         previous = existing.get(finding["key"])
         if previous is None:
-            finding.update(status=OPEN, first_seen=today, found_against=found_against)
+            waiting = [n for n in finding["rests_on"] if n not in store.get("measurements", {})]
+            finding.update(status=BLOCKED if waiting else OPEN,
+                           first_seen=today, found_against=found_against)
             store["findings"].append(finding)
             existing[finding["key"]] = finding
             added.append(finding)
@@ -194,23 +196,65 @@ def rank(findings):
 
 # ----------------------------------------------------------------- measurements
 
-def record_measurement(store, name, value, unit, instrument, today=None):
+#: How a number got here. Only `measured` means somebody put an instrument on the actual part.
+SOURCES = ("measured", "datasheet", "estimate")
+
+
+def record_measurement(store, name, value, unit, source, instrument=None,
+                       today=None, supersede=False):
     """
     Supply a number somebody was guessing, and reopen whatever was resting on it.
 
-    This is what makes an assumption safe to work with: it is not a risk buried in prose, it is
-    a named thing that findings point at, and filling it in tells you exactly what changed.
+    Every number says where it came from, and that is not paperwork. This function once took any
+    string and stored it, and the example value out of the documentation walked into a real
+    project's store and sat there looking exactly like a reading — indistinguishable from a
+    number somebody had actually taken off a meter. The measurements registry is the one place
+    where a wrong value costs money, so it is the one place that must not accept a guess quietly.
+
+    A second reading that disagrees with the first is information, not a correction, so replacing
+    a value keeps the old one rather than overwriting it.
     """
     today = today or date.today().isoformat()
-    store.setdefault("measurements", {})[name] = {
-        "value": value, "unit": unit, "instrument": instrument, "date": today,
-    }
+    if source not in SOURCES:
+        raise ValueError("source must be one of %s, not %r" % (", ".join(SOURCES), source))
+    if source == "measured" and not instrument:
+        raise ValueError("a measured value needs --instrument: a reading with no instrument "
+                         "is not reproducible")
+    if not value:
+        raise ValueError("a measurement needs a value")
+
+    registry = store.setdefault("measurements", {})
+    previous = registry.get(name)
+    if previous and not supersede:
+        raise ValueError(
+            "%s already reads %s %s (%s). Pass --supersede to replace it; the old value is kept."
+            % (name, previous["value"], previous.get("unit", ""), previous.get("source", "?")))
+
+    entry = {"value": value, "unit": unit, "source": source, "date": today}
+    if instrument:
+        entry["instrument"] = instrument
+    if previous:
+        entry["superseded"] = previous.get("superseded", []) + [
+            {k: v for k, v in previous.items() if k != "superseded"}]
+    registry[name] = entry
     reopened = []
     for finding in store["findings"]:
-        if name in finding.get("rests_on", []) and finding["status"] == BLOCKED:
+        if name not in finding.get("rests_on", []):
+            continue
+        if finding["status"] == BLOCKED:
             finding["status"] = OPEN
             reopened.append(finding)
+        elif finding["status"] == RESOLVED:
+            # It was fixed on the strength of a number that has now moved. Somebody has to look.
+            finding["status"] = REGRESSED
+            reopened.append(finding)
     return reopened
+
+
+def unfilled(finding, store):
+    """Measurements this finding rests on that nobody has taken yet."""
+    taken = store.get("measurements", {})
+    return [name for name in finding.get("rests_on", []) if name not in taken]
 
 
 # ----------------------------------------------------------------- command line
@@ -227,6 +271,13 @@ def _show(finding):
     if finding.get("rests_on"):
         line += "\n       rests on: %s" % ", ".join(finding["rests_on"])
     return line
+
+
+def _measurement(name, entry):
+    text = "%s = %s %s (%s" % (name, entry["value"], entry.get("unit", ""), entry["source"])
+    if entry.get("instrument"):
+        text += ", %s" % entry["instrument"]
+    return text + ")"
 
 
 def main(argv):
@@ -283,12 +334,19 @@ def main(argv):
         name = argv[2]
         def flag(which):
             return argv[argv.index(which) + 1] if which in argv else None
-        reopened = record_measurement(
-            store, name, flag("--value"), flag("--unit"), flag("--instrument"))
+        try:
+            reopened = record_measurement(
+                store, name, flag("--value"), flag("--unit"), flag("--source"),
+                flag("--instrument"), supersede="--supersede" in argv)
+        except ValueError as refusal:
+            raise SystemExit(str(refusal))
         save(store)
-        print("recorded %s = %s %s" % (name, flag("--value"), flag("--unit") or ""))
+        entry = store["measurements"][name]
+        print("recorded %s = %s %s (%s)"
+              % (name, entry["value"], entry.get("unit", ""), entry["source"]))
         for finding in reopened:
-            print("  unblocked: %s" % finding["what"])
+            state = "regressed" if finding["status"] == REGRESSED else "unblocked"
+            print("  %s: %s" % (state, finding["what"]))
         return 0
 
     if command == "validate":
@@ -304,13 +362,22 @@ def main(argv):
             print(_show(finding))
         return 0
 
+    if command == "measurements":
+        for name, entry in sorted(store.get("measurements", {}).items()):
+            print("  " + _measurement(name, entry))
+        return 0
+
     if command == "next":
         ordered = rank(store["findings"])
         if not ordered:
             print("nothing open.")
             return 0
         print("%d open; the one to do now:\n" % len(ordered))
-        print(_show(ordered[0]))
+        chosen = ordered[0]
+        print(_show(chosen))
+        waiting = unfilled(chosen, store)
+        if waiting:
+            print("\n   waiting on a number nobody has taken yet: %s" % ", ".join(waiting))
         return 0
 
     raise SystemExit("unknown command %r" % command)
