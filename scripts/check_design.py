@@ -21,7 +21,12 @@ import json
 import sys
 from pathlib import Path
 
-BOARDS = Path(__file__).resolve().parent.parent / "boards"
+SCRIPTS = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPTS))
+
+import boards  # noqa: E402  - for the role vocabulary, which must have one spelling
+
+BOARDS = SCRIPTS.parent / "boards"
 
 EXIT_OK = 0
 EXIT_PROBLEMS = 1
@@ -159,11 +164,15 @@ def check_pin_capability(design, board):
                             or "none on this board")))
 
             # A role is a caveat, not a ban — except for the one combination that always bites.
+            # The name comes from boards.PIN_ROLES rather than being spelled here: this line read
+            # `"boot_log_tx"`, which is what one shipped board called the console and the other
+            # did not, so the check passed a serial part on the console UART of the other board
+            # without a word.
             for role_name, note in pin["roles"]:
-                if role_name == "boot_log_tx" and part.get("reads_serial"):
+                if role_name == boards.CONSOLE_UART and part.get("reads_serial"):
                     problems.append(Problem(
                         ref,
-                        "%s is on %s, which is the boot-log UART, and this part reads serial"
+                        "%s is on %s, which carries the serial console, and this part reads serial"
                         % (signal, label),
                         note))
 

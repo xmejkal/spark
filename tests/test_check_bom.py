@@ -123,7 +123,10 @@ class DesignWarningsBecomeFatalAtFabTest(unittest.TestCase):
 
     def test_a_missing_circuit_is_not_treated_as_clean(self):
         # Asked for a file that is not there, it must not report zero problems as if it looked.
-        self.assertEqual(check_bom.check_design_warnings(Path("/nonexistent/circuit.json")), [])
+        # This asserted `== []` — that exact failure — under this exact comment. The name and the
+        # comment were both right and only the assertion disagreed with them, so it stayed green.
+        with self.assertRaises(FileNotFoundError):
+            check_bom.check_design_warnings(Path("/nonexistent/circuit.json"))
 
 
 class EndToEndTest(unittest.TestCase):

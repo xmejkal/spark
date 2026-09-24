@@ -78,6 +78,26 @@ FORBIDDEN_KEYS = {
     "signals": "which function sits on which pin is the design; see mcu-pins.ts",
 }
 
+#: The role names a board file may use, and what each one means to the scripts that read them.
+#:
+#: Closed, because an open vocabulary silently disabled a headline check. Two shipped boards
+#: described the same hazard — the serial console — under two names, `boot_log_tx` and
+#: `console_uart`. `check_design.py` knew only the first and `assign_pins.py` only the second, so
+#: a serial-parsing part sitting on the console UART was caught on one board and passed without a
+#: word on the other. Nothing noticed, because a role nobody consumes looks exactly like a role
+#: that is fine. A name outside this set is now an error rather than a silent no-op.
+PIN_ROLES = {
+    "console_uart": "carries the boot log and the serial console; it moves at every reset",
+    "onboard_button": "something is already wired here and can press it",
+    "onboard_led": "something is already wired here and will blink whatever you put on it",
+    "strapping": "sampled at reset; the level here decides how the chip boots",
+    "adc2_unusable_with_wifi": "on ADC2, which cannot be read while the radio is on",
+    "not_wake_capable": "cannot bring the chip out of deep sleep",
+}
+
+#: Named, so the one role a check singles out is spelled in exactly one place.
+CONSOLE_UART = "console_uart"
+
 #: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
 GPIO_MIN, GPIO_MAX = 0, 63
@@ -231,6 +251,10 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
             problems.append(f"{key} must be a list of GPIO numbers")
 
     for role_name, role in (board.get("pin_roles") or {}).items():
+        if role_name not in PIN_ROLES:
+            problems.append(
+                f"pin_roles.{role_name} is not a role any script reads, so it would be carried "
+                f"and ignored. Known: {', '.join(sorted(PIN_ROLES))}")
         if not isinstance(role, dict) or "gpio" not in role or "note" not in role:
             problems.append(f"pin_roles.{role_name} needs both a 'gpio' list and a 'note'")
             continue

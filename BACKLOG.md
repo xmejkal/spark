@@ -257,12 +257,22 @@ Ordered by value. Each item says what it is worth and how we will know it worked
 
 ### Now
 
-**A0 — Make the instruments unable to lie.** The §4c finding, and it gates everything else.
-*Worth:* every other claim in this file is only as good as the thing that checks it.
-*Done when:* `ok` is unreachable while anything is unchecked — one place decides status, and a
-check that could not look cannot render a tick; `Check.run` catches `BaseException`; `pin-capability`
-actually runs; and each of the six is covered by a test that **runs the runner** against an input
-that must fail. Then re-run every gate and re-earn the green.
+~~**A0 — Make the instruments unable to lie.**~~ **done.** `answer()` is the one place a status
+is decided, so `ok` is unreachable while anything went unchecked — not by convention, but because
+there is no other way to build the result. `unchecked` (a property of the RUN) is now a separate
+field from `unmeasured` (a property of the BOARD). `pin-capability` runs. `SystemExit` no longer
+escapes the guard. An empty `circuit.json` — what a half-failed build leaves — is refused by all
+four checks that read it, instead of being examined and found clean. Asking for nothing no longer
+exits 0.
+
+**Every repair was then mutation-tested:** each defect was re-introduced and the suite had to go
+red. Nine of nine caught, each by the test named for it. Two gaps surfaced that way and were
+closed rather than waived — the role vocabulary had no test, and `verdict`'s defensive branch
+could not fail. 232 tests; the bin's eleven gates still pass.
+
+*Not fixed, and still open:* `spark-review`'s own command never passes `--design`, `--firmware`
+or `--board-file`, so two of seven checks stay unasked and five clean ones will correctly exit 0.
+That is a skill-prose bug, in **Next**.
 
 **A1 — Make it installable.** `chmod +x scripts/*.py`; build `spark init` or delete the promise;
 one README that matches `plugin.json` and mentions the scripts, boards and parts libraries.
@@ -274,9 +284,12 @@ one net; pin numbers come from the part's physical pinout or the part is refused
 footprint module is a refusal, not an exit 0. *Worth:* it currently shorts a class-D output.
 *Done when:* a test asserts SPKP and SPKN are on different nets, and the generated file builds.
 
-**A3 — One role vocabulary, validated.** Board files may only use role names the scripts consume;
-the two shipped boards agree. *Worth:* a headline check silently skips one of the two boards.
-*Done when:* an unknown role name is a startup error, and the bootlog reproducer fails on both.
+~~**A3 — One role vocabulary, validated.**~~ **done.** `boards.PIN_ROLES` is a closed set of six
+names with what each means to the scripts that read them; `--validate` refuses anything else and
+says what would have worked. The XIAO's `boot_log_tx` is now `console_uart`, and `check_design.py`
+takes the name from `boards.CONSOLE_UART` rather than spelling it. The reproducer — a
+serial-parsing part on the console UART — now fails on **both** shipped boards, derived from each
+board's own file rather than hardcoded, so a board added without a console UART fails the suite.
 
 ---
 

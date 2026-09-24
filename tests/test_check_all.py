@@ -17,6 +17,7 @@ import json
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,13 +43,168 @@ class NothingAskedForTest(unittest.TestCase):
         results = check_all.run({})
         self.assertTrue(all("not given" in r["reason"] for r in results))
 
-    def test_nothing_asked_for_exits_zero_because_you_chose_not_to_ask(self):
-        self.assertEqual(check_all.main([]), check_all.EXIT_OK)
+    def test_asking_for_nothing_at_all_does_not_exit_zero(self):
+        # This asserted EXIT_OK, on the reasoning that skipping is a choice and a choice is not a
+        # failure. That holds when SOME checks were skipped and it is wrong when all of them
+        # were: the exit code then answers a question nobody asked, and "everything is in step"
+        # is the most expensive possible way to be wrong. The module docstring carries the
+        # decision; this pins it.
+        self.assertEqual(check_all.main([]), check_all.EXIT_COULD_NOT_RUN)
+
+    def test_asking_for_some_and_getting_a_clean_answer_still_exits_zero(self):
+        # The other half of the same decision, so the fix above cannot quietly grow into
+        # "any skipped check fails the run", which would make the runner useless piecemeal.
+        clean = [{"check": "a", "status": check_all.OK, "problems": [], "unchecked": []},
+                 {"check": "b", "status": check_all.SKIPPED, "reason": "not given circuit"}]
+        self.assertEqual(check_all.verdict(clean), check_all.OK)
 
     def test_but_the_rendering_says_so_out_loud(self):
         rendered = check_all.render(check_all.run({}))
         self.assertIn("not asked for", rendered)
-        self.assertIn("nothing found by the checks that ran", rendered)
+        # It said "nothing found by the checks that ran" — true, useless, and read as a clean
+        # bill when the number of checks that ran was zero.
+        self.assertIn("nothing completed", rendered)
+        self.assertIn("says nothing about the board", rendered)
+
+
+def a_header_drilled_too_small():
+    """A 6-pin 2.54 mm header on a 0.9 mm drill — the defect check_footprints exists for."""
+    return [{"type": "source_component", "source_component_id": "J1", "name": "J1"},
+            {"type": "pcb_component", "pcb_component_id": "pcb_J1", "source_component_id": "J1"}
+            ] + [{"type": "pcb_plated_hole", "pcb_component_id": "pcb_J1",
+                  "hole_diameter": 0.9, "outer_diameter": 1.4, "x": i * 2.54, "y": 0.0}
+                 for i in range(6)]
+
+
+class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
+    """
+    The rung-1 rule — every check must have an input that makes it answer — applied to the RUNNER.
+
+    The runner was exempt from it, and that is exactly where the defect was. `check_all.py` called
+    `check_design.check()`, a function that has never existed, so the plugin's flagship check had
+    never once run through the aggregator. The AttributeError became `could-not-run`, which reads
+    as a bad environment rather than a broken plugin, and the test written to catch a check nobody
+    invokes asserted that the string `load("check_design")` appeared in this file's SOURCE. It
+    verified the check was named, not that it ran, and it was green for the whole life of the bug.
+
+    So each check below is RUN, through the runner, with an input whose answer is known. The
+    per-check suites prove each check bites; this proves the seam between them is connected. The
+    coverage guard at the end is what stops a new check being added without one.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        tmp = Path(tempfile.mkdtemp())
+        board_file = str(ROOT / "boards" / "firebeetle2-esp32s3.json")
+
+        no_bom = tmp / "nobom.zip"
+        zipfile.ZipFile(no_bom, "w").writestr("readme.txt", "a package with no bill of materials")
+
+        cls.cases = {
+            # check name: (inputs, the status it must come back with, why)
+            "pin-capability": (
+                {"design": written("adc.design.json", {
+                    "board": "firebeetle2-esp32s3",
+                    "parts": [{"ref": "Sense",
+                               "pins": [{"signal": "SENSE", "pin": "D6", "needs": ["adc"]}]}]})},
+                check_all.PROBLEMS, "an analogue input on a pin with no ADC"),
+            "vendor-truth": (
+                {"boards": [written("active.json", {"board": "xiao-esp32-c6"})]},
+                check_all.COULD_NOT_RUN, "a selection file, which carries no vendor header"),
+            "buildability": (
+                {"circuit": written("bad-drill.json", a_header_drilled_too_small())},
+                check_all.PROBLEMS, "a header drilled too small for its own pins"),
+            "the-order": (
+                {"package": str(no_bom)},
+                check_all.COULD_NOT_RUN, "a fab package with no bom.csv (raises SystemExit)"),
+            "physics": (
+                {"circuit": written("ok.json", a_header_drilled_too_small()),
+                 "rules": written("rules.json", {})},
+                check_all.OK, "a real netlist and no rules to break"),
+            "rules-vs-netlist": (
+                {"circuit": written("ok2.json", a_header_drilled_too_small()),
+                 "rules": written("rules2.json", {})},
+                check_all.OK, "a real netlist and no rules to break"),
+            "firmware-vs-board": (
+                {"firmware": written("config.py", "PIN_NOWHERE = 99\n"),
+                 "board_file": board_file},
+                check_all.PROBLEMS, "a firmware driving a pin the board does not bring out"),
+        }
+
+    def test_each_check_answers_what_it_is_given(self):
+        for check in check_all.CHECKS:
+            inputs, expected, why = self.cases[check.name]
+            with self.subTest(check=check.name, given=why):
+                result = check.run(inputs)
+                self.assertEqual(
+                    result["status"], expected,
+                    "%s, given %s, answered %s: %s"
+                    % (check.name, why, result["status"],
+                       result.get("unchecked") or result.get("problems")))
+
+    def test_no_check_is_broken_at_the_seam(self):
+        # The narrow version of the defect, stated on its own so a regression names itself: a
+        # check handed exactly what it asked for must never come back "I could not look" for a
+        # reason that is really "this plugin does not work".
+        for check in check_all.CHECKS:
+            inputs, expected, why = self.cases[check.name]
+            if expected == check_all.COULD_NOT_RUN:
+                continue  # these cases are deliberately unanswerable; see `why`
+            with self.subTest(check=check.name):
+                broken = [u for u in check.run(inputs).get("unchecked", [])
+                          if "Error" in u or "Exception" in u]
+                self.assertEqual(broken, [], "%s raised inside the runner" % check.name)
+
+    def test_every_check_in_the_runner_has_a_case_here(self):
+        # The mechanism. Without it, adding a check silently adds an untested one — which is the
+        # shape of the original bug.
+        self.assertEqual(sorted(self.cases), sorted(c.name for c in check_all.CHECKS))
+
+
+class OkIsUnreachableWhileAnythingWentUncheckedTest(unittest.TestCase):
+    """
+    Two checks folded "I could not look" into a notes field and returned `ok` anyway. Deciding the
+    status in one place is what makes that impossible rather than merely discouraged.
+    """
+
+    def test_an_unchecked_entry_alone_is_not_ok(self):
+        self.assertEqual(check_all.answer(unchecked=["no cached vendor header"])["status"],
+                         check_all.COULD_NOT_RUN)
+
+    def test_an_unmeasured_note_alone_is_still_ok(self):
+        # The distinction that was lost: `unmeasured` is a real finding about the BOARD, and the
+        # check did its job. `unchecked` is a property of the RUN. Conflating them cost a tick.
+        self.assertEqual(check_all.answer(unmeasured=["GND: nobody sized the pour"])["status"],
+                         check_all.OK)
+
+    def test_nothing_at_all_is_ok(self):
+        self.assertEqual(check_all.answer()["status"], check_all.OK)
+
+    def test_a_check_that_says_could_not_run_without_saying_why_still_sinks_the_verdict(self):
+        # `verdict` reads both the status and the field, because reading one trusts every call
+        # site to have filled in the other — and the reason this function exists is that a call
+        # site did not. No check produces this shape today; the next one written might.
+        self.assertEqual(
+            check_all.verdict([{"check": "a", "status": check_all.COULD_NOT_RUN,
+                                "problems": [], "unchecked": []}]),
+            check_all.COULD_NOT_RUN)
+
+    def test_the_verdict_is_could_not_run_if_any_check_could_not_look(self):
+        results = [{"check": "a", "status": check_all.OK, "problems": [], "unchecked": []},
+                   {"check": "b", "status": check_all.COULD_NOT_RUN, "problems": [],
+                    "unchecked": ["no cached header"]}]
+        self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
+
+    def test_an_empty_netlist_is_not_a_clean_board(self):
+        # A build that failed part way leaves `[]`. Every check downstream then examined nothing,
+        # found nothing, and said ok.
+        results = check_all.run({"circuit": written("empty.json", []),
+                                 "rules": written("norules.json", {})})
+        looked = [r for r in results if r["status"] != check_all.SKIPPED]
+        self.assertTrue(looked, "no check even tried")
+        self.assertTrue(all(r["status"] == check_all.COULD_NOT_RUN for r in looked),
+                        "a check reported on a board that was never built")
+        self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
 
 
 class ABrokenCheckDoesNotHideTheOthers(unittest.TestCase):
@@ -61,10 +217,22 @@ class ABrokenCheckDoesNotHideTheOthers(unittest.TestCase):
                                         if name in ("physics", "buildability")])
 
     def test_one_exploding_check_still_lets_the_rest_report(self):
-        # Every check runs; a failure in one is caught and reported as its own status.
-        results = check_all.run({"circuit": written("circuit.json", "not json at all"),
-                                 "rules": written("rules.json", {})})
-        self.assertEqual(len(results), len(check_all.CHECKS))
+        # This asserted only `len(results) == len(CHECKS)`, which `run()` makes true by
+        # construction whatever explodes, so it could not fail — and the explosion it was written
+        # for was a SystemExit, which the guard did not catch at all. What matters is that a
+        # check which blew up did not stop another check from answering.
+        no_bom = Path(tempfile.mkdtemp()) / "nobom.zip"
+        zipfile.ZipFile(no_bom, "w").writestr("readme.txt", "no bill of materials here")
+        results = {r["check"]: r for r in check_all.run({
+            "package": str(no_bom),
+            "design": written("exploding.design.json", {
+                "board": "firebeetle2-esp32s3",
+                "parts": [{"ref": "Sense",
+                           "pins": [{"signal": "SENSE", "pin": "D6", "needs": ["adc"]}]}]}),
+        })}
+        self.assertEqual(results["the-order"]["status"], check_all.COULD_NOT_RUN)
+        self.assertEqual(results["pin-capability"]["status"], check_all.PROBLEMS,
+                         "a check that exploded stopped another check from answering")
 
     def test_could_not_run_is_not_the_same_exit_code_as_clean(self):
         self.assertNotEqual(check_all.EXIT_COULD_NOT_RUN, check_all.EXIT_OK)
@@ -109,12 +277,16 @@ class TheCheckListItselfTest(unittest.TestCase):
 
     def test_every_check_script_on_disk_is_wired_into_the_runner(self):
         """
-        A script nobody invokes is the bug this whole file exists to prevent: for a while the
-        review loop ran one check out of seven, and looked exactly like one that ran all seven.
+        A script nobody invokes is the bug this whole file exists to prevent.
 
-        Asserted against the runner's own SOURCE, because that is the thing that would be
-        forgotten. A first version of this test subtracted the very scripts it was looking for
-        and could not fail — which is its own lesson about tests that agree with themselves.
+        This used to grep the runner's SOURCE for `load("check_design")`. The string was there and
+        the call beneath it named a function that has never existed, so the flagship check had
+        never run once and the test was green the whole time: it verified the check was NAMED,
+        not that it RAN. Its own docstring even warned about an earlier version that could not
+        fail.
+
+        So it now imports each script and calls what the runner calls. Nothing in this file may
+        assert on source text again.
         """
         NOT_A_CHECK = {"check_all"}
         on_disk = {path.stem for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK

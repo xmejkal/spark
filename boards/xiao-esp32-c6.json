@@ -58,7 +58,7 @@
   ],
   "//pin_roles": "What a pin IS, beyond its number. Typed so a program can read it: the arrays are for checks, the notes are for people. A pin with a role is not unusable - it is usable with a caveat, and the caveat is the note.",
   "pin_roles": {
-    "boot_log_tx": {
+    "console_uart": {
       "gpio": [
         16
       ],

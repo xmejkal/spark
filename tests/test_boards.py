@@ -151,12 +151,60 @@ class TheContractTest(unittest.TestCase):
         self.assertTrue(boards.validate(board, path, for_fab=True))
 
 
+class TheRoleVocabularyIsClosedTest(unittest.TestCase):
+    """
+    A role name nothing reads looks exactly like a role name that is working.
+
+    The two shipped boards described the same hazard — the serial console — under two names,
+    `boot_log_tx` and `console_uart`. `check_design.py` knew only the first and `assign_pins.py`
+    only the second, so a serial-parsing part on the console UART was caught on one board and
+    passed without a word on the other. `--validate` said "ok" for both, because nothing checked
+    that a role was one anybody consumes.
+    """
+
+    def _problems(self, roles):
+        return boards.validate(dict(definition("b"), pin_roles=roles),
+                               boards.LIBRARY / "b.json")
+
+    def test_a_role_no_script_reads_is_refused(self):
+        problems = self._problems({"boot_log_tx": {"gpio": [0], "note": "the old name"}})
+        self.assertTrue(any("not a role any script reads" in p for p in problems), problems)
+
+    def test_the_refusal_lists_the_names_that_would_have_worked(self):
+        # Refusing without saying what to write instead is how a vocabulary becomes folklore.
+        problems = self._problems({"typo_uart": {"gpio": [0], "note": "x"}})
+        self.assertTrue(any(boards.CONSOLE_UART in p for p in problems), problems)
+
+    def test_a_known_role_passes(self):
+        self.assertEqual(
+            self._problems({boards.CONSOLE_UART: {"gpio": [0], "note": "prints the boot log"}}),
+            [])
+
+    def test_every_role_the_assigner_prices_is_one_a_board_may_use(self):
+        # The other half of the same drift: a penalty keyed on a name no board file may carry is
+        # a penalty that never fires, and it looks identical to one that does.
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import assign_pins  # noqa: E402,PLC0415 - here so this file stays standalone
+        priced = set(assign_pins.ROLE_PENALTY) | set(assign_pins.CONFLICTING_ROLES)
+        self.assertEqual(priced - set(boards.PIN_ROLES), set())
+
+
 class TheShippedLibraryTest(unittest.TestCase):
     def test_every_board_in_the_library_satisfies_its_own_contract(self):
         for path in sorted(boards.LIBRARY.glob("*.json")):
             with self.subTest(board=path.stem):
                 problems = boards.validate(json.loads(path.read_text()), path)
                 self.assertEqual(problems, [], "%s: %s" % (path.stem, problems))
+
+    def test_every_shipped_board_names_the_console_uart(self):
+        # Not decoration: it is the role the pin-capability check singles out, so a board that
+        # omits it is a board where that check silently does nothing.
+        for path in sorted(boards.LIBRARY.glob("*.json")):
+            if path.name == "active.json":
+                continue
+            with self.subTest(board=path.stem):
+                roles = json.loads(path.read_text()).get("pin_roles") or {}
+                self.assertIn(boards.CONSOLE_UART, roles)
 
 
 if __name__ == "__main__":

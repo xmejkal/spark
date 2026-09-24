@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import boards  # noqa: E402  - for the role vocabulary, so the test cannot drift from it either
 import check_design  # noqa: E402
 
 BOARD = json.loads(
@@ -67,7 +68,35 @@ class PinCapabilityTest(unittest.TestCase):
                     "pins": [{"signal": "RXD", "pin": "D6"}]}),
             BOARD)
         self.assertEqual(len(problems), 1)
-        self.assertIn("boot-log UART", problems[0].detail)
+        self.assertIn("serial console", problems[0].detail)
+
+    def test_the_same_hazard_is_caught_on_every_board_the_plugin_ships(self):
+        """
+        The defect that made this necessary: the two shipped boards named the console
+        differently — `boot_log_tx` and `console_uart` — and this check knew only the first. So a
+        serial-parsing part on the console UART was caught on the XIAO and passed without a word
+        on the FireBeetle. The same hazard, one board checked, and 216 tests green, because the
+        fixture here only ever used one board.
+
+        `boards.PIN_ROLES` is now a closed vocabulary so the names cannot drift again. This
+        proves the check actually reaches both, and will fail for any board added without it.
+        """
+        exercised = 0
+        for path in sorted((ROOT / "boards").glob("*.json")):
+            if path.name == "active.json":
+                continue
+            board = json.loads(path.read_text())
+            console = (board.get("pin_roles") or {}).get(boards.CONSOLE_UART)
+            self.assertIsNotNone(console, "%s names no console UART" % path.stem)
+            label = next(l for l, g in board["pins"].items() if g == console["gpio"][0])
+            with self.subTest(board=path.stem):
+                problems = check_design.check_pin_capability(
+                    design({"ref": "Gps", "reads_serial": True,
+                            "pins": [{"signal": "TXD", "pin": label}]}), board)
+                self.assertEqual(len(problems), 1,
+                                 "%s: a serial part on %s was not caught" % (path.stem, label))
+            exercised += 1
+        self.assertGreater(exercised, 1, "this passed by exercising no board, or only one")
 
     def test_a_button_on_the_boot_log_pin_is_fine(self):
         # The caveat is real but conditional. A check that forbade this outright would be wrong,

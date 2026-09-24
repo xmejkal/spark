@@ -97,9 +97,18 @@ def check_missing_parts(rows):
 
 
 def check_design_warnings(circuit_path: Path):
-    """Warnings the design already emitted that are fatal once this becomes an order."""
+    """
+    Warnings the design already emitted that are fatal once this becomes an order.
+
+    A missing circuit raises rather than returning nothing. It returned `[]`, so a mistyped path
+    dropped every fatal-at-fab warning in silence — and the test named
+    `test_a_missing_circuit_is_not_treated_as_clean` asserted precisely that empty list, under a
+    comment saying it must not report zero problems as if it had looked. The name was right and
+    the assertion was its opposite.
+    """
     if not circuit_path.is_file():
-        return []
+        raise FileNotFoundError(
+            "no circuit at %s, so the design's own fab warnings were never read" % circuit_path)
     problems = []
     for element in json.loads(circuit_path.read_text()):
         if element.get("type") in FATAL_AT_FAB:
