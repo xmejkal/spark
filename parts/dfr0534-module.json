@@ -78,6 +78,18 @@
       "verified": true,
       "source": "DFRobot's 11-page datasheet and the JQ8400 manual both document opcodes 0x01-0x26 and neither includes sleep or standby; the JQ8400 manual says sleep is entered over a one-wire protocol it then describes as untested",
       "note": "Settles an open question: there is no software way to put this module to sleep, so cutting its power in hardware is the only option."
+    },
+    "silicon": {
+      "value": "JQ8400-FL decoder + NS8002 class-AB amplifier + SPI flash",
+      "verified": true,
+      "source": "DFRobot's own product photography, kept at parts/datasheets/DFR0534_silkscreen_face_DFRobot.jpg and DFR0534_component_face_with_ruler_DFRobot.jpg in the bin \u2014 all three markings are legible on the component face",
+      "note": "Worth recording because DFRobot publish no schematic, so the chips are the only route to this board's behaviour: the decoder's own manual is where the command set and the current figures come from, and the amplifier's datasheet is where the output power would. Neither is a DFRobot document."
+    },
+    "amplifier_can_be_shut_down_by_the_host": {
+      "value": false,
+      "verified": false,
+      "source": "no jumper, solder bridge or exposed pad for the amplifier's SD pin is visible in DFRobot's photographs, and DFRobot publish no schematic to check it against",
+      "why_it_matters": "If the NS8002's shutdown pin is tied to ground on the board, as it is on the JQ8400 boards somebody measured, the amplifier draws its idle current whenever the module is powered and no command can stop it. That is what makes cutting the module's supply in hardware the only option, and it is the single largest current in a sleeping design."
     }
   },
   "host_requirements": [
@@ -91,12 +103,12 @@
     "height": 22.0,
     "verified": true,
     "source": "DFRobot's own dimension drawing, https://dfimg.dfrobot.com/wiki/19342/DFR0534_mp3-player-module_dimension_V1.0.pdf (agrees with the datasheet p.1 and the wiki)",
-    "note": "Thickness and component height are NOT published by DFRobot. The tallest features are the two side-entry JST-PH sockets and the micro-USB; measure them before designing an enclosure."
+    "note": "Thickness and component height are NOT published by DFRobot. The tallest features are the two side-entry JST-PH sockets and the micro-USB; measure them before designing an enclosure. The 30 x 22 mm outline is corroborated by the ruler in DFRobot's own component-face photograph."
   },
   "sources": {
     "vendor": "https://wiki.dfrobot.com/Voice_Module_SKU__DFR0534"
   },
-  "//pin_order": "Ten pads in two rows of five, from DFRobot's dimension drawing and datasheet p.2: row A is VCC GND RX TX BUSY, row B is ONE DACR DACL SP- SP+. The footprint was headermodule6, which is a six-pad part \u2014 every trace would have landed on the wrong pad even with the right order.",
+  "//pin_order": "Read off the board's own silkscreen in DFRobot's photograph, not inferred from the dimension drawing: the top row is VCC GND RX TX BUSY and the bottom row is ONE DACR DACL SP- SP+. The drawing does not say whether it is a top or bottom view and the board is nearly mirror-symmetric in its landmarks, so the photo is what settles it. This file wires five of the ten pads; the rest stay empty rather than closing up. DFRobot's own product photography, kept at parts/datasheets/DFR0534_silkscreen_face_DFRobot.jpg and DFR0534_component_face_with_ruler_DFRobot.jpg in the bin",
   "pin_order": [
     "VCC",
     "GND",
