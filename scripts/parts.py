@@ -223,20 +223,36 @@ def main(argv=None):
                       help="the signals these parts ask for, as assign_pins.py input")
     what.add_argument("--unverified", nargs="+", metavar="PART",
                       help="what nobody has checked about these parts")
+    # Every function in this file already took `project`, and nothing ever passed one — so the
+    # docstring's promise that "a project's own wins" was unreachable from any entry point and
+    # the library was closed at whatever ships with the plugin.
+    parser.add_argument("--project", type=Path,
+                        help="a project whose own parts/ beats the shipped library")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
+    project = args.project.resolve() if args.project else None
 
     try:
         if args.list:
-            for part_id in available():
-                part = load(part_id)
-                print("  %-22s %-16s %s" % (part_id, part["kind"], part["name"]))
+            listing = [dict(load(part_id, project), id=part_id) for part_id in available(project)]
+            if args.json:
+                print(json.dumps({"tool": "parts", "parts": [
+                    {"id": part["id"], "kind": part["kind"], "name": part["name"],
+                     "from": str(definition_path(part["id"], project).parent)}
+                    for part in listing]}, indent=2))
+            else:
+                for part in listing:
+                    where = ("project" if project and definition_path(part["id"], project).parent
+                             != LIBRARY else "library")
+                    print("  %-22s %-16s %-9s %s"
+                          % (part["id"], part["kind"], where, part["name"]))
         elif args.show:
-            print(_show(load(args.show)))
+            part = load(args.show, project)
+            print(json.dumps(part, indent=2) if args.json else _show(part))
         elif args.signals:
-            print(json.dumps({"signals": signals_for(args.signals)}, indent=2))
+            print(json.dumps({"signals": signals_for(args.signals, project)}, indent=2))
         elif args.unverified:
-            questions = unverified(args.unverified)
+            questions = unverified(args.unverified, project)
             if args.json:
                 print(json.dumps(questions, indent=2))
             elif not questions:
@@ -249,16 +265,23 @@ def main(argv=None):
                     if question["why_it_matters"]:
                         print("      %s" % question["why_it_matters"])
         else:
-            failed = False
-            for part_id in available():
-                path = definition_path(part_id)
-                problems = validate(json.loads(path.read_text()), path)
-                print("  %-22s %s" % (part_id, "ok" if not problems
-                                      else "%d problem(s)" % len(problems)))
-                for problem in problems:
-                    print("      - %s" % problem)
-                failed = failed or bool(problems)
-            return EXIT_INVALID if failed else EXIT_OK
+            checked = []
+            for part_id in available(project):
+                path = definition_path(part_id, project)
+                checked.append({"part": part_id, "path": str(path),
+                                "problems": validate(json.loads(path.read_text()), path)})
+            if args.json:
+                print(json.dumps({"tool": "parts",
+                                  "status": "problems" if any(c["problems"] for c in checked)
+                                            else "ok",
+                                  "checked": checked}, indent=2))
+            else:
+                for one in checked:
+                    print("  %-22s %s" % (one["part"], "ok" if not one["problems"]
+                                          else "%d problem(s)" % len(one["problems"])))
+                    for problem in one["problems"]:
+                        print("      - %s" % problem)
+            return EXIT_INVALID if any(c["problems"] for c in checked) else EXIT_OK
     except PartError as broken:
         print("parts.py: %s" % broken, file=sys.stderr)
         return EXIT_INVALID

@@ -160,6 +160,45 @@ class FromPartsToAPinMapTest(unittest.TestCase):
         self.assertEqual([a for a in assignments if a["gpio"] in strapping], [])
 
 
+class AProjectCanExtendTheLibraryTest(unittest.TestCase):
+    """
+    Every function here took `project`, the docstring promised "a project's own wins", and
+    `main()` never passed one. So the override was unreachable from every entry point and the
+    library was closed at whatever ships with the plugin — a stranger's first part could not be
+    added, which makes the library a private data file with a read-only API.
+    """
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+        (self.project / "parts").mkdir()
+        self.own = part("ssd1306-oled", name="SSD1306 OLED", kind="display")
+        (self.project / "parts" / "ssd1306-oled.json").write_text(json.dumps(self.own))
+
+    def test_a_projects_own_part_is_listed(self):
+        self.assertIn("ssd1306-oled", parts.available(self.project))
+        self.assertNotIn("ssd1306-oled", parts.available())
+
+    def test_a_projects_own_part_can_be_loaded_and_asked_for_signals(self):
+        self.assertEqual(parts.load("ssd1306-oled", self.project)["name"], "SSD1306 OLED")
+        self.assertTrue(parts.signals_for(["ssd1306-oled"], self.project))
+
+    def test_a_project_definition_beats_the_shipped_one_of_the_same_name(self):
+        # The reason the override exists: what you verified yourself must not be replaced by a
+        # plugin update.
+        shadowed = part("l9110s-module", name="My own measured L9110S")
+        (self.project / "parts" / "l9110s-module.json").write_text(json.dumps(shadowed))
+        self.assertEqual(parts.load("l9110s-module", self.project)["name"],
+                         "My own measured L9110S")
+
+    def test_the_cli_reaches_it(self):
+        # The defect was exactly here: the library functions worked and no flag could get to them.
+        self.assertEqual(parts.main(["--show", "ssd1306-oled", "--project", str(self.project)]),
+                         parts.EXIT_OK)
+
+    def test_the_cli_without_a_project_still_cannot_see_it(self):
+        self.assertEqual(parts.main(["--show", "ssd1306-oled"]), parts.EXIT_INVALID)
+
+
 class TheShippedLibraryTest(unittest.TestCase):
     def test_every_part_shipped_satisfies_the_contract(self):
         for part_id in parts.available():
