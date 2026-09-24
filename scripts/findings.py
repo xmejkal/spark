@@ -287,7 +287,17 @@ def rank(findings):
 # ----------------------------------------------------------------- measurements
 
 #: How a number got here. Only `measured` means somebody put an instrument on the actual part.
-SOURCES = ("measured", "datasheet", "estimate")
+#:
+#: `simulated` exists so the loop can be demonstrated and tested without a bench, and it is a
+#: separate source rather than a convincing `measured` on purpose. A fabricated value once walked
+#: out of this project's own documentation into a live store and sat there looking exactly like a
+#: reading; a simulator that produced indistinguishable numbers would be that mistake with a
+#: feature request attached.
+SOURCES = ("measured", "datasheet", "estimate", "simulated")
+
+#: Sources that may not settle a decision that costs money. A simulated number is for showing the
+#: machinery works, never for choosing a part.
+NOT_EVIDENCE = ("estimate", "simulated")
 
 
 def record_measurement(store, name, value, unit, source, instrument=None,
@@ -384,7 +394,10 @@ def _measurement(name, entry):
     text = "%s = %s %s (%s" % (name, entry["value"], entry.get("unit") or "", entry["source"])
     if entry.get("instrument"):
         text += ", %s" % entry["instrument"]
-    return text + ")"
+    text += ")"
+    if entry["source"] in NOT_EVIDENCE:
+        text += "  <- NOT A READING"
+    return text
 
 
 def _parser():

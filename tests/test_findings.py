@@ -288,3 +288,69 @@ class AnchorNamespaceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SimulatedMeasurementTest(unittest.TestCase):
+    """
+    A pretend reading must be useful for a demo and useless as evidence.
+
+    The reason this is a separate source rather than a convincing `measured` is the incident that
+    prompted it: a documentation example ended up in a live store with an instrument and a date,
+    indistinguishable from a real reading.
+    """
+
+    def test_a_simulated_value_needs_no_instrument_and_is_marked(self):
+        shelf = store()
+        findings.record_measurement(shelf, "x", "15.3", "mA", "simulated")
+        self.assertEqual(shelf["measurements"]["x"]["source"], "simulated")
+
+    def test_it_is_not_evidence(self):
+        self.assertIn("simulated", findings.NOT_EVIDENCE)
+        self.assertNotIn("measured", findings.NOT_EVIDENCE)
+        self.assertNotIn("datasheet", findings.NOT_EVIDENCE)
+
+    def test_it_prints_with_a_warning_attached(self):
+        shown = findings._measurement(
+            "x", {"value": "15.3", "unit": "mA", "source": "simulated"})
+        self.assertIn("NOT A READING", shown)
+
+    def test_a_real_reading_carries_no_warning(self):
+        shown = findings._measurement(
+            "x", {"value": "15.3", "unit": "mA", "source": "measured", "instrument": "DMM"})
+        self.assertNotIn("NOT A READING", shown)
+
+    def test_a_simulated_value_still_unblocks_so_the_loop_can_be_demonstrated(self):
+        shelf = store()
+        findings.merge(shelf, [MP3], NAMESPACE)
+        reopened = findings.record_measurement(
+            shelf, "mp3-idle-current", "15.3", "mA", "simulated")
+        self.assertEqual(len(reopened), 1)
+
+
+class BenchSimulatorTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import bench_sim
+        self.bench = bench_sim
+
+    def test_the_same_seed_gives_the_same_reading(self):
+        """Otherwise a test that depends on a simulated value is flaky by construction."""
+        self.assertEqual(self.bench.simulate("mp3-idle-current", seed=7)["value"],
+                         self.bench.simulate("mp3-idle-current", seed=7)["value"])
+
+    def test_a_reading_lands_inside_the_model_it_claims(self):
+        reading = self.bench.simulate("mp3-idle-current", seed=1)
+        low, high = self.bench.BENCH["mp3-idle-current"]["range"]
+        self.assertGreaterEqual(reading["value"], low)
+        self.assertLessEqual(reading["value"], high)
+
+    def test_a_derived_reading_shows_its_arithmetic(self):
+        """A number a demo cannot explain is the thing this exists to avoid."""
+        reading = self.bench.simulate("motor-stall-current", seed=1)
+        self.assertIn("/", reading["working"])
+        self.assertEqual(reading["unit"], "A")
+
+    def test_it_refuses_to_invent_a_measurement_it_has_no_model_for(self):
+        with self.assertRaises(SystemExit) as refused:
+            self.bench.simulate("cavity-depth", seed=1)
+        self.assertIn("no bench model", str(refused.exception))
