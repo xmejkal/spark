@@ -21,7 +21,10 @@ name: finds-assembly-problems
 # not read the board" is indistinguishable from a zero that means "found nothing" — which read as
 # the reviewer not working. Inlining removes the question.
 execution:
-  runs: 3
+  # Two, not three. Each run is a full review and takes ~260 s against a 300 s per-run limit —
+  # one run in the first outing produced nothing at all because it ran out of time, and a zero
+  # from a timeout is indistinguishable in the score from a zero for a bad answer.
+  runs: 2
   prompt: |
     Review the MANUFACTURABILITY dimension of the board below: can this be built, populated and
     serviced by a person?
@@ -36,6 +39,10 @@ execution:
     together. Those are already checked deterministically and repeating them is noise.
 
     A finding without a consequence is an observation. Say what goes wrong, and to whom.
+
+    **Answer with the six most serious findings and stop.** One short paragraph each: what is
+    wrong, what it costs, who it lands on. An exhaustive review times out before it is graded,
+    and a reviewer that cannot say which six things matter most has not finished thinking.
 
     The board is 100 x 45 mm. Placement is `pcbX`/`pcbY` in millimetres from the centre.
 
@@ -143,7 +150,13 @@ graders:
       - the mere fact that two identical connector footprints are close together, framed as a
         geometry or spacing problem rather than a labelling one
 
-      **Scoring.** Finding 1 and 2 are the highest value; an answer that gets neither scores low
-      regardless of what else it found. An answer that finds four or more of the six, with
-      consequences, and raises no noise, is excellent. Generic manufacturability advice that does
-      not name parts on this board scores zero.
+      **Scoring.** Finding the real defects dominates. An answer that names four or more of the
+      six above, each with a consequence, PASSES — noise reduces the quality of a passing answer
+      but does not by itself fail it, because a reviewer that finds five real problems and one
+      thing better left to a script is still worth having.
+
+      Fail an answer that: names fewer than four; gives findings without consequences; or offers
+      generic manufacturability advice that does not name parts on this board.
+
+      Findings 1 and 2 carry the most weight — an answer that gets neither is failing regardless
+      of how much else it lists.
