@@ -70,6 +70,12 @@
       "verified": true,
       "source": "the module's own header: BIA BIB GND VCC AIA AIB",
       "why_it_matters": "There is no enable and no separate PWM pin, so the firmware has to encode direction and speed in the two inputs together."
+    },
+    "onboard_input_pullups_ohms": {
+      "value": 10000,
+      "verified": false,
+      "source": "Handson Technology / Eclipsera schematic for this module, page 3 (R2 R3 R4 R5, all four inputs to VCC). One vendor's schematic; clones vary.",
+      "why_it_matters": "If the module really pulls its inputs UP to VCC and the host board pulls them DOWN with 10k, the two form a divider idling near VCC/2. On a 5 V module that is ~2.5 V and on a 6 V one ~3 V, both at or above this part's 2.5 V input-high threshold \u2014 so an input the host believes is safely low may read as high before the firmware runs. Measure resistance from each input pin to VCC on the actual module before committing the PCB."
     }
   },
   "//host_requirements": "Things the host board must do that are not pins. Prose on purpose: these are design rules, and a rule nobody can read is not enforced.",
