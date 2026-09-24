@@ -32,12 +32,28 @@ You are given exactly one. Stay inside it.
   is permanently on, inrush, sag under load, quiescent draw.
 - **signals** — logic thresholds between parts on different rails, pull-ups and their budget,
   bus loading and rise time, level shifting, direction, what floats and when.
-- **thermal-mechanical** — dissipation against package rating, what fits where, connector
-  orientation and keying, cable strain, what a human has to physically reach.
+- **thermal-mechanical** — dissipation against package rating, what fits where, cable strain,
+  what a human has to physically reach.
 - **firmware-hardware** — does the code match the board: pin assignments, peripheral counts and
   conflicts, polarity, what the configuration actually selects versus what the design assumes.
+- **manufacturability** — can this be built, populated and serviced by a person? Assembly order,
+  what a soldering iron can reach once the tall parts are in, connector keying and whether two
+  plugs can be swapped, strain on hand-made leads, parts that must be fitted before or after
+  others, what has to come apart to replace a module, and whether the silkscreen says enough to
+  populate the board without the schematic.
 
 A finding outside your dimension is noise. Leave it.
+
+### What manufacturability does NOT cover
+
+`check_footprints.py` already owns the arithmetic, deterministically, and a reviewer pointed at
+a rule a script covers produces false positives and nothing else. Do not report: drill size
+against the pin that goes in it, annular ring, via class, whether a value exists in a package,
+or two identical connectors close together. Those are measured, not judged.
+
+What is left for you is everything a number cannot settle — the order things get soldered in,
+whether a person can physically reach a joint, what a wrong-but-possible assembly would destroy,
+and what the board fails to tell whoever builds it.
 
 ## What makes a finding worth returning
 

@@ -73,7 +73,7 @@ Four rungs. A thing is only as trustworthy as the highest rung it has climbed.
 
 | Rung | Question | Mechanism |
 | --- | --- | --- |
-| 1. Unit test | Does the check bite? | 101 tests. **Every check must have a design that violates it** |
+| 1. Unit test | Does the check bite? | 126 tests. **Every check must have a design that violates it** |
 | 2. Self-refutation | Can it cry wolf? | Each rule needs a case that looks wrong and is fine |
 | 3. Eval | Does the *agent* find it? | `evals/`, reported as a rate over *n* runs, with a no-plugin baseline |
 | 4. Reality | Did it hold? | The bin: `make check`, and eventually a bench |
@@ -86,7 +86,7 @@ for this.
 
 ## 4. Done
 
-Evidence, not assertion. 101 tests, 6 skills, 7 scripts, 1 agent, 3 evals.
+Evidence, not assertion. 126 tests, 6 skills, 9 scripts, 1 agent (5 dimensions), 3 evals.
 
 | Capability | Proven by |
 | --- | --- |
@@ -98,7 +98,9 @@ Evidence, not assertion. 101 tests, 6 skills, 7 scripts, 1 agent, 3 evals.
 | **Buildability** | `check_footprints.py` — drill vs pin diagonal, annular ring, via class, package vs value, cross-pluggable connectors |
 | Simulation without hardware | `spark-simulate` — fake `machine`, real MicroPython, Wokwi |
 | Photo → netlist | `spark-reverse-engineer` |
-| Design review by dimension | `design-reviewer`, 4 dimensions, isolated from the project's own prose |
+| Design review by dimension | `design-reviewer`, 5 dimensions, isolated from the project's own prose |
+| **The order** | `check_bom.py` — found one supplier part ordered for two capacitances |
+| **One call for all of it** | `check_all.py` — six checks, four outcomes, so "not asked" never reads as "clean" |
 | Measurement discipline | `bench_sim.py` marks everything `simulated`; nothing that costs money may rest on it |
 
 **The proof it works:** applied to a real board, this stack plus a four-lens review found 20+
@@ -123,10 +125,12 @@ could not look) and `skipped` (never asked). Conflating those last two is how a 
 one check out of seven looked exactly like one that ran all seven.
 *Still open from S2:* an eval showing the combined loop finds what the ad-hoc council found.
 
-**S3 — A `manufacturability` dimension for `design-reviewer`.**
-Four lenses were used today; three map onto existing dimensions. The judgement half of DFM —
-connector keying, cable strain, what a human has to reach, assembly order — has no home.
-*Done when:* the dimension exists and an eval scores it against today's findings as ground truth.
+~~**S3 — A `manufacturability` dimension for `design-reviewer`.**~~ **done.** Five dimensions
+now. It is explicitly told what `check_footprints.py` already owns — drill, ring, via class,
+package-holds-value, cross-pluggable connectors — so it cannot duplicate arithmetic a script
+settles. What is left for it is what a number cannot: assembly order, what a soldering iron can
+reach once the tall parts are in, and what the board fails to tell whoever builds it.
+*Still open:* an eval scoring it against today's findings as ground truth (see S6).
 
 ### Next
 
@@ -155,7 +159,6 @@ and stops at anything needing a human. Only once 1–3 are trusted.
 
 ### Debt
 
-- **`spark` has no git remote.** Committed locally and nowhere else.
 - **`boards/` is duplicated** between spark and the bin (S4 fixes this).
 - **The `examples/` design and `evals/fixtures/` predate the current board** and describe a
   machine that no longer exists.

@@ -1,6 +1,6 @@
 ---
 name: spark-review
-description: Review an electronics design for problems and keep track of what was found. Runs the deterministic checks, then reviews power, signals, thermal-mechanical and firmware-hardware agreement, and records findings so they survive between sessions. Use when the user asks to "review my design", "what's wrong with this board", "check my circuit", or has just changed a design and wants to know what it broke.
+description: Review an electronics design for problems and keep track of what was found. Runs the deterministic checks, then reviews power, signals, thermal-mechanical, manufacturability and firmware-hardware agreement, and records findings so they survive between sessions. Use when the user asks to "review my design", "what's wrong with this board", "check my circuit", or has just changed a design and wants to know what it broke.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/findings.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py *)
 ---
 
@@ -61,7 +61,7 @@ number nobody has taken should be told that rather than given a tick.
 
 Launch one `design-reviewer` agent per dimension, **in a single message so they run at once**:
 
-- `power` · `signals` · `thermal-mechanical` · `firmware-hardware`
+- `power` · `signals` · `thermal-mechanical` · `manufacturability` · `firmware-hardware`
 
 Each agent needs, in its prompt: its dimension, the paths it may read, the anchor namespace from
 step 1, and the brief's `must` list from `.spark/project.json`.
