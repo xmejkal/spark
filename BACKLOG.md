@@ -51,7 +51,7 @@ to be arithmetic.
 | # | Use case | State |
 | --- | --- | --- |
 | **A** | *"Here is my design — check it before I spend money"* | **works** |
-| **B** | *"I have these modules, wire them up"* | partial — the skill describes it, nothing drives it |
+| **B** | *"I have these modules, wire them up"* | **works** — `parts.py` → `assign_pins.py` → `emit_board.py` |
 | **C** | *"Here is a photo of a dead board"* | works (`spark-reverse-engineer`) |
 | **D** | *"Write and prove the firmware before hardware exists"* | works (`spark-simulate`) |
 | **E** | *"Take this from idea to ordered files"* | **not built** — the end-to-end goal |
@@ -73,7 +73,7 @@ Four rungs. A thing is only as trustworthy as the highest rung it has climbed.
 
 | Rung | Question | Mechanism |
 | --- | --- | --- |
-| 1. Unit test | Does the check bite? | 184 tests. **Every check must have a design that violates it** |
+| 1. Unit test | Does the check bite? | 199 tests. **Every check must have a design that violates it** |
 | 2. Self-refutation | Can it cry wolf? | Each rule needs a case that looks wrong and is fine |
 | 3. Eval | Does the *agent* find it? | `evals/`, reported as a rate over *n* runs, with a no-plugin baseline |
 | 4. Reality | Did it hold? | The bin: `make check`, and eventually a bench |
@@ -86,7 +86,7 @@ for this.
 
 ## 4. Done
 
-Evidence, not assertion. 184 tests, 6 skills, 12 scripts, 1 agent (5 dimensions), 4 evals,
+Evidence, not assertion. 199 tests, 6 skills, 13 scripts, 1 agent (5 dimensions), 4 evals,
 and libraries of verified boards and parts.
 
 | Capability | Proven by |
@@ -105,6 +105,7 @@ and libraries of verified boards and parts.
 | **A board library** | `boards/` + `scripts/boards.py` — adopt a verified board with one line; the contract refuses decisions in a facts file |
 | **Pin assignment** | `assign_pins.py` — spends the scarce pins last and explains every choice; refuses rather than half-assigning |
 | **A part library** | `parts/` + `parts.py` — what a module asks of its host, as data; and `--unverified` names every number nobody has checked |
+| **Modules in, board out** | `emit_board.py` — a module list becomes a `board.tsx` that builds, routes and passes the checks, and that says which of its own decisions are drafts |
 | Measurement discipline | `bench_sim.py` marks everything `simulated`; nothing that costs money may rest on it |
 
 **The proof it works:** applied to a real board, this stack plus a four-lens review found 20+
@@ -166,10 +167,20 @@ motor driver's facts and a rangefinder's have nothing in common, and one schema 
 degenerates into `{name, notes}`. Every fact carries a source and whether anyone checked, and an
 unverified number must say what depends on it or not be carried.
 
-*Still to do:* turn a pin map plus a module list into a `board.tsx` that builds — placement,
-footprints and traces.
-*Done when:* "I have a FireBeetle, an L9110S and a VL6180X" produces a `board.tsx` that builds
-and passes every check, without hand-holding.
+`scripts/emit_board.py` closes it. `{"board": "firebeetle2-esp32s3", "parts": [...]}` produces a
+`board.tsx` that `tsci build` compiles, that routes, and that passes the buildability check out of
+the box — because it sets the fabrication defaults rather than inheriting a tool's floor.
+
+What it is honest about matters as much as what it emits. The connections are derived and
+defensible; the PLACEMENT is a column, chosen because it does not overlap, and the file says so
+at the top. It also names what it has not decided — mounting holes, connector keying, trace
+widths — and carries each part's requirements of its host into the file, because a design rule
+left in a library nobody opens is not enforced.
+
+It refuses usefully too: a module list is a list of CONSUMERS, so nothing sources the motor rail,
+and it says that instead of emitting a file that silently fails to route.
+
+*Remaining, and it is a design activity rather than a gap:* real placement.
 
 **S6 — Evals for the agent-shaped gaps.** *in progress.*
 `finds-assembly-problems` added: does the manufacturability dimension find what only judgement
