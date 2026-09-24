@@ -1,7 +1,7 @@
 ---
 name: spark-review
 description: Review an electronics design for problems and keep track of what was found. Runs the deterministic checks, then reviews power, signals, thermal-mechanical and firmware-hardware agreement, and records findings so they survive between sessions. Use when the user asks to "review my design", "what's wrong with this board", "check my circuit", or has just changed a design and wants to know what it broke.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/findings.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_design.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/findings.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py *)
 ---
 
 # spark-review
@@ -26,13 +26,36 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/findings.py anchors
 
 ## 2. Run the checks
 
+One command runs all of them. Pass whatever the project has; anything you leave out is reported
+as not asked for rather than quietly passed.
+
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/check_design.py <design.json>
+${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py \
+  --circuit dist/board/circuit.json \
+  --rules .spark/rules.json \
+  --boards boards/*.json \
+  --package board-gerbers.zip
 ```
 
-Cheap, deterministic, and they own their ground: pin capability, exclusivity, the boot-log UART,
-I²C address clashes. **Do not ask a reviewer to look at anything on that list** — a reviewer
-pointed at a dimension a script already covers produces false positives and nothing else.
+Cheap, deterministic, and they own their ground:
+
+| check | owns |
+| --- | --- |
+| vendor-truth | the pin map, re-derived from the vendor's own header |
+| buildability | drill vs the pin that goes in it, annular ring, via class, package vs value, cross-pluggable connectors |
+| the-order | the BOM against the schematic it came from |
+| physics | trace current, capacitor derating, resistor dissipation, I²C rise time |
+| rules-vs-netlist | written rules against the design that was built |
+| pin-capability | wake, ADC, exclusivity, the boot-log UART, I²C address clashes |
+
+**Do not ask a reviewer to look at anything in that table.** A reviewer pointed at a dimension a
+script already covers produces false positives and nothing else — and these are faster, free,
+and cannot change their mind.
+
+**Read the three outcomes separately.** `FAIL` is a problem. `????` means a check was given what
+it needs and still could not look, which is not a clean board. `?` lines are things the design
+does not know yet — an unmeasured rail is not a passing rail, and a project whose worst risk is a
+number nobody has taken should be told that rather than given a tick.
 
 ## 3. Review the dimensions, in parallel
 

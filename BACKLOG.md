@@ -112,16 +112,16 @@ Ordered by value. Each item says what it is worth and how we will know it worked
 
 ### Now
 
-**S1 — Move the BOM check into the plugin.**
-`check-bom.py` lives in the bin, not in spark. It found a supplier part ordered for two different
-capacitances. Generic, proven, in the wrong repo.
-*Done when:* it is `spark/scripts/`, has tests, and the bin calls it from there.
+~~**S1 — Move the BOM check into the plugin.**~~ **done.** `scripts/check_bom.py`, 13 tests, and
+the project-specific regex turned out to be dead code — "has a value and no supplier part" is the
+rule on any board, with nothing to configure.
 
-**S2 — Wire the new scripts into `spark-review`.**
-`check_physics`, `check_vendor_pins` and `check_footprints` exist and nothing invokes them. The
-loop still runs only the two original checks.
-*Done when:* one command runs every deterministic check, then fans out reviewers, and the eval
-shows the combined loop finding what the ad-hoc council found.
+~~**S2 — Wire the new scripts into `spark-review`.**~~ **done.** `scripts/check_all.py` runs all
+six deterministic checks in one call and answers once, so adding a check no longer means editing
+a skill. It reports four outcomes, not two: the usual pair plus `could-not-run` (asked, and still
+could not look) and `skipped` (never asked). Conflating those last two is how a review that ran
+one check out of seven looked exactly like one that ran all seven.
+*Still open from S2:* an eval showing the combined loop finds what the ad-hoc council found.
 
 **S3 — A `manufacturability` dimension for `design-reviewer`.**
 Four lenses were used today; three map onto existing dimensions. The judgement half of DFM —
