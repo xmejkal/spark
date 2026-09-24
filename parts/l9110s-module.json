@@ -57,7 +57,7 @@
     "continuous_current_a": {
       "value": 0.8,
       "verified": true,
-      "source": "datasheet, per channel"
+      "source": "800 mA per channel, stated in the Handson guide's own description and in the GME/Eclipsera datasheet. Marketplace listings for 'L9110S' quote 500 mA, 800 mA, 1.5 A and 2.5 A \u2014 the name is a commodity rather than one part, so this is the figure for THIS module, not for anything sold under that name."
     },
     "supply_range_v": {
       "value": [
@@ -75,9 +75,15 @@
     },
     "onboard_input_pullups_ohms": {
       "value": 10000,
-      "verified": false,
-      "source": "Handson Technology / Eclipsera schematic for this module, page 3 (R2 R3 R4 R5, all four inputs to VCC). One vendor's schematic; clones vary.",
-      "why_it_matters": "If the module really pulls its inputs UP to VCC and the host board pulls them DOWN with 10k, the two form a divider idling near VCC/2. On a 5 V module that is ~2.5 V and on a 6 V one ~3 V, both at or above this part's 2.5 V input-high threshold \u2014 so an input the host believes is safely low may read as high before the firmware runs. Measure resistance from each input pin to VCC on the actual module before committing the PCB."
+      "verified": true,
+      "source": "Handson Technology L9110S module guide, kept at parts/datasheets/L9110S_module_guide_Handson_with_schematic.pdf in the bin (also sold by GME/Eclipsera as 772-209), schematic on page 3: R2, R3, R4 and R5, all 10K, all to VCC",
+      "note": "Read off the schematic rather than reported. All FOUR inputs are pulled up, so the module alone idles both channels high, which its truth table makes Off. But a host that adds its own 10k pulldown forms a divider at about VCC/2 \u2014 near 3 V on a 6 V supply, above this part's 2.5 V input-high threshold. Clones are built by many factories, so confirm on the module in hand: resistance from each input pin to VCC."
+    },
+    "schematic_numbers_vcc_and_gnd_opposite_to_the_silkscreen": {
+      "value": true,
+      "verified": true,
+      "source": "Handson Technology L9110S module guide, kept at parts/datasheets/L9110S_module_guide_Handson_with_schematic.pdf in the bin (also sold by GME/Eclipsera as 772-209): the board photo on page 1 reads B-IA B-IB GND VCC A-IA A-IB along the header, while the P3 connector symbol on page 3 puts VCC on pin 3 and GND on pin 4",
+      "note": "The silkscreen is the physical truth and is what pin_order follows. Recorded because anyone wiring from the schematic's pin numbers reverses the supply on a motor driver, and a vendor document disagreeing with its own board is exactly the kind of thing that is discovered twice."
     }
   },
   "//host_requirements": "Things the host board must do that are not pins. Prose on purpose: these are design rules, and a rule nobody can read is not enforced.",
@@ -96,7 +102,7 @@
   "sources": {
     "datasheet": "https://www.elecrow.com/download/datasheet-l9110.pdf"
   },
-  "//pin_order": "Pad 1..N of the footprint, by this file's own pin names, null where the module has a pad this file does not wire. Read off the silkscreen in the vendor photo and confirmed against the Handson/Eclipsera guide, an archived Banana Robotics article and a Fritzing part: B-IA B-IB GND VCC A-IA A-IB. One reseller listing gives a different order, which is why this is sourced.",
+  "//pin_order": "Pad 1..N of the footprint, by this file's own pin names. Read directly off the silkscreen in the vendor's board photo \u2014 B-IA B-IB GND VCC A-IA A-IB \u2014 and corroborated by the Handson guide text, an archived Banana Robotics article and a Fritzing part. One reseller listing gives a different order and the vendor's own schematic symbol numbers VCC and GND the other way round, which is why this says where it came from.",
   "pin_order": [
     "BIA",
     "BIB",
