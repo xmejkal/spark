@@ -41,8 +41,10 @@ a rule checklist in the loop. Follow it.
    power/ground, overlaps). Fix and rebuild until clean. Do not rely on the `tsci check` CLI
    subcommands (work-in-progress) — read the circuit.json errors.
 
-6. **Verify before emitting fab output.** Hand off to the `spark-verify` skill: run the checks,
-   export to KiCad, run `kicad-cli sch erc`. Do NOT produce Gerbers while any pin is unverified.
+6. **Verify before emitting fab output.** Hand off to `spark-review`, which ends with the fab
+   gate: `check_all.py --project .`, then `boards.py --validate --for-fab` and
+   `parts.py --unverified`, then `kicad-cli sch erc` if KiCad is installed. Do NOT produce Gerbers
+   while something load-bearing is unverified.
 
 7. **Render and show.** `npx tsci export -f schematic-svg board.tsx`, convert to PNG if needed,
    and show the user the schematic. Summarize what is verified vs still a placeholder.
@@ -65,7 +67,8 @@ a rule checklist in the loop. Follow it.
 ## Honest limits (state these to the user)
 
 - tscircuit's autorouter can occasionally emit shorts or unmanufacturable vias — always run a
-  DRC pass (spark-verify) before ordering, and never trust auto-routing unverified.
+  DRC pass (the gate at the end of spark-review) before ordering, and never trust
+  auto-routing unverified.
 - Auto-placement is beta; place major modules yourself.
 - Footprints from `jlcpcb:` auto-import are unverified until checked.
 - Human review before fabrication is non-negotiable.
@@ -76,7 +79,8 @@ a rule checklist in the loop. Follow it.
 - `references/verified-parts.md` — the verified-parts library (pin maps + provenance).
 - `references/vendor-knowledge.md` — how to pull verified data from Espressif & DFRobot (and others).
 - `references/part-data.md` — the part-data backbone: real footprints/3D/datasheets per part, and auto-solve-or-ask for layout.
-- `references/verification-loop.md` — the checks-to-fab gate (shared with spark-verify).
+- `references/verification-loop.md` — the checks-to-fab gate; the enforced version is the
+  gate section at the end of `spark-review`.
 - `references/pcb-layout.md` — the fab stage: honest AI-layout limits + the two PCB pipelines.
 - `references/tscircuit-recipes.md` — PROVEN commands: local run, the cap→net routing fix, real
   footprints (footprinter strings + `tsci convert` from GitHub `.kicad_mod`), auto-solve placement.

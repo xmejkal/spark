@@ -1,6 +1,6 @@
 ---
 name: spark-review
-description: Review an electronics design for problems and keep track of what was found. Runs the deterministic checks, then reviews power, signals, thermal-mechanical, manufacturability and firmware-hardware agreement, and records findings so they survive between sessions. Use when the user asks to "review my design", "what's wrong with this board", "check my circuit", or has just changed a design and wants to know what it broke.
+description: Review an electronics design for problems, gate it before fabrication, and keep track of what was found. Runs every deterministic check, then reviews power, signals, thermal-mechanical, manufacturability and firmware-hardware agreement, and records findings so they survive between sessions. Use when the user asks to "review my design", "what's wrong with this board", "check my circuit", "verify this", "run ERC or DRC", is about to order or fabricate a board, or has just changed a design and wants to know what it broke. For a quick deterministic pass with no agents, /spark:check is cheaper.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/findings.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py *)
 ---
 
@@ -161,6 +161,34 @@ regresses, because a fix justified by a number that has since moved needs lookin
 **Never paste an example value into a real store.** That has already happened once here: the
 sample figure from this document ended up in a live project, indistinguishable from a reading,
 while the handover note still said the number had never been taken.
+
+## Before fabrication, the gate
+
+The one rule that separates a real design from plausible-but-dead output: **never emit
+fabrication files while something load-bearing is unverified.** Rigour scales with stakes — at
+the schematic stage warnings are fine and you just show them; at the ordering stage they are not.
+
+Two commands enforce it, and they are the ones this gate used to describe in prose without
+naming:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/boards.py --validate --for-fab
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified <every part on the board>
+```
+
+The first refuses a board definition missing what a PCB actually needs. The second lists every
+number nobody has checked, each with what depends on it. Neither is advisory: an open one is a
+thing to settle or to accept out loud, not to scroll past.
+
+If KiCad is installed, `kicad-cli sch erc --format json --exit-code-violations` is the
+authoritative electrical-rules check (exit 0 clean, 5 violations), and `kicad-cli pcb drc` is
+what catches an autorouter short or an unmanufacturable via before the fab house does. If it is
+not installed, say so rather than skipping it silently — an ERC that did not run is not an ERC
+that passed.
+
+**Ground truth is the bench.** Breadboard the modules before ordering a PCB. Auto-routing is the
+weakest link in this whole pipeline and human review before fabrication is not optional; say so
+plainly rather than implying the checks have covered it.
 
 ## What this does not do
 

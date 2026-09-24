@@ -373,6 +373,29 @@ class BenchSimulatorTest(unittest.TestCase):
             self.bench.simulate("cavity-depth", seed=1)
         self.assertIn("no bench model", str(refused.exception))
 
+    def test_the_machine_output_says_it_is_not_a_reading(self):
+        """
+        This module's stated single design constraint is that everything it produces is marked
+        simulated, because "a simulator that produced convincing readings would be that same
+        failure shipped as a feature". The human path printed NOT A READING. The --json path
+        printed a bare value and unit, indistinguishable from something somebody measured — in
+        the one format a machine consumes, which is the reader least able to notice.
+
+        Every test above exercises `simulate()` and none went through `main`, which is exactly
+        why nothing caught it.
+        """
+        import contextlib  # noqa: PLC0415 - local, to keep this file standalone
+        import io
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.bench.main(["mp3-idle-current", "--json"])
+        emitted = json.loads(out.getvalue())
+
+        self.assertEqual(emitted["source"], "simulated")
+        self.assertIs(emitted["measured"], False)
+        self.assertIn("NOT A READING", emitted["warning"])
+
 
 class AgentDoorTest(unittest.TestCase):
     """

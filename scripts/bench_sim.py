@@ -119,7 +119,16 @@ def main(argv=None):
     reading = simulate(args.name, args.seed)
 
     if args.json:
-        print(json.dumps(reading, indent=2))
+        # The human path printed "NOT A READING" and this one printed a bare number with a unit,
+        # indistinguishable from something somebody measured — in the one output format a machine
+        # consumes, in a tool whose stated single design constraint is that everything it produces
+        # is marked simulated. That is the failure this module exists to prevent, shipped as a
+        # feature, on the path least able to notice.
+        print(json.dumps(dict(reading, source="simulated", measured=False,
+                              warning="NOT A READING. Nobody measured anything. This number came "
+                                      "from a model of the part, and recording it with any source "
+                                      "but 'simulated' would make a guess look like a reading."),
+                         indent=2))
         return 0
 
     print("%s = %s %s" % (reading["name"], reading["value"], reading["unit"]))
