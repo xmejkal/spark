@@ -171,10 +171,11 @@ def check_trace_currents(board, rails, rise_c):
     """Can the copper carry what the rail is expected to carry?"""
     findings = []
     narrowest = board.narrowest_by_net()
-    if not narrowest:
-        return [Finding("trace-current", "the board", "no routed traces to check",
-                        severity="could-not-run")]
 
+    # Deliberately no early return when nothing is routed. An earlier version bailed out here,
+    # which preempted every per-rail rule below — so a board whose returns are all poured, or
+    # one checked before routing, reported "could not run" instead of what is actually known
+    # about each rail. Absence of copper is a fact about a rail, not a reason to stop.
     for rail, spec in sorted(rails.items()):
         current = spec.get("max_current_a")
         if current is None:
