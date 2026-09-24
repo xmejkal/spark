@@ -73,7 +73,7 @@ Four rungs. A thing is only as trustworthy as the highest rung it has climbed.
 
 | Rung | Question | Mechanism |
 | --- | --- | --- |
-| 1. Unit test | Does the check bite? | 126 tests. **Every check must have a design that violates it** |
+| 1. Unit test | Does the check bite? | 142 tests. **Every check must have a design that violates it** |
 | 2. Self-refutation | Can it cry wolf? | Each rule needs a case that looks wrong and is fine |
 | 3. Eval | Does the *agent* find it? | `evals/`, reported as a rate over *n* runs, with a no-plugin baseline |
 | 4. Reality | Did it hold? | The bin: `make check`, and eventually a bench |
@@ -86,7 +86,8 @@ for this.
 
 ## 4. Done
 
-Evidence, not assertion. 126 tests, 6 skills, 9 scripts, 1 agent (5 dimensions), 3 evals.
+Evidence, not assertion. 142 tests, 6 skills, 10 scripts, 1 agent (5 dimensions), 3 evals,
+and a library of verified board definitions.
 
 | Capability | Proven by |
 | --- | --- |
@@ -101,6 +102,7 @@ Evidence, not assertion. 126 tests, 6 skills, 9 scripts, 1 agent (5 dimensions),
 | Design review by dimension | `design-reviewer`, 5 dimensions, isolated from the project's own prose |
 | **The order** | `check_bom.py` — found one supplier part ordered for two capacitances |
 | **One call for all of it** | `check_all.py` — six checks, four outcomes, so "not asked" never reads as "clean" |
+| **A board library** | `boards/` + `scripts/boards.py` — adopt a verified board with one line; the contract refuses decisions in a facts file |
 | Measurement discipline | `bench_sim.py` marks everything `simulated`; nothing that costs money may rest on it |
 
 **The proof it works:** applied to a real board, this stack plus a four-lens review found 20+
@@ -134,10 +136,14 @@ reach once the tall parts are in, and what the board fails to tell whoever build
 
 ### Next
 
-**S4 — Extract the board plugin system into spark.**
-`boards/active.json`, `tools/boards.py`, the facts-not-decisions contract and the vendor check
-all live in the bin. This is the most reusable thing built this week and it is in the wrong repo.
-*Done when:* a second project can adopt a board definition without copying files.
+~~**S4 — Extract the board plugin system into spark.**~~ **done.** The contract, the resolver and
+a library of verified definitions now ship with the plugin. Criterion met and demonstrated: a new
+directory containing only `boards/active.json` resolves the full FireBeetle definition — 25 pins,
+22 wake-capable GPIOs — with nothing copied. A project's own definition still wins.
+
+The resolver writes `.spark/board.json` and every consumer reads that, which deleted a second,
+partial implementation of the same lookup in TypeScript rather than growing it to search two
+directories.
 
 **S5 — Use case B end to end: modules in, schematic out.**
 The largest gap between what the skills describe and what they drive.
@@ -159,7 +165,6 @@ and stops at anything needing a human. Only once 1–3 are trusted.
 
 ### Debt
 
-- **`boards/` is duplicated** between spark and the bin (S4 fixes this).
 - **The `examples/` design and `evals/fixtures/` predate the current board** and describe a
   machine that no longer exists.
 - **Plugin prose is long.** ~1,100 lines of skill markdown; some is reference, some is repetition.
