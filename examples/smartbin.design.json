@@ -1,0 +1,53 @@
+{
+  "//": "The smart bin, as actually built. This is the regression fixture: it must pass, and the pin choices in it were expensive to learn.",
+  "board": "../../smartbin-local/boards/xiao-esp32-c6.json",
+  "parts": [
+    {
+      "ref": "Rangefinder",
+      "part": "VL6180X",
+      "i2c": { "bus": "i2c0", "address": "0x29" },
+      "pins": [
+        { "signal": "INT", "pin": "D0", "needs": ["wake"] },
+        { "signal": "SDA", "pin": "D4" },
+        { "signal": "SCL", "pin": "D5" }
+      ]
+    },
+    {
+      "ref": "OpenButton",
+      "part": "tactile 6x6",
+      "pins": [{ "signal": "A", "pin": "D1", "needs": ["wake"] }]
+    },
+    {
+      "ref": "ModeButton",
+      "part": "tactile 6x6",
+      "pins": [{ "signal": "A", "pin": "D6" }]
+    },
+    {
+      "ref": "StallSense",
+      "part": "0.33R shunt + RC",
+      "pins": [{ "signal": "SENSE", "pin": "D2", "needs": ["adc"] }]
+    },
+    {
+      "ref": "MotorDriver",
+      "part": "L9110S",
+      "pins": [
+        { "signal": "AIA", "pin": "D3" },
+        { "signal": "AIB", "pin": "D8" }
+      ]
+    },
+    {
+      "ref": "Mp3Player",
+      "part": "DFR0534",
+      "reads_serial": true,
+      "pins": [{ "signal": "RXD", "pin": "D9" }]
+    },
+    {
+      "ref": "StatusLed",
+      "part": "bicolour common cathode",
+      "pins": [
+        { "signal": "RED", "pin": "D7" },
+        { "signal": "GREEN", "pin": "D10" }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "spark",
-  "version": "0.4.0",
-  "description": "AI electronics design. Describe a circuit (or hand it a board photo) and get a verified tscircuit schematic and PCB. Bundles ESP32/PCB design-rule checklists, a verified-parts library, vendor-knowledge ingestion (Espressif, Seeed and DFRobot datasheets, pin maps, EDA files and code examples), a photo-to-schematic reverse-engineering procedure, and a verification gate that refuses to emit a board with unverified part pins. Wires up the Espressif docs, part-lookup, bench-instrument and KiCad MCP servers.",
+  "version": "0.5.0",
+  "description": "AI electronics design. Checks a design made of modules plugged into a dev board for the mistakes no EDA tool catches: a wake source on a pin that cannot wake the chip, an analogue input on a digital-only pin, two parts on one pin, a serial module on the boot-log UART, and two I2C devices at one address. Also bundles ESP32/PCB design-rule checklists, a verified-parts library, vendor-knowledge ingestion (Espressif, Seeed and DFRobot), a photo-to-schematic reverse-engineering procedure, and a verification gate that refuses to emit a board with unverified part pins.",
   "author": {
     "name": "Petr Smejkal"
   },
@@ -18,5 +18,8 @@
     "espressif",
     "seeed",
     "dfrobot"
-  ]
+  ],
+  "experimental": {
+    "evals": "./evals"
+  }
 }

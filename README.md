@@ -11,7 +11,7 @@ layer, plus the workflow that uses it.
 
 ## What's in the box (bundled)
 
-Three skills and their reference knowledge:
+Five skills and their reference knowledge:
 
 | Skill | What it does |
 | --- | --- |
@@ -19,6 +19,7 @@ Three skills and their reference knowledge:
 | **spark-reverse-engineer** | Board photo -> fuse copper-reading + datasheet pinouts + functional wiring -> netlist hypothesis + part guesses -> a bench test protocol to confirm. |
 | **spark-simulate** (+ hook) | Test firmware before the hardware exists: injected fakes and a fake `machine` module for offline tests, then Wokwi (browser / CLI / MCP) for the real binary on a simulated chip. Honest about what no simulator proves. |
 | **spark-verify** | The gate: tscircuit checks + `kicad-cli` ERC/DRC + pin cross-check; refuses fab output while any pin is unverified. |
+| **spark-check** | The five mistakes no EDA tool catches, because no EDA format carries the facts: a wake source on a pin that cannot wake the chip, an analogue input on a digital-only pin, two parts on one pin, a serial module on the boot-log UART, and two I2C devices at one address. Runs in a second, exits non-zero, names the pin. |
 
 Bundled knowledge (in the skills' `references/`): `design-rules.md` (general PCB best practices +
 the ESP32-C6/XIAO checklist), `verified-parts.md` (pin maps + provenance + the Seeed-vs-DFRobot
