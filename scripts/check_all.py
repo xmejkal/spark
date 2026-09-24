@@ -133,6 +133,19 @@ class VendorTruth(Check):
                 "problems": problems, "unmeasured": unchecked}
 
 
+class Firmware(Check):
+    def call(self, inputs):
+        check_firmware = load("check_firmware")
+        source = Path(inputs["firmware"]).read_text()
+        constants = check_firmware.read_pin_constants(source)
+        if not constants:
+            return {"status": COULD_NOT_RUN,
+                    "reason": "no PIN_* constants in %s — nothing to compare, which is not the "
+                              "same as agreeing" % Path(inputs["firmware"]).name}
+        board = json.loads(Path(inputs["board_file"]).read_text())
+        return findings_result(check_firmware.check_against_board(constants, board))
+
+
 class TheOrder(Check):
     def call(self, inputs):
         check_bom = load("check_bom")
@@ -156,6 +169,8 @@ CHECKS = [
             "the board obeys physics, not just itself"),
     RulesVsNetlist("rules-vs-netlist", ["circuit", "rules"],
                    "written rules hold in the design that was built"),
+    Firmware("firmware-vs-board", ["firmware", "board_file"],
+             "every pin the firmware drives is one this board can do it with"),
     PinCapability("pin-capability", ["design"],
                   "every pin can do what it is being asked to do"),
 ]
@@ -200,6 +215,8 @@ def main(argv=None):
         description="Run every deterministic check and answer once.")
     parser.add_argument("--design", help="a design description, for the pin-capability check")
     parser.add_argument("--board", help="the board definition that design is built around")
+    parser.add_argument("--board-file", help="a board definition, for the firmware check")
+    parser.add_argument("--firmware", help="a firmware file holding PIN_* constants")
     parser.add_argument("--boards", nargs="*", default=[],
                         help="board definitions to verify against their vendor headers")
     parser.add_argument("--circuit", help="the built netlist")

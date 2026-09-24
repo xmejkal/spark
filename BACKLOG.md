@@ -73,7 +73,7 @@ Four rungs. A thing is only as trustworthy as the highest rung it has climbed.
 
 | Rung | Question | Mechanism |
 | --- | --- | --- |
-| 1. Unit test | Does the check bite? | 199 tests. **Every check must have a design that violates it** |
+| 1. Unit test | Does the check bite? | 216 tests. **Every check must have a design that violates it** |
 | 2. Self-refutation | Can it cry wolf? | Each rule needs a case that looks wrong and is fine |
 | 3. Eval | Does the *agent* find it? | `evals/`, reported as a rate over *n* runs, with a no-plugin baseline |
 | 4. Reality | Did it hold? | The bin: `make check`, and eventually a bench |
@@ -86,7 +86,7 @@ for this.
 
 ## 4. Done
 
-Evidence, not assertion. 199 tests, 6 skills, 13 scripts, 1 agent (5 dimensions), 4 evals,
+Evidence, not assertion. 216 tests, 6 skills, 14 scripts, 1 agent (5 dimensions), 4 evals,
 and libraries of verified boards and parts.
 
 | Capability | Proven by |
@@ -106,6 +106,7 @@ and libraries of verified boards and parts.
 | **Pin assignment** | `assign_pins.py` — spends the scarce pins last and explains every choice; refuses rather than half-assigning |
 | **A part library** | `parts/` + `parts.py` — what a module asks of its host, as data; and `--unverified` names every number nobody has checked |
 | **Modules in, board out** | `emit_board.py` — a module list becomes a `board.tsx` that builds, routes and passes the checks, and that says which of its own decisions are drafts |
+| **Firmware vs board** | `check_firmware.py` — matched on GPIO, not on constant names, so renaming a constant cannot silently switch the check off |
 | Measurement discipline | `bench_sim.py` marks everything `simulated`; nothing that costs money may rest on it |
 
 **The proof it works:** applied to a real board, this stack plus a four-lens review found 20+
@@ -144,7 +145,8 @@ second, for free. That difference — not cleverness — is the product.
 **So the priorities change:**
 
 1. **Deterministic checks first.** Every defect class that can be settled by arithmetic should be,
-   and should move out of the reviewer's remit when it is.
+   and should move out of the reviewer's remit when it is. *Done so far under this rule:*
+   `check_firmware.py`, which takes firmware-hardware agreement off the reviewer entirely.
 2. **Libraries with provenance second.** Facts the model would otherwise invent, carrying sources
    and an honest `verified: false`.
 3. **Generators third.** Artifacts, not opinions.
