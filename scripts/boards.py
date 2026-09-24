@@ -1,0 +1,364 @@
+#!/usr/bin/env python3
+"""
+Which board this project is built around — resolved in one place, and checked against a contract.
+
+    python3 tools/boards.py --path        the active board's definition file
+    python3 tools/boards.py --id          the active board's id
+    python3 tools/boards.py --list        every board available to switch to
+    python3 tools/boards.py --paths       their file paths, for tools that take a list
+    python3 tools/boards.py --get chip    one field, by dotted path
+    python3 tools/boards.py --validate    check every board file against the contract
+    python3 tools/boards.py --validate --for-fab
+                                          also require what the PCB needs, not just the firmware
+
+Boards are drop-in: add `boards/<id>.json`, put that id in `boards/active.json`, run `make`.
+Nothing else names a board. This file is both the library the Python tools import and the command
+the Makefile and `make check` call, because a second copy of "where is the board file" would be
+the exact duplication that boards/ exists to remove.
+
+The contract is enforced rather than documented. A board definition that a person merely
+*described* correctly is how the C6 pin map nearly shipped with D3 read as GPIO3; a definition
+that a program refuses to load cannot fail that way. Structural validity and fab-readiness are
+separate on purpose — the firmware can be built and simulated against a board whose footprint
+nobody has verified, and it is better to say so than to either block that work or let an
+unverified footprint reach a gerber.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+#: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
+#: without copying a file it would then have to maintain. A project may still keep its own in
+#: `boards/`, and its own wins — a definition you have verified yourself always beats a shared
+#: one, and a project must never be surprised by a library update.
+LIBRARY = Path(__file__).resolve().parent.parent / "boards"
+
+#: Where a project keeps what is its own: which board it uses, and any definitions of its own.
+PROJECT_BOARDS_DIR = "boards"
+SELECTION_NAME = "active.json"
+DEFINITION_SUFFIX = ".json"
+
+#: The resolved, validated board is written here so that every consumer — Make, a Python
+#: generator, a TypeScript tool — reads ONE file at a known path instead of each re-implementing
+#: the search and the schema check. That duplication was real: a TypeScript copy of this resolver
+#: re-checked the schema version, the selection file and the id, and would have had to learn to
+#: search a second directory the moment the library existed.
+RESOLVED_NAME = "board.json"
+SPARK_DIR = ".spark"
+
+#: Files in boards/ that are not board definitions.
+NOT_A_BOARD = frozenset({SELECTION_NAME})
+
+#: The only schema version this code understands. A board file claiming a different one is
+#: refused rather than read optimistically: the failure mode of guessing is a wrong pin map,
+#: which is silent until the hardware is built.
+SUPPORTED_SCHEMA = 1
+
+#: What every board definition must carry for the firmware and the simulator to be generated.
+REQUIRED_KEYS = ("schema", "id", "name", "chip", "wokwi_part_type",
+                 "pins", "wake_capable_gpio", "adc_gpio", "physical")
+
+#: What a board must additionally carry before it can be laid out and fabricated. Kept apart
+#: from REQUIRED_KEYS because these are the fields that, if wrong, cost money.
+REQUIRED_FOR_FAB = ("footprint_module", "footprint_export")
+
+#: Keys a board file may NOT contain, because they are decisions rather than facts about the
+#: hardware. boards/README.md states the rule; this enforces it. `wake_on_high` is the named
+#: example and is exactly what went wrong: it was removed from one board file when the rule was
+#: written and left in the other, and --validate said "ok" for a day.
+#:
+#: A fact is true of the board whatever you build with it. A decision is a choice you made, and
+#: a board file that accumulates choices stops being swappable, which is the point of boards/.
+FORBIDDEN_KEYS = {
+    "wake_on_high": "follows from how the buttons are wired; belongs in config.WAKE_ON_HIGH",
+    "i2c_freq": "a firmware setting, not a property of the board",
+    "i2c_freq_hz": "a firmware setting, not a property of the board",
+    "pin_assignments": "which function sits on which pin is the design; see mcu-pins.ts",
+    "signals": "which function sits on which pin is the design; see mcu-pins.ts",
+}
+
+#: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
+#: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
+GPIO_MIN, GPIO_MAX = 0, 63
+
+EXIT_OK, EXIT_INVALID = 0, 1
+
+
+class BoardError(Exception):
+    """A board definition that cannot be used, with the reason a person needs to fix it."""
+
+
+def project_root(start: Path = None) -> Path:
+    """
+    The project this is being run for: the nearest directory up the tree holding `boards/` or
+    `.spark/`. Explicit beats clever, so `--project` overrides it.
+    """
+    here = (start or Path.cwd()).resolve()
+    for directory in [here, *here.parents]:
+        if (directory / PROJECT_BOARDS_DIR / SELECTION_NAME).is_file() \
+                or (directory / SPARK_DIR).is_dir():
+            return directory
+    raise BoardError(
+        f"no project here: nothing up from {here} holds {PROJECT_BOARDS_DIR}/{SELECTION_NAME} "
+        f"or {SPARK_DIR}/")
+
+
+def _read_json(path: Path, what: str) -> dict:
+    if not path.is_file():
+        raise BoardError(f"no {what} at {path}")
+    try:
+        return json.loads(path.read_text())
+    except ValueError as broken:
+        raise BoardError(f"{path} is not valid JSON: {broken}") from broken
+
+
+def selection_file(project: Path) -> Path:
+    return project / PROJECT_BOARDS_DIR / SELECTION_NAME
+
+
+def active_id(project: Path) -> str:
+    """The id of the board this project is currently built around."""
+    selection = _read_json(selection_file(project), "board selection")
+    board_id = selection.get("board")
+    if not board_id:
+        raise BoardError(f"{selection_file(project)} names no board "
+                         f'(expected a "board" key holding a board id)')
+    return board_id
+
+
+def search_path(project: Path) -> list:
+    """Where definitions are looked for, nearest first. A project's own always wins."""
+    return [project / PROJECT_BOARDS_DIR, LIBRARY]
+
+
+def definition_path(project: Path, board_id: str = None) -> Path:
+    """Where a board's definition lives. Defaults to the active board."""
+    board_id = board_id or active_id(project)
+    for directory in search_path(project):
+        path = directory / f"{board_id}{DEFINITION_SUFFIX}"
+        if path.is_file():
+            return path
+    raise BoardError(f"no board definition for {board_id!r}.\n"
+                     f"  available: {', '.join(available(project)) or '(none)'}")
+
+
+def available(project: Path) -> list:
+    """Every board that could be switched to — the project's own, plus the shipped library."""
+    found = {}
+    for directory in reversed(search_path(project)):      # nearest wins, so fill it in last
+        if not directory.is_dir():
+            continue
+        for path in directory.glob(f"*{DEFINITION_SUFFIX}"):
+            if path.name not in NOT_A_BOARD:
+                found[path.stem] = path
+    return sorted(found)
+
+
+def load(project: Path, board_id: str = None) -> dict:
+    """A board definition, validated. Defaults to the active board."""
+    path = definition_path(project, board_id)
+    board = _read_json(path, "board definition")
+    problems = validate(board, path)
+    if problems:
+        raise BoardError(f"{path} does not meet the board contract:\n" +
+                         "\n".join(f"  - {problem}" for problem in problems))
+    return board
+
+
+def resolve(project: Path) -> Path:
+    """
+    Write the active board, validated, to one known path.
+
+    Every consumer then reads that instead of re-implementing the search and the schema check in
+    its own language. The file is derived — regenerate it, never edit it.
+    """
+    board = load(project)
+    destination = project / SPARK_DIR / RESOLVED_NAME
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    # A distinct key, not "//": board definitions carry their own "//" comment, and merging on
+    # that silently dropped the generated-file warning. The test noticed.
+    destination.write_text(json.dumps(
+        dict({"//generated": "GENERATED by spark's boards.py from boards/active.json. Do not "
+                             "edit — run the resolver again. This exists so Make, Python and "
+                             "TypeScript read one validated file instead of three copies of a "
+                             "search."}, **board),
+        indent=2) + "\n")
+    return destination
+
+
+def validate(board: dict, path: Path, for_fab: bool = False) -> list:
+    """
+    Every way this board definition breaks the contract. Empty means it holds.
+
+    Returns a list rather than raising on the first fault so that a person fixing a new board
+    file sees all of it at once.
+    """
+    problems = []
+
+    schema = board.get("schema")
+    if schema != SUPPORTED_SCHEMA:
+        problems.append(f"schema is {schema!r}, but this code understands only {SUPPORTED_SCHEMA}")
+
+    for key in REQUIRED_KEYS:
+        if key not in board:
+            problems.append(f"missing required key {key!r}")
+
+    if board.get("id") != path.stem:
+        problems.append(f"id is {board.get('id')!r} but the file is named {path.stem!r}; "
+                        f"the two must match, because active.json selects by filename")
+
+    pins = board.get("pins")
+    if isinstance(pins, dict):
+        if not pins:
+            problems.append("pins is empty: a board with no pins cannot be wired to anything")
+        for label, gpio in pins.items():
+            # Two labels sharing one GPIO is legal and common — on the FireBeetle 2 S3 both A4
+            # and SS are GPIO10 — so duplicates are not an error. A non-integer is.
+            if not isinstance(gpio, int) or isinstance(gpio, bool):
+                problems.append(f"pin {label!r} maps to {gpio!r}, which is not a GPIO number")
+            elif not GPIO_MIN <= gpio <= GPIO_MAX:
+                problems.append(f"pin {label!r} maps to GPIO{gpio}, outside {GPIO_MIN}-{GPIO_MAX}")
+    elif pins is not None:
+        problems.append("pins must be an object of silkscreen label -> GPIO number")
+
+    for key in ("wake_capable_gpio", "adc_gpio"):
+        value = board.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, list) or not all(
+                isinstance(gpio, int) and not isinstance(gpio, bool) for gpio in value):
+            problems.append(f"{key} must be a list of GPIO numbers")
+
+    for role_name, role in (board.get("pin_roles") or {}).items():
+        if not isinstance(role, dict) or "gpio" not in role or "note" not in role:
+            problems.append(f"pin_roles.{role_name} needs both a 'gpio' list and a 'note'")
+            continue
+        if not role["note"].strip():
+            # The note is the whole value of a role: "GPIO0 is special" helps nobody, whereas
+            # "held low at reset it enters the bootloader" decides whether a button can go there.
+            problems.append(f"pin_roles.{role_name} has an empty note; say what the caveat is")
+
+    # Decisions must not leak into a facts file, at any depth.
+    def forbidden(node, path=""):
+        if not isinstance(node, dict):
+            return
+        for key, value in node.items():
+            if key in FORBIDDEN_KEYS:
+                where = "%s.%s" % (path, key) if path else key
+                problems.append(
+                    "%s is a DECISION, not a fact about this board: %s. See boards/README.md"
+                    % (where, FORBIDDEN_KEYS[key]))
+            forbidden(value, "%s.%s" % (path, key) if path else key)
+
+    forbidden(board)
+
+    physical = board.get("physical")
+    if for_fab:
+        if not isinstance(physical, dict):
+            problems.append("physical is missing, so the board cannot be laid out")
+        else:
+            for key in REQUIRED_FOR_FAB:
+                if not physical.get(key):
+                    problems.append(
+                        f"physical.{key} is not set: no verified footprint for this board, "
+                        f"so it is not ready to be laid out or fabricated")
+
+    return problems
+
+
+#: Separates the levels of a key path given to --get, e.g. `physical.width_mm`.
+KEY_PATH_SEPARATOR = "."
+
+
+def get(project: Path, key_path: str, board_id: str = None):
+    """
+    One field out of a board definition, addressed by dotted path.
+
+    A generic accessor rather than a flag per field, because the Makefile and any future consumer
+    should be able to reach a new board fact without this file growing a new option for it.
+    """
+    value = load(project, board_id)
+    for step in key_path.split(KEY_PATH_SEPARATOR):
+        if not isinstance(value, dict) or step not in value:
+            raise BoardError(f"no {key_path!r} in this board definition "
+                             f"(stopped at {step!r})")
+        value = value[step]
+    return value
+
+
+def _validate_all(project: Path, for_fab: bool) -> int:
+    """Check every board file, not just the active one, and say what is wrong with each."""
+    failed = False
+    for board_id in available(project):
+        path = definition_path(project, board_id)
+        try:
+            board = _read_json(path, "board definition")
+        except BoardError as broken:
+            print(f"  {board_id}: {broken}")
+            failed = True
+            continue
+        problems = validate(board, path, for_fab=for_fab)
+        marker = "active" if board_id == active_id(project) else "     "
+        where = "library" if path.parent == LIBRARY else "project"
+        if problems:
+            print(f"  {marker}  {board_id} ({where}): {len(problems)} problem(s)")
+            for problem in problems:
+                print(f"           - {problem}")
+            failed = True
+        else:
+            print(f"  {marker}  {board_id} ({where}): ok")
+    return EXIT_INVALID if failed else EXIT_OK
+
+
+def main(argv=None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="boards.py", description="Resolve and check the project's board definitions.")
+    what = parser.add_mutually_exclusive_group(required=True)
+    what.add_argument("--path", action="store_true", help="the active board's definition file")
+    what.add_argument("--id", action="store_true", help="the active board's id")
+    what.add_argument("--list", action="store_true", help="every board available to switch to")
+    what.add_argument("--paths", action="store_true",
+                      help="every board definition file, for tools that take a list")
+    what.add_argument("--validate", action="store_true", help="check every board file")
+    what.add_argument("--get", metavar="KEY.PATH",
+                      help="one field from the active board, e.g. chip or physical.width_mm")
+    what.add_argument("--resolve", action="store_true",
+                      help="write the validated active board to .spark/board.json")
+    parser.add_argument("--for-fab", action="store_true",
+                        help="with --validate, also require what the PCB needs")
+    parser.add_argument("--project", help="the project to act on (default: found upwards)")
+    args = parser.parse_args(argv)
+
+    try:
+        project = Path(args.project).resolve() if args.project else project_root()
+        if args.path:
+            print(definition_path(project))
+        elif args.resolve:
+            print(resolve(project))
+        elif args.id:
+            print(active_id(project))
+        elif args.paths:
+            # Deliberately not `boards/*.json`: that glob also matches active.json, which is a
+            # selection rather than a board. Everything that needs the list should ask here.
+            print(" ".join(str(definition_path(project, b)) for b in available(project)))
+        elif args.get:
+            print(get(project, args.get))
+        elif args.list:
+            current = active_id(project)
+            for board_id in available(project):
+                where = "library" if definition_path(project, board_id).parent == LIBRARY \
+                    else "project"
+                print(f"  {'*' if board_id == current else ' '} {board_id} ({where})")
+        else:
+            return _validate_all(project, for_fab=args.for_fab)
+    except BoardError as broken:
+        print(f"boards.py: {broken}", file=sys.stderr)
+        return EXIT_INVALID
+    return EXIT_OK
+
+
+if __name__ == "__main__":
+    sys.exit(main())
