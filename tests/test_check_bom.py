@@ -143,5 +143,42 @@ class EndToEndTest(unittest.TestCase):
         self.assertNotEqual(check_bom.EXIT_COULD_NOT_RUN, check_bom.EXIT_OK)
 
 
+class APartWhoseFootprintCannotSayWhichPadIsWhichTest(unittest.TestCase):
+    """
+    The value rule exempts anything without a value, because headers, connectors and plug-in
+    modules legitimately have none and their footprint says everything about them.
+
+    A semiconductor is the opposite. `sot23` does not say which pad is the gate — a real SOT-23
+    P-FET is gate, source, drain, and the tool that drew this project's high-side switch bound
+    pad 1 to the drain. Fitting any actual part would put the load on the gate and a GPIO on the
+    drain, shorting a 2 A rail through it. The line had no value, so it was exempt, and nothing
+    in the whole suite looked at it.
+    """
+
+    def test_a_semiconductor_with_no_part_number_is_caught(self):
+        problems = check_bom.check_missing_parts(
+            [{"Designator": "Q1", "Value": "", "Footprint": "sot23", "JLCPCB Part #": ""}])
+        self.assertEqual(len(problems), 1)
+        self.assertIn("does not say which pad", problems[0])
+
+    def test_a_semiconductor_with_a_part_number_is_fine(self):
+        self.assertEqual(check_bom.check_missing_parts(
+            [{"Designator": "Q1", "Value": "", "Footprint": "sot23",
+              "JLCPCB Part #": "C15127"}]), [])
+
+    def test_a_header_with_no_value_and_no_part_is_still_exempt(self):
+        # The exemption has to survive, or every hand-fitted module and connector cries wolf.
+        for footprint in ("headermodule6", "jst_ph_2", "pinrow5"):
+            with self.subTest(footprint=footprint):
+                self.assertEqual(check_bom.check_missing_parts(
+                    [{"Designator": "J1", "Value": "", "Footprint": footprint,
+                      "JLCPCB Part #": ""}]), [])
+
+    def test_a_passive_with_a_value_is_still_caught_by_the_original_rule(self):
+        problems = check_bom.check_missing_parts(
+            [{"Designator": "C1", "Value": "100nF", "Footprint": "0603", "JLCPCB Part #": ""}])
+        self.assertIn("has a value", problems[0])
+
+
 if __name__ == "__main__":
     unittest.main()

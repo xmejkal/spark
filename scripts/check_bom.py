@@ -21,7 +21,13 @@ cannot rot when a catalogue changes:
   * one supplier part number used for two different values is a contradiction on its face;
   * a supplier footprint that disagrees with the footprint in the design is tscircuit telling you
     the part it matched is not the part you drew;
-  * a passive with a value but no supplier part is an unbuildable line in the order.
+  * a passive with a value but no supplier part is an unbuildable line in the order;
+  * a three-pin semiconductor with no supplier part at all, because its FOOTPRINT does not
+    say which pad is the gate. That one is not hypothetical: this project's high-side switch
+    was drawn as a bare `sot23` with no part number, and the tool bound pad 1 to the drain
+    while every real SOT-23 P-FET is gate, source, drain. Fitting any actual part would have
+    put the load on the gate and a GPIO on the drain. It had no VALUE either, so the rule
+    above exempted it.
 
 What it deliberately does NOT do is claim a part number is correct. Proving that needs the
 supplier's catalogue, and a check that silently stops verifying when a network call fails is
@@ -75,6 +81,16 @@ def check_duplicate_parts(rows):
     return problems
 
 
+#: Packages whose FOOTPRINT does not say what each pad does, so the part number is the only
+#: thing that can. A 0603 is symmetric and a header is mechanical — either is safe to fit from
+#: the drawing alone. A three-pin semiconductor is not: SOT-23 MOSFETs are gate-source-drain,
+#: SOT-23 BJTs are base-emitter-collector, and a regulator is something else again.
+SEMICONDUCTOR_PACKAGES = (
+    "sot23", "sot-23", "sot223", "sot-223", "sot89", "sot323", "sot363",
+    "sod123", "sod323", "sod523", "to220", "to-220", "to252", "dpak", "to92", "to-92",
+)
+
+
 def check_missing_parts(rows):
     """
     A line with a value nobody can source.
@@ -89,10 +105,27 @@ def check_missing_parts(rows):
     """
     problems = []
     for row in rows:
-        if (row.get("Value") or "").strip() and not (row.get("JLCPCB Part #") or "").strip():
+        supplier = (row.get("JLCPCB Part #") or "").strip()
+        value = (row.get("Value") or "").strip()
+        footprint = (row.get("Footprint") or "").strip().lower()
+
+        if value and not supplier:
             problems.append(
                 "%s has a value (%s) but no supplier part, so it cannot be ordered or placed"
-                % (row["Designator"], row["Value"]))
+                % (row["Designator"], value))
+        elif not supplier and any(package in footprint for package in SEMICONDUCTOR_PACKAGES):
+            # The exemption above is for hand-fitted things whose footprint says everything:
+            # a header, a connector, a module. A semiconductor is the opposite — its FOOTPRINT
+            # does not say which pad is the gate. A real SOT-23 P-FET is gate-source-drain, and
+            # the tool that drew this board bound pad 1 to the drain, so fitting any actual part
+            # puts the load on the gate and a GPIO on the drain. Nothing else catches that,
+            # because the line has no value either and so was exempt from the rule above.
+            problems.append(
+                "%s is a %s with no supplier part. Its footprint does not say which pad is "
+                "which — a SOT-23 MOSFET is gate, source, drain in an order the package does "
+                "not encode — so until a real part is named, nothing can check that the design "
+                "connects to the pads that part actually has"
+                % (row["Designator"], footprint))
     return problems
 
 
