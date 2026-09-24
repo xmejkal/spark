@@ -173,6 +173,27 @@ def rails_without_a_source(part_list):
     return sorted(consumed)
 
 
+def outputs_with_nothing_on_them(part_list):
+    """
+    Nets a part drives that nothing on this board receives.
+
+    The mirror of `rails_without_a_source`, and it has to be said too: a speaker is not a module,
+    so nobody lists one, and the amplifier's two outputs each end up a net with one member. That
+    is a net that cannot route, in a file whose header says every connection is derived and
+    checked — and the errors a build then reports should be the ones this file predicted rather
+    than a surprise.
+    """
+    driven = []
+    for part in part_list:
+        for power in part.get("power") or []:
+            if power.get("direction") != "out":
+                continue
+            net = net_for(power)
+            if net:
+                driven.append((net, part["name"], power["pin"]))
+    return sorted(driven)
+
+
 def emit(board, part_list, assignments, placements, width, height):
     by_signal = {entry["signal"]: entry for entry in assignments}
 
@@ -246,6 +267,12 @@ def emit(board, part_list, assignments, placements, width, height):
 
     lines.append("")
     lines.append("    {/* Power. Which rail each module pin belongs to comes from its part file. */}")
+    for net, part_name, pin in outputs_with_nothing_on_them(part_list):
+        lines.append("    {/* net.%s is driven by %s.%s and NOTHING ON THIS BOARD RECEIVES IT."
+                     % (net, part_name, pin))
+        lines.append("        A speaker, a motor or a connector is not a module, so nobody lists")
+        lines.append("        one — whatever this drives has to be added, or the net has one")
+        lines.append("        member and will not route. */}")
     for net in rails_without_a_source(part_list):
         lines.append("    {/* NOTHING ON THIS BOARD SOURCES net.%s. A module list is a list of" % net)
         lines.append("        consumers — whatever supplies this rail (a connector, a regulator,")
@@ -334,6 +361,10 @@ def main(argv=None):
     sys.stdout.write(emit(board, part_list, assignments, placements, width, height))
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
+    for net, part_name, pin in outputs_with_nothing_on_them(part_list):
+        print("note: %s.%s drives net.%s and nothing on this board receives it — add whatever it "
+              "drives, or that net has one member and will not route" % (part_name, pin, net),
+              file=sys.stderr)
     for net in rails_without_a_source(part_list):
         print("note: nothing sources net.%s — add whatever supplies it, or that net has one "
               "member and the board will not route" % net, file=sys.stderr)

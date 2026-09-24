@@ -203,6 +203,41 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
                 self.assertEqual(used - set(part["pin_order"]), set())
 
 
+class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
+    """
+    A generated board has nets with one member, and that is not a bug — a battery, a speaker and
+    a motor are not modules, so nobody lists them and nothing on the board is at the other end.
+    What matters is that the file SAYS SO, in both directions, before anyone builds it.
+
+    Built against the real engine while this was written: 415 elements, 3 errors, and the three
+    nets the build refused to route were exactly the three the generator had named.
+    """
+
+    def test_a_rail_nothing_supplies_is_named(self):
+        self.assertIn("MOTOR6V", emit_board.rails_without_a_source([parts.load("l9110s-module")]))
+
+    def test_an_output_nothing_receives_is_named_too(self):
+        # The half that was missing. Excluding outputs from the rail check was right — the part
+        # IS the source — but it left two unroutable nets unmentioned.
+        driven = emit_board.outputs_with_nothing_on_them([parts.load("dfr0534-module")])
+        self.assertEqual({net for net, _, _ in driven}, {"SPEAKER_P", "SPEAKER_N"})
+
+    def test_both_kinds_reach_the_generated_file(self):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        ids = ["l9110s-module", "dfr0534-module"]
+        part_list = [parts.load(part_id) for part_id in ids]
+        assignments, _ = assign_pins.assign(board, parts.signals_for(ids))
+        placements, width, height = emit_board.place(board, part_list)
+        tsx = emit_board.emit(board, part_list, assignments, placements, width, height)
+        self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", tsx)
+        self.assertIn("NOTHING ON THIS BOARD RECEIVES IT", tsx)
+
+    def test_a_rail_the_module_supplies_is_not_reported_either_way(self):
+        part_list = [parts.load("vl6180x-breakout")]
+        self.assertNotIn("V33", emit_board.rails_without_a_source(part_list))
+        self.assertEqual(emit_board.outputs_with_nothing_on_them(part_list), [])
+
+
 class RailsWithoutASourceTest(unittest.TestCase):
     def test_a_rail_the_module_supplies_is_not_reported(self):
         # The microcontroller module provides 3V3 and ground, so consuming those is fine.
