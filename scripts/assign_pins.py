@@ -282,22 +282,26 @@ def main(argv=None):
 
     wanted = json.loads(path.read_text())
 
-    # A requirements file may name PARTS instead of listing every signal by hand. The signals a
-    # part asks for are a property of the part, not of this design, so they belong in the part
-    # library where they can be verified once and reused.
-    signals = list(wanted.get("signals") or [])
-    if wanted.get("parts"):
-        try:
-            signals = parts_library.signals_for(wanted["parts"]) + signals
-        except parts_library.PartError as broken:
-            print("could not read a part: %s" % broken)
-            return EXIT_COULD_NOT_RUN
+    # The project is resolved first because BOTH libraries need it: a project's own board file
+    # beats the shipped one, and so does its own part file. Reading the parts before this was
+    # settled is how the parts library ended up being consulted without a project at all.
     try:
         project = Path(args.project).resolve() if args.project else boards.project_root()
         board = boards.load(project, args.board or wanted.get("board"))
     except boards.BoardError as broken:
         print("could not load the board: %s" % broken)
         return EXIT_COULD_NOT_RUN
+
+    # A requirements file may name PARTS instead of listing every signal by hand. The signals a
+    # part asks for are a property of the part, not of this design, so they belong in the part
+    # library where they can be verified once and reused.
+    signals = list(wanted.get("signals") or [])
+    if wanted.get("parts"):
+        try:
+            signals = parts_library.signals_for(wanted["parts"], project) + signals
+        except parts_library.PartError as broken:
+            print("could not read a part: %s" % broken)
+            return EXIT_COULD_NOT_RUN
 
     try:
         assignments, leftover = assign(board, signals)
@@ -307,7 +311,8 @@ def main(argv=None):
 
     # Whatever the parts do not know about themselves travels with the answer. A pin map that
     # looks complete while resting on unmeasured numbers is the thing this plugin exists to stop.
-    open_questions = parts_library.unverified(wanted["parts"]) if wanted.get("parts") else []
+    open_questions = (parts_library.unverified(wanted["parts"], project)
+                      if wanted.get("parts") else [])
 
     if args.json:
         print(json.dumps({"tool": "assign_pins", "board": board["id"],

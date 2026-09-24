@@ -258,8 +258,9 @@ def main(argv=None):
     try:
         project = Path(args.project).resolve() if args.project else boards.project_root()
         board = boards.load(project, args.board or wanted.get("board"))
-        part_list = [parts_library.load(part_id) for part_id in wanted.get("parts", [])]
-        signals = parts_library.signals_for(wanted.get("parts", [])) + list(
+        part_list = [parts_library.load(part_id, project)
+                     for part_id in wanted.get("parts", [])]
+        signals = parts_library.signals_for(wanted.get("parts", []), project) + list(
             wanted.get("signals") or [])
         assignments, _ = assign_pins.assign(board, signals)
     except (boards.BoardError, parts_library.PartError, assign_pins.Impossible) as broken:
