@@ -254,6 +254,85 @@ CHECKS = [
 ]
 
 
+#: Where each input lives in a project laid out the usual way. Globs, first list wins.
+#:
+#: This exists so the caller has ONE argument. The command a skill documented named five paths,
+#: and got two of them wrong: it globbed `boards/*.json`, which matches the selection file rather
+#: than a board definition, and it never passed `--design` or `--firmware` at all — so the
+#: flagship check was permanently unasked and the review still called itself complete.
+CONVENTIONS = {
+    "circuit": ["dist/board/circuit.json", "dist/*/circuit.json"],
+    "rules": [".spark/rules.json"],
+    "package": ["*-gerbers.zip", "fab/*.zip"],
+    "design": ["*.design.json", ".spark/design.json"],
+    "firmware": ["firmware/*/config.py", "firmware/config.py", "config.py"],
+}
+
+
+def discover(project):
+    """
+    Find each input by convention, and say what was found and what was looked for.
+
+    Two rules keep auto-discovery from being worse than the explicit paths it replaces:
+
+      * every resolved path is PRINTED. Silently picking up a stale artifact is the one way this
+        makes things worse rather than better, and the BOM check has already been bitten by it.
+      * a glob matching more than one file is AMBIGUOUS, not a coin toss. Two fab packages in a
+        directory is exactly when checking the wrong one costs money.
+    """
+    project = Path(project)
+    found, notes = {}, []
+
+    for name, patterns in CONVENTIONS.items():
+        matches = []
+        for pattern in patterns:
+            matches = sorted(project.glob(pattern))
+            if matches:
+                break
+        if len(matches) == 1:
+            found[name] = str(matches[0])
+            notes.append("%-12s %s" % (name, matches[0].relative_to(project)))
+        elif matches:
+            notes.append("%-12s AMBIGUOUS, %d matches: %s — name one explicitly"
+                         % (name, len(matches),
+                            ", ".join(str(m.relative_to(project)) for m in matches)))
+        else:
+            notes.append("%-12s not found (looked for %s)" % (name, ", ".join(patterns)))
+
+    # The board library knows where board definitions are; a glob does not, and guessing is how
+    # the selection file ended up being checked against a vendor header it does not have.
+    try:
+        boards = load("boards")  # via load(), so this file stays the only place scripts are named
+        definitions = [str(boards.definition_path(project, board_id))
+                       for board_id in boards.available(project)]
+        if definitions:
+            found["boards"] = definitions
+            notes.append("%-12s %d definition(s): %s"
+                         % ("boards", len(definitions),
+                            ", ".join(sorted(boards.available(project)))))
+        active = boards.definition_path(project)
+        found["board_file"] = str(active)
+        notes.append("%-12s %s" % ("board_file", Path(active).name))
+    except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
+        notes.append("%-12s not resolved (%s)" % ("boards", broken))
+
+    return found, notes
+
+
+def inputs_for(args):
+    """
+    What each check will be given, and the record of where it came from.
+
+    An explicit flag always beats a convention, so `--project` is a starting point rather than a
+    straitjacket: discover the usual layout, then let the caller correct any one of them.
+    """
+    explicit = {key: value for key, value in vars(args).items() if value}
+    if not args.project:
+        return vars(args), []
+    discovered, resolved = discover(args.project)
+    return dict(discovered, **explicit), resolved
+
+
 def run(inputs):
     return [check.run(inputs) for check in CHECKS]
 
@@ -321,6 +400,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="check_all.py",
         description="Run every deterministic check and answer once.")
+    parser.add_argument("--project",
+                        help="a project directory; every input is discovered in it by "
+                             "convention, and each resolved path is printed")
     parser.add_argument("--design", help="a design description, for the pin-capability check")
     parser.add_argument("--board", help="the board definition that design is built around")
     parser.add_argument("--board-file", help="a board definition, for the firmware check")
@@ -333,10 +415,22 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="for a caller that is not a person")
     args = parser.parse_args(argv)
 
-    results = run(vars(args))
+    inputs, resolved = inputs_for(args)
+    results = run(inputs)
     overall = verdict(results)
-    print(json.dumps({"tool": "check_all", "status": overall, "results": results}, indent=2)
-          if args.json else render(results))
+
+    if args.json:
+        print(json.dumps({"tool": "check_all", "status": overall,
+                          "resolved": resolved, "results": results}, indent=2))
+    else:
+        if resolved:
+            # Printed every time, not on a flag. Silently picking up a stale artifact is the one
+            # way discovery is worse than the five paths it replaces.
+            print("  resolved from %s:" % args.project)
+            for note in resolved:
+                print("    %s" % note)
+            print()
+        print(render(results))
     return {OK: EXIT_OK, PROBLEMS: EXIT_PROBLEMS,
             COULD_NOT_RUN: EXIT_COULD_NOT_RUN}[overall]
 

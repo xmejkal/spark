@@ -13,6 +13,7 @@ they render differently, and only one of them can sink the exit code.
     python3 -m unittest discover -s tests
 """
 
+import argparse
 import json
 import sys
 import tempfile
@@ -205,6 +206,71 @@ class OkIsUnreachableWhileAnythingWentUncheckedTest(unittest.TestCase):
         self.assertTrue(all(r["status"] == check_all.COULD_NOT_RUN for r in looked),
                         "a check reported on a board that was never built")
         self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
+
+
+class OneArgumentFindsTheInputsTest(unittest.TestCase):
+    """
+    `--project` exists because the command a skill documented named five paths and got two wrong:
+    it globbed `boards/*.json`, which matches the selection file rather than a board definition,
+    and it never passed `--design` or `--firmware` — so the flagship check was permanently
+    unasked while the review called itself complete.
+
+    Discovery is only an improvement if it cannot quietly pick the wrong file, which is what the
+    two rules here are about.
+    """
+
+    def _project(self, *relative_paths):
+        root = Path(tempfile.mkdtemp())
+        for relative in relative_paths:
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("[]")
+        return root
+
+    def test_it_finds_what_a_usual_layout_holds(self):
+        root = self._project("dist/board/circuit.json", ".spark/rules.json", "board-gerbers.zip")
+        found, _ = check_all.discover(root)
+        self.assertEqual(found["circuit"], str(root / "dist/board/circuit.json"))
+        self.assertEqual(found["rules"], str(root / ".spark/rules.json"))
+        self.assertEqual(found["package"], str(root / "board-gerbers.zip"))
+
+    def test_two_candidates_are_ambiguous_rather_than_a_coin_toss(self):
+        # Two fab packages in one directory is exactly when checking the wrong one costs money.
+        root = self._project("old-gerbers.zip", "new-gerbers.zip")
+        found, notes = check_all.discover(root)
+        self.assertNotIn("package", found)
+        self.assertTrue(any("AMBIGUOUS" in note for note in notes), notes)
+
+    def test_what_is_missing_says_where_it_looked(self):
+        found, notes = check_all.discover(self._project())
+        self.assertNotIn("circuit", found)
+        self.assertTrue(any("circuit" in n and "dist/board/circuit.json" in n for n in notes))
+
+    def test_every_resolved_path_is_reported(self):
+        # The one way discovery is worse than five explicit paths is by silently picking up a
+        # stale artifact, so nothing may be used without being named.
+        root = self._project("dist/board/circuit.json", ".spark/rules.json")
+        found, notes = check_all.discover(root)
+        for name in found:
+            with self.subTest(input=name):
+                self.assertTrue(any(note.startswith(name) for note in notes))
+
+    def test_an_explicit_flag_beats_the_convention(self):
+        root = self._project("dist/board/circuit.json", ".spark/rules.json")
+        chosen = written("chosen.json", [])
+        args = argparse.Namespace(project=str(root), circuit=chosen, rules=None, design=None,
+                                  board=None, board_file=None, firmware=None, boards=None,
+                                  package=None, json=False)
+        inputs, _ = check_all.inputs_for(args)
+        self.assertEqual(inputs["circuit"], chosen, "the convention overrode an explicit path")
+        self.assertEqual(inputs["rules"], str(root / ".spark/rules.json"),
+                         "an input nobody named should still come from the project")
+
+    def test_without_a_project_nothing_is_discovered(self):
+        args = argparse.Namespace(project=None, circuit="given.json", json=False)
+        inputs, resolved = check_all.inputs_for(args)
+        self.assertEqual(resolved, [])
+        self.assertEqual(inputs["circuit"], "given.json")
 
 
 class ABrokenCheckDoesNotHideTheOthers(unittest.TestCase):

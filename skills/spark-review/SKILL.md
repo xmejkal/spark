@@ -26,16 +26,24 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/findings.py anchors
 
 ## 2. Run the checks
 
-One command runs all of them. Pass whatever the project has; anything you leave out is reported
-as not asked for rather than quietly passed.
+One command, one argument. It finds the circuit, the rules, the fab package, the firmware, the
+board definitions and the design file inside the project, and **prints every path it resolved**
+before it reports anything.
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py \
-  --circuit dist/board/circuit.json \
-  --rules .spark/rules.json \
-  --boards boards/*.json \
-  --package board-gerbers.zip
+${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py --project .
 ```
+
+Read the resolution block first, every time. Anything shown as `not found` is a check that will
+be skipped, and it says where it looked. Anything shown as `AMBIGUOUS` is two candidates it
+refused to choose between — name that one with its own flag (`--circuit`, `--rules`, `--package`,
+`--firmware`, `--design`, `--board-file`), which always beats the convention.
+
+This step used to list five explicit paths, and two were wrong in a way nothing announced: it
+globbed `boards/*.json`, which matches the project's board *selection* file rather than a board
+definition, and it never passed `--design` or `--firmware` at all. So the flagship check was
+permanently unasked, a board that could not be read still showed a tick, and the review called
+itself complete having run three of seven checks.
 
 Cheap, deterministic, and they own their ground:
 
@@ -46,7 +54,8 @@ Cheap, deterministic, and they own their ground:
 | the-order | the BOM against the schematic it came from |
 | physics | trace current, capacitor derating, resistor dissipation, I²C rise time |
 | rules-vs-netlist | written rules against the design that was built |
-| pin-capability | wake, ADC, exclusivity, the boot-log UART, I²C address clashes |
+| pin-capability | wake, ADC, exclusivity by GPIO, the console UART, I²C address clashes |
+| firmware-vs-board | every pin the firmware drives against the board and the agreed pin map |
 
 **Do not ask a reviewer to look at anything in that table.** A reviewer pointed at a dimension a
 script already covers produces false positives and nothing else — and these are faster, free,
@@ -65,6 +74,14 @@ Launch one `design-reviewer` agent per dimension, **in a single message so they 
 
 Each agent needs, in its prompt: its dimension, the paths it may read, the anchor namespace from
 step 1, and the brief's `must` list from `.spark/project.json`.
+
+**`firmware-hardware` is narrower than its name.** `check_firmware.py` already owns pin agreement
+— every constant against what the board brings out, against its strapping pins, and against the
+pin map that was agreed, matched on GPIO rather than on name. Do not ask a reviewer for any of
+that. What is left for it is what a number cannot settle: whether the firmware's behaviour is
+possible on this hardware at all. Does a power policy assume a wake source the board cannot
+provide? Does a timeout assume a stroke the motor cannot finish? Does the code assume a peripheral
+that is shared with something else?
 
 **Give each one the primary artefacts only** — the schematic, the board definition, the firmware
 config. Not the README, not the handover note, not the design-rationale document. Those hold the
