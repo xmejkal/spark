@@ -95,5 +95,14 @@
   },
   "sources": {
     "datasheet": "https://www.elecrow.com/download/datasheet-l9110.pdf"
-  }
+  },
+  "//pin_order": "Pad 1..N of the footprint, by this file's own pin names, null where the module has a pad this file does not wire. Read off the silkscreen in the vendor photo and confirmed against the Handson/Eclipsera guide, an archived Banana Robotics article and a Fritzing part: B-IA B-IB GND VCC A-IA A-IB. One reseller listing gives a different order, which is why this is sourced.",
+  "pin_order": [
+    "BIA",
+    "BIB",
+    "GND",
+    "VCC",
+    "AIA",
+    "AIB"
+  ]
 }

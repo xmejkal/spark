@@ -155,6 +155,54 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         self.assertTrue(any("short into each other" in p for p in problems), problems)
 
 
+class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
+    """
+    `pinLabels` were numbered from the order the pins happened to appear in the JSON file.
+
+    That is not a fact about anything. The L9110S's header reads BIA BIB GND VCC AIA AIB on its
+    own silkscreen, and the generator emitted `pin1: "AIA"` — so every trace to the module landed
+    on the wrong pad. The board would build, the render would look right, and nothing would work.
+    The physical order simply was not written down, so the generator could not have been correct.
+    """
+
+    def test_pads_are_numbered_from_the_module_not_from_the_file(self):
+        part = parts.load("l9110s-module")
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        assignments, _ = assign_pins.assign(board, parts.signals_for(["l9110s-module"]))
+        placements, width, height = emit_board.place(board, [part])
+        tsx = emit_board.emit(board, [part], assignments, placements, width, height)
+        # Off the silkscreen, confirmed four independent ways.
+        self.assertIn('pin1: "BIA", pin2: "BIB", pin3: "GND", pin4: "VCC", pin5: "AIA", '
+                      'pin6: "AIB"', tsx)
+
+    def test_a_pad_the_part_does_not_wire_is_left_empty_not_renumbered(self):
+        # The audio module has ten pads and wires five. Closing the gaps would put SPKN on pad 4.
+        part = parts.load("dfr0534-module")
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        assignments, _ = assign_pins.assign(board, parts.signals_for(["dfr0534-module"]))
+        placements, width, height = emit_board.place(board, [part])
+        tsx = emit_board.emit(board, [part], assignments, placements, width, height)
+        self.assertIn('pin9: "SPKN", pin10: "SPKP"', tsx)
+        self.assertNotIn('pin4: "SPKN"', tsx)
+
+    def test_a_part_with_no_recorded_pinout_is_refused(self):
+        # The rangefinder deliberately has none: four different VL6180X breakouts exist and they
+        # do not share a pinout, so any order would be invented.
+        unpinned = parts.load("vl6180x-breakout")
+        self.assertIn(unpinned["name"], emit_board.parts_without_a_pinout([unpinned]))
+
+    def test_every_pin_the_part_uses_has_a_pad(self):
+        # The contract's half of it: a pin with no pad would silently connect to nothing.
+        for part_id in parts.available():
+            part = parts.load(part_id)
+            if not part.get("pin_order"):
+                continue
+            used = {need["pin"] for need in part.get("needs") or []}
+            used |= {supply["pin"] for supply in part.get("power") or []}
+            with self.subTest(part=part_id):
+                self.assertEqual(used - set(part["pin_order"]), set())
+
+
 class RailsWithoutASourceTest(unittest.TestCase):
     def test_a_rail_the_module_supplies_is_not_reported(self):
         # The microcontroller module provides 3V3 and ground, so consuming those is fine.

@@ -94,6 +94,17 @@ def has_an_outline(part):
         body.get("height"), (int, float))
 
 
+def parts_without_a_pinout(part_list):
+    """
+    Parts that never say which pad is pin 1.
+
+    Without it the generator numbered pads from the order the pins appear in the JSON file, which
+    is not a fact about anything. Every trace to such a module lands wherever that order happened
+    to put it, the board builds, the render looks right, and nothing works.
+    """
+    return [part["name"] for part in part_list if not part.get("pin_order")]
+
+
 def parts_without_an_outline(part_list):
     """
     Parts whose size nobody has recorded.
@@ -211,10 +222,12 @@ def emit(board, part_list, assignments, placements, width, height):
 
     for part in part_list:
         name = component_name(part)
-        labels = {need["pin"]: need["pin"] for need in part.get("needs") or []}
-        labels.update({power["pin"]: power["pin"] for power in part.get("power") or []})
-        pin_labels = ", ".join('pin%d: "%s"' % (index + 1, pin)
-                               for index, pin in enumerate(labels))
+        # Numbered from the part's own pin_order, which is pad 1..N of the real module. This read
+        # the order the pins happened to appear in the JSON file, so an L9110S whose header reads
+        # BIA BIB GND VCC AIA AIB came out as pin1: "AIA" and every trace landed on the wrong pad.
+        pin_labels = ", ".join('pin%d: "%s"' % (position, pad)
+                               for position, pad in enumerate(part.get("pin_order") or [], 1)
+                               if pad is not None)
         lines.append("    {/* %s */}" % part["name"])
         lines.append('    <chip name="%s" footprint="%s" pcbX={%g} pcbY={%g}'
                      % (name, part.get("footprint", "pinrow4"), *placements[name]))
@@ -295,6 +308,16 @@ def main(argv=None):
     if not (board.get("physical") or {}).get("footprint_export"):
         print("this board has no verified footprint, so a board file would reference nothing",
               file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+
+    unpinned = parts_without_a_pinout(part_list)
+    if unpinned:
+        print("no pin_order recorded for: %s\n"
+              "  Pads would be numbered from the order the pins appear in the part file, which "
+              "is not a fact about the module. Every trace would land on whichever pad that "
+              "order happened to choose.\n"
+              "  Record pad 1..N by name, with a source — the silkscreen or the vendor drawing."
+              % ", ".join(unpinned), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
     unsized = parts_without_an_outline(part_list)

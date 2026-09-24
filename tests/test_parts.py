@@ -160,6 +160,42 @@ class FromPartsToAPinMapTest(unittest.TestCase):
         self.assertEqual([a for a in assignments if a["gpio"] in strapping], [])
 
 
+class WhichPadIsPinOneTest(unittest.TestCase):
+    """
+    The generator numbered pads from the order the pins happened to appear in the file, which is
+    not a fact about any module. `pin_order` is that fact; these are the ways it can be wrong and
+    still look fine.
+    """
+
+    def _problems(self, **overrides):
+        definition = part(**overrides)
+        return parts.validate(definition, written(definition))
+
+    def test_a_pad_naming_something_the_part_never_mentions_is_caught(self):
+        # It would silently wire nothing — the worst shape of wrong, because the file looks
+        # complete and the board builds.
+        problems = self._problems(pin_order=["P", "TYPO"])
+        self.assertTrue(any("never mentions" in p for p in problems), problems)
+
+    def test_a_pin_with_no_pad_is_caught(self):
+        problems = self._problems(pin_order=[None, None])
+        self.assertTrue(any("does not say where" in p for p in problems), problems)
+
+    def test_the_same_pad_named_twice_is_caught(self):
+        problems = self._problems(pin_order=["P", "P"])
+        self.assertTrue(any("twice" in p for p in problems), problems)
+
+    def test_an_unwired_pad_is_allowed_to_be_empty(self):
+        # A module with ten pads of which you use five is the normal case; the gaps must stay
+        # gaps, or everything after one shifts by a pad.
+        self.assertEqual(self._problems(pin_order=[None, "P", None]), [])
+
+    def test_a_part_that_records_no_pinout_at_all_still_validates(self):
+        # Absent is honest — four different VL6180X breakouts exist with different pinouts. The
+        # generator refuses such a part; the contract does not force a guess into the file.
+        self.assertEqual(self._problems(), [])
+
+
 class AProjectCanExtendTheLibraryTest(unittest.TestCase):
     """
     Every function here took `project`, the docstring promised "a project's own wins", and

@@ -84,7 +84,7 @@
     "If the design sleeps, put a high-side switch on its rail and hold the gate OFF with a resistor \u2014 the host's GPIO goes high-impedance during deep sleep and reset, which is exactly when the module must be off.",
     "It boots from cold whenever its rail returns, so nothing may be sent for a few hundred milliseconds after power-up."
   ],
-  "footprint": "headermodule6",
+  "footprint": "pinrow10",
   "body_mm": {
     "width": 30.0,
     "height": 22.0,
@@ -94,5 +94,18 @@
   },
   "sources": {
     "vendor": "https://wiki.dfrobot.com/Voice_Module_SKU__DFR0534"
-  }
+  },
+  "//pin_order": "Ten pads in two rows of five, from DFRobot's dimension drawing and datasheet p.2: row A is VCC GND RX TX BUSY, row B is ONE DACR DACL SP- SP+. The footprint was headermodule6, which is a six-pad part \u2014 every trace would have landed on the wrong pad even with the right order.",
+  "pin_order": [
+    "VCC",
+    "GND",
+    "RXD",
+    null,
+    null,
+    null,
+    null,
+    null,
+    "SPKN",
+    "SPKP"
+  ]
 }

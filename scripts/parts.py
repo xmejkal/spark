@@ -130,6 +130,32 @@ def validate(part: dict, path: Path) -> list:
                 problems.append("body_mm is unverified with no why_it_matters; say what depends "
                                 "on it — here, whether the modules physically fit the board")
 
+    # Which pad is pin 1. The generator numbered `pinLabels` from the order the pins happened to
+    # appear in this file — so an L9110S whose header reads BIA BIB GND VCC AIA AIB was emitted
+    # as pin1: "AIA", and every trace to the module landed on the wrong pad. Nothing here could
+    # have been right, because the physical order was not written down anywhere.
+    order = part.get("pin_order")
+    if order is not None:
+        if not isinstance(order, list) or not order:
+            problems.append("pin_order must be a list of pad names, pad 1 first")
+        else:
+            named = {need["pin"] for need in part.get("needs") or []}
+            named |= {supply["pin"] for supply in part.get("power") or []}
+            named |= {unused["pin"] for unused in part.get("unused_pins") or []}
+            for position, pad in enumerate(order, start=1):
+                if pad is not None and pad not in named:
+                    problems.append(
+                        "pin_order pad %d is %r, which this part never mentions — a pad name that "
+                        "matches nothing silently wires nothing" % (position, pad))
+            placed = [pad for pad in order if pad is not None]
+            if len(placed) != len(set(placed)):
+                problems.append("pin_order names the same pad twice")
+            missing = sorted(named - set(placed))
+            if missing:
+                problems.append(
+                    "pin_order does not say where %s sit(s), so the generator would have to "
+                    "guess a pad for them" % ", ".join(missing))
+
     # A power pin's DIRECTION is what says whether sharing a net is normal or fatal. Several GND
     # pins on one net is how ground works; two amplifier outputs on one net is a short. Both
     # looked identical in this schema — a `rail` and nothing else — and the generator duly wired

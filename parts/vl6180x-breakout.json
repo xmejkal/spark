@@ -87,5 +87,6 @@
       "Pololu 2489",
       "generic GY-VL6180"
     ]
-  }
+  },
+  "//pin_order": "NOT RECORDED, deliberately. There are four different VL6180X breakouts and they do not share a pinout: Pololu #2489 has 7 pins (VDD VIN GND SDA SCL GPIO0 GPIO1), the current Adafruit 3316 has 6 and no 2v8 pin, the older Adafruit had 7 in a different order, and the generic boards vary by factory. This file does not say which board it describes, so any order here would be a guess. Pick a variant, then record its order with a source."
 }
