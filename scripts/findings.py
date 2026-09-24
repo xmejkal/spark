@@ -204,10 +204,29 @@ class Store:
         os.replace(temporary, self.path)
 
     def circuit(self):
+        """
+        The built design every anchor is checked against.
+
+        An EMPTY netlist is refused, not read. A `tsci build` that failed part way leaves a file
+        holding `[]`, and this only checked that the file existed — so every anchor resolved
+        against nothing, every finding looked like it cited a component the design does not
+        contain, and `validate --apply` retired the lot. Measured on a copy of a real store:
+        19 of 20 findings marked stale, reported as "19 marked stale." and exit 0.
+
+        That is the same defect as a check reporting `ok` because it could not look, except this
+        one destroys the project's memory of what is wrong with it. The file existing is not the
+        same as the board existing.
+        """
         if not self.circuit_path.exists():
             raise SystemExit(
                 "no %s — build the design first (`make`, or `tsci build`)" % self.circuit_path)
-        return json.loads(self.circuit_path.read_text())
+        elements = json.loads(self.circuit_path.read_text())
+        if not elements:
+            raise SystemExit(
+                "%s holds no circuit elements — the build produced nothing. Every anchor would "
+                "resolve against an empty design and every finding would look stale, so this "
+                "refuses rather than retiring your findings. Build it again." % self.circuit_path)
+        return elements
 
 
 def merge(store, incoming, namespace, found_against=None, today=None):

@@ -10,6 +10,7 @@ noise by its third run — so each has a test that fails without it.
 
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -453,3 +454,45 @@ class AgentDoorTest(unittest.TestCase):
         self.assertEqual(result["status"], "ok")
         self.assertIsNone(result["next"])
         self.assertEqual(code, findings.EXIT_OK)
+
+
+class AnEmptyBuildMustNotRetireEverythingTest(unittest.TestCase):
+    """
+    `validate --apply` is the one operation here that destroys work, and it had no guard against
+    the input that makes it destroy all of it.
+
+    `Store.circuit()` checked only that the file existed. A `tsci build` that fails part way
+    leaves `[]`, every anchor then resolves against an empty design, every finding looks like it
+    cites a component that does not exist, and the lot is retired. Measured on a copy of a real
+    store before the fix: 19 of 20 marked stale, reported as success.
+    """
+
+    def _project(self, circuit):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "dist" / "board").mkdir(parents=True)
+        (root / "dist" / "board" / "circuit.json").write_text(json.dumps(circuit))
+        return root
+
+    def test_an_empty_netlist_is_refused_rather_than_read(self):
+        root = self._project([])
+        store = findings.Store(root / ".spark" / "findings.json",
+                               root / "dist" / "board" / "circuit.json")
+        with self.assertRaises(SystemExit) as refused:
+            store.circuit()
+        self.assertIn("produced nothing", str(refused.exception))
+
+    def test_the_refusal_says_what_it_protected(self):
+        # A refusal nobody understands gets worked around, and the workaround here is the bug.
+        root = self._project([])
+        store = findings.Store(root / ".spark" / "findings.json",
+                               root / "dist" / "board" / "circuit.json")
+        with self.assertRaises(SystemExit) as refused:
+            store.circuit()
+        self.assertIn("retiring your findings", str(refused.exception))
+
+    def test_a_real_netlist_still_reads(self):
+        root = self._project([{"type": "source_component", "name": "X"}])
+        store = findings.Store(root / ".spark" / "findings.json",
+                               root / "dist" / "board" / "circuit.json")
+        self.assertEqual(len(store.circuit()), 1)
