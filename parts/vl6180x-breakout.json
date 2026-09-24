@@ -51,19 +51,20 @@
       "value": 2.8,
       "verified": true,
       "source": "ST VL6180X datasheet",
-      "why_it_matters": "The DIE is a 2.8 V part. A bus pulled to 3.3 V meets a pad powered from 2.8 V, and whether that is safe depends entirely on whether the carrier level-shifts."
+      "why_it_matters": "The DIE is a 2.8 V part. A bus pulled to 3.3 V meets a pad powered from 2.8 V, and whether that is safe depends entirely on whether the carrier level-shifts.",
+      "note": "A 2.8 V LDO on the carrier feeds it from VIN, so the die never sees the host's 3.3 V."
     },
     "carrier_has_level_shifters": {
-      "value": null,
-      "verified": false,
-      "source": "unknown until the exact carrier is identified",
-      "why_it_matters": "Decides whether host-side pull-ups help the sensor side at all, and whether 3.3 V on the bus is safe. Adafruit 3316 and Pololu 2489 shift; cheap GY-VL6180 boards may not."
+      "value": true,
+      "verified": true,
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
+      "note": "Q1A and Q1B, the usual two-MOSFET bidirectional shifter, with 10k to VIN on the host side and 10k to the 2.8 V VDD on the die side. So SDA and SCL are safe to drive at 3.3 V, and the bus already has 10k pull-ups without the host adding any."
     },
     "carrier_pulls_up_the_interrupt": {
-      "value": null,
-      "verified": false,
-      "source": "unknown",
-      "why_it_matters": "If GPIO1 is open-drain and the carrier has no pull-up, the host's interrupt pin FLOATS while awake \u2014 and a floating pin reads low about as often as not, so the lid opens at random with nothing in front of it. One meter reading settles it."
+      "value": 47000,
+      "verified": true,
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
+      "note": "R6, 47k to VDD \u2014 which is 2.8 V, not the host's 3.3 V \u2014 with R8 1k in series out to the header. So the interrupt idles near 2.8 V. That clears an ESP32-S3's input high threshold, but a host adding its own pull-up to 3.3 V is fighting a divider rather than helping, and the level it settles at is what an ext1 wake reads."
     },
     "idle_current_ma": {
       "value": null,
@@ -88,5 +89,16 @@
       "generic GY-VL6180"
     ]
   },
-  "//pin_order": "NOT RECORDED, deliberately. There are four different VL6180X breakouts and they do not share a pinout: Pololu #2489 has 7 pins (VDD VIN GND SDA SCL GPIO0 GPIO1), the current Adafruit 3316 has 6 and no 2v8 pin, the older Adafruit had 7 in a different order, and the generic boards vary by factory. This file does not say which board it describes, so any order here would be a guess. Pick a variant, then record its order with a source."
+  "//pin_order": "Pololu's 7-pin header reads VDD \u00b7 VIN \u00b7 GND \u00b7 SDA \u00b7 SCL \u00b7 GPIO0/CE \u00b7 GPIO1. This file wires five of them; pad 1 (VDD, the 2.8 V rail brought out for reference) and pad 6 (GPIO0/CE, the chip-enable) are real pads this design does not use, so they stay empty. Read off Pololu's own schematic for carrier #2489.",
+  "//variant": "WHICH BREAKOUT THIS DESCRIBES, because they are not interchangeable. Four exist and they differ in size, pin count, pin order and what is on the board: Pololu #2489 has 7 pins, the current Adafruit 3316 has 6 and no 2v8 pin, the older Adafruit had 7 in another order, and the generic boards vary between factories. The facts below are read off Pololu's schematic and hold for that carrier ONLY. On another board they are not approximately right, they are unknown.",
+  "variant": "Pololu VL6180X Carrier #2489 (PCB revision irs09a)",
+  "pin_order": [
+    null,
+    "VIN",
+    "GND",
+    "SDA",
+    "SCL",
+    null,
+    "GPIO1"
+  ]
 }

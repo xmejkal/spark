@@ -186,10 +186,23 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
         self.assertNotIn('pin4: "SPKN"', tsx)
 
     def test_a_part_with_no_recorded_pinout_is_refused(self):
-        # The rangefinder deliberately has none: four different VL6180X breakouts exist and they
-        # do not share a pinout, so any order would be invented.
-        unpinned = parts.load("vl6180x-breakout")
-        self.assertIn(unpinned["name"], emit_board.parts_without_a_pinout([unpinned]))
+        # Asserted against a part built for the purpose. This used to name the rangefinder,
+        # because that was the library's unpinned part on the day it was written — so the test
+        # broke the moment somebody found a schematic and recorded its pinout, which is the
+        # library getting better. A test should fail when the behaviour breaks, not when the data
+        # improves.
+        unpinned = {"id": "x", "name": "A part nobody has opened", "kind": "test", "needs": []}
+        self.assertEqual(emit_board.parts_without_a_pinout([unpinned]),
+                         ["A part nobody has opened"])
+
+    def test_every_part_in_the_library_either_has_a_pinout_or_says_why_not(self):
+        # The library's own state, kept honest separately: a part may carry no pin_order, but
+        # then the file has to say what would make one possible.
+        for part_id in parts.available():
+            part = parts.load(part_id)
+            with self.subTest(part=part_id):
+                self.assertTrue(part.get("pin_order") or part.get("//pin_order"),
+                                "%s has neither a pinout nor a reason it lacks one" % part_id)
 
     def test_every_pin_the_part_uses_has_a_pad(self):
         # The contract's half of it: a pin with no pad would silently connect to nothing.
