@@ -119,6 +119,40 @@ class PackageHoldsItsValueTest(unittest.TestCase):
         self.assertEqual(self._cap(220e-6, "radial_d6.3_p2.5"), [])
 
 
+class WhereTheFootprintActuallyLivesTest(unittest.TestCase):
+    """
+    The engine moved `footprinter_string` from `pcb_component` to `cad_component`, and two rules
+    read only the old place. On a real board that meant they examined nothing and said nothing.
+
+    Every fixture in this file put the string on `pcb_component`, which is why the suite stayed
+    green through the whole life of the bug — the tests described a netlist the engine had
+    stopped emitting.
+    """
+
+    def _cap_on(self, element_type):
+        return [
+            {"type": "source_component", "source_component_id": "C1", "name": "C1",
+             "ftype": "simple_capacitor", "capacitance": 220e-6},
+            {"type": "pcb_component", "pcb_component_id": "pcbC1", "source_component_id": "C1"},
+            {"type": element_type, "pcb_component_id": "pcbC1", "source_component_id": "C1",
+             "footprinter_string": "cap0805"}]
+
+    def test_a_footprint_on_cad_component_is_found(self):
+        findings = check_footprints.check_package_holds_the_value(self._cap_on("cad_component"))
+        self.assertEqual(len(findings), 1, "the rule did not see a cad_component footprint")
+
+    def test_a_footprint_on_pcb_component_is_still_found(self):
+        # Older netlists put it there, and dropping them would trade one silence for another.
+        findings = check_footprints.check_package_holds_the_value(self._cap_on("pcb_component"))
+        self.assertEqual(len(findings), 1)
+
+    def test_a_component_with_no_footprint_anywhere_is_simply_absent(self):
+        circuit = [{"type": "source_component", "source_component_id": "U1", "name": "U1"},
+                   {"type": "pcb_component", "pcb_component_id": "pcbU1",
+                    "source_component_id": "U1"}]
+        self.assertEqual(check_footprints.footprint_by_component(circuit), {})
+
+
 class CrossPluggableTest(unittest.TestCase):
     def _two(self, footprint_a, footprint_b, distance, pins_a=2, pins_b=2):
         """
