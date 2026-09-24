@@ -1,6 +1,9 @@
 {
   "name": "petr-local",
-  "owner": { "name": "Petr Smejkal" },
+  "owner": {
+    "name": "Petr Smejkal"
+  },
+  "description": "Petr's local plugins. Currently spark: electronics design where every claim is checked against something outside the design.",
   "plugins": [
     {
       "name": "spark",
