@@ -116,22 +116,39 @@ real defects, including several that would have cost a fabrication run.
 
 ## 4b. What the evals actually say, and what it changes
 
-**2026-09-24, `finds-assembly-problems`: with-plugin 0.67, no-plugin baseline 1.00, delta −0.33.**
+**This section previously drew a conclusion from one arm of one run, selected from a corpus that
+trends the other way. Here is the whole record.**
 
-The baseline scored perfect. It independently found the mating 2-pin connectors, the crimp order
-that puts 6 V across the H-bridge outputs, the absent mounting holes and the consequences of each
-— unprompted, with no plugin loaded. This is the second eval to say the same thing: the earlier
-`deep-sleep-pins` case scored 1/1 in both arms.
+| run | case | with plugin | without | delta |
+| --- | --- | --- | --- | --- |
+| 07:52 | deep-sleep-pins | [1,1,1] | [1,0] | **+0.50** |
+| 09:19 | deep-sleep-pins | [1,1,1] | [1,1,1] | 0.00 |
+| 09:19 | testing-without-hardware | [1,1,1] | [0,1,0] | **+0.67** |
+| 09:27 | finds-unswitched-power | [0,0,0] | [0,0,0] | 0.00 |
+| 09:30 | finds-unswitched-power | [1,1,1] | [1,1,0] | **+0.33** |
+| 16:59 | finds-assembly-problems | [0,0,1] | [0] | **+0.33** |
+| 17:16 | finds-assembly-problems | [1,1,0] | [1,1,1] | **−0.33** |
 
-**The conclusion is uncomfortable and it should be acted on: the model does not need help
-reviewing. Asking it to review better is not where this product's value is.**
+Five of six two-armed runs are ≥ 0; the mean delta is about **+0.30**. The largest effect measured,
+`testing-without-hardware` at +0.67, was not mentioned here at all. The single negative result was
+cited as if it were the corpus.
 
-That kills a line of work. Writing more reviewer dimensions, tuning reviewer prompts and
-sharpening rubrics is effort spent on the half the model already does well — and the extra
-context may actively cost something, which is what a negative delta means.
+**And that negative run measured nothing.** Its `turns` were `[1,1,1]` in *both* arms: one turn
+each, so zero tool calls, so no script ever executed. The arms differed only by text in the context
+window. The same case had read +0.33 seventeen minutes earlier; at n=3 one run's difference *is*
+0.33, so the swing sits at the resolution of the instrument. `finds-unswitched-power` scored
+all-zero in both arms at 09:27 and all-one at 09:30 — a total flip in three minutes, which means
+the harness itself was not stable in that window. Two cases still use `runs: 1`, and one run is not
+a rate.
 
-What the model demonstrably cannot do, and what every defect this week that a review MISSED had
-in common:
+**Every run in which the tools were actually used is positive.** The evals as built cannot
+falsify a claim about the product, because the product does not run inside them.
+
+### What survives
+
+The strategic direction — deterministic checks ahead of reviewer polish — is probably still right,
+but it has to rest on the argument below rather than on a delta that is noise. A script runs in a
+second, costs nothing, and cannot change its mind. That is the case; the eval never made it.
 
 | Found by | Examples |
 | --- | --- |
@@ -139,22 +156,98 @@ in common:
 | **A library with provenance** | that the L9110S's input threshold is absolute and not ratiometric — the fact that decides whether 3.3 V logic drives a 6 V part at all |
 | **Being run at all** | the checks only catch what runs; a review that does not happen catches nothing |
 
-A model asked to review will *sometimes* notice a wrong drill. A script notices every time, in a
-second, for free. That difference — not cleverness — is the product.
+So: deterministic checks first, libraries with provenance second, generators third. The reviewers
+are **not** frozen — nothing measured says they should be. They are simply not the bottleneck while
+the deterministic half has a broken front door (§4c).
 
-**So the priorities change:**
+**The evals need rebuilding before they are cited again.** `schema_version: "1.1"` with
+`context.add_dirs` so a script can actually run, `tool_used` graders with `arm: both` so a run that
+used no tools is visible as such, and n large enough that 1/3 of a run is not the unit of measure.
 
-1. **Deterministic checks first.** Every defect class that can be settled by arithmetic should be,
-   and should move out of the reviewer's remit when it is. *Done so far under this rule:*
-   `check_firmware.py`, which takes firmware-hardware agreement off the reviewer entirely.
-2. **Libraries with provenance second.** Facts the model would otherwise invent, carrying sources
-   and an honest `verified: false`.
-3. **Generators third.** Artifacts, not opinions.
-4. **Reviewers last, and unchanged.** They are already good enough. Leave them alone.
+---
 
-**And the evals change shape.** Grading review QUALITY measures the model, not the product. What
-needs grading is whether the workflow fires and uses the tools — `tool_used` graders on the skill
-and on `check_all.py` — because that is the thing that varies and the thing the plugin controls.
+## 4c. The audit — what three independent reviews found, and the one thing they all found
+
+Three reviewers were given the plugin cold: one auditing for gaps, one using it as a stranger on
+their own project, one testing whether an unattended agent could drive it. They worked separately, and their reports are kept verbatim in
+`docs/audit-2026-09-24/` — roughly sixty findings, more detail than a backlog should carry.
+**All three independently opened on the same defect**, and everything below was reproduced here
+before it was written down.
+
+### The systemic finding
+
+**Every instrument built to say "this is fine" reports success when it did not look.** The same
+defect, six places — including the ones whose own docstrings are essays warning about it:
+
+| where | what it does |
+| --- | --- |
+| the eval cited in §4b | both arms ran zero tools; read as a measurement of the product |
+| `check_all.py` `vendor-truth` | folds `could-not-run` into a notes field, returns **`ok`**, exit 0 |
+| `check_all.py` `pin-capability` | calls `check_design.check()` — **a function that has never existed**; the flagship check has never run through the runner once |
+| `test_..._wired_into_the_runner` | greps the runner's *source text* for `load("check_design")`. Verifies the check is **named**, not that it **runs** |
+| `test_a_missing_circuit_is_not_treated_as_clean` | asserts `== []`, which is precisely "treated as clean". The comment above it says it must not do that |
+| `Check.run`'s `except Exception` | `check_bom` raises `SystemExit`, a `BaseException`, so one check's missing file kills all seven and exits 1 = "problems found" |
+
+**216 tests pass.** They pass because they test the boxes and never the seams. Every confirmed
+defect today is in a seam: runner→check, board file→role vocabulary, part file→pin numbering, rail
+name→net name, README→code, skill prose→script CLI.
+
+This also explains the §4b error. The eval's result was tested; the seam between the eval and the
+product — *did the product run?* — was not.
+
+### The rule that would have caught all six
+
+> **A test must run the thing, not read it.** No assertion on source text. No assertion that is an
+> arithmetic identity of the function under test. Every check must be exercised *through the
+> runner*, with an input that makes it fail.
+
+The plugin's own rung-1 rule is "every check must have a design that violates it". The runner was
+exempt from it, and that is exactly where the defect was. Four more tests assert their own
+premises: `test_the_board_is_big_enough_for_what_is_on_it` (an identity of `place()`),
+`test_both_doors_agree` (a string compared to itself), and two comparing `0, 1, 2` to each other.
+
+### The generator emits a board that would destroy a part
+
+`emit_board.py` writes both bridged amplifier outputs to one net:
+
+```jsx
+<trace from=".Dfr0534Module > .SPKP" to="net.SPEAKER" />  {/* bridged amplifier output — never ground either side */}
+<trace from=".Dfr0534Module > .SPKN" to="net.SPEAKER" />
+```
+
+The part file's own warning is printed on the trace that shorts it. `RAIL_NETS` maps a rail name to
+exactly one net, and both outputs declare `"rail": "speaker"`. Emitted under a banner reading *"The
+CONNECTIONS are derived and trustworthy… Nothing here is guessed."*
+
+Beside it, `pinLabels` are numbered by **dict insertion order**, not by the module's physical
+pinout — `pin1: "AIA"` on a header whose first pad is BIA — so every trace to a module lands on the
+wrong pad. And the emitted `import { X } from "./X"` references a footprint module the plugin does
+not ship, so the output does not build; `emit_board.py` exits **0** anyway.
+
+### The two shipped boards do not speak the same language
+
+`xiao-esp32-c6.json` says `boot_log_tx`; `firebeetle2-esp32s3.json` says `console_uart`.
+`check_design.py` hard-codes the first, `assign_pins.py` hard-codes the second. Nothing validates
+role names. So a serial-parsing part on the FireBeetle's console UART passes silently, and
+`assign_pins`'s 40-point console penalty never fires on the XIAO. Same hazard, one board checked.
+
+### Nobody can install it
+
+All 14 scripts are mode `100644`. Every skill invokes them as `./scripts/x.py`, and the
+`allowed-tools` grants whitelist exactly that form — which cannot execute. `findings.py` tells the
+user to run **`spark init`**, which does not exist anywhere but in that error string. `README.md`
+says v0.1.0 against `plugin.json`'s 0.6.0 and documents none of the 14 scripts, the board library
+or the parts library.
+
+### What this changes
+
+The order in §4b still holds — deterministic checks carry this product — but it now has a
+precondition that outranks everything: **the deterministic half has a broken front door.** An
+instrument that reports clean without looking makes every other system here unverifiable, and it is
+the reason a session's worth of "everything is in step" has to be re-earned rather than trusted.
+
+(The reference project's own `make check` calls each script directly, not through `check_all.py`,
+so its eleven gates are genuinely green. The plugin's front door is the broken part.)
 
 ---
 
@@ -163,6 +256,31 @@ and on `check_all.py` — because that is the thing that varies and the thing th
 Ordered by value. Each item says what it is worth and how we will know it worked.
 
 ### Now
+
+**A0 — Make the instruments unable to lie.** The §4c finding, and it gates everything else.
+*Worth:* every other claim in this file is only as good as the thing that checks it.
+*Done when:* `ok` is unreachable while anything is unchecked — one place decides status, and a
+check that could not look cannot render a tick; `Check.run` catches `BaseException`; `pin-capability`
+actually runs; and each of the six is covered by a test that **runs the runner** against an input
+that must fail. Then re-run every gate and re-earn the green.
+
+**A1 — Make it installable.** `chmod +x scripts/*.py`; build `spark init` or delete the promise;
+one README that matches `plugin.json` and mentions the scripts, boards and parts libraries.
+*Worth:* on a fresh install today, nothing in `scripts/` runs. *Done when:* a stranger gets a
+result from a cold clone without reading Python.
+
+**A2 — Stop `emit_board.py` emitting a destructive board.** A rail that several pins share is not
+one net; pin numbers come from the part's physical pinout or the part is refused; a missing
+footprint module is a refusal, not an exit 0. *Worth:* it currently shorts a class-D output.
+*Done when:* a test asserts SPKP and SPKN are on different nets, and the generated file builds.
+
+**A3 — One role vocabulary, validated.** Board files may only use role names the scripts consume;
+the two shipped boards agree. *Worth:* a headline check silently skips one of the two boards.
+*Done when:* an unknown role name is a startup error, and the bootlog reproducer fails on both.
+
+---
+
+#### Already done
 
 ~~**S1 — Move the BOM check into the plugin.**~~ **done.** `scripts/check_bom.py`, 13 tests, and
 the project-specific regex turned out to be dead code — "has a value and no supplier part" is the
