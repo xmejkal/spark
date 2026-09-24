@@ -22,6 +22,11 @@ import check_design  # noqa: E402
 BOARD = json.loads(
     (ROOT / "boards" / "xiao-esp32-c6.json").read_text())
 
+#: The board that brings one GPIO out under two silkscreen names, which is where the
+#: label-keyed exclusivity check quietly stopped working.
+FIREBEETLE = json.loads(
+    (ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
 
 def design(*parts):
     return {"parts": list(parts)}
@@ -69,6 +74,49 @@ class PinCapabilityTest(unittest.TestCase):
             BOARD)
         self.assertEqual(len(problems), 1)
         self.assertIn("serial console", problems[0].detail)
+
+    def test_two_devices_sharing_a_declared_bus_are_not_a_collision(self):
+        # The commonest wiring pattern in the domain, reported as two errors on a stranger's
+        # first design. Both parts declare the same bus; the design file already carried it and
+        # nothing read it.
+        oled = {"ref": "Oled", "i2c": {"bus": "i2c0"},
+                "pins": [{"signal": "SDA", "pin": "SDA"}, {"signal": "SCL", "pin": "SCL"}]}
+        sensor = dict(oled, ref="Sensor")
+        self.assertEqual(
+            check_design.check_pin_capability(design(oled, sensor), FIREBEETLE), [])
+
+    def test_two_devices_on_the_same_pin_but_different_buses_are_still_a_collision(self):
+        # The exemption is "you both said you share this bus", not "you are both I2C".
+        oled = {"ref": "Oled", "i2c": {"bus": "i2c0"},
+                "pins": [{"signal": "SDA", "pin": "SDA"}]}
+        other = {"ref": "Other", "i2c": {"bus": "i2c1"},
+                 "pins": [{"signal": "SDA", "pin": "SDA"}]}
+        self.assertEqual(len(check_design.check_pin_capability(design(oled, other), FIREBEETLE)), 1)
+
+    def test_one_pin_brought_out_under_two_names_is_caught(self):
+        """
+        The mirror-image defect, and the reason both live in one fix.
+
+        This board brings GPIO10 out twice, silkscreened `SS` and `A4`. Two parts on those two
+        labels are on ONE pin and short each other. Keyed on the label, that read as clean —
+        "two parts on one pin" is a headline check, missed on the plugin's own default board.
+        """
+        aliases = [label for label, gpio in FIREBEETLE["pins"].items() if gpio == 10]
+        self.assertEqual(len(aliases), 2, "this board no longer has an aliased pin to test with")
+        first, second = aliases
+        problems = check_design.check_pin_capability(
+            design({"ref": "Flash", "pins": [{"signal": "CS", "pin": first}]},
+                   {"ref": "Analog", "pins": [{"signal": "IN", "pin": second}]}), FIREBEETLE)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("same pin", problems[0].detail)
+        self.assertIn("GPIO10", problems[0].detail)
+
+    def test_a_plain_collision_on_one_label_is_still_caught(self):
+        problems = check_design.check_pin_capability(
+            design({"ref": "BtnA", "pins": [{"signal": "A", "pin": "D6"}]},
+                   {"ref": "BtnB", "pins": [{"signal": "B", "pin": "D6"}]}), FIREBEETLE)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("already taken by BtnA", problems[0].detail)
 
     def test_the_same_hazard_is_caught_on_every_board_the_plugin_ships(self):
         """

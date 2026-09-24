@@ -118,6 +118,21 @@ def usable_pins(board):
     return pins
 
 
+def bus_of(part):
+    """
+    The bus this part shares, if it says it is on one.
+
+    A bus is the one place several parts legitimately sit on the same pins. The design file
+    already carries it — `{"i2c": {"bus": "i2c0"}}` — and nothing read it, so every second device
+    on a bus was reported as a collision.
+    """
+    for key in ("i2c", "spi"):
+        bus = (part.get(key) or {}).get("bus")
+        if bus:
+            return "%s:%s" % (key, bus)
+    return None
+
+
 def check_pin_capability(design, board):
     """
     Every pin a part asks for exists, can do what is asked of it, and is asked only once.
@@ -146,12 +161,31 @@ def check_pin_capability(design, board):
 
             pin = pins[label]
 
-            previous = claimed.get(label)
-            if previous:
+            # Keyed on the GPIO, not the silkscreen label, and aware of buses. Both halves were
+            # wrong, in opposite directions:
+            #
+            #   * One board brings GPIO10 out twice, as `SS` and as `A4`. Two parts on those two
+            #     labels are on ONE pin and short each other, and a label-keyed check called that
+            #     clean. `assign_pins.py` already does this correctly and says why.
+            #   * Two I2C devices share SDA and SCL. That is not a collision, it is how a bus
+            #     works, and it is the most common wiring pattern in the domain — reported as two
+            #     errors on a stranger's first design.
+            gpio, bus = pin["gpio"], bus_of(part)
+            previous = claimed.get(gpio)
+
+            if previous and bus and previous["bus"] == bus:
+                pass  # shared on purpose, and both parts say so
+            elif previous:
+                also_known_as = ("" if previous["label"] == label
+                                 else " — %s and %s are the same pin"
+                                      % (label, previous["label"]))
                 problems.append(Problem(
-                    ref, "%s wants %s, already taken by %s.%s" % (signal, label, previous[0], previous[1])))
+                    ref, "%s wants %s (GPIO%d), already taken by %s.%s%s"
+                    % (signal, label, gpio, previous["ref"], previous["signal"], also_known_as),
+                    "two parts driving one pin short each other" if not also_known_as else
+                    "this board brings GPIO%d out under both names, so they are one net" % gpio))
             else:
-                claimed[label] = (ref, signal)
+                claimed[gpio] = {"ref": ref, "signal": signal, "label": label, "bus": bus}
 
             for needed in assignment.get("needs", []):
                 if needed not in pin["capabilities"]:
