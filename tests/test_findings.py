@@ -8,6 +8,7 @@ noise by its third run — so each has a test that fails without it.
     python3 -m unittest discover -s tests
 """
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -354,3 +355,61 @@ class BenchSimulatorTest(unittest.TestCase):
         with self.assertRaises(SystemExit) as refused:
             self.bench.simulate("cavity-depth", seed=1)
         self.assertIn("no bench model", str(refused.exception))
+
+
+class AgentDoorTest(unittest.TestCase):
+    """
+    The same answer, whether a person or a program is asking.
+
+    An autonomous caller cannot parse prose, and it especially cannot act on an exit code that
+    says the same thing for "I looked and found nothing" as for "I never got to look". That
+    conflation already cost this project a wrong conclusion: an eval scored zero on every run
+    because its fixtures were outside the sandbox, which read exactly like a reviewer that does
+    not work.
+    """
+
+    def setUp(self):
+        import tempfile
+        self.workspace = tempfile.TemporaryDirectory()
+        root = Path(self.workspace.name)
+        (root / ".spark").mkdir()
+        (root / "circuit.json").write_text(json.dumps([
+            {"type": "source_net", "name": "VBAT"}]))
+        self.root, self.circuit = str(root), str(root / "circuit.json")
+
+    def tearDown(self):
+        self.workspace.cleanup()
+
+    def run_it(self, *argv):
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = findings.main(["--store", self.root, "--circuit", self.circuit, *argv])
+        return code, out.getvalue()
+
+    def test_could_not_run_is_distinguishable_from_found_nothing(self):
+        found_nothing, _ = self.run_it("next")
+        could_not, _ = self.run_it("--circuit", "/nowhere.json", "anchors")
+        self.assertEqual(found_nothing, findings.EXIT_OK)
+        self.assertEqual(could_not, findings.EXIT_COULD_NOT_RUN)
+        self.assertNotEqual(found_nothing, could_not)
+
+    def test_a_refusal_is_data_rather_than_a_traceback(self):
+        code, output = self.run_it("--circuit", "/nowhere.json", "anchors", "--json")
+        result = json.loads(output)
+        self.assertEqual(result["status"], "could-not-run")
+        self.assertIn("reason", result)
+        self.assertEqual(code, findings.EXIT_COULD_NOT_RUN)
+
+    def test_both_doors_agree(self):
+        """The human line is built from the result, so the two cannot drift apart."""
+        _, spoken = self.run_it("next")
+        _, data = self.run_it("next", "--json")
+        self.assertEqual(spoken.strip(), json.loads(data)["rendered"].strip())
+
+    def test_an_empty_store_says_so_rather_than_failing(self):
+        code, output = self.run_it("next", "--json")
+        result = json.loads(output)
+        self.assertEqual(result["status"], "ok")
+        self.assertIsNone(result["next"])
+        self.assertEqual(code, findings.EXIT_OK)

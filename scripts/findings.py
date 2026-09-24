@@ -37,6 +37,9 @@ from pathlib import Path
 
 EXIT_OK = 0
 EXIT_PROBLEMS = 1
+#: Distinct from 1 on purpose. A caller must be able to tell "I looked and there is nothing" from
+#: "I never got to look" — conflating them once made a broken eval look like a broken reviewer.
+EXIT_COULD_NOT_RUN = 2
 
 SCHEMA = 1
 SPARK_DIR = ".spark"
@@ -400,6 +403,17 @@ def _measurement(name, entry):
     return text
 
 
+def answer(status, rendered, **data):
+    """
+    One result, two audiences.
+
+    The human line and the machine object are built from the same call, so they cannot drift —
+    which is the failure this whole plugin exists to catch, and it would be embarrassing to
+    reproduce it in the output of the tool that catches it.
+    """
+    return dict({"tool": "findings", "status": status, "rendered": rendered}, **data)
+
+
 def _parser():
     """
     One place that knows the command line, so a missing flag is a message rather than a traceback.
@@ -414,7 +428,13 @@ def _parser():
         prog="findings.py", description="What is wrong with a design, and what was decided about it.")
     parser.add_argument("--store", help="project root holding .spark/ (default: found by walking up)")
     parser.add_argument("--circuit", help="the built design (default: dist/board/circuit.json)")
-    sub = parser.add_subparsers(dest="command", required=True)
+
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--json", action="store_true",
+                        help="the result as data, for a caller that is not a person")
+    parser.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
+    sub = parser.add_subparsers(dest="command", required=True, parser_class=lambda **kw:
+                                argparse.ArgumentParser(parents=[common], **kw))
 
     sub.add_parser("anchors", help="what a finding may refer to")
     sub.add_parser("next", help="the one thing to do now")
@@ -447,12 +467,27 @@ def _parser():
 
 def main(argv=None):
     args = _parser().parse_args(argv)
+    try:
+        result = _run(args)
+    except SystemExit as refusal:
+        # A refusal is an answer, not a crash — an autonomous caller has to act on it.
+        result = answer("could-not-run", str(refusal), reason=str(refusal))
+
+    if getattr(args, "json", False):
+        print(json.dumps(result, indent=2))
+    elif result["rendered"]:
+        print(result["rendered"])
+
+    return {"ok": EXIT_OK, "problems": EXIT_PROBLEMS,
+            "could-not-run": EXIT_COULD_NOT_RUN}[result["status"]]
+
+
+def _run(args):
     store_io = Store(root=args.store, circuit=args.circuit)
 
     if args.command == "anchors":
-        for anchor in sorted(anchor_namespace(store_io.circuit())):
-            print(anchor)
-        return EXIT_OK
+        names = sorted(anchor_namespace(store_io.circuit()))
+        return answer("ok", "\n".join(names), anchors=names)
 
     with store_io.locked():
         store = store_io.load()
@@ -467,27 +502,28 @@ def main(argv=None):
             added, refused, duplicates, regressions = merge(
                 store, raw, anchor_namespace(store_io.circuit()))
             store_io.save(store)
-            print("%d new, %d already known, %d refused, %d regressed"
-                  % (len(added), len(duplicates), len(refused), len(regressions)))
-            for finding in added:
-                print(_show(finding))
-            for what, why in refused:
-                print("  refused: %s\n       %s" % (what, why))
-            for finding in regressions:
-                print("  REGRESSED: %s" % finding["what"])
+            lines = ["%d new, %d already known, %d refused, %d regressed"
+                     % (len(added), len(duplicates), len(refused), len(regressions))]
+            lines += [_show(f) for f in added]
+            lines += ["  refused: %s\n       %s" % (w, y) for w, y in refused]
+            lines += ["  REGRESSED: %s" % f["what"] for f in regressions]
             # A refusal is not a success: a caller needs to know the run was partly rejected.
-            return EXIT_PROBLEMS if refused else EXIT_OK
+            return answer("problems" if refused else "ok", "\n".join(lines),
+                          added=[f["key"] for f in added],
+                          duplicates=[f["key"] for f in duplicates],
+                          regressed=[f["key"] for f in regressions],
+                          refused=[{"what": w, "why": y} for w, y in refused])
 
         if args.command == "list":
-            for finding in store["findings"]:
-                if args.status is None or finding["status"] == args.status:
-                    print(_show(finding))
-            return EXIT_OK
+            shown = [f for f in store["findings"]
+                     if args.status is None or f["status"] == args.status]
+            return answer("ok", "\n".join(_show(f) for f in shown), findings=shown)
 
         if args.command == "measurements":
-            for name, entry in sorted(store.get("measurements", {}).items()):
-                print("  " + _measurement(name, entry))
-            return EXIT_OK
+            taken = store.get("measurements", {})
+            return answer("ok", "\n".join("  " + _measurement(n, e)
+                                          for n, e in sorted(taken.items())),
+                          measurements=taken)
 
         if args.command == "status":
             if args.status in (ACCEPTED, REJECTED) and not args.reason:
@@ -500,8 +536,7 @@ def main(argv=None):
                         {"status": args.status, "reason": args.reason,
                          "date": date.today().isoformat()})
                     store_io.save(store)
-                    print(_show(finding))
-                    return EXIT_OK
+                    return answer("ok", _show(finding), finding=finding)
             raise SystemExit("no finding %s" % args.key)
 
         if args.command == "measure":
@@ -518,43 +553,44 @@ def main(argv=None):
             except ValueError as refusal:
                 raise SystemExit(str(refusal))
             store_io.save(store)
-            print("recorded " + _measurement(args.name, store["measurements"][args.name]))
-            for finding in reopened:
-                state = "regressed" if finding["status"] == REGRESSED else "unblocked"
-                print("  %s: %s" % (state, finding["what"]))
-            return EXIT_OK
+            entry = store["measurements"][args.name]
+            lines = ["recorded " + _measurement(args.name, entry)]
+            lines += ["  %s: %s" % ("regressed" if f["status"] == REGRESSED else "unblocked",
+                                    f["what"]) for f in reopened]
+            return answer("ok", "\n".join(lines), measurement=entry,
+                          reopened=[f["key"] for f in reopened])
 
         if args.command == "validate":
             namespace = anchor_namespace(store_io.circuit())
             stale = [f for f in store["findings"]
                      if f["status"] in LIVE and unresolved(f["anchors"], namespace)]
-            for finding in stale:
-                print("  %s\n       anchors gone: %s"
-                      % (_show(finding), ", ".join(unresolved(finding["anchors"], namespace))))
+            shown = ["  %s\n       anchors gone: %s"
+                     % (_show(f), ", ".join(unresolved(f["anchors"], namespace))) for f in stale]
+            keys = [f["key"] for f in stale]
             if not args.apply:
                 # Run against a half-built or wrong-branch design, this would retire every live
                 # finding with no way back. It says what it would do unless told to do it.
-                print("\n%d would go stale. Re-run with --apply to write." % len(stale))
-                return EXIT_PROBLEMS if stale else EXIT_OK
+                return answer("problems" if stale else "ok",
+                              "\n".join(shown) + "\n\n%d would go stale. Re-run with --apply."
+                              % len(stale), would_go_stale=keys, applied=False)
             for finding in stale:
                 finding["status"] = STALE
                 finding["stale_anchors"] = unresolved(finding["anchors"], namespace)
             store_io.save(store)
-            print("\n%d marked stale." % len(stale))
-            return EXIT_OK
+            return answer("ok", "%d marked stale." % len(stale), went_stale=keys, applied=True)
 
         if args.command == "next":
             ordered = rank(store["findings"])
             if not ordered:
-                print("nothing live.")
-                return EXIT_OK
-            print("%d live; the one to do now:\n" % len(ordered))
+                return answer("ok", "nothing live.", next=None, live=0)
             chosen = ordered[0]
-            print(_show(chosen))
             waiting = unfilled(chosen, store)
+            lines = ["%d live; the one to do now:\n" % len(ordered), _show(chosen)]
             if waiting:
-                print("\n   waiting on a number nobody has taken yet: %s" % ", ".join(waiting))
-            return EXIT_OK
+                lines.append("\n   waiting on a number nobody has taken yet: %s"
+                             % ", ".join(waiting))
+            return answer("ok", "\n".join(lines), next=chosen, live=len(ordered),
+                          waiting_on=waiting)
 
     raise SystemExit("unknown command %r" % args.command)
 
