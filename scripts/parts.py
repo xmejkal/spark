@@ -108,6 +108,28 @@ def validate(part: dict, path: Path) -> list:
             problems.append("%s direction is %r; expected in, out or bidirectional"
                             % (where, need.get("direction")))
 
+    # Dimensions are a real schema, not an open fact, because every part has an outline and a
+    # generator reads them structurally to decide where things go. They sat OUTSIDE the
+    # provenance contract as a bare `{"width": .., "height": ..}` — so one part carried a
+    # measured size, one carried an unsourced guess wearing exactly the same clothes, and one
+    # carried nothing at all and silently became 16 x 12 mm inside the generator. Placement was
+    # then proven not to overlap, using numbers nobody had taken.
+    body = part.get("body_mm")
+    if body is not None:
+        if not isinstance(body, dict):
+            problems.append("body_mm is not an object; it needs width, height and provenance")
+        else:
+            for key in ("width", "height"):
+                if not isinstance(body.get(key), (int, float)):
+                    problems.append("body_mm has no numeric %s" % key)
+            for key in ("verified", "source"):
+                if key not in body:
+                    problems.append("body_mm has no %r — a dimension with no provenance is a "
+                                    "guess, and a generator cannot tell the difference" % key)
+            if body.get("verified") is False and not body.get("why_it_matters"):
+                problems.append("body_mm is unverified with no why_it_matters; say what depends "
+                                "on it — here, whether the modules physically fit the board")
+
     for name, fact in (part.get("facts") or {}).items():
         if not isinstance(fact, dict):
             problems.append("facts.%s is not an object; every fact needs a value, a source and "

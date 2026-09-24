@@ -4,20 +4,43 @@
   "name": "DFRobot DFR0534 voice module",
   "//": "A UART-controlled audio module with its own flash and an onboard amplifier.",
   "kind": "audio",
-
   "needs": [
-    { "signal": "MP3_TX", "pin": "RXD", "direction": "out",
-      "note": "The host TRANSMITS into the module's receive pin. The module's own TXD is deliberately left unwired: nothing reads its replies, and its idle level is not something a 3.3 V pin should be asked to tolerate." }
+    {
+      "signal": "MP3_TX",
+      "pin": "RXD",
+      "direction": "out",
+      "note": "The host TRANSMITS into the module's receive pin. The module's own TXD is deliberately left unwired: nothing reads its replies, and its idle level is not something a 3.3 V pin should be asked to tolerate."
+    }
   ],
   "power": [
-    { "pin": "VCC", "rail": "logic", "note": "3.3-5 V" },
-    { "pin": "GND", "rail": "ground" },
-    { "pin": "SPKP", "rail": "speaker", "note": "bridged amplifier output — never ground either side" },
-    { "pin": "SPKN", "rail": "speaker" }
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "note": "3.3-5 V"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground"
+    },
+    {
+      "pin": "SPKP",
+      "rail": "speaker",
+      "note": "bridged amplifier output \u2014 never ground either side"
+    },
+    {
+      "pin": "SPKN",
+      "rail": "speaker"
+    }
   ],
-
   "facts": {
-    "supply_range_v": { "value": [3.3, 5.0], "verified": true, "source": "DFRobot wiki specification table" },
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.0
+      ],
+      "verified": true,
+      "source": "DFRobot wiki specification table"
+    },
     "has_enable_pin": {
       "value": false,
       "verified": true,
@@ -30,16 +53,26 @@
       "source": "DFRobot publish no figure; not measured",
       "why_it_matters": "Its class idles somewhere near 15-25 mA, which would be tens of times everything else on a sleeping battery board combined. Until it is measured, no battery-life claim about a design containing this part means anything."
     },
-    "amplifier_output_w": { "value": null, "verified": false, "source": "no figure published" }
+    "amplifier_output_w": {
+      "value": null,
+      "verified": false,
+      "source": "no figure published"
+    }
   },
-
   "host_requirements": [
     "Give it a reservoir capacitor at its supply pin. A speaker peak pulls hundreds of milliamps and the resulting sag is a classic brownout reset.",
-    "If the design sleeps, put a high-side switch on its rail and hold the gate OFF with a resistor — the host's GPIO goes high-impedance during deep sleep and reset, which is exactly when the module must be off.",
+    "If the design sleeps, put a high-side switch on its rail and hold the gate OFF with a resistor \u2014 the host's GPIO goes high-impedance during deep sleep and reset, which is exactly when the module must be off.",
     "It boots from cold whenever its rail returns, so nothing may be sent for a few hundred milliseconds after power-up."
   ],
-
   "footprint": "headermodule6",
-  "body_mm": { "width": 30, "height": 22 },
-  "sources": { "vendor": "https://wiki.dfrobot.com/Voice_Module_SKU__DFR0534" }
+  "body_mm": {
+    "width": 30,
+    "height": 22,
+    "verified": false,
+    "source": "unknown \u2014 carried since the first draft with no source recorded",
+    "why_it_matters": "Decides whether this module and the motor driver both fit beside the microcontroller, and how big the generated board is. A wrong outline is found at assembly, after the boards are paid for."
+  },
+  "sources": {
+    "vendor": "https://wiki.dfrobot.com/Voice_Module_SKU__DFR0534"
+  }
 }

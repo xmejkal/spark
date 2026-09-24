@@ -66,6 +66,25 @@ def body_of(part):
     return (body.get("width", DEFAULT_BODY_MM[0]), body.get("height", DEFAULT_BODY_MM[1]))
 
 
+def has_an_outline(part):
+    """Whether anyone has ever recorded how big this part is."""
+    body = part.get("body_mm") or {}
+    return isinstance(body.get("width"), (int, float)) and isinstance(
+        body.get("height"), (int, float))
+
+
+def parts_without_an_outline(part_list):
+    """
+    Parts whose size nobody has recorded.
+
+    `body_of` substitutes DEFAULT_BODY_MM for these, which is how a rangefinder nobody had
+    measured became 16 x 12 mm — and then `place()` proved the modules did not overlap, using a
+    number that was invented two lines earlier. A layout is only as true as its smallest
+    dimension, so this is a refusal rather than a default.
+    """
+    return [part["name"] for part in part_list if not has_an_outline(part)]
+
+
 def component_name(part):
     """`l9110s-module` -> `L9110sModule`, so the name in the file reads like a component."""
     return "".join(word.capitalize() for word in part["id"].replace("_", "-").split("-"))
@@ -138,6 +157,22 @@ def emit(board, part_list, assignments, placements, width, height):
         " *",
         " * Not decided here, and it must be: mounting holes, connector keying, and trace widths for",
         " * anything carrying real current.",
+    ]
+
+    # A warning on stderr is gone the moment the shell scrolls; the file is what someone opens in
+    # six weeks. If a size was invented, the artifact says so where it cannot be missed.
+    unsized = parts_without_an_outline(part_list)
+    if unsized:
+        lines += [
+            " *",
+            " * NOBODY HAS MEASURED: %s." % ", ".join(unsized),
+            " * Each is drawn as a placeholder %g x %g mm and everything else is arranged around"
+            % DEFAULT_BODY_MM,
+            " * that, so 'nothing overlaps' here is evidence of nothing at all. Measure them, put",
+            " * width and height in the part file with a source, and regenerate.",
+        ]
+
+    lines += [
         " */",
         "export default () => (",
         '  <board width="%gmm" height="%gmm" autorouter="auto"' % (width, height),
@@ -209,6 +244,9 @@ def main(argv=None):
     parser.add_argument("requirements")
     parser.add_argument("--project")
     parser.add_argument("--board")
+    parser.add_argument("--assume-missing-sizes", action="store_true",
+                        help="lay out around a guessed size for any part whose outline "
+                             "nobody recorded, saying so in the generated file")
     args = parser.parse_args(argv)
 
     path = Path(args.requirements)
@@ -231,6 +269,16 @@ def main(argv=None):
     if not (board.get("physical") or {}).get("footprint_export"):
         print("this board has no verified footprint, so a board file would reference nothing",
               file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+
+    unsized = parts_without_an_outline(part_list)
+    if unsized and not args.assume_missing_sizes:
+        print("no outline recorded for: %s\n"
+              "  Every placement below would be arranged around an invented size, and the board "
+              "would then be declared not to overlap on the strength of it.\n"
+              "  Measure them and put width/height in the part file with a source, or pass "
+              "--assume-missing-sizes to proceed with the guess declared in the output."
+              % ", ".join(unsized), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
     placements, width, height = place(board, part_list)

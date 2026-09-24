@@ -3,23 +3,47 @@
   "id": "l9110s-module",
   "name": "L9110S dual motor driver module",
   "//": "The blue two-channel breakout, also sold as HG7881: two SOP-8 chips, green screw terminals marked MOTOR A / MOTOR B, and a 6-pin header. What a host board has to provide is under `needs`; what is true of the part is under `facts`, each with where it came from.",
-  "also_known_as": ["HG7881", "L9110H module"],
+  "also_known_as": [
+    "HG7881",
+    "L9110H module"
+  ],
   "kind": "motor-driver",
-
   "//needs": "What this part asks of the host, and the ONLY part of this file with a fixed shape. `signal` is the name the host will use; `pin` is what the module calls it. `needs` is what the host pin must be able to do, in the vocabulary assign_pins.py understands.",
   "needs": [
-    { "signal": "MOTOR_IA", "pin": "AIA", "direction": "in", "note": "PWM-capable host pin; direction and speed both live on the two inputs" },
-    { "signal": "MOTOR_IB", "pin": "AIB", "direction": "in", "note": "the other half of the same channel" }
+    {
+      "signal": "MOTOR_IA",
+      "pin": "AIA",
+      "direction": "in",
+      "note": "PWM-capable host pin; direction and speed both live on the two inputs"
+    },
+    {
+      "signal": "MOTOR_IB",
+      "pin": "AIB",
+      "direction": "in",
+      "note": "the other half of the same channel"
+    }
   ],
   "power": [
-    { "pin": "VCC", "rail": "motor", "note": "2.5-12 V; this is the MOTOR supply, not logic" },
-    { "pin": "GND", "rail": "ground" }
+    {
+      "pin": "VCC",
+      "rail": "motor",
+      "note": "2.5-12 V; this is the MOTOR supply, not logic"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground"
+    }
   ],
   "unused_pins": [
-    { "pin": "BIA", "note": "channel B is unused in a one-motor design and must not float — tie it to the driver's own ground" },
-    { "pin": "BIB", "note": "as BIA" }
+    {
+      "pin": "BIA",
+      "note": "channel B is unused in a one-motor design and must not float \u2014 tie it to the driver's own ground"
+    },
+    {
+      "pin": "BIB",
+      "note": "as BIA"
+    }
   ],
-
   "//facts": "Deliberately open-ended. A motor driver's facts are input thresholds and current; a rangefinder's are an I2C address and a calibration. Forcing them into one schema produces a field nobody reads. Every entry says where it came from, and `verified` is false until someone has actually checked.",
   "facts": {
     "input_high_threshold_v": {
@@ -28,8 +52,19 @@
       "source": "L9110 datasheet, absolute figure",
       "why_it_matters": "ABSOLUTE, not ratiometric. If it were 0.7 x VCC it would be 4.2 V on a 6 V supply and 3.3 V logic would never turn the motor. This was checked precisely because the ratiometric reading would have killed the design."
     },
-    "continuous_current_a": { "value": 0.8, "verified": true, "source": "datasheet, per channel" },
-    "supply_range_v": { "value": [2.5, 12.0], "verified": true, "source": "datasheet" },
+    "continuous_current_a": {
+      "value": 0.8,
+      "verified": true,
+      "source": "datasheet, per channel"
+    },
+    "supply_range_v": {
+      "value": [
+        2.5,
+        12.0
+      ],
+      "verified": true,
+      "source": "datasheet"
+    },
     "has_enable_pin": {
       "value": false,
       "verified": true,
@@ -37,15 +72,19 @@
       "why_it_matters": "There is no enable and no separate PWM pin, so the firmware has to encode direction and speed in the two inputs together."
     }
   },
-
   "//host_requirements": "Things the host board must do that are not pins. Prose on purpose: these are design rules, and a rule nobody can read is not enforced.",
   "host_requirements": [
     "Pull both inputs down in HARDWARE. The host's pins float for the ~300 ms between reset and firmware, and through any crash or reflash, and a floating CMOS input on an H-bridge can turn both halves on.",
     "If a current shunt sits in this module's ground return, the module judges its inputs against ITS OWN ground, which the shunt lifts. Effective input high becomes (host logic level - I x R_shunt), and the margin over 2.5 V is what decides whether the motor turns under load."
   ],
-
   "footprint": "headermodule6",
-  "body_mm": { "width": 29, "height": 23, "//": "Real, measured. The header is along one 29 mm edge and the screw terminals along the opposite one, so the body is NOT centred on the header." },
+  "body_mm": {
+    "width": 29,
+    "height": 23,
+    "verified": true,
+    "source": "measured with calipers on the module in hand",
+    "note": "The header runs along one 29 mm edge and the screw terminals along the opposite one, so the body is NOT centred on the header."
+  },
   "sources": {
     "datasheet": "https://www.elecrow.com/download/datasheet-l9110.pdf"
   }
