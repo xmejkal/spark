@@ -221,47 +221,6 @@ def check_package_holds_the_value(circuit):
     return findings
 
 
-def check_cross_pluggable_connectors(circuit, watch_distance_mm=25.0):
-    """
-    Two identical connectors close together, either of which physically accepts the other's plug.
-
-    Only reported when they are near each other, because that is when it happens: a person
-    holding two indistinguishable plugs over two indistinguishable sockets.
-    """
-    placements = {}
-    names = component_names(circuit)
-    footprints = footprint_by_component(circuit)
-    source_of = {element["pcb_component_id"]: element.get("source_component_id")
-                 for element in circuit if element.get("type") == "pcb_component"}
-
-    for element in circuit:
-        if element.get("type") != "pcb_component":
-            continue
-        footprint = footprints.get(source_of.get(element["pcb_component_id"]))
-        if not footprint or "jst" not in footprint and "conn" not in footprint:
-            continue
-        centre = element.get("center") or {}
-        placements[names.get(element["pcb_component_id"], "?")] = (
-            footprint, centre.get("x", 0), centre.get("y", 0))
-
-    findings = []
-    entries = sorted(placements.items())
-    for index, (name, (footprint, x, y)) in enumerate(entries):
-        for other_name, (other_footprint, other_x, other_y) in entries[index + 1:]:
-            if footprint != other_footprint:
-                continue
-            distance = math.dist((x, y), (other_x, other_y))
-            if distance > watch_distance_mm:
-                continue
-            findings.append(Finding(
-                "cross-pluggable", "%s and %s" % (name, other_name),
-                "both are %s and sit %.0f mm apart, so either plug fits either socket"
-                % (footprint, distance),
-                fix="use a different series or pin count for one of them, or move them apart. "
-                    "Keying is cheaper than the part that gets destroyed"))
-    return findings
-
-
 def component_names(circuit):
     """pcb_component_id -> the name a person uses."""
     source_names = {element["source_component_id"]: element.get("name")
@@ -270,10 +229,125 @@ def component_names(circuit):
             for element in circuit if element.get("type") == "pcb_component"}
 
 
+#: Surface-mount connector families, for the parts a plated-hole count cannot identify. A
+#: through-hole connector is recognised by its holes; an SMD one needs its name.
+MATING_FOOTPRINTS = ("jst", "conn", "socket", "molex", "picoblade", "sh_", "zh_", "xh_")
+
+
+def pad_signature(pads):
+    """
+    What a plug sees: how many contacts, and where they are relative to each other.
+
+    Deliberately geometric, and for the reason `is_header` already gives — a footprint's name is
+    not always available or honest. On a real board it was not available at all: three of the
+    components here, including both plug-in modules, carry no footprinter string anywhere in the
+    netlist, because a part whose 3D body comes from a model file does not emit one. Comparing
+    names found nothing and said nothing.
+
+    Two parts with the same signature accept each other's plug whatever they are called.
+    """
+    if len(pads) < 2:
+        return None
+    points = sorted((round(p.get("x", 0), 2), round(p.get("y", 0), 2)) for p in pads)
+    origin_x, origin_y = points[0]
+    return (len(points),
+            tuple((round(x - origin_x, 2), round(y - origin_y, 2)) for x, y in points))
+
+
+def check_cross_pluggable_connectors(circuit, watch_distance_mm=25.0):
+    """
+    Two identical connectors close together, either of which physically accepts the other's plug.
+
+    Only reported when they are near each other, because that is when it happens: a person
+    holding two indistinguishable plugs over two indistinguishable sockets.
+
+    A PLUG-IN MODULE HEADER counts, and used to be skipped: this looked for `jst` or `conn` in a
+    footprint name, so on the board it was written for it passed over two pad-identical six-pin
+    rows 24 mm apart on the same axis — one carrying a 6 V motor supply, the other 3.3 V logic.
+    Swapping those modules puts 6 V on an audio module's serial input. A row of header pins is a
+    socket; the hazard is the geometry.
+    """
+    names = component_names(circuit)
+    source_of = {e["pcb_component_id"]: e.get("source_component_id")
+                 for e in circuit if e.get("type") == "pcb_component"}
+    footprints = footprint_by_component(circuit)
+
+    # Only things a person can plug INTO. Comparing pad geometry alone reported every pair of
+    # 0603 passives on the board — twenty findings for one real hazard, which is the way to get a
+    # check switched off. A hand-fitted connector is through-hole here, so plated holes are the
+    # discriminator, with the footprint name as a second route for surface-mount connectors.
+    pads_by_component = defaultdict(list)
+    plated = defaultdict(int)
+    for element in circuit:
+        if element.get("type") in ("pcb_plated_hole", "pcb_smtpad"):
+            pads_by_component[element.get("pcb_component_id")].append(element)
+        if element.get("type") == "pcb_plated_hole":
+            plated[element.get("pcb_component_id")] += 1
+
+    def can_be_plugged_into(component_id):
+        # A ROW of pins at header pitch is a socket; a rectangle of through-holes is a soldered
+        # part. Two identical tactile buttons came back as cross-pluggable before this, and
+        # nothing plugs into a switch — the mistake would be fitting one in the other's place,
+        # which is a silkscreen problem, not a connector one.
+        holes = [(p.get("x", 0), p.get("y", 0)) for p in pads_by_component[component_id]
+                 if p.get("type") == "pcb_plated_hole"]
+        if is_header(holes):
+            return True
+        footprint = (footprints.get(source_of.get(component_id)) or "").lower()
+        return any(kind in footprint for kind in MATING_FOOTPRINTS)
+
+    centres = {e["pcb_component_id"]: (e.get("center") or {})
+               for e in circuit if e.get("type") == "pcb_component"}
+
+    entries = []
+    for component_id, pads in sorted(pads_by_component.items(), key=lambda kv: str(kv[0])):
+        signature = pad_signature(pads)
+        if signature is None or not can_be_plugged_into(component_id):
+            continue
+        centre = centres.get(component_id, {})
+        entries.append((names.get(component_id, str(component_id)), signature,
+                        centre.get("x", 0), centre.get("y", 0),
+                        footprints.get(source_of.get(component_id)) or "%d pads" % signature[0]))
+
+    findings = []
+    for index, (name, signature, x, y, described) in enumerate(entries):
+        for other_name, other_signature, other_x, other_y, _ in entries[index + 1:]:
+            if signature != other_signature:
+                continue
+            distance = math.dist((x, y), (other_x, other_y))
+            if distance > watch_distance_mm:
+                continue
+            findings.append(Finding(
+                "cross-pluggable", "%s and %s" % (name, other_name),
+                "have identical pad layouts (%s) and sit %.0f mm apart, so either plug fits "
+                "either socket" % (described, distance),
+                fix="use a different pin count or series for one of them, key one, or move them "
+                    "apart. Keying is cheaper than the part that gets destroyed"))
+    return findings
+
+
 def footprint_by_component(circuit):
-    """source_component_id -> footprinter string."""
-    return {element.get("source_component_id"): element.get("footprinter_string")
-            for element in circuit if element.get("type") == "pcb_component"}
+    """
+    source_component_id -> footprinter string.
+
+    Read from `cad_component`, falling back to `pcb_component` for older netlists. It read only
+    `pcb_component`, and the engine moved the field — so on a real board this returned None for
+    every component, and BOTH rules that depend on it examined nothing and reported nothing.
+    One of those is the package-holds-the-value rule, whose flagship case is 220 uF on an 0805
+    land, named in this module's own docstring as a defect it catches. It had stopped catching it.
+
+    A component with no entry anywhere is left out rather than guessed at, and
+    `check_what_was_not_examined` counts them, because "no footprint recorded" and "the footprint
+    is fine" are not the same answer.
+    """
+    found = {}
+    for element in circuit:
+        if element.get("type") not in ("pcb_component", "cad_component"):
+            continue
+        footprint = element.get("footprinter_string")
+        if footprint:
+            found[element.get("source_component_id")] = footprint
+    return found
 
 
 def check_what_was_not_examined(circuit):

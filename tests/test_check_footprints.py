@@ -120,15 +120,26 @@ class PackageHoldsItsValueTest(unittest.TestCase):
 
 
 class CrossPluggableTest(unittest.TestCase):
-    def _two(self, footprint_a, footprint_b, distance):
+    def _two(self, footprint_a, footprint_b, distance, pins_a=2, pins_b=2):
+        """
+        Two connectors, WITH PADS — because the rule compares pad geometry, not names.
+
+        This fixture used to carry a footprint string and no pads at all. That was fine while the
+        rule compared names, and it hid the fact that on a real board the names are not there:
+        three components including both plug-in modules carry no footprinter string anywhere,
+        because a part whose 3D body comes from a model file does not emit one.
+        """
         circuit = []
-        for name, footprint, x in (("MotorOut", footprint_a, 0.0),
-                                   ("Speaker", footprint_b, distance)):
+        for name, footprint, x, pins in (("MotorOut", footprint_a, 0.0, pins_a),
+                                         ("Speaker", footprint_b, distance, pins_b)):
             circuit += [
                 {"type": "source_component", "source_component_id": name, "name": name},
                 {"type": "pcb_component", "pcb_component_id": "pcb_" + name,
                  "source_component_id": name, "footprinter_string": footprint,
                  "center": {"x": x, "y": 0.0}}]
+            circuit += [{"type": "pcb_plated_hole", "pcb_component_id": "pcb_" + name,
+                         "hole_diameter": 1.0, "outer_diameter": 1.6,
+                         "x": x + index * 2.0, "y": 0.0} for index in range(pins)]
         return check_footprints.check_cross_pluggable_connectors(circuit)
 
     def test_two_identical_connectors_side_by_side_are_caught(self):
@@ -137,7 +148,61 @@ class CrossPluggableTest(unittest.TestCase):
         self.assertIn("either plug fits either socket", findings[0].detail)
 
     def test_different_series_cannot_be_cross_plugged(self):
-        self.assertEqual(self._two("jst_ph_2", "jst_xh_2", 8.0), [])
+        self.assertEqual(self._two("jst_ph_2", "jst_xh_2", 8.0, pins_b=4), [])
+
+    def test_two_identical_module_headers_are_caught_even_with_no_footprint_name(self):
+        """
+        The case that was missed on the real board, and the reason the rule is geometric now.
+
+        Two pad-identical six-pin rows 24 mm apart, one carrying a 6 V motor supply and the other
+        3.3 V logic. The old rule looked for `jst` or `conn` in a footprint NAME, and these two
+        carry no name at all — a part whose 3D body comes from a model file emits none — so it
+        examined nothing and reported nothing.
+        """
+        circuit = []
+        for name, y in (("MotorDriver", 0.0), ("Mp3Player", 24.0)):
+            circuit += [
+                {"type": "source_component", "source_component_id": name, "name": name},
+                {"type": "pcb_component", "pcb_component_id": "pcb_" + name,
+                 "source_component_id": name, "center": {"x": 0.0, "y": y}}]
+            circuit += [{"type": "pcb_plated_hole", "pcb_component_id": "pcb_" + name,
+                         "hole_diameter": 1.0, "outer_diameter": 1.6,
+                         "x": index * 2.54, "y": y} for index in range(6)]
+        findings = check_footprints.check_cross_pluggable_connectors(circuit)
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn("MotorDriver", findings[0].subject)
+        self.assertIn("Mp3Player", findings[0].subject)
+
+    def test_two_identical_passives_are_not_reported(self):
+        # Comparing geometry alone reported every pair of 0603s on a real board — twenty findings
+        # for one real hazard, which is how a check gets switched off. Nothing plugs into a chip
+        # resistor.
+        circuit = []
+        for name, x in (("R1", 0.0), ("R2", 4.0)):
+            circuit += [
+                {"type": "source_component", "source_component_id": name, "name": name},
+                {"type": "pcb_component", "pcb_component_id": "pcb_" + name,
+                 "source_component_id": name, "footprinter_string": "res0603",
+                 "center": {"x": x, "y": 0.0}}]
+            circuit += [{"type": "pcb_smtpad", "pcb_component_id": "pcb_" + name,
+                         "x": x + index * 1.6, "y": 0.0} for index in range(2)]
+        self.assertEqual(check_footprints.check_cross_pluggable_connectors(circuit), [])
+
+    def test_two_identical_buttons_are_not_reported_either(self):
+        # Four through-holes in a RECTANGLE is a soldered switch, not a socket. Fitting one in
+        # the other's place is a silkscreen problem, not a cross-plugging hazard.
+        circuit = []
+        for name, x in (("BtnOpen", 0.0), ("BtnMode", 10.0)):
+            circuit += [
+                {"type": "source_component", "source_component_id": name, "name": name},
+                {"type": "pcb_component", "pcb_component_id": "pcb_" + name,
+                 "source_component_id": name, "footprinter_string": "pushbutton",
+                 "center": {"x": x, "y": 0.0}}]
+            circuit += [{"type": "pcb_plated_hole", "pcb_component_id": "pcb_" + name,
+                         "hole_diameter": 1.0, "outer_diameter": 1.6,
+                         "x": x + dx, "y": dy}
+                        for dx in (0.0, 6.5) for dy in (0.0, 4.5)]
+        self.assertEqual(check_footprints.check_cross_pluggable_connectors(circuit), [])
 
     def test_far_apart_is_not_reported(self):
         # The failure needs a person holding two plugs over two sockets at once.
