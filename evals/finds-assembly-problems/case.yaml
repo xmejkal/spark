@@ -1,0 +1,149 @@
+schema_version: "1.0"
+name: finds-assembly-problems
+
+# Does the manufacturability dimension find what only judgement can find?
+#
+# This dimension exists because a four-lens review of a real board produced a class of finding
+# nothing else caught: not whether the board is electrically right, but whether a person can
+# build, populate and service it. Those findings are the ground truth below.
+#
+# The hard part of this dimension is what it must NOT report. Most of what that review found has
+# since become deterministic — drill against the pin that goes in it, annular ring, via class,
+# whether a value exists in a package, two connectors that can be cross-plugged — and
+# check_footprints.py owns all of it. A reviewer that spends its answer re-deriving arithmetic a
+# script already settles is producing noise, however correct the arithmetic is.
+#
+# So the grader scores two things: did it find the judgement-half defects, and did it stay out of
+# the script's territory.
+#
+# The design below is inlined rather than read from a file. An earlier eval here scored zero on
+# every run because the sandbox could not see the fixture directory, and a zero that means "could
+# not read the board" is indistinguishable from a zero that means "found nothing" — which read as
+# the reviewer not working. Inlining removes the question.
+execution:
+  runs: 3
+  prompt: |
+    Review the MANUFACTURABILITY dimension of the board below: can this be built, populated and
+    serviced by a person?
+
+    Cover assembly order, what a soldering iron can reach once the tall parts are seated,
+    connector keying and what a wrong-but-possible assembly would destroy, strain on hand-made
+    leads, what must come apart to replace a module, and whether the board tells whoever
+    populates it enough to do so without the schematic.
+
+    Do NOT report things that are measured rather than judged — drill diameters, annular rings,
+    via sizes, whether a capacitance exists in a package, or two identical footprints close
+    together. Those are already checked deterministically and repeating them is noise.
+
+    A finding without a consequence is an observation. Say what goes wrong, and to whom.
+
+    The board is 100 x 45 mm. Placement is `pcbX`/`pcbY` in millimetres from the centre.
+
+    ```tsx
+    <board width="100mm" height="45mm">
+      {/* The microcontroller module, on two rows of header. 25.4 x 60 mm, USB-C at the left edge. */}
+      <Mcu name="Mcu" pcbX={-19} pcbY={-9} pcbRotation={90} />
+
+      {/* L9110S motor driver: a 29 x 23 mm module on a 6-pin header. Its two motor terminals are
+          screw terminals on the module itself, on the edge opposite the header. */}
+      <chip name="MotorDriver" footprint="headermodule6" pcbX={28} pcbY={10} />
+
+      {/* DFR0534 MP3 module, 30 x 22 mm, also on a 6-pin header. */}
+      <chip name="Mp3Player" footprint="headermodule6" pcbX={28} pcbY={-11} />
+
+      {/* The cable from the bin: 6 V motor supply in, motor drive out. */}
+      <chip name="BinConnector" footprint="jst_ph_4" pcbX={-45} pcbY={18}
+        pinLabels={{ pin1:"BATP", pin2:"BATN", pin3:"MOTA", pin4:"MOTB" }} />
+
+      {/* Motor output, wired to the driver's screw terminals with short leads. */}
+      <chip name="MotorOut" footprint="jst_ph_2" pcbX={-34} pcbY={18}
+        pinLabels={{ pin1:"OA", pin2:"OB" }} />
+
+      {/* 8 ohm speaker on a flying lead, behind a grille. */}
+      <chip name="Speaker" footprint="jst_ph_2" pcbX={45} pcbY={-18} />
+
+      {/* The rangefinder looks out through the lid, so it is on a 15 cm ribbon to this header. */}
+      <chip name="SensorHeader" footprint="pinrow5" pcbX={-42} pcbY={15}
+        pinLabels={{ pin1:"VIN", pin2:"GND", pin3:"SDA", pin4:"SCL", pin5:"INT" }} />
+
+      {/* Bicolour LED, an 8.6 mm cylinder on a rigid 3-pin row, and two 6x6 tactile buttons with
+          roughly 4-5 mm actuators. All three have to meet the same bin surface. */}
+      <chip name="StatusLed" footprint="pinrow3" pcbX={-6} pcbY={15} />
+      <chip name="BtnOpen" footprint="pushbutton" pcbX={-26} pcbY={13} />
+      <chip name="BtnMode" footprint="pushbutton" pcbX={-16} pcbY={13} />
+
+      {/* 100nF across the motor terminals: brush arcing is what upsets I2C. */}
+      <capacitor name="MotorBrushCap" capacitance="100nF" footprint="0603" pcbX={45} pcbY={3} />
+
+      <resistor name="CurrentShunt" resistance="0.1" footprint="2512" pcbX={45} pcbY={21} />
+      <capacitor name="MotorBulkCap" capacitance="220uF" footprint="radial_d6.3_p2.5" pcbX={45} pcbY={15} />
+    </board>
+    ```
+
+    Wiring, beyond what the placement shows:
+
+    - `MotorBrushCap` connects to `MotorOut.OA` and `MotorOut.OB`.
+    - `MotorOut.OA`/`.OB` connect to `BinConnector.MOTA`/`.MOTB`.
+    - `MotorDriver`'s screw terminals are wired to `MotorOut` by hand with loose wire.
+    - The board has no holes in it other than the ones its components sit in.
+    - The silkscreen carries each module's pin names, but the two-pin JSTs and the four-pin
+      `BinConnector` have no pin markings printed at all.
+
+graders:
+  - type: llm
+    name: assembly-and-service
+    criteria: |
+      Score on how many of these real defects the answer finds. Each is a judgement call that no
+      measurement settles, and each was found on this board by a human-grade review.
+
+      **The strongest findings, in rough order of what they cost:**
+
+      1. **The board has no mounting holes of its own.** It carries a motor and lives in a lid
+         that slams thousands of times a year, and the only fixing would be tape or glue. Credit
+         for noticing the consequence: it eventually comes loose, and the 6 V cable takes the
+         strain.
+
+      2. **`MotorOut` is a pure pass-through.** The motor driver's screw terminals are wired by
+         hand to a connector 62 mm away on the far side of the board, which then routes a short
+         distance to `BinConnector`. The lead carries full motor current, crosses the whole
+         board, and exists only so it can reach a connector that sits next to the one it feeds.
+         Deleting it removes a connector, a hand-made lead, and a way to get it wrong. A strong
+         answer proposes wiring the driver straight to `BinConnector`.
+
+      3. **`MotorBrushCap` is nowhere near the brushes.** It sits at x=45 while the motor
+         connector is at x=-34/-45: about 80 mm away. Brush suppression that far from the source
+         suppresses nothing, and the two long leads to it become an antenna running the width of
+         the board past the I2C ribbon header. A strong answer puts it at the connector.
+
+      4. **`MotorOut` and `Speaker` are both 2-pin JSTs and neither is marked.** One carries a
+         6 V motor supply, the other a class-D amplifier output. Nothing printed on the board
+         distinguishes them. Note: their SPACING is checked elsewhere and should not be the
+         finding — the finding here is that the silkscreen does not say which is which, so a
+         person populating or servicing the board cannot tell.
+
+      5. **The LED and the two buttons must all meet the same bin surface**, and they are
+         different heights on rigid mounts: an 8.6 mm cylinder against 4-5 mm actuators. One of
+         them will not reach, or one will be held permanently pressed.
+
+      6. **`SensorHeader` is an unkeyed 2.54 mm pin row** on the one cable that gets unplugged
+         most often, and its power pin is adjacent to its ground. Reversed, it powers the sensor
+         backwards.
+
+      Also creditable, though secondary: the two plug-in modules overhang their headers and may
+      collide or block access to the parts beneath them; the tall radial capacitor and the
+      modules obstruct a soldering iron reaching what is under them; replacing the MP3 module
+      means removing whatever is stacked around it.
+
+      **Penalise noise.** These are checked deterministically elsewhere, and reporting them here
+      is the specific failure this dimension is meant to avoid. Deduct for each one raised as a
+      finding:
+      - drill diameters, hole sizes or annular rings
+      - via sizes
+      - whether 220uF exists in its package
+      - the mere fact that two identical connector footprints are close together, framed as a
+        geometry or spacing problem rather than a labelling one
+
+      **Scoring.** Finding 1 and 2 are the highest value; an answer that gets neither scores low
+      regardless of what else it found. An answer that finds four or more of the six, with
+      consequences, and raises no noise, is excellent. Generic manufacturability advice that does
+      not name parts on this board scores zero.
