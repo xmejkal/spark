@@ -144,5 +144,55 @@ class CrossPluggableTest(unittest.TestCase):
         self.assertEqual(self._two("jst_ph_2", "jst_ph_2", 80.0), [])
 
 
+class AHoleThisCannotReadIsNotAHoleThisApprovedTest(unittest.TestCase):
+    """
+    Both hole rules opened with a bare `continue` for an element they could not parse.
+
+    On the board this tool was written for that skipped 10 of 70 plated holes in silence — and
+    four of them are `pill`, the obround shape whose vendor-drawn finished hole is the flagship
+    defect named in this module's own docstring. It then printed "buildable — holes take their
+    pins, packages hold their values".
+    """
+
+    @staticmethod
+    def _pill(count=4):
+        return [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_J1",
+                 "x": index * 2.54, "y": 0.0} for index in range(count)]
+
+    @staticmethod
+    def _round():
+        return [{"type": "pcb_plated_hole", "shape": "circle", "pcb_component_id": "pcb_J1",
+                 "hole_diameter": 1.0, "outer_diameter": 1.6, "x": index * 2.54, "y": 0.0}
+                for index in range(4)]
+
+    def test_a_shape_the_rules_cannot_read_is_reported_not_skipped(self):
+        unchecked = check_footprints.unchecked_in(check_footprints.run(self._pill()))
+        self.assertTrue(unchecked, "four obround holes went through without a word")
+        self.assertTrue(all(f.severity == "could-not-run" for f in unchecked))
+        self.assertIn("pill", " ".join(f.detail for f in unchecked))
+
+    def test_it_says_how_many_and_of_what_shape(self):
+        # The count is what makes it actionable — "some holes" is not a thing anyone can chase.
+        detail = " ".join(f.detail for f in check_footprints.run(self._pill(6)))
+        self.assertIn("6 x pill", detail)
+
+    def test_a_hole_it_can_read_produces_no_such_finding(self):
+        self.assertEqual(check_footprints.unchecked_in(check_footprints.run(self._round())), [])
+
+    def test_it_is_not_reported_as_a_problem_either(self):
+        # "I could not read this" must not be dressed as "this will fail at assembly". A check
+        # that cries wolf gets switched off, and then it catches nothing at all.
+        self.assertEqual(check_footprints.problems_in(check_footprints.run(self._pill())), [])
+
+    def test_the_rendering_does_not_call_the_board_buildable(self):
+        rendered = check_footprints.render(check_footprints.run(self._pill()), "circuit.json")
+        self.assertNotIn("buildable", rendered)
+        self.assertIn("NOT EXAMINED", rendered)
+
+    def test_a_board_it_could_fully_read_is_still_called_buildable(self):
+        rendered = check_footprints.render(check_footprints.run(self._round()), "circuit.json")
+        self.assertIn("buildable", rendered)
+
+
 if __name__ == "__main__":
     unittest.main()

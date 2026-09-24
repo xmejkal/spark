@@ -174,7 +174,15 @@ class Buildability(Check):
     def call(self, inputs):
         check_footprints = load("check_footprints")
         findings = check_footprints.run(circuit_of(inputs))
-        return findings_result(findings, lambda f: "%s: %s" % (f.subject, f.detail))
+
+        def of(severity):
+            return ["%s: %s" % (f.subject, f.detail)
+                    for f in findings if f.severity == severity]
+
+        # Split, for the same reason physics does: a rule that could not read an element has not
+        # approved it, and folding the two together is what let 10 of 70 holes go unexamined
+        # under a tick.
+        return answer(problems=of("problem"), unchecked=of("could-not-run"))
 
 
 class VendorTruth(Check):

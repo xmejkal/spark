@@ -64,12 +64,16 @@ PACKAGE_POWER_W = {"0402": 0.063, "0603": 0.1, "0805": 0.125, "1206": 0.25,
 
 
 class Finding:
-    def __init__(self, rule, subject, detail, fix=None):
+    def __init__(self, rule, subject, detail, fix=None, severity="problem"):
         self.rule, self.subject, self.detail, self.fix = rule, subject, detail, fix
+        #: "problem" — this would fail at assembly. "could-not-run" — a rule could not read the
+        #: element, which is not the same as the element being fine. There was no severity here
+        #: at all, so the second kind had nowhere to go and left through a bare `continue`.
+        self.severity = severity
 
     def as_data(self):
-        return {"rule": self.rule, "subject": self.subject,
-                "detail": self.detail, "fix": self.fix}
+        return {"rule": self.rule, "subject": self.subject, "detail": self.detail,
+                "fix": self.fix, "severity": self.severity}
 
 
 def package_of(footprint):
@@ -272,23 +276,84 @@ def footprint_by_component(circuit):
             for element in circuit if element.get("type") == "pcb_component"}
 
 
+def check_what_was_not_examined(circuit):
+    """
+    Plated holes the rules above could not read, counted rather than dropped.
+
+    Both hole rules begin `if drill is None: continue` and `if hole is None or pad is None:
+    continue`. On the board this tool was written for that silently skipped 10 of 70 plated
+    holes — and four of them are `pill`, the obround shape whose vendor-drawn finished hole is
+    named in this module's own docstring as the flagship defect. The tool then printed
+    "buildable — holes take their pins".
+
+    A rule that cannot read an element has not approved it. Reported per shape, because the shape
+    is what would have to be taught.
+    """
+    unread_drill = defaultdict(int)
+    unread_ring = defaultdict(int)
+    for element in circuit:
+        if element.get("type") != "pcb_plated_hole":
+            continue
+        shape = element.get("shape") or "unspecified"
+        if element.get("hole_diameter") is None:
+            unread_drill[shape] += 1
+        if element.get("hole_diameter") is None or element.get("outer_diameter") is None:
+            unread_ring[shape] += 1
+
+    findings = []
+    for rule, unread, what in (("through-hole-drill", unread_drill, "drill diameter"),
+                               ("annular-ring", unread_ring, "hole and pad diameter")):
+        if not unread:
+            continue
+        findings.append(Finding(
+            rule, "%d plated hole(s)" % sum(unread.values()),
+            "carry no %s, so this rule never examined them: %s"
+            % (what, ", ".join("%d x %s" % (count, shape)
+                               for shape, count in sorted(unread.items()))),
+            fix="an obround or rectangular-pad hole states its size differently from a round "
+                "one. Until this rule reads those shapes, they are unchecked — not approved.",
+            severity="could-not-run"))
+    return findings
+
+
 def run(circuit):
     return (check_through_hole_drills(circuit)
             + check_annular_rings(circuit)
             + check_vias(circuit)
             + check_package_holds_the_value(circuit)
-            + check_cross_pluggable_connectors(circuit))
+            + check_cross_pluggable_connectors(circuit)
+            + check_what_was_not_examined(circuit))
+
+
+def problems_in(findings):
+    return [f for f in findings if f.severity == "problem"]
+
+
+def unchecked_in(findings):
+    return [f for f in findings if f.severity == "could-not-run"]
 
 
 def render(findings, design):
-    if not findings:
-        return "%s: buildable — holes take their pins, packages hold their values" % design
-    lines = ["%s: %d thing(s) that would survive DRC and fail at assembly\n"
-             % (design, len(findings))]
-    for finding in findings:
-        lines.append("  [%s] %s: %s" % (finding.rule, finding.subject, finding.detail))
+    problems, unchecked = problems_in(findings), unchecked_in(findings)
+
+    lines = []
+    if problems:
+        lines.append("%s: %d thing(s) that would survive DRC and fail at assembly\n"
+                     % (design, len(problems)))
+    for finding in problems + unchecked:
+        marker = "  [%s]" % finding.rule if finding.severity == "problem" \
+            else "  [%s, NOT EXAMINED]" % finding.rule
+        lines.append("%s %s: %s" % (marker, finding.subject, finding.detail))
         if finding.fix:
             lines.append("      %s" % finding.fix)
+
+    if not problems:
+        # "buildable" used to be printed whenever the problem list was empty, including when a
+        # rule had quietly skipped a tenth of the holes on the board.
+        lines.insert(0, "%s: %s" % (design, "buildable — holes take their pins, packages hold "
+                                    "their values" if not unchecked else
+                                    "no problems in what could be examined — see below for what "
+                                    "could not"))
     return "\n".join(lines)
 
 
@@ -306,13 +371,16 @@ def main(argv=None):
         return EXIT_COULD_NOT_RUN
 
     findings = run(json.loads(path.read_text()))
+    problems, unchecked = problems_in(findings), unchecked_in(findings)
+    status = "problems" if problems else ("could-not-run" if unchecked else "ok")
     if args.json:
-        print(json.dumps({"tool": "check_footprints",
-                          "status": "problems" if findings else "ok",
+        print(json.dumps({"tool": "check_footprints", "status": status,
                           "findings": [f.as_data() for f in findings]}, indent=2))
     else:
         print(render(findings, path.name))
-    return EXIT_PROBLEMS if findings else EXIT_OK
+    if problems:
+        return EXIT_PROBLEMS
+    return EXIT_COULD_NOT_RUN if unchecked else EXIT_OK
 
 
 if __name__ == "__main__":
