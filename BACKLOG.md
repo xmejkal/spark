@@ -73,7 +73,7 @@ Four rungs. A thing is only as trustworthy as the highest rung it has climbed.
 
 | Rung | Question | Mechanism |
 | --- | --- | --- |
-| 1. Unit test | Does the check bite? | 163 tests. **Every check must have a design that violates it** |
+| 1. Unit test | Does the check bite? | 184 tests. **Every check must have a design that violates it** |
 | 2. Self-refutation | Can it cry wolf? | Each rule needs a case that looks wrong and is fine |
 | 3. Eval | Does the *agent* find it? | `evals/`, reported as a rate over *n* runs, with a no-plugin baseline |
 | 4. Reality | Did it hold? | The bin: `make check`, and eventually a bench |
@@ -86,8 +86,8 @@ for this.
 
 ## 4. Done
 
-Evidence, not assertion. 163 tests, 6 skills, 11 scripts, 1 agent (5 dimensions), 4 evals,
-and a library of verified board definitions.
+Evidence, not assertion. 184 tests, 6 skills, 12 scripts, 1 agent (5 dimensions), 4 evals,
+and libraries of verified boards and parts.
 
 | Capability | Proven by |
 | --- | --- |
@@ -104,6 +104,7 @@ and a library of verified board definitions.
 | **One call for all of it** | `check_all.py` — six checks, four outcomes, so "not asked" never reads as "clean" |
 | **A board library** | `boards/` + `scripts/boards.py` — adopt a verified board with one line; the contract refuses decisions in a facts file |
 | **Pin assignment** | `assign_pins.py` — spends the scarce pins last and explains every choice; refuses rather than half-assigning |
+| **A part library** | `parts/` + `parts.py` — what a module asks of its host, as data; and `--unverified` names every number nobody has checked |
 | Measurement discipline | `bench_sim.py` marks everything `simulated`; nothing that costs money may rest on it |
 
 **The proof it works:** applied to a real board, this stack plus a four-lens review found 20+
@@ -155,9 +156,18 @@ The judgement it encodes is one number: what an unused capability costs against 
 existing job costs. Ranking those separately meant a zero-capability console pin always beat a
 plain wake-capable pin, which is backwards on a chip with twenty-two wake pins and one console.
 
-*Still to do:* turn an assignment plus a module list into a `board.tsx` that builds. That needs
-per-module pin requirements — what an L9110S or a VL6180X actually asks for — which is the
-`verified-parts` library's job and does not exist as data yet.
+`scripts/parts.py` + `parts/` now supply the other half: a module list produces the signals, and
+the signals produce the pin map. `{"parts": ["l9110s-module", "vl6180x-breakout",
+"dfr0534-module"]}` is enough input.
+
+The schema splits deliberately. `needs` is strict, because what a part asks its host for IS
+uniform across parts — that is what makes this data rather than prose. `facts` is open, because a
+motor driver's facts and a rangefinder's have nothing in common, and one schema over both
+degenerates into `{name, notes}`. Every fact carries a source and whether anyone checked, and an
+unverified number must say what depends on it or not be carried.
+
+*Still to do:* turn a pin map plus a module list into a `board.tsx` that builds — placement,
+footprints and traces.
 *Done when:* "I have a FireBeetle, an L9110S and a VL6180X" produces a `board.tsx` that builds
 and passes every check, without hand-holding.
 
