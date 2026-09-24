@@ -181,9 +181,21 @@ class WhichPadIsPinOneTest(unittest.TestCase):
         problems = self._problems(pin_order=[None, None])
         self.assertTrue(any("does not say where" in p for p in problems), problems)
 
-    def test_the_same_pad_named_twice_is_caught(self):
+    def test_a_signal_on_two_pads_is_caught(self):
+        # Two pads carrying one signal is two pads shorted together.
         problems = self._problems(pin_order=["P", "P"])
-        self.assertTrue(any("twice" in p for p in problems), problems)
+        self.assertTrue(any("more than one pad" in p for p in problems), problems)
+
+    def test_a_supply_on_two_pads_is_allowed(self):
+        """
+        Real modules bring VCC and GND out on both rows so either side can be fed — the DFR0954
+        I2S amplifier does exactly that with all twelve of its pads. Refusing it would have made
+        the contract reject a part the library needs to describe.
+        """
+        self.assertEqual(self._problems(
+            pin_order=["VCC", "P", "GND", "VCC", "GND"],
+            power=[{"pin": "VCC", "rail": "logic", "direction": "in"},
+                   {"pin": "GND", "rail": "ground", "direction": "in"}]), [])
 
     def test_an_unwired_pad_is_allowed_to_be_empty(self):
         # A module with ten pads of which you use five is the normal case; the gaps must stay

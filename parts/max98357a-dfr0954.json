@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "id": "max98357a-dfr0954",
+  "name": "DFRobot DFR0954 MAX98357A I2S amplifier",
+  "kind": "audio-amplifier",
+  "also_known_as": [
+    "DF-DFR0954",
+    "I2S 3W Class D Amplifier Module V1.0"
+  ],
+  "//variant": "WHICH BREAKOUT THIS DESCRIBES. The DFR0954 and Adafruit's 3006 share the chip and nothing else: 12 pads in two rows versus 7 in one, a different pin order, a JST PH socket versus a screw terminal, a different SD bias resistor, and mounting holes on the Adafruit only. Any note citing the Adafruit board's pinout does not transfer.",
+  "variant": "DFRobot DFR0954 (board silkscreen 'I2S 3W Class D Amplifier Module V1.0')",
+  "body_mm": {
+    "width": 18.0,
+    "height": 18.0,
+    "verified": true,
+    "source": "DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF",
+    "note": "1.6 mm PCB, 7.1 mm total height including the JST socket, R1.0 corners, and NO MOUNTING HOLES \u2014 the DXF contains no holes but the 12 pads."
+  },
+  "//pin_order": "12 castellated pads, two rows of six at 2.54 mm, rows 15.24 mm apart. THERE IS NO PAD-1 MARKER \u2014 no square pad, no dot \u2014 so a footprint must key off the silkscreen labels rather than a pad number. DFRobot model it as two 6-way connectors: P1 is the top row numbered right-to-left, P2 the bottom row left-to-right, which concatenated runs counter-clockwise from the top right. Physically, top row left-to-right is VCC GND LRC BCLK DIN SPK+ and bottom row left-to-right is GAIN SD NC GND VCC SPK-. DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF",
+  "pin_order": [
+    "SPK_P",
+    "DIN",
+    "BCLK",
+    "LRC",
+    "GND",
+    "VCC",
+    "GAIN",
+    "SD",
+    "NC",
+    "GND",
+    "VCC",
+    "SPK_N"
+  ],
+  "needs": [
+    {
+      "signal": "I2S_BCLK",
+      "pin": "BCLK",
+      "direction": "in",
+      "bus": "i2s"
+    },
+    {
+      "signal": "I2S_LRC",
+      "pin": "LRC",
+      "direction": "in",
+      "bus": "i2s"
+    },
+    {
+      "signal": "I2S_DIN",
+      "pin": "DIN",
+      "direction": "in",
+      "bus": "i2s"
+    },
+    {
+      "signal": "AUDIO_SHUTDOWN",
+      "pin": "SD",
+      "direction": "in",
+      "note": "must be driven, not left floating \u2014 an on-board resistor holds it high"
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "note": "3.3-5 V per DFRobot"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    },
+    {
+      "pin": "SPK_P",
+      "rail": "speaker",
+      "direction": "out",
+      "polarity": "+",
+      "note": "bridged class-D output. SPK+ is top row rightmost, SPK- is BOTTOM row rightmost \u2014 diagonally opposite, not a neighbouring pair"
+    },
+    {
+      "pin": "SPK_N",
+      "rail": "speaker",
+      "direction": "out",
+      "polarity": "-"
+    }
+  ],
+  "unused_pins": [
+    {
+      "pin": "GAIN",
+      "note": "left unconnected on this board, which selects 9 dB. Tie to GND for 12 dB, GND via 100k for 15 dB, VCC for 6 dB, VCC via 100k for 3 dB"
+    },
+    {
+      "pin": "NC",
+      "note": "genuinely floating \u2014 the schematic shows an unterminated stub. Safe as a mechanical anchor"
+    }
+  ],
+  "facts": {
+    "shutdown_current_ua": {
+      "value": 0.6,
+      "verified": true,
+      "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, SD_MODE = 0 V, 25 C (max 2 uA)",
+      "note": "Only reachable by actively pulling SD below the B0 threshold."
+    },
+    "standby_current_ua": {
+      "value": 340,
+      "verified": true,
+      "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, SD_MODE = 1.8 V with no BCLK, 25 C",
+      "note": "THE TRAP. The chip enters standby by itself when the clock stops \u2014 outputs go high-impedance \u2014 but it still draws 340 uA, about a thousand times the shutdown figure and comparable to the whole rest of a sleeping board. Stopping the audio is not turning it off."
+    },
+    "shutdown_threshold_v": {
+      "value": 0.16,
+      "verified": true,
+      "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, trip point B0: min 0.08 V, typ 0.16 V, max 0.355 V",
+      "note": "ABSOLUTE volts, not a fraction of the supply. Drive below 0.08 V to be safe against the minimum. Above it the pin selects a channel instead of shutting down."
+    },
+    "sd_bias_resistor_ohms": {
+      "value": 100000,
+      "verified": false,
+      "source": "DFRobot's own two documents disagree: the schematic (DFRobot schematic DFR0954_max98357a-i2s_schematics_1.0.pdf, Rev V0.0.1, 2021-12-29) shows R1 = 100k from VCC to SD, while the wiki text says 680k and calls the default mode 'mix'. Both compute correctly against the Maxim thresholds, so the arithmetic does not settle it",
+      "why_it_matters": "Decides the as-shipped channel \u2014 100k gives VCC/2 which selects LEFT, 680k gives 0.128 x VCC which selects the L+R mix \u2014 and it decides what holding SD low costs: 33 uA at 3.3 V through 100k, or 4.9 uA through 680k. Measure R1, or measure the SD voltage on a powered board."
+    },
+    "quiescent_current_ma": {
+      "value": 2.4,
+      "verified": true,
+      "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, 25 C, VDD = 3.7 V (max 2.85 mA)"
+    },
+    "output_power_w_8ohm_5v": {
+      "value": 1.8,
+      "verified": true,
+      "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, 8 ohm + 68 uH, 12 dB gain, 10% THD+N (1.4 W at 1%)"
+    },
+    "output_power_w_8ohm_3v3": {
+      "value": 0.6,
+      "verified": false,
+      "source": "read off Maxim's graph TOC18 by eye \u2014 the datasheet tabulates 3.7 V and 5 V but has no 3.3 V figure. A clipping estimate V^2/2R gives 0.68 W and matches the tabulated points",
+      "why_it_matters": "Decides whether the bin is audible from the far side of a room on the 3V3 rail, or whether the amplifier should be fed from VCC instead."
+    },
+    "gain_db_as_shipped": {
+      "value": 9,
+      "verified": true,
+      "source": "DFRobot schematic DFR0954_max98357a-i2s_schematics_1.0.pdf, Rev V0.0.1, 2021-12-29 \u2014 GAIN goes only to its pad and the chip pin, no resistor fitted; unconnected selects 9 dB per Maxim Table 8"
+    },
+    "needs_mclk": {
+      "value": false,
+      "verified": true,
+      "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, a headline feature: supply LRCLK, BCLK and DIN only",
+      "note": "The module has no MCLK pad, consistent with the chip."
+    },
+    "unsupported_sample_rates_hz": {
+      "value": [
+        11025,
+        12000,
+        22050,
+        24000
+      ],
+      "verified": true,
+      "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, body text: \"LRCLK ONLY supports 8kHz, 16kHz, 32kHz, 44.1kHz, 48kHz, 88.2kHz and 96kHz\" and names these four as NOT supported",
+      "note": "The headline spec says 8-96 kHz, which reads as continuous. 22.05 kHz is the natural choice for a short chime and is explicitly excluded \u2014 use 16 or 32 kHz."
+    },
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.0
+      ],
+      "verified": true,
+      "source": "DFRobot wiki, https://wiki.dfrobot.com/SKU_DFR0954_MAX98357_I2S_Amplifier_Module (the sidebar name 'Digital Amplifier' is not the slug and 404s; the file-server id is 20560, not 20954); the silicon is rated 2.5-5.5 V per MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, so DFRobot state a narrower range than the chip supports and give no reason"
+    },
+    "lcsc_part_for_the_bare_chip": {
+      "value": "C910544",
+      "verified": true,
+      "source": "LCSC, MAX98357AETE+T, TQFN-16-EP 3x3",
+      "note": "Only if the chip is ever put on the board directly instead of this module."
+    }
+  },
+  "host_requirements": [
+    "NEVER stop LRCLK while BCLK is running. Maxim state twice that this can produce a large DC output voltage, which into an 8 ohm speaker cooks the voice coil. Stop BCLK, not LRCLK.",
+    "SD must be DRIVEN LOW to shut the amplifier down, not left floating \u2014 an on-board resistor holds it high, and floating selects a channel rather than turning it off. Removing the clock only reaches standby at 340 uA.",
+    "Holding SD low draws current through that on-board resistor for as long as it is held: 33 uA at 3.3 V if R1 is 100k, 4.9 uA if it is 680k. The host GPIO sinks it, and it is spent precisely while the amplifier is meant to be off.",
+    "SPK+ and SPK- are on OPPOSITE rows, diagonally \u2014 top row rightmost and bottom row rightmost. They are not an adjacent pair, and a footprint drawn as if they were will wire the speaker across the wrong two pads.",
+    "This module has no mounting holes. Whatever holds it is the host board's problem."
+  ]
+}

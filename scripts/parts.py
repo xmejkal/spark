@@ -147,9 +147,16 @@ def validate(part: dict, path: Path) -> list:
                     problems.append(
                         "pin_order pad %d is %r, which this part never mentions — a pad name that "
                         "matches nothing silently wires nothing" % (position, pad))
+            # A pad may legitimately appear twice, but only if it is a SUPPLY. Real modules bring
+            # VCC and GND out on both rows so either side can be fed; a repeated SIGNAL is a typo,
+            # and two pads shorted together is what it would build.
+            supplies = {supply["pin"] for supply in part.get("power") or []}
             placed = [pad for pad in order if pad is not None]
-            if len(placed) != len(set(placed)):
-                problems.append("pin_order names the same pad twice")
+            repeated = {pad for pad in placed if placed.count(pad) > 1}
+            for pad in sorted(repeated - supplies):
+                problems.append(
+                    "pin_order names %r on more than one pad, and it is not a supply — a signal "
+                    "on two pads is two pads shorted together" % pad)
             missing = sorted(named - set(placed))
             if missing:
                 problems.append(
