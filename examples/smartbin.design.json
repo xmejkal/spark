@@ -1,6 +1,7 @@
 {
-  "//": "The smart bin, as actually built. This is the regression fixture: it must pass, and the pin choices in it were expensive to learn.",
-  "board": "../../smartbin-local/boards/xiao-esp32-c6.json",
+  "//": "The regression fixture: a known-good design that must stay clean. FROZEN on purpose — it is the smart bin as it stood on the ESP32-C6, and the pin choices in it were expensive to learn. It is deliberately NOT tracked against the live project: a fixture that follows a project breaks every time the project is fixed, which teaches everyone to ignore it.",
+  "board": "xiao-esp32-c6",
+  "//board": "A board id, resolved from the library by scripts/boards.py. It used to be a relative path into a sibling checkout, which stopped existing the moment the definitions moved into this plugin - and nothing noticed, because the test passes the board in separately.",
   "parts": [
     {
       "ref": "Rangefinder",

@@ -150,9 +150,14 @@ The largest gap between what the skills describe and what they drive.
 *Done when:* "I have a FireBeetle, an L9110S and a VL6180X" produces a `board.tsx` that builds
 and passes every check, without hand-holding.
 
-**S6 — Evals for the checks that have none.**
-Three evals exist and predate half the tooling.
-*Done when:* each new check has an eval with a baseline, so we know the agent uses it.
+**S6 — Evals for the agent-shaped gaps.** *in progress.*
+`finds-assembly-problems` added: does the manufacturability dimension find what only judgement
+finds, and — the harder half — does it stay out of the deterministic checks' territory? It is
+graded both ways, with penalties for repeating arithmetic a script already owns.
+*Note on scope:* a deterministic check does not need an eval. It has unit tests, and an eval
+measures the agent. What needs one is every place the agent has to choose.
+*Done when:* the manufacturability eval has run with a baseline, and one case covers whether the
+review loop actually invokes `check_all.py` rather than reasoning from the design alone.
 
 ### Later
 
@@ -165,8 +170,11 @@ and stops at anything needing a human. Only once 1–3 are trusted.
 
 ### Debt
 
-- **The `examples/` design and `evals/fixtures/` predate the current board** and describe a
-  machine that no longer exists.
+- ~~The `examples/` design and `evals/fixtures/` predate the current board.~~ Resolved, and the
+  assessment was half wrong: `evals/fixtures/` was genuinely orphaned and is deleted, but
+  `examples/smartbin.design.json` is a FROZEN regression fixture and being out of date with the
+  live project is the point. Its one real defect was a `board` path into a sibling checkout that
+  stopped existing when the definitions moved — dead metadata nothing read.
 - **Plugin prose is long.** ~1,100 lines of skill markdown; some is reference, some is repetition.
 
 ---
