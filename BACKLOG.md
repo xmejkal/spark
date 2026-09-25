@@ -251,67 +251,113 @@ so its eleven gates are genuinely green. The plugin's front door is the broken p
 
 ---
 
+## 4d. State on 2026-09-25 — what runs, measured not remembered
+
+298 tests. `claude plugin validate` passes. 4 skills, 2 commands, 1 agent, 15 scripts, 2 boards,
+4 parts. Everything pushed to `xmejkal/spark`.
+
+### The interface, before and after two days
+
+| | was | now |
+| --- | --- | --- |
+| scripts a fresh install can run | **0 of 14** (all mode 100644) | 15, all `100755` |
+| checks the documented review command runs | **3 of 7** | **6 of 7** |
+| skills competing for "check my design" | 3 | 1 |
+| parts a second project can add | **0** (the flag was unreachable) | any |
+| `spark init` | a string inside an error message | `/spark:init` |
+| README version vs `plugin.json` | 0.1.0 vs 0.6.0 | both 0.6.0 |
+
+### The defect class this was all one instance of
+
+**Every instrument built to say "this is fine" reported success when it had not looked**, and the
+tests passed because they exercised the boxes and never the seams. Found and fixed, each with a
+test that fails without it and a mutation run proving so:
+
+| where | what it did |
+| --- | --- |
+| `check_all.py` pin-capability | called `check_design.check()`, a function that has never existed. The flagship check had never once run through the runner |
+| `check_all.py` vendor-truth | folded "could not look" into a notes field and returned `ok` |
+| `check_all.py` physics | discarded its own `could-not-run` findings |
+| `Check.run` | `except Exception` let `SystemExit` past, so one check's missing file killed the other six and exited 1 = "problems found" |
+| `check_bom.check_design_warnings` | returned `[]` for a file it never opened |
+| `check_footprints` hole rules | silently skipped 14 of 74 holes on the real board, four of them the obround shape its own docstring calls its flagship defect |
+| `check_footprints` footprint lookup | read `pcb_component.footprinter_string`; the engine moved it to `cad_component`, so **two rules examined nothing and said nothing** |
+| `findings.py` `validate --apply` | against an empty `circuit.json` — what a half-failed build leaves — retired **19 of 20 findings** and reported it as success |
+| an empty netlist, everywhere | four checks examined nothing, found nothing, and reported `ok` |
+| the test written to catch all this | asserted that the string `load("check_design")` appeared in the runner's SOURCE. It verified the check was *named*, not that it *ran* |
+
+**The rule that now governs the suite:** a test must RUN the thing, not read it. No assertion on
+source text, none that is an arithmetic identity of the function under test, and every check
+exercised through the runner with an input that makes it fail. Every repair this week was
+mutation-tested — the defect put back, the suite required to go red — and that run has twice
+caught a rule I had just written that no test covered.
+
+### What the bin taught the library
+
+The one real project is the test case, and working it produced checks and contract rules that
+generalise:
+
+- **a three-pin semiconductor with no supplier part** is now a BOM problem. Its footprint cannot
+  say which pad is the gate, and the board's high-side switch was a bare `sot23` with no part
+  number — tscircuit binds pad 1 to the drain, every real SOT-23 P-FET is gate-source-drain, so
+  fitting any actual part shorts a 2 A rail through a GPIO. The line had no *value* either, so
+  the existing rule exempted it.
+- **cross-pluggable connectors are decided by pad geometry**, not by a name. Three components on
+  the reference board carry no footprint string at all, including both plug-in modules — the
+  exact parts whose swap puts 6 V on a logic input.
+- **`pin_order`**: which pad is pin 1 is a fact about the module. The generator numbered pads
+  from the order the pins appeared in a JSON file.
+- **`body_mm` carries provenance**, and a part nobody measured makes the generator refuse rather
+  than invent 16 x 12 mm.
+- **an output is not a rail.** Both halves of a bridged class-D amplifier declared `rail:
+  speaker` and were wired to one net — a short, under a banner reading "nothing here is guessed".
+- **a supply may sit on two pads; a signal may not.** The DFR0954 brings VCC and GND out twice.
+- **scope**: an assertion with no stated scope is the defect. One FireBeetle SKU covers two
+  different power designs; four VL6180X breakouts share no pinout; "the DFRobot MP3 one" names
+  four products. Board and part files now say which thing they describe.
+
+### Still true, and still the gap
+
+`check_all` answers in prose strings; `findings.py` wants `{dimension, anchors, what,
+consequence, severity}`. **Nothing bridges them**, so only a model can write to the store — in a
+tool whose measured value is the half that is not a model. That is the next structural piece, and
+it needs `findings.py sync` in the same change or machine findings never retire.
+
+---
+
 ## 5. Backlog
 
 Ordered by value. Each item says what it is worth and how we will know it worked.
 
 ### Now
 
-~~**A0 — Make the instruments unable to lie.**~~ **done.** `answer()` is the one place a status
-is decided, so `ok` is unreachable while anything went unchecked — not by convention, but because
-there is no other way to build the result. `unchecked` (a property of the RUN) is now a separate
-field from `unmeasured` (a property of the BOARD). `pin-capability` runs. `SystemExit` no longer
-escapes the guard. An empty `circuit.json` — what a half-failed build leaves — is refused by all
-four checks that read it, instead of being examined and found clean. Asking for nothing no longer
-exits 0.
+**N1 — Bridge the checks into the findings store.** `check_all` returns prose; the store wants
+`{dimension, anchors, what, consequence, severity}` with anchors validated against the netlist.
+Today only a model can write findings, which is the wrong half of this product doing it. The
+checks already carry the structure — `check_physics` returns `{rule, subject, detail, severity,
+fix}` and knows its net and component names — so the mapping is mechanical. Build it as an
+`anchors` list filled at each Finding's construction site plus `check_all --findings out.json`,
+not as a separate script that would re-run everything.
+*What would make it a mistake, and must ship in the same change:* machine findings are
+self-clearing — widen a trace and the rule stops firing — so without a `findings.py sync
+--source check` that retires what the current run no longer reports, the store fills with stale
+entries and the human list becomes noise. Build `sync` with it or not at all.
 
-**Every repair was then mutation-tested:** each defect was re-introduced and the suite had to go
-red. Nine of nine caught, each by the test named for it. Two gaps surfaced that way and were
-closed rather than waived — the role vocabulary had no test, and `verdict`'s defensive branch
-could not fail. 232 tests; the bin's eleven gates still pass.
+**N2 — `findings.py next --actionable`.** The live store is 11 blocked of 20 and `next` ranks
+blocked first, by design, because clearing one is minutes of a person's time. For an unattended
+caller that is a deadlock on turn one. One flag.
 
-*Not fixed, and still open:* `spark-review`'s own command never passes `--design`, `--firmware`
-or `--board-file`, so two of seven checks stay unasked and five clean ones will correctly exit 0.
-That is a skill-prose bug, in **Next**.
+**N3 — Rebuild the evals so they can exercise the product.** Every case inlines its design in the
+prompt and none references a path on disk, so **no case can run a script** whatever its turn
+count. That is why the conclusion in §4b could not have been falsified. Needs
+`schema_version: "1.1"` with `context.add_dirs`, `tool_used` graders with `arm: both`, and n
+large enough that one run of three is not the unit of measure. Grade knowledge-recall cases and
+judgement cases **separately** — they behave differently and averaging them is how the last
+conclusion went wrong in both directions.
 
-**A1 — Make it installable.** `chmod +x scripts/*.py`; build `spark init` or delete the promise;
-one README that matches `plugin.json` and mentions the scripts, boards and parts libraries.
-*Worth:* on a fresh install today, nothing in `scripts/` runs. *Done when:* a stranger gets a
-result from a cold clone without reading Python.
-
-**A2 — Stop `emit_board.py` emitting a destructive board.** A rail that several pins share is not
-one net; pin numbers come from the part's physical pinout or the part is refused; a missing
-footprint module is a refusal, not an exit 0. *Worth:* it currently shorts a class-D output.
-*Done when:* a test asserts SPKP and SPKN are on different nets, and the generated file builds.
-
-~~**A3 — One role vocabulary, validated.**~~ **done.** `boards.PIN_ROLES` is a closed set of six
-names with what each means to the scripts that read them; `--validate` refuses anything else and
-says what would have worked. The XIAO's `boot_log_tx` is now `console_uart`, and `check_design.py`
-takes the name from `boards.CONSOLE_UART` rather than spelling it. The reproducer — a
-serial-parsing part on the console UART — now fails on **both** shipped boards, derived from each
-board's own file rather than hardcoded, so a board added without a console UART fails the suite.
-
----
-
-#### Already done
-
-~~**S1 — Move the BOM check into the plugin.**~~ **done.** `scripts/check_bom.py`, 13 tests, and
-the project-specific regex turned out to be dead code — "has a value and no supplier part" is the
-rule on any board, with nothing to configure.
-
-~~**S2 — Wire the new scripts into `spark-review`.**~~ **done.** `scripts/check_all.py` runs all
-six deterministic checks in one call and answers once, so adding a check no longer means editing
-a skill. It reports four outcomes, not two: the usual pair plus `could-not-run` (asked, and still
-could not look) and `skipped` (never asked). Conflating those last two is how a review that ran
-one check out of seven looked exactly like one that ran all seven.
-*Still open from S2:* an eval showing the combined loop finds what the ad-hoc council found.
-
-~~**S3 — A `manufacturability` dimension for `design-reviewer`.**~~ **done.** Five dimensions
-now. It is explicitly told what `check_footprints.py` already owns — drill, ring, via class,
-package-holds-value, cross-pluggable connectors — so it cannot duplicate arithmetic a script
-settles. What is left for it is what a number cannot: assembly order, what a soldering iron can
-reach once the tall parts are in, and what the board fails to tell whoever builds it.
-*Still open:* an eval scoring it against today's findings as ground truth (see S6).
+**N4 — Leaf checks must count what they skipped.** Done for `check_footprints`'s hole rules; the
+same audit has not been run over `check_physics`, `compare_design` or `check_vendor_pins`. The
+determinism argument only holds if the script reports honestly that it ran.
 
 ### Next
 
