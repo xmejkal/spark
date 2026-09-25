@@ -293,5 +293,95 @@ class AHoleThisCannotReadIsNotAHoleThisApprovedTest(unittest.TestCase):
         self.assertIn("buildable", rendered)
 
 
+class EveryShapeTscircuitEmitsTest(unittest.TestCase):
+    """
+    The rules read `hole_diameter` and `outer_diameter` and nothing else, so two of the three
+    shapes tscircuit actually emits went past them unread. That is not a gap in the footprint
+    library — the geometry was in the netlist all along — it is a gap in the reader, and the
+    difference matters because one is a week of importing and the other is a function.
+
+    Measured on the reference board the moment these landed: two connectors whose pill holes
+    leave 0.225 mm of annular ring, under the 0.25 mm a cheap process guarantees. Both had been
+    sitting in the "could not examine" bucket, on a board declared ready to fabricate.
+    """
+
+    @staticmethod
+    def pill(hole_w, hole_h, pad_w, pad_h, count=4, **extra):
+        return [dict({"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_J1",
+                      "hole_width": hole_w, "hole_height": hole_h,
+                      "outer_width": pad_w, "outer_height": pad_h,
+                      "x": index * 2.54, "y": 0.0}, **extra)
+                for index in range(count)]
+
+    @staticmethod
+    def rect_pad(hole, pad_w, pad_h, count=4, **extra):
+        return [dict({"type": "pcb_plated_hole", "shape": "circular_hole_with_rect_pad",
+                      "pcb_component_id": "pcb_J1", "hole_diameter": hole,
+                      "rect_pad_width": pad_w, "rect_pad_height": pad_h,
+                      "x": index * 2.54, "y": 0.0}, **extra)
+                for index in range(count)]
+
+    # --- what a pin has to fit through ---
+
+    def test_an_obround_hole_is_measured_across_its_narrow_way(self):
+        # The wide way is free clearance; only the narrow way stops the pin.
+        self.assertEqual(check_footprints.hole_span_mm(
+            {"shape": "pill", "hole_width": 1.6, "hole_height": 0.8}), 0.8)
+
+    def test_a_rectangular_pad_still_has_a_round_hole(self):
+        self.assertEqual(check_footprints.hole_span_mm(
+            {"shape": "circular_hole_with_rect_pad", "hole_diameter": 1.0}), 1.0)
+
+    def test_an_element_that_states_no_size_is_still_unreadable(self):
+        # The honest None. Teaching the reader more shapes must not turn "it did not say" into a
+        # number — that is how a check starts approving things it never saw.
+        self.assertIsNone(check_footprints.hole_span_mm({"shape": "pill"}))
+
+    def test_an_obround_header_hole_too_narrow_for_its_pin_is_now_caught(self):
+        circuit = self.pill(1.6, 0.8, 2.2, 1.4, count=6) + named("J1")
+        findings = check_footprints.problems_in(check_footprints.run(circuit))
+        self.assertTrue(any(f.rule == "through-hole-drill" for f in findings), findings)
+
+    # --- how much copper is left around it ---
+
+    def test_a_rectangular_pad_is_measured_on_its_tight_axis(self):
+        # 3.0 wide and 1.4 tall around a 1.0 hole: generous across, 0.2 up and down. Averaging,
+        # or taking the width, would call this fine.
+        self.assertAlmostEqual(check_footprints.annular_ring_mm(
+            {"hole_diameter": 1.0, "rect_pad_width": 3.0, "rect_pad_height": 1.4}), 0.2)
+
+    def test_an_obround_pad_is_measured_on_its_tight_axis_too(self):
+        self.assertAlmostEqual(check_footprints.annular_ring_mm(
+            {"hole_width": 1.6, "hole_height": 0.8, "outer_width": 2.6, "outer_height": 1.2}), 0.2)
+
+    def test_a_hole_pushed_off_centre_loses_ring_on_the_side_it_moved_toward(self):
+        # The field is in the netlist and describes exactly this. Ignoring it reports the ring
+        # the pad would have had if the hole were centred, which it is not.
+        centred = {"hole_diameter": 1.0, "rect_pad_width": 2.0, "rect_pad_height": 2.0}
+        self.assertAlmostEqual(check_footprints.annular_ring_mm(centred), 0.5)
+        self.assertAlmostEqual(check_footprints.annular_ring_mm(
+            dict(centred, hole_offset_x=0.3)), 0.2)
+
+    def test_a_thin_ring_on_an_obround_pad_is_caught(self):
+        circuit = self.pill(1.6, 0.75, 2.4, 1.2) + named("J1")
+        findings = check_footprints.problems_in(check_footprints.run(circuit))
+        self.assertTrue(any(f.rule == "annular-ring" for f in findings), findings)
+
+    def test_a_generous_ring_on_an_obround_pad_is_not(self):
+        circuit = self.pill(1.6, 1.0, 3.0, 2.4) + named("J1")
+        self.assertEqual([f for f in check_footprints.problems_in(check_footprints.run(circuit))
+                          if f.rule == "annular-ring"], [])
+
+    # --- and nothing is left in the unread bucket ---
+
+    def test_a_fully_dimensioned_obround_hole_is_no_longer_unexaminable(self):
+        self.assertEqual(
+            check_footprints.unchecked_in(check_footprints.run(self.pill(1.6, 1.0, 3.0, 2.4))), [])
+
+    def test_a_rect_pad_hole_is_no_longer_unexaminable(self):
+        self.assertEqual(
+            check_footprints.unchecked_in(check_footprints.run(self.rect_pad(1.0, 1.8, 1.8))), [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -117,6 +117,57 @@ def is_header(holes):
     return False
 
 
+def hole_span_mm(element):
+    """
+    The narrowest way across a plated hole — the dimension a pin actually has to fit through.
+
+    tscircuit describes a hole in one of three ways, and the rules below read only the first, so
+    the other two were skipped in silence: `circle` carries `hole_diameter`;
+    `circular_hole_with_rect_pad` carries `hole_diameter` inside a rectangular pad; `pill` is
+    obround and carries `hole_width` and `hole_height`, of which only the smaller constrains a
+    pin. `pill` is the shape this module's own docstring names as the flagship defect, so a rule
+    that could not read one was blind to the case it was written for.
+
+    None means the element does not say — which is not the same as passing.
+    """
+    if element.get("hole_diameter") is not None:
+        return element["hole_diameter"]
+    width, height = element.get("hole_width"), element.get("hole_height")
+    if width is not None and height is not None:
+        return min(width, height)
+    return None
+
+
+def annular_ring_mm(element):
+    """
+    The thinnest copper anywhere between the hole edge and the pad edge.
+
+    Measured per axis and then minimised, because a ring only has to be too thin in one place to
+    tear off the barrel. A rectangular pad is not square and a pill is not round, so collapsing
+    either to one nominal "pad diameter" reports the generous axis and misses the tight one.
+
+    An off-centre hole eats into the ring on the side it moves toward, so the offset is
+    subtracted rather than ignored.
+    """
+    offset_x = abs(element.get("hole_offset_x") or 0)
+    offset_y = abs(element.get("hole_offset_y") or 0)
+
+    hole = element.get("hole_diameter")
+    if hole is not None:
+        pad_width = element.get("outer_diameter") or element.get("rect_pad_width")
+        pad_height = element.get("outer_diameter") or element.get("rect_pad_height")
+        if pad_width is None or pad_height is None:
+            return None
+        return min(pad_width / 2 - offset_x - hole / 2, pad_height / 2 - offset_y - hole / 2)
+
+    hole_width, hole_height = element.get("hole_width"), element.get("hole_height")
+    pad_width, pad_height = element.get("outer_width"), element.get("outer_height")
+    if None in (hole_width, hole_height, pad_width, pad_height):
+        return None
+    return min(pad_width / 2 - offset_x - hole_width / 2,
+               pad_height / 2 - offset_y - hole_height / 2)
+
+
 def check_through_hole_drills(circuit):
     """
     Every plated hole that a header pin goes into has to admit one.
@@ -130,7 +181,7 @@ def check_through_hole_drills(circuit):
     for element in circuit:
         if element.get("type") != "pcb_plated_hole":
             continue
-        drill = element.get("hole_diameter")
+        drill = hole_span_mm(element)
         if drill is None:
             continue
         by_component[element.get("pcb_component_id")].add(drill)
@@ -163,10 +214,10 @@ def check_annular_rings(circuit):
     for element in circuit:
         if element.get("type") != "pcb_plated_hole":
             continue
-        hole, pad = element.get("hole_diameter"), element.get("outer_diameter")
-        if hole is None or pad is None:
+        hole, ring = hole_span_mm(element), annular_ring_mm(element)
+        if hole is None or ring is None:
             continue
-        ring = (pad - hole) / 2
+        pad = hole + 2 * ring
         owner = names.get(element.get("pcb_component_id"), "?")
         if ring < MIN_ANNULAR_RING_MM and (owner, round(ring, 3)) not in seen:
             seen.add((owner, round(ring, 3)))
@@ -369,9 +420,9 @@ def check_what_was_not_examined(circuit):
         if element.get("type") != "pcb_plated_hole":
             continue
         shape = element.get("shape") or "unspecified"
-        if element.get("hole_diameter") is None:
+        if hole_span_mm(element) is None:
             unread_drill[shape] += 1
-        if element.get("hole_diameter") is None or element.get("outer_diameter") is None:
+        if annular_ring_mm(element) is None:
             unread_ring[shape] += 1
 
     findings = []
