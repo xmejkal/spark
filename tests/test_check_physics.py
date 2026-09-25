@@ -189,22 +189,68 @@ class CapacitorVoltageTest(unittest.TestCase):
 
 
 class ResistorPowerTest(unittest.TestCase):
-    def _shunt(self, ohms, footprint, current):
+    """
+    A netlist records neither the current through a resistor nor the voltage across it.
+
+    The rule used to compute I^2 * R with the RAIL's maximum current for every resistor on that
+    rail. For a shunt that is exactly right — a shunt is in series with the rail — and these
+    tests only ever exercised a shunt, which is why the arithmetic looked sound. For a 100k
+    pull-up on the same rail it claims 225 kW.
+
+    It never fired on a real board anyway: `footprint_of` read a field the engine had moved and
+    returned None for all 28 components, and the package table was keyed `0603` while the engine
+    emits `res0603`. Three independent faults, and being broken is the only reason nobody noticed
+    the arithmetic was wrong for everything but the case under test.
+
+    The design current is now stated by the design, because that is a thing a person knows and a
+    netlist does not — and a resistor with no stated current is reported as unassessed rather
+    than passed.
+    """
+
+    def _shunt(self, ohms, footprint, current, state_it=True):
         circuit = [net("MOTOR6V"), component("Shunt", "simple_resistor", resistance=ohms),
-                   port("Shunt", "pin1"), pcb_component("Shunt", footprint)]
+                   port("Shunt", "pin1"),
+                   # cad_component, which is where the engine actually puts the footprint. The
+                   # old fixture used pcb_component with a bare "0805" and so described a netlist
+                   # the engine had stopped emitting.
+                   {"type": "cad_component", "source_component_id": "Shunt",
+                    "footprinter_string": footprint}]
         circuit += trace("MOTOR6V", ["Shunt.pin1"], [1.0])
-        return check_physics.run(circuit, {"physics": {"rails": {
-            "MOTOR6V": {"max_current_a": current}}}})
+        rail = {"max_current_a": current}
+        if state_it:
+            rail["resistor_currents"] = {"Shunt": current}
+        return check_physics.run(circuit, {"physics": {"rails": {"MOTOR6V": rail}}})
 
     def test_a_shunt_beyond_its_package_rating_is_caught(self):
-        findings = [f for f in self._shunt(0.33, "0805", 2.0) if f.rule == "resistor-power"]
-        self.assertEqual(len(findings), 1)
+        findings = [f for f in self._shunt(0.33, "res0805", 2.0) if f.rule == "resistor-power"]
+        self.assertEqual(len(findings), 1, findings)
+        self.assertEqual(findings[0].severity, "problem")
         self.assertIn("0805", findings[0].detail)
 
     def test_the_same_job_in_a_bigger_package_at_a_lower_value_is_fine(self):
         # The change that made this measurement stop mattering: 0.1R in a 2512 is 0.40 W at 2 A.
         self.assertEqual(
-            [f for f in self._shunt(0.1, "2512", 2.0) if f.rule == "resistor-power"], [])
+            [f for f in self._shunt(0.1, "res2512", 2.0) if f.rule == "resistor-power"], [])
+
+    def test_a_resistor_with_no_stated_current_is_reported_not_passed(self):
+        findings = [f for f in self._shunt(0.33, "res0805", 2.0, state_it=False)
+                    if f.rule == "resistor-power"]
+        self.assertEqual(len(findings), 1, findings)
+        self.assertEqual(findings[0].severity, "could-not-run")
+        self.assertIn("could not be assessed", findings[0].detail)
+
+    def test_the_footprint_is_read_from_where_the_engine_puts_it(self):
+        # The defect that made every one of these rules inert on a real board. Measured against
+        # the reference board before the fix: 0 of 28 components resolved.
+        circuit = [component("R1", "simple_resistor", resistance=100),
+                   {"type": "cad_component", "source_component_id": "R1",
+                    "footprinter_string": "res0603"}]
+        self.assertEqual(check_physics.Board(circuit).footprint_of("R1"), "res0603")
+
+    def test_the_package_table_matches_what_the_engine_emits(self):
+        # Keyed "0603" and matched with startswith against "res0603", which can never be true.
+        self.assertEqual(check_physics.package_of("res0603"), "0603")
+        self.assertIn(check_physics.package_of("res0603"), check_physics.PACKAGE_POWER_W)
 
 
 class I2cRiseTimeTest(unittest.TestCase):

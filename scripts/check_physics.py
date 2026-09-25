@@ -30,10 +30,27 @@ whose worst risk is an unmeasured number should be told that, not given a green 
 """
 
 import argparse
+import importlib.util
 import json
 import math
 import sys
 from pathlib import Path
+
+SCRIPTS = Path(__file__).resolve().parent
+
+
+def _sibling(module_name):
+    """Import a sibling script, so a fact lives in one place rather than two."""
+    spec = importlib.util.spec_from_file_location(module_name, SCRIPTS / (module_name + ".py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+#: `res0603` -> `0603`. check_footprints already works this out, and the package table here was
+#: keyed on the bare size while the engine emits the prefixed form — so even with the footprint
+#: resolved, nothing matched. One copy, imported.
+package_of = _sibling("check_footprints").package_of
 
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"
@@ -129,13 +146,27 @@ class Board:
         return sorted({name for name, _ in self.members.get(net_name, [])})
 
     def footprint_of(self, component_name):
-        """The package string, e.g. '0805'. Taken from the PCB side, which is what is built."""
+        """
+        The package string, e.g. `res0603`.
+
+        Read from `cad_component` first, falling back to `pcb_component` for older netlists. This
+        looked only at `pcb_component`, where the engine no longer puts it: measured against the
+        reference board it resolved 0 of 28 components, so every rule downstream of it examined
+        nothing. Exactly the defect fixed in check_footprints, in a second file, which is why
+        that fix needed to be an audit rather than a patch.
+        """
         source = self.named(component_name)
         if not source:
             return None
-        for pcb in self.pcb_components.values():
-            if pcb.get("source_component_id") == source["source_component_id"]:
-                return (pcb.get("footprinter_string") or "").strip() or None
+        wanted = source["source_component_id"]
+        for element in self.elements:
+            if element.get("type") not in ("cad_component", "pcb_component"):
+                continue
+            if element.get("source_component_id") != wanted:
+                continue
+            footprint = (element.get("footprinter_string") or "").strip()
+            if footprint:
+                return footprint
         return None
 
     def narrowest_by_net(self):
@@ -250,31 +281,62 @@ def check_capacitor_voltages(board, rails):
 
 
 def check_resistor_power(board, rails):
-    """Does a resistor's package survive what it dissipates?"""
+    """
+    Whether a resistor's package survives what it dissipates — which a netlist cannot answer.
+
+    This computed `I^2 * R` using the RAIL's maximum current for every resistor on that rail. That
+    is only true of a resistor in series with the whole rail. For a 100k pull-up on a 1.5 A rail
+    it claims 225 kW. The mirror error is just as bad: `V^2 / R` over the rail voltage is a valid
+    upper bound for a pull-up and absurd for a 0.1 ohm shunt, which never sees the full rail.
+
+    **A netlist records neither the current through a resistor nor the voltage across it.** Both
+    depend on topology the design does not state. So this rule cannot decide, and the honest
+    answer is to say how many it could not assess rather than to compute a number that is wrong
+    in one direction or the other.
+
+    It never fired, in either direction, because `footprint_of` returned None for every component
+    and the package table was keyed `0603` while the engine emits `res0603`. Three independent
+    faults, and being broken is the only reason nobody noticed the arithmetic was wrong.
+
+    To make this a real check, a design has to state the current through a resistor — which is a
+    thing a person knows and a netlist does not.
+    """
     findings = []
+    unassessable = []
     for rail, spec in sorted(rails.items()):
-        current = spec.get("max_current_a")
-        if current is None:
-            continue
         for component_name in board.components_on(rail):
             component = board.named(component_name)
             if not component or component.get("ftype") != "simple_resistor":
                 continue
-            ohms = component.get("resistance")
-            if not ohms:
+            if not component.get("resistance"):
                 continue
-            watts = current * current * float(ohms)
-            footprint = board.footprint_of(component_name) or ""
-            rated = next((w for size, w in PACKAGE_POWER_W.items() if footprint.startswith(size)),
-                         None)
-            if rated is None:
+            stated = (spec.get("resistor_currents") or {}).get(component_name)
+            package = package_of(board.footprint_of(component_name))
+            rated = PACKAGE_POWER_W.get(package)
+
+            if stated is None or rated is None:
+                unassessable.append(component_name)
                 continue
+
+            watts = stated * stated * float(component["resistance"])
             if watts > rated:
                 findings.append(Finding(
                     "resistor-power", component_name,
-                    "dissipates %.2f W at %.2f A through %g ohm, but a %s is rated %.3f W"
-                    % (watts, current, float(ohms), footprint, rated),
-                    fix="use a package rated above %.2f W, or lower the resistance" % watts))
+                    "dissipates %.3f W at the %.2f A this design states for it, through %g ohm, "
+                    "but a %s is rated %.3f W"
+                    % (watts, stated, float(component["resistance"]), package, rated),
+                    fix="use a package rated above %.3f W, or lower the resistance" % watts))
+
+    if unassessable:
+        findings.append(Finding(
+            "resistor-power", "%d resistor(s)" % len(unassessable),
+            "could not be assessed: %s. A netlist records neither the current through a resistor "
+            "nor the voltage across it, and both depend on topology the design does not state"
+            % ", ".join(sorted(unassessable)),
+            fix="state the current in the rules file under the rail's `resistor_currents`, for "
+                "any resistor whose dissipation actually matters — a shunt, an LED series "
+                "resistor, a bleeder. A pull-up almost never does.",
+            severity="could-not-run"))
     return findings
 
 
