@@ -358,7 +358,14 @@ class TheCheckListItselfTest(unittest.TestCase):
         So it now imports each script and calls what the runner calls. Nothing in this file may
         assert on source text again.
         """
-        NOT_A_CHECK = {"check_all"}
+        # Scripts that are not checks OF A BUILT DESIGN, which is the only thing this runner
+        # knows how to feed. Each needs a reason, because an exclusion list is also how a check
+        # gets quietly switched off.
+        #   check_all   — the runner itself.
+        #   check_spine — takes a requirements.json and BUILDS a design; every other check reads
+        #                 one that already exists. Wiring it in would make every design review
+        #                 regenerate and rebuild spark's own reference board.
+        NOT_A_CHECK = {"check_all", "check_spine"}
         on_disk = {path.stem for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
         on_disk |= {"compare_design"}
 

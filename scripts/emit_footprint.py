@@ -182,11 +182,14 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="machine-readable result")
     args = parser.parse_args(argv)
 
-    project = Path(args.project) if args.project else boards.project_root()
+    # Resolving the project has to sit INSIDE the guard. It raises when there is no project
+    # around, and outside the try that escaped `main` as a traceback — so a caller asking for an
+    # exit code got an exception instead, and whoever called it reported the crash as a verdict.
     try:
+        project = Path(args.project) if args.project else boards.project_root()
         board = boards.load(project, args.board)
     except Exception as exc:  # noqa: BLE001 — the message is the product
-        return _report(args, EXIT_COULD_NOT_RUN, "no such board: %s" % exc)
+        return _report(args, EXIT_COULD_NOT_RUN, "no board to generate from: %s" % exc)
 
     physical = board.get("physical") or {}
     gaps = _missing(physical, physical.get("header"))
