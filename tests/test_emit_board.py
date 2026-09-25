@@ -49,9 +49,26 @@ class WhatItEmitsTest(unittest.TestCase):
                 self.assertIn(emit_board.component_name(parts.load(part_id)), self.tsx)
 
     def test_every_signal_a_part_asked_for_becomes_a_trace(self):
-        # One trace per signal, no more and no less. A dropped signal is a module that does not
-        # work; a duplicated one is a short.
-        self.assertEqual(self.tsx.count('<trace from=".Mcu'), len(parts.signals_for(PARTS)))
+        """
+        One trace per signal, no more and no less. A dropped signal is a module that does not
+        work; a duplicated one is a short.
+
+        Counted as traces from the MCU to a PART, not as every trace from the MCU. It used to be
+        the latter, which silently assumed the microcontroller had no supply connections of its
+        own — and for a long time that was true, which is exactly the defect: a generated board
+        whose processor shared a net with none of its 32 pins.
+        """
+        signal_traces = [line for line in self.tsx.splitlines()
+                         if '<trace from=".Mcu' in line and 'to="net.' not in line]
+        self.assertEqual(len(signal_traces), len(parts.signals_for(PARTS)))
+
+    def test_the_microcontroller_is_wired_to_ground_and_its_logic_rail(self):
+        # The board file says which of its pads are power; every one of them must appear. A
+        # processor connected to no ground builds, routes, and reports no error.
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        for pad in (board.get("power_pads") or {}):
+            with self.subTest(pad=pad):
+                self.assertIn('<trace from=".Mcu > .%s" to="net.' % pad, self.tsx)
 
     def test_each_module_pin_appears_on_the_trace_that_reaches_it(self):
         for part_id in PARTS:
@@ -142,10 +159,18 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
                                  "%s drives two outputs onto one net" % part_id)
 
     def test_inputs_still_share_the_rail_they_name(self):
-        # The other half: if outputs getting their own net turned into every pin getting its own
-        # net, nothing would connect to anything.
+        """
+        The other half: if outputs getting their own net turned into every pin getting its own
+        net, nothing would connect to anything.
+
+        Counts the MODULES' ground connections specifically. It counted every `net.GND` in the
+        file until the microcontroller started contributing its own three ground pads — the
+        number was right only while the processor was ungrounded.
+        """
         tsx = self._emit(["dfr0534-module", "l9110s-module"])
-        self.assertEqual(tsx.count('to="net.GND"'), 2)
+        module_grounds = [line for line in tsx.splitlines()
+                          if 'to="net.GND"' in line and '.Mcu >' not in line]
+        self.assertEqual(len(module_grounds), 2)
 
     def test_the_contract_refuses_two_outputs_that_cannot_be_told_apart(self):
         broken = json.loads((ROOT / "parts" / "dfr0534-module.json").read_text())

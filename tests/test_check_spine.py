@@ -84,6 +84,74 @@ class WhatTheExitCodeMeansTest(unittest.TestCase):
         self.assertNotIn("runs end to end", rendered)
 
 
+class EveryComponentNeedsAGroundTest(unittest.TestCase):
+    """
+    The defect that prompted this check, and the wrong detector that was tried first.
+
+    A generated board's microcontroller shared a net with NONE of its 32 pins — no ground, no
+    3.3 V — while every module around it was correctly wired to a ground the processor was not
+    on. It built, it routed, tscircuit reported zero errors, and the gate called it done.
+    Nothing in a build flags this: tscircuit checks that each trace you asked for is satisfiable,
+    never that you asked for the ones a circuit needs.
+
+    The first attempt compared connections asked for against `pcb_trace` count, and was wrong
+    twice: a net with N members needs N-1 traces, and a pin on a poured net (V33 and GND are
+    poured — 53 pours on the reference board) is connected by copper with no trace at all. It
+    failed a correct board, which is the mirror of the defect it was chasing.
+    """
+
+    @staticmethod
+    def circuit(*, ground_the_mcu):
+        elements = [
+            {"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+            {"type": "source_net", "source_net_id": "n_v33", "name": "V33"},
+            {"type": "source_component", "source_component_id": "c_mcu", "name": "Mcu"},
+            {"type": "source_component", "source_component_id": "c_mod", "name": "Module"},
+            {"type": "source_port", "source_port_id": "p_mcu_sda", "source_component_id": "c_mcu"},
+            {"type": "source_port", "source_port_id": "p_mcu_gnd", "source_component_id": "c_mcu"},
+            {"type": "source_port", "source_port_id": "p_mod_sda", "source_component_id": "c_mod"},
+            {"type": "source_port", "source_port_id": "p_mod_gnd", "source_component_id": "c_mod"},
+            # a signal trace: the MCU is wired to something, just not to a ground
+            {"type": "source_trace", "source_trace_id": "t1",
+             "connected_source_port_ids": ["p_mcu_sda", "p_mod_sda"],
+             "connected_source_net_ids": []},
+            {"type": "source_trace", "source_trace_id": "t2",
+             "connected_source_port_ids": ["p_mod_gnd"],
+             "connected_source_net_ids": ["n_gnd"]},
+        ]
+        if ground_the_mcu:
+            elements.append({"type": "source_trace", "source_trace_id": "t3",
+                             "connected_source_port_ids": ["p_mcu_gnd"],
+                             "connected_source_net_ids": ["n_gnd"]})
+        return elements
+
+    def test_a_component_wired_to_signals_but_no_ground_is_caught(self):
+        # It has a trace, so "does it connect to anything" would pass it. The question is
+        # whether it shares a RETURN PATH, and that is a different question.
+        self.assertEqual(
+            check_spine.components_not_on_ground(self.circuit(ground_the_mcu=False)), ["Mcu"])
+
+    def test_grounding_it_clears_the_finding(self):
+        self.assertEqual(
+            check_spine.components_not_on_ground(self.circuit(ground_the_mcu=True)), [])
+
+    def test_a_ground_under_another_name_still_counts(self):
+        # A design with an analogue return calls it AGND, and "the net called GND" stops being
+        # true. Naming them beats guessing from the netlist.
+        circuit = self.circuit(ground_the_mcu=True)
+        for element in circuit:
+            if element.get("name") == "GND":
+                element["name"] = "AGND"
+        self.assertEqual(check_spine.components_not_on_ground(circuit), [])
+
+    def test_a_component_in_no_trace_at_all_is_not_reported_here(self):
+        # Already covered by the generators, which refuse to emit a part they cannot wire.
+        # Reporting it twice, in different words, is how a finding gets scrolled past.
+        circuit = self.circuit(ground_the_mcu=True) + [
+            {"type": "source_component", "source_component_id": "c_lonely", "name": "Lonely"}]
+        self.assertNotIn("Lonely", check_spine.components_not_on_ground(circuit))
+
+
 class FindingTheToolchainTest(unittest.TestCase):
     def test_a_projects_own_tsci_is_preferred_over_the_global_one(self):
         # A project pins a version for a reason; silently building with a different one produces

@@ -101,6 +101,46 @@ def count_in(circuit):
     return traces, errors
 
 
+#: Nets that are a ground. Named rather than guessed, because "the one called GND" stops being
+#: true the moment a design has an analogue ground or an isolated return.
+GROUND_NETS = ("GND", "AGND", "DGND", "GROUND")
+
+
+def components_not_on_ground(circuit):
+    """
+    Every component that reaches no ground net, by name.
+
+    A component can be perfectly placed, carry every pad, route its signals and still share no
+    return path with anything. Nothing in a build flags it: tscircuit checks that each trace you
+    asked for is satisfiable, never that you asked for the ones a circuit needs.
+
+    Connection is counted through the source netlist rather than through copper, because a pin on
+    a poured net has no trace of its own and is connected all the same.
+    """
+    names, grounded, present = {}, set(), set()
+    ground_ids = {element["source_net_id"] for element in circuit
+                  if element.get("type") == "source_net"
+                  and (element.get("name") or "").upper() in GROUND_NETS}
+    for element in circuit:
+        if element.get("type") == "source_component":
+            names[element["source_component_id"]] = element.get("name") or "?"
+    ports = {element["source_port_id"]: element for element in circuit
+             if element.get("type") == "source_port"}
+    for element in circuit:
+        if element.get("type") != "source_trace":
+            continue
+        on_ground = bool(set(element.get("connected_source_net_ids") or []) & ground_ids)
+        owners = {ports[port_id].get("source_component_id")
+                  for port_id in element.get("connected_source_port_ids") or []
+                  if port_id in ports}
+        present |= owners
+        if on_ground:
+            grounded |= owners
+    # A component with no trace at all is a separate complaint, already covered by the parts that
+    # refuse to emit. Report only those that are wired to something and to no ground.
+    return sorted(names.get(owner, "?") for owner in present - grounded)
+
+
 def run(requirements, workdir, toolchain=None):
     """Every stage, in order, stopping at the first that cannot produce input for the next."""
     stages = []
@@ -163,6 +203,24 @@ def run(requirements, workdir, toolchain=None):
                                "no circuit.json was produced\n" + built.stderr.strip()[-800:])]
 
     traces, errors = count_in(json.loads(circuit_path.read_text()))
+    # NOT a trace count. Comparing connections asked for against `pcb_trace`s is wrong twice
+    # over, and was tried here first: a net with N members needs N-1 traces, and a pin on a
+    # poured net (V33 and GND are poured, 53 pours on this board) is connected by copper with no
+    # trace at all. That rule failed a correct board, which is the mirror of the defect it was
+    # chasing.
+    #
+    # The real invariant is grounding. The defect that prompted this was a microcontroller
+    # sharing a net with NONE of its 32 pins — no ground, no 3.3 V — on a board that built,
+    # routed and reported zero errors, while every module around it was correctly wired to a
+    # ground the processor was not on.
+    ungrounded = components_not_on_ground(json.loads(circuit_path.read_text()))
+    if ungrounded:
+        return stages + [Stage("build", PROBLEMS,
+                               "%s no ground. A board builds, routes and reports no error with "
+                               "a component grounded to nothing — the parts around it are wired "
+                               "to a net it is simply not on"
+                               % (("%s reaches" % ungrounded[0]) if len(ungrounded) == 1
+                                  else ("%s reach" % ", ".join(ungrounded))))]
     if errors:
         kinds = sorted({element["type"] for element in errors})
         return stages + [Stage("build", PROBLEMS, "%d error(s): %s" % (len(errors),

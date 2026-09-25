@@ -319,6 +319,22 @@ def emit(board, part_list, assignments, placements, width, height):
 
     lines.append("")
     lines.append("    {/* Power. Which rail each module pin belongs to comes from its part file. */}")
+
+    # The microcontroller's OWN supply pins. Omitted entirely until 2026-09-25, so a generated
+    # board's processor shared a net with none of its pins — no ground, no 3.3 V — while the
+    # modules around it were correctly wired to rails the MCU was not on. It built, it routed,
+    # and nothing reported it, because "is this component connected to anything" was a question
+    # no check asked.
+    for pad, supply in sorted((board.get("power_pads") or {}).items()):
+        net = RAIL_NETS.get(supply.get("rail"))
+        if not net:
+            continue
+        lines.append('    <trace from=".Mcu > .%s" to="net.%s" />' % (pad, net))
+    if not board.get("power_pads"):
+        lines.append("    {/* THIS BOARD FILE DOES NOT SAY WHICH OF ITS PADS ARE POWER, so the")
+        lines.append("        microcontroller is wired to no rail at all. Every module below may")
+        lines.append("        be correctly connected to a ground the processor is not on. Add")
+        lines.append("        `power_pads` to the board definition. */}")
     for net, part_name, pin in outputs_with_nothing_on_them(part_list):
         lines.append("    {/* net.%s is driven by %s.%s and NOTHING ON THIS BOARD RECEIVES IT."
                      % (net, part_name, pin))
