@@ -253,6 +253,37 @@ class ResistorPowerTest(unittest.TestCase):
         self.assertIn(check_physics.package_of("res0603"), check_physics.PACKAGE_POWER_W)
 
 
+class AnEmptyRulesFileIsNotACleanBoardTest(unittest.TestCase):
+    """
+    `spark init` writes `rails: {}` and `i2c_hz: null` on purpose — it guesses nothing. So the
+    default state of every new project was the state in which three of this tool's four rules did
+    not run, and `check_all` rendered the silence as `[ok  ] physics`.
+
+    `commands/init.md` promises the opposite in as many words: "a check reading a null reports it
+    as unverifiable rather than passing it."
+    """
+
+    def test_no_rails_stated_is_reported_not_passed(self):
+        findings = check_physics.run([net("V33")], {"physics": {"rails": {}}})
+        rails = [f for f in findings if f.rule == "rails-not-stated"]
+        self.assertEqual(len(rails), 1, findings)
+        self.assertEqual(rails[0].severity, "could-not-run")
+        self.assertIn("three of this tool's four rules", rails[0].detail)
+
+    def test_a_board_with_an_i2c_bus_and_no_clock_is_reported(self):
+        findings = check_physics.run([net("SDA"), net("SCL")], {"physics": {"rails": {}}})
+        i2c = [f for f in findings if f.rule == "i2c-rise-time"]
+        self.assertEqual(len(i2c), 1, findings)
+        self.assertEqual(i2c[0].severity, "could-not-run")
+
+    def test_a_board_with_no_bus_is_not_nagged_about_i2c(self):
+        # The first version of this fix asked every board about I2C, including boards with none
+        # — while its own remedy text said an empty list should stop it asking. A check that
+        # nags about what is not there is how a check earns a reputation for noise.
+        findings = check_physics.run([net("V33")], {"physics": {"rails": {}}})
+        self.assertEqual([f for f in findings if f.rule == "i2c-rise-time"], [])
+
+
 class I2cRiseTimeTest(unittest.TestCase):
     def _bus(self, ohms, bus_hz=400_000, capacitance_pf=100):
         circuit = [net("SDA")]

@@ -121,7 +121,11 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
             "physics": (
                 {"circuit": written("ok.json", a_header_drilled_too_small()),
                  "rules": written("rules.json", {})},
-                check_all.OK, "a real netlist and no rules to break"),
+                # Was OK, "a real netlist and no rules to break". That expectation WAS the bug:
+                # an empty rules file is what `spark init` writes, so every new project got
+                # `[ok  ] physics` about a board whose rails nothing had described. Three of the
+                # four rules had not run.
+                check_all.COULD_NOT_RUN, "a real netlist and a rules file stating no rails"),
             "rules-vs-netlist": (
                 {"circuit": written("ok2.json", a_header_drilled_too_small()),
                  "rules": written("rules2.json", {})},

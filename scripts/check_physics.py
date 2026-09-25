@@ -145,6 +145,10 @@ class Board:
     def components_on(self, net_name):
         return sorted({name for name, _ in self.members.get(net_name, [])})
 
+    def net_names(self):
+        """Every net's name, for rules that ask whether a thing exists before asking about it."""
+        return [net.get("name") for net in self.nets.values() if net.get("name")]
+
     def footprint_of(self, component_name):
         """
         The package string, e.g. `res0603`.
@@ -373,19 +377,62 @@ def check_i2c_rise_time(board, buses, bus_hz, capacitance_pf):
 
 
 def run(circuit, rules):
+    """
+    Every physics rule, and an honest answer about the ones that could not run.
+
+    This returned nothing at all when the rules file was empty, and an empty rules file is
+    exactly what `spark init` writes. So a freshly-initialised project asked about a real
+    415-element board and was told "nothing to answer for" — which `check_all` rendered as
+    `[ok  ] physics   the board obeys physics, not just itself`.
+
+    `commands/init.md` promises the opposite in as many words: "a check reading a null reports it
+    as unverifiable rather than passing it". It did not, and the default state of every new
+    project was the state where it did not.
+
+    Each rule below says what it needs. Missing inputs are `could-not-run` findings naming the
+    field to fill, because a rule that never ran must not be indistinguishable from one that ran
+    and found nothing.
+    """
     board = Board(circuit)
     physics = rules.get("physics") or {}
     rails = physics.get("rails") or {}
     rise_c = physics.get("trace_temperature_rise_c", 10)
 
     findings = []
-    findings += check_trace_currents(board, rails, rise_c)
-    findings += check_capacitor_voltages(board, rails)
-    findings += check_resistor_power(board, rails)
-    if rules.get("i2c_buses") and physics.get("i2c_hz"):
+    if rails:
+        findings += check_trace_currents(board, rails, rise_c)
+        findings += check_capacitor_voltages(board, rails)
+        findings += check_resistor_power(board, rails)
+    else:
+        findings.append(Finding(
+            "rails-not-stated", "physics.rails",
+            "no rail is described, so trace current, capacitor derating and resistor power were "
+            "not checked at all — three of this tool's four rules",
+            fix="fill physics.rails in the rules file: each net's nominal_volts and "
+                "max_current_a. `spark init` writes the names from the built design and leaves "
+                "the numbers null, which is where they have stayed.",
+            severity="could-not-run"))
+
+    buses, hertz = rules.get("i2c_buses"), physics.get("i2c_hz")
+    # Only ask about I2C when there is evidence of some. Nagging a board that has no bus is how
+    # a check earns a reputation for noise — and the first version of this fix did exactly that,
+    # while its own remedy text said an empty list should stop it asking.
+    looks_like_a_bus = {name.upper() for name in board.net_names()} & {"SDA", "SCL"}
+    if buses and hertz:
         findings += check_i2c_rise_time(
-            board, rules["i2c_buses"], physics["i2c_hz"],
-            physics.get("i2c_bus_capacitance_pf", 50))
+            board, buses, hertz, physics.get("i2c_bus_capacitance_pf", 50))
+    elif buses or looks_like_a_bus:
+        missing = " and ".join(
+            [name for name, value in (("i2c_buses", buses), ("physics.i2c_hz", hertz))
+             if not value])
+        findings.append(Finding(
+            "i2c-rise-time", "the I2C bus",
+            "this board has %s, but %s is not stated, so the rise time was not checked. A "
+            "pull-up that is fine at 100 kHz is too weak at 400 kHz, and nothing here can tell "
+            "which you are running"
+            % (" and ".join(sorted(looks_like_a_bus)) or "a bus named in the rules", missing),
+            fix="name the bus nets in i2c_buses and put the clock in physics.i2c_hz",
+            severity="could-not-run"))
     return findings
 
 
