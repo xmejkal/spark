@@ -247,6 +247,63 @@ class AProjectCanExtendTheLibraryTest(unittest.TestCase):
         self.assertEqual(parts.main(["--show", "ssd1306-oled"]), parts.EXIT_INVALID)
 
 
+class TheFootprintAndThePinoutDescribeOnePartTest(unittest.TestCase):
+    """
+    Two fields, one physical object, and nothing compared them.
+
+    `vl6180x-breakout` shipped saying `pinrow5` while its `pin_order` named seven pads — five of
+    the seven carry a signal and two are unwired, so somebody counted the pins instead of the
+    pads. The file's own prose note said seven all along, which is the recurring shape here: the
+    truth written for a human, the contradiction written for the program.
+
+    What it cost: the generator labelled a pad that did not exist, that port was given no
+    position, and tscircuit's autorouter died reading its `x`. That failure is silent — the board
+    comes back with zero traces rather than an error naming the part.
+    """
+
+    def _problems(self, **overrides):
+        definition = part(**overrides)
+        return parts.validate(definition, written(definition))
+
+    def test_a_footprint_with_fewer_pads_than_the_pinout_is_caught(self):
+        problems = self._problems(footprint="pinrow5", pin_order=[None, "P", None, None, None,
+                                                                 None, None])
+        self.assertTrue(any("7" in p and "5" in p for p in problems), problems)
+
+    def test_a_footprint_with_more_pads_than_the_pinout_is_caught(self):
+        # The other direction is just as wrong and reads as "finished" just as easily.
+        problems = self._problems(footprint="pinrow8", pin_order=["P", None])
+        self.assertTrue(any("8" in p for p in problems), problems)
+
+    def test_they_agree_and_nothing_is_reported(self):
+        self.assertEqual(self._problems(footprint="pinrow2", pin_order=["P", None]), [])
+
+    def test_a_footprint_whose_pad_count_cannot_be_read_asserts_nothing(self):
+        # Most footprints do not encode a count. Guessing one would report every honest part
+        # file as a disagreement, and a checker that cries wolf gets switched off.
+        self.assertEqual(self._problems(footprint="jlcpcb:C2040", pin_order=["P", None]), [])
+
+
+class CountingPadsFromAFootprintNameTest(unittest.TestCase):
+    def test_a_pin_row_says_how_many(self):
+        self.assertEqual(parts.footprint_pad_count("pinrow7"), 7)
+
+    def test_a_module_header_says_how_many(self):
+        self.assertEqual(parts.footprint_pad_count("headermodule6"), 6)
+
+    def test_a_package_named_after_its_body_is_not_a_pad_count(self):
+        # The trap that makes this a whitelist. `sot23` is three pads, `0603` is a size in
+        # hundredths of an inch, `sod123` is neither — and the obvious implementation, "take the
+        # first integer", reads them as 23, 603 and 123.
+        for footprint in ("sot23", "0603", "0805", "sod123", "sot23_3"):
+            with self.subTest(footprint=footprint):
+                self.assertIsNone(parts.footprint_pad_count(footprint))
+
+    def test_a_footprint_from_a_supplier_or_a_file_says_nothing(self):
+        self.assertIsNone(parts.footprint_pad_count("jlcpcb:C12345"))
+        self.assertIsNone(parts.footprint_pad_count(None))
+
+
 class TheShippedLibraryTest(unittest.TestCase):
     def test_every_part_shipped_satisfies_the_contract(self):
         for part_id in parts.available():
@@ -255,11 +312,26 @@ class TheShippedLibraryTest(unittest.TestCase):
                 problems = parts.validate(json.loads(path.read_text()), path)
                 self.assertEqual(problems, [], "%s: %s" % (part_id, problems))
 
-    def test_every_shipped_part_can_produce_signals(self):
+    def test_every_shipped_part_does_something_for_the_board(self):
+        """
+        This asserted that every part produces SIGNALS, which was true only for as long as the
+        library held nothing but modules with GPIO.
+
+        A power inlet asks the host for no pin at all — that is the entire point of it, and it is
+        the part that stops a generated board having a rail with one member. Requiring a signal
+        would have made the contract reject the category the library most needed.
+
+        The real rule underneath is that a part must do SOMETHING: ask for a pin, or carry a
+        rail. One that does neither is inert, and would be emitted as a component nothing can
+        ever connect to.
+        """
         for part_id in parts.available():
             with self.subTest(part=part_id):
-                self.assertTrue(parts.signals_for([part_id]),
-                                "%s asks its host for nothing at all" % part_id)
+                definition = parts.load(part_id)
+                self.assertTrue(
+                    parts.signals_for([part_id]) or definition.get("power"),
+                    "%s asks the host for no pin and carries no rail, so placing it on a board "
+                    "does nothing at all" % part_id)
 
 
 if __name__ == "__main__":

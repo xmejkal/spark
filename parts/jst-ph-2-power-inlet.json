@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "id": "jst-ph-2-power-inlet",
+  "name": "JST PH 2-pin power inlet",
+  "kind": "connector",
+  "//": "The thing nobody lists among their modules, which is why generated boards kept coming out with a power rail that had exactly one member. A module list is a list of CONSUMERS; something still has to bring the supply onto the board, and physically that something is a connector. It is in the library so it can be named in a requirements file like any other part, rather than hand-added to the generated design afterwards.",
+
+  "//rail": "This inlet is declared to supply the MOTOR rail because that is the rail a module list cannot source for itself — logic and ground come from the microcontroller module. An inlet for a different rail is a different file, not a flag: which rail arrives on a connector is a fact about the harness, and a part that could be silently repointed at any rail would wire a 6 V pack to 3.3 V logic without anything noticing.",
+
+  "needs": [],
+  "power": [
+    {"pin": "VCC", "rail": "motor", "direction": "out",
+     "note": "From the external pack. NOT regulated by this board and NOT referenced to anything until GND below is joined — the two domains share ground and nothing else."},
+    {"pin": "GND", "rail": "ground", "direction": "out",
+     "note": "The single point where the motor supply's return meets board ground. If the harness also grounds elsewhere, that is a ground loop through the motor return."}
+  ],
+
+  "pin_order": ["VCC", "GND"],
+  "//pin_order": "Pad 1 is VCC. JST PH housings are keyed, so the mate cannot be reversed — but the CRIMP order in a hand-made harness can be, and reversing 6 V into a motor driver's ground is not recoverable. Mark pin 1 on the silkscreen.",
+
+  "footprint": "jst_ph_2",
+  "body_mm": {"width": 7.9, "height": 5.8, "verified": true,
+              "source": "JST PH series drawing, B2B-PH-K-S: 7.9 mm across the 2-pin housing, 5.8 mm deep including the latch"},
+
+  "host_requirements": [
+    "Size the inlet for the STALL current, not the running current. A lid motor stalls every time something blocks it, and JST PH is rated 2 A per contact.",
+    "This connector and any other 2-pin connector on the board can be cross-plugged unless one of them is keyed or a different series. Swapping a motor supply into an audio output destroys the amplifier.",
+    "Fuse or current-limit upstream. Nothing on the board protects this rail."
+  ],
+
+  "facts": {
+    "contact_rating_a": {
+      "value": 2.0, "verified": true,
+      "source": "JST PH series datasheet, current rating per contact at 20 C rise"
+    },
+    "pitch_mm": {
+      "value": 2.0, "verified": true,
+      "source": "JST PH series datasheet"
+    }
+  }
+}

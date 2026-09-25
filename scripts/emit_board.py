@@ -117,6 +117,21 @@ def parts_without_an_outline(part_list):
     return [part["name"] for part in part_list if not has_an_outline(part)]
 
 
+def parts_without_a_footprint(part_list):
+    """
+    Parts with no footprint recorded.
+
+    This used to default to `pinrow4` — a guess dressed as a fact. The MAX98357A carrier has
+    twelve pads in two rows and would have been emitted onto four in one row. Every pad past the
+    fourth would simply not exist, and traces to them land on ports with no position, which is
+    not a build error: it is a board with no routing at all.
+
+    Four pads is also the least suspicious wrong answer available. A default of forty would have
+    been caught the first time it ran; this one survived because the output looked plausible.
+    """
+    return [part["name"] for part in part_list if not part.get("footprint")]
+
+
 def component_name(part):
     """`l9110s-module` -> `L9110sModule`, so the name in the file reads like a component."""
     return "".join(word.capitalize() for word in part["id"].replace("_", "-").split("-"))
@@ -160,17 +175,22 @@ def rails_without_a_source(part_list):
     That is worth saying plainly rather than emitting a file that fails: the design genuinely
     needs a source for that rail and the module list did not contain one.
     """
-    consumed = set()
+    consumed, provided = set(), set()
     for part in part_list:
         for power in part.get("power") or []:
-            # An OUTPUT is not a rail anything has to source — the part is the source. It is
-            # still a net with one member, which is worth saying, but for the opposite reason.
-            if power.get("direction") == "out":
-                continue
             net = net_for(power)
-            if net and net not in RAILS_THE_MODULE_PROVIDES:
+            if not net:
+                continue
+            # An OUTPUT is not a rail anything has to source — the part IS the source. This
+            # branch collected nothing until 2026-09-25, so the function returned every consumed
+            # rail whether or not something fed it, and adding the connector that supplies a rail
+            # did not stop it being reported as unsupplied. The name and the docstring were right
+            # about the intent; the code only did the first half.
+            if power.get("direction") == "out":
+                provided.add(net)
+            elif net not in RAILS_THE_MODULE_PROVIDES:
                 consumed.add(net)
-    return sorted(consumed)
+    return sorted(consumed - provided)
 
 
 def outputs_with_nothing_on_them(part_list):
@@ -183,15 +203,22 @@ def outputs_with_nothing_on_them(part_list):
     checked — and the errors a build then reports should be the ones this file predicted rather
     than a surprise.
     """
-    driven = []
+    driven, received = [], set(RAILS_THE_MODULE_PROVIDES)
     for part in part_list:
         for power in part.get("power") or []:
-            if power.get("direction") != "out":
-                continue
             net = net_for(power)
-            if net:
+            if not net:
+                continue
+            if power.get("direction") == "out":
                 driven.append((net, part["name"], power["pin"]))
-    return sorted(driven)
+            else:
+                received.add(net)
+    # Same omission this function's twin had: it listed every driven net without ever asking
+    # whether something on the board receives it. Adding the power inlet that feeds the motor
+    # driver then produced a warning that the motor rail goes nowhere, naming the part it goes
+    # to. A warning that fires on a correct design is worse than none — it is the reason people
+    # stop reading them.
+    return sorted(entry for entry in driven if entry[0] not in received)
 
 
 def emit(board, part_list, assignments, placements, width, height):
@@ -251,7 +278,7 @@ def emit(board, part_list, assignments, placements, width, height):
                                if pad is not None)
         lines.append("    {/* %s */}" % part["name"])
         lines.append('    <chip name="%s" footprint="%s" pcbX={%g} pcbY={%g}'
-                     % (name, part.get("footprint", "pinrow4"), *placements[name]))
+                     % (name, part["footprint"], *placements[name]))
         lines.append("      pinLabels={{ %s }} />" % pin_labels)
 
     lines.append("")
@@ -360,6 +387,16 @@ def main(argv=None):
     if not (board.get("physical") or {}).get("footprint_export"):
         print("this board has no verified footprint, so a board file would reference nothing",
               file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+
+    unfootprinted = parts_without_a_footprint(part_list)
+    if unfootprinted:
+        print("no footprint recorded for: %s\n"
+              "  Until 2026-09-25 these were emitted as `pinrow4`. A twelve-pad module on four "
+              "pads is not a rough draft: the pads past the fourth have no position, so every "
+              "trace to them is unroutable and the board comes out with no copper at all.\n"
+              "  Record it in the part file — a footprinter string, a converted .kicad_mod, or "
+              "jlcpcb:C<lcsc>." % ", ".join(unfootprinted), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
     unpinned = parts_without_a_pinout(part_list)

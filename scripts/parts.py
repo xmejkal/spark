@@ -85,6 +85,36 @@ def load(part_id: str, project: Path = None) -> dict:
     return part
 
 
+#: Footprinter families whose trailing number IS the pad count. Deliberately a whitelist, because
+#: the obvious shortcut — take the first integer — is wrong in the most damaging direction:
+#: `sot23` is a three-pad package named after its body, `0603` is a size in hundredths of an inch,
+#: and `sod123` is neither. A rule that read those as 23, 603 and 123 pads would contradict every
+#: honest part file it met, which is how a useful check gets switched off.
+PAD_COUNT_FAMILIES = ("pinrow", "headermodule", "jst_ph_", "jst_sh_", "jst_xh_", "dip", "bh_")
+
+
+def footprint_pad_count(footprint):
+    """
+    How many pads a footprinter string describes, or None when this cannot tell.
+
+    None is a real answer and must stay available: most footprints do not encode a count, and a
+    checker that guesses one would report every one of them as a disagreement.
+    """
+    if not isinstance(footprint, str):
+        return None
+    name = footprint.strip().lower()
+    for family in PAD_COUNT_FAMILIES:
+        if name.startswith(family):
+            digits = ""
+            for character in name[len(family):]:
+                if not character.isdigit():
+                    break
+                digits += character
+            if digits:
+                return int(digits)
+    return None
+
+
 def validate(part: dict, path: Path) -> list:
     """Every way this definition breaks the contract. Empty means it holds."""
     problems = []
@@ -162,6 +192,20 @@ def validate(part: dict, path: Path) -> list:
                 problems.append(
                     "pin_order does not say where %s sit(s), so the generator would have to "
                     "guess a pad for them" % ", ".join(missing))
+
+            # The two fields describe the same physical thing and nothing compared them. The
+            # VL6180X breakout shipped saying `pinrow5` while naming seven pads — five of its
+            # seven carry a signal and two are unwired, so somebody counted the pins instead of
+            # the pads. The generator then labelled a pad that did not exist; that port got no
+            # position, and tscircuit's autorouter died reading its x — which does not fail
+            # loudly, it just leaves the whole board with zero traces.
+            pads = footprint_pad_count(part.get("footprint"))
+            if pads is not None and pads != len(order):
+                problems.append(
+                    "footprint %r has %d pads but pin_order names %d. They describe the same "
+                    "physical part, so one of them is wrong — and the generator will label a pad "
+                    "that does not exist, which leaves that port with no position at all"
+                    % (part["footprint"], pads, len(order)))
 
     # A power pin's DIRECTION is what says whether sharing a net is normal or fatal. Several GND
     # pins on one net is how ground works; two amplifier outputs on one net is a short. Both

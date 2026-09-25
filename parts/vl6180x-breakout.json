@@ -78,7 +78,8 @@
     "If this sits on a ribbon away from the board, the ribbon's capacitance is part of the bus and belongs in the rise-time budget.",
     "Behind a window, range-ignore must be calibrated or the window's own reflection reads as a target \u2014 and on an interrupt-driven design that is a wake loop, which is worse for the battery than never sleeping."
   ],
-  "footprint": "pinrow5",
+  "//footprint": "SEVEN pads, not five. It said pinrow5 until 2026-09-25 — the count of pins this design WIRES, not the count of pads Pololu put on the carrier. The file's own //pin_order note said seven all along. Consequence: emit_board labelled a pad that does not exist, that port got no position, and tscircuit's autorouter died reading its x, which does not fail loudly — it leaves the whole board with zero traces.",
+  "footprint": "pinrow7",
   "on_board": false,
   "//on_board": "It has to look out through the enclosure, so it is never on the PCB. The board carries the mating header and no body is drawn for it.",
   "sources": {
