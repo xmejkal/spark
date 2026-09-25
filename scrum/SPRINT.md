@@ -61,6 +61,29 @@ green; the board is not. Sprint re-pointed at the board and the shopping list.
 
 **Next.** B3 — the deep-sleep wake, which is firmware and needs nobody.
 
+### 2026-09-25 — evening
+
+**Sprint goal met, on the measurable half.** Five of the bin's seven blockers are closed and
+`make check` is green. Deep sleep never woke (`WAKEUP_ALL_LOW` is an AND across every armed pin);
+a screw head bridged V33 to GND at two mounting holes, measured at 0.19 mm against an M3 head's
+1.15 mm overhang; the audio moved to I2S, taking four blockers with it.
+
+**Two findings worth more than the fixes.** A mutation no firmware test could catch — reverting
+`WAKE_ON_HIGH` left 113 tests green because they all derive from it, so `wake-polarity.ts` now
+compares the board's copper against the firmware's constant. And the bring-up script's WAVE
+phase had never tested anything: it passed on an interrupt pin nothing had ever driven.
+
+**Also found in spark itself, by an observer:** the generated board's microcontroller shared a
+net with none of its 32 pins — no ground, no 3.3 V — while `check_spine` called it done. Fixed,
+and the detector the observer proposed (comparing traces asked against traces routed) was wrong
+and would have failed correct boards; the real invariant is grounding.
+
+**Remaining, and neither is ours to close today.** The audio module's identity is Petr's, and
+nothing else can be known without a bench — the motor's current, the stroke times, and whether
+the chip really wakes, which Wokwi cannot test at all.
+
+**Not started: P1/P2**, the simulation lift. Still the right next thing for the plugin.
+
 ## Review — validated value
 
 Run at sprint end. Not "did the work complete" but **can Petr order the board and have it work**:
