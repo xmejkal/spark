@@ -1,5 +1,12 @@
 # What the observations found, and what happened to it
 
+> **This is INTAKE, not a backlog.** Claims arrive here and leave by being reproduced or
+> rejected. A claim becomes *work* only by being promoted to a PBI in
+> [`../../scrum/PRODUCT_BACKLOG.md`](../../scrum/PRODUCT_BACKLOG.md).
+> Retro R1.2 exists because this table has never drained: no row has changed status since it was
+> written, and `rejected` has never once been used. If that is still true at the next retro, the
+> change did not stick.
+
 One line per claim. **A claim leaves this table only by being reproduced and acted on, or by
 being rejected with a reason.** Nothing sits here unread.
 

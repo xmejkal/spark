@@ -1,5 +1,11 @@
 # spark — what it is, what works, what's next
 
+> **This file is NARRATIVE, not a queue.** As of 2026-09-25 the one ordered list of work is
+> [`scrum/PRODUCT_BACKLOG.md`](scrum/PRODUCT_BACKLOG.md). What stays here is how the product got
+> where it is and what was learned on the way — worth reading, not worth pulling from.
+> §5 below is kept as the record of what was queued before the consolidation; everything in it
+> that still matters is a PBI now, and everything that is not, is not happening.
+
 Working document. `README.md` is for someone installing it; this is for someone building it.
 
 Updated 2026-09-24.
