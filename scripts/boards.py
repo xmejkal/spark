@@ -250,6 +250,32 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
                 isinstance(gpio, int) and not isinstance(gpio, bool) for gpio in value):
             problems.append(f"{key} must be a list of GPIO numbers")
 
+    # A pad every pin can be reached at. The geometry in `physical` is precise to 0.01 mm, and
+    # which label sits on which pad is the one fact that cannot be derived from it — a cold
+    # rebuild of the reference board was blocked exactly here. Worse, a name in `pins` that has
+    # no pad produces a footprint whose pads the design's traces never reach, silently: the
+    # silkscreen says MI where the design says MISO.
+    physical = board.get("physical") or {}
+    order = physical.get("header_order") or {}
+    if order:
+        pads = set()
+        for key, labels in order.items():
+            if key.startswith("//"):
+                continue
+            pads |= set(labels)
+        aliases = physical.get("pad_aliases") or {}
+        for name in sorted(board.get("pins") or {}):
+            if name not in pads and aliases.get(name) not in pads:
+                problems.append(
+                    "pins.%s sits on no pad in physical.header_order, and physical.pad_aliases "
+                    "does not say which pad it is. A footprint built from this would have no pad "
+                    "for it, and every trace to it would silently reach nothing" % name)
+        for name, pad in sorted(aliases.items()):
+            if pad not in pads:
+                problems.append(
+                    "physical.pad_aliases maps %s to %r, which is not a pad in header_order"
+                    % (name, pad))
+
     for role_name, role in (board.get("pin_roles") or {}).items():
         if role_name not in PIN_ROLES:
             problems.append(
