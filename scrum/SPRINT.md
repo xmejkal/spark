@@ -1,70 +1,75 @@
 # Sprint 1
 
-**Started** 2026-09-25 · **Product Owner** Petr · **Facilitator** main session
+**Started** 2026-09-25 · **Re-goaled** 2026-09-25 by the Product Owner · **Facilitator** main session
 
 ## Goal
 
-> **A design spark generated can be simulated.**
+> **The bin is a working project: a board fit to order, parts you can buy, simulations that pass,
+> software that runs.**
 
-One sentence, one outcome. The schema half of the product goal was finished on 2026-09-25 —
-`check_spine.py` runs idea → parts → pin map → schematic → footprint → build and reports 8 traces,
-0 errors. Simulation is the last word of the goal Petr stated and the only step still missing
-before 3D and PCB become the right thing to work on.
+Petr reordered mid-sprint, which is his call: *"lets prioritize having a working bin project with
+a schema, parts, simulations and software and such"*. The previous goal — a generated design
+reaching a simulator — is not abandoned, it is **later**. The bin is the only real evidence spark
+works, and it is closer to done than the plugin's simulation path is to started.
 
-**Not in this sprint:** 3D, PCB layout, routing quality, the findings store, the evals. Anything
-that is not "a generated design reaches a simulator" is out, and saying so here is what makes the
-goal a goal rather than a wish.
+**Measured state at the moment of re-goaling**, not remembered:
+
+| half | state |
+| --- | --- |
+| **software** | 84 tests, green |
+| **simulation** | local MicroPython run, all checks passed, costs no Wokwi minutes |
+| **schema — the board** | **`make check` RED.** 7 fab blockers. This is the sprint. |
+| **parts** | `SHOPPING.md` stale — lists a XIAO and a LiPo JST the board no longer has |
+
+So two of the four are already there. The goal is the other two.
 
 ## Pulled
 
-| id | item | state | owner |
+| id | item | state | why this order |
 | --- | --- | --- | --- |
-| P1 | Bring `circuit-to-wokwi` into spark | **assessing** — observer measuring whether it accepts a generated board | main |
-| P2 | A simulation path that costs no Wokwi minutes | not started | main |
+| **B3** | Deep sleep never wakes (blocker 5) | **in progress** | firmware, independent of every open question, and today the bin would not wake at all |
+| **B2a** | Annular rings on Speaker + BinConnector (blocker 7) | next | connector footprints; survives any audio decision |
+| **B1** | Confirm the audio module **[PO]** | **blocked on Petr** | four blockers turn on it. It is a look in a drawer |
+| **B2b** | I²S redraw (clears blockers 1, 3, 4, 6) | blocked by B1 | drawing it for the wrong module is a week of rework |
+| **B4** | Refresh `SHOPPING.md` | after B2b | the list changes with the audio decision |
 
-W6: one in progress at a time. P2 is not pulled until P1 is Done or written up as blocked.
+W6: one at a time. B3 first because it is unblocked, real, and locally provable.
 
 ## Definition of Done
 
-Every PBI, every time. Full text in [`README.md`](README.md).
-
-1. tests green · 2. mutation tested · 3. `check_spine.py` exit 0 · 4. its own
-`Value proven by:` command runs and shows what it claims · 5. committed, with the reasoning ·
-6. every claim it makes is true when run.
+Full text in [`README.md`](README.md). Clause 3 (`check_spine.py`) applies to spark changes; for
+bin changes the equivalent gate is `make check` **green for a real reason, not because a gate was
+removed**, plus both firmware suites.
 
 ## Daily log
 
-### 2026-09-25
+### 2026-09-25 — morning
 
-**Moved.** The schema half of the goal went from "never once run end to end" to exit 0.
-`emit_footprint.py` generates the footprint the emitted board has always imported, verified
-against an independently-made one — all 32 pads agree. Four defects fixed that each alone produced
-a board with zero traces: a part file whose footprint said 5 pads beside a pinout naming 7; a
-missing footprint defaulting to `pinrow4`; `rails_without_a_source` never checking for a source;
-and its mirror warning that a correctly-supplied rail went nowhere.
-`check_footprints` learned to read the other two hole shapes tscircuit emits, and **immediately
-found two real fab blockers** on a board that had been declared ready to order.
-`check_spine.py` exists: one command, one definition of done.
+The schema half of the *plugin* went from never run end to end to exit 0, 8 traces. Four
+zero-trace defects fixed. `check_footprints` learned the other two hole shapes and immediately
+found two real fab blockers on a board declared ready to order. `check_spine.py` exists.
 
-**Blocked.** Nothing in the sprint. B1 (the audio module's identity) is blocked on Petr and is
-not in this sprint.
+### 2026-09-25 — afternoon, after the re-goal
+
+**Measured the bin rather than trusting the handover note.** Software and simulation are already
+green; the board is not. Sprint re-pointed at the board and the shopping list.
 
 **Impediments, named.**
-1. **W3 is enforced by memory.** Mutation testing is the acceptance bar and there is no tool, hook
-   or CI for it. → P4, and the retro's action below.
-2. **The observation intake does not drain.** ~37 rows, no row has ever changed status, `rejected`
-   never used once. → retro action R1.2.
+1. **B1 is blocked on a physical look** and gates four of seven blockers. Everything else in the
+   audio path is guesswork until it is answered.
+2. **W3 still enforced by memory** — carried from this morning, now P4.
 
-**Next.** P1 — the observer's assessment of `circuit-to-wokwi`, then the move.
+**Next.** B3 — the deep-sleep wake, which is firmware and needs nobody.
 
 ## Review — validated value
 
-To be run at sprint end. Not "did the work complete" but **can Petr do the thing**:
+Run at sprint end. Not "did the work complete" but **can Petr order the board and have it work**:
 
 ```
-python3 scripts/check_spine.py                     # the chain, including simulation
+cd smartbin-local && make check                                   # green, for real reasons
+cd firmware/micropython && python3 -m unittest discover -s tests -t tests
+micropython sim/run_on_micropython.py                             # free; no Wokwi minutes
 ```
 
-The sprint has delivered value when that reaches a `simulation` stage with a verdict, and the
-scenario it ran is one that would catch a real firmware or wiring mistake. A converter that emits
-a `diagram.json` nobody runs is Done and worth nothing.
+Plus: `STATUS.md` lists zero fab blockers, and `SHOPPING.md` names only parts the current board
+actually has.
