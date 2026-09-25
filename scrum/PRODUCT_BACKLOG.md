@@ -24,9 +24,13 @@ Where that stands today, measured:
 | idea → parts | works — `parts.py`, 5 records, contract-tested |
 | parts → pin map | works — `assign_pins.py`, but no board file has an `spi` role (P3) |
 | pin map → schematic | works |
-| schematic → **builds** | **works as of 2026-09-25** — 8 traces, 0 errors, exit 0 |
-| **schema → simulation** | **not built.** This is the sprint. |
+| schematic → **builds** | works — 12 traces, 0 errors |
+| **schema → simulation** | **works as of 2026-09-25** — a 10-wire `diagram.json` from a design nobody typed |
 | → 3D / PCB | later, by Petr's instruction |
+
+**The whole spine runs**: `python3 scripts/check_spine.py` →
+`idea -> parts -> pin map -> schematic -> footprint -> build -> simulation`, exit 0. What is left
+on it is quality, not existence: the `spi` role (P3), and the structural question under P1.
 
 ---
 
@@ -61,9 +65,12 @@ plugin gets no simulation. Moving it means spark depends on bun. Options: move i
 or leave it and document the dependency. **Not obvious, so not decided here.**
 
 ### P2 — A simulation path that costs no Wokwi minutes
-~21 of 50 free minutes remain (W10), so a loop that spends them on every check is unusable. The
-bin already proves a free path exists — `micropython sim/run_on_micropython.py` runs the real
-firmware on a real MicroPython runtime locally, 13 checks, exit code as verdict.
+The quota is 50 free minutes and the only source of truth is wokwi.com/dashboard/ci — check
+there, do not trust a number written here. A loop that spends them on every check is unusable
+either way. The bin already proves a free path exists: `micropython sim/run_on_micropython.py`
+runs the real firmware on a real MicroPython runtime locally, 14 checks, exit code as verdict.
+**Note:** the `simulation` stage added under P1 costs **no** minutes — generating a diagram is
+offline. Only *running* one is billed. So this item is now about a local RUN, not a local emit.
 **Value proven by:** a simulation stage that runs to a verdict with the network off.
 
 ### P3 — An `spi` role in both board files
@@ -131,16 +138,22 @@ Everything in the bin's audio path waits on this and it is a look in a drawer. m
 DFPlayer Mini; micro-USB and "Voice Module V1.0" means DFR0534; pads marked BCLK/LRC/DIN means the
 I²S amp. Petr has chosen the I²S route on the merits; the module's identity is still unconfirmed.
 
-### B2 — Seven fab blockers, in `smartbin-local/STATUS.md`
-Four disappear if the audio goes I²S. Blocker 7 — 0.225 mm annular rings on two connectors — does
-not, and was found by spark on 2026-09-25 within minutes of the checker learning to read pill
-holes. **That is the best evidence the product works that this project has.**
-**Value proven by:** `make check` green for a reason other than the gate being removed.
+### B2 — Fab blockers — **done: five of seven closed, `make check` green**
+Blocker 7, the 0.225 mm annular rings, was found by spark within minutes of the checker learning
+to read pill holes — **still the best evidence the product works that this project has.** It is
+parked deliberately: a fabrication-process limit, and the board is not being ordered.
 
-### B3 — Deep sleep never wakes
-`WAKEUP_ALL_LOW` is an AND across both armed pins, so the bin wakes only if you hold OPEN *while*
-waving. A board-swap regression the board file records in a field nothing reads.
-**Value proven by:** the local MicroPython run covering a wake path, red before and green after.
+### B3 — Deep sleep never wakes — **done**
+Both wake sources now assert HIGH and the firmware arms `WAKEUP_ANY_HIGH`, a genuine OR.
+
+What it left behind is the part worth keeping: a mutation **no firmware test could catch**.
+Reverting `WAKE_ON_HIGH` left all 113 tests green, because every one of them derives from that
+constant — the pull, the pressed level, the interrupt polarity — so flipping it flips them with
+it. It is only wrong relative to the copper. `wake-polarity.ts` now compares the rail the button
+is tied to against the level the firmware arms for.
+
+**Still unproven, and not provable here:** Wokwi does not wake an ESP32 from a GPIO at all, so
+whether the chip really wakes is a bench test.
 
 ---
 
