@@ -113,6 +113,43 @@ class AgainstTheAgreedPinMapTest(unittest.TestCase):
             {"PIN_INT": 2}, assignment(("INT", "W0", 2, ["wake"])), BOARD), [])
 
 
+class RolesTheBoardAlreadyKnowsTest(unittest.TestCase):
+    """
+    A cold rebuild put a wake button on GPIO44 — the console UART, and not wake-capable, on a
+    design whose whole premise is deep sleep — and got "the firmware drives the board that was
+    designed", exit 0.
+
+    Both facts were already in the board file and already used by check_design.py. This check
+    read header membership and strapping and nothing else, while its docstring claimed to compare
+    every pin against what the board can do.
+    """
+
+    def test_a_pin_that_cannot_wake_is_surfaced(self):
+        board = dict(BOARD, pin_roles=dict(BOARD.get("pin_roles") or {}, **{
+            "not_wake_capable": {"gpio": [0], "note": "outside the RTC domain"}}))
+        caveats = check_firmware.caveats_against_board({"PIN_BTN": 0}, board)
+        self.assertTrue(any("not wake capable" in c for c in caveats), caveats)
+
+    def test_the_boards_own_note_is_carried(self):
+        # Repeating the reason saves a lookup at the worst moment, as the strapping rule does.
+        board = dict(BOARD, pin_roles=dict(BOARD.get("pin_roles") or {}, **{
+            "console_uart": {"gpio": [0], "note": "the ROM bootloader prints here"}}))
+        caveats = check_firmware.caveats_against_board({"PIN_X": 0}, board)
+        self.assertTrue(any("ROM bootloader prints here" in c for c in caveats), caveats)
+
+    def test_a_caveat_is_not_a_problem(self):
+        # A button on the on-board button pin is a legitimate choice. It must not fail a build.
+        board = dict(BOARD, pin_roles=dict(BOARD.get("pin_roles") or {}, **{
+            "onboard_button": {"gpio": [0], "note": "something is already wired here"}}))
+        self.assertEqual(check_firmware.check_against_board({"PIN_X": 0}, board), [])
+        self.assertTrue(check_firmware.caveats_against_board({"PIN_X": 0}, board))
+
+    def test_the_clean_message_no_longer_claims_more_than_it_checked(self):
+        rendered = check_firmware.render({"PIN_X": 0}, [], 0)
+        self.assertNotIn("drives the board that was designed", rendered)
+        self.assertIn("on the header", rendered)
+
+
 class NothingToCompareIsNotAgreementTest(unittest.TestCase):
     def test_a_firmware_with_no_pin_constants_is_could_not_run(self):
         # Silence here would read as "the firmware agrees", which is the one thing it must never

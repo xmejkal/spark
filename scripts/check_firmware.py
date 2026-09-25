@@ -50,6 +50,13 @@ PIN_CONSTANT = re.compile(r"^(PIN_[A-Z0-9_]+)\s*=\s*(\d+)\s*(?:#.*)?$", re.M)
 #: Roles that make a pin wrong for firmware to drive at all, whatever it is for.
 FORBIDDEN_ROLES = ("strapping",)
 
+#: Roles that are not wrong in themselves but change what the firmware can expect of the pin.
+#: These used to go unmentioned, so a wake button on the console UART of a deep-sleep design got
+#: "the firmware drives the board that was designed" — from a check whose docstring claims to
+#: compare every pin against what the board can do. The board file already knew; nothing read it.
+CAVEAT_ROLES = ("console_uart", "onboard_button", "onboard_led", "not_wake_capable",
+                "adc2_unusable_with_wifi")
+
 
 def read_pin_constants(source: str) -> dict:
     """`PIN_MOTOR_IA = 14` -> {"PIN_MOTOR_IA": 14}."""
@@ -74,6 +81,31 @@ def check_against_board(firmware: dict, board: dict) -> list:
                     "%s = GPIO%d (%s), a %s pin: %s"
                     % (name, gpio, on_header[gpio], role, roles[role]["note"]))
     return problems
+
+
+def caveats_against_board(firmware: dict, board: dict) -> list:
+    """
+    What is true of these pins that the firmware may not have meant.
+
+    Not defects — a button on the on-board button pin is a legitimate choice — but each one
+    changes what the code can assume, and the board file already records why. Reported separately
+    from problems so a caveat cannot fail a build, and so that "no problems" stops being
+    indistinguishable from "nothing was looked at".
+    """
+    caveats = []
+    on_header = {gpio: label for label, gpio in board["pins"].items()}
+    roles = board.get("pin_roles") or {}
+
+    for name, gpio in sorted(firmware.items(), key=lambda pin: pin[1]):
+        if gpio not in on_header:
+            continue
+        for role in CAVEAT_ROLES:
+            if gpio in (roles.get(role) or {}).get("gpio", []):
+                caveats.append(
+                    "%s = GPIO%d (%s) is %s: %s"
+                    % (name, gpio, on_header[gpio], role.replace("_", " "),
+                       (roles.get(role) or {}).get("note", "")))
+    return caveats
 
 
 def check_against_assignment(firmware: dict, assignment: list, board: dict) -> list:
@@ -111,16 +143,24 @@ def check_against_assignment(firmware: dict, assignment: list, board: dict) -> l
     return problems
 
 
-def render(firmware, problems, compared):
+def render(firmware, problems, compared, caveats=()):
     lines = ["%d pin constant(s) read" % len(firmware)]
     if compared:
         lines.append("  %d compared against the agreed pin map" % compared)
     if not problems:
-        lines.append("\n  the firmware drives the board that was designed.")
-        return "\n".join(lines)
-    lines.append("\n%d disagreement(s):\n" % len(problems))
-    for problem in problems:
-        lines.append("  - %s" % problem)
+        # It said "the firmware drives the board that was designed", which claims far more than
+        # it checked — header membership and strapping pins. Say what was actually compared.
+        lines.append("\n  every pin is on the header and none is a strapping pin%s."
+                     % (", and the agreed pin map matches" if compared else ""))
+    else:
+        lines.append("\n%d disagreement(s):\n" % len(problems))
+        for problem in problems:
+            lines.append("  - %s" % problem)
+    if caveats:
+        lines.append("\n%d thing(s) true of these pins that the firmware may not have meant:\n"
+                     % len(caveats))
+        for caveat in caveats:
+            lines.append("  ? %s" % caveat)
     return "\n".join(lines)
 
 
@@ -157,6 +197,7 @@ def main(argv=None):
         return EXIT_COULD_NOT_RUN
 
     problems = check_against_board(firmware, board)
+    caveats = caveats_against_board(firmware, board)
     compared = 0
     if args.assignment:
         assignment_path = Path(args.assignment)
@@ -170,9 +211,10 @@ def main(argv=None):
     if args.json:
         print(json.dumps({"tool": "check_firmware",
                           "status": "problems" if problems else "ok",
-                          "constants": firmware, "problems": problems}, indent=2))
+                          "constants": firmware, "problems": problems,
+                          "caveats": caveats}, indent=2))
     else:
-        print(render(firmware, problems, compared))
+        print(render(firmware, problems, compared, caveats))
     return EXIT_PROBLEMS if problems else EXIT_OK
 
 
