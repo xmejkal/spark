@@ -94,6 +94,32 @@ def find_toolchain(start):
     return Path(found) if found else None
 
 
+#: Where the circuit.json -> Wokwi diagram.json converter might be. It is not part of this
+#: plugin yet: it lives in the project that proved it, and moving ~1800 lines of TypeScript into
+#: a Python plugin is a structural decision nobody has made. Until then this stage is honest
+#: about not having run rather than absent, because "the spine reaches simulation" is the whole
+#: product goal and a chain that quietly stops at `build` misrepresents it.
+CONVERTER_PATHS = (
+    "tools/circuit-to-wokwi/cli.ts",
+    "../smartbin-local/tools/circuit-to-wokwi/cli.ts",
+)
+
+
+def find_converter(start):
+    """The circuit-to-Wokwi converter, or None."""
+    for directory in [start, *start.parents]:
+        for relative in CONVERTER_PATHS:
+            candidate = (directory / relative).resolve()
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def wires_in(diagram):
+    """How many connections the emitted diagram makes."""
+    return len(diagram.get("connections") or [])
+
+
 def count_in(circuit):
     """Traces and errors, which is what 'did it build' actually means."""
     traces = sum(1 for element in circuit if element.get("type") == "pcb_trace")
@@ -232,7 +258,35 @@ def run(requirements, workdir, toolchain=None):
                                "built with 0 pcb_traces — every component is placed and no "
                                "copper joins any of them. tscircuit skips routing entirely when "
                                "one net is unroutable, and that does not raise")]
-    return stages + [Stage("build", OK, "%d trace(s), 0 errors" % traces)]
+    stages.append(Stage("build", OK, "%d trace(s), 0 errors" % traces))
+
+    # --- simulation: the last step of the product goal -------------------------
+    converter = find_converter(Path.cwd())
+    if converter is None:
+        return stages + [Stage("simulation", COULD_NOT_RUN,
+                               "no circuit-to-wokwi converter found. It is not shipped with this "
+                               "plugin yet — it lives in the project that proved it. Looked for: "
+                               + ", ".join(CONVERTER_PATHS))]
+    if shutil.which("bun") is None:
+        return stages + [Stage("simulation", COULD_NOT_RUN,
+                               "the converter is TypeScript and bun is not installed")]
+
+    diagram_path = workdir / "diagram.json"
+    made = subprocess.run(
+        ["bun", "run", str(converter), "--circuit", str(circuit_path), "--out", str(diagram_path)],
+        cwd=str(converter.parent), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S)
+    if not diagram_path.is_file():
+        return stages + [Stage("simulation", PROBLEMS,
+                               "no diagram was produced\n" + (made.stderr or made.stdout)[-800:])]
+
+    wires = wires_in(json.loads(diagram_path.read_text()))
+    if wires == 0:
+        # The same failure shape as a board with no copper: every part placed, nothing joined.
+        return stages + [Stage("simulation", PROBLEMS,
+                               "a diagram with 0 connections. Every part is placed and none is "
+                               "wired, which is what an unmapped component looks like once the "
+                               "converter has given up on it")]
+    return stages + [Stage("simulation", OK, "%d wire(s) in the diagram" % wires)]
 
 
 def verdict(stages):
@@ -245,7 +299,7 @@ def verdict(stages):
 
 def render(stages, code):
     mark = {OK: "ok  ", PROBLEMS: "!!  ", COULD_NOT_RUN: "????"}
-    lines = ["", "  idea -> parts -> pin map -> schematic -> footprint -> build", ""]
+    lines = ["", "  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation", ""]
     for stage in stages:
         lines.append("  [%s] %-16s %s" % (mark[stage.status], stage.name, stage.detail))
     lines.append("")

@@ -178,6 +178,49 @@ class FindingTheToolchainTest(unittest.TestCase):
             os.environ["PATH"] = original
 
 
+class ReachingSimulationTest(unittest.TestCase):
+    """
+    The last step of the product goal, and the one the chain used to stop short of.
+
+    A board that builds is not the goal — `idea -> parts -> schema -> simulation` is, in Petr's
+    words. A spine that ended at `build` and called itself complete was measuring four fifths of
+    the thing and reporting five.
+    """
+
+    def test_a_diagram_with_connections_is_counted(self):
+        self.assertEqual(check_spine.wires_in({"connections": [["a", "b"], ["c", "d"]]}), 2)
+
+    def test_a_diagram_with_no_connections_counts_zero(self):
+        # The same failure shape as a board with no copper: every part placed, nothing joined.
+        # It is what an unmapped component looks like once the converter has given up on it.
+        self.assertEqual(check_spine.wires_in({"parts": [{"id": "mcu"}], "connections": []}), 0)
+
+    def test_a_diagram_missing_the_key_entirely_counts_zero_rather_than_raising(self):
+        self.assertEqual(check_spine.wires_in({}), 0)
+
+    def test_the_converter_is_found_from_a_directory_below_it(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        converter = root / "tools" / "circuit-to-wokwi" / "cli.ts"
+        converter.parent.mkdir(parents=True)
+        converter.write_text("// stand-in\n")
+        deep = root / "a" / "b"
+        deep.mkdir(parents=True)
+        # Both sides resolved: on macOS /var is a symlink to /private/var, so the finder's own
+        # `.resolve()` — which is right, it normalises what it returns — would otherwise make
+        # this fail on a path difference that is not one.
+        self.assertEqual(check_spine.find_converter(deep), converter.resolve())
+
+    def test_no_converter_anywhere_is_none_not_a_guess(self):
+        import tempfile
+        self.assertIsNone(check_spine.find_converter(Path(tempfile.mkdtemp())))
+
+    def test_the_stage_appears_in_the_rendering(self):
+        # If the banner still stops at `build`, a reader is told the chain is shorter than it is.
+        rendered = check_spine.render([stage("build", check_spine.OK)], check_spine.EXIT_OK)
+        self.assertIn("simulation", rendered)
+
+
 class TheReferenceDesignTest(unittest.TestCase):
     def test_it_names_only_parts_the_library_actually_has(self):
         # If it drifts, the gate fails for a reason that has nothing to do with the chain, and

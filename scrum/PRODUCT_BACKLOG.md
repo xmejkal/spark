@@ -43,14 +43,22 @@ See [`SPRINT.md`](SPRINT.md). Goal: **a design spark generated can be simulated.
 
 ## Ready — ordered
 
-### P1 — Bring `circuit-to-wokwi` into spark
-The link between schema and simulation, and **it already exists**: 1645 lines of TypeScript with
-six test files and an architecture document, in `smartbin-local/tools/circuit-to-wokwi/`. It turns
-`circuit.json` into a Wokwi `diagram.json`. W7 says lift it, do not rewrite it.
-Open question for the move: does it assume the hand-written bin board, or will it accept the one
-`emit_board` generates? An observer is measuring that now.
-**Value proven by:** `check_spine.py` reaching a `simulation` stage that emits a `diagram.json`
-from the generated design, with pin assignments matching the netlist.
+### P1 — Bring `circuit-to-wokwi` into spark — **the value is already delivered; the move is not**
+**Done, and this is what it produced:** `check_spine.py` now has a `simulation` stage and the
+chain runs `idea -> parts -> pin map -> schematic -> footprint -> build -> simulation`, emitting
+a 10-wire `diagram.json` from a design nobody typed.
+
+The blocker was not what the observer reported. The converter did not need three missing rows —
+it needed to stop mistaking a NAME for an IDENTITY: `match: "MotorDriver"` is string equality
+against what the BIN calls its driver, and a generated design names components after the part.
+Fixed in `smartbin-local` (`59b7a0b`), which was right on its own merits: the same rule would
+have failed for anyone who called their driver `M1`.
+
+**What remains, and it is a structural decision for the PO, not a task [PO]:** the converter is
+still ~1800 lines of TypeScript in the bin. spark finds it by searching upward and reports
+`could-not-run` honestly when it is absent, so nothing lies — but a stranger installing this
+plugin gets no simulation. Moving it means spark depends on bun. Options: move it, vendor it,
+or leave it and document the dependency. **Not obvious, so not decided here.**
 
 ### P2 — A simulation path that costs no Wokwi minutes
 ~21 of 50 free minutes remain (W10), so a loop that spends them on every check is unusable. The
