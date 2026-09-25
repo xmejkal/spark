@@ -255,15 +255,40 @@ def emit(board, part_list, assignments, placements, width, height):
         lines.append("      pinLabels={{ %s }} />" % pin_labels)
 
     lines.append("")
-    lines.append("    {/* Signals, each on the pin assign_pins.py chose and for the reason it gave. */}")
+    # Every signal the assigner placed, and an account of each one.
+    #
+    # This iterated over PARTS and their needs, so a signal placed for something with no part
+    # record — a button, an LED, a limit switch, a connector — was never looked up at all. On a
+    # twelve-signal design six vanished, with no trace and no warning, under this very banner.
+    # The assignments are the authority on what has to be connected; the parts only say where.
+    wants = {}
     for part in part_list:
-        name = component_name(part)
         for need in part.get("needs") or []:
-            entry = by_signal.get(need["signal"])
-            if not entry:
-                continue
-            lines.append('    <trace from=".Mcu > .%s" to=".%s > .%s" />  {/* %s */}'
-                         % (entry["pin"], name, need["pin"], entry["why"]))
+            wants[need["signal"]] = (component_name(part), need["pin"])
+
+    lines.append("    {/* Signals, each on the pin assign_pins.py chose and for the reason it gave. */}")
+    unclaimed = []
+    for entry in assignments:
+        target = wants.get(entry["signal"])
+        if not target:
+            unclaimed.append(entry)
+            continue
+        # The signal's own name, not just the module pin it lands on. Without it the file says
+        # `.Mcu > .D3 -> .L9110sModule > .AIA` and nothing connects that back to MOTOR_IA or to
+        # the reason the assigner chose D3.
+        lines.append('    <trace from=".Mcu > .%s" to=".%s > .%s" />  {/* %s: %s */}'
+                     % (entry["pin"], target[0], target[1], entry["signal"], entry["why"]))
+
+    if unclaimed:
+        lines += ["",
+                  "    {/* ASSIGNED, AND CONNECTED TO NOTHING. The pin assigner placed these, and",
+                  "        no part in the module list claims them, so this file cannot say what",
+                  "        they reach. They are not optional — the design asked for them:"]
+        for entry in unclaimed:
+            lines.append("          - %s on %s (GPIO%s): %s"
+                         % (entry["signal"], entry["pin"], entry["gpio"], entry["why"]))
+        lines += ["        Add a part record for whatever each one drives, or wire it by hand.",
+                  "        A schematic missing half its signals builds and routes cleanly. */}"]
 
     lines.append("")
     lines.append("    {/* Power. Which rail each module pin belongs to comes from its part file. */}")
@@ -361,6 +386,11 @@ def main(argv=None):
     sys.stdout.write(emit(board, part_list, assignments, placements, width, height))
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
+    placed = {entry["signal"] for entry in assignments}
+    claimed = {need["signal"] for part in part_list for need in part.get("needs") or []}
+    for signal in sorted(placed - claimed):
+        print("note: %s was assigned a pin and no part claims it, so nothing in the emitted "
+              "board connects to it" % signal, file=sys.stderr)
     for net, part_name, pin in outputs_with_nothing_on_them(part_list):
         print("note: %s.%s drives net.%s and nothing on this board receives it — add whatever it "
               "drives, or that net has one member and will not route" % (part_name, pin, net),

@@ -251,6 +251,55 @@ class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
         self.assertEqual(emit_board.outputs_with_nothing_on_them(part_list), [])
 
 
+class EverySignalTheAssignerPlacedIsAccountedForTest(unittest.TestCase):
+    """
+    The emitted file said "Signals, each on the pin assign_pins.py chose" over half a board.
+
+    The loop ran over PARTS and their needs, so a signal placed for something with no part record
+    — a button, an LED, a limit switch, a connector — was never looked up. On a twelve-signal
+    design six vanished, silently, exit 0. `parts/` holds four parts and all four are modules, so
+    every discrete component on a real board falls in this hole.
+
+    The assignments are the authority on what has to be connected. The parts only say where.
+    """
+
+    def _emit_with_extra_signals(self):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        part_list = [parts.load("l9110s-module")]
+        signals = parts.signals_for(["l9110s-module"]) + [
+            {"name": "BTN_OPEN", "needs": ["wake"]}, {"name": "LED_RED", "needs": []}]
+        assignments, _ = assign_pins.assign(board, signals)
+        placements, width, height = emit_board.place(board, part_list)
+        return assignments, emit_board.emit(
+            board, part_list, assignments, placements, width, height)
+
+    def test_a_signal_no_part_claims_is_named_rather_than_dropped(self):
+        _, tsx = self._emit_with_extra_signals()
+        self.assertIn("ASSIGNED, AND CONNECTED TO NOTHING", tsx)
+        for signal in ("BTN_OPEN", "LED_RED"):
+            with self.subTest(signal=signal):
+                self.assertIn(signal, tsx)
+
+    def test_it_carries_the_pin_and_the_reason_so_it_can_be_wired_by_hand(self):
+        _, tsx = self._emit_with_extra_signals()
+        self.assertIn("needs wake", tsx)
+        self.assertRegex(tsx, r"BTN_OPEN on \w+ \(GPIO\d+\)")
+
+    def test_every_assigned_signal_appears_somewhere_in_the_file(self):
+        # The general property: a placed signal is either traced or declared unclaimed. Never
+        # absent, which is the state that reads as finished.
+        assignments, tsx = self._emit_with_extra_signals()
+        for entry in assignments:
+            with self.subTest(signal=entry["signal"]):
+                self.assertIn(entry["signal"], tsx)
+
+    def test_a_signal_a_part_does_claim_is_traced_not_listed(self):
+        _, tsx = self._emit_with_extra_signals()
+        self.assertIn('<trace from=".Mcu > .', tsx)
+        unclaimed = tsx.split("ASSIGNED, AND CONNECTED TO NOTHING")[1]
+        self.assertNotIn("MOTOR_IA", unclaimed)
+
+
 class RailsWithoutASourceTest(unittest.TestCase):
     def test_a_rail_the_module_supplies_is_not_reported(self):
         # The microcontroller module provides 3V3 and ground, so consuming those is fine.
