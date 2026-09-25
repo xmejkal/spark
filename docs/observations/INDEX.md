@@ -50,3 +50,27 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | O7 | N3, the eval rebuild, has been named three times with zero movement; 47 of 57 commits postdate the last eval run | work-pattern, 09-25 | `raised` | matches my own read. Every avoided item would produce a number that could disappoint |
 | O8 | Three of six questions parked on Petr were answerable from published documents | work-pattern, 09-25 | **verified** | I found this myself while closing them: `3a43821`, `db4a7e4`, `fafbd47` |
 | O9 | `.gitignore` excludes `evals/results/`, so the runs §4b's argument rests on are not versioned | work-pattern, 09-25 | `raised` | if true, the corrected eval argument cites evidence nobody else can see |
+| R1 | `check_physics` passes on `spark init`'s own output — 3 of 4 rules never run | cold rebuild, 09-25 | **acted** | reproduced; `f2a7e1b` |
+| R2 | `check_firmware --board` passes a wake source on a non-wake console pin | cold rebuild, 09-25 | **acted** | reproduced; caveat roles now read |
+| R3 | `emit_board` silently drops signals with no part record — 6 of 12 placed, exit 0 | cold rebuild, 09-25 | **verified** | reproduced by the design council independently. The §4d defect class, living in the generator |
+| R4 | `assign_pins` spends the whole SPI bus on two LEDs and a button — no board file has an `spi` role | cold rebuild, 09-25 | **verified** | `grep spi boards/*.json` → nothing. Fix is one `pin_roles` entry reusing the existing bus path |
+| R5 | `emit_board` output cannot build — imports a footprint module the plugin does not ship | cold rebuild + claims audit | `raised` | I reproduced this myself in the walkthrough |
+| R6 | Nothing ships the header **pin order** for either board — the one fact you cannot derive | cold rebuild, 09-25 | `raised` | blocked their fabrication. Board file is precise to 0.01 mm and omits this |
+| R7 | `emit_board` prints the mandatory `host_requirements` and implements none of them | cold rebuild, 09-25 | `raised` | leaves an H-bridge's unused inputs floating, which the same file warns against |
+| R8 | A part's `host_requirements` need a GPIO that `needs` never asks for | cold rebuild, 09-25 | `raised` | the MP3's high-side switch needs a gate pin; the pin map came up one short |
+| R9 | `check_design` recommends pins `assign_pins` refuses to use (BOOT, JTAG straps) | cold rebuild, 09-25 | `raised` | follow the advice and put a wake button on BOOT |
+| R10 | `must_not_float` false-positives on pin-to-pin traces — including boards spark emits | cold rebuild, 09-25 | `raised` | the generator produces boards that fail the plugin's own flagship rule |
+| R11 | `check_all` drops `subject` from aggregated findings — "connects to nothing" twice, unattributed | cold rebuild, 09-25 | `raised` | the aggregator throws away structure its own checks produce |
+| R12 | Using the documented board override disables `vendor-truth` | cold rebuild, 09-25 | `raised` | the mechanism you are told to use to record what you verified turns off verification |
+| R13 | `init --force`, the only way to seed rails, destroys the brief you were told to hand-write | cold rebuild, 09-25 | `raised` | they recovered from a backup taken one command earlier |
+| R14 | Zero design guidance for current sensing — a third of the brief, designed entirely by the engineer | cold rebuild, 09-25 | `raised` | their largest single hole. spark gave the threshold and the warning, none of the arithmetic |
+| R15 | Nothing checks that deep-sleep wake sources share a polarity, though the board file records the constraint at length | cold rebuild, 09-25 | `raised` | |
+| R16 | `hardware_revisions` is the most design-critical fact in the board file and nothing consumes it | cold rebuild, 09-25 | `raised` | V1.2+ has no I2C pull-ups; the generator emits none either way |
+| R17 | `spark-design` points at `references/verified-parts.md`, which has none of the brief's parts, and never mentions the generators | cold rebuild, 09-25 | `raised` | a user following that skill never runs the pin assigner |
+| R18 | `on_board: false` and `unused_pins` are read by nothing | cold rebuild, 09-25 | `raised` | the off-board sensor was placed on the PCB |
+| R19 | The L9110S record has no motor output pins, though its own note mentions the screw terminals | cold rebuild, 09-25 | `raised` | a generated motor board cannot connect a motor |
+| R20 | `design-rules.md` teaches 4.7k I2C pull-ups; `check_physics` rejects them at 400 kHz | cold rebuild, 09-25 | `raised` | the reference file taught the habit the part file warns against |
+| R21 | The board file's own `drill_mm: 0.9` is rejected by `check_footprints` in the same plugin | cold rebuild, 09-25 | `raised` | spark caught spark |
+| R22 | The plugin ships this project as its worked example, so it cannot be cold-tested by anyone | cold rebuild, 09-25 | `raised` | and the harness injects the project's CLAUDE.md, so the rebuild's gap list understates |
+| C1 | The converter plan's demo produces geometry identical to what the board already has | design council, 09-25 | **acted** | reproduced to the micron. Plan abandoned |
+| C2 | The pill-hole gap is a field-reading gap in `check_footprints`, not a footprint-source gap | design council, 09-25 | **verified** | pill holes carry `hole_width`/`hole_height`; the rules read `hole_diameter`. Importing adds unreadable holes |
