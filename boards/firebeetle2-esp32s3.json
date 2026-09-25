@@ -34,9 +34,13 @@
       ],
       "pitch_mm": 2.54,
       "row_spacing_mm": 22.86,
+      "//drill_mm": "DFRobot's own finished hole for DFRobot's own obround pad. It is NOT the hole to put in a board this module plugs into: a 2.54 mm header pin is 0.64 mm square, so 0.905 mm across the diagonal, and a 0.9 mm drill finishes near 0.84 mm after plating. Carried because it is what the vendor drawing says; emit_footprint.py deliberately ignores it and sizes the hole from the pin that has to go in.",
       "drill_mm": 0.9,
       "pad_mm": 1.5,
-      "//alignment": "Both rows are flush at the end away from USB-C; the 18-pin row runs four pitches further toward the USB end. First pad is 5.20 mm from the flush edge."
+      "//alignment": "Both rows are flush at the end away from USB-C; the 18-pin row runs four pitches further toward the USB end.",
+      "//first_pad_from_edge_mm": "Centre of the first pad of BOTH rows, from the flush edge. This was prose inside the line above until 2026-09-25, which meant the one number tying the pads to the outline could not be read by anything - the same defect as the header order itself. Check: 60.0/2 - 5.2 = 24.80 mm, where the hand-checked footprint puts pad 1.",
+      "first_pad_from_edge_mm": 5.2,
+      "flush_edge": "+y"
     },
     "mounting_holes": {
       "count": 4,
