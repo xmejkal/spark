@@ -121,6 +121,71 @@ class WhatItAdmitsTest(unittest.TestCase):
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", self.tsx)
 
 
+class ManyOfOnePartTest(unittest.TestCase):
+    """
+    Five identical buttons became one component with five GPIOs shorted to its single port.
+
+    Found by building a remote control. The requirements file listed the same part five times,
+    which is the obvious way to say "five of these". `component_name` derived the name from the
+    part id, so all five were `TactileButton`; `tsci build` kept ONE; and the five distinct pins
+    `assign_pins` had carefully allocated were all wired to the survivor. Exit 0, no warning.
+
+    Fourth instance of one defect class — after signals with no part record, the processor on no
+    ground, and rails outside the vocabulary. Every time the generator emitted less than it was
+    asked for and said nothing, and three of the four were found by building something new rather
+    than by any test.
+    """
+
+    @staticmethod
+    def button(instance=None):
+        part = {"schema": 1, "id": "tactile-button", "name": "button", "kind": "button",
+                "needs": [{"signal": "BUTTON", "pin": "A", "direction": "in"}],
+                "power": [{"pin": "B", "rail": "ground", "direction": "in"}],
+                "pin_order": ["A", "B"], "footprint": "pushbutton",
+                "body_mm": {"width": 6, "height": 6, "verified": True, "source": "6x6"}}
+        if instance:
+            part["_instance"] = instance
+        return part
+
+    def test_an_instance_name_wins_over_the_part_id(self):
+        self.assertEqual(emit_board.component_name(self.button("BtnForward")), "BtnForward")
+
+    def test_without_one_the_part_id_is_still_used(self):
+        self.assertEqual(emit_board.component_name(self.button()), "TactileButton")
+
+    def test_two_unnamed_instances_are_caught_before_anything_is_emitted(self):
+        # The safety net, independent of how a design arrives at two of the same name.
+        repeated = emit_board.duplicate_component_names([self.button(), self.button()])
+        self.assertEqual(repeated, ["TactileButton"])
+
+    def test_named_instances_do_not_collide(self):
+        self.assertEqual(emit_board.duplicate_component_names(
+            [self.button("BtnLeft"), self.button("BtnRight")]), [])
+
+    def test_two_instances_given_the_SAME_name_are_still_caught(self):
+        # Naming is not a cure by itself; a copy-pasted requirements entry hits the same wall.
+        self.assertEqual(emit_board.duplicate_component_names(
+            [self.button("BtnLeft"), self.button("BtnLeft")]), ["BtnLeft"])
+
+    def test_each_instance_asks_for_its_own_signal(self):
+        # Five buttons asking for `BUTTON` produced five signals of one name, which every lookup
+        # keyed by name then collapsed to whichever came last.
+        left = self.button("BtnLeft")
+        right = self.button("BtnRight")
+        self.assertEqual(emit_board.signal_name(left, left["needs"][0]), "BTNLEFT_BUTTON")
+        self.assertEqual(emit_board.signal_name(right, right["needs"][0]), "BTNRIGHT_BUTTON")
+
+    def test_an_unnamed_part_keeps_its_bare_signal_name(self):
+        plain = self.button()
+        self.assertEqual(emit_board.signal_name(plain, plain["needs"][0]), "BUTTON")
+
+    def test_a_bare_string_and_an_object_are_both_valid_entries(self):
+        self.assertEqual(
+            emit_board.requested_parts({"parts": ["l9110s-module",
+                                                  {"part": "tactile-button", "name": "BtnLeft"}]}),
+            [("l9110s-module", None), ("tactile-button", "BtnLeft")])
+
+
 class AnyRailCanBeNamedTest(unittest.TestCase):
     """
     The rail vocabulary was four names, closed, and a rail outside it was silently dropped.

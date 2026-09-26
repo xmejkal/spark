@@ -182,8 +182,66 @@ def parts_without_a_footprint(part_list):
 
 
 def component_name(part):
-    """`l9110s-module` -> `L9110sModule`, so the name in the file reads like a component."""
+    """
+    What to call this instance in the emitted file.
+
+    An explicit instance name wins. Without one the name comes from the part id, which is fine
+    for one of a thing and catastrophic for five: a remote with five identical buttons emitted
+    five components all called `TactileButton`, `tsci build` kept ONE of them, and the five
+    distinct GPIOs `assign_pins` had carefully allocated were all wired to that survivor's single
+    port. Five microcontroller pins shorted together, exit 0, no warning.
+    """
+    if part.get("_instance"):
+        return part["_instance"]
     return "".join(word.capitalize() for word in part["id"].replace("_", "-").split("-"))
+
+
+def requested_parts(wanted):
+    """
+    The parts list, normalised to (part_id, instance name or None).
+
+    An entry is either a bare id — `"l9110s-module"` — or an object naming the instance:
+    `{"part": "tactile-button", "name": "BtnForward"}`. Five buttons without names is not a design
+    anyway: you cannot write firmware against "button three".
+    """
+    entries = []
+    for entry in wanted.get("parts") or []:
+        if isinstance(entry, dict):
+            entries.append((entry["part"], entry.get("name")))
+        else:
+            entries.append((entry, None))
+    return entries
+
+
+def signal_name(part, need):
+    """
+    The name the assigner knows this need by.
+
+    ONE definition, because there were briefly two. An instance prefixes its signals so five
+    buttons are five signals rather than one name five times — and the same mapping written out
+    at each use site diverged immediately: the trace lookup was fixed and the unclaimed-signal
+    reporter was not, so five correctly wired signals were reported as connected to nothing. Same
+    shape as every other "fixed in one place" defect in this project's history.
+    """
+    if part.get("_instance"):
+        return "%s_%s" % (part["_instance"].upper(), need["signal"])
+    return need["signal"]
+
+
+def duplicate_component_names(part_list):
+    """
+    Names used more than once, which `tsci build` resolves by keeping one component.
+
+    The independent safety net for the defect above: whatever route a design takes to two
+    components of the same name, this catches it before anything is emitted.
+    """
+    seen, repeated = set(), []
+    for part in part_list:
+        name = component_name(part)
+        if name in seen and name not in repeated:
+            repeated.append(name)
+        seen.add(name)
+    return repeated
 
 
 def place(board, part_list):
@@ -340,7 +398,7 @@ def emit(board, part_list, assignments, placements, width, height):
     wants = {}
     for part in part_list:
         for need in part.get("needs") or []:
-            wants[need["signal"]] = (component_name(part), need["pin"])
+            wants[signal_name(part, need)] = (component_name(part), need["pin"])
 
     lines.append("    {/* Signals, each on the pin assign_pins.py chose and for the reason it gave. */}")
     unclaimed = []
@@ -452,10 +510,20 @@ def main(argv=None):
     try:
         project = Path(args.project).resolve() if args.project else boards.project_root()
         board = boards.load(project, args.board or wanted.get("board"))
-        part_list = [parts_library.load(part_id, project)
-                     for part_id in wanted.get("parts", [])]
-        signals = parts_library.signals_for(wanted.get("parts", []), project) + list(
-            wanted.get("signals") or [])
+        requested = requested_parts(wanted)
+        part_list = []
+        signals = []
+        for part_id, instance in requested:
+            part = dict(parts_library.load(part_id, project))
+            if instance:
+                part["_instance"] = instance
+            part_list.append(part)
+            # Signals are per INSTANCE, not per part. Five buttons asking for `BUTTON` produced
+            # five signals of one name, which `assign_pins` placed on five pins and every
+            # downstream lookup keyed by name then collapsed to whichever came last.
+            for signal in parts_library.signals_for([part_id], project):
+                signals.append(dict(signal, name=signal_name(part, {"signal": signal["name"]})))
+        signals += list(wanted.get("signals") or [])
         assignments, _ = assign_pins.assign(board, signals)
     except (boards.BoardError, parts_library.PartError, assign_pins.Impossible) as broken:
         print("cannot emit a board: %s" % broken, file=sys.stderr)
@@ -464,6 +532,17 @@ def main(argv=None):
     if not (board.get("physical") or {}).get("footprint_export"):
         print("this board has no verified footprint, so a board file would reference nothing",
               file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+
+    repeated = duplicate_component_names(part_list)
+    if repeated:
+        print("two or more components would be called: %s\n"
+              "  `tsci build` resolves that by keeping ONE of them, so every pin assigned to the "
+              "others is wired to the survivor — five identical buttons became one component with "
+              "five GPIOs shorted to a single port, and nothing said so.\n"
+              "  Name each instance in the requirements file: "
+              "{\"part\": \"tactile-button\", \"name\": \"BtnForward\"}."
+              % ", ".join(repeated), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
     unfootprinted = parts_without_a_footprint(part_list)
@@ -501,7 +580,8 @@ def main(argv=None):
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
     placed = {entry["signal"] for entry in assignments}
-    claimed = {need["signal"] for part in part_list for need in part.get("needs") or []}
+    claimed = {signal_name(part, need)
+               for part in part_list for need in part.get("needs") or []}
     for signal in sorted(placed - claimed):
         print("note: %s was assigned a pin and no part claims it, so nothing in the emitted "
               "board connects to it" % signal, file=sys.stderr)
