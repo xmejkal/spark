@@ -233,7 +233,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
 
     def test_it_finds_what_a_usual_layout_holds(self):
         root = self._project("dist/board/circuit.json", ".spark/rules.json", "board-gerbers.zip")
-        found, _ = check_all.discover(root)
+        found, _, _ = check_all.discover(root)
         self.assertEqual(found["circuit"], str(root / "dist/board/circuit.json"))
         self.assertEqual(found["rules"], str(root / ".spark/rules.json"))
         self.assertEqual(found["package"], str(root / "board-gerbers.zip"))
@@ -241,12 +241,12 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
     def test_two_candidates_are_ambiguous_rather_than_a_coin_toss(self):
         # Two fab packages in one directory is exactly when checking the wrong one costs money.
         root = self._project("old-gerbers.zip", "new-gerbers.zip")
-        found, notes = check_all.discover(root)
+        found, notes, _ = check_all.discover(root)
         self.assertNotIn("package", found)
         self.assertTrue(any("AMBIGUOUS" in note for note in notes), notes)
 
     def test_what_is_missing_says_where_it_looked(self):
-        found, notes = check_all.discover(self._project())
+        found, notes, _ = check_all.discover(self._project())
         self.assertNotIn("circuit", found)
         self.assertTrue(any("circuit" in n and "dist/board/circuit.json" in n for n in notes))
 
@@ -254,7 +254,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         # The one way discovery is worse than five explicit paths is by silently picking up a
         # stale artifact, so nothing may be used without being named.
         root = self._project("dist/board/circuit.json", ".spark/rules.json")
-        found, notes = check_all.discover(root)
+        found, notes, _ = check_all.discover(root)
         for name in found:
             with self.subTest(input=name):
                 self.assertTrue(any(note.startswith(name) for note in notes))
@@ -265,16 +265,84 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         args = argparse.Namespace(project=str(root), circuit=chosen, rules=None, design=None,
                                   board=None, board_file=None, firmware=None, boards=None,
                                   package=None, json=False)
-        inputs, _ = check_all.inputs_for(args)
+        inputs, _, _ = check_all.inputs_for(args)
         self.assertEqual(inputs["circuit"], chosen, "the convention overrode an explicit path")
         self.assertEqual(inputs["rules"], str(root / ".spark/rules.json"),
                          "an input nobody named should still come from the project")
 
     def test_without_a_project_nothing_is_discovered(self):
         args = argparse.Namespace(project=None, circuit="given.json", json=False)
-        inputs, resolved = check_all.inputs_for(args)
+        inputs, resolved, ambiguous = check_all.inputs_for(args)
         self.assertEqual(resolved, [])
+        self.assertEqual(ambiguous, {})
         self.assertEqual(inputs["circuit"], "given.json")
+
+
+class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
+    """
+    A second board silently switched six of seven checks off and still reported `ok`.
+
+    Found on a two-board project — an RC car and its remote, in one directory. The `circuit` glob
+    matched twice, `discover` declined to choose (right) and then did not record the ambiguity
+    (wrong), so the input was simply unset. Every check needing it reported SKIPPED — "not given
+    circuit" — which the verdict reads as "not asked for", and exit was **0** with a top-level
+    `"status": "ok"`.
+
+    That is this tool's founding rule broken at the top level: a check that could not look read as
+    a check nobody wanted. "There is no circuit" and "there are two and I refused to pick" are
+    different sentences, and only the first is a legitimate skip.
+    """
+
+    @staticmethod
+    def check():
+        return check_all.Check("demo", ["circuit"], "a demo check")
+
+    def test_an_ambiguous_input_is_could_not_run_not_skipped(self):
+        result = self.check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
+        self.assertEqual(result["status"], check_all.COULD_NOT_RUN)
+
+    def test_it_names_both_candidates_and_how_to_choose(self):
+        # A could-not-run nobody can act on is only marginally better than a false pass.
+        result = self.check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
+        self.assertIn("dist/a.json", result["reason"])
+        self.assertIn("dist/b.json", result["reason"])
+        self.assertIn("--circuit", result["reason"])
+
+    def test_a_genuinely_absent_input_is_still_skipped(self):
+        # The distinction has to cut both ways, or every project without firmware reports a
+        # could-not-run it can do nothing about.
+        result = self.check().run({}, {})
+        self.assertEqual(result["status"], check_all.SKIPPED)
+
+    def test_the_verdict_is_not_ok_when_something_was_ambiguous(self):
+        # `verdict` answers with a STATUS, not an exit code — the exit code is mapped from it.
+        results = [self.check().run({}, {"circuit": ["a", "b"]})]
+        self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
+        self.assertNotEqual(check_all.verdict(results), check_all.OK)
+
+    def test_naming_one_explicitly_settles_it(self):
+        # `--circuit` exists precisely to resolve this, so it must clear the ambiguity rather than
+        # be overruled by it.
+        root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
+        args = argparse.Namespace(project=str(root), circuit="dist/car/circuit.json", rules=None,
+                                  design=None, board=None, board_file=None, firmware=None,
+                                  boards=None, package=None, json=False)
+        _, _, ambiguous = check_all.inputs_for(args)
+        self.assertNotIn("circuit", ambiguous)
+
+    def test_two_circuits_with_no_choice_made_are_reported_ambiguous(self):
+        root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
+        _, _, ambiguous = check_all.discover(root)
+        self.assertEqual(len(ambiguous.get("circuit", [])), 2)
+
+    @staticmethod
+    def _project(*relative):
+        root = Path(tempfile.mkdtemp())
+        for name in relative:
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("[]")
+        return root
 
 
 class ABrokenCheckDoesNotHideTheOthers(unittest.TestCase):

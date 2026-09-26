@@ -72,7 +72,17 @@ class Check:
     def __init__(self, name, needs, what):
         self.name, self.needs, self.what = name, needs, what
 
-    def run(self, inputs):
+    def run(self, inputs, ambiguous=None):
+        ambiguous = ambiguous or {}
+        unchosen = [need for need in self.needs if need in ambiguous]
+        if unchosen:
+            # NOT skipped. The input exists — twice — and nothing decided between them, so this
+            # check did not look. Saying "not asked" would be a check that could not look reading
+            # as one that was never wanted.
+            return {"check": self.name, "status": COULD_NOT_RUN, "what": self.what,
+                    "reason": "; ".join("%s is ambiguous: %s — name one with --%s"
+                                        % (need, ", ".join(ambiguous[need]), need)
+                                        for need in unchosen)}
         missing = [need for need in self.needs if not inputs.get(need)]
         if missing:
             return {"check": self.name, "status": SKIPPED, "what": self.what,
@@ -283,6 +293,7 @@ def discover(project):
     project = Path(project)
     found, notes = {}, []
 
+    ambiguous = {}
     for name, patterns in CONVENTIONS.items():
         matches = []
         for pattern in patterns:
@@ -293,6 +304,12 @@ def discover(project):
             found[name] = str(matches[0])
             notes.append("%-12s %s" % (name, matches[0].relative_to(project)))
         elif matches:
+            # Recorded, not dropped. Leaving the input unset made every check that needed it
+            # report SKIPPED — "I was not asked" — when the truth is "there were two of these and
+            # I refused to choose". On a two-board project that turned six of seven checks off and
+            # still exited 0 with a top-level status of "ok", which is this tool's own founding
+            # rule broken at the top level.
+            ambiguous[name] = [str(m.relative_to(project)) for m in matches]
             notes.append("%-12s AMBIGUOUS, %d matches: %s — name one explicitly"
                          % (name, len(matches),
                             ", ".join(str(m.relative_to(project)) for m in matches)))
@@ -316,7 +333,7 @@ def discover(project):
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 
-    return found, notes
+    return found, notes, ambiguous
 
 
 def inputs_for(args):
@@ -328,13 +345,15 @@ def inputs_for(args):
     """
     explicit = {key: value for key, value in vars(args).items() if value}
     if not args.project:
-        return vars(args), []
-    discovered, resolved = discover(args.project)
-    return dict(discovered, **explicit), resolved
+        return vars(args), [], {}
+    discovered, resolved, ambiguous = discover(args.project)
+    # An explicit flag settles an ambiguity: that is what naming one is for.
+    ambiguous = {name: matches for name, matches in ambiguous.items() if name not in explicit}
+    return dict(discovered, **explicit), resolved, ambiguous
 
 
-def run(inputs):
-    return [check.run(inputs) for check in CHECKS]
+def run(inputs, ambiguous=None):
+    return [check.run(inputs, ambiguous) for check in CHECKS]
 
 
 def render(results):
@@ -415,8 +434,8 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="for a caller that is not a person")
     args = parser.parse_args(argv)
 
-    inputs, resolved = inputs_for(args)
-    results = run(inputs)
+    inputs, resolved, ambiguous = inputs_for(args)
+    results = run(inputs, ambiguous)
     overall = verdict(results)
 
     if args.json:
