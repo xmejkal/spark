@@ -44,8 +44,57 @@ MARGIN_MM = 6
 GAP_MM = 4
 DEFAULT_BODY_MM = (16, 12)
 
-#: Rails every design has, and what they are called.
-RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker": "SPEAKER"}
+#: Rails with an ESTABLISHED net name. Deliberately not the whole vocabulary — see
+#: `net_name_for_rail`. `MOTOR6V` carries a voltage belonging to one project's battery and is kept
+#: only because designs already reference that net by name; a new design should say `motor` and
+#: state the voltage in its rules file.
+KNOWN_RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker": "SPEAKER"}
+
+
+def net_name_for_rail(rail):
+    """
+    The net a rail's name means. ANY rail name is allowed.
+
+    This was a closed dictionary of four, and a rail outside it returned None — which the power
+    loops turned into `continue`, so the connection was silently not emitted. An RC car with a 5 V
+    servo rail and a 7.4 V traction pack came out with a servo that had a ground and no supply,
+    and a regulator joined to the board by its two ground pins and nothing else. Exit 0, one
+    unrelated note. That is the third instance of one defect — `244feb1` (signals with no part
+    record) and `21156b4` (the processor on no ground) were the first two: the generator emitting
+    less than it was asked for without saying so.
+
+    The four above keep their names so existing designs are unchanged. Anything else becomes its
+    own name upper-cased, and `rails_not_established` reports it — because an open vocabulary
+    means a typo creates a net, and the answer is to show the reader what was created rather than
+    to refuse every rail nobody thought of in advance.
+    """
+    if not rail:
+        return None
+    return KNOWN_RAIL_NETS.get(rail, str(rail).upper())
+
+
+def rails_not_established(part_list):
+    """
+    Rails this design invented, so a typo is visible rather than silently a new net.
+
+    `GROUDN` is a perfectly good net name and a terrible ground. Reported, not refused: the
+    alternative is the closed vocabulary that silently dropped three connections.
+    """
+    invented = {}
+    for part in part_list:
+        for supply in part.get("power") or []:
+            rail = supply.get("rail")
+            if rail and rail not in KNOWN_RAIL_NETS:
+                invented.setdefault(net_name_for_rail(rail), []).append(
+                    "%s.%s" % (part["name"], supply["pin"]))
+    return {net: sorted(pins) for net, pins in sorted(invented.items())}
+
+
+def power_pins_with_no_rail(part_list):
+    """Power pins whose record names no rail at all — a connection nobody can place."""
+    return ["%s.%s" % (part["name"], supply["pin"])
+            for part in part_list for supply in part.get("power") or []
+            if not supply.get("rail")]
 
 #: What a `polarity` becomes in a net name, so a differential pair reads as one.
 POLARITY_SUFFIX = {"+": "_P", "-": "_N"}
@@ -76,7 +125,7 @@ def net_for(supply):
     together — printing the part file's own warning, "never ground either side", on the trace
     that did it.
     """
-    net = RAIL_NETS.get(supply.get("rail"))
+    net = net_name_for_rail(supply.get("rail"))
     if net and supply.get("direction") == "out":
         return net + POLARITY_SUFFIX.get(supply.get("polarity"), "")
     return net
@@ -326,7 +375,7 @@ def emit(board, part_list, assignments, placements, width, height):
     # and nothing reported it, because "is this component connected to anything" was a question
     # no check asked.
     for pad, supply in sorted((board.get("power_pads") or {}).items()):
-        net = RAIL_NETS.get(supply.get("rail"))
+        net = net_name_for_rail(supply.get("rail"))
         if not net:
             continue
         lines.append('    <trace from=".Mcu > .%s" to="net.%s" />' % (pad, net))
@@ -341,6 +390,18 @@ def emit(board, part_list, assignments, placements, width, height):
         lines.append("        A speaker, a motor or a connector is not a module, so nobody lists")
         lines.append("        one — whatever this drives has to be added, or the net has one")
         lines.append("        member and will not route. */}")
+    for pin in power_pins_with_no_rail(part_list):
+        lines.append("    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no" % pin)
+        lines.append("        rail is not a pin on some default rail — it is a connection the part")
+        lines.append("        file never stated. Add a `rail` to that entry. */}")
+    invented = rails_not_established(part_list)
+    if invented:
+        lines.append("    {/* Rails this design INVENTED. Listed because a typo creates a net just")
+        lines.append("        as easily as a new rail does — GROUDN is a fine net name and a")
+        lines.append("        terrible ground. Check each one is intended:")
+        for invented_net, pins in invented.items():
+            lines.append("          net.%-12s from %s" % (invented_net, ", ".join(pins)))
+        lines.append("     */}")
     for net in rails_without_a_source(part_list):
         lines.append("    {/* NOTHING ON THIS BOARD SOURCES net.%s. A module list is a list of" % net)
         lines.append("        consumers — whatever supplies this rail (a connector, a regulator,")

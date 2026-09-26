@@ -121,6 +121,80 @@ class WhatItAdmitsTest(unittest.TestCase):
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", self.tsx)
 
 
+class AnyRailCanBeNamedTest(unittest.TestCase):
+    """
+    The rail vocabulary was four names, closed, and a rail outside it was silently dropped.
+
+    Found by building something that was not the smart bin. An RC car has a 5 V servo rail and a
+    7.4 V traction pack; neither name was in the dictionary, `net_for` returned None, and the
+    power loop's `if not net: continue` turned three declared connections into nothing. The
+    emitted schematic had a servo with a ground and no supply, and a 5 V regulator joined to the
+    board by its two ground pins alone. Exit 0.
+
+    Third instance of one defect: the generator emitting less than it was asked for in silence.
+    The first two were signals with no part record, and the microcontroller on no ground.
+    """
+
+    @staticmethod
+    def part(part_id, power):
+        return {"schema": 1, "id": part_id, "name": part_id, "kind": "test",
+                "needs": [], "power": power, "pin_order": [s["pin"] for s in power],
+                "footprint": "pinrow%d" % len(power)}
+
+    def test_a_rail_nobody_thought_of_becomes_a_net(self):
+        self.assertEqual(emit_board.net_name_for_rail("servo"), "SERVO")
+        self.assertEqual(emit_board.net_name_for_rail("traction"), "TRACTION")
+
+    def test_the_established_names_are_unchanged(self):
+        # Existing designs reference these nets by name; renaming them would be a silent rewire.
+        self.assertEqual(emit_board.net_name_for_rail("logic"), "V33")
+        self.assertEqual(emit_board.net_name_for_rail("ground"), "GND")
+        self.assertEqual(emit_board.net_name_for_rail("motor"), "MOTOR6V")
+        self.assertEqual(emit_board.net_name_for_rail("speaker"), "SPEAKER")
+
+    def test_no_rail_at_all_is_still_None(self):
+        # Absent is different from unrecognised. A power pin naming no rail is a record that never
+        # said where the pin goes, and inventing a default for it would be the original defect
+        # wearing a different hat.
+        self.assertIsNone(emit_board.net_name_for_rail(None))
+        self.assertIsNone(emit_board.net_name_for_rail(""))
+
+    def test_an_invented_rail_is_reported_with_the_pins_on_it(self):
+        # Open vocabulary means a typo creates a net. Reported rather than refused, because
+        # refusing is what dropped the connections.
+        servo = self.part("servo", [{"pin": "VCC", "rail": "servo", "direction": "in"},
+                                    {"pin": "GND", "rail": "ground", "direction": "in"}])
+        invented = emit_board.rails_not_established([servo])
+        self.assertEqual(invented, {"SERVO": ["servo.VCC"]})
+
+    def test_a_design_using_only_established_rails_invents_nothing(self):
+        motor = self.part("m", [{"pin": "VCC", "rail": "motor", "direction": "in"},
+                                {"pin": "GND", "rail": "ground", "direction": "in"}])
+        self.assertEqual(emit_board.rails_not_established([motor]), {})
+
+    def test_a_power_pin_naming_no_rail_is_reported(self):
+        broken = self.part("x", [{"pin": "VCC", "direction": "in"}])
+        self.assertEqual(emit_board.power_pins_with_no_rail([broken]), ["x.VCC"])
+
+    def test_every_declared_power_pin_reaches_a_net(self):
+        """
+        The regression, stated as the thing that was actually wrong.
+
+        Eight power pins were declared across three parts and five were emitted. Nothing said so.
+        """
+        servo = self.part("servo", [{"pin": "VCC", "rail": "servo", "direction": "in"},
+                                    {"pin": "GND", "rail": "ground", "direction": "in"}])
+        buck = self.part("buck", [{"pin": "IN+", "rail": "traction", "direction": "in"},
+                                  {"pin": "IN-", "rail": "ground", "direction": "in"},
+                                  {"pin": "OUT+", "rail": "servo", "direction": "out"},
+                                  {"pin": "OUT-", "rail": "ground", "direction": "out"}])
+        for part in (servo, buck):
+            for supply in part["power"]:
+                with self.subTest(part=part["id"], pin=supply["pin"]):
+                    self.assertIsNotNone(emit_board.net_for(supply),
+                                         "declared and unplaceable, which is how it vanished")
+
+
 class TwoOutputsNeverShareANetTest(unittest.TestCase):
     """
     The generator emitted a board that would destroy a part.
