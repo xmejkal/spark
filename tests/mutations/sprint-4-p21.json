@@ -6,7 +6,7 @@
   "replace": "SHARED_LINES = frozenset()"
  },
  {
-  "file": "scripts/assign_pins.py",
+  "file": "scripts/parts.py",
   "name": "the vendor's name for the clock is forgotten",
   "find": "\"SCK\": (\"SCK\", \"CLK\", \"SCLK\")",
   "replace": "\"SCK\": (\"SCK\",)"

@@ -538,7 +538,9 @@ class TheCheckListItselfTest(unittest.TestCase):
         #   check_spine — takes a requirements.json and BUILDS a design; every other check reads
         #                 one that already exists. Wiring it in would make every design review
         #                 regenerate and rebuild spark's own reference board.
-        NOT_A_CHECK = {"check_all", "check_spine"}
+        #   check_commit — takes a COMMIT and measures the tree it holds (the suite, the anchors);
+        #                 it is about this repository, not about any design.
+        NOT_A_CHECK = {"check_all", "check_spine", "check_commit"}
         on_disk = {path.stem for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
         on_disk |= {"compare_design"}
 
