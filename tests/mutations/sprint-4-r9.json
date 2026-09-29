@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/design.py",
+  "name": "the rails override is never applied",
+  "find": "            if (part_id, instance) in rails:\n                part = on_rails(part, rails[(part_id, instance)])",
+  "replace": "            if False:\n                part = on_rails(part, rails[(part_id, instance)])"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "a rail on a pin the part lacks is silently ignored",
+  "find": "        if not any(supply.get(\"pin\") == pin for supply in part.get(\"power\") or []):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "the library's own power entries are re-pointed in place",
+  "find": "    return dict(part, power=[dict(supply, rail=rails[supply[\"pin\"]])\n                             if supply.get(\"pin\") in rails else supply\n                             for supply in part.get(\"power\") or []])",
+  "replace": "    for supply in part.get(\"power\") or []:\n        if supply.get(\"pin\") in rails:\n            supply[\"rail\"] = rails[supply[\"pin\"]]\n    return part"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "a malformed rails map is accepted",
+  "find": "            if not isinstance(rails, dict) or not all(",
+  "replace": "            if False and not all("
+ }
+]

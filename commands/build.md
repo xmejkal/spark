@@ -29,8 +29,10 @@ or `{part, name}` when the same part appears more than once: five buttons with n
 component with five GPIOs shorted to it, and the generator refuses that. The inlet is there
 because a module list is a list of *consumers*: the motor driver's rail needs a source, and
 without one the generator says so and the build stops on a net with one member — which is what
-the first version of this very example did. An optional `"signals": [{"name": "LED_STATUS",
-"needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
+the first version of this very example did. Which rail a part's power pin sits on is the design's to say, not the record's: `{"part":
+"l9110s-module", "rails": {"VCC": "traction"}}` puts the driver on the pack rail without copying
+the record, and a pin the part does not have is refused by name. An optional `"signals":
+[{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
 *assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
 
 The project is found up from the requirements file's own directory, so this works from anywhere.

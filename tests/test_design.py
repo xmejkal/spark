@@ -157,5 +157,51 @@ class LoadingTest(unittest.TestCase):
         self.assertEqual(design.load(path, board_id="xiao-esp32-c6").board["id"], "xiao-esp32-c6")
 
 
+
+class ARailBelongsToTheDesignTest(unittest.TestCase):
+    """
+    The RC car copied the whole shipped L9110S record to change `motor` to `traction` (G5).
+    A requirements entry says it instead, and the library's record is never touched.
+    """
+
+    ENTRY = {"part": "l9110s-module", "name": "Drive", "rails": {"VCC": "traction"}}
+
+    def test_a_pins_rail_can_be_re_pointed_from_the_requirements(self):
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": [self.ENTRY]})
+        [drive] = design.load(path).parts
+        rails = {supply["pin"]: supply["rail"] for supply in drive["power"]}
+        self.assertEqual(rails["VCC"], "traction")
+        self.assertEqual(rails["GND"], "ground", "only the named pin moves")
+        self.assertEqual(drive["_instance"], "Drive")
+
+    def test_on_rails_returns_a_copy_and_leaves_its_argument_as_loaded(self):
+        # The first version of this test re-loaded the record from disk afterwards, which
+        # `parts.load` does fresh every time — so an in-place edit was invisible and the mutation
+        # escaped (W12). The contract is on the function: its argument is untouched.
+        import parts
+        record = parts.load("l9110s-module")
+        moved = design.on_rails(record, {"VCC": "traction"})
+        self.assertEqual([s["rail"] for s in moved["power"] if s["pin"] == "VCC"], ["traction"])
+        self.assertEqual([s["rail"] for s in record["power"] if s["pin"] == "VCC"], ["motor"])
+        self.assertIsNot(moved["power"], record["power"])
+
+    def test_a_pin_the_part_does_not_have_is_a_sentence(self):
+        entry = dict(self.ENTRY, rails={"VIN": "traction"})
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": [entry]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertIn("VIN", str(caught.exception))
+        self.assertIn("VCC", str(caught.exception), "the message names the pins it does have")
+
+    def test_rails_must_be_a_pin_to_rail_map(self):
+        with self.assertRaises(design.DesignError):
+            design.rails_requested({"parts": [dict(self.ENTRY, rails=["traction"])]})
+
+    def test_an_unnamed_entry_can_carry_rails_too(self):
+        entry = {"part": "l9110s-module", "rails": {"VCC": "traction"}}
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": [entry]})
+        [drive] = design.load(path).parts
+        self.assertEqual([s["rail"] for s in drive["power"] if s["pin"] == "VCC"], ["traction"])
+
 if __name__ == "__main__":
     unittest.main()

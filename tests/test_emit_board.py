@@ -708,6 +708,20 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertEqual(tsx, "")
         self.assertIn("not JSON", err)
 
+    def test_a_rail_named_in_the_requirements_reaches_the_netlist(self):
+        # R9: no copied record — the design says which rail the driver sits on, and the file
+        # carries that net. The rail is not in the established vocabulary, so it is also listed
+        # as invented, which is the reader's cue to check the name.
+        root = self._project()
+        (root / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3",
+             "parts": [{"part": "l9110s-module", "rails": {"VCC": "traction"}}]}))
+        code, tsx, _ = self._main(["requirements.json"], root)
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertIn('to="net.TRACTION"', tsx)
+        self.assertNotIn('to="net.MOTOR6V"', tsx)
+        self.assertIn("Rails this design INVENTED", tsx)
+
     def test_an_entry_without_a_part_is_could_not_run(self):
         root = self._project()
         (root / "requirements.json").write_text(json.dumps(

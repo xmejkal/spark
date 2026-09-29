@@ -42,7 +42,9 @@ a rule checklist in the loop. Follow it.
    ```
 
    A module list is a list of *consumers* — the inlet is what sources the motor driver's rail,
-   and without it the chain stops at the schematic and says so. Extra pins no part claims go in
+   and without it the chain stops at the schematic and says so. Which rail a part sits on is the
+   design's: `{"part": "l9110s-module", "rails": {"VCC": "traction"}}` re-points one pin without
+   copying the record. Extra pins no part claims go in
    `"signals": [{"name": "LED_STATUS", "needs": []}]`; the file lists each as assigned and
    connected to nothing, for you to wire by hand.
 

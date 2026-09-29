@@ -107,14 +107,57 @@ def requested_parts(wanted):
     return entries
 
 
+def rails_requested(wanted):
+    """
+    `{(part_id, instance): {pin: rail}}` for every entry that re-points a power pin's rail.
+
+    Which rail a part sits on is a property of the DESIGN, not of the part: an L9110S runs on
+    6 V, 7.4 V or 12 V and its record had to pick one. The RC car shadowed the whole shipped
+    record to change the one string `motor` → `traction`, and that copy was then frozen against
+    every update to the record (cold test G5, backlog R9). So the requirements file says it:
+    `{"part": "l9110s-module", "rails": {"VCC": "traction"}}`.
+    """
+    overrides = {}
+    for index, entry in enumerate(wanted.get("parts") or []):
+        if isinstance(entry, dict) and entry.get("rails"):
+            rails = entry["rails"]
+            if not isinstance(rails, dict) or not all(
+                    isinstance(pin, str) and isinstance(rail, str) and rail for pin, rail in rails.items()):
+                raise DesignError("parts[%d].rails must map pin names to rail names: %s"
+                                  % (index, json.dumps(rails)))
+            overrides[(entry.get("part"), entry.get("name"))] = rails
+    return overrides
+
+
+def on_rails(part, rails):
+    """
+    The part's record with the named power pins moved to the design's rails — a COPY, with its
+    own `power` list; the argument is left exactly as loaded. (`parts.load` reads the file every
+    time, so an in-place edit would reach nothing else today; the copy is the contract, not a
+    fix, and the test holds the function to it rather than to a cache that does not exist.)
+    """
+    for pin in rails:
+        if not any(supply.get("pin") == pin for supply in part.get("power") or []):
+            raise DesignError("%s has no power pin %r to put on rail %r; its power pins are %s"
+                              % (part.get("id"), pin, rails[pin],
+                                 ", ".join(s.get("pin", "?") for s in part.get("power") or [])
+                                 or "none"))
+    return dict(part, power=[dict(supply, rail=rails[supply["pin"]])
+                             if supply.get("pin") in rails else supply
+                             for supply in part.get("power") or []])
+
+
 def parts_of(wanted, project):
-    """Each requested part as an instance: its record, plus `_instance` when it was named."""
+    """Each requested part as an instance: its record, `_instance` when named, its rails as designed."""
     part_list = []
+    rails = rails_requested(wanted)
     try:
         for part_id, instance in requested_parts(wanted):
             part = dict(parts_library.load(part_id, project))
             if instance:
                 part["_instance"] = instance
+            if (part_id, instance) in rails:
+                part = on_rails(part, rails[(part_id, instance)])
             part_list.append(part)
     except parts_library.PartError as broken:
         raise DesignError(str(broken)) from broken
