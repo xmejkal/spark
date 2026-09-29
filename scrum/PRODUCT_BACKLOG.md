@@ -254,8 +254,11 @@ the script names by someone who already knew them.
 
 **Result.** `/spark:build`; the design skill routed through the chain with hand-written tscircuit
 only where the generator stops; the hardware-engineer agent likewise. The documented example, run
-as written, reaches the end of the chain — which needed a `tactile-button` record the library did
-not have (the car's, with sources, now shipped). `test_routes.py` keeps every link named and every
+as first written, did NOT run: it named a motor driver and no inlet, the generator said so, and
+the build stopped on a one-member net. `1f769f8`'s message claims it ran — written from a grep,
+not the verdict. Corrected in `7ac2ba1`: the example has the inlet, a test runs it from the
+document, and the build was gated on the verdict (12 traces, 10 wires). The example also needed a
+`tactile-button` record the library did not have (the car's, with sources, now shipped). `test_routes.py` keeps every link named and every
 route pointing at a script that exists; four mutations caught.
 
 ### R8 — Asked for a servo; nothing started looking [G1] **[PO — this is a product decision]**

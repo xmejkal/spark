@@ -47,8 +47,11 @@ it decides nothing about the product. `grep -c '\`raised\`' docs/observations/IN
 `f35e7df`; R19 is the first `rejected` row the table has ever had. Four items came out, two of them
 the PO's.
 
-**R7 done** (`1f769f8`). The documented example did not work as written until the library had a
-tactile button; it does now, end to end. **Correction:** the fix commit's message (`f35e7df`) says 533 tests; the run it cites
+**R7 done** (`1f769f8`, corrected `7ac2ba1`). **The commit message of `1f769f8` is false**: it says the
+documented example ran end to end; the output it was written over said `the chain is broken`
+(a motor driver with no inlet — the tool was right, the example wrong). Grepped, not read. Fixed,
+tested from the document, and the build gated on the verdict this time. Second R3.5 failure of the
+day, one hour after R3.5. **Correction:** the fix commit's message (`f35e7df`) says 533 tests; the run it cites
 printed 532. Written before the count — R3.5's exact failure mode, an hour after R3.5.
 
 ## Definition of Done
