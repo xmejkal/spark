@@ -111,11 +111,17 @@ years ago with `physical.pad_aliases` — **parts have no equivalent**, so the p
 discarded.
 **Value proven by:** a part keeping `IN+` as its printed name and wiring correctly.
 
-### R5 — The generator sizes no trace [G6]
-Every trace is tscircuit's 0.15 mm default, good for 0.6 A, on a car whose traction rail carries
-2.9 A. `check_physics` caught all three rails — the checker works and the generator never asks.
-**Value proven by:** a generated board's power traces passing `check_physics` without being widened
-by hand, and a comment where the rules file states no current.
+### ~~R5 — The generator sizes no trace~~ [G6] — **DONE `dd01824`**
+Sized from `.spark/rules.json` by `copper.py`, the module `check_physics` judges with — so the two
+cannot disagree. The RC car's `physics` check now passes on a board the generator sized itself.
+
+Two things the measurements changed: sizing only ever WIDENS (the IPC minimum for a 0.5 A rail is
+0.12 mm, narrower than the router's default), and **a neck is not a trace** — six segments at
+1.20 mm turned out to be 0.12-0.85 mm long, each the last step into the board's one 1.2 mm pad.
+The constriction is real and belongs to the pad, so necks are reported rather than judged as runs.
+
+`copper.py` is the refactor: no imports, no I/O, no state, checked against handbook figures rather
+than against itself. 17 tests of its own.
 
 ### R6 — A placeholder footprint is indistinguishable from a real one [G4]
 The XT30 inlet has no footprint in the library, so it carries a `jst_ph_2` placeholder with the
