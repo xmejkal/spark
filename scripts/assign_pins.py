@@ -40,7 +40,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-import boards  # noqa: E402
+import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
 
 EXIT_OK, EXIT_IMPOSSIBLE, EXIT_COULD_NOT_RUN = 0, 1, 2
@@ -304,44 +304,28 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    path = Path(args.requirements)
-    if not path.is_file():
-        print("no requirements at %s" % path)
-        return EXIT_COULD_NOT_RUN
-
-    wanted = json.loads(path.read_text())
-
-    # The project is resolved first because BOTH libraries need it: a project's own board file
-    # beats the shipped one, and so does its own part file. Reading the parts before this was
-    # settled is how the parts library ended up being consulted without a project at all.
+    # One loader for the whole chain (`design.py`): the project is the requirements FILE's, the
+    # parts are instances, and the signals are derived once and named per instance — the same
+    # list `emit_board` traces. This used to read the JSON outside any try, resolve the project
+    # from the current directory, and hand the raw `parts` entries to the library, so the first
+    # step every document names crashed on the `{part, name}` form every document shows (B1).
     try:
-        project = Path(args.project).resolve() if args.project else boards.project_root()
-        board = boards.load(project, args.board or wanted.get("board"))
-    except boards.BoardError as broken:
-        print("could not load the board: %s" % broken)
+        loaded = design_library.load(args.requirements, args.project, args.board)
+    except design_library.DesignError as broken:
+        print("could not load the design: %s" % broken)
         return EXIT_COULD_NOT_RUN
-
-    # A requirements file may name PARTS instead of listing every signal by hand. The signals a
-    # part asks for are a property of the part, not of this design, so they belong in the part
-    # library where they can be verified once and reused.
-    signals = list(wanted.get("signals") or [])
-    if wanted.get("parts"):
-        try:
-            signals = parts_library.signals_for(wanted["parts"], project) + signals
-        except parts_library.PartError as broken:
-            print("could not read a part: %s" % broken)
-            return EXIT_COULD_NOT_RUN
+    board = loaded.board
 
     try:
-        assignments, leftover = assign(board, signals)
+        assignments, leftover = assign(board, loaded.signals)
     except Impossible as refused:
         print("cannot place every signal on this board:\n\n  %s" % refused)
         return EXIT_IMPOSSIBLE
 
     # Whatever the parts do not know about themselves travels with the answer. A pin map that
     # looks complete while resting on unmeasured numbers is the thing this plugin exists to stop.
-    open_questions = (parts_library.unverified(wanted["parts"], project)
-                      if wanted.get("parts") else [])
+    open_questions = parts_library.unverified(
+        list(dict.fromkeys(part["id"] for part in loaded.parts)), loaded.project)
 
     if args.json:
         print(json.dumps({"tool": "assign_pins", "board": board["id"],

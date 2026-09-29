@@ -314,12 +314,12 @@ class ManyOfOnePartTest(unittest.TestCase):
         # keyed by name then collapsed to whichever came last.
         left = self.button("BtnLeft")
         right = self.button("BtnRight")
-        self.assertEqual(emit_board.signal_name(left, left["needs"][0]), "BTNLEFT_BUTTON")
-        self.assertEqual(emit_board.signal_name(right, right["needs"][0]), "BTNRIGHT_BUTTON")
+        self.assertEqual(design.signal_name(left, left["needs"][0]), "BTNLEFT_BUTTON")
+        self.assertEqual(design.signal_name(right, right["needs"][0]), "BTNRIGHT_BUTTON")
 
     def test_an_unnamed_part_keeps_its_bare_signal_name(self):
         plain = self.button()
-        self.assertEqual(emit_board.signal_name(plain, plain["needs"][0]), "BUTTON")
+        self.assertEqual(design.signal_name(plain, plain["needs"][0]), "BUTTON")
 
     def test_a_bare_string_and_an_object_are_both_valid_entries(self):
         self.assertEqual(
@@ -721,6 +721,23 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertIn('to="net.TRACTION"', tsx)
         self.assertNotIn('to="net.MOTOR6V"', tsx)
         self.assertIn("Rails this design INVENTED", tsx)
+
+    def test_the_signals_the_loader_derives_are_the_ones_traced(self):
+        # P20: the signals come from `design.load`, the same list `assign_pins.py` prints. A main
+        # that traced anything else — or nothing — would still emit a file that builds.
+        code, tsx, _ = self._main(["requirements.json"], self._project())
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertIn('to=".L9110sModule > .AIA" />  {/* MOTOR_IA:', tsx)
+
+    def test_a_malformed_part_record_is_could_not_run_not_a_traceback(self):
+        # B10: `parts.load` read the file outside any try; through here it was a JSONDecodeError.
+        root = self._project()
+        (root / "parts").mkdir()
+        (root / "parts" / "l9110s-module.json").write_text("{half a record")
+        code, tsx, err = self._main(["requirements.json"], root)
+        self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
+        self.assertIn("l9110s-module", err)
+        self.assertIn("not JSON", err)
 
     def test_an_entry_without_a_part_is_could_not_run(self):
         root = self._project()

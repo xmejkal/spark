@@ -37,7 +37,7 @@ import parts as parts_library  # noqa: E402
 
 #: What `load` returns. `parts` are the requested instances: each a copy of its record, with
 #: `_instance` set when the requirements named it.
-Design = namedtuple("Design", "path project requirements board parts rules")
+Design = namedtuple("Design", "path project requirements board parts signals rules")
 
 #: Where a project keeps the rules its checks and its generator both read.
 RULES_PATH = Path(".spark") / "rules.json"
@@ -147,21 +147,76 @@ def on_rails(part, rails):
                              for supply in part.get("power") or []])
 
 
+def record(part_id, project):
+    """
+    The library's record for a part, or a DesignError saying what is wrong with it.
+
+    `parts.load` reads the file outside any try, so a malformed project part was a
+    `JSONDecodeError` traceback through `emit_board` and `[!!] schematic Traceback …` through the
+    spine — the A8 class, one module below the loader (audit B10). Named by part id here, since
+    the library resolves the path.
+    """
+    try:
+        return parts_library.load(part_id, project)
+    except parts_library.PartError as broken:
+        raise DesignError(str(broken)) from broken
+    except ValueError as broken:
+        raise DesignError("the record for %r is not JSON: %s" % (part_id, broken)) from broken
+    except OSError as broken:
+        raise DesignError("the record for %r could not be read: %s" % (part_id, broken)) from broken
+
+
 def parts_of(wanted, project):
     """Each requested part as an instance: its record, `_instance` when named, its rails as designed."""
     part_list = []
     rails = rails_requested(wanted)
-    try:
-        for part_id, instance in requested_parts(wanted):
-            part = dict(parts_library.load(part_id, project))
-            if instance:
-                part["_instance"] = instance
-            if (part_id, instance) in rails:
-                part = on_rails(part, rails[(part_id, instance)])
-            part_list.append(part)
-    except parts_library.PartError as broken:
-        raise DesignError(str(broken)) from broken
+    for part_id, instance in requested_parts(wanted):
+        part = dict(record(part_id, project))
+        if instance:
+            part["_instance"] = instance
+        if (part_id, instance) in rails:
+            part = on_rails(part, rails[(part_id, instance)])
+        part_list.append(part)
     return part_list
+
+
+def signal_name(part, need):
+    """
+    The name the assigner knows this need by.
+
+    ONE definition, because there were briefly two. An instance prefixes its signals so five
+    buttons are five signals rather than one name five times — and the same mapping written out
+    at each use site diverged immediately: the trace lookup was fixed and the unclaimed-signal
+    reporter was not, so five correctly wired signals were reported as connected to nothing.
+    It lives with the loader because the name is decided when the instance is.
+    """
+    if part.get("_instance"):
+        return "%s_%s" % (part["_instance"].upper(), need["signal"])
+    return need["signal"]
+
+
+def signals_of(part_list, wanted, project):
+    """
+    Every signal this design asks the host for, ready for `assign_pins`: each instance's, named
+    per instance, then the requirements' own.
+
+    Derived HERE, once. `emit_board.main` derived them and `assign_pins.main` handed the raw
+    `parts` entries to the library instead, so the first step every document names crashed on
+    the `{part, name}` form every document shows (audit B1), and the two mains could have
+    disagreed about which signals a design has.
+    """
+    signals = []
+    for part in part_list:
+        try:
+            asked = parts_library.signals_for([part["id"]], project)
+        except (parts_library.PartError, ValueError, OSError) as broken:
+            raise DesignError(str(broken)) from broken
+        for signal in asked:
+            # Signals are per INSTANCE, not per part. Five buttons asking for `BUTTON` produced
+            # five signals of one name, which `assign_pins` placed on five pins and every
+            # downstream lookup keyed by name then collapsed to whichever came last.
+            signals.append(dict(signal, name=signal_name(part, {"signal": signal["name"]})))
+    return signals + list(wanted.get("signals") or [])
 
 
 def rules_in(project):
@@ -188,4 +243,6 @@ def load(path, project=None, board_id=None):
         board = boards.load(root, board_id or wanted.get("board"))
     except boards.BoardError as broken:
         raise DesignError(str(broken)) from broken
-    return Design(Path(path), root, wanted, board, parts_of(wanted, root), rules_in(root))
+    part_list = parts_of(wanted, root)
+    return Design(Path(path), root, wanted, board, part_list, signals_of(part_list, wanted, root),
+                  rules_in(root))

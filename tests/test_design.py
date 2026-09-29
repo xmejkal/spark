@@ -203,5 +203,38 @@ class ARailBelongsToTheDesignTest(unittest.TestCase):
         [drive] = design.load(path).parts
         self.assertEqual([s["rail"] for s in drive["power"] if s["pin"] == "VCC"], ["traction"])
 
+
+class TheSignalsAreDerivedOnceTest(unittest.TestCase):
+    """
+    P20: `emit_board.main` derived a design's signals and `assign_pins.main` handed the raw parts
+    entries to the library instead, so the first documented step crashed on the documented input
+    (audit B1). The loader derives them, named per instance, and both mains read `design.signals`.
+    """
+
+    def test_each_instance_gets_its_own_signal_names(self):
+        root, path = project(requirements={
+            "board": "firebeetle2-esp32s3",
+            "parts": [{"part": "tactile-button", "name": "BtnOpen"},
+                      {"part": "tactile-button", "name": "BtnMode"}, "l9110s-module"]})
+        names = [signal["name"] for signal in design.load(path).signals]
+        self.assertEqual(len(names), len(set(names)), names)
+        self.assertTrue(any(name.startswith("BTNOPEN_") for name in names), names)
+        self.assertTrue(any(name.startswith("BTNMODE_") for name in names), names)
+        self.assertIn("MOTOR_IA", names)
+
+    def test_the_requirements_own_signals_come_last(self):
+        root, path = project(requirements={
+            "board": "firebeetle2-esp32s3", "parts": ["l9110s-module"],
+            "signals": [{"name": "LED_STATUS", "needs": []}]})
+        self.assertEqual(design.load(path).signals[-1]["name"], "LED_STATUS")
+
+    def test_a_malformed_project_part_is_a_sentence_naming_the_part(self):
+        root, path = project()
+        (root / "parts").mkdir()
+        (root / "parts" / "l9110s-module.json").write_text("{half a record")
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertIn("l9110s-module", str(caught.exception))
+
 if __name__ == "__main__":
     unittest.main()

@@ -206,5 +206,70 @@ class AgainstARealBoardTest(unittest.TestCase):
         self.assertEqual([a for a in assignments if a["gpio"] in strapping], [])
 
 
+
+class TheDocumentedInvocationTest(unittest.TestCase):
+    """
+    `assign_pins.py requirements.json` is the first step every document names, and until
+    2026-09-29 nothing called `main`: it crashed with `TypeError` on the `{part, name}` entry
+    form the same documents show, and on `rails` (audit B1). These run it the documented way.
+    """
+
+    @staticmethod
+    def _main(argv, cwd):
+        import contextlib
+        import io
+        import os
+        out = io.StringIO()
+        was = os.getcwd()
+        os.chdir(cwd)
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = assign_pins.main(argv)
+        finally:
+            os.chdir(was)
+        return code, out.getvalue()
+
+    @staticmethod
+    def _project(requirements):
+        import json
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps(requirements))
+        return root
+
+    def test_the_build_commands_own_example_gets_a_pin_per_signal(self):
+        import json
+        import re
+        text = (ROOT / "commands" / "build.md").read_text()
+        example = json.loads(re.search(r"```json\n(.*?)```", text, re.S).group(1))
+        code, out = self._main(["requirements.json"], self._project(example))
+        self.assertEqual(code, assign_pins.EXIT_OK, out)
+        self.assertIn("MOTOR_IA", out)
+        self.assertIn("BTNOPEN_", out)
+        self.assertIn("BTNMODE_", out)
+
+    def test_a_rails_entry_is_accepted(self):
+        code, out = self._main(["requirements.json"], self._project(
+            {"board": "firebeetle2-esp32s3",
+             "parts": [{"part": "l9110s-module", "rails": {"VCC": "traction"}}]}))
+        self.assertEqual(code, assign_pins.EXIT_OK, out)
+        self.assertIn("MOTOR_IA", out)
+
+    def test_malformed_requirements_are_could_not_run_not_a_traceback(self):
+        root = self._project({})
+        (root / "requirements.json").write_text("{not json")
+        code, out = self._main(["requirements.json"], root)
+        self.assertEqual(code, assign_pins.EXIT_COULD_NOT_RUN)
+        self.assertIn("not JSON", out)
+
+    def test_a_malformed_part_record_is_could_not_run_naming_the_part(self):
+        root = self._project({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
+        (root / "parts").mkdir()
+        (root / "parts" / "l9110s-module.json").write_text("{half a record")
+        code, out = self._main(["requirements.json"], root)
+        self.assertEqual(code, assign_pins.EXIT_COULD_NOT_RUN)
+        self.assertIn("l9110s-module", out)
+
 if __name__ == "__main__":
     unittest.main()

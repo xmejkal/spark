@@ -261,21 +261,6 @@ def component_name(part):
     return "".join(word.capitalize() for word in part["id"].replace("_", "-").split("-"))
 
 
-def signal_name(part, need):
-    """
-    The name the assigner knows this need by.
-
-    ONE definition, because there were briefly two. An instance prefixes its signals so five
-    buttons are five signals rather than one name five times — and the same mapping written out
-    at each use site diverged immediately: the trace lookup was fixed and the unclaimed-signal
-    reporter was not, so five correctly wired signals were reported as connected to nothing. Same
-    shape as every other "fixed in one place" defect in this project's history.
-    """
-    if part.get("_instance"):
-        return "%s_%s" % (part["_instance"].upper(), need["signal"])
-    return need["signal"]
-
-
 def placeholder_components(part_list):
     """
     Components whose footprint is a stand-in, by the name the emitted file gives them.
@@ -470,7 +455,7 @@ def signal_lines(part_list, assignments):
     wants = {}
     for part in part_list:
         for need in part.get("needs") or []:
-            wants[signal_name(part, need)] = (component_name(part), need["pin"])
+            wants[design_library.signal_name(part, need)] = (component_name(part), need["pin"])
 
     lines = ["    {/* Signals, each on the pin assign_pins.py chose and for the reason it gave. */}"]
     unclaimed = []
@@ -651,16 +636,10 @@ def main(argv=None):
     try:
         design = design_library.load(args.requirements, args.project, args.board)
         board, part_list = design.board, design.parts
-        signals = []
-        for part in part_list:
-            # Signals are per INSTANCE, not per part. Five buttons asking for `BUTTON` produced
-            # five signals of one name, which `assign_pins` placed on five pins and every
-            # downstream lookup keyed by name then collapsed to whichever came last.
-            for signal in parts_library.signals_for([part["id"]], design.project):
-                signals.append(dict(signal, name=signal_name(part, {"signal": signal["name"]})))
-        signals += list(design.requirements.get("signals") or [])
-        assignments, _ = assign_pins.assign(board, signals)
-    except (design_library.DesignError, parts_library.PartError, assign_pins.Impossible) as broken:
+        # The signals are the loader's — derived once, named per instance — so `assign_pins.py`
+        # and this file cannot disagree about which signals a design has.
+        assignments, _ = assign_pins.assign(board, design.signals)
+    except (design_library.DesignError, assign_pins.Impossible) as broken:
         # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
         # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
         # which reads as "problems found" to anything that knows three outcomes.
@@ -722,7 +701,7 @@ def main(argv=None):
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
     placed = {entry["signal"] for entry in assignments}
-    claimed = {signal_name(part, need)
+    claimed = {design_library.signal_name(part, need)
                for part in part_list for need in part.get("needs") or []}
     for signal in sorted(placed - claimed):
         print("note: %s was assigned a pin and no part claims it, so nothing in the emitted "
