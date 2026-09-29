@@ -186,6 +186,62 @@ def footprint_pad_count(footprint):
     return None
 
 
+#: How a part is simulated (backlog P31, ordered by the PO 2026-09-29): a Wokwi built-in part
+#: standing in for it, a custom chip written for it and kept beside its record, or a reason it is
+#: absent. `pins` maps the record's wired pads to the stand-in's pin names; null says the
+#: stand-in has no such pin. The converter reads this instead of a hand table in another repo.
+CHIP_SOURCE_SUFFIXES = (".chip.c", ".chip.json")
+
+
+def chip_folder(part: dict, path: Path) -> Path:
+    """Where a record's custom chip lives: `<record's folder>/<id>/chip/`, travelling with it."""
+    return path.parent / part["id"] / "chip"
+
+
+def simulation_problems(part: dict, path: Path) -> list:
+    """What is wrong with a record's `simulation`, if it has one; nothing is allowed to be absent."""
+    sim = part.get("simulation")
+    if sim is None:
+        return []
+    if not isinstance(sim, dict):
+        return ["simulation must be an object: {\"wokwi\": {...}} or {\"skip\": \"why\"}"]
+    if "skip" in sim:
+        problems = [] if isinstance(sim["skip"], str) and sim["skip"] else [
+            "simulation.skip must say why the part is absent from the simulation"]
+        if "wokwi" in sim:
+            problems.append("simulation has both skip and wokwi; a part is simulated or it is not")
+        return problems
+    wokwi = sim.get("wokwi")
+    if not isinstance(wokwi, dict):
+        return ["simulation needs wokwi {part or chip, pins, stand_in} or skip with a reason"]
+    problems = []
+    part_type, chip = wokwi.get("part"), wokwi.get("chip")
+    if bool(part_type) == bool(chip):
+        problems.append("simulation.wokwi names exactly one of part (a Wokwi built-in) or chip "
+                        "(a custom chip beside the record)")
+    if part_type and not wokwi.get("stand_in"):
+        problems.append("a built-in part stands in for the real one: simulation.wokwi.stand_in must say "
+                        "what differs, so a pass here is not mistaken for the bench")
+    pins = wokwi.get("pins")
+    if not isinstance(pins, dict):
+        problems.append("simulation.wokwi.pins must map each wired pad to the stand-in's pin name, "
+                        "or to null when the stand-in has no such pin")
+    else:
+        wired = {entry.get("pin") for group in ("needs", "power") for entry in part.get(group) or []} - {None}
+        mentioned = {entry.get("pin") for group in PIN_LISTS for entry in part.get(group) or []} - {None}
+        for pad in sorted(set(pins) - mentioned):
+            problems.append("simulation.wokwi.pins names %r, a pad this part never mentions" % pad)
+        for pad in sorted(wired - set(pins)):
+            problems.append("simulation.wokwi.pins does not say where the wired pad %r goes on the "
+                            "stand-in; name its pin, or null when it has none" % pad)
+    if chip:
+        folder = chip_folder(part, path)
+        for suffix in CHIP_SOURCE_SUFFIXES:
+            if not (folder / (chip + suffix)).is_file():
+                problems.append("simulation.wokwi.chip %r needs %s beside the record" % (chip, folder / (chip + suffix)))
+    return problems
+
+
 def validate(part: dict, path: Path) -> list:
     """Every way this definition breaks the contract. Empty means it holds."""
     problems = []
@@ -380,6 +436,7 @@ def validate(part: dict, path: Path) -> list:
             problems.append("facts.%s is an unverified value with no why_it_matters; say what "
                             "depends on it or do not carry the number" % name)
 
+    problems.extend(simulation_problems(part, path))
     return problems
 
 

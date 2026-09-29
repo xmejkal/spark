@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "a skip with no reason passes",
+  "find": "        problems = [] if isinstance(sim[\"skip\"], str) and sim[\"skip\"] else [",
+  "replace": "        problems = [] if isinstance(sim[\"skip\"], str) else ["
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a stand-in needs no stand_in note",
+  "find": "    if part_type and not wokwi.get(\"stand_in\"):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "part and chip together are accepted",
+  "find": "    if bool(part_type) == bool(chip):",
+  "replace": "    if not part_type and not chip:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a wired pad may be left unplaced",
+  "find": "        for pad in sorted(wired - set(pins)):",
+  "replace": "        for pad in []:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a chip with no sources beside the record passes",
+  "find": "        for suffix in CHIP_SOURCE_SUFFIXES:",
+  "replace": "        for suffix in ():"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "validate no longer looks at simulation",
+  "find": "    problems.extend(simulation_problems(part, path))",
+  "replace": "    pass"
+ }
+]

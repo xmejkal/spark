@@ -798,5 +798,67 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
             self.assertEqual(parts.promote("x-part", project, to=library), library / "x-part.json")
             self.assertTrue((library / "x-part" / "x.pdf").is_file())
 
+
+class ASimulationIsDeclaredTest(unittest.TestCase):
+    """P31: a record says how it is simulated, and the contract refuses a half-said one."""
+
+    def _record(self, **extra):
+        record = {"schema": 1, "id": "x-part", "name": "X", "kind": "sensor",
+                  "needs": [{"signal": "OUT", "pin": "OUT", "needs": []}],
+                  "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}, {"pin": "GND", "rail": "ground", "direction": "in"}],
+                  "unused_pins": [{"pin": "NC", "note": "no connection"}]}
+        record.update(extra)
+        return record
+
+    def _problems(self, simulation, root=None):
+        import tempfile
+        root = root or Path(tempfile.mkdtemp())
+        path = root / "x-part.json"
+        return parts.simulation_problems(self._record(simulation=simulation), path), root
+
+    def test_a_skip_needs_its_reason_and_nothing_else(self):
+        self.assertEqual(self._problems({"skip": "wiring, not a part"})[0], [])
+        self.assertTrue(self._problems({"skip": ""})[0])
+        self.assertTrue(self._problems({"skip": "x", "wokwi": {}})[0])
+
+    def test_a_stand_in_names_its_part_its_pins_and_what_differs(self):
+        good = {"wokwi": {"part": "wokwi-led", "pins": {"OUT": "A", "GND": "C", "VCC": None}, "stand_in": "an LED shows the level"}}
+        self.assertEqual(self._problems(good)[0], [])
+        no_note = {"wokwi": {"part": "wokwi-led", "pins": {"OUT": "A", "GND": "C", "VCC": None}}}
+        self.assertTrue(any("stand_in" in p for p in self._problems(no_note)[0]))
+        both = {"wokwi": {"part": "wokwi-led", "chip": "x", "pins": {"OUT": "A", "GND": "C", "VCC": None}, "stand_in": "s"}}
+        self.assertTrue(any("exactly one" in p for p in self._problems(both)[0]))
+
+    def test_every_wired_pad_is_placed_and_no_unknown_pad_is_named(self):
+        missing = {"wokwi": {"part": "wokwi-led", "pins": {"OUT": "A"}, "stand_in": "s"}}
+        said = " ".join(self._problems(missing)[0])
+        self.assertIn("'GND'", said); self.assertIn("'VCC'", said)
+        unknown = {"wokwi": {"part": "wokwi-led", "pins": {"OUT": "A", "GND": "C", "VCC": None, "BOGUS": "B"}, "stand_in": "s"}}
+        self.assertTrue(any("never mentions" in p for p in self._problems(unknown)[0]))
+        unused_may_be_absent = {"wokwi": {"part": "wokwi-led", "pins": {"OUT": "A", "GND": "C", "VCC": None}, "stand_in": "s"}}
+        self.assertEqual(self._problems(unused_may_be_absent)[0], [], "NC is unused and need not be placed")
+
+    def test_a_chip_must_exist_beside_the_record(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        chip = {"wokwi": {"chip": "probe", "pins": {"OUT": "SIG", "GND": "GND", "VCC": "VCC"}}}
+        self.assertTrue(any("needs" in p and "probe.chip.c" in p for p in self._problems(chip, root)[0]))
+        folder = root / "x-part" / "chip"; folder.mkdir(parents=True)
+        (folder / "probe.chip.c").write_text("// c"); (folder / "probe.chip.json").write_text("{}")
+        self.assertEqual(self._problems(chip, root)[0], [])
+
+    def test_the_validator_refuses_a_record_whose_simulation_is_half_said(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        record = self._record(simulation={"skip": ""}, pin_order=["OUT", "VCC", "GND", "NC"], footprint="pinrow4",
+                              body_mm={"width": 10, "height": 10, "verified": True, "source": "x"})
+        self.assertTrue(any("simulation.skip" in p for p in parts.validate(record, root / "x-part.json")),
+                        "validate must carry the simulation problems, or --validate passes a record the converter cannot use")
+
+    def test_every_shipped_record_says_how_it_is_simulated(self):
+        for part_id in parts.available():
+            record = parts.load(part_id)
+            self.assertIn("simulation", record, "%s: the converter has nothing to read" % part_id)
+
 if __name__ == "__main__":
     unittest.main()

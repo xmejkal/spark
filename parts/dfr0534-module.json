@@ -27,7 +27,7 @@
     {
       "pin": "SPKP",
       "rail": "speaker",
-      "note": "bridged amplifier output \u2014 never ground either side",
+      "note": "bridged amplifier output — never ground either side",
       "direction": "out",
       "//direction": "An OUTPUT, not a supply. Both halves of a bridged amplifier: they swing in opposite directions and the speaker sits across them. Wiring them to one net shorts the amplifier to itself.",
       "polarity": "+"
@@ -59,19 +59,19 @@
       "value": 18,
       "verified": false,
       "source": "third-party measurement of a JQ8400 board, the same decoder this module uses (github.com/arduino12/mp3_player_module_wire): 18 mA idle, 4.5 mA after the one-wire sleep command, and 140 uA only after removing the BUSY LED and cutting the amplifier's SD pin to a GPIO. DFRobot publish no figure for the DFR0534 itself and no schematic, so its floor cannot be known from documentation",
-      "why_it_matters": "Even the optimistic 4.5 mA is roughly ten times the entire rest of a sleeping battery board. With no standby command and no schematic, the module's power has to be switched in hardware \u2014 which is a board decision, not a firmware one."
+      "why_it_matters": "Even the optimistic 4.5 mA is roughly ten times the entire rest of a sleeping battery board. With no standby command and no schematic, the module's power has to be switched in hardware — which is a board decision, not a firmware one."
     },
     "amplifier_output_w": {
       "value": null,
       "verified": false,
-      "source": "DFRobot publish no figure. The amplifier is an NSIWAY NS8002 (legible in DFRobot's own product photo, so the part identity is primary), LCSC C189960 \u2014 its datasheet states output power against supply and load, but neither lcsc.com nor nsiway.com.cn served the PDF when tried; both returned HTML.",
-      "why_it_matters": "Decides how loud the bin can be and what the speaker must survive. It is a published number on the amplifier's own datasheet, not something needing a meter \u2014 the document simply has not been obtained. Lower stakes than the two idle currents, which decide battery life."
+      "source": "DFRobot publish no figure. The amplifier is an NSIWAY NS8002 (legible in DFRobot's own product photo, so the part identity is primary), LCSC C189960 — its datasheet states output power against supply and load, but neither lcsc.com nor nsiway.com.cn served the PDF when tried; both returned HTML.",
+      "why_it_matters": "Decides how loud the bin can be and what the speaker must survive. It is a published number on the amplifier's own datasheet, not something needing a meter — the document simply has not been obtained. Lower stakes than the two idle currents, which decide battery life."
     },
     "mounting_holes": {
       "value": "2 holes, 15.00 mm apart, both 3.50 mm in from the right edge",
       "verified": true,
       "source": "DFRobot's own dimension drawing, https://dfimg.dfrobot.com/wiki/19342/DFR0534_mp3-player-module_dimension_V1.0.pdf (agrees with the datasheet p.1 and the wiki)",
-      "note": "Drill measures ~2.5 mm off the drawing, which is M2 clearance \u2014 NOT M3. DFRobot does not label the diameter, so treat the size as unconfirmed even though the spacing is dimensioned."
+      "note": "Drill measures ~2.5 mm off the drawing, which is M2 clearance — NOT M3. DFRobot does not label the diameter, so treat the size as unconfirmed even though the spacing is dimensioned."
     },
     "has_uart_standby_command": {
       "value": false,
@@ -82,7 +82,7 @@
     "silicon": {
       "value": "JQ8400-FL decoder + NS8002 class-AB amplifier + SPI flash",
       "verified": true,
-      "source": "DFRobot's own product photography, kept at parts/datasheets/DFR0534_silkscreen_face_DFRobot.jpg and DFR0534_component_face_with_ruler_DFRobot.jpg in the bin \u2014 all three markings are legible on the component face",
+      "source": "DFRobot's own product photography, kept at parts/datasheets/DFR0534_silkscreen_face_DFRobot.jpg and DFR0534_component_face_with_ruler_DFRobot.jpg in the bin — all three markings are legible on the component face",
       "note": "Worth recording because DFRobot publish no schematic, so the chips are the only route to this board's behaviour: the decoder's own manual is where the command set and the current figures come from, and the amplifier's datasheet is where the output power would. Neither is a DFRobot document."
     },
     "amplifier_can_be_shut_down_by_the_host": {
@@ -94,7 +94,7 @@
   },
   "host_requirements": [
     "Give it a reservoir capacitor at its supply pin. A speaker peak pulls hundreds of milliamps and the resulting sag is a classic brownout reset.",
-    "If the design sleeps, put a high-side switch on its rail and hold the gate OFF with a resistor \u2014 the host's GPIO goes high-impedance during deep sleep and reset, which is exactly when the module must be off.",
+    "If the design sleeps, put a high-side switch on its rail and hold the gate OFF with a resistor — the host's GPIO goes high-impedance during deep sleep and reset, which is exactly when the module must be off.",
     "It boots from cold whenever its rail returns, so nothing may be sent for a few hundred milliseconds after power-up."
   ],
   "footprint": "pinrow10",
@@ -120,5 +120,8 @@
     null,
     "SPKN",
     "SPKP"
-  ]
+  ],
+  "simulation": {
+    "skip": "no Wokwi part for the MP3 module; the firmware's log says which cue it played"
+  }
 }

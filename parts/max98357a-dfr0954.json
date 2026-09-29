@@ -14,9 +14,9 @@
     "height": 18.0,
     "verified": true,
     "source": "DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF",
-    "note": "1.6 mm PCB, 7.1 mm total height including the JST socket, R1.0 corners, and NO MOUNTING HOLES \u2014 the DXF contains no holes but the 12 pads."
+    "note": "1.6 mm PCB, 7.1 mm total height including the JST socket, R1.0 corners, and NO MOUNTING HOLES — the DXF contains no holes but the 12 pads."
   },
-  "//pin_order": "12 castellated pads, two rows of six at 2.54 mm, rows 15.24 mm apart. THERE IS NO PAD-1 MARKER \u2014 no square pad, no dot \u2014 so a footprint must key off the silkscreen labels rather than a pad number. DFRobot model it as two 6-way connectors: P1 is the top row numbered right-to-left, P2 the bottom row left-to-right, which concatenated runs counter-clockwise from the top right. Physically, top row left-to-right is VCC GND LRC BCLK DIN SPK+ and bottom row left-to-right is GAIN SD NC GND VCC SPK-. DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF",
+  "//pin_order": "12 castellated pads, two rows of six at 2.54 mm, rows 15.24 mm apart. THERE IS NO PAD-1 MARKER — no square pad, no dot — so a footprint must key off the silkscreen labels rather than a pad number. DFRobot model it as two 6-way connectors: P1 is the top row numbered right-to-left, P2 the bottom row left-to-right, which concatenated runs counter-clockwise from the top right. Physically, top row left-to-right is VCC GND LRC BCLK DIN SPK+ and bottom row left-to-right is GAIN SD NC GND VCC SPK-. DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF",
   "pin_order": [
     "SPK_P",
     "DIN",
@@ -54,7 +54,7 @@
       "signal": "AUDIO_SHUTDOWN",
       "pin": "SD",
       "direction": "in",
-      "note": "must be driven, not left floating \u2014 an on-board resistor holds it high"
+      "note": "must be driven, not left floating — an on-board resistor holds it high"
     }
   ],
   "power": [
@@ -74,7 +74,7 @@
       "rail": "speaker",
       "direction": "out",
       "polarity": "+",
-      "note": "bridged class-D output. SPK+ is top row rightmost, SPK- is BOTTOM row rightmost \u2014 diagonally opposite, not a neighbouring pair"
+      "note": "bridged class-D output. SPK+ is top row rightmost, SPK- is BOTTOM row rightmost — diagonally opposite, not a neighbouring pair"
     },
     {
       "pin": "SPK_N",
@@ -90,7 +90,7 @@
     },
     {
       "pin": "NC",
-      "note": "genuinely floating \u2014 the schematic shows an unterminated stub. Safe as a mechanical anchor"
+      "note": "genuinely floating — the schematic shows an unterminated stub. Safe as a mechanical anchor"
     }
   ],
   "facts": {
@@ -104,7 +104,7 @@
       "value": 340,
       "verified": true,
       "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, SD_MODE = 1.8 V with no BCLK, 25 C",
-      "note": "THE TRAP. The chip enters standby by itself when the clock stops \u2014 outputs go high-impedance \u2014 but it still draws 340 uA, about a thousand times the shutdown figure and comparable to the whole rest of a sleeping board. Stopping the audio is not turning it off."
+      "note": "THE TRAP. The chip enters standby by itself when the clock stops — outputs go high-impedance — but it still draws 340 uA, about a thousand times the shutdown figure and comparable to the whole rest of a sleeping board. Stopping the audio is not turning it off."
     },
     "shutdown_threshold_v": {
       "value": 0.16,
@@ -116,7 +116,7 @@
       "value": 100000,
       "verified": false,
       "source": "DFRobot's own two documents disagree: the schematic (DFRobot schematic DFR0954_max98357a-i2s_schematics_1.0.pdf, Rev V0.0.1, 2021-12-29) shows R1 = 100k from VCC to SD, while the wiki text says 680k and calls the default mode 'mix'. Both compute correctly against the Maxim thresholds, so the arithmetic does not settle it",
-      "why_it_matters": "Decides the as-shipped channel \u2014 100k gives VCC/2 which selects LEFT, 680k gives 0.128 x VCC which selects the L+R mix \u2014 and it decides what holding SD low costs: 33 uA at 3.3 V through 100k, or 4.9 uA through 680k. Measure R1, or measure the SD voltage on a powered board."
+      "why_it_matters": "Decides the as-shipped channel — 100k gives VCC/2 which selects LEFT, 680k gives 0.128 x VCC which selects the L+R mix — and it decides what holding SD low costs: 33 uA at 3.3 V through 100k, or 4.9 uA through 680k. Measure R1, or measure the SD voltage on a powered board."
     },
     "quiescent_current_ma": {
       "value": 2.4,
@@ -131,13 +131,13 @@
     "output_power_w_8ohm_3v3": {
       "value": 0.6,
       "verified": false,
-      "source": "read off Maxim's graph TOC18 by eye \u2014 the datasheet tabulates 3.7 V and 5 V but has no 3.3 V figure. A clipping estimate V^2/2R gives 0.68 W and matches the tabulated points",
+      "source": "read off Maxim's graph TOC18 by eye — the datasheet tabulates 3.7 V and 5 V but has no 3.3 V figure. A clipping estimate V^2/2R gives 0.68 W and matches the tabulated points",
       "why_it_matters": "Decides whether the bin is audible from the far side of a room on the 3V3 rail, or whether the amplifier should be fed from VCC instead."
     },
     "gain_db_as_shipped": {
       "value": 9,
       "verified": true,
-      "source": "DFRobot schematic DFR0954_max98357a-i2s_schematics_1.0.pdf, Rev V0.0.1, 2021-12-29 \u2014 GAIN goes only to its pad and the chip pin, no resistor fitted; unconnected selects 9 dB per Maxim Table 8"
+      "source": "DFRobot schematic DFR0954_max98357a-i2s_schematics_1.0.pdf, Rev V0.0.1, 2021-12-29 — GAIN goes only to its pad and the chip pin, no resistor fitted; unconnected selects 9 dB per Maxim Table 8"
     },
     "needs_mclk": {
       "value": false,
@@ -154,7 +154,7 @@
       ],
       "verified": true,
       "source": "MAX98357A/B datasheet. NOTE: read from the copy DFRobot host, which is an alldatasheet.com mirror created 2014-09-03. ADI's current copy is Rev 16, 2019-07-29 and has NOT been diffed against it, body text: \"LRCLK ONLY supports 8kHz, 16kHz, 32kHz, 44.1kHz, 48kHz, 88.2kHz and 96kHz\" and names these four as NOT supported",
-      "note": "The headline spec says 8-96 kHz, which reads as continuous. 22.05 kHz is the natural choice for a short chime and is explicitly excluded \u2014 use 16 or 32 kHz."
+      "note": "The headline spec says 8-96 kHz, which reads as continuous. 22.05 kHz is the natural choice for a short chime and is explicitly excluded — use 16 or 32 kHz."
     },
     "supply_range_v": {
       "value": [
@@ -173,9 +173,12 @@
   },
   "host_requirements": [
     "NEVER stop LRCLK while BCLK is running. Maxim state twice that this can produce a large DC output voltage, which into an 8 ohm speaker cooks the voice coil. Stop BCLK, not LRCLK.",
-    "SD must be DRIVEN LOW to shut the amplifier down, not left floating \u2014 an on-board resistor holds it high, and floating selects a channel rather than turning it off. Removing the clock only reaches standby at 340 uA.",
+    "SD must be DRIVEN LOW to shut the amplifier down, not left floating — an on-board resistor holds it high, and floating selects a channel rather than turning it off. Removing the clock only reaches standby at 340 uA.",
     "Holding SD low draws current through that on-board resistor for as long as it is held: 33 uA at 3.3 V if R1 is 100k, 4.9 uA if it is 680k. The host GPIO sinks it, and it is spent precisely while the amplifier is meant to be off.",
-    "SPK+ and SPK- are on OPPOSITE rows, diagonally \u2014 top row rightmost and bottom row rightmost. They are not an adjacent pair, and a footprint drawn as if they were will wire the speaker across the wrong two pads.",
+    "SPK+ and SPK- are on OPPOSITE rows, diagonally — top row rightmost and bottom row rightmost. They are not an adjacent pair, and a footprint drawn as if they were will wire the speaker across the wrong two pads.",
     "This module has no mounting holes. Whatever holds it is the host board's problem."
-  ]
+  ],
+  "simulation": {
+    "skip": "no Wokwi part for the I2S amplifier; cues are visible in the serial log"
+  }
 }
