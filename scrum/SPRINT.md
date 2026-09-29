@@ -19,8 +19,8 @@ gap, and a gap does not lie.
 | --- | --- | --- | --- |
 | ~~P11~~ | One `design.load()`; `main()` tested | **done `0c21ef5`** | the live defect, and four more audit claims with the same cause |
 | ~~P12~~ | Toolchain fault ≠ design fault | **done `c4d0582`** | a wrong verdict class; small |
-| **P13** | Plain imports | **next** | two `PartError` classes in one process is a miss waiting to happen |
-| **P14** | `emit_board` says each thing once | last | a refactor, and it lands on the code P11 just touched |
+| ~~P13~~ | Plain imports | **done `55e7bb8`** | two `PartError` classes in one process is a miss waiting to happen |
+| **P14** | `emit_board` says each thing once | **next** | a refactor, and it lands on the code P11 just touched |
 
 W6: one at a time. **Not pulled:** R2.5, the third cold test — the PO chooses the domain.
 
@@ -60,6 +60,9 @@ unreadable rules file is an error, and a project's placeholder list survives one
 Node prefix as `node_modules`; the global tsci builds fine on its own. So the A/B the item asked
 for now reads `ok` / `ok` with the version named, and the preflight covers the tool that really
 cannot build. Both sides of that are tested with a fake tsci, so the suite still needs no tscircuit.
+
+**P13 done** (`55e7bb8`). A test's docstring was found describing a test that did not exist — it said it
+called the runner and it grepped the source. Fixed to ask the code, and the docstring says so.
 
 ## Review — validated value
 

@@ -42,7 +42,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark reports what it did and nothing less
 | --- | --- | --- |
 | ~~P11~~ | A design is loaded once, in one place, and `main()` is tested — **done `0c21ef5`** | M |
 | ~~P12~~ | The spine tells a toolchain fault from a design fault — **done `c4d0582`** | S |
-| P13 | Sibling scripts are imported, not loaded by path | S |
+| ~~P13~~ | Sibling scripts are imported, not loaded by path — **done `55e7bb8`** | S |
 | P14 | `emit_board` says each thing once | M |
 
 ---
@@ -195,7 +195,7 @@ install). Now only a project's own modules are linked, and the A/B reads `ok` / 
 version named — `tsci 0.0.2600` and `0.0.2621`. The preflight exists for a tool that really cannot
 build, driven with a fake tsci in tests. Four mutations caught, 511 tests.
 
-### P13 — Sibling scripts are imported, not loaded by path
+### ~~P13 — Sibling scripts are imported, not loaded by path~~ — **DONE `55e7bb8`**
 `check_all.load()` (eleven sites) and `check_physics._sibling` import siblings with `importlib`
 by file path and register nothing in `sys.modules`: in one process `check_all`'s `parts` is not
 `emit_board`'s `parts`, and their `PartError` classes are different objects, so an `except` for
@@ -203,6 +203,12 @@ one cannot catch the other. Eight scripts already do `sys.path.insert` + plain i
 `check_physics.py` among them, three lines above its own `_sibling`.
 **Value proven by:** `check_all.load` gone; a test asserts one `parts` module per process; suite
 green.
+
+**Result.** Both loaders gone; imports inside each check's `call`, so nothing loads before it runs.
+Proven behaviourally: a patch on the shared `check_footprints.run` is seen by the buildability
+check. The wiring test's docstring turned out to describe a test that did not exist (it grepped
+source while claiming to call the runner); it now inspects the names each `call` compiles to.
+Three mutations caught, 515 tests.
 
 ### P14 — `emit_board` says each thing once
 `emit()` is 186 lines and 39 branches: ten sections, none a function. The power-pin walk is
