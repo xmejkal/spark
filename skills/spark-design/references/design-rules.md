@@ -23,7 +23,12 @@ at this. Sources at the end.
 **Level & protection**
 - Match logic levels (3.3 V here); a motor/actuator never touches a GPIO.
 - Inductive loads need flyback protection (the H-bridge has internal diodes); add TVS/ESD on any externally exposed connector; optional series R on long logic lines.
-- I2C: one set of pull-ups (typ. 4.7 kΩ) per bus. Buttons: input→GND with a pull-up (internal is fine).
+- I2C: one set of pull-ups per bus, sized from the bus speed and capacitance — not a habit.
+  `check_physics` uses t_rise = 0.8473·R·C against the I2C limits (1000 ns at 100 kHz, 300 ns
+  at 400 kHz, 120 ns at 1 MHz). 4.7 kΩ passes 100 kHz up to ~250 pF of bus; at 400 kHz the
+  same value tolerates only ~75 pF, which a module plus a lead exceeds, so 2.2 kΩ is the
+  usual answer there. State `physics.i2c_hz` and `i2c_bus_capacitance_pf` in the rules file
+  and let the check say. Buttons: input→GND with a pull-up (internal is fine).
 
 **Thermal & DFM (for cheap fabs like JLCPCB)**
 - Copper pour + thermal vias under the motor driver.
@@ -40,7 +45,8 @@ all bare-chip decoupling are **already done**. You're a pin-allocation + power-b
 - [ ] **Motor VM off battery/5 V, never the 3V3 LDO.** The 3V3 pad only feeds logic-level
       peripherals (OLED, IR, amp logic, TB6612 *VCC*). Give VM its own bulk cap.
 - [ ] **0.1 µF at every peripheral** (OLED, amp, IR, driver) + the VM bulk cap.
-- [ ] **I2C pull-ups (4.7 kΩ)** on D4/SDA (GPIO22) and D5/SCL (GPIO23) — the module doesn't add them.
+- [ ] **I2C pull-ups** on D4/SDA (GPIO22) and D5/SCL (GPIO23) — the module doesn't add them;
+  the value comes from the bus speed and capacitance (above), not from a default.
 - [ ] **Only use the 11 broken-out GPIOs**; none are strapping/flash/USB/antenna, so the
       classic boot-strap failure is designed out. Respect default roles:
       D6/D7 = UART0 TX/RX (GPIO16/17), D8/D9/D10 = SPI (GPIO19/20/18), D3 = SS (GPIO21),

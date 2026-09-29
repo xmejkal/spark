@@ -249,6 +249,14 @@ def run(requirements, workdir, toolchain=None, project=None):
         return stages + [Stage("board", COULD_NOT_RUN, str(exc))]
     stages.append(Stage("board", OK, board["name"]))
 
+    # Nothing to build is not a pass. An empty parts list came out `ok` end to end — two traces
+    # (the processor's own ground and 3.3 V) and two wires — which proves nothing about the chain
+    # and reads as though it did. Intake row M3 had it as `problems` on 09-25; both were wrong.
+    if not requirements.get("parts"):
+        return stages + [Stage("parts", COULD_NOT_RUN,
+                               "the requirements name no parts, so there is nothing to build; a "
+                               "board holding only the microcontroller proves nothing")]
+
     board_file = workdir / "board.tsx"
     emitted = subprocess.run(
         [sys.executable, str(SCRIPTS / "emit_board.py"), str(workdir / "requirements.json"),

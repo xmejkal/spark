@@ -179,5 +179,50 @@ class TheCommandThatNamesItExistsTest(unittest.TestCase):
                         "the error names /spark:init and no such command file exists")
 
 
+
+class ABriefIsYoursTest(unittest.TestCase):
+    """
+    `init --force` was the only way to re-seed the rails after a build, and it replaced the
+    hand-written `project.json` with the blank template on the way (intake R13, 09-25;
+    reproduced in the code 09-29). The rules file is derived and may be rewritten; a brief with
+    answers in it is a person's, and no flag touches it.
+    """
+
+    def _init(self, root, *extra):
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return init_project.main(["--project", str(root), *extra])
+
+    def test_force_reseeds_the_rules_and_keeps_an_answered_brief(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        brief = root / ".spark" / "project.json"
+        answered = json.loads(brief.read_text())
+        answered["goal"] = "a bin that opens when waved at"
+        brief.write_text(json.dumps(answered))
+        rules = root / ".spark" / "rules.json"
+        rules.write_text("{}")
+        self._init(root, "--force")
+        self.assertEqual(json.loads(brief.read_text())["goal"], "a bin that opens when waved at")
+        self.assertNotEqual(rules.read_text(), "{}", "the derived rules were not re-seeded")
+
+    def test_an_unanswered_brief_is_still_rewritten_by_force(self):
+        # The control: the template itself has no answers, so --force may replace it.
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        brief = root / ".spark" / "project.json"
+        brief.write_text(json.dumps(json.loads(brief.read_text())) + "\n\n")
+        self._init(root, "--force")
+        self.assertFalse(brief.read_text().endswith("\n\n"))
+
+    def test_a_brief_that_cannot_be_read_is_not_replaced_either(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        brief = root / ".spark" / "project.json"
+        brief.write_text("{half-written")
+        self._init(root, "--force")
+        self.assertEqual(brief.read_text(), "{half-written")
+
 if __name__ == "__main__":
     unittest.main()

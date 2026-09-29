@@ -136,9 +136,32 @@ def nulls_in(node, path=""):
     return found
 
 
-def write(path, payload, force):
-    if path.exists() and not force:
-        return False, "%s already exists, left alone" % path.name
+def has_answers(path, template):
+    """
+    Whether a file someone was told to hand-write has been hand-written.
+
+    Fewer nulls than the template means a person answered something. A file that cannot be read
+    counts as answered too: whatever is in it, it is not ours to replace.
+    """
+    try:
+        return set(nulls_in(json.loads(path.read_text()))) < set(nulls_in(template))
+    except (OSError, ValueError):
+        return True
+
+
+def write(path, payload, force, brief=False):
+    """
+    Write, or say why not. `--force` rewrites what this tool derived — never a brief with
+    answers in it: `init --force` was the only way to re-seed the rails from a new build, and it
+    replaced the hand-written `project.json` with the blank template on the way (intake R13; the
+    person who hit it had a backup from one command earlier).
+    """
+    if path.exists():
+        if brief and has_answers(path, payload):
+            return False, ("%s has answers in it and was kept — a brief is yours; --force "
+                           "rewrites only what this tool derived" % path.name)
+        if not force:
+            return False, "%s already exists, left alone" % path.name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n")
     return True, "wrote %s" % path.name
@@ -185,9 +208,9 @@ def main(argv=None):
     nets = nets_in(circuit)
     written, notes = [], []
 
-    for path, payload in ((project / ".spark" / "rules.json", rules_for(nets)),
-                          (project / ".spark" / "project.json", PROJECT_TEMPLATE)):
-        did, note = write(path, payload, args.force)
+    for path, payload, brief in ((project / ".spark" / "rules.json", rules_for(nets), False),
+                                 (project / ".spark" / "project.json", PROJECT_TEMPLATE, True)):
+        did, note = write(path, payload, args.force, brief=brief)
         notes.append(note)
         if did:
             written.append((path, payload))

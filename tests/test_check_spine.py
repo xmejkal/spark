@@ -393,5 +393,19 @@ class AToolchainFaultIsNotADesignFaultTest(unittest.TestCase):
         self.assertEqual(check_spine.tsci_version(fake_tsci(root, "true")), "0.0.0-fake")
         self.assertEqual(check_spine.tsci_version(root / "no-such-tsci"), "unknown version")
 
+
+class NothingToBuildIsNotAPassTest(unittest.TestCase):
+    def test_an_empty_parts_list_is_could_not_run_before_anything_is_emitted(self):
+        # Ran end to end as `ok` with two traces — the MCU's own rails — and two wires. A chain
+        # proven on nothing has not been proven. (Intake M3, reproduced 2026-09-29.)
+        workdir = Path(tempfile.mkdtemp())
+        requirements = {"board": "firebeetle2-esp32s3", "parts": []}
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        stages = check_spine.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
+        self.assertEqual([s.name for s in stages], ["board", "parts"])
+        self.assertEqual(stages[-1].status, check_spine.COULD_NOT_RUN)
+        self.assertIn("nothing to build", stages[-1].detail)
+        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+
 if __name__ == "__main__":
     unittest.main()
