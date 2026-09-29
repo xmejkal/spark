@@ -150,6 +150,21 @@ class EveryComponentNeedsAGroundTest(unittest.TestCase):
                 element["name"] = "AGND"
         self.assertEqual(check_spine.components_not_on_ground(circuit), [])
 
+    def test_a_passive_between_a_pin_and_a_rail_is_not_an_island(self):
+        # P6 placed the first pull-ups a generated board ever carried, and this check reported
+        # them as reaching no ground — which is what a pull-up is. A passive is asked whether an
+        # end dangles, not whether it touches ground.
+        circuit = self.circuit(ground_the_mcu=True) + [
+            {"type": "source_component", "source_component_id": "c_r", "name": "SdaPullup", "ftype": "simple_resistor"},
+            {"type": "source_port", "source_port_id": "p_r1", "source_component_id": "c_r", "name": "pin1"},
+            {"type": "source_port", "source_port_id": "p_r2", "source_component_id": "c_r", "name": "pin2"},
+            {"type": "source_trace", "source_trace_id": "t4", "connected_source_port_ids": ["p_r1", "p_mod_sda"], "connected_source_net_ids": []},
+            {"type": "source_trace", "source_trace_id": "t5", "connected_source_port_ids": ["p_r2"], "connected_source_net_ids": ["n_v33"]},
+        ]
+        self.assertEqual(check_spine.components_not_on_ground(circuit), [])
+        dangling = [e for e in circuit if e.get("source_trace_id") != "t5"]
+        self.assertEqual(check_spine.components_not_on_ground(dangling), ["SdaPullup.pin2 (a terminal connected to nothing)"])
+
     def test_a_component_in_no_trace_at_all_is_not_reported_here(self):
         # Already covered by the generators, which refuse to emit a part they cannot wire.
         # Reporting it twice, in different words, is how a finding gets scrolled past.

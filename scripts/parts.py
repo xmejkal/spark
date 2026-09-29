@@ -199,6 +199,36 @@ def chip_folder(part: dict, path: Path) -> Path:
     return path.parent / part["id"] / "chip"
 
 
+#: What a record may demand of its host as a COMPONENT (backlog P6): a resistor from a signal
+#: pad to ground or to the part's rail, or a divider that brings a signal down before the host's
+#: pin. The generator places and wires these; every other requirement stays prose, and is said.
+HOST_PART_KINDS = ("pulldown", "pullup", "divider")
+
+
+def host_part_problems(part: dict) -> list:
+    """What is wrong with a record's `host_parts`: a kind nothing can place, a pad, a value, a why."""
+    problems = []
+    signal_pads = {entry.get("pin") for entry in part.get("needs") or []} - {None}
+    for index, host_part in enumerate(part.get("host_parts") or []):
+        where = "host_parts[%d]" % index
+        if not isinstance(host_part, dict):
+            problems.append("%s must be an object {kind, pin, ohms, why}" % where)
+            continue
+        kind = host_part.get("kind")
+        if kind not in HOST_PART_KINDS:
+            problems.append("%s kind %r is not one the generator can place: %s" % (where, kind, ", ".join(HOST_PART_KINDS)))
+            continue
+        if host_part.get("pin") not in signal_pads:
+            problems.append("%s names pin %r, which is not a signal pad of this part" % (where, host_part.get("pin")))
+        for key in (("top_ohms", "bottom_ohms") if kind == "divider" else ("ohms",)):
+            value = host_part.get(key)
+            if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+                problems.append("%s needs a positive %s" % (where, key))
+        if not host_part.get("why"):
+            problems.append("%s says no why — a passive nobody can explain is the first one removed" % where)
+    return problems
+
+
 def simulation_problems(part: dict, path: Path) -> list:
     """What is wrong with a record's `simulation`, if it has one; nothing is allowed to be absent."""
     sim = part.get("simulation")
@@ -453,6 +483,7 @@ def validate(part: dict, path: Path) -> list:
             problems.append("facts.%s is an unverified value with no why_it_matters; say what "
                             "depends on it or do not carry the number" % name)
 
+    problems.extend(host_part_problems(part))
     problems.extend(simulation_problems(part, path))
     return problems
 

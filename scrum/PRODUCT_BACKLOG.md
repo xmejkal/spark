@@ -26,7 +26,6 @@ simulation, a link between two boards, and parts research beyond R11 below.
 | # | item | needed by |
 | --- | --- | --- |
 | **R11** | Research parts and modules, vendor by vendor, and keep what was found | the third cold test, on day one |
-| **P6** | The generated board honours the host requirements it prints | every generated motor board |
 | **P10** | A project's own board file must not switch `vendor-truth` off | any project with its own board |
 | **P28** | The tools this repository relies on, made true | this repository's Definition of Done |
 | R2.5 | The third cold test — **PO: one letter, (a), (b) or (c)** | it is the test |
@@ -54,7 +53,7 @@ tracker, automatic pinout verification.
 could not confirm — and the chain builds with it. Then: a candidate the researcher passed over is
 in the catalog with its datasheet beside it, and `--need` for the same words finds it next time.
 
-### P6 — The generated board honours the host requirements it prints
+### P6 — The generated board honours the host requirements it prints — DONE 2026-09-29, late night
 **Needed by:** every generated board with an L9110S — the file prints "10 k pulldowns on both
 inputs" and leaves the inputs floating; the reference design and the RC car both.
 `emit_board` acts on the mechanical requirements it can (a pulldown, a decoupling capacitor, a
@@ -131,6 +130,7 @@ one), P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8
 by the PO).
 
 ## Done — one line each, the hash is the record
+- **P6** — what a record demands of its host as a component is placed and wired: `host_parts` (pulldown, pullup, divider) become 0603 resistors beside the module, a divider ends the host's trace at its midpoint; the L9110S's pull-downs, the VL6180X's I2C pull-ups and the flow meter's divider are the first three; the spine asks a passive whether an end dangles instead of whether it touches ground; the generated resistors map to Wokwi's resistor. Reference: 20 traces, 18 wires, exit 0. Table sprint-5-p6 (9): caught.
 - **P8** — the floating-input rule sees a pin-to-pin trace: the netlist model skipped every trace that named no net, which is how spark's generator wires every signal; a wire's traces share its connectivity key; the finding names its component and pin (I10). Proven on the irrigation board with four declared inputs and on the bin's own (`compare_design.py`, table sprint-5-p8, 3 caught).
 - **P31** — a part record says how it is simulated; the spine builds the Wokwi project from the records, compiles the chips, and one irrigation scenario passes with the probe's and the flow meter's sliders set from the test (`47dbcdc`, `9a8b0e2`, `1710d94`, `dbd3c1c`; irrigation diary, late night; converter `bf9bf09` in the bin repo).
 

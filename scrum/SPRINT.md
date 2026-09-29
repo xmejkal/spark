@@ -99,6 +99,14 @@ disproved it. The PO's photos of the DS3231's back corrected five of the record'
 unverified facts (diary, "the RTC's back"); `identify` now asks for both sides. Budget 6,500
 (the PO's words beside it); spark 574 tests, 113 mutations in 24 tables, every anchor present.
 
+**Later still — P8 and P6.** P8: the floating-input rule's netlist model skipped every trace
+that named no net, which is how the generator wires every signal; fixed, the finding names its
+pin (I10), the irrigation valves pass. P6: a record's `host_parts` — a pull-down, a pull-up, a
+divider — are placed and wired as real resistors; three records carry them; the reference
+design's chain exits 0 end to end (20 traces, 18 wires, both chips compiled from the library
+records); the spine's "reaches ground" check learned that a passive between a pin and a rail is
+not an island. Budget 6,600 with the reason beside it. 587 tests, 125 mutations in 26 tables.
+
 ## Definition of Done
 
 Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its

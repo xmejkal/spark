@@ -37,6 +37,13 @@ def mapping_for(design):
     mapping, chips, unmapped = {}, [], []
     for part in design.parts:
         name = emit_board.component_name(part)
+        # The passives spark itself placed for this part (P6): a resistor is a resistor, whatever
+        # the record says about the module — its own skip must not skip them.
+        for host_part in part.get("host_parts") or []:
+            values = (host_part.get("top_ohms"), host_part.get("bottom_ohms")) if host_part["kind"] == "divider" else (host_part.get("ohms"),)
+            for resistor, ohms in zip(emit_board.host_part_names(part, host_part), values):
+                mapping[resistor] = {"wokwiType": "wokwi-resistor", "attrs": {"value": str(ohms)},
+                                     "pins": {"anode": "1", "cathode": "2", "pin1": "1", "pin2": "2"}}
         simulation = part.get("simulation")
         if not isinstance(simulation, dict):
             unmapped.append((name, part["id"]))

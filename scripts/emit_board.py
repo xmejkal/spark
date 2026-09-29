@@ -28,6 +28,7 @@ which is the difference between a draft you can iterate and a blank file.
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -320,6 +321,14 @@ def place(board, part_list):
     width = column_x + widest + MARGIN_MM
     height = max(module_height, total_height) + 2 * MARGIN_MM
 
+    passives = [name for part in part_list for host_part in part.get("host_parts") or []
+                for name in host_part_names(part, host_part)]
+    if passives:
+        # A third column for the passives the records demand, so nothing sits on a module.
+        passives_height = len(passives) * (PASSIVE_BODY_MM[1] + PASSIVE_GAP_MM)
+        width += PASSIVE_BODY_MM[0] + GAP_MM
+        height = max(height, passives_height + 2 * MARGIN_MM)
+
     placements = {"Mcu": (-width / 2 + MARGIN_MM + module_width / 2, 0)}
     y = height / 2 - MARGIN_MM
     for part in part_list:
@@ -327,6 +336,11 @@ def place(board, part_list):
         y -= part_height / 2
         placements[component_name(part)] = (-width / 2 + column_x + widest / 2, y)
         y -= part_height / 2 + GAP_MM
+    y = height / 2 - MARGIN_MM
+    for name in passives:
+        y -= PASSIVE_BODY_MM[1] / 2
+        placements[name] = (-width / 2 + column_x + widest + GAP_MM + PASSIVE_BODY_MM[0] / 2, y)
+        y -= PASSIVE_BODY_MM[1] / 2 + PASSIVE_GAP_MM
     return placements, width, height
 
 
@@ -453,6 +467,82 @@ def header_lines(board, part_list, placements, width, height):
     return lines
 
 
+#: A 0603 resistor's footprint, for the passives a record demands of its host.
+PASSIVE_BODY_MM = (3.2, 1.6)
+PASSIVE_GAP_MM = 2
+
+
+def ohms_label(ohms):
+    """tscircuit's resistance string: 10000 -> 10k, 4700 -> 4.7k, 330 -> 330."""
+    if ohms >= 1e6:
+        return "%gM" % (ohms / 1e6)
+    if ohms >= 1e3:
+        return "%gk" % (ohms / 1e3)
+    return "%g" % ohms
+
+
+def host_part_names(part, host_part):
+    """The component name(s) a demanded passive gets: the instance, the kind, the pad."""
+    pad = re.sub(r"[^A-Za-z0-9]", "", host_part["pin"])
+    base = "%s%s%s" % (component_name(part), host_part["kind"].capitalize(), pad)
+    if host_part["kind"] == "divider":
+        return [base + "Top", base + "Bottom"]
+    return [base]
+
+
+def signal_target(part, need):
+    """
+    Where the host's trace for a signal ends: the module's pad, or — when the record demands a
+    divider on that pad — the divider's midpoint, so the host's pin sees the divided level.
+    """
+    for host_part in part.get("host_parts") or []:
+        if host_part["kind"] == "divider" and host_part["pin"] == need["pin"]:
+            return (host_part_names(part, host_part)[0], "pin2")
+    return (component_name(part), need["pin"])
+
+
+def supply_net_of(part):
+    """The net the part's own supply pin sits on, for a pull-up: its first non-ground input rail."""
+    for supply in part.get("power") or []:
+        net = net_name_for_rail(supply.get("rail"))
+        if supply.get("direction", "in") == "in" and net and net not in GROUND_NETS:
+            return net
+    return "V33"
+
+
+def host_part_lines(part_list, placements):
+    """
+    The passives the records demand of this board, as components and traces (backlog P6). This
+    was prose in a comment block — "10 k pulldowns on both inputs" printed under a board whose
+    inputs floated, on the reference design and the car alike.
+    """
+    lines = []
+    for part in part_list:
+        for host_part in part.get("host_parts") or []:
+            module, pad, kind = component_name(part), host_part["pin"], host_part["kind"]
+            names = host_part_names(part, host_part)
+            if kind == "divider":
+                top, bottom = names
+                lines.append("    {/* %s.%s through a divider: %s */}" % (module, pad, host_part["why"]))
+                for name, ohms in ((top, host_part["top_ohms"]), (bottom, host_part["bottom_ohms"])):
+                    lines.append('    <resistor name="%s" resistance="%s" footprint="0603" pcbX={%g} pcbY={%g} />'
+                                 % (name, ohms_label(ohms), *placements[name]))
+                lines.append('    <trace from=".%s > .%s" to=".%s > .pin1" />' % (module, pad, top))
+                lines.append('    <trace from=".%s > .pin2" to=".%s > .pin1" />  {/* the midpoint the host\'s pin reads */}' % (top, bottom))
+                lines.append('    <trace from=".%s > .pin2" to="net.GND" />' % bottom)
+                continue
+            name, = names
+            net = "GND" if kind == "pulldown" else supply_net_of(part)
+            lines.append("    {/* %s on %s.%s: %s */}" % (kind, module, pad, host_part["why"]))
+            lines.append('    <resistor name="%s" resistance="%s" footprint="0603" pcbX={%g} pcbY={%g} />'
+                         % (name, ohms_label(host_part["ohms"]), *placements[name]))
+            lines.append('    <trace from=".%s > .pin1" to=".%s > .%s" />' % (name, module, pad))
+            lines.append('    <trace from=".%s > .pin2" to="net.%s" />' % (name, net))
+    if lines:
+        lines = ["    {/* What the parts demand of this board as components, from their records' host_parts — done here. */}"] + lines + [""]
+    return lines
+
+
 def component_lines(part_list, placements):
     """One chip per part instance, its pads numbered from the module's own pin_order."""
     lines = []
@@ -491,7 +581,7 @@ def signal_lines(part_list, assignments):
     wants = {}
     for part in part_list:
         for need in part.get("needs") or []:
-            wants[design_library.signal_name(part, need)] = (component_name(part), need["pin"])
+            wants[design_library.signal_name(part, need)] = signal_target(part, need)
 
     lines = ["    {/* Signals, each on the pin assign_pins.py chose and for the reason it gave. */}"]
     unclaimed = []
@@ -636,8 +726,10 @@ def host_requirement_lines(part_list):
                     for part in part_list for text in part.get("host_requirements") or []]
     if not requirements:
         return []
+    done = sum(len(part.get("host_parts") or []) for part in part_list)
     lines = ["", "    {/* What these parts require of this board, from their part files.",
-             "        None of it is done here — each one is a design decision:"]
+             ("        Beyond the %d passive(s) placed above, none of it is done here — each one is a design decision:" % done)
+             if done else "        None of it is done here — each one is a design decision:"]
     for part_name, text in requirements:
         lines.append("          - %s: %s" % (part_name, text))
     lines.append("     */}")
@@ -655,6 +747,7 @@ def emit(board, part_list, assignments, placements, width, height, rules=None):
     rules = rules or {}
     lines = (header_lines(board, part_list, placements, width, height)
              + component_lines(part_list, placements)
+             + host_part_lines(part_list, placements)
              + signal_lines(part_list, assignments)
              + power_lines(board, part_list, rules)
              + stand_in_lines(part_list)

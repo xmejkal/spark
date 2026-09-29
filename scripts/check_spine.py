@@ -204,6 +204,8 @@ def count_in(circuit):
 
 #: Nets that are a ground: the generator's list, so this rule and its supply rule agree.
 GROUND_NETS = emit_board.GROUND_NETS
+#: tscircuit's types for the two-terminal parts a generated board places between a pin and a rail.
+PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "simple_diode")
 
 
 def components_not_on_ground(circuit):
@@ -217,28 +219,38 @@ def components_not_on_ground(circuit):
     Connection is counted through the source netlist rather than through copper, because a pin on
     a poured net has no trace of its own and is connected all the same.
     """
-    names, grounded, present = {}, set(), set()
+    names, grounded, present, traced = {}, set(), set(), set()
     ground_ids = {element["source_net_id"] for element in circuit
                   if element.get("type") == "source_net"
                   and (element.get("name") or "").upper() in GROUND_NETS}
+    passives = set()
     for element in circuit:
         if element.get("type") == "source_component":
             names[element["source_component_id"]] = element.get("name") or "?"
+            if element.get("ftype") in PASSIVE_FTYPES:
+                passives.add(element["source_component_id"])
     ports = {element["source_port_id"]: element for element in circuit
              if element.get("type") == "source_port"}
     for element in circuit:
         if element.get("type") != "source_trace":
             continue
         on_ground = bool(set(element.get("connected_source_net_ids") or []) & ground_ids)
-        owners = {ports[port_id].get("source_component_id")
-                  for port_id in element.get("connected_source_port_ids") or []
-                  if port_id in ports}
+        port_ids = [port_id for port_id in element.get("connected_source_port_ids") or [] if port_id in ports]
+        traced.update(port_ids)
+        owners = {ports[port_id].get("source_component_id") for port_id in port_ids}
         present |= owners
         if on_ground:
             grounded |= owners
     # A component with no trace at all is a separate complaint, already covered by the parts that
-    # refuse to emit. Report only those that are wired to something and to no ground.
-    return sorted(names.get(owner, "?") for owner in present - grounded)
+    # refuse to emit. Report only those that are wired to something and to no ground — for a
+    # chip. A two-terminal passive is asked a different question: a pull-up, or the top of a
+    # divider, sits between a pin and a rail and reaches no ground BY DESIGN, and was reported
+    # here as an island the evening P6 placed the first ones. What must hold for it is that
+    # neither end dangles.
+    findings = [names.get(owner, "?") for owner in present - grounded if owner not in passives]
+    findings += ["%s.%s (a terminal connected to nothing)" % (names.get(port.get("source_component_id"), "?"), port.get("name") or port_id)
+                 for port_id, port in ports.items() if port.get("source_component_id") in present & passives and port_id not in traced]
+    return sorted(findings)
 
 
 def run(requirements, workdir, toolchain=None, project=None, from_library=False, firmware=None):

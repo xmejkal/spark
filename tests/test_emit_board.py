@@ -454,9 +454,10 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         number was right only while the processor was ungrounded.
         """
         tsx = self._emit(["dfr0534-module", "l9110s-module"])
+        modules = tuple('.%s >' % emit_board.component_name(parts.load(p)) for p in ("dfr0534-module", "l9110s-module"))
         module_grounds = [line for line in tsx.splitlines()
-                          if 'to="net.GND"' in line and '.Mcu >' not in line]
-        self.assertEqual(len(module_grounds), 2)
+                          if 'to="net.GND"' in line and any(line.startswith('    <trace from="%s' % m) for m in modules)]
+        self.assertEqual(len(module_grounds), 2, "two modules, one ground pin each; the pulldowns the L9110S demands have their own")
 
     def test_the_contract_refuses_two_outputs_that_cannot_be_told_apart(self):
         broken = json.loads((ROOT / "parts" / "dfr0534-module.json").read_text())
@@ -807,6 +808,7 @@ class EachSectionStandsAloneTest(unittest.TestCase):
                         "the fixture must have a part with host requirements")
         sections = (emit_board.header_lines(board, part_list, placements, width, height)
                     + emit_board.component_lines(part_list, placements)
+                    + emit_board.host_part_lines(part_list, placements)
                     + emit_board.signal_lines(part_list, assignments)
                     + emit_board.power_lines(board, part_list, {})
                     + emit_board.stand_in_lines(part_list)
@@ -972,6 +974,58 @@ class ThePowerHelpersEachHaveANameTest(unittest.TestCase):
         self.assertEqual(len(lines), 2)
         self.assertTrue(any('from=".L9110sModule > .VCC" to="net.MOTOR6V"' in line for line in lines))
         self.assertTrue(any('from=".L9110sModule > .GND" to="net.GND"' in line for line in lines))
+
+
+class WhatThePartsDemandIsDoneTest(unittest.TestCase):
+    """
+    P6: a record's `host_parts` become components and traces. The file printed "10 k pulldowns
+    on both inputs" under a board whose inputs floated, on the reference design and the car.
+    """
+
+    def _emit(self, part, signals=()):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        assignments, _ = assign_pins.assign(board, list(signals))
+        placements, width, height = emit_board.place(board, [part])
+        return emit_board.emit(board, [part], assignments, placements, width, height, {}), placements
+
+    def _part(self, **extra):
+        part = parts.load("l9110s-module")
+        part.update(extra)
+        return part
+
+    def test_a_pulldown_is_a_resistor_from_the_pad_to_ground(self):
+        tsx, _ = self._emit(self._part())  # the shipped record demands 10 k on AIA and AIB
+        self.assertIn('<resistor name="L9110sModulePulldownAIA" resistance="10k" footprint="0603"', tsx)
+        self.assertIn('<trace from=".L9110sModulePulldownAIA > .pin1" to=".L9110sModule > .AIA" />', tsx)
+        self.assertIn('<trace from=".L9110sModulePulldownAIA > .pin2" to="net.GND" />', tsx)
+        self.assertIn("Beyond the 2 passive(s) placed above", tsx, "the prose block says what was done")
+
+    def test_a_pullup_goes_to_the_parts_own_rail(self):
+        part = self._part(host_parts=[{"kind": "pullup", "pin": "AIA", "ohms": 4700, "why": "test"}])
+        tsx, _ = self._emit(part)
+        self.assertIn('resistance="4.7k"', tsx)
+        self.assertIn('<trace from=".L9110sModulePullupAIA > .pin2" to="net.MOTOR6V" />', tsx,
+                      "the L9110S record's VCC sits on the motor rail, so its pull-up does too")
+
+    def test_a_divider_puts_the_hosts_pin_on_the_midpoint(self):
+        part = self._part(host_parts=[{"kind": "divider", "pin": "AIA", "top_ohms": 10000, "bottom_ohms": 18000, "why": "5 V pulse"}])
+        signals = parts.signals_for(["l9110s-module"])
+        tsx, _ = self._emit(part, signals)
+        self.assertIn('<trace from=".L9110sModule > .AIA" to=".L9110sModuleDividerAIATop > .pin1" />', tsx)
+        self.assertIn('<trace from=".L9110sModuleDividerAIATop > .pin2" to=".L9110sModuleDividerAIABottom > .pin1" />', tsx)
+        self.assertIn('<trace from=".L9110sModuleDividerAIABottom > .pin2" to="net.GND" />', tsx)
+        self.assertRegex(tsx, r'<trace from="\.Mcu > \.\w+" to="\.L9110sModuleDividerAIATop > \.pin2" />  \{/\* MOTOR_IA',
+                         "the host's own trace ends at the midpoint, not at the module's pad")
+        self.assertNotRegex(tsx, r'<trace from="\.Mcu > \.\w+" to="\.L9110sModule > \.AIA"')
+
+    def test_the_passives_sit_beside_the_modules_not_on_them(self):
+        _, placements = self._emit(self._part())
+        positions = list(placements.values())
+        self.assertEqual(len(positions), len(set(positions)), "no two components share a position")
+        module_x = placements["L9110sModule"][0]
+        for name in ("L9110sModulePulldownAIA", "L9110sModulePulldownAIB"):
+            self.assertGreater(placements[name][0], module_x + emit_board.body_of(self._part())[0] / 2,
+                               "%s sits to the right of the module's body" % name)
 
 if __name__ == "__main__":
     unittest.main()

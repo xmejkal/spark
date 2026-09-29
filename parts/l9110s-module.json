@@ -124,5 +124,19 @@
       },
       "note": "one channel: reads IA/IB and prints MOTOR: opening/closing/stopped; models no current, so a stall cannot be simulated"
     }
-  }
+  },
+  "host_parts": [
+    {
+      "kind": "pulldown",
+      "pin": "AIA",
+      "ohms": 10000,
+      "why": "the host's pins float for the ~300 ms between reset and firmware, and through any crash or reflash; a floating input can turn both halves of the bridge on"
+    },
+    {
+      "kind": "pulldown",
+      "pin": "AIB",
+      "ohms": 10000,
+      "why": "the same, for the other input: both held low is the only state that moves nothing"
+    }
+  ]
 }

@@ -872,5 +872,36 @@ class ASimulationIsDeclaredTest(unittest.TestCase):
             record = parts.load(part_id)
             self.assertIn("simulation", record, "%s: the converter has nothing to read" % part_id)
 
+
+class WhatAPartDemandsOfItsHostTest(unittest.TestCase):
+    """P6: `host_parts` is a component list the generator can act on, so it is checked like one."""
+
+    def _problems(self, host_parts):
+        part = {"schema": 1, "id": "x", "name": "X", "kind": "sensor",
+                "needs": [{"signal": "OUT", "pin": "OUT", "needs": []}],
+                "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}]}
+        part["host_parts"] = host_parts
+        return parts.host_part_problems(part)
+
+    def test_a_well_said_pulldown_passes_and_each_omission_is_named(self):
+        self.assertEqual(self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 10000, "why": "floats at reset"}]), [])
+        self.assertTrue(any("not one the generator can place" in p for p in self._problems([{"kind": "flyback", "pin": "OUT", "ohms": 1, "why": "w"}])))
+        self.assertTrue(any("not a signal pad" in p for p in self._problems([{"kind": "pulldown", "pin": "VCC", "ohms": 10000, "why": "w"}])))
+        self.assertTrue(any("positive ohms" in p for p in self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 0, "why": "w"}])))
+        self.assertTrue(any("no why" in p for p in self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 10000}])))
+
+    def test_the_validator_carries_the_host_parts_problems(self):
+        import tempfile
+        record = {"schema": 1, "id": "x-part", "name": "X", "kind": "sensor",
+                  "needs": [{"signal": "OUT", "pin": "OUT", "needs": []}], "power": [{"pin": "GND", "rail": "ground", "direction": "in"}],
+                  "pin_order": ["OUT", "GND"], "footprint": "pinrow2", "body_mm": {"width": 5, "height": 5, "verified": True, "source": "x"},
+                  "host_parts": [{"kind": "pulldown", "pin": "GND", "ohms": 100, "why": "w"}]}
+        self.assertTrue(any("not a signal pad" in p for p in parts.validate(record, Path(tempfile.mkdtemp()) / "x-part.json")))
+
+    def test_a_divider_needs_both_values(self):
+        said = " ".join(self._problems([{"kind": "divider", "pin": "OUT", "top_ohms": 10000, "why": "w"}]))
+        self.assertIn("bottom_ohms", said)
+        self.assertEqual(self._problems([{"kind": "divider", "pin": "OUT", "top_ohms": 10000, "bottom_ohms": 18000, "why": "w"}]), [])
+
 if __name__ == "__main__":
     unittest.main()

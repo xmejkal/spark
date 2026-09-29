@@ -114,5 +114,19 @@
       },
       "note": "answers I2C at 0x29 with a range the `distance` control sets; always reports a good status and a ready sample"
     }
-  }
+  },
+  "host_parts": [
+    {
+      "kind": "pullup",
+      "pin": "SDA",
+      "ohms": 4700,
+      "why": "the module carries no I2C pull-ups and the host's internal ones are tens of kiloohms; 4.7 k suits 100-400 kHz on a short bus — a ribbon wants less (the bin chose 2.2 k for its cable)"
+    },
+    {
+      "kind": "pullup",
+      "pin": "SCL",
+      "ohms": 4700,
+      "why": "the same, for the clock line"
+    }
+  ]
 }

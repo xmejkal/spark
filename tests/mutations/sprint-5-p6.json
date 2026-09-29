@@ -1,0 +1,56 @@
+[
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the demanded passives are printed as prose again, not placed",
+  "find": "             + host_part_lines(part_list, placements)\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a pull-up goes to ground like a pull-down",
+  "find": "            net = \"GND\" if kind == \"pulldown\" else supply_net_of(part)",
+  "replace": "            net = \"GND\""
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the host's trace ignores the divider and lands on the pad",
+  "find": "            wants[design_library.signal_name(part, need)] = signal_target(part, need)",
+  "replace": "            wants[design_library.signal_name(part, need)] = (component_name(part), need[\"pin\"])"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the passives are placed on top of the modules",
+  "find": "        placements[name] = (-width / 2 + column_x + widest + GAP_MM + PASSIVE_BODY_MM[0] / 2, y)",
+  "replace": "        placements[name] = (-width / 2 + column_x + widest / 2, y)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a passive on a power pad passes",
+  "find": "        if host_part.get(\"pin\") not in signal_pads:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "validate no longer looks at host_parts",
+  "find": "    problems.extend(host_part_problems(part))",
+  "replace": "    pass"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a pull-up is an island again",
+  "find": "    findings = [names.get(owner, \"?\") for owner in present - grounded if owner not in passives]",
+  "replace": "    findings = [names.get(owner, \"?\") for owner in present - grounded]"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a passive's dangling terminal is not reported",
+  "find": "                 for port_id, port in ports.items() if port.get(\"source_component_id\") in present & passives and port_id not in traced]",
+  "replace": "                 for port_id, port in [] if port.get(\"source_component_id\") in present & passives and port_id not in traced]"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "the passives spark placed have no Wokwi part",
+  "find": "        for host_part in part.get(\"host_parts\") or []:\n            values = (host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\" else (host_part.get(\"ohms\"),)",
+  "replace": "        for host_part in []:\n            values = (host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\" else (host_part.get(\"ohms\"),)"
+ }
+]

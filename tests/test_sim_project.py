@@ -57,6 +57,17 @@ class WhatStandsInTest(unittest.TestCase):
         self.assertEqual(chips, [(chip, "probe")], "one chip to stage, however many instances use it")
         self.assertEqual(unmapped, [])
 
+    def test_the_passives_spark_placed_for_a_part_are_resistors_in_the_diagram(self):
+        part = {"id": "l9110s-module", "simulation": {"skip": "x"},
+                "host_parts": [{"kind": "pulldown", "pin": "AIA", "ohms": 10000, "why": "w"},
+                               {"kind": "divider", "pin": "AIB", "top_ohms": 10000, "bottom_ohms": 18000, "why": "w"}]}
+        mapping, _, unmapped = sim_project.mapping_for(FakeDesign([part], None))
+        self.assertEqual(unmapped, [])
+        self.assertEqual(mapping["L9110sModulePulldownAIA"], {"wokwiType": "wokwi-resistor", "attrs": {"value": "10000"},
+                                                               "pins": {"anode": "1", "cathode": "2", "pin1": "1", "pin2": "2"}},
+                         "tscircuit names a resistor's ports anode and cathode; the diagram must not inherit the module's mapping")
+        self.assertEqual(mapping["L9110sModuleDividerAIBBottom"]["attrs"], {"value": "18000"})
+
     def test_a_record_that_says_nothing_is_named_with_its_id(self):
         mapping, chips, unmapped = sim_project.mapping_for(FakeDesign([{"id": "mystery-x", "_instance": "M1"}], None))
         self.assertEqual((mapping, chips, unmapped), ({}, [], [("M1", "mystery-x")]))
