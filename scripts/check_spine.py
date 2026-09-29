@@ -52,6 +52,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import design  # noqa: E402
 import emit_board  # noqa: E402
 import emit_footprint  # noqa: E402
 
@@ -167,17 +168,18 @@ def components_not_on_ground(circuit):
     return sorted(names.get(owner, "?") for owner in present - grounded)
 
 
-def run(requirements, workdir, toolchain=None):
-    """Every stage, in order, stopping at the first that cannot produce input for the next."""
+def run(requirements, workdir, toolchain=None, project=None):
+    """
+    Every stage, in order, stopping at the first that cannot produce input for the next.
+
+    `project` is where the design's parts and rules live, resolved by `main` from the
+    requirements FILE — never from the current directory. Resolved from `cwd`, a run from
+    anywhere but inside the project said `no part called 'sg90-servo'` about a part sitting
+    beside the file. None means the plugin's own library, which is what the reference design is
+    built from and must not require a surrounding project for.
+    """
     stages = []
-    # The reference design is built from the plugin's OWN library, so it must not require a
-    # surrounding project. It did: `project_root()` raises outside one, the exception escaped
-    # `main`, and the traceback exited 1 — which reads as "the chain is broken" when the truth
-    # is "the chain was never started". A crash must not be able to impersonate a verdict.
-    try:
-        project = boards.project_root()
-    except Exception:  # noqa: BLE001
-        project = SCRIPTS.parent
+    project = project or SCRIPTS.parent
 
     # --- parts and pin assignment, via the generator that owns them ---
     try:
@@ -261,7 +263,9 @@ def run(requirements, workdir, toolchain=None):
     stages.append(Stage("build", OK, "%d trace(s), 0 errors" % traces))
 
     # --- simulation: the last step of the product goal -------------------------
-    converter = find_converter(Path.cwd())
+    # From the project, not from `cwd`: the same defect the project resolution had, one stage
+    # later — run from /tmp the converter beside the project was "not found".
+    converter = find_converter(project)
     if converter is None:
         return stages + [Stage("simulation", COULD_NOT_RUN,
                                "no circuit-to-wokwi converter found. It is not shipped with this "
@@ -319,21 +323,34 @@ def main(argv=None):
     parser.add_argument("--keep", action="store_true", help="leave the working directory behind")
     args = parser.parse_args(argv)
 
-    requirements = (json.loads(Path(args.requirements).read_text())
-                    if args.requirements else dict(REFERENCE))
+    # The input is read before anything runs, and read AS input: a malformed file is a stage
+    # that could not run, not a traceback with exit 1 — which is "the chain is broken" to anyone
+    # reading the code. The project is the file's, up from its own directory, so a design
+    # belongs to its parts wherever the command is typed; a file inside no project at all is
+    # built from the plugin's library, like the reference design.
+    source = Path(args.requirements).resolve() if args.requirements else None
+    try:
+        requirements = design.read(source) if source else dict(REFERENCE)
+    except design.DesignError as broken:
+        return report([Stage("requirements", COULD_NOT_RUN, str(broken))], args)
+    project = None
+    if source:
+        try:
+            project = design.project_for(source)
+        except design.DesignError:
+            project = None
 
     workdir = Path(tempfile.mkdtemp(prefix="spark-spine-"))
     (workdir / "requirements.json").write_text(json.dumps(requirements))
     # tsci needs its toolchain reachable from the build directory.
-    source = Path(args.requirements).resolve().parent if args.requirements else Path.cwd()
-    toolchain = find_toolchain(source)
+    toolchain = find_toolchain(source.parent if source else Path.cwd())
     if toolchain is not None:
         modules = toolchain.parent.parent
         if not (workdir / "node_modules").exists():
             os.symlink(modules, workdir / "node_modules")
 
     try:
-        stages = run(requirements, workdir, toolchain)
+        stages = run(requirements, workdir, toolchain, project)
     except subprocess.TimeoutExpired:
         stages = [Stage("build", COULD_NOT_RUN,
                         "the build did not finish in %ds" % BUILD_TIMEOUT_S)]
@@ -344,6 +361,11 @@ def main(argv=None):
         stages = [Stage("check_spine", COULD_NOT_RUN,
                         "%s: %s" % (type(exc).__name__, exc))]
 
+    return report(stages, args, workdir)
+
+
+def report(stages, args, workdir=None):
+    """The verdict, rendered the way it was asked for; the working directory kept or removed."""
     code = verdict(stages)
     if args.json:
         print(json.dumps({"check": "spine", "status": {EXIT_OK: OK, EXIT_PROBLEMS: PROBLEMS,
@@ -352,6 +374,8 @@ def main(argv=None):
                                      for s in stages]}))
     else:
         sys.stdout.write(render(stages, code))
+    if workdir is None:
+        return code
     if args.keep:
         print("  working directory: %s" % workdir, file=sys.stderr)
     elif workdir.exists():

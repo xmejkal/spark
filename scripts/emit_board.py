@@ -3,7 +3,10 @@
 A pin map and a module list, as a board file you can build.
 
     emit_board.py requirements.json > board.tsx
-    emit_board.py requirements.json --assignment saved.json
+    emit_board.py requirements.json --project ~/my-project --board xiao-esp32-c6
+
+The project — its parts, its rules — is the one found up from the requirements file's own
+directory unless `--project` says otherwise. Where the command is typed does not matter.
 
 This is the last step of "I have these modules, wire them up". Everything before it — which board,
 what each module asks for, which pin each signal goes on — is settled by `boards.py`,
@@ -25,7 +28,6 @@ which is the difference between a draft you can iterate and a blank file.
 """
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -35,6 +37,7 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import copper  # noqa: E402
+import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
 
 EXIT_OK, EXIT_COULD_NOT_RUN = 0, 2
@@ -135,19 +138,6 @@ def power_trace(component, pin, net, rules, note="", unjustified=None):
     suffix = ("  {/* %s */}" % note) if note else ""
     return '    <trace from=".%s > .%s" to="net.%s"%s />%s' % (
         component, pin, net, thickness, suffix)
-
-
-def rules_in(project):
-    """The project's rules file, or an empty one. Absent is not an error — `init` writes it."""
-    if project is None:
-        return {}
-    path = Path(project) / ".spark" / "rules.json"
-    if not path.is_file():
-        return {}
-    try:
-        return json.loads(path.read_text())
-    except (ValueError, OSError):
-        return {}
 
 
 def trace_width_mm(net, rules):
@@ -254,23 +244,6 @@ def component_name(part):
     if part.get("_instance"):
         return part["_instance"]
     return "".join(word.capitalize() for word in part["id"].replace("_", "-").split("-"))
-
-
-def requested_parts(wanted):
-    """
-    The parts list, normalised to (part_id, instance name or None).
-
-    An entry is either a bare id — `"l9110s-module"` — or an object naming the instance:
-    `{"part": "tactile-button", "name": "BtnForward"}`. Five buttons without names is not a design
-    anyway: you cannot write firmware against "button three".
-    """
-    entries = []
-    for entry in wanted.get("parts") or []:
-        if isinstance(entry, dict):
-            entries.append((entry["part"], entry.get("name")))
-        else:
-            entries.append((entry, None))
-    return entries
 
 
 def signal_name(part, need):
@@ -599,31 +572,22 @@ def main(argv=None):
                              "nobody recorded, saying so in the generated file")
     args = parser.parse_args(argv)
 
-    path = Path(args.requirements)
-    if not path.is_file():
-        print("no requirements at %s" % path, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-
-    wanted = json.loads(path.read_text())
     try:
-        project = Path(args.project).resolve() if args.project else boards.project_root()
-        board = boards.load(project, args.board or wanted.get("board"))
-        requested = requested_parts(wanted)
-        part_list = []
+        design = design_library.load(args.requirements, args.project, args.board)
+        board, part_list = design.board, design.parts
         signals = []
-        for part_id, instance in requested:
-            part = dict(parts_library.load(part_id, project))
-            if instance:
-                part["_instance"] = instance
-            part_list.append(part)
+        for part in part_list:
             # Signals are per INSTANCE, not per part. Five buttons asking for `BUTTON` produced
             # five signals of one name, which `assign_pins` placed on five pins and every
             # downstream lookup keyed by name then collapsed to whichever came last.
-            for signal in parts_library.signals_for([part_id], project):
+            for signal in parts_library.signals_for([part["id"]], design.project):
                 signals.append(dict(signal, name=signal_name(part, {"signal": signal["name"]})))
-        signals += list(wanted.get("signals") or [])
+        signals += list(design.requirements.get("signals") or [])
         assignments, _ = assign_pins.assign(board, signals)
-    except (boards.BoardError, parts_library.PartError, assign_pins.Impossible) as broken:
+    except (design_library.DesignError, parts_library.PartError, assign_pins.Impossible) as broken:
+        # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
+        # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
+        # which reads as "problems found" to anything that knows three outcomes.
         print("cannot emit a board: %s" % broken, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
@@ -674,8 +638,11 @@ def main(argv=None):
         return EXIT_COULD_NOT_RUN
 
     placements, width, height = place(board, part_list)
+    # The rules come with the design, from the project it was resolved to. They were looked up
+    # by the raw `--project` flag instead: None without the flag, so the documented invocation
+    # emitted every power trace unsized, exit 0, and called the widths unjustified.
     sys.stdout.write(emit(board, part_list, assignments, placements, width, height,
-                          rules_in(args.project)))
+                          design.rules))
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
     placed = {entry["signal"] for entry in assignments}

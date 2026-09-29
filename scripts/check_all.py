@@ -191,33 +191,35 @@ def placeholder_components_in(project):
 
     Every requirements file is read, not one: `check_all` is handed one circuit and cannot know
     which requirements produced it. A name from another board simply matches nothing in this
-    netlist, so the union is safe. No project, or nothing derivable, means an empty list — the
-    check then measures everything, which is what it did before and not a new way to be wrong.
+    netlist, so the union is safe.
+
+    Returns (names, notes). Each file is read on its own, through `design` — the loader the
+    generator itself uses — and a file that cannot be read is a NOTE, not a reason to empty the
+    list: before, one unreadable file made this return `()` under `except Exception`, and the
+    check then measured every placeholder as if it were real without a word. A stand-in the
+    check did not learn about is something the reader has to be told.
     """
     if not project:
-        return ()
+        return (), []
+    design = load("design")
+    emit_board = load("emit_board")
     root = Path(project)
-    try:
-        emit_board = load("emit_board")
-        parts_library = load("parts")
-        part_list = []
-        for requirements in sorted(root.glob("*requirements.json")):
-            wanted = json.loads(requirements.read_text())
-            for part_id, instance in emit_board.requested_parts(wanted):
-                part = dict(parts_library.load(part_id, root))
-                if instance:
-                    part["_instance"] = instance
-                part_list.append(part)
-        return tuple(emit_board.placeholder_components(part_list))
-    except Exception:  # noqa: BLE001 — a broken requirements file must not take buildability down
-        return ()
+    names, notes = set(), []
+    for requirements in sorted(root.glob("*requirements.json")):
+        try:
+            part_list = design.parts_of(design.read(requirements), root)
+            names |= set(emit_board.placeholder_components(part_list))
+        except design.DesignError as broken:
+            notes.append("%s could not be read, so any stand-in footprint it names was "
+                         "measured as if real: %s" % (requirements.name, broken))
+    return tuple(sorted(names)), notes
 
 
 class Buildability(Check):
     def call(self, inputs):
         check_footprints = load("check_footprints")
-        findings = check_footprints.run(circuit_of(inputs),
-                                        placeholder_components_in(inputs.get("project")))
+        placeholders, notes = placeholder_components_in(inputs.get("project"))
+        findings = check_footprints.run(circuit_of(inputs), placeholders)
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)
@@ -226,7 +228,7 @@ class Buildability(Check):
         # Split, for the same reason physics does: a rule that could not read an element has not
         # approved it, and folding the two together is what let 10 of 70 holes go unexamined
         # under a tick.
-        return answer(problems=of("problem"), unchecked=of("could-not-run"))
+        return answer(problems=of("problem"), unchecked=of("could-not-run") + notes)
 
 
 class VendorTruth(Check):

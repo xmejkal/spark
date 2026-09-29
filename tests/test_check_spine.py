@@ -13,9 +13,15 @@ raise?" calls it a pass.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
+import io
+import json
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -240,6 +246,57 @@ class TheReferenceDesignTest(unittest.TestCase):
                           for supply in parts.load(part_id).get("power") or [])]
         self.assertTrue(sources, "no part in the reference design supplies a rail")
 
+
+
+class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
+    """
+    Two of the audit's claims (A8, A10) in one place: the requirements file was read outside any
+    `try`, so malformed JSON was a traceback and exit 1 — "the chain is broken" — and the project
+    was resolved from the current directory, so from anywhere else the spine could not find a
+    part sitting beside the file.
+    """
+
+    @staticmethod
+    def _main(argv, cwd):
+        out = io.StringIO()
+        was = os.getcwd()
+        os.chdir(cwd)
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = check_spine.main(argv)
+        finally:
+            os.chdir(was)
+        return code, out.getvalue()
+
+    def test_malformed_requirements_are_could_not_run_not_a_traceback(self):
+        path = Path(tempfile.mkdtemp()) / "bad.json"
+        path.write_text("{not json")
+        code, out = self._main([str(path)], tempfile.mkdtemp())
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        self.assertIn("NOT exercised", out)
+        self.assertIn("not JSON", out)
+
+    def test_the_project_is_the_files_not_the_current_directory(self):
+        # A project with a part of its own, run from elsewhere. The schematic stage has to find
+        # the part; the build stage is could-not-run because no toolchain is offered, which is
+        # what keeps this test off tsci and under a second.
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "parts").mkdir()
+        (root / "parts" / "probe.json").write_text(json.dumps(
+            {"schema": 1, "id": "probe", "name": "probe", "kind": "connector", "needs": [],
+             "power": [{"pin": "VCC", "rail": "logic", "direction": "in"},
+                       {"pin": "GND", "rail": "ground", "direction": "in"}],
+             "pin_order": ["VCC", "GND"], "footprint": "jst_ph_2",
+             "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}))
+        path = root / "car.requirements.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["probe"]}))
+        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
+            code, out = self._main([str(path)], tempfile.mkdtemp())
+        self.assertNotIn("no part called", out)
+        self.assertIn("[ok  ] schematic", out)
+        self.assertIn("[????] build", out)
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
 
 if __name__ == "__main__":
     unittest.main()

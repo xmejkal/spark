@@ -12,9 +12,13 @@ does not overlap. The file has to say so, or someone will order it.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
+import io
 import json
+import os
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -23,6 +27,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
 import copper  # noqa: E402
+import design  # noqa: E402
 import emit_board  # noqa: E402
 import parts  # noqa: E402
 
@@ -318,7 +323,7 @@ class ManyOfOnePartTest(unittest.TestCase):
 
     def test_a_bare_string_and_an_object_are_both_valid_entries(self):
         self.assertEqual(
-            emit_board.requested_parts({"parts": ["l9110s-module",
+            design.requested_parts({"parts": ["l9110s-module",
                                                   {"part": "tactile-button", "name": "BtnLeft"}]}),
             [("l9110s-module", None), ("tactile-button", "BtnLeft")])
 
@@ -637,6 +642,79 @@ class PlacementTest(unittest.TestCase):
         self.assertGreater(height, board["physical"]["height_mm"])
         self.assertGreater(width, board["physical"]["width_mm"])
 
+
+
+class TheDocumentedInvocationTest(unittest.TestCase):
+    """
+    `main()`, run the way the docstring says to run it: inside the project, no `--project`.
+
+    Nothing called `main()` before 2026-09-29. Every sizing test handed `emit()` a rules dict,
+    and `main()` looked the rules up by the raw flag — None without it — so the documented
+    invocation emitted every power trace unsized, exit 0, and said the widths were unjustified
+    while `.spark/rules.json` two directories down stated them. The mutation table could not
+    reach it. This is the test the sprint audit said would fail, and it did.
+    """
+
+    RULES = {"physics": {"rails": {"MOTOR6V": {"max_current_a": 2.0}}}}
+
+    def _project(self, rules=RULES):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        if rules is not None:
+            (root / ".spark" / "rules.json").write_text(json.dumps(rules))
+        (root / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
+        return root
+
+    @staticmethod
+    def _main(argv, cwd):
+        out, err = io.StringIO(), io.StringIO()
+        was = os.getcwd()
+        os.chdir(cwd)
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = emit_board.main(argv)
+        finally:
+            os.chdir(was)
+        return code, out.getvalue(), err.getvalue()
+
+    SIZED = r'to="net\.MOTOR6V" thickness="[0-9.]+mm"'
+
+    def test_inside_the_project_without_the_flag_the_traces_are_sized(self):
+        code, tsx, _ = self._main(["requirements.json"], self._project())
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertRegex(tsx, self.SIZED)
+
+    def test_from_elsewhere_by_absolute_path_the_same(self):
+        root = self._project()
+        code, tsx, _ = self._main([str(root / "requirements.json")], tempfile.mkdtemp())
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertRegex(tsx, self.SIZED)
+
+    def test_the_flag_still_wins(self):
+        # Pointed at a project with no rules, the same file comes out unsized: the control that
+        # the two tests above are reading the project's rules and not something else.
+        root, bare = self._project(), self._project(rules=None)
+        code, tsx, _ = self._main([str(root / "requirements.json"), "--project", str(bare)], root)
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertNotRegex(tsx, self.SIZED)
+        self.assertIn("UNJUSTIFIED", tsx)
+
+    def test_malformed_requirements_are_could_not_run_not_a_traceback(self):
+        root = self._project()
+        (root / "bad.json").write_text("{not json")
+        code, tsx, err = self._main(["bad.json"], root)
+        self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
+        self.assertEqual(tsx, "")
+        self.assertIn("not JSON", err)
+
+    def test_an_entry_without_a_part_is_could_not_run(self):
+        root = self._project()
+        (root / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": [{"name": "X"}]}))
+        code, _, err = self._main(["requirements.json"], root)
+        self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
+        self.assertIn("parts[0]", err)
 
 if __name__ == "__main__":
     unittest.main()

@@ -306,13 +306,13 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         return root
 
     def test_a_placeholder_in_the_project_is_found_by_its_instance_name(self):
-        self.assertEqual(check_all.placeholder_components_in(self._project(True)), ("PackIn",))
+        self.assertEqual(check_all.placeholder_components_in(self._project(True)), (("PackIn",), []))
 
     def test_a_real_footprint_yields_nothing(self):
-        self.assertEqual(check_all.placeholder_components_in(self._project(False)), ())
+        self.assertEqual(check_all.placeholder_components_in(self._project(False)), ((), []))
 
     def test_no_project_yields_nothing(self):
-        self.assertEqual(check_all.placeholder_components_in(None), ())
+        self.assertEqual(check_all.placeholder_components_in(None), ((), []))
 
     def test_buildability_actually_uses_the_list(self):
         """
@@ -347,12 +347,32 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         result = check.run({"circuit": str(root / "circuit.json")})
         self.assertEqual(result["status"], check_all.PROBLEMS, result)
 
-    def test_a_broken_requirements_file_does_not_take_buildability_down(self):
-        # Empty, and the check measures everything — which is what it did before, and not a new
-        # way to be wrong.
+    def test_a_broken_requirements_file_is_reported_and_the_others_still_count(self):
+        """
+        The decision changed on 2026-09-29 (audit A4). Before, one unreadable file emptied the
+        whole list under `except Exception` and the check measured every stand-in as if it were
+        real, silently. Now each file is read on its own: the good one's placeholder is still
+        known, and the broken one is a note the check reports — a stand-in the check did not
+        learn about is measured as real, which the reader has to be told.
+        """
         root = self._project(True)
         (root / "broken.requirements.json").write_text("{not json")
-        self.assertEqual(check_all.placeholder_components_in(root), ())
+        names, notes = check_all.placeholder_components_in(root)
+        self.assertEqual(names, ("PackIn",))
+        self.assertEqual(len(notes), 1, notes)
+        self.assertIn("broken.requirements.json", notes[0])
+
+    def test_buildability_reports_the_file_it_could_not_read(self):
+        # The integration: the note reaches the check's answer, not just the helper's return.
+        root = self._project(True)
+        (root / "broken.requirements.json").write_text("{not json")
+        circuit = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
+                   {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
+        (root / "circuit.json").write_text(json.dumps(circuit))
+        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
+        self.assertNotEqual(result["status"], check_all.OK, result)
+        self.assertIn("broken.requirements.json", json.dumps(result))
 
 
 class TwoOfSomethingIsNotNothingTest(unittest.TestCase):

@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/emit_board.py",
+  "name": "rules looked up by nothing again (A2)",
+  "find": "                          design.rules))",
+  "replace": "                          {}))"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "project resolved from cwd, not the file (A10)",
+  "find": "        return boards.project_root(Path(path).resolve().parent)",
+  "replace": "        return boards.project_root()"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "malformed JSON escapes as a traceback (A8)",
+  "find": "    except ValueError as broken:\n        raise DesignError(\"%s is not JSON: %s\" % (path, broken)) from broken",
+  "replace": "    except ValueError as broken:\n        raise"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "an entry without `part` is a KeyError again",
+  "find": "            if not entry.get(\"part\"):\n                raise DesignError",
+  "replace": "            if False:\n                raise DesignError"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "an unreadable rules file is silently no rules",
+  "find": "    except (ValueError, OSError) as broken:\n        raise DesignError(\"%s could not be read: %s\" % (path, broken)) from broken",
+  "replace": "    except (ValueError, OSError):\n        return {}"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "placeholders never collected (A4)",
+  "find": "            names |= set(emit_board.placeholder_components(part_list))",
+  "replace": "            names -= set(emit_board.placeholder_components(part_list))"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "the unreadable-file note is dropped by the check",
+  "find": "unchecked=of(\"could-not-run\") + notes)",
+  "replace": "unchecked=of(\"could-not-run\"))"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the spine ignores the file's project",
+  "find": "            project = design.project_for(source)\n",
+  "replace": "            project = None\n"
+ }
+]
