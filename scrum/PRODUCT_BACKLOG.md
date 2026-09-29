@@ -43,7 +43,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark reports what it did and nothing less
 | ~~P11~~ | A design is loaded once, in one place, and `main()` is tested — **done `0c21ef5`** | M |
 | ~~P12~~ | The spine tells a toolchain fault from a design fault — **done `c4d0582`** | S |
 | ~~P13~~ | Sibling scripts are imported, not loaded by path — **done `55e7bb8`** | S |
-| P14 | `emit_board` says each thing once | M |
+| ~~P14~~ | `emit_board` says each thing once — **done `f7674b4`** | M |
 
 ---
 
@@ -210,7 +210,7 @@ check. The wiring test's docstring turned out to describe a test that did not ex
 source while claiming to call the runner); it now inspects the names each `call` compiles to.
 Three mutations caught, 515 tests.
 
-### P14 — `emit_board` says each thing once
+### ~~P14 — `emit_board` says each thing once~~ — **DONE `f7674b4`**
 `emit()` is 186 lines and 39 branches: ten sections, none a function. The power-pin walk is
 written four times, the placeholder filter twice, `("needs", "power", "unused_pins")` three times
 in `parts.py`, the circuit-glob pair in two files, and the MCU pad loop still carries the
@@ -219,6 +219,11 @@ rest; three of this sprint's fixes did exactly that before the audit.
 **Value proven by:** one power-connection generator, one placeholder filter, one pin-list
 constant, one circuit-glob list; each `emit()` section a function with a test; the generated
 reference board and both RC boards byte-identical before and after.
+
+**Result.** All of it, byte-identical on four designs. The MCU pad `continue` is gone at both
+layers (contract and generator). The composition test's first fixture could not see a swapped
+section — no placeholder, so the swap changed nothing — and the mutation tool said so; the
+fixture now has every section non-empty and asserts it. Eight mutations caught, 528 tests.
 
 ### R7 — The generator chain is named by no skill, no command and no agent [G13]
 `assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working
