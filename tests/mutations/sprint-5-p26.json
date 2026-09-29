@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "i2s vanishes from the vocabulary (C6)",
+  "find": "    \"i2s\": {\"BCLK\": (\"BCLK\", \"SCK\"), \"LRC\": (\"LRC\", \"LRCLK\", \"WS\"), \"DIN\": (\"DIN\", \"SD\", \"DOUT\")},\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a bus-prefixed signal no longer names its line",
+  "find": "    if printed.startswith(bus.upper() + \"_\"):\n        printed = printed[len(bus) + 1:]",
+  "replace": "    if False:\n        printed = printed[len(bus) + 1:]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the contract lets an unknown bus through",
+  "find": "        if bus and bus not in BUSES:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "a matrix-routed bus is refused again",
+  "find": "        elif line == \"SS\" or not board_dedicates_pins_to(board, signal[\"bus\"]):",
+  "replace": "        elif line == \"SS\":"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "the matrix is not mentioned in the reason",
+  "find": "            why = (\"on the %s bus, which this board routes through its GPIO matrix rather than \"\n                   \"to labelled pins, so any pin serves; \" % signal[\"bus\"].upper()) + why",
+  "replace": "            why = why"
+ }
+]

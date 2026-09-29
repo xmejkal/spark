@@ -119,6 +119,32 @@ PAD_COUNT_FAMILIES = ("pinrow", "headermodule", "jst_ph_", "jst_sh_", "jst_xh_",
 #: nowhere else.
 PIN_LISTS = ("needs", "power", "unused_pins")
 
+#: The buses a part may put a signal on, and the lines each has, by the board's label for the
+#: line with the names vendors print for it. THE definition: `assign_pins` imports it to find the
+#: board's pin for a line, and `validate` refuses a record naming a bus or a line not here — where
+#: the record is written, not four scripts later (the shape of `CAPABILITIES`, G12). `i2s` was
+#: missing from the assigner's own copy for one evening and the shipped MAX98357A could not be
+#: placed by the chain while `--validate` called it fine (sprint-4 close audit, C6). A signal
+#: named `<BUS>_<LINE>` — `I2S_BCLK` — names its line.
+BUSES = {
+    "i2c": {"SDA": ("SDA",), "SCL": ("SCL",)},
+    "spi": {"SCK": ("SCK", "CLK", "SCLK"), "MOSI": ("MOSI", "DIN", "SDI", "SI"),
+            "MISO": ("MISO", "DOUT", "SDO", "SO"), "SS": ("SS", "CS", "NSS")},
+    "i2s": {"BCLK": ("BCLK", "SCK"), "LRC": ("LRC", "LRCLK", "WS"), "DIN": ("DIN", "SD", "DOUT")},
+}
+
+
+def bus_line_of(bus, name):
+    """Which line of `bus` a signal called `name` is, by the board's label — or None."""
+    lines = BUSES.get(bus) or {}
+    printed = str(name).upper()
+    if printed.startswith(bus.upper() + "_"):
+        printed = printed[len(bus) + 1:]
+    for line, names in lines.items():
+        if printed in names:
+            return line
+    return None
+
 
 def printed_names(part):
     """`{wiring name: silkscreen text}` for every pin whose silkscreen differs from its name."""
@@ -179,6 +205,15 @@ def validate(part: dict, path: Path) -> list:
         if need.get("direction") not in ("in", "out", "bidirectional", None):
             problems.append("%s direction is %r; expected in, out or bidirectional"
                             % (where, need.get("direction")))
+        bus = need.get("bus")
+        if bus and bus not in BUSES:
+            problems.append("%s is on bus %r, which is not a bus this knows: %s"
+                            % (where, bus, ", ".join(BUSES)))
+        elif bus and need.get("signal") and bus_line_of(bus, need["signal"]) is None:
+            problems.append("%s is on the %s bus but %r is not one of its lines: %s"
+                            % (where, bus.upper(), need["signal"],
+                               ", ".join("%s (%s)" % (line, "/".join(names))
+                                         for line, names in BUSES[bus].items())))
         unknown = sorted(set(need.get("needs") or []) - set(CAPABILITIES))
         if unknown:
             # Caught HERE, not four scripts later. `assign_pins` refuses the entire design over

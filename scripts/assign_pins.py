@@ -157,15 +157,9 @@ def candidates(board):
     return found
 
 
-#: The lines a bus has, each with the names vendors print for it. A part record says what its
-#: vendor says — DIN, CLK, CS — and a board file labels the pin the way its silkscreen does —
-#: MOSI, SCK, SS — and neither is wrong; this is the one place the two vocabularies meet. Keyed
-#: by the board label, because that is what the pin map has to name.
-BUS_LINES = {
-    "i2c": {"SDA": ("SDA",), "SCL": ("SCL",)},
-    "spi": {"SCK": ("SCK", "CLK", "SCLK"), "MOSI": ("MOSI", "DIN", "SDI", "SI"),
-            "MISO": ("MISO", "DOUT", "SDO", "SO"), "SS": ("SS", "CS", "NSS")},
-}
+#: The lines a bus has, with the names vendors print for them — the parts library's definition,
+#: imported, so a record `parts.py --validate` calls fine is one this can place (close audit C6).
+BUS_LINES = parts_library.BUSES
 
 #: Lines every device on the bus shares — which is what a bus IS. A chip select is per device:
 #: the first takes the board's SS pin and the rest are ordinary signals on any free pin.
@@ -185,13 +179,21 @@ def bus_line(signal):
     if lines is None:
         raise Impossible("%s is on bus %r, which is not a bus this knows: %s"
                          % (signal["name"], signal["bus"], ", ".join(BUS_LINES)))
-    printed = str(signal.get("line") or signal["name"]).upper()
-    for line, names in lines.items():
-        if printed in names:
-            return line
-    raise Impossible("%s is on the %s bus but %r is not one of its lines: %s"
-                     % (signal["name"], signal["bus"].upper(), printed,
-                        ", ".join("%s (%s)" % (line, "/".join(names)) for line, names in lines.items())))
+    line = parts_library.bus_line_of(signal["bus"], signal.get("line") or signal["name"])
+    if line is None:
+        raise Impossible("%s is on the %s bus but %r is not one of its lines: %s"
+                         % (signal["name"], signal["bus"].upper(), signal.get("line") or signal["name"],
+                            ", ".join("%s (%s)" % (l, "/".join(names)) for l, names in lines.items())))
+    return line
+
+
+def board_dedicates_pins_to(board, bus):
+    """
+    Whether this board brings the bus out on labelled pins, which is a fact the board file
+    states in `pin_roles`. A bus it does not — I2S on an ESP32, which reaches any pin through
+    the GPIO matrix — has no pin to refuse for, and is placed like any signal, saying so.
+    """
+    return bus in (board.get("pin_roles") or {})
 
 
 def assign(board, signals):
@@ -221,8 +223,11 @@ def assign(board, signals):
         line = bus_line(signal)
         if line in board["pins"]:
             placed_by_name.append(dict(signal, pin=line, line=line))
-        elif line == "SS":
-            to_place.append(dict(signal, line=line))   # a select can go anywhere; see below
+        elif line == "SS" or not board_dedicates_pins_to(board, signal["bus"]):
+            # A select can go anywhere (see below); so can every line of a bus this board routes
+            # through its matrix rather than to labelled pins — I2S on the ESP32. Refusing those
+            # made the shipped MAX98357A unplaceable for an evening (close audit C6).
+            to_place.append(dict(signal, line=line))
         else:
             raise Impossible("%s needs the %s bus's %s line and this board labels no %s pin — "
                              "add it to the board file's pins, or use another board"
@@ -281,9 +286,12 @@ def assign(board, signals):
         pin = usable[label]
         taken_gpio.add(pin["gpio"])
         why = _why(needs, pin)
-        if signal.get("line") == "SS":
+        if signal.get("line") == "SS" and board_dedicates_pins_to(board, signal.get("bus", "")):
             why = "a chip select — every SPI device has its own, and the board's SS pin is " \
                   "taken, so any pin serves; " + why
+        elif signal.get("bus") and signal.get("line"):
+            why = ("on the %s bus, which this board routes through its GPIO matrix rather than "
+                   "to labelled pins, so any pin serves; " % signal["bus"].upper()) + why
         assignments.append({
             "signal": signal["name"], "pin": label, "gpio": pin["gpio"],
             "why": why, "roles": pin["roles"]})

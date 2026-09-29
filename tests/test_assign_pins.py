@@ -387,5 +387,36 @@ class TheHelpersEachHaveANameTest(unittest.TestCase):
         said = assign_pins._why_not(self.board, {"name": "SENSE"}, {"adc"}, no_adc, set())
         self.assertIn("no pin on this board can do that at all", said)
 
+
+class ABusWithNoDedicatedPinsGoesAnywhereTest(unittest.TestCase):
+    """
+    Close audit C6: P21's rule refused every bus line the board did not label, and the ESP32
+    routes I2S through its GPIO matrix — no board labels BCLK — so the shipped MAX98357A could
+    not be placed by the chain while `parts.py --validate` called it fine. A bus the board
+    states no `pin_roles` for is placed like any signal, and the reason says so.
+    """
+
+    def setUp(self):
+        import json
+        self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def test_the_shipped_i2s_amplifier_is_placed_and_the_reason_names_the_matrix(self):
+        import parts
+        placed, _ = assign_pins.assign(self.board, parts.signals_for(["max98357a-dfr0954"]))
+        names = {a["signal"] for a in placed}
+        self.assertTrue({"I2S_BCLK", "I2S_LRC", "I2S_DIN"} <= names, names)
+        why = next(a["why"] for a in placed if a["signal"] == "I2S_BCLK")
+        self.assertIn("GPIO matrix", why)
+        self.assertIn("I2S", why)
+
+    def test_a_bus_the_board_dedicates_pins_to_is_still_refused_when_a_line_is_missing(self):
+        board = dict(self.board, pins={k: v for k, v in self.board["pins"].items() if k != "SDA"})
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.assign(board, [{"name": "SDA", "bus": "i2c", "needs": []}])
+
+    def test_the_vocabulary_is_the_parts_librarys(self):
+        import parts
+        self.assertIs(assign_pins.BUS_LINES, parts.BUSES)
+
 if __name__ == "__main__":
     unittest.main()

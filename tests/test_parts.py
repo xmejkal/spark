@@ -587,5 +587,34 @@ class AMissingPinIsReportedOnceTest(unittest.TestCase):
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("power[0]", problems[0])
 
+
+class ABusIsCheckedWhereTheRecordIsWrittenTest(unittest.TestCase):
+    """The contract refuses an unknown bus or a line the bus lacks, so the chain never has to."""
+
+    def _problems(self, **need):
+        path = ROOT / "parts" / "vl6180x-breakout.json"
+        record = json.loads(path.read_text())
+        record["needs"] = [dict(record["needs"][0], **need)]
+        return [p for p in parts.validate(record, path) if "bus" in p]
+
+    def test_an_unknown_bus_is_refused_by_name(self):
+        problems = self._problems(signal="X", bus="can")
+        self.assertTrue(problems and "not a bus this knows" in problems[0], problems)
+
+    def test_a_line_the_bus_does_not_have_is_refused_naming_the_lines(self):
+        problems = self._problems(signal="XYZ", bus="spi")
+        self.assertTrue(problems and "not one of its lines" in problems[0] and "SCK" in problems[0], problems)
+
+    def test_a_bus_prefixed_signal_names_its_line(self):
+        self.assertEqual(parts.bus_line_of("i2s", "I2S_BCLK"), "BCLK")
+        self.assertEqual(parts.bus_line_of("spi", "CS"), "SS")
+        self.assertIsNone(parts.bus_line_of("spi", "XYZ"))
+        self.assertEqual(self._problems(signal="I2S_LRC", bus="i2s"), [])
+
+    def test_every_shipped_record_is_still_within_the_vocabulary(self):
+        for path in sorted((ROOT / "parts").glob("*.json")):
+            record = json.loads(path.read_text())
+            self.assertEqual([p for p in parts.validate(record, path) if "bus" in p], [], path.name)
+
 if __name__ == "__main__":
     unittest.main()
