@@ -3,9 +3,8 @@
 Every deterministic check, in one call, with one answer.
 
     check_all.py --circuit dist/board/circuit.json --rules .spark/rules.json
-    check_all.py --design design.json --boards boards/*.json --package fab.zip --json
 
-There are seven checks in this plugin and the review loop invoked one of them. That is the
+There were seven checks in this plugin and the review loop invoked one of them. That is the
 predictable outcome of a skill listing commands: the list is written once and the scripts keep
 arriving. So the list lives here, next to the scripts, and everything else asks this.
 
@@ -34,8 +33,8 @@ to run it. `could-not-run` exits non-zero, because you asked and got no answer.
 run exits non-zero as well. "I asked for nothing and was told everything is fine" is the cleanest
 form of the failure this file exists to prevent, and it is exactly what an agent gets when it
 builds its command wrong — which is not hypothetical: an earlier `spark-review` skill named two
-inputs by hand and left two of the seven permanently unasked. The skill now runs
-`check_all.py --project .`, which discovers all seven; this docstring said otherwise for four
+inputs by hand and left two of the checks permanently unasked. The skill now runs
+`check_all.py --project .`, which discovers all of them; this docstring said otherwise for four
 days after that changed (audit B18, 2026-09-29). Five checks running clean will and should exit
 0; only the all-skipped case is caught here.
 """
@@ -118,8 +117,7 @@ def answer(problems=(), unchecked=(), unmeasured=()):
     return result
 
 
-def findings_result(findings, describe=lambda f: f):
-    return answer(problems=[describe(f) for f in findings])
+
 
 
 def circuit_of(inputs):
@@ -135,22 +133,6 @@ def circuit_of(inputs):
         raise ValueError("%s holds no circuit elements — the build produced nothing, so there is "
                          "nothing to check" % Path(inputs["circuit"]).name)
     return elements
-
-
-class PinCapability(Check):
-    def call(self, inputs):
-        # This called `check_design.check()` — a function that has never existed — and passed it
-        # path strings where it wanted parsed dicts. The plugin's flagship check therefore never
-        # ran once through the runner, and the AttributeError surfaced as `could-not-run`, which
-        # reads as "your environment is wrong" rather than "this plugin is broken".
-        import check_design
-        design_path = Path(inputs["design"])
-        design = json.loads(design_path.read_text())
-        reference = inputs.get("board") or design.get("board")
-        if not reference:
-            raise ValueError("the design does not say which board it is built around")
-        board = json.loads(check_design.resolve_board(reference, design_path).read_text())
-        return findings_result(check_design.run(design, board), str)
 
 
 class RulesVsNetlist(Check):
@@ -247,19 +229,6 @@ class VendorTruth(Check):
         return answer(problems=problems, unchecked=unchecked)
 
 
-class Firmware(Check):
-    def call(self, inputs):
-        import check_firmware
-        source = Path(inputs["firmware"]).read_text()
-        constants = check_firmware.read_pin_constants(source)
-        if not constants:
-            return answer(unchecked=[
-                "no PIN_* constants in %s — nothing to compare, which is not the same as "
-                "agreeing" % Path(inputs["firmware"]).name])
-        board = json.loads(Path(inputs["board_file"]).read_text())
-        return findings_result(check_firmware.check_against_board(constants, board))
-
-
 class TheOrder(Check):
     def call(self, inputs):
         import check_bom
@@ -292,10 +261,6 @@ CHECKS = [
             "the board obeys physics, not just itself"),
     RulesVsNetlist("rules-vs-netlist", ["circuit", "rules"],
                    "written rules hold in the design that was built"),
-    Firmware("firmware-vs-board", ["firmware", "board_file"],
-             "every pin the firmware drives is one this board can do it with"),
-    PinCapability("pin-capability", ["design"],
-                  "every pin can do what it is being asked to do"),
 ]
 
 
@@ -309,8 +274,6 @@ CONVENTIONS = {
     "circuit": list(design.CIRCUIT_PATHS),
     "rules": [str(design.RULES_PATH)],
     "package": ["*-gerbers.zip", "fab/*.zip"],
-    "design": ["*.design.json", ".spark/design.json"],
-    "firmware": ["firmware/*/config.py", "firmware/config.py", "config.py"],
 }
 
 
@@ -363,8 +326,6 @@ def discover(project):
                          % ("boards", len(definitions),
                             ", ".join(sorted(boards.available(project)))))
         active = boards.definition_path(project)
-        found["board_file"] = str(active)
-        notes.append("%-12s %s" % ("board_file", Path(active).name))
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 
@@ -457,10 +418,6 @@ def main(argv=None):
     parser.add_argument("--project",
                         help="a project directory; every input is discovered in it by "
                              "convention, and each resolved path is printed")
-    parser.add_argument("--design", help="a design description, for the pin-capability check")
-    parser.add_argument("--board", help="the board definition that design is built around")
-    parser.add_argument("--board-file", help="a board definition, for the firmware check")
-    parser.add_argument("--firmware", help="a firmware file holding PIN_* constants")
     parser.add_argument("--boards", nargs="*", default=[],
                         help="board definitions to verify against their vendor headers")
     parser.add_argument("--circuit", help="the built netlist")

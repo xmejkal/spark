@@ -159,27 +159,6 @@ class TwoBuiltDesignsTest(unittest.TestCase):
         self.assertIn("V33", rules["physics"]["rails"])
 
 
-class TheCommandThatNamesItExistsTest(unittest.TestCase):
-    def test_the_error_message_names_something_real(self):
-        """
-        The original defect: `findings.py` told the user to run `spark init`, and that string
-        appeared nowhere else in the repository. An instruction to run a command that does not
-        exist is worse than no instruction, because it is followed.
-        """
-        import findings  # noqa: PLC0415 - imported here to keep this file standalone
-        try:
-            findings.project_root(Path(tempfile.mkdtemp()))
-        except SystemExit as refusal:
-            named = str(refusal)
-        else:
-            self.skipTest("a .spark directory was found above the temporary directory")
-
-        self.assertIn("/spark:init", named)
-        self.assertTrue((ROOT / "commands" / "init.md").is_file(),
-                        "the error names /spark:init and no such command file exists")
-
-
-
 class ABriefIsYoursTest(unittest.TestCase):
     """
     `init --force` was the only way to re-seed the rails after a build, and it replaced the

@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "tools"))
 
 import check_commit  # noqa: E402
 
@@ -32,11 +32,11 @@ def repo_with(files):
 
 
 class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
-    MUTATE = (ROOT / "scripts" / "mutate.py").read_text()
+    MUTATE = (ROOT / "tools" / "mutate.py").read_text()
     OUTCOMES = (ROOT / "scripts" / "outcomes.py").read_text()
 
     def test_a_tree_whose_suite_passes_is_ok(self):
-        root = repo_with({"scripts/mutate.py": self.MUTATE, "scripts/outcomes.py": self.OUTCOMES,
+        root = repo_with({"tools/mutate.py": self.MUTATE, "scripts/outcomes.py": self.OUTCOMES,
                           "m.py": "def add(a, b):\n    return a + b\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
@@ -50,7 +50,7 @@ class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
 
     def test_a_file_left_uncommitted_makes_the_committed_tree_fail(self):
         # The C3 shape: the working tree has the module, the commit does not.
-        root = repo_with({"scripts/mutate.py": self.MUTATE, "scripts/outcomes.py": self.OUTCOMES,
+        root = repo_with({"tools/mutate.py": self.MUTATE, "scripts/outcomes.py": self.OUTCOMES,
                           "m.py": "import helper\ndef add(a, b):\n    return helper.plus(a, b)\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"})

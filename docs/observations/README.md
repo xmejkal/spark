@@ -20,8 +20,8 @@ work.
 
 **They are reviews, not facts.** Several have been confidently wrong — one council's central
 claim about the evals was right, another's verdict on two findings was not. Reproduce a claim
-before acting on it. Anything promoted out of here into `BACKLOG.md` should have been verified
-first, and should say so.
+before acting on it. Anything promoted out of here into `scrum/PRODUCT_BACKLOG.md` should have
+been verified first, and should say so.
 
 ## What to do when a report lands
 
@@ -29,13 +29,16 @@ first, and should say so.
    findings until its claims are separable and countable.
 2. **Reproduce, or reject.** Run something. A claim that cannot be reproduced is `rejected` with
    that as the reason — which is useful, because it says the observer's method was wrong.
-3. **Promote what survives** into `BACKLOG.md` with the evidence attached, and mark the row
-   `acted`.
+3. **Promote what survives** into `scrum/PRODUCT_BACKLOG.md` with the evidence attached — an item
+   that names the design needing it (W14) — and mark the row `acted`.
 4. **Keep rejected rows.** An observer that is confidently wrong will be wrong the same way next
    time.
 
-This is four steps because the alternative is demonstrated a directory away: the smart-bin's
-findings store holds 20 findings and has resolved none of them. Good mechanism, no closing move.
+This is four steps because the alternative was demonstrated here: a findings store that held
+twenty findings and resolved none of them, cut on 2026-09-29. Good mechanism, no closing move.
+
+The reports here are the sprint audits since 09-29. The four essays of 09-25 that fed the first
+rows are in git history; every claim they made is a row in `INDEX.md`, which is what survives.
 
 ## What good observations look like over time
 

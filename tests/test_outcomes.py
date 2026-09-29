@@ -16,7 +16,7 @@ import outcomes  # noqa: E402
 
 #: Every script that exits with the three-way answer, and the local word it uses for "no".
 SCRIPTS = {
-    "check_all": "EXIT_PROBLEMS", "check_spine": "EXIT_PROBLEMS", "check_firmware": "EXIT_PROBLEMS",
+    "check_all": "EXIT_PROBLEMS", "check_spine": "EXIT_PROBLEMS",
     "check_bom": "EXIT_PROBLEMS", "check_footprints": "EXIT_PROBLEMS", "check_physics": "EXIT_PROBLEMS",
     "emit_footprint": "EXIT_PROBLEMS", "assign_pins": "EXIT_IMPOSSIBLE", "init_project": "EXIT_NOTHING_TO_DO",
     "check_vendor_pins": "EXIT_MISMATCH", "mutate": "EXIT_ESCAPED", "boards": "EXIT_INVALID",

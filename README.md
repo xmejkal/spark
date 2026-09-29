@@ -20,7 +20,7 @@ Then, in a project:
 
 ```
 /spark:init              # writes what the checks need; guesses nothing
-/spark:check             # the cheap deterministic pass
+/spark:build             # a requirements file to a built, simulated board
 ```
 
 ## The one rule everything here is built around
@@ -40,23 +40,21 @@ generator refuse rather than invent one.
 | | |
 | --- | --- |
 | `/spark:init` | Writes `.spark/rules.json`, `.spark/project.json` and `boards/active.json`. Names the rails from the built design; leaves **every value null** and lists them. A guessed rail current would poison the one check that does arithmetic. |
-| `/spark:check` | The cheap pass: pins, capabilities, shared buses, I²C addresses. Seconds, no agents. |
 | `/spark:build` | A requirements file — a board and a list of parts — to a board that builds and simulates, or the stage that stopped it: `parts → pin map → board file → build → simulation`. Seconds, no agents, refuses rather than guesses. |
 
 ## Skills
 
 | | |
 | --- | --- |
-| **spark-review** | Find what is wrong, gate it before fab, and remember it. Runs all seven deterministic checks, then five reviewers (power, signals, thermal-mechanical, manufacturability, firmware-hardware) reading primary artefacts only, into a findings store that survives between sessions. Identity is structural, so the same defect worded differently is one finding, and an anchor the design does not contain refuses the finding outright. |
+| **spark-review** | Find what is wrong and gate it before fab: the five deterministic checks, then one reviewer per dimension (power, signals, thermal-mechanical, manufacturability, firmware-hardware) reading the primary artefacts only, then the fabrication gate. |
 | **spark-design** | Describe → `requirements.json` → parts → pin map → generated board file → build → checks → render. tscircuit by hand only where the generator stops. |
-| **spark-simulate** | Test firmware before the hardware exists: a fake `machine` module for offline tests, then Wokwi for the real binary on a simulated chip. Honest about what no simulator proves. |
 | **spark-reverse-engineer** | Board photo → copper reading + datasheet pinouts + functional wiring → netlist hypothesis and a bench protocol to confirm it. |
 
 ## Scripts
 
-Every one runs standalone and is what the skills above actually call. The checks take
-`--json`; `boards`, `check_bom`, `check_design`, `emit_board` and `init_project` do not yet,
-and `copper` is a library, not a command.
+Every one runs standalone and is what the commands and skills above actually call. The checks
+take `--json`; `boards`, `check_bom`, `emit_board` and `init_project` do not yet, and `copper`,
+`outcomes` and `design` are libraries, not commands.
 
 **The one command**
 
@@ -66,18 +64,13 @@ and `copper` is a library, not a command.
 
 **The checks**
 
-- `check_design.py` — the mistakes no EDA tool catches, because no EDA format carries the facts:
-  a wake source on a pin that cannot wake the chip, an analogue input on a digital-only pin, two
-  parts on one GPIO (including one pin brought out under two silkscreen names), a serial module
-  on the console UART, and two I²C devices at one address.
 - `check_vendor_pins.py` — re-derives the pin map from the vendor's own `pins_arduino.h`. The only
   tool here that consults something outside both the design and the model.
 - `check_footprints.py` — drill vs the pin that goes in it, annular ring, via class, package vs
   value, cross-pluggable connectors. Counts the holes it could not read rather than skipping them.
 - `check_physics.py` — trace current, capacitor derating, resistor dissipation, I²C rise time.
 - `check_bom.py` — the fab package against the schematic it came from.
-- `check_firmware.py` — every pin the firmware drives against the board and the agreed pin map,
-  matched on GPIO rather than on constant names.
+
 - `compare_design.py` — written rules against the design that was built.
 
 **The libraries and the generators**
@@ -97,8 +90,6 @@ and `copper` is a library, not a command.
   copper is not a pass; a toolchain that cannot build a trivial board is could-not-run, named.
 - `mutate.py` — re-introduces each defect in a table and proves the suite goes red. The
   acceptance bar for every fix (`tests/mutations/`).
-- `findings.py` — the findings store: structural identity, anchor validation, status transitions,
-  and a measurement registry so a finding resting on an unmeasured number says so.
 
 ## Libraries
 
@@ -107,12 +98,6 @@ and `copper` is a library, not a command.
 of the same name wins, so what you verified yourself is never replaced by an update. See
 `boards/README.md` for the schema and for the fact-versus-decision rule that keeps a board file
 swappable.
-
-## Hooks
-
-`hooks/hooks.json` runs `make check` after a design file is edited, if the project has a Makefile
-with a `check` target — so drift between a board, its firmware and its simulation surfaces in
-seconds rather than on the bench.
 
 ## What you install alongside (declared, not bundled)
 

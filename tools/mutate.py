@@ -2,8 +2,8 @@
 """
 Re-introduce each defect and prove the suite goes red.
 
-    mutate.py mutations.json
-    mutate.py mutations.json --root . --tests tests --json
+    tools/mutate.py tests/mutations/<table>.json
+    tools/mutate.py --anchors tests/mutations/*.json      # anchors only, a second
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -46,6 +46,10 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+
+#: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
+SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
+sys.path.insert(0, str(SCRIPTS))
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
 

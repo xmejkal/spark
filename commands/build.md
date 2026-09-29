@@ -105,6 +105,6 @@ build stops on a net with one member. Add the connector to the parts list.
 
 ## After it builds
 
-`/spark:check` for the cheap deterministic pass; the `spark-review` skill for the full gate before
-anything is fabricated. The generated placement is a column that does not overlap — a draft, and
+`check_all.py --project .` for the deterministic checks; the `spark-review` skill for the full
+gate before anything is fabricated. The generated placement is a column that does not overlap — a draft, and
 the file's own header says so.

@@ -99,19 +99,11 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         tmp = Path(tempfile.mkdtemp())
-        board_file = str(ROOT / "boards" / "firebeetle2-esp32s3.json")
-
         no_bom = tmp / "nobom.zip"
         zipfile.ZipFile(no_bom, "w").writestr("readme.txt", "a package with no bill of materials")
 
         cls.cases = {
             # check name: (inputs, the status it must come back with, why)
-            "pin-capability": (
-                {"design": written("adc.design.json", {
-                    "board": "firebeetle2-esp32s3",
-                    "parts": [{"ref": "Sense",
-                               "pins": [{"signal": "SENSE", "pin": "D6", "needs": ["adc"]}]}]})},
-                check_all.PROBLEMS, "an analogue input on a pin with no ADC"),
             "vendor-truth": (
                 {"boards": [written("active.json", {"board": "xiao-esp32-c6"})]},
                 check_all.COULD_NOT_RUN, "a selection file, which carries no vendor header"),
@@ -133,10 +125,6 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
                 {"circuit": written("ok2.json", a_header_drilled_too_small()),
                  "rules": written("rules2.json", {})},
                 check_all.OK, "a real netlist and no rules to break"),
-            "firmware-vs-board": (
-                {"firmware": written("config.py", "PIN_NOWHERE = 99\n"),
-                 "board_file": board_file},
-                check_all.PROBLEMS, "a firmware driving a pin the board does not bring out"),
         }
 
     def test_each_check_answers_what_it_is_given(self):
@@ -265,8 +253,8 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
     def test_an_explicit_flag_beats_the_convention(self):
         root = self._project("dist/board/circuit.json", ".spark/rules.json")
         chosen = written("chosen.json", [])
-        args = argparse.Namespace(project=str(root), circuit=chosen, rules=None, design=None,
-                                  board=None, board_file=None, firmware=None, boards=None,
+        args = argparse.Namespace(project=str(root), circuit=chosen, rules=None,
+                                  boards=None,
                                   package=None, json=False)
         inputs, _, _ = check_all.inputs_for(args)
         self.assertEqual(inputs["circuit"], chosen, "the convention overrode an explicit path")
@@ -425,7 +413,7 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
         # be overruled by it.
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
         args = argparse.Namespace(project=str(root), circuit="dist/car/circuit.json", rules=None,
-                                  design=None, board=None, board_file=None, firmware=None,
+                                  firmware=None,
                                   boards=None, package=None, json=False)
         _, _, ambiguous = check_all.inputs_for(args)
         self.assertNotIn("circuit", ambiguous)
@@ -463,13 +451,10 @@ class ABrokenCheckDoesNotHideTheOthers(unittest.TestCase):
         zipfile.ZipFile(no_bom, "w").writestr("readme.txt", "no bill of materials here")
         results = {r["check"]: r for r in check_all.run({
             "package": str(no_bom),
-            "design": written("exploding.design.json", {
-                "board": "firebeetle2-esp32s3",
-                "parts": [{"ref": "Sense",
-                           "pins": [{"signal": "SENSE", "pin": "D6", "needs": ["adc"]}]}]}),
+            "circuit": written("exploding.json", a_header_drilled_too_small()),
         })}
         self.assertEqual(results["the-order"]["status"], check_all.COULD_NOT_RUN)
-        self.assertEqual(results["pin-capability"]["status"], check_all.PROBLEMS,
+        self.assertEqual(results["buildability"]["status"], check_all.PROBLEMS,
                          "a check that exploded stopped another check from answering")
 
     def test_could_not_run_is_not_the_same_exit_code_as_clean(self):

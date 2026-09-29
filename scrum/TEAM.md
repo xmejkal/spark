@@ -22,12 +22,15 @@ argues with). This test is why the roster is small.
 
 | member | why it is an agent | works on |
 | --- | --- | --- |
-| **`scrum-master`** | isolation — must not be the person doing the work | process, impediments, the awkward questions |
 | **`design-reviewer`** | isolation + restricted tools + fan-out | one design dimension per run, reading only the design |
 | **`hardware-engineer`** | context budget — tscircuit semantics, footprint geometry, netlist shapes | schematics, footprints, the build |
-| **`firmware-engineer`** | context budget — the MicroPython package and its state machine | the bin's firmware, board specs, the simulator scenarios |
-| **`verification-engineer`** | isolation — the author is the worst judge of their own tests | tests, mutation runs, adversarial re-checks |
 | **`parts-researcher`** | fan-out + context budget — pages of datasheet per part | part records, vendor truth, sourcing |
+
+Three agent files ship with the plugin, because three pass the test above. The process roles —
+scrum master, verification, firmware — were agent files too until 2026-09-29 and were cut: nothing
+routed to them, and a plugin user has no use for the way its author works. Those roles are played
+by the main session and by the audit agent spawned at each sprint's end (R3.3), whose report is a
+file in `docs/observations/`.
 
 **Petr** is Product Owner: value and order. **The main session** facilitates, integrates, and is
 the one that says Done.
@@ -45,7 +48,7 @@ itself is contamination, not context.
 
 ## How work reaches a member
 
-The facilitator pulls a PBI from `PRODUCT_BACKLOG.md`, and either does it on the main thread or
+The facilitator pulls a PBI from `PRODUCT_BACKLOG.md` — one that names the design that needs it (W14) — and either does it on the main thread or
 hands it to the member whose discipline it sits in — with the PBI's `Value proven by:` line, so
 the member knows what finishing looks like. Members report; the facilitator integrates, runs the
 Definition of Done, and commits.

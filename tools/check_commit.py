@@ -2,8 +2,8 @@
 """
 The suite and every mutation anchor, on the tree as COMMITTED — not the working tree.
 
-    check_commit.py            # HEAD
-    check_commit.py fd25f15    # any commit
+    tools/check_commit.py            # HEAD
+    tools/check_commit.py fd25f15    # any commit
 
 A commit's message said "Ran 589 tests, OK" while the commit as committed ran 562 FAILED: the
 run was on the working tree, and the file it imported was staged one commit later (sprint-4 close
@@ -16,8 +16,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-SCRIPTS = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPTS))
+#: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
@@ -37,7 +38,7 @@ def measure(tree):
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines()
                   if line.startswith(("Ran ", "OK", "FAILED"))]
     tables = sorted((tree / "tests" / "mutations").glob("*.json"))
-    anchors = subprocess.run([sys.executable, str(tree / "scripts" / "mutate.py"), "--anchors",
+    anchors = subprocess.run([sys.executable, str(tree / "tools" / "mutate.py"), "--anchors",
                               *map(str, tables), "--root", str(tree)],
                              cwd=str(tree), capture_output=True, text=True)
     anchors_said = anchors.stdout.strip().splitlines()[-1:] if anchors.stdout.strip() else ["(no output)"]
@@ -47,7 +48,7 @@ def measure(tree):
 
 def main(argv=None):
     commit = (argv or sys.argv[1:] or ["HEAD"])[0]
-    root = SCRIPTS.parent
+    root = ROOT
     scratch = Path(tempfile.mkdtemp(prefix="spark-commit-"))
     try:
         archive(root, commit, scratch)

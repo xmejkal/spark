@@ -13,8 +13,8 @@ use.
 **Say what is verified and what is not.** A number nobody has confirmed must either say what
 depends on it or not be carried at all. That is how an assumption becomes a fact without anyone
 deciding to promote it — and it has already happened here: a fabricated idle current walked out of
-a document into a live findings store, complete with instrument and date, and sat there looking
-exactly like a reading while the handover note said the number had never been taken.
+a document into a record, complete with instrument and date, and sat there looking exactly like
+a reading while the handover note said the number had never been taken.
 
 So every fact carries `value`, `source`, `verified`, and — when unverified — `why_it_matters`.
 "Nobody knows" is an honest state and must be cheap to record.
