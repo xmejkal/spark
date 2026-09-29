@@ -164,5 +164,51 @@ class TheToolIsHonestAboutItselfTest(unittest.TestCase):
         self.assertIn("missing test", text)
 
 
+
+class AnchorsAreCheckedWithoutRunningTest(unittest.TestCase):
+    """
+    A table's `find` strings go stale when the code moves under them, and a refused mutation
+    guards nothing. `--anchors` says so in a second, so it can run at every commit.
+    """
+
+    def test_a_stale_anchor_is_named_and_nothing_is_run(self):
+        root = tiny_project()
+        wrong = mutate.anchors(root, [BREAK_ADD, dict(BREAK_SUB, find="return a // b")])
+        self.assertEqual([(name, count) for name, _, count in wrong], [("sub adds", 0)])
+
+    def test_anchors_mode_exits_escaped_on_a_stale_table_and_ok_on_a_fresh_one(self):
+        root = tiny_project()
+        fresh = table(root, BREAK_ADD, BREAK_SUB)
+        self.assertEqual(mutate.main(["--anchors", str(fresh), "--root", str(root)]), mutate.EXIT_OK)
+        stale = root / "stale.json"
+        stale.write_text(json.dumps([dict(BREAK_ADD, find="return a ** b")]))
+        self.assertEqual(mutate.main(["--anchors", str(fresh), str(stale), "--root", str(root)]),
+                         mutate.EXIT_ESCAPED)
+
+    def test_a_missing_file_counts_as_an_anchor_matching_nowhere(self):
+        root = tiny_project()
+        wrong = mutate.anchors(root, [dict(BREAK_ADD, file="gone.py")])
+        self.assertEqual(wrong[0][2], 0)
+
+
+class OneRunAtATimeTest(unittest.TestCase):
+    def test_a_second_run_is_refused_while_the_first_holds_the_lock(self):
+        # Two runs overlapped in the background on 2026-09-29, rewriting and restoring the same
+        # files under each other; both reported verdicts neither had earned.
+        root = tiny_project()
+        (root / mutate.LOCK_NAME).write_text("12345")
+        self.assertEqual(mutate.main([str(table(root, BREAK_ADD)), "--root", str(root)]),
+                         mutate.EXIT_COULD_NOT_RUN)
+        with self.assertRaises(mutate.AnotherRunIsActive):
+            mutate.run(root, "tests", [BREAK_ADD])
+
+    def test_the_lock_is_gone_after_a_run_whatever_happened(self):
+        root = tiny_project()
+        mutate.run(root, "tests", [BREAK_ADD])
+        self.assertFalse((root / mutate.LOCK_NAME).exists())
+        with self.assertRaises(KeyError):
+            mutate.run(root, "tests", [{"file": "m.py"}])      # a malformed row raises mid-run
+        self.assertFalse((root / mutate.LOCK_NAME).exists(), "the lock outlived a failed run")
+
 if __name__ == "__main__":
     unittest.main()

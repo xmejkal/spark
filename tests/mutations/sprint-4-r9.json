@@ -2,8 +2,8 @@
  {
   "file": "scripts/design.py",
   "name": "the rails override is never applied",
-  "find": "            if (part_id, instance) in rails:\n                part = on_rails(part, rails[(part_id, instance)])",
-  "replace": "            if False:\n                part = on_rails(part, rails[(part_id, instance)])"
+  "find": "        if (part_id, instance) in rails:\n            part = on_rails(part, rails[(part_id, instance)])",
+  "replace": "        if False:\n            part = on_rails(part, rails[(part_id, instance)])"
  },
  {
   "file": "scripts/design.py",

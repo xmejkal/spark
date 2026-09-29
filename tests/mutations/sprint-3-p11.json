@@ -8,8 +8,8 @@
  {
   "file": "scripts/design.py",
   "name": "project resolved from cwd, not the file (A10)",
-  "find": "        return boards.project_root(Path(path).resolve().parent)",
-  "replace": "        return boards.project_root()"
+  "find": "    return boards.project_or_library(Path(path).resolve().parent)",
+  "replace": "    return boards.project_or_library(Path.cwd())"
  },
  {
   "file": "scripts/design.py",
@@ -44,7 +44,7 @@
  {
   "file": "scripts/check_spine.py",
   "name": "the spine ignores the file's project",
-  "find": "            project = design.project_for(source)\n",
-  "replace": "            project = None\n"
+  "find": "    project = design.project_for(source) if source else None\n",
+  "replace": "    project = None\n"
  }
 ]

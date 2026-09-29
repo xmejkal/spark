@@ -1,7 +1,86 @@
-# Sprint 4 — proposed
+# Sprint 5 — proposed
+
+**Proposed** 2026-09-29, night · **Facilitator** main session · **Product Owner** Petr. The order
+below is a proposal (W11). Sprint 4 is closed below it, with its review.
+
+## Goal (proposed)
+
+> **A generated board is a design someone could build: its own rules are honoured or named as the
+> reader's, its checks do not cry wolf on its own output, and two of its tools never disagree about
+> the same board.**
+
+Why: every item that misled on a documented command is closed (Sprints 3 and 4). What is left in
+the backlog is quality of the design that comes out — `must_not_float` fails spark's own boards
+(P8), `check_design` recommends pins `assign_pins` refuses (P7), and the generated board prints
+each part's `host_requirements` and honours none of them, leaving an H-bridge's inputs floating
+under the warning that says not to (P6).
+
+## Proposed order
+
+| id | item | why here |
+| --- | --- | --- |
+| **P8** | `must_not_float` false-positives on pin-to-pin traces, on spark's own output | a rule that cries wolf is switched off, and then catches nothing |
+| **P7** | `check_design` recommends pins `assign_pins` refuses (BOOT, JTAG straps) | two tools of one product disagreeing about one board |
+| **P6** | `emit_board` honours the mechanical `host_requirements` it prints, or says which are the reader's | every generated motor board leaves the L9110S inputs floating today |
+| **P16** | Lift the bin's wake-polarity check into spark | the one defect no firmware test could see; the bin has the check, spark does not |
+| **P17** | An off-board part is emitted as its header, not its footprint | `on_board: false` is read by nothing |
+| **R2.5** | Third cold test — **PO: one letter, (a), (b) or (c)** — parked with the date if unanswered at the sprint's start (R4.4) | both silent-wrongness classes were found only by building something new |
+| — | Audit at sprint end, before the retro (R4.3) | |
+
+Still parked, the PO's: **P18** evals (run or delete), **P19** findings.py and its fake bench
+(keep, freeze or drop), **R8** parts-research routing, **R10** a link between two designs. Later
+and not misleading today: P2, P5, P9, P10.
+
+## Definition of Done
+
+Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its
+output in the commit, written after the run (W13); `check_spine.py` green; a `mutate.py` table with
+every mutation caught (W3, W12), and `mutate.py --anchors tests/mutations/*.json` clean at every
+commit, one mutate run at a time (R4.5); a "user can" value line proven by a test that follows the
+document (R4.2); both RC boards and the bin's `make check` unchanged or explained.
+
+---
+
+# Sprint 4 — closed 2026-09-29
 
 **Proposed** 2026-09-29 · **Facilitator** main session · **Product Owner** Petr. The order below
-is a proposal (W11); nothing is pulled until he has seen it. Sprint 3 is closed below.
+was a proposal (W11); every non-PO item was done the same day. Sprint 3 is closed below.
+
+### Review — validated value, run at close
+
+On `77af415`, the last item's commit, in one background run with nothing else touching the tree:
+
+```
+python3 -m unittest discover -s tests                 # Ran 603 tests — OK
+for t in tests/mutations/sprint-4-*.json: mutate.py $t
+                                                      # b11, p15, p20, p21, p22, p23, p24, p25, r7:
+                                                      #   every mutation caught, files restored
+                                                      # r9: 0 escaped, 1 REFUSED — its anchor moved
+                                                      #   under P20 (the B8 shape, again)
+python3 scripts/check_spine.py                        # nvm's tsci first on PATH:
+                                                      #   ok build 12 trace(s), 0 errors, tsci 0.0.2600
+                                                      #   ok simulation 10 wire(s) — end to end
+awk … rows by status cell, docs/observations/INDEX.md # acted 83, closed 11, rejected 1, raised 0
+```
+
+**What the review found, and what was done about it before closing.** A refused mutation guards
+nothing, and the morning's audit had found the same for the R6 mutation (B8). So `mutate.py` got
+an `--anchors` mode that checks every table's `find` in a second — and on its first run found two
+more stale anchors, both in the P11 table, both moved by P22 that evening. All three were
+re-anchored. Then a second fault, mine: I started the P11 re-run while the R9 re-run was still
+going in the background, and two runs rewrote and restored `design.py` under each other; both
+printed verdicts neither had earned. The tree was checked clean against HEAD, the tool now
+refuses a second concurrent run (a lock, removed in a `finally`), and both tables were run again
+alone, one after the other:
+
+```
+python3 -m unittest discover -s tests                 # Ran 608 tests — OK (after the tool changes)
+mutate.py tests/mutations/sprint-4-r9.json            # every mutation caught, files restored
+mutate.py tests/mutations/sprint-3-p11.json           # every mutation caught, files restored
+mutate.py --anchors tests/mutations/*.json            # 74 mutation(s) in 16 table(s): every anchor present, once
+```
+
+Retro: **R4**.
 
 ## Goal (proposed)
 

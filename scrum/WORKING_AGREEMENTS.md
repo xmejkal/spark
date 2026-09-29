@@ -117,3 +117,15 @@ test cannot see that" is dropping the test.
 
 **Origin:** R3.1, 2026-09-29. W3 makes the tool report the escape; this says what to do with it.
 
+## W13 — A number enters a message only after its output is read
+
+A count, a hash, a verdict ("the chain runs end to end") goes into a commit message, a backlog
+result or a sprint log only in a later call than the command that produced it, copied from output
+that is on the screen. A value proof in a gated chain asserts the verdict string, never the
+presence of output.
+
+**Origin:** R3.5 said this as a rule about care on the morning of 2026-09-29 and was broken three
+times before nightfall — 533 for 532, "reaches end to end" over "the chain is broken", 12 and 10 for
+11 and 9 — every time by a message composed in the same command as the run. R4.1 makes it a rule
+about sequence, which is the form that held for the rest of the day.
+

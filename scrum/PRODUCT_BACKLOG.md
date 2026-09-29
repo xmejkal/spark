@@ -34,9 +34,23 @@ on it is quality, not existence: the structural question under P1, and the loade
 
 ---
 
-## Sprint 4 — proposed to the PO
+## Sprint 5 — proposed to the PO
+
+See [`SPRINT.md`](SPRINT.md). Goal: **a generated board is a design someone could build.**
+
+| id | item | size |
+| --- | --- | --- |
+| P8 | `must_not_float` false-positives on spark's own output | M |
+| P7 | `check_design` recommends pins `assign_pins` refuses | S |
+| P6 | `emit_board` honours the mechanical host requirements, or says which are the reader's | M |
+| P16 | The bin's wake-polarity check, in spark | M |
+| P17 | An off-board part is emitted as its header | M |
+| R2.5 | Third cold test — **PO chooses the domain** | L |
+
+## Sprint 4 — done 2026-09-29
 
 See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not read its source.**
+Met: every non-PO item done, R7 reopened by the audit and done again as P22.
 
 | id | item | size |
 | --- | --- | --- |

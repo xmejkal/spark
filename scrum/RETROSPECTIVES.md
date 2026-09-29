@@ -171,9 +171,57 @@ not.
 
 | # | change | check that it stuck | result |
 | --- | --- | --- | --- |
-| **R3.1** | A weak fixture is a defect: when a mutation escapes because the fixture cannot see it, the fixture is fixed and the mutation stays. Written as **W12**. | At R4: any mutation removed from a table; escapes listed with their cause | *pending* |
-| **R3.2** | Drain the 42: **P15**, first item of Sprint 4, half a day, time-boxed. Each row reproduced against today's code or `rejected` as superseded, with the commit that made it so. | At R4: `raised` count in `INDEX.md`; `rejected` > 0 | *pending* |
-| **R3.3** | An outside read CLOSES every sprint: the audit agent runs at sprint end, its claims go through `INDEX.md` before anything is acted on (W9). | At R4: the Sprint 4 report file exists and its rows are in `INDEX.md` | *pending* |
-| **R3.4** | Ask the PO the R2.5 question so it is one word: three concrete domains in `SPRINT.md`. | At R4: a domain chosen, or the item explicitly parked by the PO | *pending* |
-| **R3.5** | No summary before its count: a "N rows/tests/items" claim in a record is written from a command run that day, and the command is beside it. | At R4: count the numeric claims in `SPRINT.md` that carry their command | *pending* |
+| **R3.1** | A weak fixture is a defect: when a mutation escapes because the fixture cannot see it, the fixture is fixed and the mutation stays. Written as **W12**. | At R4: any mutation removed from a table; escapes listed with their cause | **stuck.** No mutation removed for want of a test. Five escapes this sprint — R9, P22 (twice), P24, P25 — four of them the fixture-cannot-see shape, each fixed by strengthening the fixture; the fifth (P25) was a mutation that changed no behaviour, and the dead guard it exposed was removed with the reason written down |
+| **R3.2** | Drain the 42: **P15**, first item of Sprint 4, half a day, time-boxed. Each row reproduced against today's code or `rejected` as superseded, with the commit that made it so. | At R4: `raised` count in `INDEX.md`; `rejected` > 0 | **stuck.** Rows by status cell at the close: 0 `raised` (the audit's twenty were drained the same evening), 1 `rejected`, 11 `closed`, the rest `acted` |
+| **R3.3** | An outside read CLOSES every sprint: the audit agent runs at sprint end, its claims go through `INDEX.md` before anything is acted on (W9). | At R4: the Sprint 4 report file exists and its rows are in `INDEX.md` | **stuck.** The sprint-4 audit (B1–B20) closed Sprint 4's first half and a second audit closes the whole; both went through `INDEX.md` before anything was acted on |
+| **R3.4** | Ask the PO the R2.5 question so it is one word: three concrete domains in `SPRINT.md`. | At R4: a domain chosen, or the item explicitly parked by the PO | **asked, unanswered.** Three domains in `SPRINT.md` since the evening of 09-29; no reply from the PO in this session. Not started, as the item says |
+| **R3.5** | No summary before its count: a "N rows/tests/items" claim in a record is written from a command run that day, and the command is beside it. | At R4: count the numeric claims in `SPRINT.md` that carry their command | **did not stick as written; stuck once mechanical.** Three P15 counts were made by eye after R3.5 (B12/B13) and two commit messages carried numbers composed in the same command as their run. Since the rule became "a number enters a message only in a later call than the run" (`25e585d`), every number in P20–P25's commits was read from output first — the audit's own check on those commits is R4's evidence |
+
+
+---
+
+## R4 — 2026-09-29, night, on Sprint 4
+
+**Present:** facilitator. The sprint-4 audit (B1–B20) read the first half cold; a closing audit
+reads the whole and its claims go through `INDEX.md` before R5.
+
+### What happened
+
+Nine items in one evening — P15, R7, R9, P20–P25 — each mutation-tested, and a mid-sprint audit
+that reopened one of them: R7 had been called DONE on the strength of the one command while the
+documented steps could not be followed from a fresh directory. The stranger test is a test now.
+
+### What went well, with evidence
+
+- **The outside read did what it is for, again.** Twenty claims, none rejected; the first
+  documented step crashed on the documented input (B1) and a named I2C part left its bus with
+  exit 0 (B2) — neither visible from inside the work.
+- **W12 held five times.** Every escape this sprint was a fixture that could not see the defect,
+  and every one was fixed by strengthening the fixture: three LEDs that never reached the tie, a
+  mention in prose that satisfied a name test, a regex that read the prose between code blocks, a
+  JSON status a test accepted either way. One "escape" was a mutation of dead code; the code went.
+- **Measure before fixing, again.** The library-fallback note broke the spine's own reference run
+  until it was made to fire only when fallen into, not asked for; the contention rule flagged
+  every design with an inlet until ground was excluded — both found by the existing tests, both
+  turned into a sentence in the code.
+
+### What did not
+
+- **R3.5 failed three more times after it was written**, and stopped failing only when it became
+  mechanical. A rule about care does not survive the next hour; a rule about sequence does.
+- **A DONE that a stranger could not reproduce.** R7's proof was the one command run by the person
+  who knew the scripts; the documented steps were never followed from nowhere. The value line said
+  "a user following the documented flow"; the proof was not that.
+- **The PO question has waited a day.** R2.5's domain, P18, P19 — asked concretely, answered by
+  nobody, because nobody was asked in a way that requires an answer.
+
+### Actions
+
+| # | change | check that it stuck | result |
+| --- | --- | --- | --- |
+| **R4.1** | R3.5 in its mechanical form becomes **W13**: a number or a verdict enters a commit message or a record only in a later call than the command that produced it. | At R5: an audit compares every number in the sprint's commit messages with the runs they cite — zero mismatches | *pending* |
+| **R4.2** | An item whose value line says "a user can …" is proven by a test that follows the document from nowhere (`AStrangerCanBuildTest` is the pattern), never by a name check. | At R5: any such item DONE without one | *pending* |
+| **R4.3** | The closing audit is spawned before the retro is written, on the committed HEAD, and the retro cites its report. | At R5: R5 names the Sprint 5 audit's file | *pending* |
+| **R4.4** | The PO question is put once more, in the checkpoint summary, as a question that takes one letter; if unanswered by the next sprint's start, the sprint is planned without the cold test and the item stays parked, visibly. | At R5: the item is either answered or parked with the date | *pending* |
+| **R4.5** | A refused mutation guards nothing, and three were found refused at this close (R9 by the review, two in P11 by the new `--anchors` mode). `mutate.py --anchors tests/mutations/*.json` runs at every commit (DoD), and the tool refuses a second concurrent run — two overlapped tonight and both verdicts were worthless. | At R5: any table refused at the close; any overlapping runs (the lock says) | *pending* |
 

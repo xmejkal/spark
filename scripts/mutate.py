@@ -87,8 +87,52 @@ def apply(root, mutation):
     return original, None
 
 
+def anchors(root, mutations):
+    """
+    Every mutation whose `find` does not occur exactly once — checked without running anything.
+
+    A table is written against the code of its day and a later change moves the code under it:
+    the mutation for the R6 escape was REFUSED for four days after P11 moved its anchor and
+    nothing noticed until an audit ran the table (B8); the R9 table was refused three commits
+    after it was written, when P20 re-indented the loop it anchored to. A refused mutation
+    guards nothing. Anchors take a second to check; the suite takes minutes per table, so this is
+    what runs at every commit and the full run is what runs per item and at the sprint's close.
+    """
+    wrong = []
+    for mutation in mutations:
+        path = root / mutation["file"]
+        count = path.read_text().count(mutation["find"]) if path.is_file() else 0
+        if count != 1:
+            wrong.append((mutation.get("name", mutation["find"]), mutation["file"], count))
+    return wrong
+
+
+#: Two runs at once rewrite and restore the same files under each other, and both then report
+#: verdicts neither earned — which happened, on 2026-09-29, when an R9 run and a P11 run
+#: overlapped in the background. The lock is the tool refusing to produce a verdict it cannot
+#: trust; it is removed in a `finally`, and a stale one left by a killed run says how to clear it.
+LOCK_NAME = ".mutate.lock"
+
+
+class AnotherRunIsActive(Exception):
+    """A lock is held: some other mutate run is rewriting these files right now."""
+
+
 def run(root, tests, mutations):
     """Every mutation, each restored before the next, and the suite confirmed green at the end."""
+    lock = root / LOCK_NAME
+    if lock.exists():
+        raise AnotherRunIsActive("%s exists: another run is rewriting these files, or a killed "
+                                 "one left its lock. Wait for it, or remove the lock once you "
+                                 "are sure and check `git status` for a mutated file" % lock)
+    lock.write_text(str(__import__("os").getpid()))
+    try:
+        return _run(root, tests, mutations)
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def _run(root, tests, mutations):
     results = []
     for mutation in mutations:
         path = root / mutation["file"]
@@ -139,24 +183,46 @@ def render(results, restored, code):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    parser.add_argument("table", help="a JSON list of {file, find, replace, name?}")
+    parser.add_argument("table", nargs="+", help="JSON lists of {file, find, replace, name?}")
+    parser.add_argument("--anchors", action="store_true",
+                        help="only check that every `find` occurs exactly once; run nothing")
     parser.add_argument("--root", default=".", help="the project root the files are under")
     parser.add_argument("--tests", default="tests", help="the test directory, relative to root")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
-    try:
-        mutations = json.loads(Path(args.table).read_text())
-    except (OSError, ValueError) as broken:
-        print("could not read the table: %s" % broken, file=sys.stderr)
+    mutations = []
+    for table in args.table:
+        try:
+            mutations += json.loads(Path(table).read_text())
+        except (OSError, ValueError) as broken:
+            print("could not read the table %s: %s" % (table, broken), file=sys.stderr)
+            return EXIT_COULD_NOT_RUN
+
+    if args.anchors:
+        wrong = anchors(root, mutations)
+        for name, file, count in wrong:
+            print("  [refused] %s — `find` occurs %d time(s) in %s" % (name, count, file))
+        print("  %d mutation(s) in %d table(s): %s" % (
+            len(mutations), len(args.table),
+            "every anchor present, once" if not wrong else "%d would be refused" % len(wrong)))
+        return EXIT_ESCAPED if wrong else EXIT_OK
+
+    if (root / LOCK_NAME).exists():
+        print("another mutate run holds %s; two at once rewrite the same files under each "
+              "other and neither verdict can be trusted" % (root / LOCK_NAME), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     if not suite_is_green(root, args.tests):
         print("the suite is not green BEFORE any mutation; a red suite catches nothing",
               file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
-    results, restored = run(root, args.tests, mutations)
+    try:
+        results, restored = run(root, args.tests, mutations)
+    except AnotherRunIsActive as held:
+        print(str(held), file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
     code = verdict(results, restored)
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,
