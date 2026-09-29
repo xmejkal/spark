@@ -349,6 +349,35 @@ The mechanism you are told to use to record what you verified turns off the chec
 **Value proven by:** a project with a board override still gets a `vendor-truth` verdict, against
 the override.
 
+### P16 — Lift the bin's wake-polarity check into spark
+The bin's `tools/circuit-to-wokwi/lib/checks/wake-polarity.ts` (B3) compares the rail a wake
+button is tied to against the level the firmware arms for — the one defect no firmware test could
+catch, because every test derives from the constant it checks. spark has no such check (intake
+R15) while the board file records the constraint at length.
+**Value proven by:** `check_all` on the bin reporting the polarity agreement, and a deliberately
+flipped `WAKE_ON_HIGH` reported as a problem.
+
+### P17 — An off-board part is emitted as its header, not its footprint
+`on_board: false` is in the VL6180X record and read by nothing (intake R18): the sensor that
+sits on a lead was placed on the PCB. The bin's hand-drawn board does it right — a `SensorHeader`
+where the module would be.
+**Value proven by:** the reference design's rangefinder emitted as a header carrying its pins,
+the module's footprint nowhere on the board.
+
+### P18 — evals: run them or delete them **[PO]**
+`evals/` holds four cases last run 2026-09-24, results gitignored (intake O7, O9, S11); the plan's
+verification of the reviewer roster rests on them. Running them costs model calls; keeping them
+unrun costs honesty. Not obvious, so not decided here.
+
+### P19 — findings.py and its fake bench: keep, freeze or drop **[PO]**
+1,856 lines and zero resolved findings ever (intake O5, S12); `bench_sim.py` exists only to feed
+its tests and prints "what it can pretend to measure" (M6, S13). The plan's review loop (B1–B4)
+is built on it. Either that loop gets built on it soon or both go.
+
+### ~~P15 — Drain the intake~~ — **DONE `f35e7df` + this change**
+43 rows: 40 resolved by what today's code demonstrably does, 3 reproduced live and fixed (M3, R13,
+R20), 1 rejected on reproduction (R19). Four items came out: P16, P17, P18 [PO], P19 [PO].
+
 ---
 
 ## The bin — competing work, and when it is justified

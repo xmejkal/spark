@@ -18,7 +18,7 @@ retros in a row say the intake has not drained (R3.2).
 
 | id | item | why here |
 | --- | --- | --- |
-| **P15** | Drain the intake: 43 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | R2.4 failed twice; half a day, time-boxed (R3.2) |
+| ~~P15~~ | Drain the intake: 43 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | **done** the same evening, `f35e7df`: 40 resolved, 3 fixed, 1 rejected, 4 new items |
 | **R7** | The generator chain named by a skill, a command and an agent [G13] | the usability gap: the chain exists and nothing routes to it |
 | **R9** | A rail belongs to the design, not the part [G5] | one line in a requirements file instead of a copied record |
 | **R2.5** | Third cold test — **PO: choose a domain** (below) | both silent-wrongness classes were found only by building something new |
@@ -36,6 +36,16 @@ car, which is the point:
   (MOSFET/relay driver) spark has never seen.
 
 (c) exercises the most that is new; (a) the most that exists. Not started until chosen.
+
+## Daily log
+
+### 2026-09-29, evening
+
+**P15 done** — pulled ahead of the PO's ordering because two retros mandated it (R2.4, R3.2) and
+it decides nothing about the product. `grep -c '\`raised\`' docs/observations/INDEX.md` → 1
+(the legend line and one row that quotes the word). Three rows were still true and are fixed in
+`f35e7df`; R19 is the first `rejected` row the table has ever had. Four items came out, two of them
+the PO's.
 
 ## Definition of Done
 
