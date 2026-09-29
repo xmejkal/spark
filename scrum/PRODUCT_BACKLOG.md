@@ -68,8 +68,12 @@ are the reader's.
 **Needed by:** every generated board at review — `check_all` on the reference design reports
 `L9110sModule.AIA: connects to nothing` on a trace that exists. A rule that cries wolf is switched
 off, and then catches nothing.
+Reproduced a third time on 2026-09-29, night, on the irrigation controller: four valve inputs
+declared `must_not_float`, four traces in the built `circuit.json` touching them, four findings
+"connects to nothing" — and the finding names neither component nor pin (irrigation diary I10),
+so the list cannot even be acted on by hand.
 **Value proven by:** `check_all` on the generated reference design reports no `must_not_float`
-finding, while a genuinely floating input still does.
+finding, while a genuinely floating input still does — and a finding names its component and pin.
 
 ### P10 — A project's own board file must not switch `vendor-truth` off
 **Needed by:** any project whose board is its own file rather than the library's — the mechanism
