@@ -38,6 +38,7 @@ confirm it is reading a field that exists before believing it.
 python3 scripts/parts.py --list                      # what exists; write a record for what does not
 python3 scripts/assign_pins.py requirements.json     # a pin per signal, with the reason
 python3 scripts/emit_board.py requirements.json > board.tsx
+python3 scripts/emit_footprint.py --board <id> -o <Footprint>.tsx   # what board.tsx imports
 python3 scripts/check_spine.py requirements.json     # idea -> ... -> simulation, or the stage that stopped
 ```
 

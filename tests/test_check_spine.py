@@ -421,5 +421,21 @@ class AConverterLimitIsNotADesignFaultTest(unittest.TestCase):
         self.assertFalse(check_spine.simulation_could_not_look(""))
         self.assertFalse(check_spine.simulation_could_not_look(None))
 
+
+class AFileInNoProjectIsSaidToBeTest(unittest.TestCase):
+    def test_the_board_stage_says_the_design_came_from_the_library(self):
+        # P22: from nowhere the spine builds from the plugin's library; that is a fact about how
+        # the design was resolved, said on the board stage — never a `!!` note about the design.
+        # The reference design, which sources its own rails: a driver alone would earn a real
+        # `!!` note about an unsourced motor rail, which is the design's and not this test's.
+        workdir = Path(tempfile.mkdtemp())
+        requirements = dict(check_spine.REFERENCE)
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
+            stages = check_spine.run(requirements, workdir, from_library=True)
+        self.assertIn("plugin's library", stages[0].detail)
+        self.assertEqual(stages[0].status, check_spine.OK)
+        self.assertNotIn("schematic-notes", [s.name for s in stages])
+
 if __name__ == "__main__":
     unittest.main()

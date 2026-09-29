@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds and simulates, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
 ---
 
 # spark:build
@@ -38,7 +38,10 @@ somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
 *assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
 
-The project is found up from the requirements file's own directory, so this works from anywhere.
+The project is found up from the requirements file's own directory, so this works from anywhere —
+and from nowhere: a file inside no project is built from the plugin's own library, with no rules,
+and every command says so. `/spark:init` in a directory makes it a project, which is where a
+design's own parts, boards and rules live.
 
 ## The one command
 
@@ -72,7 +75,13 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list                       # what exist
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per signal, with the reason
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx
+${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board firebeetle2-esp32s3 -o FireBeetle2Esp32S3.tsx
+npx tsci build board.tsx                                            # needs tscircuit; the one command does this in a temp dir
 ```
+
+The board file imports `./FireBeetle2Esp32S3` — the footprint `emit_footprint.py` writes from
+the board file's measured geometry; without that step `tsci build` stops at the import. The
+one command writes it for you.
 
 `assign_pins` spends scarce pins last — wake-capable, ADC1, the SPI and I2C pins — and prints why
 each signal landed where it did. `emit_board` writes tscircuit you can build and check; the file

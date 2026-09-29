@@ -186,7 +186,7 @@ def main(argv=None):
     # around, and outside the try that escaped `main` as a traceback — so a caller asking for an
     # exit code got an exception instead, and whoever called it reported the crash as a verdict.
     try:
-        project = Path(args.project) if args.project else boards.project_root()
+        project = Path(args.project) if args.project else boards.project_or_library()
         board = boards.load(project, args.board)
     except Exception as exc:  # noqa: BLE001 — the message is the product
         return _report(args, EXIT_COULD_NOT_RUN, "no board to generate from: %s" % exc)

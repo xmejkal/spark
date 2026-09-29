@@ -379,6 +379,8 @@ def main(argv=None):
         print("could not load the design: %s" % broken)
         return EXIT_COULD_NOT_RUN
     board = loaded.board
+    if not args.project and design_library.is_library(loaded.project):
+        print(design_library.LIBRARY_NOTE)
 
     try:
         assignments, leftover = assign(board, loaded.signals)

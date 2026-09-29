@@ -129,6 +129,26 @@ def project_root(start: Path = None) -> Path:
         f"or {SPARK_DIR}/")
 
 
+#: The plugin's own root: what a design in no project is built from — its shipped boards and
+#: parts, and no rules. Every command that reads may fall back to it; `--resolve`, which writes,
+#: never does, because writing a stranger's resolved board into the plugin is not a fallback.
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+
+
+def project_or_library(start: Path = None) -> Path:
+    """
+    The nearest project up from `start`, or the plugin's own root when there is none.
+
+    Every script raised "no project here" from a fresh directory while `check_spine` alone fell
+    back to the library, so the documented steps could not be followed from nowhere (sprint-4
+    audit B5). Callers say so when they land on the library — see `design.is_library`.
+    """
+    try:
+        return project_root(start)
+    except BoardError:
+        return PLUGIN_ROOT
+
+
 def _read_json(path: Path, what: str) -> dict:
     if not path.is_file():
         raise BoardError(f"no {what} at {path}")
@@ -416,7 +436,9 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        project = Path(args.project).resolve() if args.project else project_root()
+        # Reading modes may fall back to the plugin's library; the one writing mode may not.
+        project = (Path(args.project).resolve() if args.project
+                   else project_root() if args.resolve else project_or_library())
         if args.path:
             print(definition_path(project))
         elif args.resolve:
@@ -430,7 +452,10 @@ def main(argv=None) -> int:
         elif args.get:
             print(get(project, args.get))
         elif args.list:
-            current = active_id(project)
+            try:
+                current = active_id(project)
+            except BoardError:
+                current = None          # nothing chosen — the library, or a project before init
             for board_id in available(project):
                 where = "library" if definition_path(project, board_id).parent == LIBRARY \
                     else "project"

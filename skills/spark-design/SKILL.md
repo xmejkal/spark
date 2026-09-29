@@ -55,12 +55,17 @@ a rule checklist in the loop. Follow it.
      It REFUSES rather than guess: no footprint, no pin order, no measured outline
      (`--assume-missing-sizes` proceeds with the guess declared in the file), two components of one
      name. The file says what it invented and what it could not size.
+   - `${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board <id> -o <Footprint>.tsx` — the
+     footprint the board file imports on its first line, from the board file's measured geometry.
+     `npx tsci build board.tsx` stops at that import until it exists.
    - `${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json` — the whole chain,
      `idea → parts → pin map → schematic → footprint → build → simulation`, and the stage that
      stopped it. `????` is could-not-run and never a pass; `!!` is a defect in the design.
 
-   The project is found up from the requirements file, so this works from anywhere. `/spark:build`
-   is the same thing as a command.
+   The project is found up from the requirements file, so this works from anywhere — and from
+   nowhere: a file inside no project is built from the plugin's library, with no rules, and the
+   commands say so; `/spark:init` makes a directory a project. `/spark:build` is the same thing
+   as a command.
 
 4. **Apply the design rules the generator cannot.** Read `references/design-rules.md` and check
    the design against it — decoupling at every IC power pin, bulk cap near high-current loads, I2C

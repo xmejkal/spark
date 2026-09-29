@@ -75,14 +75,23 @@ def project_for(path, project=None):
 
     `--project` wins. Otherwise the nearest project UP FROM THE FILE — a design lives with its
     parts and its rules, and it does not stop belonging to them when the command is typed from
-    `/tmp`.
+    `/tmp`. A file inside no project at all is built from the plugin's own library (no rules),
+    the way `check_spine` always did; the callers say so (`LIBRARY_NOTE`).
     """
     if project:
         return Path(project).resolve()
-    try:
-        return boards.project_root(Path(path).resolve().parent)
-    except boards.BoardError as broken:
-        raise DesignError(str(broken)) from broken
+    return boards.project_or_library(Path(path).resolve().parent)
+
+
+def is_library(project):
+    """Whether a design was resolved to the plugin's own root, for want of a project around it."""
+    return Path(project).resolve() == boards.PLUGIN_ROOT
+
+
+#: What the two mains say when a design was built from nowhere. One sentence, one place.
+LIBRARY_NOTE = ("note: no project up from the requirements file, so parts and boards come from "
+                "the plugin's library and there are no rules — `/spark:init` in a directory "
+                "makes it a project")
 
 
 def requested_parts(wanted):

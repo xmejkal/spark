@@ -241,7 +241,7 @@ def components_not_on_ground(circuit):
     return sorted(names.get(owner, "?") for owner in present - grounded)
 
 
-def run(requirements, workdir, toolchain=None, project=None):
+def run(requirements, workdir, toolchain=None, project=None, from_library=False):
     """
     Every stage, in order, stopping at the first that cannot produce input for the next.
 
@@ -259,7 +259,9 @@ def run(requirements, workdir, toolchain=None, project=None):
         board = boards.load(project, requirements.get("board"))
     except Exception as exc:  # noqa: BLE001
         return stages + [Stage("board", COULD_NOT_RUN, str(exc))]
-    stages.append(Stage("board", OK, board["name"]))
+    stages.append(Stage("board", OK, board["name"] + (
+        " — from the plugin's library; no project up from the requirements file, so no rules"
+        if from_library else "")))
 
     # Nothing to build is not a pass. An empty parts list came out `ok` end to end — two traces
     # (the processor's own ground and 3.3 V) and two wires — which proves nothing about the chain
@@ -431,12 +433,9 @@ def main(argv=None):
         requirements = design.read(source) if source else dict(REFERENCE)
     except design.DesignError as broken:
         return report([Stage("requirements", COULD_NOT_RUN, str(broken))], args)
-    project = None
-    if source:
-        try:
-            project = design.project_for(source)
-        except design.DesignError:
-            project = None
+    # A file in no project is built from the plugin's library, and the board stage says so.
+    project = design.project_for(source) if source else None
+    from_library = bool(source) and design.is_library(project)
 
     workdir = Path(tempfile.mkdtemp(prefix="spark-spine-"))
     (workdir / "requirements.json").write_text(json.dumps(requirements))
@@ -447,7 +446,7 @@ def main(argv=None):
         os.symlink(modules, workdir / "node_modules")
 
     try:
-        stages = run(requirements, workdir, toolchain, project)
+        stages = run(requirements, workdir, toolchain, project, from_library)
     except subprocess.TimeoutExpired:
         stages = [Stage("build", COULD_NOT_RUN,
                         "the build did not finish in %ds" % BUILD_TIMEOUT_S)]

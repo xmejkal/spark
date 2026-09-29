@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 #: The chain, in order. A document that routes to the chain names every link.
-CHAIN = ("parts.py", "assign_pins.py", "emit_board.py", "check_spine.py")
+CHAIN = ("parts.py", "assign_pins.py", "emit_board.py", "emit_footprint.py", "check_spine.py")
 
 BUILD_COMMAND = ROOT / "commands" / "build.md"
 DESIGN_SKILL = ROOT / "skills" / "spark-design" / "SKILL.md"
@@ -34,20 +34,38 @@ def allowed_scripts(command_path):
 
 
 class TheDocumentedFlowNamesTheChainTest(unittest.TestCase):
-    def test_the_build_command_exists_and_may_run_the_spine(self):
+    def test_the_build_command_exists_and_may_run_every_link(self):
         self.assertTrue(BUILD_COMMAND.is_file(), "no /spark:build command")
-        self.assertIn("check_spine.py", allowed_scripts(BUILD_COMMAND))
-        self.assertIn("emit_board.py", allowed_scripts(BUILD_COMMAND))
+        missing = sorted(set(CHAIN) - allowed_scripts(BUILD_COMMAND))
+        self.assertEqual(missing, [], "/spark:build may not run: %s" % missing)
 
-    def test_the_design_skill_names_every_link(self):
-        text = DESIGN_SKILL.read_text()
-        missing = [script for script in CHAIN if script not in text]
-        self.assertEqual(missing, [], "spark-design never names: %s" % missing)
+    def test_both_documents_name_every_link(self):
+        # The command is the first thing a user reads, the skill the second; a link either one
+        # forgets is a step the user takes with outside knowledge. The footprint step vanished
+        # from the command and the suite stayed green while only the skill was held to this.
+        for document in (BUILD_COMMAND, DESIGN_SKILL):
+            text = document.read_text()
+            missing = [script for script in CHAIN if script not in text]
+            self.assertEqual(missing, [], "%s never names: %s" % (document.name, missing))
 
     def test_the_design_skill_does_not_start_with_a_hand_written_board(self):
         # The generator comes before any instruction to write tscircuit by hand.
         text = DESIGN_SKILL.read_text()
         self.assertLess(text.index("emit_board.py"), text.index("<chip>"))
+
+    def test_the_command_shows_each_link_being_typed(self):
+        # A mention is not a step. With the footprint line removed from the steps block, the
+        # name survived in the prose and the frontmatter and the name test stayed green (W12).
+        # What the user types is what the code blocks show, so every link must be typed there.
+        # Split on fence lines: the odd segments are inside a fence. (A regex pairing "```\n"
+        # with the next "```" paired each block's closer with the next opener and read the prose
+        # between blocks instead — every link came back missing on the real file.)
+        segments = re.split(r"^```.*$", BUILD_COMMAND.read_text(), flags=re.M)
+        blocks = segments[1::2]
+        self.assertGreater(len(blocks), 1, "the command document has lost its code blocks")
+        typed = set(re.findall(r"scripts/([a-z_]+\.py)", "\n".join(blocks)))
+        missing = sorted(set(CHAIN) - typed)
+        self.assertEqual(missing, [], "/spark:build never shows these being typed: %s" % missing)
 
     def test_the_hardware_engineer_runs_the_chain(self):
         text = HARDWARE_AGENT.read_text()
@@ -121,6 +139,53 @@ class TheDocumentedExampleRunsTest(unittest.TestCase):
         self.assertEqual(names, ["board", "schematic", "footprint", "build"], names)
         self.assertEqual([s.status for s in stages[:-1]], [check_spine.OK] * 3)
         self.assertEqual(stages[-1].status, check_spine.COULD_NOT_RUN)   # no tsci offered here
+
+
+class AStrangerCanBuildTest(unittest.TestCase):
+    """
+    The audit followed /spark:build's documented steps from a fresh directory and reached no
+    build (B5, B6, B19): every script refused "no project here", and the board file imported a
+    footprint no document said how to write. This runs the documented steps, as documented, from
+    a directory that holds nothing but the requirements file. The tsci build itself needs
+    tscircuit and stays a manual proof, gated on its verdict.
+    """
+
+    def setUp(self):
+        import json
+        import tempfile
+        self.here = Path(tempfile.mkdtemp())
+        example = json.loads(re.search(r"```json\n(.*?)```", BUILD_COMMAND.read_text(), re.S).group(1))
+        (self.here / "requirements.json").write_text(json.dumps(example))
+
+    def run_step(self, *argv):
+        import subprocess
+        script = ROOT / "scripts" / argv[0]
+        result = subprocess.run([sys.executable, str(script), *argv[1:]], cwd=str(self.here),
+                                capture_output=True, text=True)
+        return result.returncode, result.stdout, result.stderr
+
+    def test_the_library_is_listed_from_nowhere(self):
+        code, out, err = self.run_step("boards.py", "--list")
+        self.assertEqual(code, 0, err)
+        self.assertIn("firebeetle2-esp32s3", out)
+        code, out, err = self.run_step("parts.py", "--list")
+        self.assertEqual(code, 0, err)
+        self.assertIn("l9110s-module", out)
+
+    def test_the_documented_steps_produce_a_board_file_and_its_footprint(self):
+        code, out, err = self.run_step("assign_pins.py", "requirements.json")
+        self.assertEqual(code, 0, err + out)
+        self.assertIn("MOTOR_IA", out)
+        code, board, err = self.run_step("emit_board.py", "requirements.json")
+        self.assertEqual(code, 0, err)
+        self.assertIn("<board", board)
+        self.assertIn("plugin's library", err, "a design built from nowhere is told so")
+        (self.here / "board.tsx").write_text(board)
+        code, _, err = self.run_step("emit_footprint.py", "--board", "firebeetle2-esp32s3",
+                                     "-o", "FireBeetle2Esp32S3.tsx")
+        self.assertEqual(code, 0, err)
+        self.assertTrue((self.here / "FireBeetle2Esp32S3.tsx").is_file())
+        self.assertIn('from "./FireBeetle2Esp32S3"', board)
 
 if __name__ == "__main__":
     unittest.main()

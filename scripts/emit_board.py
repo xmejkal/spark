@@ -636,6 +636,11 @@ def main(argv=None):
     try:
         design = design_library.load(args.requirements, args.project, args.board)
         board, part_list = design.board, design.parts
+        # Said only when the library was fallen into, not asked for: `check_spine` passes
+        # `--project` to build the reference design from it on purpose, and it reads every
+        # line here as a note about the design.
+        if not args.project and design_library.is_library(design.project):
+            print(design_library.LIBRARY_NOTE, file=sys.stderr)
         # The signals are the loader's — derived once, named per instance — so `assign_pins.py`
         # and this file cannot disagree about which signals a design has.
         assignments, _ = assign_pins.assign(board, design.signals)

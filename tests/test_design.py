@@ -100,12 +100,22 @@ class TheProjectIsTheFilesTest(unittest.TestCase):
         with elsewhere():
             self.assertEqual(design.project_for(path), root.resolve())
 
-    def test_a_file_in_no_project_is_a_sentence(self):
+    def test_a_file_in_no_project_is_built_from_the_plugins_library(self):
+        # The decision changed 2026-09-29 (audit B5): this raised, and every documented step
+        # refused "no project here" from a fresh directory while `check_spine` alone fell back.
         path = Path(tempfile.mkdtemp()) / "loose.json"
         path.write_text("{}")
         with elsewhere():
-            with self.assertRaises(design.DesignError):
-                design.project_for(path)
+            project = design.project_for(path)
+        self.assertTrue(design.is_library(project))
+        self.assertFalse(design.is_library(tempfile.mkdtemp()))
+
+    def test_a_design_from_nowhere_has_no_rules(self):
+        path = Path(tempfile.mkdtemp()) / "loose.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
+        loaded = design.load(path)
+        self.assertTrue(design.is_library(loaded.project))
+        self.assertEqual(loaded.rules, {})
 
 
 class LoadingTest(unittest.TestCase):
