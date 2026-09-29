@@ -41,7 +41,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark reports what it did and nothing less
 | id | item | size |
 | --- | --- | --- |
 | ~~P11~~ | A design is loaded once, in one place, and `main()` is tested — **done `0c21ef5`** | M |
-| P12 | The spine tells a toolchain fault from a design fault | S |
+| ~~P12~~ | The spine tells a toolchain fault from a design fault — **done `c4d0582`** | S |
 | P13 | Sibling scripts are imported, not loaded by path | S |
 | P14 | `emit_board` says each thing once | M |
 
@@ -176,7 +176,7 @@ change. Two decisions changed with their tests: an unreadable rules file is an e
 unreadable requirements file no longer empties the placeholder list for a whole project. Eight
 mutations caught, 505 tests.
 
-### P12 — The spine tells a toolchain fault from a design fault
+### ~~P12 — The spine tells a toolchain fault from a design fault~~ — **DONE `c4d0582`**
 With nvm's global `tsci 0.0.2600` first on PATH, `check_spine.py` from the spark directory says
 `[!!] build — no circuit.json was produced … Cannot find package 'react'` and **"the chain is
 broken", exit 1** — a toolchain that cannot build anything, reported as a defect in the design.
@@ -187,6 +187,13 @@ if that fails too, the stage is `could-not-run`, naming the tsci path and versio
 on the happy path.
 **Value proven by:** the same A/B — global tsci first on PATH → `????  build`, exit 2, the tsci
 named; project tsci → `ok`. Mutation: the preflight removed.
+
+**Result — better than asked, because the cause was ours.** Measured first: the global tsci builds
+a trivial board on its own and fails only with the Node prefix linked as `node_modules`, which is
+what the spine did (`toolchain.parent.parent` is a `node_modules` only for a project-local
+install). Now only a project's own modules are linked, and the A/B reads `ok` / `ok` with the
+version named — `tsci 0.0.2600` and `0.0.2621`. The preflight exists for a tool that really cannot
+build, driven with a fake tsci in tests. Four mutations caught, 511 tests.
 
 ### P13 — Sibling scripts are imported, not loaded by path
 `check_all.load()` (eleven sites) and `check_physics._sibling` import siblings with `importlib`

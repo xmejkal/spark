@@ -18,8 +18,8 @@ gap, and a gap does not lie.
 | id | item | state | why this order |
 | --- | --- | --- | --- |
 | ~~P11~~ | One `design.load()`; `main()` tested | **done `0c21ef5`** | the live defect, and four more audit claims with the same cause |
-| **P12** | Toolchain fault ≠ design fault | **next** | a wrong verdict class; small |
-| **P13** | Plain imports | after P12 | two `PartError` classes in one process is a miss waiting to happen |
+| ~~P12~~ | Toolchain fault ≠ design fault | **done `c4d0582`** | a wrong verdict class; small |
+| **P13** | Plain imports | **next** | two `PartError` classes in one process is a miss waiting to happen |
 | **P14** | `emit_board` says each thing once | last | a refactor, and it lands on the code P11 just touched |
 
 W6: one at a time. **Not pulled:** R2.5, the third cold test — the PO chooses the domain.
@@ -55,6 +55,11 @@ written (R1.2). **Forty-three older `raised` rows remain; R2.4 is not done.** Fo
 more instance of the class turned up on the way — the converter looked for from `cwd` — and
 went in the same change. Two decisions changed with their tests (W4 the right way round): an
 unreadable rules file is an error, and a project's placeholder list survives one broken file.
+
+**P12 done** (`c4d0582`). Measure-before-fixing again: the "toolchain fault" was the spine linking the
+Node prefix as `node_modules`; the global tsci builds fine on its own. So the A/B the item asked
+for now reads `ok` / `ok` with the version named, and the preflight covers the tool that really
+cannot build. Both sides of that are tested with a fake tsci, so the suite still needs no tscircuit.
 
 ## Review — validated value
 
