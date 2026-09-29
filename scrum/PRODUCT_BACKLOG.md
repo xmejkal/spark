@@ -46,7 +46,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | ~~P20~~ | `assign_pins.main` through the loader; signals derived once — **done `c3e2e28`** | M |
 | ~~P21~~ | A bus is shared; an instance name does not take a part off it — **done `7381fed`** | M |
 | ~~P22~~ | A stranger can build [reopened R7] — **done `c565778`** | M |
-| P23 | Two outputs on one net, across parts | S |
+| ~~P23~~ | Two outputs on one net, across parts — **done `5605065`** | S |
 | P24 | `check_design.py` gets a command line | S |
 | P25 | One outcome vocabulary; a test for every rule function | M |
 | R2.5 | Third cold test — **PO chooses the domain** | L |
@@ -425,13 +425,18 @@ end. One mutation escaped twice on the way — a mention in prose satisfied a na
 regex read the prose between code blocks — and the test now holds the command to showing each
 link typed. Four mutations caught, 574 tests.
 
-### P23 — Two outputs on one net, across parts and against the board
+### ~~P23 — Two outputs on one net, across parts and against the board~~ — **DONE `5605065`**
 B9. A project part's `VOUT` on `rail: logic, direction: out` is traced to `net.V33` beside the
 MCU's own 3V3, exit 0, no note; `parts.validate` checks outputs per rail inside one part only.
 An `out` supply onto a rail the module provides, or onto a net another `out` drives, is a short
 the file has to name.
 **Value proven by:** a probe regulator on `logic` produces a named note in the file and in the
 spine's schematic-notes; on its own rail it does not.
+
+**Result.** `outputs_in_contention`, said in the file and on stderr. Grounds excluded — the
+first version flagged every design with an inlet, whose GND is rightly `out`; the reference test
+caught it. `GROUND_NETS` is one list now, in the generator, read by the spine. Four mutations
+caught, 579 tests, four designs byte-identical.
 
 ### P24 — `check_design.py` gets a command line
 O4c. `--help` prints `no design at --help`, exit 1: `main(argv)` reads `argv[1]` and nothing else.
