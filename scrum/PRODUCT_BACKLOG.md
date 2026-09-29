@@ -98,19 +98,11 @@ because the `pin_order` block read `need["pin"]` three lines after reporting it.
 fix found the same crash again in `power`. Fixed at the cause: only `needs` was ever checked for a
 pin while three lists were read for one.
 
-### R2 — `init_project` silently picks one of two circuits [G10]
-Same input, same glob, opposite behaviour: `check_all` now calls two matches ambiguous and
-`init_project` takes one, reports "5 rail(s) from circuit.json", and names no path. It wrote the
-car's rails into a project that also contains the remote. Two halves of one tool disagreeing about
-whether choosing is allowed.
-**Value proven by:** `init_project` on a two-circuit project refusing, or naming which it used.
+### ~~R2 — `init_project` silently picks one of two circuits~~ [G10] — **DONE `9fcb3c1`**
+Refuses, names both files, and writes nothing when it refuses. Four tests, mutation caught.
 
-### R3 — A part stating a real requirement breaks the chain; the validator says it is fine [G12]
-`needs: ["pwm"]` validates `ok`, then `assign_pins` refuses the entire design because
-`CAPABILITIES = ("wake", "adc")`. To get a board out you must delete a true fact about the part.
-That is the contract punishing honesty, in a tool whose whole thesis is provenance.
-**Value proven by:** either `pwm` is assignable, or `parts.py` rejects the capability at the point
-it is written — not four scripts later.
+### ~~R3 — A part stating a real requirement breaks the chain~~ [G12] — **DONE `9fcb3c1`**
+One `CAPABILITIES`, owned by `parts.py`; `assign_pins` imports it. `pwm` added, satisfied by every pin unless a board lists `pwm_gpio`. The RC car's servo now declares its real requirement and the board says "needs pwm, and this pin does exactly that and no more". Six tests, two mutations caught.
 
 ### R4 — A pin name with `+` or `-` cannot be wired, and nothing warns [G3]
 The MP1584 buck's pads are silkscreened `IN+`/`OUT+`. tscircuit cannot select those, so all four
