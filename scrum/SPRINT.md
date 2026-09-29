@@ -21,8 +21,8 @@ retros in a row say the intake has not drained (R3.2).
 | ~~P15~~ | Drain the intake: 42 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | **done** the same evening, `f35e7df`: 38 resolved, 3 fixed, 1 rejected, 4 new items (first written 43 and 40 — counted by eye, audit B12) |
 | ~~R7~~ | The generator chain named by a skill, a command and an agent [G13] | **done `1f769f8`** for the one command; **reopened as P22** — the audit followed the documented steps from a fresh directory and reached no build (B19) |
 | ~~R9~~ | A rail belongs to the design, not the part [G5] | **done `227f5d4`** — the car's copied record is gone |
-| **P20** | `assign_pins.main` through the loader | **next** — the documented first step crashes on the documented input (B1) |
-| **P21** | A bus is shared; a name does not take a part off it | after P20 — a named I2C part silently off its bus (B2) |
+| ~~P20~~ | `assign_pins.main` through the loader | **done `c3e2e28`** — the documented first step assigns; a malformed part is a sentence |
+| **P21** | A bus is shared; a name does not take a part off it | **next** — a named I2C part silently off its bus (B2) |
 | **P22** | A stranger can build [reopens R7] | after P21 |
 | **P23** | Two outputs on one net, across parts | after P22 |
 | P24, P25 | `check_design` CLI; one outcome vocabulary | last |

@@ -43,7 +43,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | ~~P15~~ | Drain the intake: 42 `raised` rows, reproduced or rejected — **done `f35e7df`** | S, time-boxed |
 | ~~R7~~ | The generator chain named by a skill, a command and an agent — **done `1f769f8`** for the one command; the steps reopened as P22 | M |
 | ~~R9~~ | A rail belongs to the design, not the part — **done `227f5d4`** | M |
-| P20 | `assign_pins.main` through the loader; signals derived once | M |
+| ~~P20~~ | `assign_pins.main` through the loader; signals derived once — **done `c3e2e28`** | M |
 | P21 | A bus is shared; an instance name does not take a part off it | M |
 | P22 | A stranger can build [reopens R7] | M |
 | P23 | Two outputs on one net, across parts | S |
@@ -376,7 +376,7 @@ the end of Sprint 4. The stranger test failed — following the two documents fr
 reaches no build — so **R7 is reopened as P22**; and the documented first step crashes on the
 documented input. Order as before: what misleads or crashes today first, then the refactors.
 
-### P20 — `assign_pins.main` loads through the loader, and signals are derived in one place
+### ~~P20 — `assign_pins.main` loads through the loader, and signals are derived in one place~~ — **DONE `c3e2e28`**
 B1, B10, B16. `assign_pins.py requirements.json` — the first documented step — crashes with
 `TypeError` on the `{part, name}` form the same documents show, and on `rails`: it hands raw
 entries to `parts.signals_for`, reads the JSON outside any `try`, resolves the project from
@@ -386,6 +386,10 @@ malformed project part is a traceback through `emit_board` and a "broken chain" 
 **Value proven by:** `assign_pins.py` on `/spark:build`'s own example and on rc-car's
 `car.requirements.json` prints a pin per signal, exit 0, the same signals `emit_board` traces; a
 malformed part file is `could-not-run` through both. Mutation: the raw entries handed through.
+
+**Result.** `design.load` carries `signals`; both mains consume it; `signal_name` lives with the
+loader. The car's pin map assigns (exit 0), both boards re-emit byte-identical, a malformed part
+record is a sentence through both mains and the spine. Four mutations caught, 559 tests.
 
 ### P21 — A bus is shared, and an instance name does not take a part off it
 B2, B3, B18. `signal_name` prefixes an instance's signals (`RANGEFINDER_SDA`) and the bus path in
