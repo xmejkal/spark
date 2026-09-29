@@ -37,6 +37,12 @@ WHAT IT REFUSES TO CALL A PASS
 If `tsci` is not installed, the build stage is `could-not-run` and the exit code says so. A chain
 that could not be exercised has not been proven; it has been skipped, and the difference is the
 whole point of this file.
+
+If it IS installed and cannot build a trivial board from the working directory, the same. A tool
+that fails on a resistor is not reporting on the design, and "the chain is broken" for a broken
+tool sends somebody to debug a design nobody examined — the mirror image of a false pass, and as
+misleading. Every build verdict names the tsci that produced it, because "exit 0" once depended
+on which one PATH found first, and nothing said so.
 """
 
 import argparse
@@ -93,6 +99,61 @@ def find_toolchain(start):
             return candidate
     found = shutil.which("tsci")
     return Path(found) if found else None
+
+
+def modules_for(toolchain):
+    """
+    The `node_modules` a project-local tsci lives in, or None for a global one.
+
+    tsci resolves the emitted board's imports upward from the build directory, so a project's
+    own `node_modules` has to be reachable from the working directory; `main` links it in. A
+    GLOBAL tsci resolves them from its own install and needs nothing linked — and linking
+    `toolchain.parent.parent` for it, which is the Node prefix and not a `node_modules`, put a
+    directory with no `react` in it first on the path and broke a toolchain that built the same
+    board on its own. That was the "toolchain fault" of audit A9: the spine's fault, not the
+    tool's. Measured 2026-09-29: nvm's global 0.0.2600 builds with no link, and fails with the
+    prefix linked.
+    """
+    modules = toolchain.parent.parent
+    if toolchain.parent.name == ".bin" and modules.name == "node_modules":
+        return modules
+    return None
+
+
+#: The smallest board that should build anywhere: what the preflight asks of a toolchain that
+#: produced nothing, to tell "the design is broken" from "the tool is".
+TRIVIAL_BOARD = """export default () => (
+  <board width="10mm" height="10mm">
+    <resistor name="R1" resistance="1k" footprint="0402" />
+  </board>
+)
+"""
+
+
+def toolchain_can_build(toolchain, workdir):
+    """
+    Whether this tsci builds a trivial board from this working directory at all.
+
+    Run only after a build produced no circuit.json, so the happy path pays nothing. Returns
+    (built, the tool's last words) — the words matter, because "Cannot find package 'react'"
+    names a broken install where "no circuit.json" names nothing.
+    """
+    probe = workdir / "spark-probe"
+    probe.mkdir(exist_ok=True)
+    (probe / "board.tsx").write_text(TRIVIAL_BOARD)
+    result = subprocess.run([str(toolchain), "build", "board.tsx"], cwd=str(probe),
+                            capture_output=True, text=True, timeout=BUILD_TIMEOUT_S)
+    return (probe / "dist" / "board" / "circuit.json").is_file(), result.stderr.strip()[-400:]
+
+
+def tsci_version(toolchain):
+    """What `tsci --version` says, or "unknown version" — never an exception, never nothing."""
+    try:
+        said = subprocess.run([str(toolchain), "--version"], capture_output=True, text=True,
+                              timeout=60).stdout.strip().splitlines()
+        return said[-1].strip() if said else "unknown version"
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown version"
 
 
 #: Where the circuit.json -> Wokwi diagram.json converter might be. It is not part of this
@@ -225,10 +286,22 @@ def run(requirements, workdir, toolchain=None, project=None):
     built = subprocess.run([str(toolchain), "build", "board.tsx"],
                            cwd=str(workdir), capture_output=True, text=True,
                            timeout=BUILD_TIMEOUT_S)
+    version = tsci_version(toolchain)
     circuit_path = workdir / "dist" / "board" / "circuit.json"
     if not circuit_path.is_file():
+        # Nothing came out. Before blaming the design, ask the same tool for a resistor on a
+        # board: a tool that cannot build that is not reporting on the design at all.
+        can, last_words = toolchain_can_build(toolchain, workdir)
+        if not can:
+            return stages + [Stage("build", COULD_NOT_RUN,
+                                   "%s (%s) cannot build even a trivial board from here, so this "
+                                   "is the toolchain, not the design. Use the project's own tsci "
+                                   "(npm i @tscircuit/cli in the project) or one that builds on "
+                                   "its own.\n%s" % (toolchain, version, last_words))]
         return stages + [Stage("build", PROBLEMS,
-                               "no circuit.json was produced\n" + built.stderr.strip()[-800:])]
+                               "no circuit.json was produced by %s (%s), which does build a "
+                               "trivial board\n%s" % (toolchain, version,
+                                                      built.stderr.strip()[-800:]))]
 
     traces, errors = count_in(json.loads(circuit_path.read_text()))
     # NOT a trace count. Comparing connections asked for against `pcb_trace`s is wrong twice
@@ -260,7 +333,7 @@ def run(requirements, workdir, toolchain=None, project=None):
                                "built with 0 pcb_traces — every component is placed and no "
                                "copper joins any of them. tscircuit skips routing entirely when "
                                "one net is unroutable, and that does not raise")]
-    stages.append(Stage("build", OK, "%d trace(s), 0 errors" % traces))
+    stages.append(Stage("build", OK, "%d trace(s), 0 errors, tsci %s" % (traces, version)))
 
     # --- simulation: the last step of the product goal -------------------------
     # From the project, not from `cwd`: the same defect the project resolution had, one stage
@@ -344,10 +417,9 @@ def main(argv=None):
     (workdir / "requirements.json").write_text(json.dumps(requirements))
     # tsci needs its toolchain reachable from the build directory.
     toolchain = find_toolchain(source.parent if source else Path.cwd())
-    if toolchain is not None:
-        modules = toolchain.parent.parent
-        if not (workdir / "node_modules").exists():
-            os.symlink(modules, workdir / "node_modules")
+    modules = modules_for(toolchain) if toolchain is not None else None
+    if modules is not None and not (workdir / "node_modules").exists():
+        os.symlink(modules, workdir / "node_modules")
 
     try:
         stages = run(requirements, workdir, toolchain, project)

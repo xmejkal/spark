@@ -298,5 +298,100 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         self.assertIn("[????] build", out)
         self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
 
+
+def fake_tsci(root, builds_when):
+    """
+    A `tsci` that answers `--version` and builds — writes a circuit.json — only when
+    `builds_when` (a shell test on the working directory) holds. Instant, so the build stage can
+    be driven without tscircuit installed.
+    """
+    binary = root / "fake-tsci"
+    binary.write_text("#!/bin/sh\n"
+                      "[ \"$1\" = \"--version\" ] && { echo 0.0.0-fake; exit 0; }\n"
+                      "if %s; then mkdir -p dist/board; echo '[]' > dist/board/circuit.json; exit 0; fi\n"
+                      "echo \"Cannot find package 'react'\" >&2\n"
+                      "exit 1\n" % builds_when)
+    binary.chmod(0o755)
+    return binary
+
+
+class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):
+    """
+    Audit A9, at its cause. The spine linked `toolchain.parent.parent` into the working
+    directory as `node_modules`. For a project-local tsci that IS the node_modules; for a global
+    one it is the Node prefix, and a `node_modules` with no `react` in it broke a toolchain that
+    built the same board on its own. The spine then called that "the chain is broken".
+    """
+
+    def test_a_project_local_tsci_names_its_node_modules(self):
+        root = Path(tempfile.mkdtemp())
+        binary = root / "node_modules" / ".bin" / "tsci"
+        binary.parent.mkdir(parents=True)
+        binary.write_text("#!/bin/sh\n")
+        self.assertEqual(check_spine.modules_for(binary), root / "node_modules")
+
+    def test_a_global_tsci_links_nothing(self):
+        # ~/.nvm/versions/node/v18/bin/tsci: its parent.parent is the prefix, not a node_modules.
+        prefix = Path(tempfile.mkdtemp())
+        binary = prefix / "bin" / "tsci"
+        binary.parent.mkdir(parents=True)
+        binary.write_text("#!/bin/sh\n")
+        self.assertIsNone(check_spine.modules_for(binary))
+
+
+class AToolchainFaultIsNotADesignFaultTest(unittest.TestCase):
+    """
+    The build stage's three outcomes, driven with a fake tsci so no tscircuit is needed.
+
+    A tool that cannot build a resistor on a board is not reporting on the design. Calling that
+    "the chain is broken" is W1's mirror image — a check that could not look, reading as a check
+    that failed — and it sends somebody to debug a design nobody examined.
+    """
+
+    def _build_stage(self, builds_when):
+        root = Path(tempfile.mkdtemp())
+        workdir = root / "work"
+        workdir.mkdir()
+        binary = fake_tsci(root, builds_when)
+        # `main` writes the requirements into the working directory before `run`; this drives
+        # `run` directly, so it does the same.
+        (workdir / "requirements.json").write_text(json.dumps(check_spine.REFERENCE))
+        stages = check_spine.run(dict(check_spine.REFERENCE), workdir, toolchain=binary)
+        build = next((stage for stage in stages if stage.name == "build"), None)
+        if build is None:
+            self.fail("the chain stopped before the build stage: %s" % stages)
+        return build, binary, stages
+
+    def test_a_tool_that_builds_nothing_at_all_is_could_not_run_and_named(self):
+        build, binary, stages = self._build_stage("false")
+        self.assertEqual(build.status, check_spine.COULD_NOT_RUN, build.detail)
+        self.assertIn(str(binary), build.detail)
+        self.assertIn("0.0.0-fake", build.detail)
+        self.assertIn("toolchain, not the design", build.detail)
+        self.assertIn("Cannot find package", build.detail)
+        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+
+    def test_a_tool_that_builds_a_trivial_board_but_not_this_one_is_a_problem(self):
+        # The control: same failure on the design, but the preflight passes, so the design is
+        # what is broken — and the verdict says the tool was checked.
+        build, binary, stages = self._build_stage('[ "$(basename "$PWD")" = "spark-probe" ]')
+        self.assertEqual(build.status, check_spine.PROBLEMS, build.detail)
+        self.assertIn("no circuit.json was produced", build.detail)
+        self.assertIn("does build a trivial board", build.detail)
+        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_PROBLEMS)
+
+    def test_the_preflight_reports_what_the_tool_said(self):
+        root = Path(tempfile.mkdtemp())
+        can, words = check_spine.toolchain_can_build(fake_tsci(root, "false"), root)
+        self.assertFalse(can)
+        self.assertIn("react", words)
+        can, _ = check_spine.toolchain_can_build(fake_tsci(root, "true"), root)
+        self.assertTrue(can)
+
+    def test_the_version_is_asked_of_the_tool_and_never_raises(self):
+        root = Path(tempfile.mkdtemp())
+        self.assertEqual(check_spine.tsci_version(fake_tsci(root, "true")), "0.0.0-fake")
+        self.assertEqual(check_spine.tsci_version(root / "no-such-tsci"), "unknown version")
+
 if __name__ == "__main__":
     unittest.main()
