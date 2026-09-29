@@ -73,8 +73,22 @@ ROLE_PENALTY = {
     "console_uart": 40,               # costs you the serial console, and TX moves at every reset
     "onboard_button": 20,             # something else is already wired to it, and can press it
     "onboard_led": 10,                # it will blink whatever you put on it
+    "spi": 5,                         # a bus, spent after plain pins and before scarce ones
+    "i2c": 5,
     "adc2_unusable_with_wifi": 1,     # only a loss if you wanted the ADC, which `can` covers
 }
+#: THE BUS PENALTY IS A TIE-BREAKER, SMALLER THAN ONE ABILITY ON PURPOSE. Nothing marked SCK,
+#: MI and MO as a bus, so the assigner spent all three on two LEDs and a button — the cheapest
+#: pins left, by its lights — and a later SPI part had nowhere to go. The cost function already
+#: ranks a pin by the abilities it WASTES (`CAPABILITY_COST` each), and a bus pin wastes nothing
+#: scarce by itself; what spent the bus was the tie-break among equal pins, which goes by GPIO
+#: number and on the FireBeetle puts MOSI (15) and MISO (16) before D6 (18). A penalty below
+#: `CAPABILITY_COST` settles that tie and nothing more: a plain signal still takes a bus pin
+#: before it wastes an ADC1 pin. Measured on the bin's 11 signals: at 0, LED_RED lands on MOSI;
+#: at 5, on D6; at 15 — my first value — the bus ranked above the ADC1 pins and two plain
+#: signals were sent onto the board's scarcest inputs instead. Five is also `DEFAULT_ROLE_PENALTY`,
+#: what an unnamed role costs; these entries exist so the reason is written down. A bus signal
+#: still lands on its own named pin regardless: that path runs first and ignores penalties.
 DEFAULT_ROLE_PENALTY = 5
 
 #: Roles where something ELSE is already wired to the pin, so sharing it has a consequence a

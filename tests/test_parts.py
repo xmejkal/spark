@@ -287,6 +287,116 @@ class APwmPinTest(unittest.TestCase):
         self.assertNotIn("pwm", assign_pins.capability_of(limited, limited["pins"]["D5"]))
 
 
+class ABusIsSpentLastTest(unittest.TestCase):
+    """
+    Nothing marked SCK, MI and MO as a bus, so the assigner spent all three on two LEDs and a
+    button — the cheapest pins left, by its lights — and a later SPI part had nowhere to go.
+    Found by a cold rebuild of the bin and left open as backlog P3 until 2026-09-29.
+
+    A bus signal still lands on its own named pin: that path runs first and ignores penalties.
+    This is only about PLAIN signals preferring any other pin while one is free.
+    """
+
+    def setUp(self):
+        self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        self.spi = set(self.board["pin_roles"]["spi"]["gpio"])
+        self.i2c = set(self.board["pin_roles"]["i2c"]["gpio"])
+
+    def test_the_board_records_which_pins_are_a_bus(self):
+        # The data, since the assigner can only avoid what the board file names.
+        self.assertEqual(self.spi, {self.board["pins"][k] for k in ("MOSI", "MISO", "SCK", "SS")})
+        self.assertEqual(self.i2c, {self.board["pins"]["SDA"], self.board["pins"]["SCL"]})
+
+    def test_six_plain_signals_fill_every_plain_pin_before_touching_the_spi_bus(self):
+        """
+        Six, because the FireBeetle has exactly six pins that are neither scarce nor a bus —
+        D3, A5, D10, D11, D12, D6 — and the bus pins MOSI/MISO/SCK are ADC2 pins exactly like
+        D6. Without the penalty the six-way tie is broken by GPIO number, which spends MOSI (15)
+        and MISO (16) before D6 (18): that is the whole defect, measured. My first version placed
+        three LEDs, never reached the tie, and passed with the penalty at zero.
+        """
+        signals = [{"name": "S%d" % i, "needs": []} for i in range(6)]
+        placed, _ = assign_pins.assign(self.board, signals)
+        landed = {a["gpio"] for a in placed}
+        self.assertEqual(len(placed), 6)
+        self.assertEqual(landed & self.spi, set(), "a plain signal took a bus pin: %s" % placed)
+        self.assertEqual(landed & self.i2c, set())
+
+    def test_a_plain_signal_takes_an_unlabelled_adc1_pin_before_the_i2c_pair(self):
+        """
+        On this board SDA and SCL are ADC1 pins (GPIO 1 and 2), equal in every ability to A0-A3
+        and lower-numbered, so the tie-break alone would spend them first. Ten plain signals:
+        nine fill every pin cheaper than an ADC1 pin (six plain, then the three SPI pins — a bus
+        is cheaper than a scarce pin, by design), and the tenth must choose among the ADC1 pins.
+        """
+        ten = [{"name": "S%d" % i, "needs": []} for i in range(10)]
+        placed, _ = assign_pins.assign(self.board, ten)
+        landed = {a["gpio"] for a in placed}
+        self.assertEqual(len(placed), 10)
+        self.assertTrue(landed & set(self.board["adc_gpio"]),
+                        "ten signals never reached an ADC1 pin; the pin count this test assumes is wrong")
+        self.assertEqual(landed & self.i2c, set(), "the I2C pair was spent: %s" % placed)
+
+    def test_the_bus_penalty_is_a_tie_breaker_smaller_than_one_ability(self):
+        # 0 < penalty < CAPABILITY_COST: it orders pins that waste the same abilities and can
+        # never make a plain signal waste an ability to avoid a bus. 15 broke this — two plain
+        # signals sent onto ADC1 — and the ordering test below caught it; this pins the reason.
+        for bus in ("spi", "i2c"):
+            self.assertGreater(assign_pins.ROLE_PENALTY[bus], 0, bus)
+            self.assertLess(assign_pins.ROLE_PENALTY[bus], assign_pins.CAPABILITY_COST, bus)
+
+    def test_a_bus_signal_still_lands_on_its_own_pin(self):
+        # The penalty must not push a real SPI signal off the pin it exists for.
+        placed, _ = assign_pins.assign(self.board, [{"name": "SCK", "bus": "spi", "needs": []}])
+        self.assertEqual(placed[0]["pin"], "SCK")
+
+    def test_a_bus_pin_is_still_available_when_nothing_else_is(self):
+        # Worse, not forbidden. A design with no SPI and many signals may use the bus; refusing
+        # would fail boards that are perfectly buildable. Twenty signals: more than the pins
+        # that are NOT a bus, so the bus must be drawn on, and fewer than the board has, so the
+        # request is satisfiable. (My first version asked for 24 of a 23-pin board and blamed
+        # the penalty for the refusal.)
+        many = [{"name": "S%d" % i, "needs": []} for i in range(20)]
+        placed, _ = assign_pins.assign(self.board, many)
+        self.assertEqual(len(placed), 20)
+        self.assertTrue({a["gpio"] for a in placed} & (self.spi | self.i2c),
+                        "twenty plain signals were placed without touching a bus pin, which "
+                        "means there are more non-bus pins than this test assumes")
+
+    def test_for_a_plain_signal_a_bus_pin_costs_more_than_a_plain_pin_and_less_than_a_scarce_one(self):
+        """
+        The ordering, through `_cost` on real pins — not the penalty number, which is an
+        implementation detail that the cost constant could move under.
+
+        plain pin < bus pin < ADC1 pin. My first penalty was 15, which put the bus ABOVE the ADC1
+        pins and sent three LEDs onto the board's scarcest inputs; a test pinning the number
+        against other roles passed throughout. This one would not have.
+        """
+        pins = assign_pins.candidates(self.board)
+        plain, bus, scarce = pins["D3"], pins["SCK"], pins["A1"]
+        cost = lambda pin: assign_pins._cost(pin, frozenset())
+        self.assertLess(cost(plain), cost(bus))
+        self.assertLess(cost(bus), cost(scarce))
+
+    def test_the_bin_still_spends_no_adc1_pin_on_a_plain_signal(self):
+        """
+        The regression the wrong penalty caused, stated beside the ordering that prevents it:
+        the bin's LEDs and buttons must not be pushed onto ADC1 by the bus being expensive.
+
+        A plain signal has no `bus` and no `needs`. SDA and SCL are excluded on purpose: on this
+        board the I2C pins ARE GPIO 1 and 2, which are ADC1 — a bus signal goes where its bus is,
+        and the first version of this test counted them and failed for the right placement.
+        """
+        signals = parts.signals_for(["l9110s-module", "vl6180x-breakout"]) + [
+            {"name": "LED_%d" % i, "needs": []} for i in range(3)]
+        placed, _ = assign_pins.assign(self.board, signals)
+        adc1 = set(self.board["adc_gpio"])
+        plain = {s["name"] for s in signals if not s.get("bus") and not s.get("needs")}
+        self.assertEqual({"MOTOR_IA", "MOTOR_IB", "LED_0", "LED_1", "LED_2"}, plain)
+        on_adc1 = [a["signal"] for a in placed if a["gpio"] in adc1 and a["signal"] in plain]
+        self.assertEqual(on_adc1, [], "plain signals landed on ADC1 pins: %s" % on_adc1)
+
+
 class WhichPadIsPinOneTest(unittest.TestCase):
     """
     The generator numbered pads from the order the pins happened to appear in the file, which is

@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "no SPI penalty at all",
+  "find": "\"spi\": 5,",
+  "replace": "\"spi\": 0,"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "no I2C penalty at all",
+  "find": "\"i2c\": 5,",
+  "replace": "\"i2c\": 0,"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "bus dearer than a scarce ADC1 pin (the first, wrong value)",
+  "find": "\"spi\": 5,",
+  "replace": "\"spi\": 15,"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "bus and I2C both at the first, wrong value",
+  "find": "\"i2c\": 5,",
+  "replace": "\"i2c\": 15,"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "SPI dropped from the role vocabulary",
+  "find": "    \"spi\": \"the hardware SPI bus; spent last by signals that could use any pin\",\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "I2C dropped from the role vocabulary",
+  "find": "    \"i2c\": \"the hardware I2C bus; spent last by signals that could use any pin\",\n",
+  "replace": ""
+ }
+]

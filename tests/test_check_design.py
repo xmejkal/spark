@@ -157,8 +157,14 @@ class PinCapabilityTest(unittest.TestCase):
         # The C6 can wake on GPIO0-7; the XIAO brings out only 0, 1 and 2 of them. Checking the
         # chip alone would approve four pins that are not on the header.
         pins = check_design.usable_pins(BOARD)
-        can_wake = sorted(name for name, pin in pins.items() if "wake" in pin["capabilities"])
-        self.assertEqual(can_wake, ["D0", "D1", "D2"])
+        # Compared by GPIO, not by label. The XIAO file now records the vendor's function names
+        # as second labels for GPIOs it already carried — A0/A1/A2 on 0/1/2, the way the
+        # FireBeetle has SS and A4 on GPIO10 — and a label list would grow while the fact under
+        # test, "only three of the chip's wake pins are on this header", stays exactly true.
+        can_wake = sorted({pin["gpio"] for pin in pins.values() if "wake" in pin["capabilities"]})
+        self.assertEqual(can_wake, [0, 1, 2])
+        self.assertEqual({name for name, pin in pins.items() if pin["gpio"] in (0, 1, 2)},
+                         {"D0", "D1", "D2", "A0", "A1", "A2"})
 
 
 class BoardResolutionTest(unittest.TestCase):

@@ -54,7 +54,7 @@
       "width": 70,
       "height": 160
     },
-    "//header_order": "Which silkscreen label sits on which PAD, per row, in physical order from the flush end. The geometry above is precise to 0.01 mm and this is the one fact that cannot be derived from it \u2014 a cold rebuild of this board was blocked here, and had to guess. UNRESOLVED: pads 14 and 16 of the 18-pin row. This file calls them GND1/GND3 from one reading of DFRobot's schematic; a later reading of the same schematic and the board photo says they are silkscreened NC and carry no net. Treating them as GND is the safe direction \u2014 a ground trace terminating on an unconnected pad is harmless, whereas treating a real ground pad as NC loses a return path. Settle it with a continuity meter, module to pad.",
+    "//header_order": "Which silkscreen label sits on which PAD, per row, in physical order from the flush end. The geometry above is precise to 0.01 mm and this is the one fact that cannot be derived from it — a cold rebuild of this board was blocked here, and had to guess. UNRESOLVED: pads 14 and 16 of the 18-pin row. This file calls them GND1/GND3 from one reading of DFRobot's schematic; a later reading of the same schematic and the board photo says they are silkscreened NC and carry no net. Treating them as GND is the safe direction — a ground trace terminating on an unconnected pad is harmless, whereas treating a real ground pad as NC loses a return path. Settle it with a continuity meter, module to pad.",
     "header_order": {
       "//": "18-pin row first, then the 14-pin row; each from the end away from the USB-C.",
       "row_18": [
@@ -94,7 +94,7 @@
         "VCC"
       ]
     },
-    "//pad_aliases": "Where a pin's NAME in `pins` differs from the label silkscreened on its PAD. The silkscreen abbreviates, and one GPIO is brought out twice. A footprint generated from the silkscreen gives a pad called MI while the design writes a trace to MISO, and they do not connect \u2014 silently, because nothing downstream knows the two words mean one pad.",
+    "//pad_aliases": "Where a pin's NAME in `pins` differs from the label silkscreened on its PAD. The silkscreen abbreviates, and one GPIO is brought out twice. A footprint generated from the silkscreen gives a pad called MI while the design writes a trace to MISO, and they do not connect — silently, because nothing downstream knows the two words mean one pad.",
     "pad_aliases": {
       "MISO": "MI",
       "MOSI": "MO",
@@ -112,13 +112,24 @@
     "GND3": "GND.3"
   },
   "wokwi_is_stand_in": true,
-
   "//power_pads": "Which pad carries which rail, and which way it flows. This fact existed only as `wokwi_power_pins` until 2026-09-25 - the same knowledge, named for one consumer, so the schematic generator could not read it and emitted no power connection for the module at all. The generated board's microcontroller shared a net with NONE of its 32 pins: no ground, no 3.3 V. It built, routed 8 of 11 traces, and the gate called it done. VCC is deliberately absent: it is the USB 5 V rail, an output these designs do not consume, and wiring it up by default is how 5 V reaches 3.3 V logic.",
   "power_pads": {
-    "GND1": {"rail": "ground", "direction": "out"},
-    "GND2": {"rail": "ground", "direction": "out"},
-    "GND3": {"rail": "ground", "direction": "out"},
-    "3V3": {"rail": "logic", "direction": "out"}
+    "GND1": {
+      "rail": "ground",
+      "direction": "out"
+    },
+    "GND2": {
+      "rail": "ground",
+      "direction": "out"
+    },
+    "GND3": {
+      "rail": "ground",
+      "direction": "out"
+    },
+    "3V3": {
+      "rail": "logic",
+      "direction": "out"
+    }
   },
   "//pins": "The silkscreen label on the board, and the GPIO it actually is. This is the single most error-prone fact about any board: here D2 is GPIO3, D9 is GPIO0, and D13 is GPIO21. The labels are not a sequence and must never be inferred. Note that D0, D1, D4 and D8 do not exist on this board - DFRobot skips them.",
   "pins": {
@@ -236,7 +247,23 @@
         43,
         44
       ],
-      "note": "U0TXD and U0RXD \u2014 the ROM bootloader prints here on every reset and the serial console uses both. TX is driven push-pull at boot, so anything that acts on a level (a motor driver input, an enable line) twitches every time the board resets. Usable in a pinch, never a first choice, and taking them costs you the console you need during bring-up."
+      "note": "U0TXD and U0RXD — the ROM bootloader prints here on every reset and the serial console uses both. TX is driven push-pull at boot, so anything that acts on a level (a motor driver input, an enable line) twitches every time the board resets. Usable in a pinch, never a first choice, and taking them costs you the console you need during bring-up."
+    },
+    "spi": {
+      "gpio": [
+        15,
+        16,
+        17,
+        10
+      ],
+      "note": "MOSI, MISO, SCK and SS: the hardware SPI bus, silkscreened MO, MI, SCK and A4. A design with no SPI may use them — but they are taken LAST, because the assigner spent the whole bus on two LEDs and a button when nothing marked it, and a later SPI part then had nowhere to go. Recorded 2026-09-29 (backlog P3)."
+    },
+    "i2c": {
+      "gpio": [
+        1,
+        2
+      ],
+      "note": "SDA and SCL: the hardware I2C bus. Same reasoning as spi. The smart bin never hit this only because its rangefinder claims both pins before anything else is placed."
     }
   },
   "//deep_sleep": "How this chip is woken. Unlike the C6, the S3 has real RTC IO and defines SOC_PM_SUPPORT_EXT0_WAKEUP, so esp32.wake_on_ext0 exists - it takes a single pin at either polarity. What the S3 does NOT have is SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN, which the C6 does: its ext1 applies one trigger level to every pin at once. So with two wake sources the shared-polarity constraint is back, for the opposite reason to the C6's.",
@@ -260,7 +287,7 @@
     "how_to_tell": "Look at the chip between the BOOT button and the USB-C. A QFN marked AXP313A is V1.1 or earlier; a tiny SOT-563 next to two SOT-23-5 LDOs is V1.2 or later. The back silkscreen also carries the revision.",
     "v1_1_and_earlier": {
       "3v3_regulator": "AXP313A PMIC, DCDC1, 1.5 A (X-Powers datasheet, not DFRobot)",
-      "i2c_pullups": "5.1k to 3V3 already present on SDA/SCL \u2014 they are the PMIC's own bus pull-ups, and the PMIC is another device on your I2C bus",
+      "i2c_pullups": "5.1k to 3V3 already present on SDA/SCL — they are the PMIC's own bus pull-ups, and the PMIC is another device on your I2C bus",
       "user_button": "also drives the PMIC's PWRON through a diode, so a long press can power the board down and the pin reads ~0.7 V pressed, not 0 V"
     },
     "v1_2_and_later": {
@@ -275,13 +302,13 @@
       "value": true,
       "verified": true,
       "source": "DFRobot schematic V1.3.0",
-      "note": "VCC reaches VSYS through a SI2301 P-FET with a dual-PNP gate drive and a 6.2 V zener clamp. Functionally VCC follows VSYS, but it is a switch, not a short, and the FET is the practical current ceiling \u2014 DFRobot rate neither."
+      "note": "VCC reaches VSYS through a SI2301 P-FET with a dual-PNP gate drive and a 6.2 V zener clamp. Functionally VCC follows VSYS, but it is a switch, not a short, and the FET is the practical current ceiling — DFRobot rate neither."
     },
     "charge_current_a": {
       "value": 1.0,
       "verified": true,
       "source": "DFRobot wiki 'Max Charging Current: 1A'; schematic V1.3.0 ETA6003 ISET1 = 1k",
-      "note": "Not settable in software or by a jumper \u2014 changing it means replacing R2. Battery temperature protection is disabled on this board: NTC is tied to ground."
+      "note": "Not settable in software or by a jumper — changing it means replacing R2. Battery temperature protection is disabled on this board: NTC is tied to ground."
     },
     "feeding_vcc_charges_the_battery": {
       "value": false,
@@ -292,7 +319,7 @@
       "value": null,
       "verified": false,
       "source": "DFRobot publish no quiescent or deep-sleep figure for either SKU. Espressif's WROOM-1 datasheet v1.1 Table 12 gives 8 uA for the module alone, plus a footnote: 140 uA more for 8 MB octal PSRAM",
-      "why_it_matters": "Decides which SKU to buy. The N16R8's PSRAM costs ~140 uA in deep sleep and the N4 does not pay it \u2014 on a budget of a few hundred microamps that is the difference between the two parts, and it is the only electrical reason to prefer one."
+      "why_it_matters": "Decides which SKU to buy. The N16R8's PSRAM costs ~140 uA in deep sleep and the N4 does not pay it — on a budget of a few hundred microamps that is the difference between the two parts, and it is the only electrical reason to prefer one."
     }
   }
 }
