@@ -45,7 +45,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | ~~R9~~ | A rail belongs to the design, not the part — **done `227f5d4`** | M |
 | ~~P20~~ | `assign_pins.main` through the loader; signals derived once — **done `c3e2e28`** | M |
 | ~~P21~~ | A bus is shared; an instance name does not take a part off it — **done `7381fed`** | M |
-| P22 | A stranger can build [reopens R7] | M |
+| ~~P22~~ | A stranger can build [reopened R7] — **done `c565778`** | M |
 | P23 | Two outputs on one net, across parts | S |
 | P24 | `check_design.py` gets a command line | S |
 | P25 | One outcome vocabulary; a test for every rule function | M |
@@ -251,7 +251,7 @@ are already backlog items (P5–P10 map to seven of them) are `acted` with the i
 **Value proven by:** no row whose status cell is `raised` — `awk -F'|' 'NF>6 {gsub(/ /,"",$5); s[$5]++} END {for (k in s) print k, s[k]}' docs/observations/INDEX.md` — and
 `rejected` used at least once with a reason.
 
-### ~~R7 — The generator chain is named by no skill, no command and no agent~~ [G13] — **DONE `1f769f8` for the one command; REOPENED as P22 for the documented steps** (audit B19)
+### ~~R7 — The generator chain is named by no skill, no command and no agent~~ [G13] — **DONE `1f769f8` for the one command; reopened as P22 for the documented steps (audit B19), done `c565778`**
 `assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working
 boards, and `spark-design:31` still tells a user to write the `.tsx` by hand. Verified: two
 mentions of `parts-researcher` plugin-wide, both non-routes.
@@ -407,7 +407,7 @@ through the rename; shared lines share the pin, selects are per device. Two name
 with tsci: 12 traces, 0 errors, both on the MCU's SDA/SCL pads. Four designs byte-identical.
 Five mutations caught, 569 tests.
 
-### P22 — A stranger can build: the documented steps work from nowhere **[reopens R7]**
+### ~~P22 — A stranger can build: the documented steps work from nowhere~~ **[reopened R7]** — **DONE `c565778`**
 B5, B6, B19. R7 was called DONE on the strength of the one command; followed as documented from a
 fresh directory, `boards.py --list`, `assign_pins.py` and `emit_board.py` refuse "no project here"
 where `check_spine` falls back to the library; the emitted board imports `./FireBeetle2Esp32S3`,
@@ -417,6 +417,13 @@ usage error (fixed). A file in no project is built from the plugin's library and
 documented step commands run from a fresh temp directory produce a board file and its footprint.
 **Value proven by:** that test, and the audit's stranger run repeated by hand with nothing but the
 two documents, reaching `the chain runs end to end`, gated on the verdict.
+
+**Result.** Every reading script falls back to the plugin's library from nowhere and says so
+(only when fallen into, not asked for); `emit_footprint` is a named, typed, runnable link. The
+stranger run by hand: every step exit 0, `tsci build` 11 traces 0 errors, the one command end to
+end. One mutation escaped twice on the way — a mention in prose satisfied a name test, then a
+regex read the prose between code blocks — and the test now holds the command to showing each
+link typed. Four mutations caught, 574 tests.
 
 ### P23 — Two outputs on one net, across parts and against the board
 B9. A project part's `VOUT` on `rail: logic, direction: out` is traced to `net.V33` beside the
