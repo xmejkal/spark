@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "id": "sen0193-soil-moisture",
+  "name": "Gravity: Analog Capacitive Soil Moisture Sensor, corrosion resistant (bare-PCB probe with a PH2.0-3P plug)",
+  "kind": "sensor",
+  "//": "Catalog record written by /spark:research on 2026-09-29 while researching a garden-bed soil probe for the irrigation project: the part read, evaluated and NOT chosen (see //why_not). A draft \u2014 filled only from what was actually read, everything else null. WHAT IT IS TRUE OF: DFRobot SKU SEN0193 as drawn in the vendor's schematic 'Capacitive Soil Moisture Sensor, Revision V1.0, 2015/8/27, drawn Bernie-SH', the only schematic the vendor publishes. verified: true = the vendor's own text at the cited URL; read off an image or a drawing, inferred or computed = false with why_it_matters.",
+  "//why_not": "Its electronics are an exposed PCB that must stay above the soil line, and the need was a garden bed; DFRobot's own SEN0308 page names 'long-term outdoor gardening' and gives that one the IP65 head \u2014 for a pot indoors this is the pick, at a quarter of the price.",
+  "//chosen_instead": "sen0308-soil-moisture, the IP65 sibling, in the irrigation project's parts/; it names this record under alternatives.",
+  "vendor": "dfrobot",
+  "sku": "SEN0193",
+  "also_known_as": [
+    "Gravity: Analog Capacitive Corrosion Resistant Soil Moisture Sensor for Arduino / Raspberry Pi",
+    "Capacitive Soil Moisture Sensor SKU SEN0193",
+    "capacitive soil moisture sensor"
+  ],
+  "//sources": "Every URL below was fetched during research; `parts.py --sources` re-fetches them and `parts.py --fetch` keeps the PDF and the photo beside this record.",
+  "sources": [
+    "https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193",
+    "https://wiki.dfrobot.com/sen0193/",
+    "https://wiki.dfrobot.com/sen0193/docs/18035",
+    "https://wiki.dfrobot.com/sen0193/docs/18037",
+    "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+    "https://www.dfrobot.com/product-1385.html",
+    "https://dfimg.dfrobot.com/enshop/SEN0193/SEN0193_Main_01.jpg",
+    "https://www.dfrobot.com/forum/topic/321676"
+  ],
+  "needs": [
+    {
+      "signal": "SOIL_MOISTURE",
+      "pin": "Signal",
+      "direction": "out",
+      "needs": [
+        "adc"
+      ],
+      "note": "Yellow wire of the supplied Gravity analog cable (the wiki's calibration page: red to VCC, black to GND, yellow to Signal). A DC level that falls as the soil gets wetter: 'There is an inverse ratio between the sensor output value and soil moisture.'"
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "note": "Red wire. The vendor allows 3.3 ~ 5.5 V. Put on the 3.3 V rail here for the same reason as the SEN0308 record; on this part the output is bounded by its own 3.0 V regulator IF the drawing reading in facts.timer_supply_rail holds, so 5 V would be safe too. A draft's decision, not the vendor's."
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in",
+      "note": "Black wire."
+    }
+  ],
+  "unused_pins": [],
+  "//pin_order": "J1 'CON/SIP3' on the V1.0 schematic: 1 GND, 2 VCC, 3 Signal \u2014 read off the drawing, so verified: false (facts.connector_pin_order). It is the order of the PH2.0-3P socket on the probe; the supplied Gravity analog cable mates it pin for pin, so the board's socket copies this order.",
+  "pin_order": [
+    "GND",
+    "VCC",
+    "Signal"
+  ],
+  "//footprint": "The wiki's 'Interface PH2.0-3P' is a JST PH 2.0 mm 3-pin socket, so the board needs the mating 3-pin PH socket for the supplied cable. Whether footprinter has a 3-pin PH string (jst_ph_3?) was not checked, so this stays null until someone builds with it.",
+  "footprint": null,
+  "on_board": false,
+  "//on_board": "It stands in the soil at the end of the supplied analog sensor cable; the board carries only the mating socket.",
+  "body_mm": {
+    "width": 98,
+    "height": 23,
+    "verified": true,
+    "source": "https://www.dfrobot.com/product-1385.html \u2014 'Dimensions: 98mm * 23mm (3.86in x 0.905in)'; the wiki table gives 3.86 x 0.905 inches (L x W)",
+    "note": "The whole PCB, blade plus the electronics end. Off-board, so nothing is placed around it."
+  },
+  "facts": {
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.5
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193",
+      "note": "'Operating Voltage 3.3 ~ 5.5 VDC' in the wiki table and on the product page."
+    },
+    "output_range_v": {
+      "value": [
+        0,
+        3.0
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193",
+      "why_it_matters": "It has to fit under a 3.3 V ADC's ceiling. The vendor disagrees with itself: the wiki table says 'Output Voltage 0 ~ 3.0VDC', the product page says '1.2 ~ 2.5V'. A poster on the vendor's forum (2023) quotes 637 counts in air and 1 in water on a 10-bit ADC and '1.14 V' in soil at an input of 4.6 V \u2014 about 3.1 V in air if the reference was 5 V \u2014 so the wiki's 3.0 V ceiling is the figure to design against, not the product page's 2.5 V."
+    },
+    "operating_current_ma": {
+      "value": 5,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193",
+      "note": "'Operating Current 5mA' in the wiki table; the product page does not state it."
+    },
+    "interface": {
+      "value": "PH2.0-3P",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193",
+      "note": "A JST PH 2.0 mm 3-pin socket, DFRobot's Gravity analog interface. The product page's shipping list: 'Capacitive Soil Moisture Sensor x1, Analog Sensor Cable x1'."
+    },
+    "timer_ic": {
+      "value": "TLC555CDR",
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "note": "IC2, SOP-8, named in the schematic's own text. The blade is driven by this astable timer; the output is the peak-detected level behind D1 (1N4148WS) with R1 1 M and C3 1 uF to ground."
+    },
+    "regulator": {
+      "value": "XC6206P302, 3.0 V",
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "note": "IC1, SOT-23, described in the schematic's own text as a '3.0V voltage regulator IC', fed from VCC with 100 nF + 4.7 uF on each side."
+    },
+    "timer_supply_rail": {
+      "value": "3.0 V (IC2 pin 8 on the regulator's 3.0V net)",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "why_it_matters": "If the timer runs from the 3.0 V rail, its square wave and so the peak-detected output cannot exceed 3.0 V whatever VCC is \u2014 which is what would make this part safe for a 3.3 V ADC even on a 5 V supply. Read off the drawing, not the vendor's text: confirm on the drawing, or on the bench by feeding 5 V and checking that the dry-air output stays below 3.0 V."
+    },
+    "connector_pin_order": {
+      "value": "J1: 1 GND, 2 VCC, 3 Signal",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "why_it_matters": "It is the order the board's PH socket must copy, and it was read off the drawing. Swapped VCC and GND reverses the probe; confirm against the plug on the delivered part before a board is ordered."
+    },
+    "detector_time_constant_s": {
+      "value": 1.0,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "why_it_matters": "R1 1 M across C3 1 uF, computed from two values read off the drawing: the output settles over seconds, so a power-gated probe needs several seconds before its first trusted sample."
+    },
+    "reading_falls_as_soil_wets": {
+      "value": true,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0193/docs/18037",
+      "note": "'There is an inverse ratio between the sensor output value and soil moisture.' The vendor's calibration: the reading in air is the 0 % reference, the reading in water (not past the red line) the 100 % reference."
+    },
+    "electronics_must_stay_dry": {
+      "value": true,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0193/docs/18037",
+      "why_it_matters": "The calibration page says to insert the probe into water 'not past the red line': the electronics end is a bare PCB. In a garden bed that line is the difference between a sensor and a corroded one, which is why the IP65 sibling was chosen for that need."
+    },
+    "hardware_revision": {
+      "value": "schematic V1.0, 2015/8/27",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "why_it_matters": "The vendor's forum carries a 2023 thread titled 'Capacitive Soil Moisture Sensor V.2' (https://www.dfrobot.com/forum/topic/321676) that discusses readings only and names no hardware change, and neither wiki nor product page mentions a revision. If a later revision changed the regulator or the connector, the schematic-derived facts here are about the wrong board; read the silkscreen on the delivered part."
+    },
+    "weight_g": {
+      "value": 15,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/Capacitive_Soil_Moisture_Sensor_SKU_SEN0193"
+    }
+  },
+  "host_requirements": [
+    "Keep the electronics end above the soil and out of the rain: the PCB is bare, the vendor's own calibration says 'not past the red line', and nothing on it is rated for ingress.",
+    "The output tops out at 3.0 V by the wiki's own table (1.2-2.5 V by the product page), so a 3.3 V ADC reads it from either rail \u2014 but calibrate air and water per probe at the supply the board gives it; the vendor's counts come from a 5 V UNO.",
+    "On an ESP32 with Wi-Fi on, read it on an ADC1 pin, and average several samples."
+  ],
+  "sourcing": [
+    {
+      "seller": "DFRobot (dfrobot.com)",
+      "url": "https://www.dfrobot.com/product-1385.html",
+      "price_czk": null,
+      "checked": "2026-09-29",
+      "note": "USD 5.90 direct; ships from China. No local (Czech) listing was fetched for this part."
+    }
+  ],
+  "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. Local sellers first, from the brief.",
+  "attachments": {
+    "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf": "sen0193-soil-moisture/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+    "https://dfimg.dfrobot.com/enshop/SEN0193/SEN0193_Main_01.jpg": "sen0193-soil-moisture/SEN0193_Main_01.jpg"
+  }
+}
