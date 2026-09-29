@@ -55,6 +55,36 @@ class TheContractTest(unittest.TestCase):
         problems = self._problems(needs=[{"signal": "SIG"}])
         self.assertTrue(any("has no pin" in p for p in problems))
 
+    def test_a_need_with_no_pin_is_caught_even_when_the_part_has_a_pin_order(self):
+        """
+        The validator crashed on exactly the malformation it exists to catch.
+
+        `needs[0] has no pin` was appended, and three lines later the pin_order block read
+        `need["pin"]` on that same entry and raised KeyError. Every real part has a pin_order, so
+        any part broken this way took the whole run down instead of being reported — and the run
+        it took down was `--validate`, whose entire job is surviving bad records long enough to
+        describe them.
+        """
+        problems = self._problems(needs=[{"signal": "SIG"}], pin_order=["A", "B"])
+        self.assertTrue(any("has no pin" in p for p in problems), problems)
+
+    def test_a_power_entry_with_no_pin_is_caught_rather_than_crashing(self):
+        # The SECOND instance of the same crash, found by writing the test for the first. Only
+        # `needs` entries were checked for a pin, and `power` was then read with `["pin"]` in
+        # four places — a rule written at the use site instead of in the contract.
+        problems = self._problems(power=[{"rail": "logic", "direction": "in"}], pin_order=["P"])
+        self.assertTrue(any("power[0] has no pin" in p for p in problems), problems)
+
+    def test_an_unused_pin_entry_with_no_pin_is_caught_too(self):
+        problems = self._problems(unused_pins=[{"note": "left floating"}])
+        self.assertTrue(any("unused_pins[0] has no pin" in p for p in problems), problems)
+
+    def test_a_well_formed_power_entry_is_not_reported(self):
+        # The rule was widened, not made noisy.
+        self.assertEqual(self._problems(
+            power=[{"pin": "VCC", "rail": "logic", "direction": "in"}],
+            pin_order=["P", "VCC"]), [])
+
     def test_a_nonsense_direction_is_caught(self):
         problems = self._problems(needs=[{"signal": "S", "pin": "P", "direction": "sideways"}])
         self.assertTrue(any("direction" in p for p in problems))

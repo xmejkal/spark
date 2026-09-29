@@ -64,6 +64,97 @@ still ~1800 lines of TypeScript in the bin. spark finds it by searching upward a
 plugin gets no simulation. Moving it means spark depends on bun. Options: move it, vendor it,
 or leave it and document the dependency. **Not obvious, so not decided here.**
 
+## The cold test — 14 findings from building something that is not the bin
+
+On 2026-09-26 the plugin was used to build an ESP32 RC car and its remote from scratch
+(`~/Development/rc-car`, full evidence in its `DIARY.md`). Both boards build. The exercise found
+fourteen defects, and it is the single best source of ordered work this backlog has.
+
+**Three are fixed**, each reproduced before acting and each mutation-tested:
+
+| id | what | fix |
+| --- | --- | --- |
+| G2 | rails outside a closed four-name vocabulary silently dropped — 3 of 8 power pins gone | `cc94dd1` |
+| G7 | five identical parts collapsed into one, shorting five GPIOs to its single port | `0201d6d` |
+| G8 | a second board in a project switched six of seven checks off and reported `ok` | `f2202e9` |
+| G9 | `active.json` holding a list gave `--id` a Python repr to print, exit 0 | **this change** |
+
+Three of those are the same defect class the bin already had twice — **the generator or the runner
+produces less than it was asked for and exits 0** — and every one was found by building something
+new, never by a test.
+
+The rest, ordered. The first group is that same family and comes first because each is cheap and
+each currently misleads.
+
+### R1 — `parts.py --validate` inside a project validates only the plugin's own parts [G14]
+Run in a project with its own `parts/`, it checks the five shipped records, says `ok`, exits 0 —
+and never opens the project's. A project's own broken part passes a validation that never read it.
+`--unverified` is blind the same way and sits in `spark-design`'s pre-fabrication gate, so the
+open-questions list a person reads before ordering a board omits every part they wrote themselves.
+**Value proven by:** a deliberately broken project part making `--validate` exit non-zero.
+
+### R2 — `init_project` silently picks one of two circuits [G10]
+Same input, same glob, opposite behaviour: `check_all` now calls two matches ambiguous and
+`init_project` takes one, reports "5 rail(s) from circuit.json", and names no path. It wrote the
+car's rails into a project that also contains the remote. Two halves of one tool disagreeing about
+whether choosing is allowed.
+**Value proven by:** `init_project` on a two-circuit project refusing, or naming which it used.
+
+### R3 — A part stating a real requirement breaks the chain; the validator says it is fine [G12]
+`needs: ["pwm"]` validates `ok`, then `assign_pins` refuses the entire design because
+`CAPABILITIES = ("wake", "adc")`. To get a board out you must delete a true fact about the part.
+That is the contract punishing honesty, in a tool whose whole thesis is provenance.
+**Value proven by:** either `pwm` is assignable, or `parts.py` rejects the capability at the point
+it is written — not four scripts later.
+
+### R4 — A pin name with `+` or `-` cannot be wired, and nothing warns [G3]
+The MP1584 buck's pads are silkscreened `IN+`/`OUT+`. tscircuit cannot select those, so all four
+power pins errored; renaming to `VIN`/`VOUT` fixed it and lost the silkscreen. Boards solved this
+years ago with `physical.pad_aliases` — **parts have no equivalent**, so the printed name is simply
+discarded.
+**Value proven by:** a part keeping `IN+` as its printed name and wiring correctly.
+
+### R5 — The generator sizes no trace [G6]
+Every trace is tscircuit's 0.15 mm default, good for 0.6 A, on a car whose traction rail carries
+2.9 A. `check_physics` caught all three rails — the checker works and the generator never asks.
+**Value proven by:** a generated board's power traces passing `check_physics` without being widened
+by hand, and a comment where the rules file states no current.
+
+### R6 — A placeholder footprint is indistinguishable from a real one [G4]
+The XT30 inlet has no footprint in the library, so it carries a `jst_ph_2` placeholder with the
+wrong pitch and hole size. `facts` and `body_mm` carry `verified`; the **footprint carries no
+provenance at all**, and `check_footprints` duly measured the placeholder's annular rings and
+reported a defect about a part that is not there.
+**Value proven by:** a placeholder footprint reported `could-not-run` rather than measured.
+
+### R7 — The generator chain is named by no skill, no command and no agent [G13]
+`assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working
+boards, and `spark-design:31` still tells a user to write the `.tsx` by hand. Verified: two
+mentions of `parts-researcher` plugin-wide, both non-routes.
+**Value proven by:** a user following the documented flow reaching a built board without being told
+the script names by someone who already knew them.
+
+### R8 — Asked for a servo; nothing started looking [G1] **[PO — this is a product decision]**
+The first thing the exercise hit and still the largest. No search, no candidate list, no sourcing,
+not even "you have no part of this kind". There is a well-specified `parts-researcher` agent and
+nothing routes to it. Steps one to three of any new project — decide what you need, find it, write
+it down — are unaided.
+**Not obvious what it should be**, which is why it is marked PO: a signpost (`--need servo` printing
+the schema and the agent's name) is an afternoon; actual sourcing is a product.
+
+### R9 — A part states its rail, but the rail belongs to the design [G5]
+The shipped `l9110s-module` puts VCC on `motor`, which names the bin's 6 V pack. The car runs the
+same driver at 7.4 V, so the whole record had to be copied to change one string — and that copy is
+now frozen against plugin updates.
+**Value proven by:** `{"part": "l9110s-module", "rails": {"VCC": "traction"}}` in a requirements
+file, with no duplicate part record.
+
+### R10 — Nothing models a link between two designs [G11] **[PO]**
+The remote sends a packet the car parses and nothing anywhere can check the two agree. An
+exhaustive grep found no notion of it in any schema. The bin has already shown what happens to an
+agreement nothing checks — twice.
+**Large and not obviously spark's job.** Marked PO.
+
 ### P2 — A simulation path that costs no Wokwi minutes
 The quota is 50 free minutes and the only source of truth is wokwi.com/dashboard/ci — check
 there, do not trust a number written here. A loop that spends them on every check is unusable

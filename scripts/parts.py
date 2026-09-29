@@ -138,6 +138,16 @@ def validate(part: dict, path: Path) -> list:
             problems.append("%s direction is %r; expected in, out or bidirectional"
                             % (where, need.get("direction")))
 
+    # Every list of pins, not just `needs`. Only `needs` entries were checked for a pin, and then
+    # `power` and `unused_pins` were read with `entry["pin"]` in four places — so an entry missing
+    # one crashed the validator instead of being reported by it. Same defect twice in one file,
+    # which is what happens when a rule is written at the use site rather than the contract.
+    for group in ("power", "unused_pins"):
+        for index, entry in enumerate(part.get(group) or []):
+            if not entry.get("pin"):
+                problems.append("%s[%d] has no pin, so nothing can say where it connects"
+                                % (group, index))
+
     # Dimensions are a real schema, not an open fact, because every part has an outline and a
     # generator reads them structurally to decide where things go. They sat OUTSIDE the
     # provenance contract as a bare `{"width": .., "height": ..}` — so one part carried a
@@ -169,9 +179,13 @@ def validate(part: dict, path: Path) -> list:
         if not isinstance(order, list) or not order:
             problems.append("pin_order must be a list of pad names, pad 1 first")
         else:
-            named = {need["pin"] for need in part.get("needs") or []}
-            named |= {supply["pin"] for supply in part.get("power") or []}
-            named |= {unused["pin"] for unused in part.get("unused_pins") or []}
+            # `.get`, not `[...]`. An entry with no `pin` is exactly what the checks above
+            # exist to report, and reading it here crashed the validator on the malformation it
+            # was written to catch: `needs[0] has no pin` was appended, then this line raised
+            # KeyError three lines later. Every real part has a pin_order, so any part broken in
+            # that way took the whole run down instead of being reported.
+            named = {entry.get("pin") for group in ("needs", "power", "unused_pins")
+                     for entry in part.get(group) or []} - {None}
             for position, pad in enumerate(order, start=1):
                 if pad is not None and pad not in named:
                     problems.append(
@@ -180,7 +194,7 @@ def validate(part: dict, path: Path) -> list:
             # A pad may legitimately appear twice, but only if it is a SUPPLY. Real modules bring
             # VCC and GND out on both rows so either side can be fed; a repeated SIGNAL is a typo,
             # and two pads shorted together is what it would build.
-            supplies = {supply["pin"] for supply in part.get("power") or []}
+            supplies = {supply.get("pin") for supply in part.get("power") or []}
             placed = [pad for pad in order if pad is not None]
             repeated = {pad for pad in placed if placed.count(pad) > 1}
             for pad in sorted(repeated - supplies):
@@ -227,7 +241,7 @@ def validate(part: dict, path: Path) -> list:
             # of it this pin drives. Two outputs on one load are the normal case — that is what a
             # differential pair is — and they are only a short if nothing distinguishes them.
             outputs_by_rail.setdefault(
-                (supply.get("rail"), supply.get("polarity")), []).append(supply["pin"])
+                (supply.get("rail"), supply.get("polarity")), []).append(supply.get("pin"))
 
     for (rail, polarity), pins in outputs_by_rail.items():
         if len(pins) > 1:

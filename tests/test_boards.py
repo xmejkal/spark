@@ -82,6 +82,43 @@ class WhereABoardComesFromTest(unittest.TestCase):
         with self.assertRaises(boards.BoardError):
             boards.active_id(root)
 
+    def test_a_selection_holding_TWO_boards_is_refused(self):
+        """
+        `if not board_id` was the only guard, and a non-empty list is truthy.
+
+        Putting both boards in the one file that chooses the board is the first thing anyone with
+        two boards tries. `--id` then printed `['firebeetle2-esp32s3', 'xiao-esp32-c6']` and exited
+        0 — and `boards/README.md` offers `--id` to Make and every other consumer to interpolate,
+        so that repr goes straight into a path. `--validate` said `ok` twice, and `--list` silently
+        dropped the `*` marking the active board: an absent character as the only signal.
+        """
+        root = project()
+        (root / "boards" / "active.json").write_text(
+            json.dumps({"schema": 1, "board": ["firebeetle2-esp32s3", "xiao-esp32-c6"]}))
+        with self.assertRaises(boards.BoardError) as caught:
+            boards.active_id(root)
+        self.assertIn("ONE board", str(caught.exception))
+
+    def test_the_refusal_says_what_to_do_with_two_boards(self):
+        # A refusal nobody can act on is only marginally better than a wrong answer, and "two
+        # boards" is a real thing to want — a car and its remote.
+        root = project()
+        (root / "boards" / "active.json").write_text(
+            json.dumps({"schema": 1, "board": ["a", "b"]}))
+        with self.assertRaises(boards.BoardError) as caught:
+            boards.active_id(root)
+        self.assertIn("two projects", str(caught.exception))
+
+    def test_a_selection_holding_a_number_is_refused_too(self):
+        # The check is on the TYPE, not on lists specifically.
+        root = project()
+        (root / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": 7}))
+        with self.assertRaises(boards.BoardError):
+            boards.active_id(root)
+
+    def test_an_ordinary_string_selection_still_works(self):
+        self.assertEqual(boards.active_id(project()), "firebeetle2-esp32s3")
+
 
 class ResolvingTest(unittest.TestCase):
     def test_resolve_writes_the_board_to_one_known_path(self):

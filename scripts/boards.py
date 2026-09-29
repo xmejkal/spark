@@ -138,12 +138,31 @@ def selection_file(project: Path) -> Path:
 
 
 def active_id(project: Path) -> str:
-    """The id of the board this project is currently built around."""
+    """
+    The id of the board this project is currently built around.
+
+    ONE id, and the type is checked rather than assumed. `if not board_id` was the only guard, and
+    a non-empty list is truthy — so a project with two boards, which is the first thing anyone with
+    two boards tries, got a Python list repr where a board id belongs:
+
+        $ boards.py --id
+        ['firebeetle2-esp32s3', 'xiao-esp32-c6']      # exit 0
+
+    `boards/README.md` offers `--id` to Make and every other consumer to interpolate, so that
+    string goes straight into a path. `--validate` said `ok` twice, and `--list` dropped the `*`
+    marking the active board — an absent character as the only signal that the file is nonsense.
+    """
     selection = _read_json(selection_file(project), "board selection")
     board_id = selection.get("board")
     if not board_id:
         raise BoardError(f"{selection_file(project)} names no board "
                          f'(expected a "board" key holding a board id)')
+    if not isinstance(board_id, str):
+        raise BoardError(
+            f'{selection_file(project)} holds {board_id!r} where a board id belongs. '
+            f"A project is built around ONE board: `.spark/board.json` is one file per project "
+            f"and every consumer reads it. Two boards means two projects — a car and its remote "
+            f"are separate designs that happen to talk to each other.")
     return board_id
 
 
