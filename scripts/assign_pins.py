@@ -241,6 +241,21 @@ def assign(board, signals):
             raise Impossible("%s asks for pin %r, which this board does not bring out"
                              % (signal["name"], label))
         gpio = board["pins"][label]
+        # Named is not exempt. A signal that names its pin was honoured without a look at what it
+        # asked for or what the pin is: a wake button on GPIO47 (not wake-capable), an ADC sense on
+        # GPIO38, a button on the BOOT strap — all "dedicated hardware, not a choice", exit 0,
+        # while the same signals without `pin` landed right (close audit C4).
+        needs = set(signal.get("needs", []))
+        roles = roles_of(board, gpio)
+        blocked = [role for role in roles if role in UNAVAILABLE_ROLES]
+        if blocked:
+            raise Impossible("%s asks for %s by name, and GPIO%d is %s — a pin this never offers, "
+                             "because the chip reads it at reset"
+                             % (signal["name"], label, gpio, ", ".join(blocked)))
+        cannot = needs - capability_of(board, gpio)
+        if cannot:
+            raise Impossible("%s asks for %s by name and needs %s, which GPIO%d cannot do"
+                             % (signal["name"], label, ", ".join(sorted(cannot)), gpio))
         line = signal.get("line") if signal.get("bus") else None
         if gpio in taken_gpio:
             if line in SHARED_LINES and bus_holders.get(gpio) == (signal["bus"], line):

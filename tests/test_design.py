@@ -266,5 +266,27 @@ class RulesInTest(unittest.TestCase):
         (root / ".spark" / "rules.json").write_text(json.dumps({"physics": {"i2c_hz": 400000}}))
         self.assertEqual(design.rules_in(root)["physics"]["i2c_hz"], 400000)
 
+
+class TheInputIsCheckedWhereItIsReadTest(unittest.TestCase):
+    def test_a_project_that_does_not_exist_is_a_sentence_naming_it(self):
+        # Close audit C5: a typo'd --project resolved to a path nobody checked, and a project's
+        # rules were dropped with exit 0.
+        root, path = project(rules={"physics": {"rails": {"MOTOR6V": {"max_current_a": 2.0}}}})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path, project=str(root / "typo"))
+        self.assertIn("typo", str(caught.exception))
+
+    def test_a_signal_without_a_name_is_a_sentence_naming_the_entry(self):
+        # Close audit C7: a KeyError through both mains and "the chain is broken" in the spine.
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": [],
+                                           "signals": [{"needs": []}]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.read(path)
+        self.assertIn("signals[0]", str(caught.exception))
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [],
+                                    "signals": [{"name": "X", "needs": "wake"}]}))
+        with self.assertRaises(design.DesignError):
+            design.read(path)
+
 if __name__ == "__main__":
     unittest.main()

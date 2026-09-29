@@ -66,6 +66,15 @@ def read(path):
     if not isinstance(wanted, dict):
         raise DesignError("%s holds a %s; a requirements file is an object with `parts`"
                           % (path, type(wanted).__name__))
+    for index, signal in enumerate(wanted.get("signals") or []):
+        # A signal with no name was a KeyError through both mains and "the chain is broken"
+        # through the spine (close audit C7). Checked where the file is read, like `parts`.
+        if not isinstance(signal, dict) or not isinstance(signal.get("name"), str) or not signal["name"]:
+            raise DesignError("%s: signals[%d] needs a `name`; a signal is {name, needs, pin?, bus?}"
+                              % (path, index))
+        if not isinstance(signal.get("needs", []), list):
+            raise DesignError("%s: signals[%d].needs must be a list of what the pin must do"
+                              % (path, index))
     return wanted
 
 
@@ -79,7 +88,13 @@ def project_for(path, project=None):
     the way `check_spine` always did; the callers say so (`LIBRARY_NOTE`).
     """
     if project:
-        return Path(project).resolve()
+        chosen = Path(project)
+        if not chosen.is_dir():
+            # Unchecked, a typo here resolved to a path nobody looked at: the board and the
+            # parts came from the library, the project's rules were dropped, exit 0, stderr
+            # empty — A2's defect one character away (close audit C5).
+            raise DesignError("no directory at %s — `--project` names a project directory" % chosen)
+        return chosen.resolve()
     return boards.project_or_library(Path(path).resolve().parent)
 
 

@@ -762,6 +762,14 @@ class TheDocumentedInvocationTest(unittest.TestCase):
             self.assertIn('<trace from=".Mcu > .SDA" to=".%s > .SDA" />' % name, tsx)
             self.assertIn('<trace from=".Mcu > .SCL" to=".%s > .SCL" />' % name, tsx)
 
+    def test_a_project_that_does_not_exist_is_could_not_run_not_an_unsized_board(self):
+        # Close audit C5: with the flag pointing at a typo, the board came out unsized, exit 0.
+        root = self._project()
+        code, tsx, err = self._main(["requirements.json", "--project", "typo"], root)
+        self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
+        self.assertEqual(tsx, "")
+        self.assertIn("typo", err)
+
     def test_an_entry_without_a_part_is_could_not_run(self):
         root = self._project()
         (root / "requirements.json").write_text(json.dumps(

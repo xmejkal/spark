@@ -418,5 +418,35 @@ class ABusWithNoDedicatedPinsGoesAnywhereTest(unittest.TestCase):
         import parts
         self.assertIs(assign_pins.BUS_LINES, parts.BUSES)
 
+
+class ANamedPinIsStillCheckedTest(unittest.TestCase):
+    """
+    Close audit C4: a signal naming its own pin was honoured without a look at its `needs` or
+    the pin's roles. Named is dedicated, not exempt.
+    """
+
+    def setUp(self):
+        import json
+        self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def test_a_named_pin_that_cannot_do_what_is_asked_is_refused_saying_what(self):
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(self.board, [{"name": "BTN_WAKE", "pin": "D14", "needs": ["wake"]}])
+        self.assertIn("D14", str(refused.exception))
+        self.assertIn("wake", str(refused.exception))
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(self.board, [{"name": "SENSE", "pin": "D3", "needs": ["adc"]}])
+        self.assertIn("adc", str(refused.exception))
+
+    def test_a_named_strap_is_refused_even_with_nothing_asked(self):
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(self.board, [{"name": "BTN_BOOT", "pin": "D9", "needs": []}])
+        self.assertIn("strapping", str(refused.exception))
+
+    def test_a_named_pin_that_can_do_it_is_honoured(self):
+        placed, _ = assign_pins.assign(self.board, [{"name": "BTN_WAKE", "pin": "D12", "needs": ["wake"]}])
+        self.assertEqual(placed[0]["pin"], "D12")
+        self.assertIn("by name", placed[0]["why"])
+
 if __name__ == "__main__":
     unittest.main()
