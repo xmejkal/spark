@@ -19,7 +19,7 @@ retros in a row say the intake has not drained (R3.2).
 | id | item | why here |
 | --- | --- | --- |
 | ~~P15~~ | Drain the intake: 43 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | **done** the same evening, `f35e7df`: 40 resolved, 3 fixed, 1 rejected, 4 new items |
-| **R7** | The generator chain named by a skill, a command and an agent [G13] | the usability gap: the chain exists and nothing routes to it |
+| ~~R7~~ | The generator chain named by a skill, a command and an agent [G13] | **done `1f769f8`** — `/spark:build`, the skill and the agent route through the chain |
 | **R9** | A rail belongs to the design, not the part [G5] | one line in a requirements file instead of a copied record |
 | **R2.5** | Third cold test — **PO: choose a domain** (below) | both silent-wrongness classes were found only by building something new |
 | — | The audit agent at sprint end (R3.3) | the outside read that produced six items last time |
@@ -45,7 +45,10 @@ car, which is the point:
 it decides nothing about the product. `grep -c '\`raised\`' docs/observations/INDEX.md` → 1
 (the legend line). Three rows were still true and are fixed in
 `f35e7df`; R19 is the first `rejected` row the table has ever had. Four items came out, two of them
-the PO's. **Correction:** the fix commit's message (`f35e7df`) says 533 tests; the run it cites
+the PO's.
+
+**R7 done** (`1f769f8`). The documented example did not work as written until the library had a
+tactile button; it does now, end to end. **Correction:** the fix commit's message (`f35e7df`) says 533 tests; the run it cites
 printed 532. Written before the count — R3.5's exact failure mode, an hour after R3.5.
 
 ## Definition of Done

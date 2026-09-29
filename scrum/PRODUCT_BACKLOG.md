@@ -41,7 +41,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | id | item | size |
 | --- | --- | --- |
 | P15 | Drain the intake: 43 `raised` rows, reproduced or rejected | S, time-boxed |
-| R7 | The generator chain named by a skill, a command and an agent | M |
+| ~~R7~~ | The generator chain named by a skill, a command and an agent — **done `1f769f8`** | M |
 | R9 | A rail belongs to the design, not the part | M |
 | R2.5 | Third cold test — **PO chooses the domain** | L |
 
@@ -245,12 +245,18 @@ are already backlog items (P5–P10 map to seven of them) are `acted` with the i
 **Value proven by:** `grep -c '\`raised\`' docs/observations/INDEX.md` → 1 (the legend), and
 `rejected` used at least once with a reason.
 
-### R7 — The generator chain is named by no skill, no command and no agent [G13]
+### ~~R7 — The generator chain is named by no skill, no command and no agent~~ [G13] — **DONE `1f769f8`**
 `assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working
 boards, and `spark-design:31` still tells a user to write the `.tsx` by hand. Verified: two
 mentions of `parts-researcher` plugin-wide, both non-routes.
 **Value proven by:** a user following the documented flow reaching a built board without being told
 the script names by someone who already knew them.
+
+**Result.** `/spark:build`; the design skill routed through the chain with hand-written tscircuit
+only where the generator stops; the hardware-engineer agent likewise. The documented example, run
+as written, reaches the end of the chain — which needed a `tactile-button` record the library did
+not have (the car's, with sources, now shipped). `test_routes.py` keeps every link named and every
+route pointing at a script that exists; four mutations caught.
 
 ### R8 — Asked for a servo; nothing started looking [G1] **[PO — this is a product decision]**
 The first thing the exercise hit and still the largest. No search, no candidate list, no sourcing,
