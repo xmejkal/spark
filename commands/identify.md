@@ -12,6 +12,12 @@ bought — with the difference that this part is owned, so nothing is sourced an
 
 ## 1. Read the photo
 
+Ask for **both sides, out of the bag, flat, with a ruler or a known header in frame**. One photo
+through an anti-static bag produced a record with seven facts marked unverified — and when the
+back was photographed, five of them were wrong: the header, the size, the pull-ups, the cell, the
+charging path (irrigation diary, the DS3231 of 2026-09-29). Unverified was the right word; the
+second photo was the cheaper fix.
+
 Read the image with the Read tool and write down, before searching anything: every chip marking
 (the part number on each IC), every silkscreen label and the order of the header pins, any board
 name (`CJMCU-111`, `ZS-042`), the connector types, and the seller's label if the bag is in the

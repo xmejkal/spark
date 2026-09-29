@@ -36,6 +36,9 @@ only the photo supports (pin order, pull-ups, a charging diode, dimensions) is `
 with "read from the photo; confirm on the bench" and how. The part is owned: `"owned": true`,
 `"photo": "<path>"`, no vendor order, a `sourcing` entry `{"seller": "owned"}`. Several modules
 are sold under one chip's name with different pinouts; be true of the one in the photo (W5).
+**Ask for both sides, out of the bag.** One photo through a bag gave a DS3231 module seven
+unverified facts, five of them wrong once the back was seen; if you have one side only, say so in
+`//` and list what the other side would settle — a cell holder, resistor packs, a charging diode.
 
 ## Keep everything you read
 
