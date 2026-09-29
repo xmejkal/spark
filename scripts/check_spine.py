@@ -241,7 +241,7 @@ def components_not_on_ground(circuit):
     return sorted(names.get(owner, "?") for owner in present - grounded)
 
 
-def run(requirements, workdir, toolchain=None, project=None, from_library=False):
+def run(requirements, workdir, toolchain=None, project=None, from_library=False, firmware=None):
     """
     Every stage, in order, stopping at the first that cannot produce input for the next.
 
@@ -383,7 +383,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False)
     staged, chip_problems = sim_project.stage_chips(chips, sim_dir)
     if chip_problems:
         return stages + [Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems))]
-    (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged))
+    (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, firmware))
 
     diagram_path = sim_dir / "diagram.json"
     made = subprocess.run(
@@ -441,6 +441,8 @@ def main(argv=None):
     parser.add_argument("--keep", action="store_true", help="leave the working directory behind")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
+    parser.add_argument("--firmware", metavar="IMAGE",
+                        help="the flash image wokwi.toml names, relative to the sim dir (flash_image.py writes one)")
     args = parser.parse_args(argv)
 
     # The input is read before anything runs, and read AS input: a malformed file is a stage
@@ -466,7 +468,7 @@ def main(argv=None):
         os.symlink(modules, workdir / "node_modules")
 
     try:
-        stages = run(requirements, workdir, toolchain, project, from_library)
+        stages = run(requirements, workdir, toolchain, project, from_library, firmware=args.firmware)
     except subprocess.TimeoutExpired:
         stages = [Stage("build", COULD_NOT_RUN,
                         "the build did not finish in %ds" % BUILD_TIMEOUT_S)]

@@ -103,6 +103,26 @@ The generator refuses rather than guess, and each refusal says what to record:
 A rail nothing sources (a motor rail with no connector) is not a refusal: the file says so and the
 build stops on a net with one member. Add the connector to the parts list.
 
+## Simulate it — for real, with the values set in the test
+
+Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
+chip kept beside the record and compiled to WebAssembly by `wokwi-cli chip compile`, or a skip
+with its reason), so the one command's last stage needs no table anywhere else. To run it:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --sim-dir sim --firmware flash-with-firmware.bin
+${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --micropython sim/micropython-<chip>.bin --files firmware -o sim/flash-with-firmware.bin
+cd sim && wokwi-cli . --scenario scenarios/<name>.scenario.yaml --timeout 60000
+```
+
+The first keeps the simulation project — `diagram.json`, `wokwi.toml`, the chips — in `sim/`;
+the second puts MicroPython and the project's own files into one flash image (the interpreter
+comes from micropython.org for the board's chip, the board file names the port); the third runs
+a scenario, whose `set-control` lines are the chips' sliders — a probe's `moisturePct`, a flow
+meter's `flowLpm` — and whose `wait-serial` and `expect-pin` lines are what it asserts. Chips
+compile locally and cost nothing; a scenario run spends Wokwi CI minutes, so run them on purpose.
+Stand-ins are named as such in the records: a pass here is not a bench.
+
 ## After it builds
 
 `check_all.py --project .` for the deterministic checks; the `spark-review` skill for the full
