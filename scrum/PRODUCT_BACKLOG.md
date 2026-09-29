@@ -8,7 +8,7 @@ Petr says otherwise. Anything marked **[PO]** needs his decision before it can m
 Every item carries `Value proven by:` — a command whose output Petr can read. An item that cannot
 name one is not ready to be pulled.
 
-Last ordered: 2026-09-25.
+Last ordered: 2026-09-29 — a proposal; the PO has not reordered since 09-25.
 
 ---
 
@@ -22,7 +22,7 @@ Where that stands today, measured:
 | step | state |
 | --- | --- |
 | idea → parts | works — `parts.py`, 5 records, contract-tested |
-| parts → pin map | works — `assign_pins.py`, but no board file has an `spi` role (P3) |
+| parts → pin map | works — `assign_pins.py`; bus pins spent last (P3, `831f756`) |
 | pin map → schematic | works |
 | schematic → **builds** | works — 12 traces, 0 errors |
 | **schema → simulation** | **works as of 2026-09-25** — a 10-wire `diagram.json` from a design nobody typed |
@@ -30,18 +30,20 @@ Where that stands today, measured:
 
 **The whole spine runs**: `python3 scripts/check_spine.py` →
 `idea -> parts -> pin map -> schematic -> footprint -> build -> simulation`, exit 0. What is left
-on it is quality, not existence: the `spi` role (P3), and the structural question under P1.
+on it is quality, not existence: the structural question under P1, and the loader defects the sprint audit found (P11).
 
 ---
 
-## Sprint 1 — pulled
+## Sprint 3 — pulled
 
-See [`SPRINT.md`](SPRINT.md). Goal: **a design spark generated can be simulated.**
+See [`SPRINT.md`](SPRINT.md). Goal: **spark reports what it did and nothing less.**
 
 | id | item | size |
 | --- | --- | --- |
-| P1 | Bring `circuit-to-wokwi` into spark | L |
-| P2 | A simulation path that costs no Wokwi minutes | M |
+| P11 | A design is loaded once, in one place, and `main()` is tested | M |
+| P12 | The spine tells a toolchain fault from a design fault | S |
+| P13 | Sibling scripts are imported, not loaded by path | S |
+| P14 | `emit_board` says each thing once | M |
 
 ---
 
@@ -70,14 +72,15 @@ On 2026-09-26 the plugin was used to build an ESP32 RC car and its remote from s
 (`~/Development/rc-car`, full evidence in its `DIARY.md`). Both boards build. The exercise found
 fourteen defects, and it is the single best source of ordered work this backlog has.
 
-**Three are fixed**, each reproduced before acting and each mutation-tested:
+**Nine are fixed** — four below, five in the struck-through items that follow — each reproduced
+before acting and each mutation-tested:
 
 | id | what | fix |
 | --- | --- | --- |
 | G2 | rails outside a closed four-name vocabulary silently dropped — 3 of 8 power pins gone | `cc94dd1` |
 | G7 | five identical parts collapsed into one, shorting five GPIOs to its single port | `0201d6d` |
 | G8 | a second board in a project switched six of seven checks off and reported `ok` | `f2202e9` |
-| G9 | `active.json` holding a list gave `--id` a Python repr to print, exit 0 | **this change** |
+| G9 | `active.json` holding a list gave `--id` a Python repr to print, exit 0 | `3b5f38f` |
 
 Three of those are the same defect class the bin already had twice — **the generator or the runner
 produces less than it was asked for and exits 0** — and every one was found by building something
@@ -111,7 +114,8 @@ where the record is written, and an entry may carry `printed` — the silkscreen
 mirroring `physical.pad_aliases` on the board side. The emitted file records both where they
 differ. The MP1584 keeps `IN+ IN- OUT+ OUT-` as printed names. Four mutations caught.
 
-**Tier 2 is closed.** That was the trigger for the audit.
+Closing this tier triggered the sprint audit — `docs/observations/2026-09-29-sprint-audit.md`,
+sixteen claims, every one reproduced or read (`INDEX.md` A1–A16). They became P11–P14 below.
 
 ### ~~R5 — The generator sizes no trace~~ [G6] — **DONE `dd01824`**
 Sized from `.spark/rules.json` by `copper.py`, the module `check_physics` judges with — so the two
@@ -138,6 +142,63 @@ footprint is a stand-in ... was not measured". **Zero false problems across the 
 A mutation escaped — "the wiring passes nothing through" — because every test exercised the
 derivation and none the check that consumes it. Same shape as the trace-sizing escape. The
 integration test now exists, with a control that the same geometry IS measured without a project.
+
+### From the sprint audit — 2026-09-29
+`docs/observations/2026-09-29-sprint-audit.md`: an outside read after the nine fixes. Sixteen
+claims, none rejected — every one reproduced or read and holding (`INDEX.md` A1–A16). Four items
+came out of it. The first two are the "less than asked, exit 0" family again — this time inside
+the generator's own entry point and in the spine's verdict — and they come first for the reason
+that family always has: each one misleads today, on the documented command.
+
+### P11 — A design is loaded once, in one place, and `main()` is tested
+`emit_board.main` resolves the project at one line and passes the *unresolved* `--project` flag
+to `rules_in` seventy lines later, so the documented invocation — inside the project, no flag —
+emits every power trace unsized, exit 0, and says the widths are unjustified while
+`.spark/rules.json` two directories down states them. Reproduced: 1 `thickness=` against 14.
+Sixth instance of the family, inside the commit that closed the fifth. Nothing tests `main()`
+and the mutation table cannot reach it. Same cause, three more claims: the load-and-tag loop is
+copied in `check_all.placeholder_components_in` under `except Exception: return ()`;
+`check_spine` resolves the project from `cwd` and the toolchain from the requirements file, so
+from `/tmp` it cannot find the project's parts; the requirements JSON is read outside every
+`try` — three raw tracebacks, exit 1, which in a three-valued tool reads as "problems found".
+One `design.load(requirements, project=None)`: project resolved once, from the file's own
+directory upward; JSON read inside the `try`; rules from the resolved project; called by all
+three.
+**Value proven by:** `emit_board.main` run from inside a temp project holding `.spark/rules.json`,
+without `--project`, emits a `thickness=` on a trace — the test that fails today;
+`check_spine.py /abs/path/car.requirements.json` from `/tmp` builds; a malformed requirements
+file is `could-not-run`, not a traceback. Mutation: the resolved project swapped back for the flag.
+
+### P12 — The spine tells a toolchain fault from a design fault
+With nvm's global `tsci 0.0.2600` first on PATH, `check_spine.py` from the spark directory says
+`[!!] build — no circuit.json was produced … Cannot find package 'react'` and **"the chain is
+broken", exit 1** — a toolchain that cannot build anything, reported as a defect in the design.
+W1's mirror image: a check that could not look, reading as a check that failed. The "exit 0"
+claim at the top of this file had an unstated precondition, now stated: a project-local `tsci`.
+When a build produces no `circuit.json`, build a trivial known-good board with the same `tsci`;
+if that fails too, the stage is `could-not-run`, naming the tsci path and version. Costs nothing
+on the happy path.
+**Value proven by:** the same A/B — global tsci first on PATH → `????  build`, exit 2, the tsci
+named; project tsci → `ok`. Mutation: the preflight removed.
+
+### P13 — Sibling scripts are imported, not loaded by path
+`check_all.load()` (eleven sites) and `check_physics._sibling` import siblings with `importlib`
+by file path and register nothing in `sys.modules`: in one process `check_all`'s `parts` is not
+`emit_board`'s `parts`, and their `PartError` classes are different objects, so an `except` for
+one cannot catch the other. Eight scripts already do `sys.path.insert` + plain import —
+`check_physics.py` among them, three lines above its own `_sibling`.
+**Value proven by:** `check_all.load` gone; a test asserts one `parts` module per process; suite
+green.
+
+### P14 — `emit_board` says each thing once
+`emit()` is 186 lines and 39 branches: ten sections, none a function. The power-pin walk is
+written four times, the placeholder filter twice, `("needs", "power", "unused_pins")` three times
+in `parts.py`, the circuit-glob pair in two files, and the MCU pad loop still carries the
+`continue` that G2 removed for parts. Each is a site where the next fix lands once and misses the
+rest; three of this sprint's fixes did exactly that before the audit.
+**Value proven by:** one power-connection generator, one placeholder filter, one pin-list
+constant, one circuit-glob list; each `emit()` section a function with a test; the generated
+reference board and both RC boards byte-identical before and after.
 
 ### R7 — The generator chain is named by no skill, no command and no agent [G13]
 `assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working
@@ -176,14 +237,22 @@ runs the real firmware on a real MicroPython runtime locally, 14 checks, exit co
 offline. Only *running* one is billed. So this item is now about a local RUN, not a local emit.
 **Value proven by:** a simulation stage that runs to a verdict with the network off.
 
-### P3 — An `spi` role in both board files
+### ~~P3 — An `spi` role in both board files~~ — **DONE `831f756`**
 `assign_pins` spends the whole SPI bus on two LEDs and a button, because no board file records
 that those pins are a bus. `grep spi boards/*.json` returns nothing. One `pin_roles` entry each,
 reusing the existing bus path — small, and it makes every generated design worse until it is done.
 **Value proven by:** a generated design that needs SPI keeps MI/MO/SCK together, and one that does
 not still leaves them free for other uses.
 
-### P4 — Make mutation testing a tool, not a memory
+**Result, measured rather than tuned.** The penalty is a tie-breaker: below one ability's cost, so
+a plain signal still takes a bus pin before it wastes an ADC1 pin. What spent the bus was the
+tie among equal ADC2 pins, broken by GPIO number (MOSI 15 before D6 18). My first value, 15,
+ranked the bus above ADC1 and sent two plain signals onto the board's scarcest inputs; the
+ordering test caught it. The second half of the value statement holds exactly as far as non-bus
+pins remain: on the XIAO there is one, so a design with several plain signals uses the bus
+whatever the penalty — correctly. Six mutations caught. Both RC boards re-emit byte-identical.
+
+### ~~P4 — Make mutation testing a tool, not a memory~~ — **DONE `997b756`**
 W3 is the acceptance bar and it is enforced by nobody: no script, no hook, no CI. It has been
 applied by hand three times in one day and correctly each time, which is exactly the situation
 that fails the first time somebody is tired. A `scripts/mutate.py` taking a table of
@@ -191,6 +260,11 @@ that fails the first time somebody is tired. A `scripts/mutate.py` taking a tabl
 already learned: capture stderr, and assert the anchor is unique before substituting.
 **Value proven by:** `python3 scripts/mutate.py <table>` reporting caught/missed per mutation, and
 a deliberately-missed mutation reported as missed.
+
+**Result.** Built in R2 itself (retro action R2.1). Its own tests cover the escape, the refusal
+of a `find` that matches twice, a red suite, and stale bytecode — the last found by its first full
+run. Used on `831f756` and `5689147`: 7 of 7 caught, and three escaped on the first P3 table,
+which is the tool doing its job (the tests were not reaching the tie).
 
 ### P5 — Audit the remaining checks for what they skip
 Done for `check_footprints`'s hole rules, and it immediately found two real defects that had been
@@ -223,6 +297,7 @@ finding, while a genuinely floating input still does.
 Two findings both reading "connects to nothing", neither saying what. The aggregator throws away
 structure its own checks produce.
 **Value proven by:** every aggregated finding names its component or net.
+**Audit A11:** three of the four checks already keep the subject; only rules-vs-netlist drops it.
 
 ### P10 — Using the documented board override disables `vendor-truth`
 The mechanism you are told to use to record what you verified turns off the check that verifies.

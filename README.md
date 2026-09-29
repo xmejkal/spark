@@ -53,7 +53,9 @@ generator refuse rather than invent one.
 
 ## Scripts
 
-Every one runs standalone, takes `--json`, and is what the skills above actually call.
+Every one runs standalone and is what the skills above actually call. The checks take
+`--json`; `boards`, `check_bom`, `check_design`, `emit_board` and `init_project` do not yet,
+and `copper` is a library, not a command.
 
 **The one command**
 

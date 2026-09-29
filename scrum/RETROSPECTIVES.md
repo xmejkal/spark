@@ -86,6 +86,13 @@ a second board turning six checks off with an `ok` (G8), the validator crashing 
 exists to catch (G15). A plan can foresee what a tool lacks. It cannot foresee what a tool lies
 about, and those are the ones that matter.
 
+**The audit sharpened this** (`docs/observations/2026-09-29-sprint-audit.md`, read cold after
+R2 was written): 4 of 5 by area, **0 of 5 by mechanism**. Every prediction was readable from the
+inventory without running anything; every unpredicted finding was existing code under new input.
+Even inside the predicted areas, four findings were BUGs predicted as GAPs — the plan could say
+where the tool was missing, never that it would say "ok" there. That is why R2.5 asks for a
+third cold test rather than a better plan.
+
 ### What went well, with evidence
 
 - **Measure before fixing paid out four times.** The "1.20 mm trace" was six pad necks 0.12–0.85 mm
