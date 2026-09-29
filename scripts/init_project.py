@@ -163,6 +163,21 @@ def main(argv=None):
     if not circuit:
         for pattern in CIRCUIT_PATHS:
             matches = sorted(project.glob(pattern))
+            if len(matches) > 1:
+                # `matches[0]` — the first in sorted order — until 2026-09-29. On a two-board
+                # project that silently seeded the rules from whichever design sorted first and
+                # reported "named N rail(s) from circuit.json", naming no path. The rails of one
+                # board then became the rules for both.
+                #
+                # `check_all` calls the same two matches ambiguous and refuses. Two halves of one
+                # tool disagreeing about whether choosing is allowed is worse than either answer.
+                print("%d built designs here, and this would seed the rails from ONE of them:\n"
+                      "  %s\n"
+                      "  The rails of one board are not the rules for both. Name one with "
+                      "--circuit, or run this in each design's own project."
+                      % (len(matches), "\n  ".join(str(m.relative_to(project))
+                                                   for m in matches)), file=sys.stderr)
+                return EXIT_COULD_NOT_RUN
             if matches:
                 circuit = str(matches[0])
                 break

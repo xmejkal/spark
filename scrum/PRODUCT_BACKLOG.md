@@ -86,12 +86,17 @@ new, never by a test.
 The rest, ordered. The first group is that same family and comes first because each is cheap and
 each currently misleads.
 
-### R1 — `parts.py --validate` inside a project validates only the plugin's own parts [G14]
-Run in a project with its own `parts/`, it checks the five shipped records, says `ok`, exits 0 —
-and never opens the project's. A project's own broken part passes a validation that never read it.
-`--unverified` is blind the same way and sits in `spark-design`'s pre-fabrication gate, so the
-open-questions list a person reads before ordering a board omits every part they wrote themselves.
-**Value proven by:** a deliberately broken project part making `--validate` exit non-zero.
+### ~~R1 — `parts.py --validate` ignores project parts~~ [G14] — **REJECTED, reproduced and wrong**
+The claim was that `--validate --project .` checks only the five shipped records and exits 0.
+Reproduced: it lists all four of the project's own parts and exits 1 on a contract violation.
+Fourth observer claim on this project to be wrong on reproduction. Kept, not deleted, so it is not
+raised again.
+
+**The reproduction found a real defect the claim missed [G15], now fixed in `3b5f38f`:** `validate()`
+crashed with `KeyError` on a `needs` entry with no `pin` — the exact malformation it checks for —
+because the `pin_order` block read `need["pin"]` three lines after reporting it. The test for that
+fix found the same crash again in `power`. Fixed at the cause: only `needs` was ever checked for a
+pin while three lists were read for one.
 
 ### R2 — `init_project` silently picks one of two circuits [G10]
 Same input, same glob, opposite behaviour: `check_all` now calls two matches ambiguous and

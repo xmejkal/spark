@@ -45,6 +45,16 @@ REQUIRED_KEYS = ("schema", "id", "name", "kind", "needs")
 #: Each entry in `facts` must answer all three, or it is an opinion with a number attached.
 REQUIRED_FACT_KEYS = ("value", "verified", "source")
 
+#: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
+#: here rather than keeping its own, because it had its own and the two disagreed: a servo part
+#: declaring `needs: ["pwm"]` validated as a good record and then made the pin assigner refuse
+#: the whole design. The only way out was to delete a true fact about the part, which is a
+#: contract punishing honesty.
+#:
+#: It lives in the lower module on purpose. A capability is a claim a PART makes, so the file
+#: that validates parts owns the vocabulary and the file that consumes it follows.
+CAPABILITIES = ("wake", "adc", "pwm")
+
 EXIT_OK, EXIT_INVALID = 0, 1
 
 
@@ -137,6 +147,15 @@ def validate(part: dict, path: Path) -> list:
         if need.get("direction") not in ("in", "out", "bidirectional", None):
             problems.append("%s direction is %r; expected in, out or bidirectional"
                             % (where, need.get("direction")))
+        unknown = sorted(set(need.get("needs") or []) - set(CAPABILITIES))
+        if unknown:
+            # Caught HERE, not four scripts later. `assign_pins` refuses the entire design over
+            # an unknown capability — rightly, since a silently dropped requirement produces a
+            # board wrong in exactly the way the requirement existed to prevent — but it did so
+            # long after this file had pronounced the record good.
+            problems.append("%s asks a pin for %s, which is not something a pin can be asked "
+                            "for. Known: %s"
+                            % (where, ", ".join(unknown), ", ".join(CAPABILITIES)))
 
     # Every list of pins, not just `needs`. Only `needs` entries were checked for a pin, and then
     # `power` and `unused_pins` were read with `entry["pin"]` in four places — so an entry missing

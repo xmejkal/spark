@@ -45,10 +45,14 @@ import parts as parts_library  # noqa: E402
 
 EXIT_OK, EXIT_IMPOSSIBLE, EXIT_COULD_NOT_RUN = 0, 1, 2
 
-#: What a signal can ask a pin for. Anything else in `needs` is refused rather than ignored,
-#: because a typo'd requirement that is silently dropped produces a board that is wrong in
-#: exactly the way the requirement existed to prevent.
-CAPABILITIES = ("wake", "adc")
+#: What a signal can ask a pin for, from the contract that validates parts. Anything else in
+#: `needs` is refused rather than ignored, because a typo'd requirement silently dropped produces
+#: a board wrong in exactly the way the requirement existed to prevent.
+#:
+#: Imported rather than restated. This file kept its own copy, `("wake", "adc")`, while
+#: `parts.py` validated any string at all — so a servo declaring `needs: ["pwm"]` was a good
+#: record here and an impossible design there.
+CAPABILITIES = parts_library.CAPABILITIES
 
 #: Roles from the board definition that make a pin unusable for general assignment.
 #:
@@ -97,12 +101,23 @@ class Impossible(Exception):
 
 
 def capability_of(board, gpio):
-    """Everything this pin can do, as a set — the basis for "least capable pin that will do"."""
+    """
+    Everything this pin can do, as a set — the basis for "least capable pin that will do".
+
+    `pwm` is read from the board definition if it says anything, and otherwise assumed of every
+    pin. That default is deliberate and it is a statement about the chips this tool targets, not
+    laziness: an ESP32 routes its LEDC timers through a GPIO matrix, so any output pin can carry
+    a PWM. A board where that is NOT true — most STM32 parts, where PWM comes from a fixed timer
+    map — says so by listing `pwm_gpio`, and then a servo signal will not land on a pin that
+    cannot drive it.
+    """
     can = set()
     if gpio in board.get("wake_capable_gpio", []):
         can.add("wake")
     if gpio in board.get("adc_gpio", []):
         can.add("adc")
+    if "pwm_gpio" not in board or gpio in board.get("pwm_gpio", []):
+        can.add("pwm")
     return can
 
 

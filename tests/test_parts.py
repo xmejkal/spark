@@ -85,6 +85,31 @@ class TheContractTest(unittest.TestCase):
             power=[{"pin": "VCC", "rail": "logic", "direction": "in"}],
             pin_order=["P", "VCC"]), [])
 
+    def test_a_capability_no_pin_can_offer_is_caught_where_it_is_written(self):
+        """
+        Two halves of the plugin disagreed, and the honest record was the one punished.
+
+        A servo declaring `needs: ["pwm"]` — which is true, a servo is a pulse-width device —
+        validated as a good record here, and then made `assign_pins` refuse the ENTIRE design,
+        because that file kept its own vocabulary of `("wake", "adc")`. The only way to get a
+        board out was to delete a true fact about the part.
+
+        There is now one `CAPABILITIES`, owned by this file because a capability is a claim a
+        PART makes, and `assign_pins` imports it.
+        """
+        problems = self._problems(
+            needs=[{"signal": "S", "pin": "P", "direction": "in", "needs": ["telepathy"]}])
+        self.assertTrue(any("telepathy" in p for p in problems), problems)
+
+    def test_pwm_is_a_thing_a_part_may_ask_for(self):
+        self.assertEqual(self._problems(
+            needs=[{"signal": "S", "pin": "P", "direction": "in", "needs": ["pwm"]}]), [])
+
+    def test_the_assigner_reads_the_same_vocabulary_this_file_validates(self):
+        # The disagreement is gone structurally, not by keeping two lists in step.
+        import assign_pins
+        self.assertIs(assign_pins.CAPABILITIES, parts.CAPABILITIES)
+
     def test_a_nonsense_direction_is_caught(self):
         problems = self._problems(needs=[{"signal": "S", "pin": "P", "direction": "sideways"}])
         self.assertTrue(any("direction" in p for p in problems))
@@ -188,6 +213,28 @@ class FromPartsToAPinMapTest(unittest.TestCase):
         assignments, _ = assign_pins.assign(self.board, self.signals)
         strapping = set(self.board["pin_roles"]["strapping"]["gpio"])
         self.assertEqual([a for a in assignments if a["gpio"] in strapping], [])
+
+
+class APwmPinTest(unittest.TestCase):
+    """A steering servo is the part that made `pwm` necessary."""
+
+    def setUp(self):
+        self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def test_a_pwm_signal_is_placed_on_this_board(self):
+        placed, _ = assign_pins.assign(self.board, [{"name": "STEER", "needs": ["pwm"]}])
+        self.assertEqual(len(placed), 1)
+
+    def test_every_pin_offers_pwm_when_the_board_does_not_say_otherwise(self):
+        # Deliberate: an ESP32 routes LEDC through a GPIO matrix, so any output pin can do it.
+        # The default is a statement about the chips this tool targets, not an omission.
+        self.assertIn("pwm", assign_pins.capability_of(self.board, self.board["pins"]["D3"]))
+
+    def test_a_board_that_LISTS_its_pwm_pins_is_believed_instead(self):
+        # Most STM32 parts have a fixed timer map, and a servo must not land off it.
+        limited = dict(self.board, pwm_gpio=[self.board["pins"]["D3"]])
+        self.assertIn("pwm", assign_pins.capability_of(limited, limited["pins"]["D3"]))
+        self.assertNotIn("pwm", assign_pins.capability_of(limited, limited["pins"]["D5"]))
 
 
 class WhichPadIsPinOneTest(unittest.TestCase):

@@ -114,6 +114,51 @@ class WithoutABuiltDesignTest(unittest.TestCase):
         self.assertFalse((root / "boards" / "active.json").exists())
 
 
+class TwoBuiltDesignsTest(unittest.TestCase):
+    """
+    Two halves of one tool disagreed about whether choosing is allowed.
+
+    `check_all` calls two matching circuits ambiguous and refuses. `init_project` took
+    `matches[0]` — whichever sorted first — seeded the rules from it, and reported "named N
+    rail(s) from circuit.json" while naming no path. On the RC-car project that made one board's
+    rails the rules for both, silently.
+    """
+
+    @staticmethod
+    def _with(*circuits):
+        root = Path(tempfile.mkdtemp())
+        for name in circuits:
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(
+                [{"type": "source_net", "source_net_id": "n1", "name": "V33"}]))
+        return root
+
+    def test_two_built_designs_are_refused_rather_than_one_chosen(self):
+        root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
+        self.assertEqual(init_project.main(["--project", str(root)]),
+                         init_project.EXIT_COULD_NOT_RUN)
+
+    def test_nothing_is_written_when_it_refuses(self):
+        # Refusing after writing half the files would be worse than choosing.
+        root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
+        init_project.main(["--project", str(root)])
+        self.assertFalse((root / ".spark" / "rules.json").exists())
+
+    def test_naming_one_settles_it(self):
+        root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
+        self.assertEqual(
+            init_project.main(["--project", str(root), "--circuit", "dist/car/circuit.json"]),
+            init_project.EXIT_OK)
+
+    def test_one_built_design_is_still_used_without_being_named(self):
+        # The refusal must not cost the ordinary case its convenience.
+        root = self._with("dist/board/circuit.json")
+        self.assertEqual(init_project.main(["--project", str(root)]), init_project.EXIT_OK)
+        rules = json.loads((root / ".spark" / "rules.json").read_text())
+        self.assertIn("V33", rules["physics"]["rails"])
+
+
 class TheCommandThatNamesItExistsTest(unittest.TestCase):
     def test_the_error_message_names_something_real(self):
         """
