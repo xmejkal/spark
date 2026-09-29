@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "id": "dfr1025-buck-adjustable",
+  "name": "60W Adjustable DC-DC Buck Converter Module (DFRobot DFR1025)",
+  "kind": "regulator",
+  "also_known_as": [
+    "DFR1025",
+    "DC-DC Buck Converter Module",
+    "buck",
+    "step-down",
+    "60W",
+    "adjustable"
+  ],
+  "//": "Catalog draft written by /spark:research on 2026-09-29 while researching the irrigation controller's 12 V -> 5 V buck; not chosen (see //why_not). Facts come ONLY from the DFRobot text at the cited URLs; photo and PDF URLs are listed in sources so `parts.py --fetch` keeps them, and were not read. verified:true = the vendor's own text at the URL; nothing here was measured or inferred.",
+  "//why_not": "A 60 W / 18 A board shipped with its own heatsink, a switch-set output that can be set wrong, and a 9-15 V input window a sagging 12 V supply can fall out of \u2014 for a load of about 1 A.",
+  "vendor": "dfrobot",
+  "sku": "DFR1025",
+  "sources": [
+    "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+    "https://www.dfrobot.com/product-2662.html",
+    "https://dfimg.dfrobot.com/wiki/17419/DFR1025_dc-dc-buck-converter-module_dimension_V1.0.pdf",
+    "https://dfimg.dfrobot.com/enshop/DFR1025/DFR1025_Main_01.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Dim_02.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Back_03.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_ShipList_04.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_05.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_06.jpg"
+  ],
+  "needs": [],
+  "power": [],
+  "unused_pins": [],
+  "pin_order": [],
+  "footprint": null,
+  "//pins": "Pinout on the wiki is an image only; not read. The product's shipping list adds '2Pin Terminal Block x2' and 'Aluminum Heat Sink x1', so input and output are screw terminals.",
+  "body_mm": {
+    "width": 52.0,
+    "height": 37.0,
+    "verified": true,
+    "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+    "note": "wiki table 'Outline Dimension 52\u00d737mm/2.05\u00d71.46\u201d'; thickness not stated"
+  },
+  "facts": {
+    "input_volts_min": {
+      "value": 9.0,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+      "why_it_matters": "the floor is 9 V \u2014 a 12 V supply sagging under load has 3 V of margin, less than the DFR0831's 5 V."
+    },
+    "input_volts_max": {
+      "value": 15.0,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+      "why_it_matters": "a 12 V-only part: the wiki says 9V-15V."
+    },
+    "output_volts_min": {
+      "value": 0.6,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+      "why_it_matters": "wiki table 'Output Voltage 0.6V-5.1V'. The product page's Features line says '1.8~5.1V output voltage adjustable' \u2014 DFRobot's two texts disagree on the floor."
+    },
+    "output_volts_max": {
+      "value": 5.1,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W"
+    },
+    "output_adjustable": {
+      "value": true,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+      "why_it_matters": "the wiki's docs blurb: 'detailed instructions on using DIP switches for precise output voltage configurations' \u2014 the output is set by DIP switches, so it can be set wrong.",
+      "note": "wiki reference blurb; the docs sub-page itself was not read"
+    },
+    "output_current_a": {
+      "value": 18.0,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+      "why_it_matters": "wiki '18A(Active dissipation)' \u2014 with the heatsink, not bare."
+    },
+    "power_w": {
+      "value": 60.0,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+      "why_it_matters": "wiki '60W(Active Dissipation)'"
+    },
+    "efficiency_pct": {
+      "value": 92.0,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/SKU_DFR1025_DC_DC_Buck_Converter_60W",
+      "why_it_matters": "wiki '92%(Typical)'"
+    },
+    "protections": {
+      "value": "short-circuit, over-current, overheating",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2662.html",
+      "why_it_matters": "product page: 'short-circuit protection, over-current protection, and overheating protection'"
+    },
+    "surface_temp_steady_c_max": {
+      "value": 80.0,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2662.html",
+      "why_it_matters": "product page 'Safe Operating Range': <80 \u00b0C steady; 80-90 \u00b0C dissipation improvement recommended; >90 \u00b0C required, overheat protection may trigger."
+    },
+    "ships_with": {
+      "value": "2Pin Terminal Block x2, Aluminum Heat Sink x1",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2662.html",
+      "why_it_matters": "product page shipping list; the heatsink is part of the rating."
+    }
+  },
+  "host_requirements": [],
+  "sourcing": [
+    {
+      "seller": "DFRobot (direct)",
+      "url": "https://www.dfrobot.com/product-2662.html",
+      "price_czk": null,
+      "price_usd": 9.9,
+      "checked": "2026-09-29",
+      "note": "structured data price 9.9; volume $9.70 (3+), $9.50 (5+), $9.20 (10+); schema.org InStock on the day"
+    }
+  ],
+  "attachments": {
+    "https://dfimg.dfrobot.com/wiki/17419/DFR1025_dc-dc-buck-converter-module_dimension_V1.0.pdf": "dfr1025-buck-adjustable/DFR1025_dc-dc-buck-converter-module_dimension_V1.0.pdf",
+    "https://dfimg.dfrobot.com/enshop/DFR1025/DFR1025_Main_01.jpg": "dfr1025-buck-adjustable/DFR1025_Main_01.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Dim_02.jpg": "dfr1025-buck-adjustable/DFR1025_Dim_02.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Back_03.jpg": "dfr1025-buck-adjustable/DFR1025_Back_03.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_ShipList_04.jpg": "dfr1025-buck-adjustable/DFR1025_ShipList_04.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_05.jpg": "dfr1025-buck-adjustable/DFR1025_Detail_05.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_06.jpg": "dfr1025-buck-adjustable/DFR1025_Detail_06.jpg"
+  }
+}
