@@ -142,7 +142,9 @@ class RulesVsNetlist(Check):
         result = compare_design.compare(inputs["circuit"], inputs["rules"])
         if result["status"] == "could-not-run":
             return answer(unchecked=[result.get("reason") or "no reason given"])
-        return answer(problems=[p["detail"] for p in result.get("problems", [])])
+        # The subject is the finding: "connects to nothing" four times over named nothing a
+        # person could act on (irrigation diary I10).
+        return answer(problems=["[%s] %s: %s" % (p["rule"], p["subject"], p["detail"]) for p in result.get("problems", [])])
 
 
 class Physics(Check):

@@ -113,9 +113,15 @@ class Netlist:
         for element in circuit:
             if element["type"] != "source_trace":
                 continue
-            for net_id in element.get("connected_source_net_ids", []):
-                if net_id not in self.members:
-                    continue
+            net_ids = [net_id for net_id in element.get("connected_source_net_ids", []) if net_id in self.members]
+            if not net_ids:
+                # A pin-to-pin trace names no net, and it is still a connection: spark's generator
+                # wires every signal this way, and this loop skipped them, so every such pin read
+                # as floating on three projects (backlog P8). Its connectivity key groups the
+                # traces of one wire; the trace's own id stands in when there is none.
+                net_ids = ["trace:" + (element.get("subcircuit_connectivity_map_key") or element["source_trace_id"])]
+                self.members.setdefault(net_ids[0], [])
+            for net_id in net_ids:
                 for port_id in element.get("connected_source_port_ids", []):
                     port = self.ports.get(port_id)
                     if not port:

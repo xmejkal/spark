@@ -27,7 +27,6 @@ simulation, a link between two boards, and parts research beyond R11 below.
 | --- | --- | --- |
 | **R11** | Research parts and modules, vendor by vendor, and keep what was found | the third cold test, on day one |
 | **P6** | The generated board honours the host requirements it prints | every generated motor board |
-| **P8** | `must_not_float` false-positives on spark's own output | every generated board, at review |
 | **P10** | A project's own board file must not switch `vendor-truth` off | any project with its own board |
 | **P28** | The tools this repository relies on, made true | this repository's Definition of Done |
 | R2.5 | The third cold test — **PO: one letter, (a), (b) or (c)** | it is the test |
@@ -64,7 +63,7 @@ are the reader's.
 **Value proven by:** the reference design's L9110S inputs carry pulldowns in the built netlist;
 `check_all` on it reports no floating input; the file lists the requirements it did not do.
 
-### P8 — `must_not_float` false-positives on spark's own output
+### P8 — `must_not_float` false-positives on spark's own output — DONE 2026-09-29, late night
 **Needed by:** every generated board at review — `check_all` on the reference design reports
 `L9110sModule.AIA: connects to nothing` on a trace that exists. A rule that cries wolf is switched
 off, and then catches nothing.
@@ -132,6 +131,7 @@ one), P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8
 by the PO).
 
 ## Done — one line each, the hash is the record
+- **P8** — the floating-input rule sees a pin-to-pin trace: the netlist model skipped every trace that named no net, which is how spark's generator wires every signal; a wire's traces share its connectivity key; the finding names its component and pin (I10). Proven on the irrigation board with four declared inputs and on the bin's own (`compare_design.py`, table sprint-5-p8, 3 caught).
 - **P31** — a part record says how it is simulated; the spine builds the Wokwi project from the records, compiles the chips, and one irrigation scenario passes with the probe's and the flow meter's sliders set from the test (`47dbcdc`, `9a8b0e2`, `1710d94`, `dbd3c1c`; irrigation diary, late night; converter `bf9bf09` in the bin repo).
 
 P3 `831f756` · P4 `997b756` · P11 `0c21ef5` · P12 `c4d0582` · P13 `55e7bb8` · P14 `f7674b4` ·
