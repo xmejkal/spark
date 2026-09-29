@@ -98,7 +98,7 @@ The generator refuses rather than guess, and each refusal says what to record:
 | no `pin_order` recorded | pads would be numbered from the order pins appear in a file, which is not a fact about the module |
 | no outline recorded | every placement would be arranged around an invented size; `--assume-missing-sizes` proceeds with the guess declared in the file |
 | two components of one name | tscircuit keeps one and wires every other instance's pins to it |
-| a part that is not in the library | write the record — `references/part-data.md` in the design skill has the schema; `parts.py --validate --project .` says what is missing — never a pinout from memory |
+| a part that is not in the library | `parts.py --need <words>` says what exists; `/spark:research` writes the record from the vendor's own pages, vendor by vendor in the project's order — never a pinout from memory |
 
 A rail nothing sources (a motor rail with no connector) is not a refusal: the file says so and the
 build stops on a net with one member. Add the connector to the parts list.

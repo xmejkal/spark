@@ -616,5 +616,62 @@ class ABusIsCheckedWhereTheRecordIsWrittenTest(unittest.TestCase):
             record = json.loads(path.read_text())
             self.assertEqual([p for p in parts.validate(record, path) if "bus" in p], [], path.name)
 
+
+class ResearchStartsFromWhatExistsTest(unittest.TestCase):
+    """
+    Backlog R11, pulled by the PO for the third cold test: research parts vendor by vendor and
+    keep what was found. The deterministic half lives here — what exists, a skeleton to fill, the
+    vendor order, and sources that must answer. The reading is the agent's.
+    """
+
+    def test_need_matches_id_name_kind_and_alias(self):
+        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor"])])
+        self.assertIn("vl6180x-breakout", [p["id"] for p in parts.need(["rangefinder"])])
+        self.assertEqual(parts.need(["unobtainium"]), [])
+        self.assertEqual([p["id"] for p in parts.need(["motor", "driver"])], ["l9110s-module"])
+
+    def test_no_match_names_the_research_command_and_the_vendor_order(self):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--need", "unobtainium"])
+        self.assertIn("/spark:research", out.getvalue())
+        self.assertIn("dfrobot, seeed", out.getvalue())
+
+    def test_the_vendor_order_is_the_briefs_when_it_says_and_the_default_when_not(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        self.assertEqual(parts.vendor_order(root), parts.DEFAULT_VENDOR_ORDER)
+        (root / ".spark").mkdir()
+        (root / ".spark" / "project.json").write_text(json.dumps({"prefer": ["Seeed", "adafruit"]}))
+        self.assertEqual(parts.vendor_order(root), ("seeed", "adafruit"))
+        (root / ".spark" / "project.json").write_text(json.dumps({"prefer": None}))
+        self.assertEqual(parts.vendor_order(root), parts.DEFAULT_VENDOR_ORDER)
+
+    def test_a_skeleton_has_every_field_and_no_guess_and_the_contract_refuses_it_until_filled(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        code = parts.main(["--skeleton", "sg90-servo", "--kind", "actuator", "--vendor", "dfrobot",
+                           "--project", str(root)])
+        self.assertEqual(code, parts.EXIT_OK)
+        written = json.loads((root / "parts" / "sg90-servo.json").read_text())
+        self.assertEqual(written["id"], "sg90-servo")
+        self.assertIsNone(written["name"])
+        self.assertIsNone(written["footprint"])
+        self.assertFalse(written["body_mm"]["verified"])
+        problems = parts.validate(written, root / "parts" / "sg90-servo.json")
+        self.assertTrue(problems, "a skeleton full of nulls must not pass the contract")
+        self.assertEqual(parts.main(["--skeleton", "sg90-servo", "--kind", "actuator", "--project", str(root)]),
+                         parts.EXIT_INVALID, "an existing record is never overwritten")
+
+    def test_sources_are_fetched_and_a_dead_one_is_named(self):
+        record = {"sources": ["https://wiki.example/a", "not a url"],
+                  "facts": {"x": {"value": 1, "verified": True, "source": "https://wiki.example/b"},
+                            "y": {"value": 2, "verified": False, "source": "the datasheet, page 3"}}}
+        self.assertEqual(parts.cited_urls(record), ["https://wiki.example/a", "https://wiki.example/b"])
+        answers = parts.sources_resolve(record, fetch=lambda url: url.endswith("/a"))
+        self.assertEqual(answers, [("https://wiki.example/a", True), ("https://wiki.example/b", False)])
+
 if __name__ == "__main__":
     unittest.main()

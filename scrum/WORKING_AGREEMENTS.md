@@ -134,3 +134,28 @@ times before nightfall — 533 for 532, "reaches end to end" over "the chain is 
 11 and 9 — every time by a message composed in the same command as the run. R4.1 makes it a rule
 about sequence, which is the form that held for the rest of the day.
 
+## W14 — Pull, never push
+
+Nothing enters the plugin unless a real design is blocked without it that week, and the backlog
+item names that design in a `**Needed by:**` line. A capability designed on paper — a review
+loop, an eval harness, a research agent — is not built until a project reaches for it. An item
+without a design behind it is not pulled; the suite refuses a backlog with one in it.
+
+**Origin:** 2026-09-29, when a third of the repository was deleted as unused. Every piece of it
+had been built because it was designed, not because a design needed it.
+
+## W15 — An orphan fails the suite
+
+Every script is named by a command, a skill, an agent, the README or a project's Makefile, or is
+imported by another script; every skill and agent is named where a user looks; `scripts/` stays
+within a line budget that a change may not exceed without deleting something. `tests/test_orphans.py`
+holds all of it, so dead code cannot accumulate silently again — every piece cut on 09-29 had
+tests, and looked alive.
+
+## W16 — A replacement deletes what it replaces, in the same commit
+
+When a new path replaces an old one — a file format, a check, a command — the old one goes in the
+same commit. Two formats for one thing is a bug, not a transition: `design.json` and `check_design`
+lived beside the requirements chain for four days, and the item "the two tools disagree" existed
+only because both did.
+

@@ -23,10 +23,10 @@ argues with). This test is why the roster is small.
 | member | why it is an agent | works on |
 | --- | --- | --- |
 | **`design-reviewer`** | isolation + restricted tools + fan-out | one design dimension per run, reading only the design |
-| **`hardware-engineer`** | context budget — tscircuit semantics, footprint geometry, netlist shapes | schematics, footprints, the build |
 | **`parts-researcher`** | fan-out + context budget — pages of datasheet per part | part records, vendor truth, sourcing |
 
-Three agent files ship with the plugin, because three pass the test above. The process roles —
+Two agent files ship with the plugin, because two pass the test above; `hardware-engineer` went
+with the cut too — the design skill carries its route, and nothing spawned it. The process roles —
 scrum master, verification, firmware — were agent files too until 2026-09-29 and were cut: nothing
 routed to them, and a plugin user has no use for the way its author works. Those roles are played
 by the main session and by the audit agent spawned at each sprint's end (R3.3), whose report is a

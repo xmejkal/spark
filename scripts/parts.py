@@ -423,6 +423,89 @@ def unverified(part_ids, project: Path = None) -> list:
     return open_questions
 
 
+#: Vendors to research in, in order, when a project's brief does not say. DFRobot first because
+#: its wiki carries a pinout table and a dimension drawing for every module; Seeed next for the
+#: same reason. A project overrides this in `.spark/project.json` → `prefer`.
+DEFAULT_VENDOR_ORDER = ("dfrobot", "seeed")
+
+
+def vendor_order(project=None):
+    """The vendors to research in, from the project's brief, else the default."""
+    if project:
+        brief = Path(project) / ".spark" / "project.json"
+        if brief.is_file():
+            try:
+                prefer = json.loads(brief.read_text()).get("prefer")
+            except ValueError:
+                prefer = None
+            if isinstance(prefer, list) and prefer and all(isinstance(v, str) for v in prefer):
+                return tuple(v.lower() for v in prefer)
+    return DEFAULT_VENDOR_ORDER
+
+
+def need(words, project=None):
+    """
+    The records matching every word — in id, name, kind or an alias — so what exists is known
+    before anything is researched. Backlog R11: the RC car wrote three records by hand because
+    nothing looked, and "nothing looked" was the first gap its diary named (G1).
+    """
+    wanted = [word.lower() for word in words]
+    found = []
+    for part_id in available(project):
+        record = load(part_id, project)
+        haystack = " ".join([part_id, record.get("name") or "", record.get("kind") or "",
+                             " ".join(record.get("also_known_as") or [])]).lower()
+        if all(word in haystack for word in wanted):
+            found.append(dict(record, id=part_id))
+    return found
+
+
+def skeleton(part_id, kind, vendor=None):
+    """
+    A record with every field present and nothing guessed: what research fills in.
+
+    Nulls are facts nobody has recorded, and `validate` refuses the file until they are — the
+    same rule `init` applies to the rules file. Every fact research adds is `verified: false`
+    until a person checks it against the source it names.
+    """
+    return {
+        "schema": 1, "id": part_id, "name": None, "kind": kind,
+        "//": ("Written by /spark:research. A null is a fact nobody has recorded; a fact is "
+               "unverified until a person checks it against the source it names."),
+        "vendor": vendor, "sku": None, "sources": [],
+        "needs": [], "power": [], "unused_pins": [], "pin_order": [], "footprint": None,
+        "body_mm": {"width": None, "height": None, "verified": False, "source": None,
+                    "why_it_matters": "every placement is arranged around it"},
+        "facts": {}, "host_requirements": [],
+    }
+
+
+def cited_urls(record):
+    """Every http(s) source the record cites — the top-level list and each fact's own."""
+    urls = [s for s in record.get("sources") or [] if isinstance(s, str) and s.startswith("http")]
+    for fact in (record.get("facts") or {}).values():
+        source = fact.get("source") if isinstance(fact, dict) else None
+        if isinstance(source, str) and source.startswith("http"):
+            urls.append(source)
+    return list(dict.fromkeys(urls))
+
+
+def reachable(url):
+    """Whether a URL answers at all. A hallucinated source is the one lie research tells easily."""
+    import urllib.request
+    try:
+        request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "spark"})
+        with urllib.request.urlopen(request, timeout=10) as answer:
+            return 200 <= answer.status < 400
+    except Exception:  # noqa: BLE001 — any failure to reach it is the same answer here
+        return False
+
+
+def sources_resolve(record, fetch=reachable):
+    """(url, reachable) for every cited URL. `fetch` is a parameter so a test needs no network."""
+    return [(url, fetch(url)) for url in cited_urls(record)]
+
+
 def _show(part):
     lines = ["%s — %s" % (part["name"], part["kind"]), ""]
     lines.append("  asks the host for:")
@@ -456,6 +539,12 @@ def main(argv=None):
                       help="the signals these parts ask for, as assign_pins.py input")
     what.add_argument("--unverified", nargs="+", metavar="PART",
                       help="what nobody has checked about these parts")
+    what.add_argument("--need", nargs="+", metavar="WORD",
+                      help="what exists for a need, before researching: words matched in id, name, kind, alias")
+    what.add_argument("--skeleton", metavar="PART", help="write a record to fill in, to the project's parts/")
+    what.add_argument("--sources", metavar="PART", help="fetch every URL a record cites; a source that does not answer is named")
+    parser.add_argument("--kind", help="with --skeleton: the part's kind (motor-driver, sensor, regulator, …)")
+    parser.add_argument("--vendor", help="with --skeleton: who makes it")
     # Every function in this file already took `project`, and nothing ever passed one — so the
     # docstring's promise that "a project's own wins" was unreachable from any entry point and
     # the library was closed at whatever ships with the plugin.
@@ -484,6 +573,42 @@ def main(argv=None):
             print(json.dumps(part, indent=2) if args.json else _show(part))
         elif args.signals:
             print(json.dumps({"signals": signals_for(args.signals, project)}, indent=2))
+        elif args.need:
+            found = need(args.need, project)
+            order = ", ".join(vendor_order(project))
+            if args.json:
+                print(json.dumps({"tool": "parts", "need": args.need, "vendor_order": list(vendor_order(project)),
+                                  "found": [{"id": p["id"], "kind": p["kind"], "name": p["name"]} for p in found]}, indent=2))
+            elif found:
+                for part in found:
+                    print("  %-22s %-16s %s" % (part["id"], part["kind"], part["name"]))
+            else:
+                print("  nothing in the library matches %r.\n  Research it: /spark:research \"%s\"  — vendors in order: %s"
+                      % (" ".join(args.need), " ".join(args.need), order))
+        elif args.skeleton:
+            if not project or not args.kind:
+                print("parts.py: --skeleton needs --project (the record belongs to a project's parts/) "
+                      "and --kind", file=sys.stderr)
+                return EXIT_INVALID
+            target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
+            if target.exists():
+                print("parts.py: %s exists; fill it in, do not overwrite it" % target, file=sys.stderr)
+                return EXIT_INVALID
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2) + "\n")
+            print("  wrote %s — every null is a fact to record; `parts.py --validate --project .` says what is missing" % target)
+        elif args.sources:
+            record = load(args.sources, project)
+            answers = sources_resolve(record)
+            if args.json:
+                print(json.dumps({"tool": "parts", "part": args.sources,
+                                  "sources": [{"url": u, "reachable": ok} for u, ok in answers]}, indent=2))
+            else:
+                for url, ok in answers:
+                    print("  %s  %s" % ("ok  " if ok else "NO  ", url))
+                if not answers:
+                    print("  %s cites no URL — every fact rests on prose sources a person has to find" % args.sources)
+            return EXIT_INVALID if any(not ok for _, ok in answers) else EXIT_OK
         elif args.unverified:
             questions = unverified(args.unverified, project)
             if args.json:

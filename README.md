@@ -40,6 +40,7 @@ generator refuse rather than invent one.
 | | |
 | --- | --- |
 | `/spark:init` | Writes `.spark/rules.json`, `.spark/project.json` and `boards/active.json`. Names the rails from the built design; leaves **every value null** and lists them. A guessed rail current would poison the one check that does arithmetic. |
+| `/spark:research` | A part the library lacks, researched from the vendor's own pages — DFRobot first, then Seeed, or the order the project's brief prefers — and written as a record with sources, every unconfirmed fact marked. The next project finds it with `parts.py --need`. |
 | `/spark:build` | A requirements file — a board and a list of parts — to a board that builds and simulates, or the stage that stopped it: `parts → pin map → board file → build → simulation`. Seconds, no agents, refuses rather than guesses. |
 
 ## Skills

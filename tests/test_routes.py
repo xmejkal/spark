@@ -23,7 +23,6 @@ CHAIN = ("parts.py", "assign_pins.py", "emit_board.py", "emit_footprint.py", "ch
 
 BUILD_COMMAND = ROOT / "commands" / "build.md"
 DESIGN_SKILL = ROOT / "skills" / "spark-design" / "SKILL.md"
-HARDWARE_AGENT = ROOT / "agents" / "hardware-engineer.md"
 
 
 def allowed_scripts(command_path):
@@ -66,11 +65,6 @@ class TheDocumentedFlowNamesTheChainTest(unittest.TestCase):
         typed = set(re.findall(r"scripts/([a-z_]+\.py)", "\n".join(blocks)))
         missing = sorted(set(CHAIN) - typed)
         self.assertEqual(missing, [], "/spark:build never shows these being typed: %s" % missing)
-
-    def test_the_hardware_engineer_runs_the_chain(self):
-        text = HARDWARE_AGENT.read_text()
-        for script in ("emit_board.py", "check_spine.py"):
-            self.assertIn(script, text)
 
     def test_the_readme_lists_the_command(self):
         self.assertIn("/spark:build", (ROOT / "README.md").read_text())

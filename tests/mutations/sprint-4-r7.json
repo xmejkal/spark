@@ -16,11 +16,5 @@
   "name": "the design skill stops naming the generator",
   "find": "   - `${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx` \u2014 the board file.",
   "replace": "   - write `board.tsx` by hand \u2014 the board file."
- },
- {
-  "file": "agents/hardware-engineer.md",
-  "name": "the agent is told to hand-write the board again",
-  "find": "python3 scripts/emit_board.py requirements.json > board.tsx\n",
-  "replace": ""
  }
 ]

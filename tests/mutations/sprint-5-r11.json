@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "need stops reading aliases and kinds",
+  "find": "        haystack = \" \".join([part_id, record.get(\"name\") or \"\", record.get(\"kind\") or \"\",\n                             \" \".join(record.get(\"also_known_as\") or [])]).lower()",
+  "replace": "        haystack = part_id.lower()"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "no match no longer names the research command",
+  "find": "Research it: /spark:research",
+  "replace": "Research it: "
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the brief's vendor order is ignored",
+  "find": "            if isinstance(prefer, list) and prefer and all(isinstance(v, str) for v in prefer):",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a dead source counts as reachable",
+  "find": "    return [(url, fetch(url)) for url in cited_urls(record)]",
+  "replace": "    return [(url, True) for url in cited_urls(record)]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a skeleton overwrites an existing record",
+  "find": "            if target.exists():\n                print(\"parts.py: %s exists; fill it in, do not overwrite it\" % target, file=sys.stderr)\n                return EXIT_INVALID",
+  "replace": "            if False:\n                print(\"parts.py: %s exists; fill it in, do not overwrite it\" % target, file=sys.stderr)\n                return EXIT_INVALID"
+ }
+]

@@ -18,9 +18,10 @@ a rule checklist in the loop. Follow it.
 2. **Resolve every part from the parts library.** `${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list`
    shows what exists — the shipped records plus the project's own `parts/*.json`, which win by
    name — and `parts.py --show <id>` what a record asks of the host and what nobody has verified.
-   A part that is not there is written as a **record**, never resolved into prose:
-   `references/part-data.md` has the schema and `parts.py --validate --project .` says what is
-   missing. NEVER invent a pinout — a pin map comes from the vendor (`references/vendor-knowledge.md`:
+   A part that is not there is **researched**: `parts.py --need <words>` says what exists, and
+   `/spark:research` runs the `parts-researcher` agent, vendor by vendor in the project's order,
+   to write the record — `references/part-data.md` has the schema and `parts.py --validate
+   --project .` says what is missing. NEVER invent a pinout — a pin map comes from the vendor (`references/vendor-knowledge.md`:
    Espressif's `pins_arduino.h` variant header, the DFRobot wiki `/<sku>/docs/` pinout and the
    `DFRobot_<Part>` GitHub `examples/`, otherwise a datasheet or a JLCPCB/LCSC lookup), recorded
    with provenance and a `verified` flag, and any pin you could not confirm flagged. **First
