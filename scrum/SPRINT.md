@@ -20,15 +20,16 @@ under the warning that says not to (P6).
 | id | item | why here |
 | --- | --- | --- |
 | ~~P26~~ | One bus vocabulary; a matrix-routed bus goes anywhere and says so | **done `07821a0`** — a regression of mine from P21, found by the close audit (C6) |
-| **P27** | A named pin checked against what it was asked to do; a project must exist; a signal well-formed | **next** — three of the "less than asked, exit 0" family, on documented forms (C4, C5, C7) |
-| **P28** | What the close audit found in the tools and the records | after P27 — the lock window, three unnamed functions, the stranger test's own lines, the example block, a hook or not (C8–C12, C14, C16) |
-| **P8** | `must_not_float` false-positives on pin-to-pin traces, on spark's own output | a rule that cries wolf is switched off, and then catches nothing |
-| **P7** | `check_design` recommends pins `assign_pins` refuses (BOOT, JTAG straps) | two tools of one product disagreeing about one board |
-| **P6** | `emit_board` honours the mechanical `host_requirements` it prints, or says which are the reader's | every generated motor board leaves the L9110S inputs floating today |
-| **P16** | Lift the bin's wake-polarity check into spark | the one defect no firmware test could see; the bin has the check, spark does not |
-| **P17** | An off-board part is emitted as its header, not its footprint | `on_board: false` is read by nothing |
-| **R2.5** | Third cold test — **(c), the 12 V irrigation controller, chosen by the PO 2026-09-29** — running in `~/Development/irrigation` (PLAN.md written first, DIARY.md kept as it goes) | both silent-wrongness classes were found only by building something new; day one is the research capability's proof |
-| — | Audit at sprint end, before the retro (R4.3) | |
+| ~~P27~~ | A named pin checked against what it was asked to do; a project must exist; a signal well-formed | **done `7459983`** (Sprint 4's close) |
+| ~~R11~~ | Research parts and modules, vendor by vendor, and keep what was found | **done** — `/spark:research`, `/spark:identify`, the catalog; seven records for the irrigation controller, 18 candidates kept |
+| ~~P31~~ | A part record says how it is simulated; chips compiled; values set in the test | **done** — ordered by the PO that night; one irrigation scenario passing on Wokwi |
+| ~~P8~~ | `must_not_float` false-positives on pin-to-pin traces | **done `10a056f`** — the netlist model skipped every trace that named no net |
+| ~~P6~~ | `emit_board` honours the host requirements it can, or says which are the reader's | **done `1c2698d`** — `host_parts` placed and wired; three records carry them |
+| ~~P10~~ | A project's own board file must not switch `vendor-truth` off | **done `9a7479b`** — the plugin's cache is the fallback |
+| ~~P28~~ | What the close audit found in the tools and the records (C8–C12, C14) | **done `ca997ed`** — six rows made true; `tools/pre-push` is the gate |
+| ~~R2.5~~ | Third cold test — **(c), the 12 V irrigation controller**, running in `~/Development/irrigation` | **done** — definition of done met, diary I1–I12, ten gaps pulled the same night |
+| — | P7 deleted with `check_design` (W16); P16, P17 parked — **Needed by:** none yet | |
+| — | **Audit at sprint end, before the retro (R4.3)** — `docs/observations/2026-09-29-v1-close-audit.md`, running | |
 
 Still parked, the PO's: **P18** evals (run or delete), **P19** findings.py and its fake bench
 (keep, freeze or drop), **R8** parts-research routing, **R10** a link between two designs. Needing
@@ -115,6 +116,13 @@ lines, the example block is a run's output with a test on its schematic line, th
 have one home, and `tools/pre-push` is the versioned gate. Every Sprint 5 item — R11, P31, P8,
 P6, P10, P28 — is done; the v1 audit follows (R4.3), then retro R5 and the review.
 594 tests, 128 mutations in 28 tables, every anchor present.
+
+**Review evidence, run at close (before the audit's verdict):** the bin's own `make check` —
+"everything is in step" with the changed converter and library records (62 bun tests, its
+diagram current); the RC car builds 17 traces and the remote 12, 0 errors each, and both end
+`????` at simulation as before — the message now names the three car records and the remote's
+own `tactile-button` copy that lack a `simulation` field, instead of blaming the converter's
+table. Unchanged in outcome, explained in words.
 
 ## Definition of Done
 
