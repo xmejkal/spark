@@ -13,6 +13,7 @@ does not overlap. The file has to say so, or someone will order it.
 """
 
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -21,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
+import copper  # noqa: E402
 import emit_board  # noqa: E402
 import parts  # noqa: E402
 
@@ -119,6 +121,64 @@ class WhatItAdmitsTest(unittest.TestCase):
         # parts, so the motor rail has one member and cannot route — and saying so is more
         # useful than emitting a file that fails to build.
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", self.tsx)
+
+
+class PowerTracesAreSizedTest(unittest.TestCase):
+    """
+    Every generated trace was the router's 0.15 mm default, good for about 0.6 A.
+
+    On an RC car whose traction rail carries 2.9 A that is a burnt board, and the generator had
+    never asked what a rail carries even though the answer was in a file the same project holds.
+    `check_physics` caught all three rails, which is the system working — but the generator
+    producing something its own checker rejects is not a design, it is a first draft.
+
+    The width comes from `copper`, the same module the checker judges by, so the two cannot
+    disagree.
+    """
+
+    RULES = {"physics": {"rails": {"TRACTION": {"max_current_a": 2.9},
+                                   "SERVO": {"max_current_a": 1.2},
+                                   "V33": {"max_current_a": None}}}}
+
+    @staticmethod
+    def part(part_id, rail):
+        return {"schema": 1, "id": part_id, "name": part_id, "kind": "test", "needs": [],
+                "power": [{"pin": "VCC", "rail": rail, "direction": "in"},
+                          {"pin": "GND", "rail": "ground", "direction": "in"}],
+                "pin_order": ["VCC", "GND"], "footprint": "pinrow2",
+                "body_mm": {"width": 5, "height": 5, "verified": True, "source": "test"}}
+
+    def _emit(self, rules):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        parts_list = [self.part("load", "traction")]
+        placements, width, height = emit_board.place(board, parts_list)
+        return emit_board.emit(board, parts_list, [], placements, width, height, rules)
+
+    def test_a_heavy_rail_gets_a_stated_thickness(self):
+        self.assertIn('to="net.TRACTION" thickness=', self._emit(self.RULES))
+
+    def test_the_thickness_carries_the_current_the_rules_state(self):
+        # Not just "a number is present" — the number has to be the right one.
+        tsx = self._emit(self.RULES)
+        stated = float(re.search(r'to="net\.TRACTION" thickness="([0-9.]+)mm"', tsx).group(1))
+        self.assertGreaterEqual(copper.current_capacity_a(stated, copper.DEFAULT_RISE_C), 2.9)
+
+    def test_a_rail_with_no_stated_current_gets_no_invented_one(self):
+        # Matched on the TRACE, not on the string: `<board thickness="1.6mm">` is the board's
+        # own, and a bare `assertNotIn("thickness=")` fails on it. Mine did.
+        tsx = self._emit({"physics": {"rails": {"TRACTION": {"max_current_a": None}}}})
+        self.assertNotRegex(tsx, r'<trace[^>]*thickness=')
+
+    def test_and_says_plainly_that_those_widths_are_unjustified(self):
+        # Silence there would be the router's default wearing the clothes of a decision.
+        tsx = self._emit({"physics": {"rails": {}}})
+        self.assertIn("UNJUSTIFIED", tsx)
+
+    def test_with_no_rules_file_at_all_it_still_emits_a_board(self):
+        # A project that has not run `init` yet must still get something, just an unjustified one.
+        tsx = self._emit({})
+        self.assertIn('to="net.TRACTION"', tsx)
+        self.assertIn("UNJUSTIFIED", tsx)
 
 
 class ManyOfOnePartTest(unittest.TestCase):

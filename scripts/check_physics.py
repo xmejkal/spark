@@ -37,6 +37,9 @@ import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPTS))
+
+import copper  # noqa: E402
 
 
 def _sibling(module_name):
@@ -55,14 +58,11 @@ package_of = _sibling("check_footprints").package_of
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"
 
-#: IPC-2221 external-layer constant: I = k * dT^0.44 * A^0.725, with A in square mils.
-IPC_K_EXTERNAL = 0.048
-IPC_DT_EXPONENT = 0.44
-IPC_AREA_EXPONENT = 0.725
-
-#: 1 oz/ft^2 finished copper, the default on every cheap 2-layer process.
-COPPER_THICKNESS_MM = 0.035
-MM_PER_MIL = 0.0254
+#: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
+#: the formula this file judges them with. Two copies is how a board passes its own tool and
+#: fails a fab; `emit_board` reaching in here by importlib is how that becomes untestable.
+COPPER_THICKNESS_MM = copper.COPPER_THICKNESS_MM
+MM_PER_MIL = copper.MM_PER_MIL
 
 #: A rise on an open-drain bus is specified between these fractions of the supply, NOT from zero.
 #: t = R*C*ln((1-lo)/(1-hi)) = 0.8473*R*C. Using ln(1/(1-hi)) = 1.204 instead overstates the rise
@@ -94,16 +94,9 @@ class Finding:
                 "severity": self.severity, "fix": self.fix}
 
 
-def trace_current_capacity_a(width_mm, rise_c):
-    """IPC-2221 external-layer current for a given trace width and temperature rise."""
-    area_mils2 = (width_mm / MM_PER_MIL) * (COPPER_THICKNESS_MM / MM_PER_MIL)
-    return IPC_K_EXTERNAL * (rise_c ** IPC_DT_EXPONENT) * (area_mils2 ** IPC_AREA_EXPONENT)
-
-
-def width_for_current_mm(current_a, rise_c):
-    """The inverse: the narrowest trace that carries this current within a temperature rise."""
-    area_mils2 = (current_a / (IPC_K_EXTERNAL * rise_c ** IPC_DT_EXPONENT)) ** (1 / IPC_AREA_EXPONENT)
-    return area_mils2 * MM_PER_MIL * MM_PER_MIL / COPPER_THICKNESS_MM
+#: Kept as names so existing call sites read unchanged; the arithmetic is `copper`'s.
+trace_current_capacity_a = copper.current_capacity_a
+width_for_current_mm = copper.width_for_current_mm
 
 
 class Board:
@@ -190,15 +183,45 @@ class Board:
                      if n in self.nets]
             nets_of_trace[element["source_trace_id"]] = names
 
-        narrowest = {}
+        segments = {}
         for element in self.elements:
             if element["type"] != "pcb_trace":
                 continue
-            widths = [step["width"] for step in element.get("route", []) if "width" in step]
-            if not widths:
-                continue
+            route = element.get("route", [])
+            measured = []
+            for index, step in enumerate(route):
+                if "width" not in step:
+                    continue
+                length = None
+                if index + 1 < len(route):
+                    nxt = route[index + 1]
+                    if None not in (step.get("x"), step.get("y"), nxt.get("x"), nxt.get("y")):
+                        length = math.dist((step["x"], step["y"]), (nxt["x"], nxt["y"]))
+                measured.append((step["width"], length))
             for net_name in nets_of_trace.get(element.get("source_trace_id"), []):
-                narrowest[net_name] = min(narrowest.get(net_name, float("inf")), min(widths))
+                segments.setdefault(net_name, []).extend(measured)
+
+        # The width a net SUSTAINS, not the narrowest copper anywhere on it.
+        #
+        # Measured on a generated board: asking the router for 1.50 mm produced 86 segments at
+        # 1.50 and six between 0.12 and 0.85 mm LONG at 1.20 mm wide — every one the last step
+        # into a 1.2 mm pad. Judging those by a formula for long uniform traces called a
+        # correctly sized 2.9 A rail unbuildable, and the remedy it printed — "widen this net" —
+        # was for a trace that was already wide enough.
+        #
+        # A neck that short cannot reach a steady temperature: it is bonded to a pad and a plated
+        # barrel, both heatsinks. The constriction is real and it belongs to the PAD, which is
+        # `check_footprints`' subject. Falling back to the absolute minimum when a net is ALL
+        # necks keeps a genuinely tiny net from passing by having no long segment to judge.
+        narrowest = {}
+        for net_name, measured in segments.items():
+            sustained = copper.sustained_width_mm(measured)
+            if sustained is None:
+                widths = [width for width, _ in measured if width]
+                if not widths:
+                    continue
+                sustained = min(widths)
+            narrowest[net_name] = sustained
         return narrowest
 
 

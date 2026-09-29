@@ -34,6 +34,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import assign_pins  # noqa: E402
 import boards  # noqa: E402
+import copper  # noqa: E402
 import parts as parts_library  # noqa: E402
 
 EXIT_OK, EXIT_COULD_NOT_RUN = 0, 2
@@ -112,6 +113,65 @@ BOARD_THICKNESS_MM = 1.6
 #: Rails the microcontroller module itself supplies, so a design made only of consumers still
 #: has a source for them.
 RAILS_THE_MODULE_PROVIDES = ("V33", "GND")
+
+
+def power_trace(component, pin, net, rules, note="", unjustified=None):
+    """
+    One power connection, sized by what its rail carries.
+
+    ONE function, because there are TWO places that emit power traces — the modules' pins and the
+    microcontroller's own pads — and sizing only the first is how the car came out with 1.30 mm
+    to the motor driver and the router's 0.15 mm default to the processor's ground. Same shape as
+    the signal-prefix mapping and the pin reads before it: a rule written at the use site gets
+    applied at one of them.
+    """
+    needed = trace_width_mm(net, rules)
+    if needed is None:
+        if unjustified is not None:
+            unjustified.add(net)
+        thickness = ""
+    else:
+        thickness = ' thickness="%.2fmm"' % needed
+    suffix = ("  {/* %s */}" % note) if note else ""
+    return '    <trace from=".%s > .%s" to="net.%s"%s />%s' % (
+        component, pin, net, thickness, suffix)
+
+
+def rules_in(project):
+    """The project's rules file, or an empty one. Absent is not an error — `init` writes it."""
+    if project is None:
+        return {}
+    path = Path(project) / ".spark" / "rules.json"
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except (ValueError, OSError):
+        return {}
+
+
+def trace_width_mm(net, rules):
+    """
+    The width this net's current needs, or None when nobody has stated a current.
+
+    Every generated trace was tscircuit's 0.15 mm default — good for about 0.6 A — including on
+    an RC car whose traction rail carries 2.9 A. `check_physics` caught all three rails and the
+    generator had never asked, even though the answer was in a file the same project holds.
+
+    The arithmetic is IMPORTED from `check_physics` rather than repeated, so the generator cannot
+    disagree with the checker that judges it. Two copies of one formula is how a board passes its
+    own tool and fails a fab.
+
+    None is a real answer: a rail with no stated current gets the default AND a comment saying
+    the width is unjustified, which is the honest state rather than a silent 0.15 mm.
+    """
+    rails = ((rules.get("physics") or {}).get("rails") or {})
+    current = (rails.get(net) or {}).get("max_current_a")
+    if not isinstance(current, (int, float)) or current <= 0:
+        return None
+    rise = ((rules.get("physics") or {}).get("trace_temperature_rise_c")
+            or copper.DEFAULT_RISE_C)
+    return copper.width_to_emit_mm(current, rise)
 
 
 def net_for(supply):
@@ -328,7 +388,8 @@ def outputs_with_nothing_on_them(part_list):
     return sorted(entry for entry in driven if entry[0] not in received)
 
 
-def emit(board, part_list, assignments, placements, width, height):
+def emit(board, part_list, assignments, placements, width, height, rules=None):
+    rules = rules or {}
     by_signal = {entry["signal"]: entry for entry in assignments}
 
     lines = [
@@ -427,6 +488,8 @@ def emit(board, part_list, assignments, placements, width, height):
     lines.append("")
     lines.append("    {/* Power. Which rail each module pin belongs to comes from its part file. */}")
 
+    unjustified = set()
+
     # The microcontroller's OWN supply pins. Omitted entirely until 2026-09-25, so a generated
     # board's processor shared a net with none of its pins — no ground, no 3.3 V — while the
     # modules around it were correctly wired to rails the MCU was not on. It built, it routed,
@@ -436,7 +499,7 @@ def emit(board, part_list, assignments, placements, width, height):
         net = net_name_for_rail(supply.get("rail"))
         if not net:
             continue
-        lines.append('    <trace from=".Mcu > .%s" to="net.%s" />' % (pad, net))
+        lines.append(power_trace("Mcu", pad, net, rules, unjustified=unjustified))
     if not board.get("power_pads"):
         lines.append("    {/* THIS BOARD FILE DOES NOT SAY WHICH OF ITS PADS ARE POWER, so the")
         lines.append("        microcontroller is wired to no rail at all. Every module below may")
@@ -471,9 +534,16 @@ def emit(board, part_list, assignments, placements, width, height):
             net = net_for(power)
             if not net:
                 continue
-            note = ("  {/* %s */}" % power["note"]) if power.get("note") else ""
-            lines.append('    <trace from=".%s > .%s" to="net.%s" />%s'
-                         % (name, power["pin"], net, note))
+            lines.append(power_trace(name, power["pin"], net, rules,
+                                     power.get("note") or "", unjustified))
+    if unjustified:
+        lines.append("    {/* THE WIDTH OF THE TRACES ABOVE ON %s IS UNJUSTIFIED."
+                     % ", ".join("net." + net for net in sorted(unjustified)))
+        lines.append("        They take the router's default, which is about 0.15 mm and good")
+        lines.append("        for roughly 0.6 A. Nobody has stated what these rails carry, so")
+        lines.append("        nothing here could size them. State `max_current_a` for each in")
+        lines.append("        .spark/rules.json and regenerate; `check_physics` judges the")
+        lines.append("        result by the same arithmetic that would have set it. */}")
 
     # Requirements a part states about its host, carried into the file rather than left in a
     # library nobody opens. These are the things a generated board CANNOT do for you.
@@ -576,7 +646,8 @@ def main(argv=None):
         return EXIT_COULD_NOT_RUN
 
     placements, width, height = place(board, part_list)
-    sys.stdout.write(emit(board, part_list, assignments, placements, width, height))
+    sys.stdout.write(emit(board, part_list, assignments, placements, width, height,
+                          rules_in(args.project)))
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
     placed = {entry["signal"] for entry in assignments}
