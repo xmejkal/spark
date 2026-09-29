@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/check_design.py",
+  "name": "a missing design is a usage exit again (O4c)",
+  "find": "    except CannotCheck as why:\n        if args.json:",
+  "replace": "    except ImportError as why:\n        if args.json:"
+ },
+ {
+  "file": "scripts/check_design.py",
+  "name": "--json forgets the status",
+  "find": "        print(json.dumps({\"check\": \"design\", \"status\": PROBLEMS if problems else OK,",
+  "replace": "        print(json.dumps({\"check\": \"design\", \"status\": OK,"
+ }
+]

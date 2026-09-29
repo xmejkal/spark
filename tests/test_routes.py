@@ -96,9 +96,14 @@ class EveryRouteLeadsSomewhereTest(unittest.TestCase):
                 self.assertTrue(path.read_text().startswith("#!/usr/bin/env python3"), script)
 
     def test_every_chain_script_has_a_command_line(self):
-        # Named in a document, and runnable as documented: each answers --help with usage.
+        # Named in a document, and runnable as documented: each answers --help with usage. Every
+        # script a command may run is held to it too — check_design answered "no design at
+        # --help", exit 1, for a year (intake O4c).
         import subprocess
-        for script in CHAIN:
+        routed = set(CHAIN)
+        for command in (ROOT / "commands").glob("*.md"):
+            routed |= allowed_scripts(command)
+        for script in sorted(routed):
             result = subprocess.run([sys.executable, str(ROOT / "scripts" / script), "--help"],
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, script)

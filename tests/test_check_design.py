@@ -176,7 +176,7 @@ class BoardResolutionTest(unittest.TestCase):
         self.assertEqual(json.loads(found.read_text())["id"], "xiao-esp32-c6")
 
     def test_an_unknown_board_says_which_ones_exist(self):
-        with self.assertRaises(SystemExit) as raised:
+        with self.assertRaises(check_design.CannotCheck) as raised:
             check_design.resolve_board("firebeetle2-s3", Path("/nowhere/design.json"))
         self.assertIn("xiao-esp32-c6", str(raised.exception))
 
@@ -208,6 +208,77 @@ class RealDesignTest(unittest.TestCase):
         real = json.loads((ROOT / "examples" / "smartbin.design.json").read_text())
         self.assertEqual(check_design.run(real, BOARD), [])
 
+
+
+class TheCommandLineTest(unittest.TestCase):
+    """
+    `main(argv)` read `argv[1]` and nothing else: `--help` printed "no design at --help", exit 1
+    (intake O4c, backlog P24). Now argparse, a could-not-run for a design it cannot read, and
+    `--json` like every other script.
+    """
+
+    @staticmethod
+    def _main(argv):
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = check_design.main(argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_help_is_a_question_not_a_problem(self):
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit) as left:
+                check_design.main(["--help"])
+        self.assertEqual(left.exception.code, 0)
+
+    def test_a_design_that_cannot_be_read_is_could_not_run(self):
+        import tempfile
+        code, out, err = self._main([str(Path(tempfile.mkdtemp()) / "nope.json")])
+        self.assertEqual(code, check_design.EXIT_COULD_NOT_RUN)
+        self.assertIn("no design at", err)
+
+    def test_a_design_naming_no_board_is_could_not_run(self):
+        import json
+        import tempfile
+        path = Path(tempfile.mkdtemp()) / "d.json"
+        path.write_text(json.dumps({"parts": []}))
+        code, out, err = self._main([str(path)])
+        self.assertEqual(code, check_design.EXIT_COULD_NOT_RUN)
+        self.assertIn("names no board", err)
+
+    def test_the_worked_example_runs_and_json_says_its_status(self):
+        import json
+        example = ROOT / "examples" / "smartbin.design.json"
+        code, out, _ = self._main([str(example), "--json"])
+        said = json.loads(out)
+        self.assertIn(said["status"], (check_design.OK, check_design.PROBLEMS))
+        self.assertEqual(code, check_design.EXIT_PROBLEMS if said["problems"] else check_design.EXIT_OK)
+        self.assertGreater(said["parts"], 0)
+
+    def test_json_status_follows_the_problems_it_lists(self):
+        # A design with a guaranteed problem: a part on a pin this board does not bring out. The
+        # first version of the JSON test accepted either status and tied the exit code to the
+        # problem list, so a status forced to `ok` escaped the mutation table (W12).
+        import json
+        import tempfile
+        path = Path(tempfile.mkdtemp()) / "d.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [
+            {"ref": "Probe", "part": "probe", "pins": [{"signal": "X", "pin": "D99"}]}]}))
+        code, out, _ = self._main([str(path), "--json"])
+        said = json.loads(out)
+        self.assertTrue(said["problems"], said)
+        self.assertEqual(said["status"], check_design.PROBLEMS)
+        self.assertEqual(code, check_design.EXIT_PROBLEMS)
+
+    def test_could_not_run_is_said_in_json_too(self):
+        import json
+        import tempfile
+        code, out, _ = self._main([str(Path(tempfile.mkdtemp()) / "nope.json"), "--json"])
+        self.assertEqual(code, check_design.EXIT_COULD_NOT_RUN)
+        self.assertEqual(json.loads(out)["status"], check_design.COULD_NOT_RUN)
 
 if __name__ == "__main__":
     unittest.main()

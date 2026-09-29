@@ -28,8 +28,11 @@ import boards  # noqa: E402  - for the role vocabulary, which must have one spel
 
 BOARDS = SCRIPTS.parent / "boards"
 
-EXIT_OK = 0
-EXIT_PROBLEMS = 1
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
+
+
+class CannotCheck(Exception):
+    """The design or its board could not be read: a could-not-run, never a usage message."""
 
 
 class Problem:
@@ -51,9 +54,9 @@ def load_json(path, what):
     try:
         return json.loads(Path(path).read_text())
     except FileNotFoundError:
-        raise SystemExit("no %s at %s" % (what, path))
+        raise CannotCheck("no %s at %s" % (what, path))
     except ValueError as error:
-        raise SystemExit("%s at %s is not valid JSON: %s" % (what, path, error))
+        raise CannotCheck("%s at %s is not valid JSON: %s" % (what, path, error))
 
 
 def resolve_board(reference, design_path):
@@ -80,7 +83,7 @@ def resolve_board(reference, design_path):
             return shipped
 
     known = sorted(p.stem for p in BOARDS.glob("*.json")) if BOARDS.exists() else []
-    raise SystemExit(
+    raise CannotCheck(
         "no board definition for %r.\n  shipped: %s\n  or give a path to one."
         % (reference, ", ".join(known) or "none"))
 
@@ -269,23 +272,43 @@ def run(design, board):
     return check_pin_capability(design, board) + check_i2c_addresses(design)
 
 
-def main(argv):
-    if len(argv) != 2:
-        raise SystemExit(__doc__.strip().split("\n\n")[1].strip())
+def main(argv=None):
+    import argparse
+    parser = argparse.ArgumentParser(
+        prog="check_design.py",
+        description="The mistakes no EDA tool catches: pins, capabilities, shared buses, I2C addresses.")
+    parser.add_argument("design", help="a design.json: the board, the parts, their pins and what each pin must do")
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+    # Until 2026-09-29 this read `argv[1]` and nothing else: `--help` printed "no design at
+    # --help" and exited 1 — a problem code for a question (intake O4c, backlog P24).
 
-    design_path = Path(argv[1])
-    design = load_json(design_path, "design")
-    board_path = resolve_board(design["board"], design_path)
-    board = load_json(board_path, "board definition")
+    design_path = Path(args.design)
+    try:
+        design = load_json(design_path, "design")
+        if not isinstance(design, dict) or not design.get("board"):
+            raise CannotCheck("%s names no board" % design_path)
+        board_path = resolve_board(design["board"], design_path)
+        board = load_json(board_path, "board definition")
+    except CannotCheck as why:
+        if args.json:
+            print(json.dumps({"check": "design", "status": COULD_NOT_RUN, "reason": str(why)}))
+        else:
+            print("check_design.py: %s" % why, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
 
     problems = run(design, board)
     parts = len(design.get("parts", []))
-    print("%s: %d parts against %s" % (design_path.name, parts, board.get("name", board_path.name)))
+    if args.json:
+        print(json.dumps({"check": "design", "status": PROBLEMS if problems else OK,
+                          "design": design_path.name, "board": board.get("name", board_path.name),
+                          "parts": parts, "problems": [str(problem) for problem in problems]}, indent=2))
+        return EXIT_PROBLEMS if problems else EXIT_OK
 
+    print("%s: %d parts against %s" % (design_path.name, parts, board.get("name", board_path.name)))
     if not problems:
         print("\nnothing to fix.")
         return EXIT_OK
-
     print("\n%d problem(s):\n" % len(problems))
     for problem in problems:
         print(problem)
@@ -293,4 +316,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())
