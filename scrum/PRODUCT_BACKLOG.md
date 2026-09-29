@@ -44,7 +44,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | ~~R7~~ | The generator chain named by a skill, a command and an agent — **done `1f769f8`** for the one command; the steps reopened as P22 | M |
 | ~~R9~~ | A rail belongs to the design, not the part — **done `227f5d4`** | M |
 | ~~P20~~ | `assign_pins.main` through the loader; signals derived once — **done `c3e2e28`** | M |
-| P21 | A bus is shared; an instance name does not take a part off it | M |
+| ~~P21~~ | A bus is shared; an instance name does not take a part off it — **done `7381fed`** | M |
 | P22 | A stranger can build [reopens R7] | M |
 | P23 | Two outputs on one net, across parts | S |
 | P24 | `check_design.py` gets a command line | S |
@@ -391,7 +391,7 @@ malformed part file is `could-not-run` through both. Mutation: the raw entries h
 loader. The car's pin map assigns (exit 0), both boards re-emit byte-identical, a malformed part
 record is a sentence through both mains and the spine. Four mutations caught, 559 tests.
 
-### P21 — A bus is shared, and an instance name does not take a part off it
+### ~~P21 — A bus is shared, and an instance name does not take a part off it~~ — **DONE `7381fed`**
 B2, B3, B18. `signal_name` prefixes an instance's signals (`RANGEFINDER_SDA`) and the bus path in
 `assign_pins` finds the bus pin by the signal's *name* matching a board label — so a named
 VL6180X lands on D3/D12 "needs nothing special", exit 0 (reproduced); two unnamed I2C parts are
@@ -401,6 +401,11 @@ the assigner's own docstring. A bus signal carries its bus pin apart from its na
 bus share the pin; a bus signal naming no pin of that bus is refused.
 **Value proven by:** a named VL6180X on `.Mcu > .SDA/.SCL`; two I2C parts traced to the same
 SDA/SCL; `{"name": "CLK", "bus": "spi"}` refused by name. Mutation: the prefix reaching the bus pin.
+
+**Result.** `BUS_LINES` is where vendor names meet board labels; a bus signal carries its line
+through the rename; shared lines share the pin, selects are per device. Two named VL6180X built
+with tsci: 12 traces, 0 errors, both on the MCU's SDA/SCL pads. Four designs byte-identical.
+Five mutations caught, 569 tests.
 
 ### P22 — A stranger can build: the documented steps work from nowhere **[reopens R7]**
 B5, B6, B19. R7 was called DONE on the strength of the one command; followed as documented from a

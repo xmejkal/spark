@@ -22,8 +22,8 @@ retros in a row say the intake has not drained (R3.2).
 | ~~R7~~ | The generator chain named by a skill, a command and an agent [G13] | **done `1f769f8`** for the one command; **reopened as P22** — the audit followed the documented steps from a fresh directory and reached no build (B19) |
 | ~~R9~~ | A rail belongs to the design, not the part [G5] | **done `227f5d4`** — the car's copied record is gone |
 | ~~P20~~ | `assign_pins.main` through the loader | **done `c3e2e28`** — the documented first step assigns; a malformed part is a sentence |
-| **P21** | A bus is shared; a name does not take a part off it | **next** — a named I2C part silently off its bus (B2) |
-| **P22** | A stranger can build [reopens R7] | after P21 |
+| ~~P21~~ | A bus is shared; a name does not take a part off it | **done `7381fed`** — two named I2C parts on one bus build, 12 traces |
+| **P22** | A stranger can build [reopens R7] | **next** |
 | **P23** | Two outputs on one net, across parts | after P22 |
 | P24, P25 | `check_design` CLI; one outcome vocabulary | last |
 | **R2.5** | Third cold test — **PO: choose a domain** (below) | both silent-wrongness classes were found only by building something new |
