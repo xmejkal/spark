@@ -42,7 +42,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | --- | --- | --- |
 | P15 | Drain the intake: 43 `raised` rows, reproduced or rejected | S, time-boxed |
 | ~~R7~~ | The generator chain named by a skill, a command and an agent — **done `1f769f8`** | M |
-| R9 | A rail belongs to the design, not the part | M |
+| ~~R9~~ | A rail belongs to the design, not the part — **done `227f5d4`** | M |
 | R2.5 | Third cold test — **PO chooses the domain** | L |
 
 ## Sprint 3 — done 2026-09-29
@@ -270,12 +270,17 @@ it down — are unaided.
 **Not obvious what it should be**, which is why it is marked PO: a signpost (`--need servo` printing
 the schema and the agent's name) is an afternoon; actual sourcing is a product.
 
-### R9 — A part states its rail, but the rail belongs to the design [G5]
+### ~~R9 — A part states its rail, but the rail belongs to the design~~ [G5] — **DONE `227f5d4`**
 The shipped `l9110s-module` puts VCC on `motor`, which names the bin's 6 V pack. The car runs the
 same driver at 7.4 V, so the whole record had to be copied to change one string — and that copy is
 now frozen against plugin updates.
 **Value proven by:** `{"part": "l9110s-module", "rails": {"VCC": "traction"}}` in a requirements
 file, with no duplicate part record.
+
+**Result.** Exactly that, in the loader. The car's copied record is deleted (rc-car `9376dcc`); the
+re-emitted board differs in one comment and builds with 13 traces, 0 errors. One mutation escaped
+at first because the test re-read a file `parts.load` reads fresh — the fixture could not see it
+(W12); it now holds `on_rails` to its copy contract directly. Four mutations caught, 547 tests.
 
 ### R10 — Nothing models a link between two designs [G11] **[PO]**
 The remote sends a packet the car parses and nothing anywhere can check the two agree. An

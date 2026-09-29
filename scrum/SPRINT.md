@@ -20,7 +20,7 @@ retros in a row say the intake has not drained (R3.2).
 | --- | --- | --- |
 | ~~P15~~ | Drain the intake: 43 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | **done** the same evening, `f35e7df`: 40 resolved, 3 fixed, 1 rejected, 4 new items |
 | ~~R7~~ | The generator chain named by a skill, a command and an agent [G13] | **done `1f769f8`** — `/spark:build`, the skill and the agent route through the chain |
-| **R9** | A rail belongs to the design, not the part [G5] | one line in a requirements file instead of a copied record |
+| ~~R9~~ | A rail belongs to the design, not the part [G5] | **done `227f5d4`** — the car's copied record is gone |
 | **R2.5** | Third cold test — **PO: choose a domain** (below) | both silent-wrongness classes were found only by building something new |
 | — | The audit agent at sprint end (R3.3) | the outside read that produced six items last time |
 
@@ -46,6 +46,10 @@ it decides nothing about the product. `grep -c '\`raised\`' docs/observations/IN
 (the legend line). Three rows were still true and are fixed in
 `f35e7df`; R19 is the first `rejected` row the table has ever had. Four items came out, two of them
 the PO's.
+
+**R9 done** (`227f5d4`); the car's copied L9110S record is deleted and the board still builds, 13 traces.
+Every non-PO item of the proposed Sprint 4 is done; the cold test waits for a domain, and the audit
+(R3.3) runs next.
 
 **R7 done** (`1f769f8`, corrected `7ac2ba1`). **The commit message of `1f769f8` is false**: it says the
 documented example ran end to end; the output it was written over said `the chain is broken`
