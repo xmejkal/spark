@@ -107,6 +107,15 @@ design's chain exits 0 end to end (20 traces, 18 wires, both chips compiled from
 records); the spine's "reaches ground" check learned that a passive between a pin and a rail is
 not an island. Budget 6,600 with the reason beside it. 587 tests, 125 mutations in 26 tables.
 
+**P10 and P28, and the sprint's items are done.** P10: a project's copy of a shipped board is
+checked against the plugin's cached vendor header (reproduced as `????` on the irrigation project
+first). P28: the six audit rows made true — the mutate lock covers the pre-check, `apply` refuses
+a missing file, three functions are named by tests, the stranger test runs the document's own
+lines, the example block is a run's output with a test on its schematic line, the status words
+have one home, and `tools/pre-push` is the versioned gate. Every Sprint 5 item — R11, P31, P8,
+P6, P10, P28 — is done; the v1 audit follows (R4.3), then retro R5 and the review.
+594 tests, 128 mutations in 28 tables, every anchor present.
+
 ## Definition of Done
 
 Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its

@@ -73,6 +73,33 @@ class WhatItWritesTest(unittest.TestCase):
                          {"mine": True})
 
 
+class TheThreeFunctionsTheAuditFoundUnnamedTest(unittest.TestCase):
+    """Audit C9: `nets_in`, `rules_for` and `has_answers` were named by no test."""
+
+    def test_nets_in_reads_the_nets_that_exist_and_nothing_from_nowhere(self):
+        root = a_project(nets=("GND", "V33", "SDA"))
+        self.assertEqual(init_project.nets_in(root / "dist" / "board" / "circuit.json"), ["GND", "SDA", "V33"])
+        self.assertEqual(init_project.nets_in(root / "nowhere.json"), [])
+        self.assertEqual(init_project.nets_in(None), [])
+
+    def test_rules_for_puts_rails_and_buses_where_they_belong_with_nothing_measured(self):
+        rules = init_project.rules_for(["GND", "V33", "SDA", "SCL"])
+        self.assertEqual(set(rules["physics"]["rails"]), {"GND", "V33"})
+        self.assertEqual(set(rules["i2c_buses"]), {"SDA", "SCL"})
+        self.assertTrue(all(rail.get("max_current_a") is None for rail in rules["physics"]["rails"].values()),
+                        "a current nobody measured is null, not a guess")
+
+    def test_has_answers_tells_a_filled_brief_from_the_template(self):
+        root = Path(tempfile.mkdtemp())
+        blank, filled, broken = root / "blank.json", root / "filled.json", root / "broken.json"
+        blank.write_text(json.dumps(init_project.PROJECT_TEMPLATE))
+        filled.write_text(json.dumps(dict(init_project.PROJECT_TEMPLATE, goal="water the beds")))
+        broken.write_text("{not json")
+        self.assertFalse(init_project.has_answers(blank, init_project.PROJECT_TEMPLATE))
+        self.assertTrue(init_project.has_answers(filled, init_project.PROJECT_TEMPLATE))
+        self.assertTrue(init_project.has_answers(broken, init_project.PROJECT_TEMPLATE), "whatever is in it, it is not ours to replace")
+
+
 class WhatItRefusesToGuessTest(unittest.TestCase):
     """The design. Everything here is about values NOT being invented."""
 

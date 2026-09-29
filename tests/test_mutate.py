@@ -127,7 +127,10 @@ class ARefusedMutationTest(unittest.TestCase):
 
     def test_a_find_that_matches_twice_is_refused_too(self):
         root = tiny_project()
-        (root / "m.py").write_text("def add(a, b):\n    return a + b\n\ndef add2(a, b):\n    return a + b\n")
+        # A second `add` body, with the arena's other functions kept: the pre-check now runs
+        # under the lock inside `run`, and an arena missing what its tests import is red before
+        # any mutation — a refusal to score, which is right, and not what this test is about.
+        (root / "m.py").write_text((root / "m.py").read_text() + "\n\ndef add2(a, b):\n    return a + b\n")
         results, _ = mutate.run(root, "tests", [BREAK_ADD])
         self.assertEqual(results[0]["status"], mutate.REFUSED)
         self.assertIn("2 time(s)", results[0]["detail"])
@@ -201,6 +204,29 @@ class OneRunAtATimeTest(unittest.TestCase):
                          mutate.EXIT_COULD_NOT_RUN)
         with self.assertRaises(mutate.AnotherRunIsActive):
             mutate.run(root, "tests", [BREAK_ADD])
+
+    def test_the_lock_is_held_while_the_suite_is_pre_checked(self):
+        # Audit C8: the pre-check took six seconds before the lock existed, and two runs started
+        # inside that window both took it.
+        import tempfile
+        from unittest import mock
+        root = Path(tempfile.mkdtemp())
+        seen = []
+        def green_under_lock(root_seen, tests):
+            seen.append((root_seen / mutate.LOCK_NAME).exists())
+            return False
+        with mock.patch.object(mutate, "suite_is_green", green_under_lock):
+            with self.assertRaises(mutate.RedBeforeMutation):
+                mutate.run(root, "tests", [])
+        self.assertEqual(seen, [True], "the pre-check ran with the lock already taken")
+        self.assertFalse((root / mutate.LOCK_NAME).exists())
+
+    def test_a_table_naming_a_missing_file_is_refused_not_a_traceback(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        original, refusal = mutate.apply(root, {"file": "scripts/nope.py", "find": "x", "replace": "y", "name": "n"})
+        self.assertIsNone(original)
+        self.assertIn("does not exist", refusal)
 
     def test_the_lock_is_gone_after_a_run_whatever_happened(self):
         root = tiny_project()

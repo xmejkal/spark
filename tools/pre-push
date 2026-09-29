@@ -1,0 +1,6 @@
+#!/bin/sh
+# The commit gate, as a git hook: the committed tree's suite and every mutation anchor, before
+# a push leaves this machine. Installed once per clone (audit C14 — "runs at every commit" was
+# enforced by nothing):
+#   ln -sf ../../tools/pre-push .git/hooks/pre-push
+exec python3 "$(git rev-parse --show-toplevel)/tools/check_commit.py"

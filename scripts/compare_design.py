@@ -22,7 +22,7 @@ import json
 import sys
 from pathlib import Path
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
 #: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
 #: this and the driving pin cannot pull it down. Wide on purpose — this is a sanity band, not a
@@ -38,7 +38,6 @@ PULLUP_MAX_OHM = 10000
 #: cost this project once: an eval scored zero on every run because the files were outside the
 #: sandbox, and a zero that means "found nothing" is indistinguishable from a zero that means
 #: "could not read the board" — so the obvious reading was that the reviewer did not work.
-OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"
 
 
 class Failure:

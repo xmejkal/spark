@@ -34,7 +34,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
 #: A standard 0.64 mm square header pin, across the diagonal — the dimension that has to fit,
 #: and the one people forget because the pin is quoted by its side.
@@ -522,7 +522,7 @@ def main(argv=None):
 
     findings = run(json.loads(path.read_text()))
     problems, unchecked = problems_in(findings), unchecked_in(findings)
-    status = "problems" if problems else ("could-not-run" if unchecked else "ok")
+    status = PROBLEMS if problems else (COULD_NOT_RUN if unchecked else OK)
     if args.json:
         print(json.dumps({"tool": "check_footprints", "status": status,
                           "findings": [f.as_data() for f in findings]}, indent=2))

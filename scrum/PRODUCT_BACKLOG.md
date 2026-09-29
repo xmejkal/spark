@@ -26,7 +26,6 @@ simulation, a link between two boards, and parts research beyond R11 below.
 | # | item | needed by |
 | --- | --- | --- |
 | **R11** | Research parts and modules, vendor by vendor, and keep what was found | the third cold test, on day one |
-| **P28** | The tools this repository relies on, made true | this repository's Definition of Done |
 | R2.5 | The third cold test — **PO: one letter, (a), (b) or (c)** | it is the test |
 
 ### R11 — Research parts and modules, vendor by vendor, and keep what was found
@@ -78,7 +77,7 @@ you are told to use to record what you verified turns off the check that verifie
 **Value proven by:** a project with a board override still gets a `vendor-truth` verdict against
 the override.
 
-### P28 — The tools this repository relies on, made true
+### P28 — The tools this repository relies on, made true — DONE 2026-09-29, late night
 **Needed by:** this repository's own Definition of Done (close audit C8–C12, C14, C16). The mutate
 lock is taken after the pre-check suite; `mutate.apply` reads a missing file where `anchors`
 refuses it; the outcome words are spelled again in `compare_design.py`; `init_project`'s
@@ -129,6 +128,7 @@ one), P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8
 by the PO).
 
 ## Done — one line each, the hash is the record
+- **P28** — the tools made true: the mutate lock covers the pre-check and `apply` refuses a missing file (C8); `nets_in`, `rules_for`, `has_answers` named by tests (C9); the stranger test runs build.md's own lines (C10); the example block is a run's output and a test holds its schematic line to the example (C11); the status words come from `outcomes` in the three files that spelled them (C12); `tools/pre-push` is the versioned gate, installed with one `ln -sf` (C14). Table sprint-5-p28 (2): caught.
 - **P10** — a project's own copy of a shipped board is checked against the plugin's cached vendor header instead of switching vendor-truth off: `cached_header` looks beside the board, then in the plugin (table sprint-5-p10, 1 caught; reproduced on the irrigation project first).
 - **P6** — what a record demands of its host as a component is placed and wired: `host_parts` (pulldown, pullup, divider) become 0603 resistors beside the module, a divider ends the host's trace at its midpoint; the L9110S's pull-downs, the VL6180X's I2C pull-ups and the flow meter's divider are the first three; the spine asks a passive whether an end dangles instead of whether it touches ground; the generated resistors map to Wokwi's resistor. Reference: 20 traces, 18 wires, exit 0. Table sprint-5-p6 (9): caught.
 - **P8** — the floating-input rule sees a pin-to-pin trace: the netlist model skipped every trace that named no net, which is how spark's generator wires every signal; a wire's traces share its connectivity key; the finding names its component and pin (I10). Proven on the irrigation board with four declared inputs and on the bin's own (`compare_design.py`, table sprint-5-p8, 3 caught).

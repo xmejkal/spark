@@ -163,3 +163,4 @@ dropped.
 
 ---
 v0.6.0 · MIT · built with the tscircuit engine.
+\n\nThe commit gate (`tools/check_commit.py`) runs itself before every push once the hook is installed: `ln -sf ../../tools/pre-push .git/hooks/pre-push`.

@@ -139,6 +139,24 @@ class TheDocumentedExampleRunsTest(unittest.TestCase):
         self.assertEqual([s.status for s in stages[:-1]], [check_spine.OK] * 3)
         self.assertEqual(stages[-1].status, check_spine.COULD_NOT_RUN)   # no tsci offered here
 
+    def test_the_documents_example_output_is_what_the_example_prints(self):
+        # Audit C11: the block showed numbers no command produced. The schematic line needs no
+        # tsci, so it is checked here; the build and simulation lines are pasted from a run.
+        import json
+        import tempfile
+        from unittest import mock
+        import check_spine
+        shown = re.search(r"\[ok  \] schematic\s+(\d+) trace\(s\) written", BUILD_COMMAND.read_text())
+        self.assertIsNotNone(shown, "the document shows the schematic line")
+        requirements = self.example(BUILD_COMMAND)
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
+            stages = check_spine.run(requirements, workdir)
+        schematic = next(s for s in stages if s.name == "schematic")
+        self.assertIn("%s trace(s) written" % shown.group(1), schematic.detail,
+                      "the document says %s, the example prints %s" % (shown.group(1), schematic.detail))
+
 
 class AStrangerCanBuildTest(unittest.TestCase):
     """
@@ -171,20 +189,32 @@ class AStrangerCanBuildTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("l9110s-module", out)
 
+    @staticmethod
+    def documented_steps():
+        """The lines of build.md's step block that run a plugin script, comments stripped, as written."""
+        text = BUILD_COMMAND.read_text()
+        block = re.search(r"## The steps, when one is wanted on its own\n\n```\n(.*?)```", text, re.S).group(1)
+        return [re.sub(r"\s+#.*$", "", line).strip() for line in block.splitlines()
+                if line.startswith("${CLAUDE_PLUGIN_ROOT}")]
+
     def test_the_documented_steps_produce_a_board_file_and_its_footprint(self):
-        code, out, err = self.run_step("assign_pins.py", "requirements.json")
-        self.assertEqual(code, 0, err + out)
-        self.assertIn("MOTOR_IA", out)
-        code, board, err = self.run_step("emit_board.py", "requirements.json")
-        self.assertEqual(code, 0, err)
+        # Audit C10: this test typed the steps itself, so a documented step that no longer worked
+        # as written was invisible to it. It runs the document's own lines now.
+        import os
+        import subprocess
+        steps = self.documented_steps()
+        self.assertGreaterEqual(len(steps), 5, steps)
+        environment = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(ROOT))
+        for line in steps:
+            result = subprocess.run(line, shell=True, cwd=str(self.here), capture_output=True, text=True, env=environment)
+            with self.subTest(step=line):
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                if "emit_board.py" in line:
+                    self.assertIn("plugin's library", result.stderr, "a design built from nowhere is told so")
+        board = (self.here / "board.tsx").read_text()
         self.assertIn("<board", board)
-        self.assertIn("plugin's library", err, "a design built from nowhere is told so")
-        (self.here / "board.tsx").write_text(board)
-        code, _, err = self.run_step("emit_footprint.py", "--board", "firebeetle2-esp32s3",
-                                     "-o", "FireBeetle2Esp32S3.tsx")
-        self.assertEqual(code, 0, err)
-        self.assertTrue((self.here / "FireBeetle2Esp32S3.tsx").is_file())
         self.assertIn('from "./FireBeetle2Esp32S3"', board)
+        self.assertTrue((self.here / "FireBeetle2Esp32S3.tsx").is_file())
 
 if __name__ == "__main__":
     unittest.main()

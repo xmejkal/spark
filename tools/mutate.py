@@ -82,6 +82,9 @@ def apply(root, mutation):
     is wrong, and running the suite against an unmutated file would score a phantom "caught".
     """
     path = root / mutation["file"]
+    if not path.is_file():
+        # `anchors` refused this; `apply` read it and the tool died with a traceback (audit C8).
+        return None, "%s does not exist" % mutation["file"]
     original = path.read_text()
     count = original.count(mutation["find"])
     if count != 1:
@@ -122,6 +125,10 @@ class AnotherRunIsActive(Exception):
     """A lock is held: some other mutate run is rewriting these files right now."""
 
 
+class RedBeforeMutation(Exception):
+    """The suite is not green before any mutation: a red suite catches nothing."""
+
+
 def run(root, tests, mutations):
     """Every mutation, each restored before the next, and the suite confirmed green at the end."""
     lock = root / LOCK_NAME
@@ -131,6 +138,10 @@ def run(root, tests, mutations):
                                  "are sure and check `git status` for a mutated file" % lock)
     lock.write_text(str(__import__("os").getpid()))
     try:
+        # The pre-check ran BEFORE the lock was taken, so two runs started within its six
+        # seconds both passed the lock test and both took the lock (audit C8). Under it now.
+        if not suite_is_green(root, tests):
+            raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing")
         return _run(root, tests, mutations)
     finally:
         lock.unlink(missing_ok=True)
@@ -213,19 +224,10 @@ def main(argv=None):
             "every anchor present, once" if not wrong else "%d would be refused" % len(wrong)))
         return EXIT_ESCAPED if wrong else EXIT_OK
 
-    if (root / LOCK_NAME).exists():
-        print("another mutate run holds %s; two at once rewrite the same files under each "
-              "other and neither verdict can be trusted" % (root / LOCK_NAME), file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    if not suite_is_green(root, args.tests):
-        print("the suite is not green BEFORE any mutation; a red suite catches nothing",
-              file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-
     try:
         results, restored = run(root, args.tests, mutations)
-    except AnotherRunIsActive as held:
-        print(str(held), file=sys.stderr)
+    except (AnotherRunIsActive, RedBeforeMutation) as stopped:
+        print(str(stopped), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     code = verdict(results, restored)
     if args.json:

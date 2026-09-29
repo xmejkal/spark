@@ -52,11 +52,11 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 
-  [ok  ] board            DFRobot FireBeetle 2 ESP32-S3
-  [ok  ] schematic        14 trace(s) written
+  [ok  ] board            DFRobot FireBeetle 2 ESP32-S3 — from the plugin's library; no project up from the requirements file, so no rules
+  [ok  ] schematic        18 trace(s) written
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
-  [ok  ] build            12 trace(s), 0 errors, tsci 0.0.2621
-  [ok  ] simulation       12 wire(s) in the diagram
+  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.2600
+  [ok  ] simulation       13 wire(s) in the diagram, 1 chip(s) compiled
 
   the chain runs end to end
 ```

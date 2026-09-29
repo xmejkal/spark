@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import boards  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
 #: A standard 0.64 mm square header pin, across the diagonal. The pin is sold by its side, so the
 #: diagonal is the dimension people forget, and it is the only one that has to fit.
@@ -213,7 +213,7 @@ def main(argv=None):
 
 
 def _report(args, code, message):
-    status = {EXIT_OK: "ok", EXIT_PROBLEMS: "problems", EXIT_COULD_NOT_RUN: "could-not-run"}[code]
+    status = {EXIT_OK: OK, EXIT_PROBLEMS: PROBLEMS, EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code]
     if args.json:
         print(json.dumps({"check": "emit-footprint", "status": status, "message": message}))
     else:
