@@ -48,7 +48,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | ~~P22~~ | A stranger can build [reopened R7] — **done `c565778`** | M |
 | ~~P23~~ | Two outputs on one net, across parts — **done `5605065`** | S |
 | ~~P24~~ | `check_design.py` gets a command line — **done `fd25f15`** | S |
-| P25 | One outcome vocabulary — **done `ebb8339`**; a test for every rule function — open | M |
+| ~~P25~~ | One outcome vocabulary; a test for every rule function — **done `ebb8339`, `7361679`** | M |
 | R2.5 | Third cold test — **PO chooses the domain** | L |
 
 ## Sprint 3 — done 2026-09-29
@@ -447,7 +447,7 @@ argparse, `--json` and a usage line, like every other script.
 forced to `ok` passed a test that accepted either); fixed with a guaranteed-problem fixture.
 Two mutations caught, 589 tests.
 
-### P25 — One vocabulary for the three outcomes, and a test for every rule function — **half done `ebb8339`**
+### ~~P25 — One vocabulary for the three outcomes, and a test for every rule function~~ — **DONE `ebb8339` + `7361679`**
 B16, B17. `EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2` in 14 files and `"could-not-run"`
 in 9, four files naming the middle outcome differently; the upward directory walk at four sites;
 `power_note_lines`, `module_power_lines`, `assign_pins.main`, `power_trace`, `trace_width_mm`,
@@ -460,6 +460,9 @@ byte-identical; every function the audit listed named by a test.
 designs byte-identical; no mutation, none possible for a pure refactor. **Open:** the named tests
 for `power_note_lines`, `module_power_lines`, `power_trace`, `trace_width_mm`, `roles_of`,
 `_penalty`, `_why`, `_why_not`, `design.rules_in` and the `check_physics.check_*` rules.
+
+**Done** (`7361679`): every one named; the four rules held to saying so when they cannot look. A dead
+guard in `trace_width_mm` found by a mutation that changed nothing, and removed. 603 tests.
 
 ### P16 — Lift the bin's wake-polarity check into spark
 The bin's `tools/circuit-to-wokwi/lib/checks/wake-polarity.ts` (B3) compares the rail a wake
