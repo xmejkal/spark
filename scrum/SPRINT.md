@@ -17,8 +17,8 @@ gap, and a gap does not lie.
 
 | id | item | state | why this order |
 | --- | --- | --- | --- |
-| **P11** | One `design.load()`; `main()` tested | **next** | the live defect, and four more audit claims with the same cause |
-| **P12** | Toolchain fault ≠ design fault | after P11 | a wrong verdict class; small |
+| ~~P11~~ | One `design.load()`; `main()` tested | **done `0c21ef5`** | the live defect, and four more audit claims with the same cause |
+| **P12** | Toolchain fault ≠ design fault | **next** | a wrong verdict class; small |
 | **P13** | Plain imports | after P12 | two `PartError` classes in one process is a miss waiting to happen |
 | **P14** | `emit_board` says each thing once | last | a refactor, and it lands on the code P11 just touched |
 
@@ -50,6 +50,11 @@ to six, then ten. **A3 fixed** (`5689147`). The bin's board facts regenerated, `
 **Audit triaged.** Sixteen claims, six re-run here (A2, A3, A7, A8, A9, A10), the rest read
 against the code; **none rejected**. Twenty-three intake rows closed in one pass — the first rows to leave the table since it was
 written (R1.2). **Forty-three older `raised` rows remain; R2.4 is not done.** Four items promoted, P11–P14, and pulled in that order.
+
+**P11 done** (`0c21ef5`), the same afternoon. The audit's test failed first, as it said it would. One
+more instance of the class turned up on the way — the converter looked for from `cwd` — and
+went in the same change. Two decisions changed with their tests (W4 the right way round): an
+unreadable rules file is an error, and a project's placeholder list survives one broken file.
 
 ## Review — validated value
 

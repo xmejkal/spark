@@ -40,7 +40,7 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark reports what it did and nothing less
 
 | id | item | size |
 | --- | --- | --- |
-| P11 | A design is loaded once, in one place, and `main()` is tested | M |
+| ~~P11~~ | A design is loaded once, in one place, and `main()` is tested — **done `0c21ef5`** | M |
 | P12 | The spine tells a toolchain fault from a design fault | S |
 | P13 | Sibling scripts are imported, not loaded by path | S |
 | P14 | `emit_board` says each thing once | M |
@@ -150,7 +150,7 @@ came out of it. The first two are the "less than asked, exit 0" family again —
 the generator's own entry point and in the spine's verdict — and they come first for the reason
 that family always has: each one misleads today, on the documented command.
 
-### P11 — A design is loaded once, in one place, and `main()` is tested
+### ~~P11 — A design is loaded once, in one place, and `main()` is tested~~ — **DONE `0c21ef5`**
 `emit_board.main` resolves the project at one line and passes the *unresolved* `--project` flag
 to `rules_in` seventy lines later, so the documented invocation — inside the project, no flag —
 emits every power trace unsized, exit 0, and says the widths are unjustified while
@@ -168,6 +168,13 @@ three.
 without `--project`, emits a `thickness=` on a trace — the test that fails today;
 `check_spine.py /abs/path/car.requirements.json` from `/tmp` builds; a malformed requirements
 file is `could-not-run`, not a traceback. Mutation: the resolved project swapped back for the flag.
+
+**Result.** `scripts/design.py`; all three callers use it. The audit's test failed first and passes
+now: 14 `thickness=` on the documented invocation. From `/tmp` by absolute path the chain runs
+end to end — which exposed the converter being looked for from `cwd` as well, fixed in the same
+change. Two decisions changed with their tests: an unreadable rules file is an error, and one
+unreadable requirements file no longer empties the placeholder list for a whole project. Eight
+mutations caught, 505 tests.
 
 ### P12 — The spine tells a toolchain fault from a design fault
 With nvm's global `tsci 0.0.2600` first on PATH, `check_spine.py` from the spark directory says
