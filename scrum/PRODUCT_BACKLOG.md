@@ -26,7 +26,6 @@ simulation, a link between two boards, and parts research beyond R11 below.
 | # | item | needed by |
 | --- | --- | --- |
 | **R11** | Research parts and modules, vendor by vendor, and keep what was found | the third cold test, on day one |
-| **P10** | A project's own board file must not switch `vendor-truth` off | any project with its own board |
 | **P28** | The tools this repository relies on, made true | this repository's Definition of Done |
 | R2.5 | The third cold test — **PO: one letter, (a), (b) or (c)** | it is the test |
 
@@ -73,7 +72,7 @@ so the list cannot even be acted on by hand.
 **Value proven by:** `check_all` on the generated reference design reports no `must_not_float`
 finding, while a genuinely floating input still does — and a finding names its component and pin.
 
-### P10 — A project's own board file must not switch `vendor-truth` off
+### P10 — A project's own board file must not switch `vendor-truth` off — DONE 2026-09-29, late night
 **Needed by:** any project whose board is its own file rather than the library's — the mechanism
 you are told to use to record what you verified turns off the check that verifies.
 **Value proven by:** a project with a board override still gets a `vendor-truth` verdict against
@@ -130,6 +129,7 @@ one), P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8
 by the PO).
 
 ## Done — one line each, the hash is the record
+- **P10** — a project's own copy of a shipped board is checked against the plugin's cached vendor header instead of switching vendor-truth off: `cached_header` looks beside the board, then in the plugin (table sprint-5-p10, 1 caught; reproduced on the irrigation project first).
 - **P6** — what a record demands of its host as a component is placed and wired: `host_parts` (pulldown, pullup, divider) become 0603 resistors beside the module, a divider ends the host's trace at its midpoint; the L9110S's pull-downs, the VL6180X's I2C pull-ups and the flow meter's divider are the first three; the spine asks a passive whether an end dangles instead of whether it touches ground; the generated resistors map to Wokwi's resistor. Reference: 20 traces, 18 wires, exit 0. Table sprint-5-p6 (9): caught.
 - **P8** — the floating-input rule sees a pin-to-pin trace: the netlist model skipped every trace that named no net, which is how spark's generator wires every signal; a wire's traces share its connectivity key; the finding names its component and pin (I10). Proven on the irrigation board with four declared inputs and on the bin's own (`compare_design.py`, table sprint-5-p8, 3 caught).
 - **P31** — a part record says how it is simulated; the spine builds the Wokwi project from the records, compiles the chips, and one irrigation scenario passes with the probe's and the flow meter's sliders set from the test (`47dbcdc`, `9a8b0e2`, `1710d94`, `dbd3c1c`; irrigation diary, late night; converter `bf9bf09` in the bin repo).

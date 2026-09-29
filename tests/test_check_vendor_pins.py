@@ -117,6 +117,18 @@ class ARefusalIsNotAPass(unittest.TestCase):
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("no cached header", result["reason"])
 
+    def test_a_projects_own_copy_of_a_shipped_board_is_checked_against_the_plugins_cache(self):
+        # P10: the override you are told to make for a verified board found no cache beside
+        # itself and switched the check off. The irrigation project, 2026-09-29: `????`.
+        shipped = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        path = self._board_file(shipped)
+        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        self.assertEqual(result["status"], "ok", result.get("reason"))
+        self.assertIn("cache", result["source"])
+        wrong = dict(shipped, pins=dict(shipped["pins"], D3=3))
+        self.assertEqual(check_vendor_pins.check_board(self._board_file(wrong), offline=True, repo="")["status"], "mismatch",
+                         "and a wrong pin in the copy is still caught")
+
     def test_a_cached_header_is_used_and_said_so(self):
         path = self._board_file({"pins": {"D3": 38}, "vendor": {"arduino_variant": "v"}})
         cache = path.parent.parent / ".spark" / "cache"

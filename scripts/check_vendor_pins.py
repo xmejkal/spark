@@ -95,6 +95,23 @@ def compare(board: dict, vendor_pins: dict):
     return problems, compared, missing
 
 
+#: The plugin's own cache: the boards it ships come with their vendor headers fetched.
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+
+
+def cached_header(path: Path, variant: str) -> Path:
+    """
+    The vendor header for a board file: cached in the board's own project when it is, else in
+    the plugin's. A project's copy of a shipped board — the documented way to record what you
+    verified about it — looked only beside itself, found nothing, and the one check that reads
+    the vendor's own header answered "could not run" for exactly the boards it was written to
+    check (backlog P10, intake R12).
+    """
+    name = "%s.pins_arduino.h" % variant
+    own = path.parent.parent / CACHE_DIR / name
+    return own if own.is_file() else PLUGIN_ROOT / CACHE_DIR / name
+
+
 def check_board(path: Path, offline: bool, repo: str):
     board = json.loads(path.read_text())
     variant = (board.get("vendor") or {}).get("arduino_variant")
@@ -105,11 +122,12 @@ def check_board(path: Path, offline: bool, repo: str):
                       "Add it, or say in the file why this board has no vendor header." % path.name,
         }
 
-    cache = path.parent.parent / CACHE_DIR / ("%s.pins_arduino.h" % variant)
+    cache = cached_header(path, variant)
     if offline:
         if not cache.is_file():
             return {"board": path.stem, "status": "could-not-run",
-                    "reason": "--offline but no cached header at %s" % cache}
+                    "reason": "--offline but no cached header at %s, nor in the plugin's own %s"
+                              % (path.parent.parent / CACHE_DIR / cache.name, PLUGIN_ROOT / CACHE_DIR)}
         header, source = cache.read_text(), "cache (%s)" % cache.name
     else:
         try:
