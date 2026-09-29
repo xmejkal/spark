@@ -60,6 +60,7 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
+import sim_project  # noqa: E402
 import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
@@ -369,10 +370,27 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False)
         return stages + [Stage("simulation", COULD_NOT_RUN,
                                "the converter is TypeScript and bun is not installed")]
 
-    diagram_path = workdir / "diagram.json"
+    # What stands in for each part comes from the records (P31), not from a table in the
+    # converter's repo: a record that says nothing stops here, naming itself.
+    loaded = design.load(workdir / "requirements.json", None if from_library else project)
+    mapping, chips, unmapped = sim_project.mapping_for(loaded)
+    if unmapped:
+        return stages + [Stage("simulation", COULD_NOT_RUN, sim_project.unmapped_detail(unmapped))]
+    sim_dir = workdir / "sim"
+    sim_dir.mkdir(exist_ok=True)
+    (sim_dir / "wokwi-mapping.json").write_text(json.dumps(mapping, indent=2) + "\n")
+    (sim_dir / "board.json").write_text(json.dumps(board, indent=2) + "\n")
+    staged, chip_problems = sim_project.stage_chips(chips, sim_dir)
+    if chip_problems:
+        return stages + [Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems))]
+    (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged))
+
+    diagram_path = sim_dir / "diagram.json"
     made = subprocess.run(
-        ["bun", "run", str(converter), "--circuit", str(circuit_path), "--out", str(diagram_path)],
-        cwd=str(converter.parent), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S)
+        ["bun", "run", str(converter), "--circuit", str(circuit_path), "--out", str(diagram_path),
+         "--mapping", str(sim_dir / "wokwi-mapping.json"), "--chips", str(sim_dir / "chips")],
+        cwd=str(converter.parent), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S,
+        env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
     if not diagram_path.is_file():
         said = (made.stderr or made.stdout)[-800:]
         if simulation_could_not_look(said):
@@ -389,7 +407,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False)
                                "a diagram with 0 connections. Every part is placed and none is "
                                "wired, which is what an unmapped component looks like once the "
                                "converter has given up on it")]
-    return stages + [Stage("simulation", OK, "%d wire(s) in the diagram" % wires)]
+    return stages + [Stage("simulation", OK, "%d wire(s) in the diagram%s" % (
+        wires, ", %d chip(s) compiled" % len(staged) if staged else ""))]
 
 
 def verdict(stages):
@@ -420,6 +439,8 @@ def main(argv=None):
                         help="a requirements.json; omit for the reference design")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--keep", action="store_true", help="leave the working directory behind")
+    parser.add_argument("--sim-dir", type=Path, metavar="DIR",
+                        help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
     args = parser.parse_args(argv)
 
     # The input is read before anything runs, and read AS input: a malformed file is a stage
@@ -456,6 +477,9 @@ def main(argv=None):
         stages = [Stage("check_spine", COULD_NOT_RUN,
                         "%s: %s" % (type(exc).__name__, exc))]
 
+    if args.sim_dir and (workdir / "sim").is_dir():
+        shutil.copytree(workdir / "sim", args.sim_dir, dirs_exist_ok=True)
+        print("simulation project kept in %s" % args.sim_dir, file=sys.stderr)
     return report(stages, args, workdir)
 
 
