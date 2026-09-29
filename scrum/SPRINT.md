@@ -70,6 +70,21 @@ every cited URL answered (`irrigation d0500ae`); the diary holds I1–I6. The `s
 may lower it**. Not yet: the catalog mutation table (waits for the last researcher to stop calling
 `parts.py`), the requirements file, the build, the predictions scored.
 
+**Later that night — the build.** All seven records validated; the catalog holds 18 candidates
+passed over, each with its datasheet beside it; the chosen records name them as alternatives.
+The one command's first run stopped inside tscircuit on a net named `12V` (I7, fixed: `V12V`);
+its second run built 36 traces, 0 errors, and ended `????` at simulation — no Wokwi part for any
+module. The pin assigner's reason text claimed scarcity while ADC pins sat free (I8, fixed). The
+manual build steps did not build in the project at all (I9: no package file, then no local
+tscircuit; `init` writes the package file now and build.md says `npm install`). `check_all` on
+the built board: vendor-truth and rules-vs-netlist ok, buildability names the four valve
+sockets' 0.225 mm annular ring (a fab limit of footprinter's `jst_ph_3`, parked by the bin's
+rule) and three placeholder footprints, physics could not look because the rules file names no
+rail. Seven of eight predictions scored in the irrigation diary. **The PO asked** what the
+simulation options are when Wokwi lacks a module; answered in the session and proposed as
+**P31** — the PO orders it or not. Spark: 555 tests, 100 mutations in 22 tables, every anchor
+present, `85963af` pushed.
+
 ## Definition of Done
 
 Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its

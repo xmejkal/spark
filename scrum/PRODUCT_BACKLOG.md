@@ -86,6 +86,19 @@ itself instead of running the document's lines; `/spark:build`'s example output 
 numbers no command produced.
 **Value proven by:** each of those false; `tools/check_commit.py` green.
 
+### P31 — A part record says how it is simulated (proposed 2026-09-29, night; the PO orders)
+**Needed by:** the irrigation cold test — its chain ends `????` at simulation because the
+converter has no Wokwi part for any of its seven modules, and the PO asked what the options are.
+A record carries a `simulation` field the converter reads: a Wokwi built-in stand-in with its
+pin map and an honest note (a DS1307 for the DS3231's time registers, a potentiometer for a soil
+probe, an LED or relay module for a valve driver), or a custom chip in the project's `sim/chips/`
+(a pulse train for the flow meter — the bin's `vl6180x` and `l9110s` chips are the precedent,
+five scenarios passing). Research fills it beside the pinout. Analogue questions (a divider's
+high level, a flyback clamp, an ADC filter) are hand SPICE netlists through ngspice, not this
+item. Not built: a chip generator, a SPICE flow for whole boards.
+**Value proven by:** the irrigation chain reaches `[ok] simulation` with a diagram whose stand-ins
+are named as such, and one scenario opens a valve when a probe's slider crosses its threshold.
+
 ## After v1 — only if a cold test asks for it
 
 Each parked, with its need unfilled; none is pulled without a design behind it (W14).
