@@ -201,9 +201,8 @@ def count_in(circuit):
     return traces, errors
 
 
-#: Nets that are a ground. Named rather than guessed, because "the one called GND" stops being
-#: true the moment a design has an analogue ground or an isolated return.
-GROUND_NETS = ("GND", "AGND", "DGND", "GROUND")
+#: Nets that are a ground: the generator's list, so this rule and its supply rule agree.
+GROUND_NETS = emit_board.GROUND_NETS
 
 
 def components_not_on_ground(circuit):

@@ -116,6 +116,11 @@ BOARD_THICKNESS_MM = 1.6
 #: has a source for them.
 RAILS_THE_MODULE_PROVIDES = ("V33", "GND")
 
+#: Nets that are a ground. Named rather than guessed, because "the one called GND" stops being
+#: true the moment a design has an analogue ground or an isolated return. `check_spine` reads
+#: this too — one list, so the grounding rule and the supply rule cannot disagree.
+GROUND_NETS = ("GND", "AGND", "DGND", "GROUND")
+
 
 def power_trace(component, pin, net, rules, note="", unjustified=None):
     """
@@ -345,6 +350,32 @@ def rails_without_a_source(part_list):
     return sorted(consumed - provided)
 
 
+def outputs_in_contention(part_list):
+    """
+    Nets driven by more than one supply, or by a supply onto a rail the module itself provides.
+
+    `parts.validate` keeps two outputs of ONE part off one net; nothing did across parts, or
+    against the board: a regulator's VOUT declared on `logic` was traced to net.V33 beside the
+    microcontroller's own 3V3, exit 0, no note (sprint-4 audit B9). Two supplies on one rail
+    short into each other unless one is designed to back-feed — which a part record cannot say,
+    so the design has to.
+    """
+    drivers = {}
+    for part, supply, net in power_connections(part_list):
+        # A ground is not a supply: a connector declares its GND as `out` — the point where the
+        # pack's return meets board ground — and many returns on one ground is what a ground is.
+        if supply.get("direction") == "out" and net not in GROUND_NETS:
+            drivers.setdefault(net, []).append("%s.%s" % (part["name"], supply["pin"]))
+    contended = []
+    for net in sorted(drivers):
+        who = drivers[net]
+        if net in RAILS_THE_MODULE_PROVIDES:
+            contended.append((net, who + ["the microcontroller module's own %s" % net]))
+        elif len(who) > 1:
+            contended.append((net, who))
+    return contended
+
+
 def outputs_with_nothing_on_them(part_list):
     """
     Nets a part drives that nothing on this board receives.
@@ -521,6 +552,11 @@ def power_note_lines(part_list):
         lines.append("        A speaker, a motor or a connector is not a module, so nobody lists")
         lines.append("        one — whatever this drives has to be added, or the net has one")
         lines.append("        member and will not route. */}")
+    for net, who in outputs_in_contention(part_list):
+        lines.append("    {/* net.%s IS DRIVEN BY MORE THAN ONE SUPPLY: %s." % (net, ", ".join(who)))
+        lines.append("        Two supplies on one rail short into each other unless one is designed")
+        lines.append("        to back-feed, which a part record cannot say. Move one to its own")
+        lines.append("        rail, or state the arrangement in the design. */}")
     for pin in power_pins_with_no_rail(part_list):
         lines.append("    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no" % pin)
         lines.append("        rail is not a pin on some default rail — it is a connection the part")
@@ -718,6 +754,10 @@ def main(argv=None):
     for net in rails_without_a_source(part_list):
         print("note: nothing sources net.%s — add whatever supplies it, or that net has one "
               "member and the board will not route" % net, file=sys.stderr)
+    for net, who in outputs_in_contention(part_list):
+        print("note: net.%s is driven by more than one supply (%s) — two supplies on one rail "
+              "short into each other; move one to its own rail or state the arrangement"
+              % (net, ", ".join(who)), file=sys.stderr)
     return EXIT_OK
 
 

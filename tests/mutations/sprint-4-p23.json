@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/emit_board.py",
+  "name": "two supplies on one rail go unreported again (B9)",
+  "find": "        elif len(who) > 1:\n            contended.append((net, who))",
+  "replace": "        elif False:\n            contended.append((net, who))"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a supply onto the module's own rail goes unreported",
+  "find": "        if net in RAILS_THE_MODULE_PROVIDES:\n            contended.append((net, who + [\"the microcontroller module's own %s\" % net]))",
+  "replace": "        if False:\n            contended.append((net, who + [\"the microcontroller module's own %s\" % net]))"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the file says it and the notes do not",
+  "find": "    for net, who in outputs_in_contention(part_list):\n        print(",
+  "replace": "    for net, who in []:\n        print("
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a ground return counts as a contended supply again",
+  "find": "        if supply.get(\"direction\") == \"out\" and net not in GROUND_NETS:",
+  "replace": "        if supply.get(\"direction\") == \"out\":"
+ }
+]

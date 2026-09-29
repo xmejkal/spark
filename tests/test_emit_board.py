@@ -876,5 +876,55 @@ class WhatAPartMustRecordTest(unittest.TestCase):
         self.assertEqual(emit_board.parts_without_an_outline([without]), [with_outline["name"]])
         self.assertEqual(emit_board.parts_without_an_outline([with_outline]), [])
 
+
+class TwoSuppliesOnOneRailTest(unittest.TestCase):
+    """
+    Audit B9: a regulator's VOUT on `logic` was traced to net.V33 beside the microcontroller's
+    own 3V3 — exit 0, no note. `parts.validate` looks inside one part; this looks across the
+    design and at the rails the module itself supplies.
+    """
+
+    @staticmethod
+    def regulator(name, rail):
+        return {"schema": 1, "id": name.lower(), "name": name, "kind": "regulator", "needs": [],
+                "power": [{"pin": "VIN", "rail": "traction", "direction": "in"},
+                          {"pin": "VOUT", "rail": rail, "direction": "out"},
+                          {"pin": "GND", "rail": "ground", "direction": "in"}],
+                "pin_order": ["VIN", "VOUT", "GND"], "footprint": "pinrow3",
+                "body_mm": {"width": 10, "height": 10, "verified": True, "source": "test"}}
+
+    def test_a_supply_onto_the_modules_own_rail_is_named(self):
+        contended = emit_board.outputs_in_contention([self.regulator("Buck", "logic")])
+        self.assertEqual([net for net, _ in contended], ["V33"])
+        self.assertIn("Buck.VOUT", contended[0][1])
+        self.assertTrue(any("microcontroller" in who for who in contended[0][1]))
+
+    def test_two_supplies_onto_one_rail_are_named(self):
+        contended = emit_board.outputs_in_contention(
+            [self.regulator("BuckA", "servo"), self.regulator("BuckB", "servo")])
+        self.assertEqual(contended, [("SERVO", ["BuckA.VOUT", "BuckB.VOUT"])])
+
+    def test_a_ground_return_from_a_connector_is_not_a_contended_supply(self):
+        # The inlet's GND is `out` — where the pack's return meets board ground. The first
+        # version of the rule called that a second supply on GND, on every design with an inlet.
+        self.assertEqual(emit_board.outputs_in_contention([parts.load("jst-ph-2-power-inlet")]), [])
+
+    def test_one_supply_on_its_own_rail_is_not(self):
+        self.assertEqual(emit_board.outputs_in_contention([self.regulator("Buck", "servo")]), [])
+        self.assertEqual(emit_board.outputs_in_contention(
+            [parts.load(part_id) for part_id in PARTS] + [parts.load("jst-ph-2-power-inlet")]), [])
+
+    def test_the_file_and_the_notes_both_say_it(self):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "parts").mkdir()
+        (root / "parts" / "buck.json").write_text(json.dumps(self.regulator("Buck", "logic")))
+        (root / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["buck"]}))
+        code, tsx, err = TheDocumentedInvocationTest._main(["requirements.json"], root)
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertIn("net.V33 IS DRIVEN BY MORE THAN ONE SUPPLY", tsx)
+        self.assertIn("note: net.V33 is driven by more than one supply", err)
+
 if __name__ == "__main__":
     unittest.main()
