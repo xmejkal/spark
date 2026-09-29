@@ -318,5 +318,34 @@ class OneCopyOfPackageOfTest(unittest.TestCase):
         # `package_of` here was a different function object from the one every test of it runs.
         self.assertIs(check_physics.package_of, check_footprints.package_of)
 
+
+class EachRuleHasANameTest(unittest.TestCase):
+    """
+    Audit B16: the four rules were reached only through `run`. Each is named here for the one
+    property every rule in this plugin owes (W1): with nothing to look at, or a limit it does not
+    know, it says so — a `could-not-run` or `needs-measurement` finding, never a silent pass.
+    """
+
+    def test_i2c_rise_time_with_a_bus_speed_it_has_no_limit_for_is_could_not_run(self):
+        findings = check_physics.check_i2c_rise_time(check_physics.Board([]), {}, 123456, 100)
+        self.assertEqual([f.severity for f in findings], ["could-not-run"])
+        self.assertIn("no rise-time limit known", findings[0].detail)
+
+    def test_trace_currents_with_no_rails_stated_finds_nothing_and_says_nothing(self):
+        # Nothing was asked, so nothing is answered — `check_all` reports the unasked separately.
+        self.assertEqual(check_physics.check_trace_currents(check_physics.Board([]), {}, 10), [])
+
+    def test_trace_currents_for_a_rail_with_no_trace_does_not_pass_it(self):
+        rails = {"X": {"max_current_a": 1.0}}
+        findings = check_physics.check_trace_currents(check_physics.Board([]), rails, 10)
+        self.assertTrue(findings, "a rail with a stated current and no copper was passed in silence")
+        self.assertNotEqual(findings[0].severity, "problem")   # it could not measure, it did not fail it
+
+    def test_capacitor_voltages_with_no_rails_finds_nothing(self):
+        self.assertEqual(check_physics.check_capacitor_voltages(check_physics.Board([]), {}), [])
+
+    def test_resistor_power_with_no_resistors_finds_nothing(self):
+        self.assertEqual(check_physics.check_resistor_power(check_physics.Board([]), {}), [])
+
 if __name__ == "__main__":
     unittest.main()

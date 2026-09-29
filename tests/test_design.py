@@ -257,5 +257,14 @@ class ABusSignalKeepsItsLineTest(unittest.TestCase):
         self.assertEqual(signals["RANGEFINDER_SDA"]["line"], "SDA")
         self.assertEqual(signals["RANGEFINDER_SDA"]["bus"], "i2c")
 
+
+class RulesInTest(unittest.TestCase):
+    def test_rules_in_reads_the_projects_rules_or_none(self):
+        root = Path(tempfile.mkdtemp())
+        self.assertEqual(design.rules_in(root), {})
+        (root / ".spark").mkdir()
+        (root / ".spark" / "rules.json").write_text(json.dumps({"physics": {"i2c_hz": 400000}}))
+        self.assertEqual(design.rules_in(root)["physics"]["i2c_hz"], 400000)
+
 if __name__ == "__main__":
     unittest.main()

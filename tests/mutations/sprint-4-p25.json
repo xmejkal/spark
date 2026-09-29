@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "roles_of forgets every role",
+  "find": "    return sorted(role for role, spec in (board.get(\"pin_roles\") or {}).items()\n                  if gpio in spec.get(\"gpio\", []))",
+  "replace": "    return []"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "not being wake-capable becomes a cost",
+  "find": "    return sum(ROLE_PENALTY.get(role, DEFAULT_ROLE_PENALTY) for role in roles\n               if role != \"not_wake_capable\")",
+  "replace": "    return sum(ROLE_PENALTY.get(role, DEFAULT_ROLE_PENALTY) for role in roles)"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "the reason for an exact fit goes blank",
+  "find": "        return \"needs %s, and this pin does exactly that and no more\" % \", \".join(sorted(needs))",
+  "replace": "        return \"\""
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a pin naming no rail is no longer said in the file",
+  "find": "    for pin in power_pins_with_no_rail(part_list):\n        lines.append(\"    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no\" % pin)",
+  "replace": "    for pin in []:\n        lines.append(\"    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no\" % pin)"
+ }
+]

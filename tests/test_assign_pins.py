@@ -340,5 +340,52 @@ class ABusIsSharedTest(unittest.TestCase):
             assign_pins.assign(self.board, [{"name": "LED", "pin": "SDA", "needs": []},
                                             {"name": "SDA", "bus": "i2c", "needs": []}])
 
+
+class TheHelpersEachHaveANameTest(unittest.TestCase):
+    """
+    Audit B16: `roles_of`, `_penalty`, `_why` and `_why_not` were reached only through `assign`.
+    Each is a sentence a person can disagree with, so each gets a test that says what it claims.
+    """
+
+    def setUp(self):
+        import json
+        self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def test_roles_of_lists_every_role_a_gpio_carries(self):
+        self.assertEqual(assign_pins.roles_of(self.board, 17), ["adc2_unusable_with_wifi", "spi"])
+        self.assertEqual(assign_pins.roles_of(self.board, 47), ["not_wake_capable", "onboard_button"])
+        # GPIO 38 is not an RTC pin on the S3, so it rightly carries `not_wake_capable`; GPIO 4
+        # (A0) carries nothing — the first version of this test had that the wrong way round.
+        self.assertEqual(assign_pins.roles_of(self.board, 38), ["not_wake_capable"])
+        self.assertEqual(assign_pins.roles_of(self.board, 4), [])
+
+    def test_penalty_sums_the_roles_and_not_being_wake_capable_costs_nothing(self):
+        # Not waking is not a cost of spending the pin: nothing is lost that a plain signal had.
+        self.assertEqual(assign_pins._penalty(["not_wake_capable"]), 0)
+        self.assertEqual(assign_pins._penalty(["onboard_button"]), assign_pins.ROLE_PENALTY["onboard_button"])
+        self.assertEqual(assign_pins._penalty(["spi", "onboard_led"]),
+                         assign_pins.ROLE_PENALTY["spi"] + assign_pins.ROLE_PENALTY["onboard_led"])
+
+    def test_why_says_what_the_pin_does_beyond_what_was_asked(self):
+        exact = {"can": {"adc"}, "roles": []}
+        self.assertIn("exactly that and no more", assign_pins._why({"adc"}, exact))
+        spare = {"can": {"adc", "wake"}, "roles": []}
+        self.assertIn("also does wake", assign_pins._why({"adc"}, spare))
+        plain = {"can": set(), "roles": []}
+        self.assertIn("can do nothing special", assign_pins._why(set(), plain))
+        shared = {"can": set(), "roles": ["onboard_led"]}
+        self.assertIn("already wired here", assign_pins._why(set(), shared))
+
+    def test_why_not_names_who_has_the_pins_or_says_no_pin_could(self):
+        available = assign_pins.candidates(self.board)
+        adc = {label for label, pin in available.items() if "adc" in pin["can"]}
+        taken = {available[label]["gpio"] for label in adc}
+        said = assign_pins._why_not(self.board, {"name": "SENSE"}, {"adc"}, available, taken)
+        self.assertIn("could have served it", said)
+        self.assertIn(sorted(adc)[0], said)
+        no_adc = {label: pin for label, pin in available.items() if "adc" not in pin["can"]}
+        said = assign_pins._why_not(self.board, {"name": "SENSE"}, {"adc"}, no_adc, set())
+        self.assertIn("no pin on this board can do that at all", said)
+
 if __name__ == "__main__":
     unittest.main()

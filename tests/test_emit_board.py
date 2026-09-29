@@ -926,5 +926,39 @@ class TwoSuppliesOnOneRailTest(unittest.TestCase):
         self.assertIn("net.V33 IS DRIVEN BY MORE THAN ONE SUPPLY", tsx)
         self.assertIn("note: net.V33 is driven by more than one supply", err)
 
+
+class ThePowerHelpersEachHaveANameTest(unittest.TestCase):
+    """Audit B16: reached only through `emit`; each has a claim of its own to hold it to."""
+
+    RULES = {"physics": {"rails": {"TRACTION": {"max_current_a": 2.9}}}}
+
+    def test_trace_width_mm_is_none_unless_a_positive_current_is_stated(self):
+        self.assertIsNone(emit_board.trace_width_mm("V33", self.RULES))
+        self.assertGreater(emit_board.trace_width_mm("TRACTION", self.RULES), copper.MIN_TRACE_WIDTH_MM)
+        for bad in (0, -1, "2.9", None):
+            rules = {"physics": {"rails": {"X": {"max_current_a": bad}}}}
+            self.assertIsNone(emit_board.trace_width_mm("X", rules), bad)
+
+    def test_power_trace_sizes_a_stated_rail_and_records_an_unstated_one(self):
+        unjustified = set()
+        sized = emit_board.power_trace("Drive", "VCC", "TRACTION", self.RULES, "", unjustified)
+        self.assertIn('from=".Drive > .VCC" to="net.TRACTION" thickness="', sized)
+        self.assertEqual(unjustified, set())
+        bare = emit_board.power_trace("Drive", "GND", "GND", self.RULES, "return", unjustified)
+        self.assertNotIn("thickness=", bare)
+        self.assertIn("{/* return */}", bare)
+        self.assertEqual(unjustified, {"GND"})
+
+    def test_power_note_lines_reports_a_pin_naming_no_rail(self):
+        part = {"id": "x", "name": "X", "power": [{"pin": "VCC"}]}
+        self.assertIn("X.VCC NAMES NO RAIL", "\n".join(emit_board.power_note_lines([part])))
+        self.assertEqual(emit_board.power_note_lines([]), [])
+
+    def test_module_power_lines_traces_every_power_pin_that_names_a_rail(self):
+        lines = emit_board.module_power_lines([parts.load("l9110s-module")], self.RULES, set())
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(any('from=".L9110sModule > .VCC" to="net.MOTOR6V"' in line for line in lines))
+        self.assertTrue(any('from=".L9110sModule > .GND" to="net.GND"' in line for line in lines))
+
 if __name__ == "__main__":
     unittest.main()

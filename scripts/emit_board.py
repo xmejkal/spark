@@ -161,7 +161,9 @@ def trace_width_mm(net, rules):
     """
     rails = ((rules.get("physics") or {}).get("rails") or {})
     current = (rails.get(net) or {}).get("max_current_a")
-    if not isinstance(current, (int, float)) or current <= 0:
+    # `copper.width_to_emit_mm` only ever widens, so a zero or negative current comes back None
+    # on its own; a guard for it here was dead code, found by a mutation that changed nothing.
+    if not isinstance(current, (int, float)):
         return None
     rise = ((rules.get("physics") or {}).get("trace_temperature_rise_c")
             or copper.DEFAULT_RISE_C)
