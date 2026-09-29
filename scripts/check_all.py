@@ -41,24 +41,20 @@ should exit 0. Only the all-skipped case is caught here.)
 """
 
 import argparse
-import importlib.util
 import json
 import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
+# Siblings are IMPORTED, inside the check that needs them so nothing loads until it runs. They
+# were loaded by file path with `importlib`, which registers nothing in `sys.modules`: in one
+# process this file's `parts` was not `emit_board`'s `parts`, and their `PartError` classes
+# were different objects, so an `except` for one could not catch the other. Audit A7.
+sys.path.insert(0, str(SCRIPTS))
 
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 
 OK, PROBLEMS, COULD_NOT_RUN, SKIPPED = "ok", "problems", "could-not-run", "skipped"
-
-
-def load(module_name):
-    """Import a sibling script by filename, so this file is the only place they are named."""
-    spec = importlib.util.spec_from_file_location(module_name, SCRIPTS / (module_name + ".py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 class Check:
@@ -144,7 +140,7 @@ class PinCapability(Check):
         # path strings where it wanted parsed dicts. The plugin's flagship check therefore never
         # ran once through the runner, and the AttributeError surfaced as `could-not-run`, which
         # reads as "your environment is wrong" rather than "this plugin is broken".
-        check_design = load("check_design")
+        import check_design
         design_path = Path(inputs["design"])
         design = json.loads(design_path.read_text())
         reference = inputs.get("board") or design.get("board")
@@ -156,7 +152,7 @@ class PinCapability(Check):
 
 class RulesVsNetlist(Check):
     def call(self, inputs):
-        compare_design = load("compare_design")
+        import compare_design
         circuit_of(inputs)  # refuse an empty netlist before comparing anything against it
         result = compare_design.compare(inputs["circuit"], inputs["rules"])
         if result["status"] == "could-not-run":
@@ -166,7 +162,7 @@ class RulesVsNetlist(Check):
 
 class Physics(Check):
     def call(self, inputs):
-        check_physics = load("check_physics")
+        import check_physics
         findings = check_physics.run(circuit_of(inputs),
                                      json.loads(Path(inputs["rules"]).read_text()))
 
@@ -201,8 +197,8 @@ def placeholder_components_in(project):
     """
     if not project:
         return (), []
-    design = load("design")
-    emit_board = load("emit_board")
+    import design
+    import emit_board
     root = Path(project)
     names, notes = set(), []
     for requirements in sorted(root.glob("*requirements.json")):
@@ -217,7 +213,7 @@ def placeholder_components_in(project):
 
 class Buildability(Check):
     def call(self, inputs):
-        check_footprints = load("check_footprints")
+        import check_footprints
         placeholders, notes = placeholder_components_in(inputs.get("project"))
         findings = check_footprints.run(circuit_of(inputs), placeholders)
 
@@ -233,7 +229,7 @@ class Buildability(Check):
 
 class VendorTruth(Check):
     def call(self, inputs):
-        check_vendor_pins = load("check_vendor_pins")
+        import check_vendor_pins
         problems, unchecked = [], []
         for path in inputs["boards"]:
             result = check_vendor_pins.check_board(Path(path), offline=True, repo="")
@@ -250,7 +246,7 @@ class VendorTruth(Check):
 
 class Firmware(Check):
     def call(self, inputs):
-        check_firmware = load("check_firmware")
+        import check_firmware
         source = Path(inputs["firmware"]).read_text()
         constants = check_firmware.read_pin_constants(source)
         if not constants:
@@ -263,7 +259,7 @@ class Firmware(Check):
 
 class TheOrder(Check):
     def call(self, inputs):
-        check_bom = load("check_bom")
+        import check_bom
         rows = check_bom.read_bom(Path(inputs["package"]))
         problems = (check_bom.check_duplicate_parts(rows)
                     + check_bom.check_missing_parts(rows))
@@ -355,7 +351,7 @@ def discover(project):
     # The board library knows where board definitions are; a glob does not, and guessing is how
     # the selection file ended up being checked against a vendor header it does not have.
     try:
-        boards = load("boards")  # via load(), so this file stays the only place scripts are named
+        import boards
         definitions = [str(boards.definition_path(project, board_id))
                        for board_id in boards.available(project)]
         if definitions:

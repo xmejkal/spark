@@ -18,6 +18,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 from pathlib import Path
 
@@ -25,6 +26,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
+import check_footprints  # noqa: E402
+import design  # noqa: E402
 
 
 def written(name, payload):
@@ -520,8 +523,13 @@ class TheCheckListItselfTest(unittest.TestCase):
         not that it RAN. Its own docstring even warned about an earlier version that could not
         fail.
 
-        So it now imports each script and calls what the runner calls. Nothing in this file may
-        assert on source text again.
+        So it now asks the code the runner RUNS: the names each check's `call` compiles to —
+        which is where the `import check_x` inside it lands — rather than the source text.
+        (The previous version of this docstring claimed it "imports each script and calls what
+        the runner calls" while the code beneath it grepped for `load("…")`; when the loader
+        became a plain import, the grep found nothing and the test failed, which is how the
+        claim was found to be untrue. Found 2026-09-29, under audit A7.) Nothing in this file may
+        assert on source text.
         """
         # Scripts that are not checks OF A BUILT DESIGN, which is the only thing this runner
         # knows how to feed. Each needs a reason, because an exclusion list is also how a check
@@ -534,12 +542,57 @@ class TheCheckListItselfTest(unittest.TestCase):
         on_disk = {path.stem for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
         on_disk |= {"compare_design"}
 
-        source = (ROOT / "scripts" / "check_all.py").read_text()
-        unwired = sorted(name for name in on_disk if 'load("%s")' % name not in source)
+        wired = set()
+        for check in check_all.CHECKS:
+            wired |= set(check.call.__code__.co_names)
+        unwired = sorted(name for name in on_disk if name not in wired)
         self.assertEqual(
             unwired, [],
-            "these check scripts exist but check_all.py never loads them: %s" % unwired)
+            "these check scripts exist but no check in check_all.py imports them: %s" % unwired)
 
+
+
+class OneModulePerProcessTest(unittest.TestCase):
+    """
+    Audit A7. Siblings were loaded by file path, which makes a fresh module object each time and
+    registers none of them: `check_all`'s `parts` was not `emit_board`'s, and their `PartError`
+    classes were different objects, so an `except` for one could not catch the other.
+
+    Proven behaviourally: a patch on the module everyone else imports is seen by the check. A
+    path-loaded copy would run the unpatched original and never notice.
+    """
+
+    @staticmethod
+    def _measured_circuit(root):
+        circuit = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
+                   {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
+        circuit += [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_c",
+                     "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
+                     "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
+        (root / "circuit.json").write_text(json.dumps(circuit))
+        return str(root / "circuit.json")
+
+    def test_buildability_runs_the_check_footprints_everyone_else_imports(self):
+        root = Path(tempfile.mkdtemp())
+        circuit = self._measured_circuit(root)
+        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        # Unpatched, the rings are under the minimum: a problem.
+        self.assertEqual(check.run({"circuit": circuit})["status"], check_all.PROBLEMS)
+        # Patched on the shared module, the check sees no findings at all.
+        with mock.patch.object(check_footprints, "run", return_value=[]):
+            self.assertEqual(check.run({"circuit": circuit})["status"], check_all.OK)
+
+    def test_the_placeholder_list_uses_the_design_module_everyone_else_imports(self):
+        root = Path(tempfile.mkdtemp())
+        (root / "car.requirements.json").write_text(json.dumps({"parts": []}))
+        with mock.patch.object(design, "parts_of", side_effect=design.DesignError("patched")):
+            names, notes = check_all.placeholder_components_in(root)
+        self.assertEqual(names, ())
+        self.assertEqual(len(notes), 1, notes)
+        self.assertIn("patched", notes[0])
+
+    def test_there_is_no_path_loader_left_to_reach_for(self):
+        self.assertFalse(hasattr(check_all, "load"))
 
 if __name__ == "__main__":
     unittest.main()

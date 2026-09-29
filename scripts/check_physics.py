@@ -30,7 +30,6 @@ whose worst risk is an unmeasured number should be told that, not given a green 
 """
 
 import argparse
-import importlib.util
 import json
 import math
 import sys
@@ -42,18 +41,12 @@ sys.path.insert(0, str(SCRIPTS))
 import copper  # noqa: E402
 
 
-def _sibling(module_name):
-    """Import a sibling script, so a fact lives in one place rather than two."""
-    spec = importlib.util.spec_from_file_location(module_name, SCRIPTS / (module_name + ".py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 #: `res0603` -> `0603`. check_footprints already works this out, and the package table here was
 #: keyed on the bare size while the engine emits the prefixed form — so even with the footprint
-#: resolved, nothing matched. One copy, imported.
-package_of = _sibling("check_footprints").package_of
+#: resolved, nothing matched. One copy, imported — plainly, under the `sys.path` line that already
+#: made that possible; the file-path loader it replaced made a second copy of the module every
+#: time (audit A7).
+from check_footprints import package_of  # noqa: E402
 
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"

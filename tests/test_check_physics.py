@@ -24,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import check_footprints  # noqa: E402
 import check_physics  # noqa: E402
 
 
@@ -309,6 +310,13 @@ class I2cRiseTimeTest(unittest.TestCase):
         self.assertEqual(len(self._bus([4_700])), 1)
         self.assertEqual(self._bus([4_700, 4_700]), [])
 
+
+
+class OneCopyOfPackageOfTest(unittest.TestCase):
+    def test_package_of_is_check_footprints_own_function_not_a_copy(self):
+        # Audit A7: loaded by file path, `check_footprints` was instantiated a second time and
+        # `package_of` here was a different function object from the one every test of it runs.
+        self.assertIs(check_physics.package_of, check_footprints.package_of)
 
 if __name__ == "__main__":
     unittest.main()
