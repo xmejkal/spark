@@ -51,7 +51,10 @@ the PO's.
 documented example ran end to end; the output it was written over said `the chain is broken`
 (a motor driver with no inlet — the tool was right, the example wrong). Grepped, not read. Fixed,
 tested from the document, and the build gated on the verdict this time. Second R3.5 failure of the
-day, one hour after R3.5. **Correction:** the fix commit's message (`f35e7df`) says 533 tests; the run it cites
+day, one hour after R3.5 — **and a third inside the correction**: `7ac2ba1`'s message says 12 traces
+and 10 wires; the gated run printed 11 and 9. The message was composed in the same command as the
+run, so its numbers were predictions. Rule from here, mechanical: a number enters a commit message
+or a record only in a later call than the command that produced it. **Correction:** the fix commit's message (`f35e7df`) says 533 tests; the run it cites
 printed 532. Written before the count — R3.5's exact failure mode, an hour after R3.5.
 
 ## Definition of Done

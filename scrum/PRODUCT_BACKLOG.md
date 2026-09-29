@@ -257,7 +257,8 @@ only where the generator stops; the hardware-engineer agent likewise. The docume
 as first written, did NOT run: it named a motor driver and no inlet, the generator said so, and
 the build stopped on a one-member net. `1f769f8`'s message claims it ran — written from a grep,
 not the verdict. Corrected in `7ac2ba1`: the example has the inlet, a test runs it from the
-document, and the build was gated on the verdict (12 traces, 10 wires). The example also needed a
+document, and the build was gated on the verdict (11 traces, 9 wires — the commit message says
+12 and 10; see the sprint log). The example also needed a
 `tactile-button` record the library did not have (the car's, with sources, now shipped). `test_routes.py` keeps every link named and every
 route pointing at a script that exists; four mutations caught.
 
