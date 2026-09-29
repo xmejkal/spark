@@ -1,6 +1,6 @@
 ---
 name: parts-researcher
-description: Research one part or module from primary sources — vendor by vendor, in the order given — and write it down as a part record with sources, marking every fact nobody has confirmed. Launched by /spark:research; fan out one per part.
+description: Research one part or module from primary sources — vendor by vendor, in the order given — or identify one from a photo of a module the person owns, and write it down as a part record with sources, marking every fact nobody has confirmed. Launched by /spark:research and /spark:identify; fan out one per part.
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch, Write
 model: opus
 ---
@@ -26,6 +26,16 @@ For each vendor in turn, search its own site first (`wiki.dfrobot.com`, `wiki.se
 then its GitHub (the `DFRobot_<Part>` and Seeed libraries carry pinouts in their examples), then
 the datasheet of the chip on the module. Stop at the first vendor with a part that fits the need
 unless you were asked to compare. A distributor page counts for price and availability only.
+
+## From a photo (`/spark:identify`)
+
+When you are given a photo instead of a need, read the image first and list its markings — chip
+part numbers, silkscreen labels and their order, the board's own name — before searching. The
+chip's datasheet is the fact source; the module's schematic usually is not published, so what
+only the photo supports (pin order, pull-ups, a charging diode, dimensions) is `verified: false`
+with "read from the photo; confirm on the bench" and how. The part is owned: `"owned": true`,
+`"photo": "<path>"`, no vendor order, a `sourcing` entry `{"seller": "owned"}`. Several modules
+are sold under one chip's name with different pinouts; be true of the one in the photo (W5).
 
 ## Where to buy — local first
 
