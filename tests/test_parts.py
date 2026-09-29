@@ -625,10 +625,21 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
     """
 
     def test_need_matches_id_name_kind_and_alias(self):
-        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor"])])
-        self.assertIn("vl6180x-breakout", [p["id"] for p in parts.need(["rangefinder"])])
-        self.assertEqual(parts.need(["unobtainium"]), [])
-        self.assertEqual([p["id"] for p in parts.need(["motor", "driver"])], ["l9110s-module"])
+        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor"])[0]])
+        self.assertIn("vl6180x-breakout", [p["id"] for p in parts.need(["rangefinder"])[0]])
+        self.assertEqual(parts.need(["unobtainium"]), ([], []))
+        self.assertEqual([p["id"] for p in parts.need(["motor", "driver"])[0]], ["l9110s-module"])
+
+    def test_a_draft_still_being_filled_in_is_named_and_does_not_stop_the_search(self):
+        # I3: `--need` died on a researcher's skeleton while five researchers were running.
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        parts.main(["--skeleton", "dfr0457-mosfet-driver", "--kind", "mosfet-driver", "--project", str(root)])
+        found, drafts = parts.need(["mosfet"], root)
+        self.assertEqual(found, [])
+        self.assertEqual(drafts, ["dfr0457-mosfet-driver"])
+        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor"], root)[0]],
+                      "the library is still searched past the draft")
 
     def test_no_match_names_the_research_command_and_the_vendor_order(self):
         import contextlib
@@ -648,6 +659,16 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertEqual(parts.vendor_order(root), ("seeed", "adafruit"))
         (root / ".spark" / "project.json").write_text(json.dumps({"prefer": None}))
         self.assertEqual(parts.vendor_order(root), parts.DEFAULT_VENDOR_ORDER)
+
+    def test_sellers_come_from_the_brief_or_are_none_named(self):
+        # Local first is the person's rule, so it lives in their brief; the tool never picks a shop.
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        self.assertEqual(parts.sellers(root), ())
+        (root / ".spark").mkdir()
+        (root / ".spark" / "project.json").write_text(json.dumps({"sellers": ["LaskaKit", "gme"]}))
+        self.assertEqual(parts.sellers(root), ("laskakit", "gme"))
+        self.assertIn("sourcing", parts.skeleton("x", "connector"))
 
     def test_a_skeleton_has_every_field_and_no_guess_and_the_contract_refuses_it_until_filled(self):
         import tempfile

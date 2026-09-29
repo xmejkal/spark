@@ -443,6 +443,23 @@ def vendor_order(project=None):
     return DEFAULT_VENDOR_ORDER
 
 
+def sellers(project=None):
+    """
+    Where the person buys, local first, from the project's brief — or nothing, which the
+    researcher reports as "no sellers named" rather than choosing a shop for them.
+    """
+    if project:
+        brief = Path(project) / ".spark" / "project.json"
+        if brief.is_file():
+            try:
+                named = json.loads(brief.read_text()).get("sellers")
+            except ValueError:
+                named = None
+            if isinstance(named, list) and named and all(isinstance(v, str) for v in named):
+                return tuple(v.lower() for v in named)
+    return ()
+
+
 def need(words, project=None):
     """
     The records matching every word — in id, name, kind or an alias — so what exists is known
@@ -450,14 +467,22 @@ def need(words, project=None):
     nothing looked, and "nothing looked" was the first gap its diary named (G1).
     """
     wanted = [word.lower() for word in words]
-    found = []
+    found, drafts = [], []
     for part_id in available(project):
-        record = load(part_id, project)
+        try:
+            record = load(part_id, project)
+        except PartError:
+            # A record still being filled in — research writes a skeleton first — must not stop
+            # the search for everyone: `--need` died on a researcher's draft while five ran (I3).
+            # Named as a draft, matched by its id alone, never returned as usable.
+            if all(word in part_id.lower() for word in wanted):
+                drafts.append(part_id)
+            continue
         haystack = " ".join([part_id, record.get("name") or "", record.get("kind") or "",
                              " ".join(record.get("also_known_as") or [])]).lower()
         if all(word in haystack for word in wanted):
             found.append(dict(record, id=part_id))
-    return found
+    return found, drafts
 
 
 def skeleton(part_id, kind, vendor=None):
@@ -477,6 +502,9 @@ def skeleton(part_id, kind, vendor=None):
         "body_mm": {"width": None, "height": None, "verified": False, "source": None,
                     "why_it_matters": "every placement is arranged around it"},
         "facts": {}, "host_requirements": [],
+        "sourcing": [],
+        "//sourcing": ("Where it can be bought, one entry per listing actually fetched: "
+                       "{seller, url, price_czk, checked}. Local sellers first, from the brief."),
     }
 
 
@@ -574,17 +602,21 @@ def main(argv=None):
         elif args.signals:
             print(json.dumps({"signals": signals_for(args.signals, project)}, indent=2))
         elif args.need:
-            found = need(args.need, project)
+            found, drafts = need(args.need, project)
             order = ", ".join(vendor_order(project))
+            shops = ", ".join(sellers(project)) or "none named in the brief"
             if args.json:
                 print(json.dumps({"tool": "parts", "need": args.need, "vendor_order": list(vendor_order(project)),
-                                  "found": [{"id": p["id"], "kind": p["kind"], "name": p["name"]} for p in found]}, indent=2))
-            elif found:
+                                  "found": [{"id": p["id"], "kind": p["kind"], "name": p["name"]} for p in found],
+                                  "drafts": drafts}, indent=2))
+            elif found or drafts:
                 for part in found:
                     print("  %-22s %-16s %s" % (part["id"], part["kind"], part["name"]))
+                for part_id in drafts:
+                    print("  %-22s %-16s %s" % (part_id, "(draft)", "does not yet meet the contract — being filled in"))
             else:
-                print("  nothing in the library matches %r.\n  Research it: /spark:research \"%s\"  — vendors in order: %s"
-                      % (" ".join(args.need), " ".join(args.need), order))
+                print("  nothing in the library matches %r.\n  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s"
+                      % (" ".join(args.need), " ".join(args.need), order, shops))
         elif args.skeleton:
             if not project or not args.kind:
                 print("parts.py: --skeleton needs --project (the record belongs to a project's parts/) "

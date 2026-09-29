@@ -115,6 +115,11 @@ PROJECT_TEMPLATE = {
     "parts_on_hand": [],
     "//parts_on_hand": "What you already own, so nothing recommends buying it again.",
     "prefer": None,
+    "//prefer": "Whose modules to research first, in order: [\"dfrobot\", \"seeed\"].",
+    "sellers": None,
+    "//sellers": ("Where you buy, local first, in order — [\"laskakit\", \"gme\", \"hadex\", \"botland\", "
+                  "\"tme\"] for Czechia. Modules come from their makers; simple parts (connectors, "
+                  "discretes) take their facts from the maker's datasheet and are bought here."),
     "decided": [],
     "//decided": ("Choices already made and not up for re-litigation, each with why. This is "
                   "what stops a reviewer proposing the option you already rejected."),

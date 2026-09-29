@@ -27,6 +27,15 @@ then its GitHub (the `DFRobot_<Part>` and Seeed libraries carry pinouts in their
 the datasheet of the chip on the module. Stop at the first vendor with a part that fits the need
 unless you were asked to compare. A distributor page counts for price and availability only.
 
+## Where to buy — local first
+
+The brief names the sellers the person buys from (`.spark/project.json` → `sellers`; for Petr,
+in Czechia: LaskaKit, GME, Hadex, Botland, TME, in that order). Modules come from their makers
+(the vendor order); **simple parts — connectors, terminals, discretes — take their facts from the
+maker's datasheet and their exact part number from a local seller's listing.** Record every
+listing you actually fetched in the record's `sourcing` list: `{seller, url, price_czk, checked}`.
+A seller's page is where it is bought; the maker's page is what it is.
+
 ## Scope every claim (W5)
 
 "The FireBeetle 2 ESP32-S3" is two power designs; "the VL6180X breakout" is four carriers with

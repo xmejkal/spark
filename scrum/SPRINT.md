@@ -27,7 +27,7 @@ under the warning that says not to (P6).
 | **P6** | `emit_board` honours the mechanical `host_requirements` it prints, or says which are the reader's | every generated motor board leaves the L9110S inputs floating today |
 | **P16** | Lift the bin's wake-polarity check into spark | the one defect no firmware test could see; the bin has the check, spark does not |
 | **P17** | An off-board part is emitted as its header, not its footprint | `on_board: false` is read by nothing |
-| **R2.5** | Third cold test — **PO: one letter, (a), (b) or (c)** — parked with the date if unanswered at the sprint's start (R4.4) | both silent-wrongness classes were found only by building something new |
+| **R2.5** | Third cold test — **(c), the 12 V irrigation controller, chosen by the PO 2026-09-29** — running in `~/Development/irrigation` (PLAN.md written first, DIARY.md kept as it goes) | both silent-wrongness classes were found only by building something new; day one is the research capability's proof |
 | — | Audit at sprint end, before the retro (R4.3) | |
 
 Still parked, the PO's: **P18** evals (run or delete), **P19** findings.py and its fake bench

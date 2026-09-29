@@ -28,5 +28,11 @@
   "name": "a skeleton overwrites an existing record",
   "find": "            if target.exists():\n                print(\"parts.py: %s exists; fill it in, do not overwrite it\" % target, file=sys.stderr)\n                return EXIT_INVALID",
   "replace": "            if False:\n                print(\"parts.py: %s exists; fill it in, do not overwrite it\" % target, file=sys.stderr)\n                return EXIT_INVALID"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a draft record stops the search again (I3)",
+  "find": "        except PartError:\n            # A record still being filled in",
+  "replace": "        except ImportError:\n            # A record still being filled in"
  }
 ]

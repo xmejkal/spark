@@ -25,6 +25,12 @@ The project's brief says whom to prefer — `.spark/project.json` → `"prefer":
 table and a dimension drawing for every module. The researcher searches the first vendor, and
 goes to the next only when the first has nothing fitting, unless asked to compare.
 
+That order is for **modules**. A **simple part** — a connector, a terminal block, a discrete —
+takes its facts from the maker's datasheet and its exact part number from a local seller's
+listing: the brief's `sellers`, local first (for Czechia: LaskaKit, GME, Hadex, Botland, TME).
+Every listing fetched goes into the record's `sourcing` list, so the next project knows where it
+was bought.
+
 ## 3. Research it
 
 Launch the `parts-researcher` agent with: the need in the user's words, the vendor order, the
