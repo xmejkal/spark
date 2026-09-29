@@ -177,6 +177,18 @@ def find_converter(start):
     return None
 
 
+#: What the converter says when it has no Wokwi part for a component. That is a limit of the
+#: converter's mapping table, not a defect in the design — the board built — and reporting it as
+#: "the chain is broken" sent a reader to debug a design that was fine (audit B11, A9's shape at
+#: the last stage). Matched on the converter's own words, which its tests pin.
+CONVERTER_HAS_NO_PART = "no Wokwi part is mapped"
+
+
+def simulation_could_not_look(said):
+    """Whether the converter's output describes its own limit rather than the design's."""
+    return CONVERTER_HAS_NO_PART in (said or "")
+
+
 def wires_in(diagram):
     """How many connections the emitted diagram makes."""
     return len(diagram.get("connections") or [])
@@ -361,8 +373,13 @@ def run(requirements, workdir, toolchain=None, project=None):
         ["bun", "run", str(converter), "--circuit", str(circuit_path), "--out", str(diagram_path)],
         cwd=str(converter.parent), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S)
     if not diagram_path.is_file():
-        return stages + [Stage("simulation", PROBLEMS,
-                               "no diagram was produced\n" + (made.stderr or made.stdout)[-800:])]
+        said = (made.stderr or made.stdout)[-800:]
+        if simulation_could_not_look(said):
+            return stages + [Stage("simulation", COULD_NOT_RUN,
+                                   "the converter has no Wokwi part for a component on this board "
+                                   "— a mapping to add to its lib/mapping.ts, not a defect in the "
+                                   "design, which built\n" + said)]
+        return stages + [Stage("simulation", PROBLEMS, "no diagram was produced\n" + said)]
 
     wires = wires_in(json.loads(diagram_path.read_text()))
     if wires == 0:

@@ -5,7 +5,7 @@ What a part asks of the board it plugs into, and what is actually known about it
     parts.py --list
     parts.py --show l9110s-module
     parts.py --validate
-    parts.py --unverified            what nobody has checked yet, across every part in use
+    parts.py --unverified <part> [part ...]   what nobody has checked yet about those parts
 
 A part library is easy to get wrong in a way that is worse than not having one. The temptation is
 a schema covering everything a part might have — and since a motor driver's facts (input

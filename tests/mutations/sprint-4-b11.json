@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "an unmapped component reads as a broken design again (B11)",
+  "find": "    return CONVERTER_HAS_NO_PART in (said or \"\")",
+  "replace": "    return False"
+ }
+]

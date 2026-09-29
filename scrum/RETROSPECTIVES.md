@@ -119,7 +119,7 @@ third cold test rather than a better plan.
 | **R2.1** | Build `scripts/mutate.py` NOW, in this retro, because R1.3 failed for want of a forcing function. | At R3: every DONE item since cites a `mutate.py` run. | **stuck.** Built in R2 itself (`997b756`); every DONE since — P3 `831f756`, A3 `5689147`, P11 `0c21ef5`, P12 `c4d0582`, P13 `55e7bb8`, P14 `f7674b4` — cites a `mutate.py` run: 30 mutations in five tables, all caught |
 | **R2.2** | Every fix that touches an integration gets an integration test, not only a helper test. Named for the two escapes. | At R3: any escaped mutation whose cause was "helper tested, consumer not". | **stuck, and a new shape appeared.** No escape this sprint was "helper tested, consumer not". Four escapes were **"the fixture cannot see the defect"**: P3's three (three LEDs never reached the tie the penalty breaks) and P14's one (no placeholder in the fixture, so a swapped section changed nothing). All four fixed by strengthening the fixture, none by dropping the mutation → R3.1 |
 | **R2.3** | Before fixing a rule at one site, `grep` for its other sites — the three recurrences all had a greppable anchor. | At R3: count of commits that say "same defect, second site". | **partly.** One second site found in flight — P11's converter lookup from `cwd`, the same defect one stage later, fixed in the same change — and one found by the audit from before R2 (A3, the double report). Zero "same defect, second site" commits after the fact |
-| **R2.4** | Retire the intake table's `raised` backlog: every row either promoted to a PBI, or `rejected` with a reason, before R3. | At R3: `raised` count in `INDEX.md`, and whether `rejected` is still zero. | **did not stick.** 23 rows closed on 09-29 — the audit's 16 and 7 stale ones — and **43 `raised` rows remain**, all from the 09-25 reports. `rejected` still unused → R3.2 |
+| **R2.4** | Retire the intake table's `raised` backlog: every row either promoted to a PBI, or `rejected` with a reason, before R3. | At R3: `raised` count in `INDEX.md`, and whether `rejected` is still zero. | **did not stick.** 23 rows closed on 09-29 — the audit's 16 and 7 stale ones — and **42 `raised` rows remain** (first written 43, by eye), all from the 09-25 reports. `rejected` still unused → R3.2 |
 | **R2.5** | Third cold test in a different domain — to be chosen by the PO — because both silent-wrongness classes were found only by building something new. | At R3: the diary of that test exists and is scored against its plan. | **pending on the PO.** No domain chosen; three proposed in `SPRINT.md`. Not started, deliberately: the domain is the whole point of the test |
 
 
@@ -156,7 +156,8 @@ not.
 
 ### What did not
 
-- **The intake did not drain — second retro in a row.** 43 `raised` rows from 09-25 remain and
+- **The intake did not drain — second retro in a row.** 42 `raised` rows from 09-25 remain (first
+  written 43, by eye — audit B12) and
   `rejected` is still unused. The cause is plain: nobody's path crosses the old rows; only new
   reports get read.
 - **R2.5 sat.** "To be chosen by the PO" is not a question anyone asked; a decision nobody is
@@ -171,7 +172,7 @@ not.
 | # | change | check that it stuck | result |
 | --- | --- | --- | --- |
 | **R3.1** | A weak fixture is a defect: when a mutation escapes because the fixture cannot see it, the fixture is fixed and the mutation stays. Written as **W12**. | At R4: any mutation removed from a table; escapes listed with their cause | *pending* |
-| **R3.2** | Drain the 43: **P15**, first item of Sprint 4, half a day, time-boxed. Each row reproduced against today's code or `rejected` as superseded, with the commit that made it so. | At R4: `raised` count in `INDEX.md`; `rejected` > 0 | *pending* |
+| **R3.2** | Drain the 42: **P15**, first item of Sprint 4, half a day, time-boxed. Each row reproduced against today's code or `rejected` as superseded, with the commit that made it so. | At R4: `raised` count in `INDEX.md`; `rejected` > 0 | *pending* |
 | **R3.3** | An outside read CLOSES every sprint: the audit agent runs at sprint end, its claims go through `INDEX.md` before anything is acted on (W9). | At R4: the Sprint 4 report file exists and its rows are in `INDEX.md` | *pending* |
 | **R3.4** | Ask the PO the R2.5 question so it is one word: three concrete domains in `SPRINT.md`. | At R4: a domain chosen, or the item explicitly parked by the PO | *pending* |
 | **R3.5** | No summary before its count: a "N rows/tests/items" claim in a record is written from a command run that day, and the command is beside it. | At R4: count the numeric claims in `SPRINT.md` that carry their command | *pending* |

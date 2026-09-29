@@ -407,5 +407,19 @@ class NothingToBuildIsNotAPassTest(unittest.TestCase):
         self.assertIn("nothing to build", stages[-1].detail)
         self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
 
+
+class AConverterLimitIsNotADesignFaultTest(unittest.TestCase):
+    def test_a_component_the_converter_cannot_map_is_could_not_look(self):
+        # The RC car builds (13 traces) and the converter has no Wokwi part for its servo, buck
+        # and inlet; that read as `!! simulation … the chain is broken` (audit B11).
+        said = ("3 problem(s) converting the board:\n  - no Wokwi part is mapped to this component. "
+                "Add it to lib/mapping.ts, or add a skip rule (component Sg90Servo)")
+        self.assertTrue(check_spine.simulation_could_not_look(said))
+
+    def test_any_other_converter_failure_is_still_a_problem(self):
+        self.assertFalse(check_spine.simulation_could_not_look("TypeError: cannot read x of undefined"))
+        self.assertFalse(check_spine.simulation_could_not_look(""))
+        self.assertFalse(check_spine.simulation_could_not_look(None))
+
 if __name__ == "__main__":
     unittest.main()

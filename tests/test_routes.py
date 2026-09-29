@@ -66,6 +66,17 @@ class EveryRouteLeadsSomewhereTest(unittest.TestCase):
                 self.assertTrue((ROOT / "scripts" / script).is_file(),
                                 "%s may run scripts/%s, which does not exist" % (command.name, script))
 
+    def test_every_script_a_command_may_run_is_executable_as_written(self):
+        # The one command in /spark:build is `${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py …`, no
+        # interpreter named, and check_spine.py was mode 100644: exit 126 as written (audit B4).
+        import os
+        for command in sorted((ROOT / "commands").glob("*.md")):
+            for script in allowed_scripts(command):
+                path = ROOT / "scripts" / script
+                self.assertTrue(os.access(path, os.X_OK), "%s is not executable, and %s runs it by path"
+                                % (script, command.name))
+                self.assertTrue(path.read_text().startswith("#!/usr/bin/env python3"), script)
+
     def test_every_chain_script_has_a_command_line(self):
         # Named in a document, and runnable as documented: each answers --help with usage.
         import subprocess

@@ -160,7 +160,8 @@ Nothing here has been validated on hardware by its author. Ground truth is the b
 python3 -m unittest discover -s tests -t tests
 ```
 
-528 of them (2026-09-29), and the rule they follow: a test must **run** the thing, not read it. No assertion on
+The count is whatever that prints — a number written here rotted three times in four days. The rule
+they follow: a test must **run** the thing, not read it. No assertion on
 source text, none that is an arithmetic identity of the function under test, and every check
 exercised through the runner with an input that makes it fail. That rule exists because the test
 written to catch "a check nobody invokes" asserted that a string appeared in the runner's source

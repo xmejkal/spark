@@ -33,11 +33,11 @@ to run it. `could-not-run` exits non-zero, because you asked and got no answer.
 **With one exception, and it overturns the simpler rule above.** If EVERY check was skipped, the
 run exits non-zero as well. "I asked for nothing and was told everything is fine" is the cleanest
 form of the failure this file exists to prevent, and it is exactly what an agent gets when it
-builds its command wrong — which is not hypothetical: the command in `spark-review`'s own skill
-leaves two of these seven permanently unasked.
-
-(That skill's command is still wrong and this does not fix it: five checks running clean will and
-should exit 0. Only the all-skipped case is caught here.)
+builds its command wrong — which is not hypothetical: an earlier `spark-review` skill named two
+inputs by hand and left two of the seven permanently unasked. The skill now runs
+`check_all.py --project .`, which discovers all seven; this docstring said otherwise for four
+days after that changed (audit B18, 2026-09-29). Five checks running clean will and should exit
+0; only the all-skipped case is caught here.
 """
 
 import argparse
@@ -306,7 +306,7 @@ CHECKS = [
 #: flagship check was permanently unasked and the review still called itself complete.
 CONVENTIONS = {
     "circuit": list(design.CIRCUIT_PATHS),
-    "rules": [".spark/rules.json"],
+    "rules": [str(design.RULES_PATH)],
     "package": ["*-gerbers.zip", "fab/*.zip"],
     "design": ["*.design.json", ".spark/design.json"],
     "firmware": ["firmware/*/config.py", "firmware/config.py", "config.py"],

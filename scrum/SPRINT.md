@@ -18,9 +18,14 @@ retros in a row say the intake has not drained (R3.2).
 
 | id | item | why here |
 | --- | --- | --- |
-| ~~P15~~ | Drain the intake: 43 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | **done** the same evening, `f35e7df`: 40 resolved, 3 fixed, 1 rejected, 4 new items |
-| ~~R7~~ | The generator chain named by a skill, a command and an agent [G13] | **done `1f769f8`** — `/spark:build`, the skill and the agent route through the chain |
+| ~~P15~~ | Drain the intake: 42 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | **done** the same evening, `f35e7df`: 38 resolved, 3 fixed, 1 rejected, 4 new items (first written 43 and 40 — counted by eye, audit B12) |
+| ~~R7~~ | The generator chain named by a skill, a command and an agent [G13] | **done `1f769f8`** for the one command; **reopened as P22** — the audit followed the documented steps from a fresh directory and reached no build (B19) |
 | ~~R9~~ | A rail belongs to the design, not the part [G5] | **done `227f5d4`** — the car's copied record is gone |
+| **P20** | `assign_pins.main` through the loader | **next** — the documented first step crashes on the documented input (B1) |
+| **P21** | A bus is shared; a name does not take a part off it | after P20 — a named I2C part silently off its bus (B2) |
+| **P22** | A stranger can build [reopens R7] | after P21 |
+| **P23** | Two outputs on one net, across parts | after P22 |
+| P24, P25 | `check_design` CLI; one outcome vocabulary | last |
 | **R2.5** | Third cold test — **PO: choose a domain** (below) | both silent-wrongness classes were found only by building something new |
 | — | The audit agent at sprint end (R3.3) | the outside read that produced six items last time |
 
@@ -42,14 +47,22 @@ car, which is the point:
 ### 2026-09-29, evening
 
 **P15 done** — pulled ahead of the PO's ordering because two retros mandated it (R2.4, R3.2) and
-it decides nothing about the product. `grep -c '\`raised\`' docs/observations/INDEX.md` → 1
-(the legend line). Three rows were still true and are fixed in
+it decides nothing about the product. Rows by status cell — `awk -F'|' 'NF>6 {gsub(/ /,"",$5); s[$5]++}
+END {for (k in s) print k, s[k]}' docs/observations/INDEX.md` — printed no `raised` at all after
+the drain (the `grep -c` first written here printed 3, two of them rows quoting the word, and the
+43 written above was 42: both counted by eye, audit B12/B13). Three rows were still true and are fixed in
 `f35e7df`; R19 is the first `rejected` row the table has ever had. Four items came out, two of them
 the PO's.
 
 **R9 done** (`227f5d4`); the car's copied L9110S record is deleted and the board still builds, 13 traces.
 Every non-PO item of the proposed Sprint 4 is done; the cold test waits for a domain, and the audit
 (R3.3) runs next.
+
+**The audit reported** (`docs/observations/2026-09-29-sprint-4-audit.md`, B1–B20). All DONEs hold
+when re-run cold. But: the documented first step crashes on the documented input (B1), a named I2C
+part silently leaves its bus (B2), the one command was not executable as written (B4), the stranger
+test failed (B5/B6/B19 — R7 reopened as P22), and three of my P15 counts were made by eye and were
+wrong (B12/B13). Every claim reproduced before anything was changed. Six items, P20–P25.
 
 **R7 done** (`1f769f8`, corrected `7ac2ba1`). **The commit message of `1f769f8` is false**: it says the
 documented example ran end to end; the output it was written over said `the chain is broken`
@@ -106,7 +119,7 @@ to six, then ten. **A3 fixed** (`5689147`). The bin's board facts regenerated, `
 
 **Audit triaged.** Sixteen claims, six re-run here (A2, A3, A7, A8, A9, A10), the rest read
 against the code; **none rejected**. Twenty-three intake rows closed in one pass — the first rows to leave the table since it was
-written (R1.2). **Forty-three older `raised` rows remain; R2.4 is not done.** Four items promoted, P11–P14, and pulled in that order.
+written (R1.2). **Forty-two older `raised` rows remain; R2.4 is not done** (first written 43, by eye). Four items promoted, P11–P14, and pulled in that order.
 
 **P11 done** (`0c21ef5`), the same afternoon. The audit's test failed first, as it said it would. One
 more instance of the class turned up on the way — the converter looked for from `cwd` — and

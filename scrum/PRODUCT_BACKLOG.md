@@ -40,9 +40,15 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 
 | id | item | size |
 | --- | --- | --- |
-| P15 | Drain the intake: 43 `raised` rows, reproduced or rejected | S, time-boxed |
-| ~~R7~~ | The generator chain named by a skill, a command and an agent — **done `1f769f8`** | M |
+| ~~P15~~ | Drain the intake: 42 `raised` rows, reproduced or rejected — **done `f35e7df`** | S, time-boxed |
+| ~~R7~~ | The generator chain named by a skill, a command and an agent — **done `1f769f8`** for the one command; the steps reopened as P22 | M |
 | ~~R9~~ | A rail belongs to the design, not the part — **done `227f5d4`** | M |
+| P20 | `assign_pins.main` through the loader; signals derived once | M |
+| P21 | A bus is shared; an instance name does not take a part off it | M |
+| P22 | A stranger can build [reopens R7] | M |
+| P23 | Two outputs on one net, across parts | S |
+| P24 | `check_design.py` gets a command line | S |
+| P25 | One outcome vocabulary; a test for every rule function | M |
 | R2.5 | Third cold test — **PO chooses the domain** | L |
 
 ## Sprint 3 — done 2026-09-29
@@ -237,15 +243,15 @@ section — no placeholder, so the swap changed nothing — and the mutation too
 fixture now has every section non-empty and asserts it. Eight mutations caught, 528 tests.
 
 ### P15 — Drain the intake
-Forty-three `raised` rows in `docs/observations/INDEX.md`, all from the 09-25 reports, none read
+Forty-two `raised` rows in `docs/observations/INDEX.md`, all from the 09-25 reports, none read
 since. Retro actions R1.2 and R2.4 both failed on this; R3.2 makes it an item with a box around
 it. Each row is reproduced against today's code or `rejected` as superseded, with the commit
 that made it so — many will be, since the code they describe has changed under them. Rows that
 are already backlog items (P5–P10 map to seven of them) are `acted` with the item's name.
-**Value proven by:** `grep -c '\`raised\`' docs/observations/INDEX.md` → 1 (the legend), and
+**Value proven by:** no row whose status cell is `raised` — `awk -F'|' 'NF>6 {gsub(/ /,"",$5); s[$5]++} END {for (k in s) print k, s[k]}' docs/observations/INDEX.md` — and
 `rejected` used at least once with a reason.
 
-### ~~R7 — The generator chain is named by no skill, no command and no agent~~ [G13] — **DONE `1f769f8`**
+### ~~R7 — The generator chain is named by no skill, no command and no agent~~ [G13] — **DONE `1f769f8` for the one command; REOPENED as P22 for the documented steps** (audit B19)
 `assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working
 boards, and `spark-design:31` still tells a user to write the `.tsx` by hand. Verified: two
 mentions of `parts-researcher` plugin-wide, both non-routes.
@@ -364,6 +370,67 @@ The mechanism you are told to use to record what you verified turns off the chec
 **Value proven by:** a project with a board override still gets a `vendor-truth` verdict, against
 the override.
 
+### From the sprint 4 audit — 2026-09-29, evening
+`docs/observations/2026-09-29-sprint-4-audit.md`: twenty claims (`INDEX.md` B1–B20), read cold at
+the end of Sprint 4. The stranger test failed — following the two documents from a fresh directory
+reaches no build — so **R7 is reopened as P22**; and the documented first step crashes on the
+documented input. Order as before: what misleads or crashes today first, then the refactors.
+
+### P20 — `assign_pins.main` loads through the loader, and signals are derived in one place
+B1, B10, B16. `assign_pins.py requirements.json` — the first documented step — crashes with
+`TypeError` on the `{part, name}` form the same documents show, and on `rails`: it hands raw
+entries to `parts.signals_for`, reads the JSON outside any `try`, resolves the project from
+`cwd`, and no test calls it. The per-instance signal derivation lives in `emit_board.main`; it
+moves to `design` and both mains call it. `parts.load` reads a part file outside any `try`, so a
+malformed project part is a traceback through `emit_board` and a "broken chain" through the spine.
+**Value proven by:** `assign_pins.py` on `/spark:build`'s own example and on rc-car's
+`car.requirements.json` prints a pin per signal, exit 0, the same signals `emit_board` traces; a
+malformed part file is `could-not-run` through both. Mutation: the raw entries handed through.
+
+### P21 — A bus is shared, and an instance name does not take a part off it
+B2, B3, B18. `signal_name` prefixes an instance's signals (`RANGEFINDER_SDA`) and the bus path in
+`assign_pins` finds the bus pin by the signal's *name* matching a board label — so a named
+VL6180X lands on D3/D12 "needs nothing special", exit 0 (reproduced); two unnamed I2C parts are
+refused ("SDA already taken") when a bus is precisely what they share; and a bus signal named the
+vendor's way (`CLK`, `DIN` on `bus: spi`) is placed on any pin with no word (reproduced), against
+the assigner's own docstring. A bus signal carries its bus pin apart from its name; signals on one
+bus share the pin; a bus signal naming no pin of that bus is refused.
+**Value proven by:** a named VL6180X on `.Mcu > .SDA/.SCL`; two I2C parts traced to the same
+SDA/SCL; `{"name": "CLK", "bus": "spi"}` refused by name. Mutation: the prefix reaching the bus pin.
+
+### P22 — A stranger can build: the documented steps work from nowhere **[reopens R7]**
+B5, B6, B19. R7 was called DONE on the strength of the one command; followed as documented from a
+fresh directory, `boards.py --list`, `assign_pins.py` and `emit_board.py` refuse "no project here"
+where `check_spine` falls back to the library; the emitted board imports `./FireBeetle2Esp32S3`,
+which only the never-named `emit_footprint.py` writes; and `parts.py --unverified` as written was a
+usage error (fixed). A file in no project is built from the plugin's library and says so;
+`emit_footprint` is a named link of the chain; and the stranger test becomes a test — the
+documented step commands run from a fresh temp directory produce a board file and its footprint.
+**Value proven by:** that test, and the audit's stranger run repeated by hand with nothing but the
+two documents, reaching `the chain runs end to end`, gated on the verdict.
+
+### P23 — Two outputs on one net, across parts and against the board
+B9. A project part's `VOUT` on `rail: logic, direction: out` is traced to `net.V33` beside the
+MCU's own 3V3, exit 0, no note; `parts.validate` checks outputs per rail inside one part only.
+An `out` supply onto a rail the module provides, or onto a net another `out` drives, is a short
+the file has to name.
+**Value proven by:** a probe regulator on `logic` produces a named note in the file and in the
+spine's schematic-notes; on its own rail it does not.
+
+### P24 — `check_design.py` gets a command line
+O4c. `--help` prints `no design at --help`, exit 1: `main(argv)` reads `argv[1]` and nothing else.
+argparse, `--json` and a usage line, like every other script.
+**Value proven by:** `check_design.py --help` exits 0 with usage; the routes test covers it.
+
+### P25 — One vocabulary for the three outcomes, and a test for every rule function
+B16, B17. `EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2` in 14 files and `"could-not-run"`
+in 9, four files naming the middle outcome differently; the upward directory walk at four sites;
+`power_note_lines`, `module_power_lines`, `assign_pins.main`, `power_trace`, `trace_width_mm`,
+`design.rules_in` and the `check_physics.check_*` rules named by no test. A refactor plus tests;
+lands when something touches those files.
+**Value proven by:** one definition each, every script importing it, suite green, four designs
+byte-identical; every function the audit listed named by a test.
+
 ### P16 — Lift the bin's wake-polarity check into spark
 The bin's `tools/circuit-to-wokwi/lib/checks/wake-polarity.ts` (B3) compares the rail a wake
 button is tied to against the level the firmware arms for — the one defect no firmware test could
@@ -390,8 +457,8 @@ its tests and prints "what it can pretend to measure" (M6, S13). The plan's revi
 is built on it. Either that loop gets built on it soon or both go.
 
 ### ~~P15 — Drain the intake~~ — **DONE `f35e7df` + this change**
-43 rows: 40 resolved by what today's code demonstrably does, 3 reproduced live and fixed (M3, R13,
-R20), 1 rejected on reproduction (R19). Four items came out: P16, P17, P18 [PO], P19 [PO].
+42 rows (first written 43, by eye — audit B12): 38 resolved by what today's code demonstrably
+does, 3 reproduced live and fixed (M3, R13, R20), 1 rejected on reproduction (R19). Four items came out: P16, P17, P18 [PO], P19 [PO].
 
 ---
 

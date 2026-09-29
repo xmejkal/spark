@@ -83,7 +83,7 @@ a rule checklist in the loop. Follow it.
 
 6. **Verify before emitting fab output.** Hand off to `spark-review`, which ends with the fab
    gate: `check_all.py --project .`, then `boards.py --validate --for-fab` and
-   `parts.py --unverified`, then `kicad-cli sch erc` if KiCad is installed. Do NOT produce Gerbers
+   `parts.py --unverified <every part on the board>`, then `kicad-cli sch erc` if KiCad is installed. Do NOT produce Gerbers
    while something load-bearing is unverified.
 
 7. **Render and show.** `npx tsci export -f schematic-svg board.tsx`, convert to PNG if needed,
