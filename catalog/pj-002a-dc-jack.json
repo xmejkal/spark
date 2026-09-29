@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "id": "pj-002a-dc-jack",
+  "name": "Same Sky PJ-002A 2.0 mm DC power jack (2.5 A)",
+  "kind": "connector",
+  "//": "The plain PJ-002A: the same drawing, pad for pad, as the PJ-002AH the irrigation controller's 12 V inlet chose, at half the current rating. Same Sky (formerly CUI Devices) datasheet rev 1.10 dated 03/11/2025, product page read the same day. Read 2026-09-29; kept because it is the drop-in substitute when the AH is out of stock, and a substitution should be made knowing what it costs. Rails are named as the irrigation design names them ('12v', 'ground'); a catalog record carries the rail it was researched for.",
+  "//why_not": "Rated 2.5 A where the board's load is 'about 2 A' unmeasured plus the buck - too thin a margin when the same footprint is sold at 5 A for a few crowns more.",
+  "vendor": "same-sky",
+  "sku": "PJ-002A",
+  "also_known_as": [
+    "CUI PJ-002A",
+    "CUI Devices PJ-002A",
+    "TME PJ002A",
+    "barrel jack",
+    "DC jack",
+    "DC power jack",
+    "5.5/2.1 mm jack",
+    "power inlet"
+  ],
+  "sources": [
+    "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+    "https://www.sameskydevices.com/product/interconnect/connectors/dc-power-connectors/jacks/pj-002a",
+    "https://gitlab.com/kicad/libraries/kicad-footprints/-/raw/master/Connector_BarrelJack.pretty/BarrelJack_Horizontal.kicad_mod"
+  ],
+  "needs": [],
+  "power": [
+    {
+      "pin": "VIN",
+      "rail": "12v",
+      "direction": "out",
+      "note": "Terminal 1, the centre pin. Carries whatever the adapter puts on its centre contact; the jack does not enforce centre-positive. Unregulated and unfused."
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "out",
+      "note": "Terminal 2, the sleeve contact the plug's barrel rides on. The single point where the supply's return meets board ground."
+    }
+  ],
+  "unused_pins": [
+    {
+      "pin": "SW",
+      "note": "Terminal 3, the switch contact. Read off the datasheet schematic: it rests against terminal 2 while no plug is in and the plug's barrel pushes them apart, so with nothing plugged in it sits at ground potential. Leave it open; never tie it to the 12 V rail."
+    }
+  ],
+  "pin_order": [
+    "VIN",
+    "GND",
+    "SW"
+  ],
+  "//pin_order": "Pads numbered as the datasheet numbers the terminals: 1 centre pin, 2 sleeve, 3 switch - read off the drawing's schematic symbol and PCB layout, never from a table, so unverified. Meter the real part before ordering a board.",
+  "footprint": "pinrow3",
+  "footprint_placeholder": true,
+  "footprint_note": "pinrow3 is a 2.54 mm header, kept only so the pad count matches pin_order. The real layout, read off the PJ-002A drawing (p.2): pads 1 and 2 on a 6.0 mm pitch across the plug axis, pad 3 on the axis 4.7 mm behind them, slots about 1.0 x 3.0 mm; 10.7 mm of body on the board behind a 3.5 mm lip that overhangs the edge; barrel axis 6.5 mm above the board. KiCad's Connector_BarrelJack.pretty/BarrelJack_Horizontal.kicad_mod has pad 1 at (0,0), pad 2 at (-6,0), pad 3 at (-3,4.7) with 1 x 3 mm oval drills - the same positions, compared by eye. Same Sky's own footprint download: https://www.sameskydevices.com/product/resource/pcbfootprint/pj-002a (not fetched).",
+  "body_mm": {
+    "width": 9.0,
+    "height": 14.4,
+    "verified": true,
+    "source": "https://www.sameskydevices.com/product/interconnect/connectors/dc-power-connectors/jacks/pj-002a",
+    "note": "Product page: 'Dimensions LxWxH (mm): 14.4 x 9 x 11' as text; the drawing agrees (9.00 across, 14.40 along the axis of which 3.50 is the overhanging lip and 10.70 on the board, 11.00 tall). width = across the axis, height = along it, the whole 14.4."
+  },
+  "host_requirements": [
+    "The jack does not enforce polarity: a centre-negative adapter puts -12 V on the rail. Reverse-polarity protection after it, centre-positive symbol on the silkscreen.",
+    "Fuse or current-limit right after it, at or below 2.5 A - which is also the reason it was not chosen.",
+    "Terminal 3 is at ground potential with no plug inserted; leave it unconnected.",
+    "Board-edge part: 3.5 mm lip overhang, barrel axis 6.5 mm above the board, plug inserts 9.5 mm - the enclosure needs a hole on that axis and clearance in front."
+  ],
+  "facts": {
+    "rated_current_a": {
+      "value": 2.5,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "note": "Datasheet: 'rated input current 2.5 A max', feature line '2.5 A rating'; product page 'Current Rating (A): 2.5'. Web-search summaries called this a 5 A part; the datasheet does not.",
+      "why_it_matters": "The whole board's current crosses this contact pair; this is the number the PJ-002AH was preferred on."
+    },
+    "rated_voltage_vdc": {
+      "value": 24,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "note": "Datasheet 'rated input voltage 24 Vdc'."
+    },
+    "center_pin_diameter_mm": {
+      "value": 2.0,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "note": "Datasheet feature line '2.0 mm center pin'; product page 'Inner Diameter (mm): 2'."
+    },
+    "jack_opening_mm": {
+      "value": 6.5,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/interconnect/connectors/dc-power-connectors/jacks/pj-002a",
+      "note": "Product page 'Outer Diameter (mm): 6.5'; the drawing shows Ø6.50 at the face."
+    },
+    "mating_plug_od_mm": {
+      "value": 5.5,
+      "verified": false,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "why_it_matters": "Read off the drawing ('MATING PLUG Ø5.5'); the adapter's plug must be 5.5 x 2.1 mm."
+    },
+    "insertion_depth_mm": {
+      "value": 9.5,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "note": "Datasheet text 'Jack Insertion Depth: 9.5 mm'."
+    },
+    "contact_resistance_mohm_max": {
+      "value": 30,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf"
+    },
+    "insulation_resistance_mohm_min": {
+      "value": 100,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "note": "Datasheet 'insulation resistance at 500 Vdc, 100 MΩ min'."
+    },
+    "operating_temperature_min_c": {
+      "value": -40,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf"
+    },
+    "operating_temperature_max_c": {
+      "value": 85,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf"
+    },
+    "life_cycles": {
+      "value": 5000,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf"
+    },
+    "terminal_count": {
+      "value": 3,
+      "verified": true,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "note": "Materials table lists terminal 1, 2, 3; product page '2 conductors, 1 internal switch'. TME's 'PIN: 2' counts conductors."
+    },
+    "pad_1_to_pad_2_mm": {
+      "value": 6.0,
+      "verified": false,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "why_it_matters": "Read off the recommended PCB layout (3.00 + 3.00 either side of the axis); where the footprint's pads 1 and 2 go."
+    },
+    "pad_3_setback_mm": {
+      "value": 4.7,
+      "verified": false,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "why_it_matters": "Read off the drawing ('4.70±0.20'); where the switch pad goes."
+    },
+    "barrel_axis_height_mm": {
+      "value": 6.5,
+      "verified": false,
+      "source": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "why_it_matters": "Read off the drawing ('6.50±0.10'); the enclosure hole is centred this far above the board."
+    }
+  },
+  "sourcing": [
+    {
+      "seller": "tme",
+      "url": "https://www.tme.eu/cz/details/pj002a/dc-power-connectors/same-sky-r/pj-002a/",
+      "price_czk": 15.092,
+      "checked": "2026-09-29",
+      "note": "TME symbol PJ002A; description 'Konektor: napájecí DC; zásuvka; 2,5A; 24V; PIN: 2; THT; 2mm'. JSON-LD: priceCurrency CZK, lowPrice 9.15, highPrice 15.092, InStock, inventoryLevel 1200; the visible '0 skladem' contradicts it. The English page shows 1,200 units at USD 0.36-0.58. VAT status not stated on what was read. TME answers 403 to a bare HEAD, so this URL is here and not in sources."
+    }
+  ],
+  "attachments": {
+    "https://www.sameskydevices.com/product/resource/pj-002a.pdf": "pj-002a-dc-jack/pj-002a.pdf"
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "schema": 1,
+  "id": "dfr0469-sd2405al-rtc",
+  "name": "DFRobot DFR0469 Gravity: I2C SD2405AL RTC module (real time clock with a built-in rechargeable cell)",
+  "kind": "rtc",
+  "//": "Catalog record written by /spark:research on 2026-09-29 — read, not chosen. Filled ONLY from what was actually read: DFRobot's wiki and product page, the schematic PDF (Altium text layer plus a rendered image), the dimension drawing (rendered image; its text layer holds only pad designators) and the SD2405AL datasheet copy DFRobot host (grepped for the rows cited). A null is a fact nobody has recorded. verified: true = the vendor's own text at the cited URL; read off an image, inferred or computed = false with why_it_matters.",
+  "//why_not": "A Gravity board around Wave's SD2405AL, whose cell is sealed inside the chip package and which DFRobot say keeps time 5-8 years unpowered; passed over because it is 35.5 x 22 mm against 22.5 x 21, a 2016 design, its 400 kHz I2C is specified at 4.5-5.5 V only, and a sealed rechargeable cell ages with no way to replace it.",
+  "vendor": "dfrobot",
+  "sku": "DFR0469",
+  "also_known_as": [
+    "DFR0469",
+    "Gravity: I2C SD2405 RTC Module",
+    "Gravity: SD2405AL RTC Module",
+    "Gravity SD2405 RTC Module",
+    "real time clock",
+    "sd2405 rtc i2c"
+  ],
+  "//variant": "True of the DFR0469 at PCB V1.0 — the drawing's silkscreen reads 'SD2405 RTC Module(V1.0)' and the schematic is V1.0 dated 2016-12-28 (drawn in Altium by HDJ-CD). Two connectors: a Gravity 4-pin socket (SDA SCL GND VCC) and a 5-pin XH2.54 header that adds INT.",
+  "variant": "DFRobot DFR0469, PCB V1.0 (schematic V1.0, 2016-12-28)",
+  "sources": [
+    "https://wiki.dfrobot.com/dfr0469/",
+    "https://www.dfrobot.com/product-1600.html",
+    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf"
+  ],
+  "//sources": "The 'datasheet' DFRobot host is the SD2405AL datasheet 'High Precision RTC module－SD2405AL (V1.00)' (the PDF's own title is 'SD2403APIdatasheetv1.1-en副本', 16 pages), read only for the rows cited below. The library https://github.com/DFRobot/Gravity-I2C-SD2405-RTC-Module is linked from the wiki and was NOT opened. An older wiki slug (wiki.dfrobot.com/Gravity__I2C_SD2405_RTC_Module_SKU__DFR0469) appeared in search results and was not opened.",
+  "needs": [
+    {
+      "signal": "SDA",
+      "pin": "SDA",
+      "direction": "bidirectional",
+      "bus": "i2c",
+      "note": "On both connectors. Pulled to the module's VCC by R2 10K on the module."
+    },
+    {
+      "signal": "SCL",
+      "pin": "SCL",
+      "direction": "in",
+      "bus": "i2c",
+      "note": "On both connectors. Pulled to the module's VCC by R1 10K on the module."
+    },
+    {
+      "signal": "RTC_INT",
+      "pin": "INT",
+      "direction": "out",
+      "needs": [
+        "wake"
+      ],
+      "optional": true,
+      "note": "On the 5-pin header only, not on the Gravity socket. On the schematic image it runs from the chip's INT pin (11) straight to J1 with no pull-up on the module; the chip datasheet's drive type for INT was not read, and its FOBAT bit 'enables/disables the INT pin during battery backup mode'."
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "note": "'Operation voltage range: 3.3V~5.5V' — but 'Fast (400kHz) I2C Interface (4.5~5.5V)', so at 3.3 V DFRobot do not promise 400 kHz. The pull-ups return to this pin. Decoupled on the module by C2 100nF and C1 10uF."
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
+  ],
+  "unused_pins": [],
+  "//pin_order": "This record's footprint is the 5-pin XH2.54 header J1, because it is the only connector that carries INT. The schematic (text layer) numbers J1 1..5 and the image wires pin 1 INT, 2 VCC, 3 GND, 4 SCL, 5 SDA; the drawing's silkscreen column reads SDA SCL GND VCC INT top to bottom, so pad 1 (INT) is the BOTTOM pad — image-read, see pad_1_position. The Gravity 4-pin socket P1 is 1 SDA, 2 SCL, 3 GND, 4 VCC (text layer), which is the standard Gravity I2C order.",
+  "pin_order": [
+    "INT",
+    "VCC",
+    "GND",
+    "SCL",
+    "SDA"
+  ],
+  "footprint": "pinrow5",
+  "//footprint": "pinrow5 for the XH2.54 header (a 2.54 mm pitch row; 'XH2.54-5pin header x1' is in the shipping list). A host that wants only I2C would instead carry a PH2.0 4-pin Gravity socket (jst_ph_4, order SDA SCL GND VCC) and use the 'Gravity I2C 4-Pin Sensor Cable x1' that ships with it.",
+  "body_mm": {
+    "width": 35.5,
+    "height": 22.0,
+    "verified": true,
+    "source": "https://wiki.dfrobot.com/dfr0469/",
+    "where": "'Dimension: 35.50 x 22.00(mm)/1.4 x 0.87 inches'; the product page says the same and 'Weight: 6g'; the drawing (image) reads 35.5 and 22",
+    "note": "Drawing (image): Gravity socket on the left edge, the 5-pad column mid-board, the SD2405AL (a 16-pin SOP-sized package) on the right, and two large circles at the right edge 15 mm apart — the mounting holes Z1/Z2, diameter not dimensioned.",
+    "why_it_matters": "every placement is arranged around it"
+  },
+  "facts": {
+    "i2c_address": {
+      "value": "0x32",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0469/",
+      "where": "Specification: 'I2C Address: 0x32'; the datasheet: 'The slave address of the SD2405AL is defined as 0110010' (= 0x32 seven-bit)",
+      "why_it_matters": "Does not collide with the DS3231 family's 0x68, so one of each can share a bus."
+    },
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.5
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Operation voltage range:3.3V~5.5V'; the datasheet's VDD pin: '3.3V～5.5V'"
+    },
+    "i2c_fast_mode_supply_v": {
+      "value": [
+        4.5,
+        5.5
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Fast (400kHz) I2C Interface(4.5~5.5V)'; the wiki says the same",
+      "why_it_matters": "At 3.3 V the 400 kHz figure is not promised; run 100 kHz on a 3.3 V host unless the datasheet's timing table says otherwise (not read)."
+    },
+    "timekeeping_accuracy_ppm": {
+      "value": 5,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Accuracy ±5ppm from -40°C to +85°C'; the datasheet says the same"
+    },
+    "operating_temperature_c": {
+      "value": [
+        -40,
+        85
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Operating temperature: -40°C to +85°C'"
+    },
+    "timing_range": {
+      "value": "to 2099, leap-year compensation valid to 2100",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Timing Range: To 2099 (with leap year compensation)'"
+    },
+    "backup_cell": {
+      "value": "rechargeable cell sealed inside the SD2405AL package",
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf",
+      "where": "'extremely accurate I2c real-time clock(RTC) with crystal compensation, inner chargeable battery'; pin 2 TEST is a 'Testing pin for Voltage of Inner battery'; the chip switches 'between the primary power supply and battery automatically'",
+      "why_it_matters": "Nothing to buy and nothing to fit — and nothing to replace when it is worn out. The schematic image shows no external cell, holder or VBAT pad on the board."
+    },
+    "backup_life_years": {
+      "value": "5~8",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Even there is no external power, it can still work for 5~8 years, 1uA ultra-low power consumption' — the vendor's claim, as written",
+      "why_it_matters": "Whether the module outlives its cell: a rechargeable cell's cycle life and whether it is recharged from VDD were NOT read (see cell_recharged_from_vdd)."
+    },
+    "timekeeping_battery_current_ua": {
+      "value": 1,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Low-power:typical 1uA (inner battery, Ta=25°C)'; the datasheet says the same"
+    },
+    "cell_recharged_from_vdd": {
+      "value": null,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf",
+      "where": "the datasheet calls the cell 'chargeable' but the charging section was not read",
+      "why_it_matters": "If it charges from VDD, the module recovers from every power cut by itself; if not, the 5-8 years is the cell's whole life."
+    },
+    "module_has_i2c_pullups": {
+      "value": true,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+      "where": "text layer: R1 10K, R2 10K from VCC; the image shows R1 on SCL and R2 on SDA",
+      "why_it_matters": "The FireBeetle 2 ESP32-S3 V1.2+ has no I2C pull-ups of its own, so these are the bus's pull-ups unless another module brings its own."
+    },
+    "i2c_pullup_ohms": {
+      "value": 10000,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+      "where": "R1, R2 = 10K (text layer)"
+    },
+    "int_pullup_on_module": {
+      "value": false,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+      "where": "on the schematic image the chip's INT (pin 11) goes straight to J1 pin 1 with no resistor",
+      "why_it_matters": "If INT is open-drain (not read), the host must pull it up itself."
+    },
+    "gravity_socket_pin_order": {
+      "value": [
+        "SDA",
+        "SCL",
+        "GND",
+        "VCC"
+      ],
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+      "where": "P1 pins 1-4 on the text layer: SDA, SCL, GND, VCC; the wiki's pinout says the same for the 'Gravity Interface'"
+    },
+    "pad_1_position": {
+      "value": "INT is the bottom pad of the 5-pad column mid-board; SDA the top",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf",
+      "where": "silkscreen on the drawing image reads SDA SCL GND VCC INT top to bottom, and the schematic image numbers J1 5..1 in that direction; no pad-1 marker is drawn",
+      "why_it_matters": "The generator numbers the row from pad 1; reversed, SDA lands on INT's pad."
+    },
+    "mounting_holes": {
+      "value": "2, on the right edge, 15 mm apart",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf",
+      "where": "the drawing image dimensions the pair's spacing as 15 (mm); diameter and inset are not dimensioned",
+      "why_it_matters": "What a host board or enclosure boss lines up with."
+    },
+    "weight_g": {
+      "value": 6,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-1600.html",
+      "where": "'Weight: 6g'"
+    }
+  },
+  "host_requirements": [
+    "Feed VCC from the logic rail: the module's 10k pull-ups return to it, so it sets the bus's high level. At 3.3 V run the bus at 100 kHz — DFRobot promise 400 kHz only at 4.5-5.5 V.",
+    "Add no I2C pull-ups; the module brings 10k on each line.",
+    "INT (5-pin header only) has no pull-up on the module; give it one on the host if the chip's INT is open-drain.",
+    "Nothing to fit and nothing to replace: the cell is inside the chip. Plan for the whole module to be the wear part."
+  ],
+  "sourcing": [
+    {
+      "seller": "DFRobot store",
+      "url": "https://www.dfrobot.com/product-1600.html",
+      "price": "USD 8.60 (8.30 for 2+, 8.00 for 5+, 7.50 for 10+)",
+      "price_czk": null,
+      "stock": "not stated on the page; ships with a Gravity 4-pin cable and an XH2.54 5-pin header",
+      "checked": "2026-09-29"
+    }
+  ],
+  "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. Search results also named CPC Farnell (cpc.farnell.com/dfrobot/dfr0469/gravity-i2c-sd2405-rtc-module/dp/SC15102), Opencircuit NL (opencircuit.shop/product/gravity-i2c-sd2405-rtc-module) and Little Bird AU; none was fetched.",
+  "attachments": {
+    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf": "dfr0469-sd2405al-rtc/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf": "dfr0469-sd2405al-rtc/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf": "dfr0469-sd2405al-rtc/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf"
+  }
+}

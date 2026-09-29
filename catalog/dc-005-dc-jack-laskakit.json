@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "id": "dc-005-dc-jack-laskakit",
+  "name": "DC-005 5.5/2.1 mm DC power jack, PCB mount (LaskaKit LA217012)",
+  "kind": "connector",
+  "//": "The generic DC-005 right-angle PCB jack as LaskaKit sells it, product code LA217012. The page names 'LaskaKit_cz' as the manufacturer, which means no maker; there is no datasheet, only a dimension drawing image (DC-005-dim.jpg) and photos. The listing states 'Max. zatížení: 30VDC 1A', 'Contact resistance: <=0.03Ω', 'Isolation: >=100MΩ', 5.5 mm outer / 2.1 mm inner. Read 2026-09-29 while researching the irrigation controller's 12 V inlet; LaskaKit was first in the seller order and this was its only PCB-mount jack.",
+  "//why_not": "Its own listing rates it 30 VDC 1 A - half the irrigation board's load.",
+  "vendor": null,
+  "sku": "LA217012",
+  "also_known_as": [
+    "DC-005",
+    "DC005",
+    "barrel jack",
+    "DC jack",
+    "napájecí konektor do PCB",
+    "5.5/2.1 mm jack"
+  ],
+  "sources": [
+    "https://www.laskakit.cz/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+    "https://www.laskakit.cz/en/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+    "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg",
+    "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/shop/big/1607_napajeci-konektor-dc-005-5-5-2-1mm-do-pcb.jpg"
+  ],
+  "needs": [],
+  "power": [],
+  "unused_pins": [],
+  "pin_order": [],
+  "//pin_order": "Left empty on purpose. The dimension drawing labels the three pads 3, 4 and 2 - two 3.5 x 0.8 mm slots in a row and one 3.0 x 0.8 mm slot 4.8 mm behind them - and its schematic table could not be read well enough to say which pad is the centre pin. Nothing here says which pad carries the supply; a person with the part and a meter decides.",
+  "footprint": null,
+  "footprint_placeholder": true,
+  "footprint_note": "No footprinter string. From the seller's drawing (read by eye): outline 13.5 mm along the plug axis in the PCB layout, 9.0 across; pads 3 and 4 as 3.5 x 0.8 mm slots at 7.5 and 11.0 mm from the front edge line, pad 2 as a 3.0 x 0.8 mm slot 4.8 mm behind that row; the same three-slot shape as the Same Sky PJ-002A family, whose KiCad generic footprint may or may not fit - not compared.",
+  "body_mm": {
+    "width": 9.0,
+    "height": 14.2,
+    "verified": false,
+    "source": "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg",
+    "why_it_matters": "Read off the seller's drawing: 9.0 across, 14.2 along the plug axis including the front lip, 11.0 tall, Ø6.4 opening, barrel axis 6.5 mm above the board. Every placement is arranged around it and nobody has measured one."
+  },
+  "host_requirements": [
+    "Do not put more than 1 A through it: the seller's own limit, and the reason it was passed over for a 2 A rail.",
+    "Nothing enforces polarity; reverse-polarity protection after it."
+  ],
+  "facts": {
+    "max_load_current_a": {
+      "value": 1.0,
+      "verified": true,
+      "source": "https://www.laskakit.cz/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+      "note": "Listing: 'Max. zatižení:30VDC 1A' (Czech page), 'Max. load: 30VDC 1A' (English page). A seller's statement, not a maker's.",
+      "why_it_matters": "The one number the part was passed over on."
+    },
+    "max_load_voltage_vdc": {
+      "value": 30,
+      "verified": true,
+      "source": "https://www.laskakit.cz/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+      "note": "Same line of the listing."
+    },
+    "contact_resistance_ohm_max": {
+      "value": 0.03,
+      "verified": true,
+      "source": "https://www.laskakit.cz/en/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+      "note": "Listing: 'Contact resistance:<=0.03Ω'."
+    },
+    "insulation_resistance_mohm_min": {
+      "value": 100,
+      "verified": true,
+      "source": "https://www.laskakit.cz/en/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+      "note": "Listing: 'Isolation: >=100MΩ'."
+    },
+    "plug_od_mm": {
+      "value": 5.5,
+      "verified": true,
+      "source": "https://www.laskakit.cz/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+      "note": "'5,5/2,1mm' in the product name; the listing says outer 5.5 mm, inner 2.1 mm."
+    },
+    "plug_id_mm": {
+      "value": 2.1,
+      "verified": true,
+      "source": "https://www.laskakit.cz/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/"
+    },
+    "jack_opening_mm": {
+      "value": 6.4,
+      "verified": false,
+      "source": "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg",
+      "why_it_matters": "Read off the drawing (Ø6.4); the enclosure hole."
+    },
+    "barrel_axis_height_mm": {
+      "value": 6.5,
+      "verified": false,
+      "source": "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg",
+      "why_it_matters": "Read off the drawing; where the enclosure hole is centred."
+    },
+    "rear_pad_setback_mm": {
+      "value": 4.8,
+      "verified": false,
+      "source": "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg",
+      "why_it_matters": "Read off the drawing's PCB layout; where the third slot goes relative to the row of two."
+    }
+  },
+  "sourcing": [
+    {
+      "seller": "laskakit",
+      "url": "https://www.laskakit.cz/napajeci-konektor-dc-005-5-5-2-1mm-do-pcb/",
+      "price_czk": 4,
+      "checked": "2026-09-29",
+      "note": "'4 Kč' s DPH, '3,30 Kč bez DPH'; 'Skladem (368 ks)'. The English page shows EUR 0.16 / 0.13. Warranty 2 years, weight 0.001 kg."
+    }
+  ],
+  "attachments": {
+    "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg": "dc-005-dc-jack-laskakit/DC-005-dim.jpg",
+    "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/shop/big/1607_napajeci-konektor-dc-005-5-5-2-1mm-do-pcb.jpg": "dc-005-dc-jack-laskakit/1607_napajeci-konektor-dc-005-5-5-2-1mm-do-pcb.jpg"
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "schema": 1,
+  "id": "dfr0998-sd3031-rtc",
+  "name": "DFRobot DFR0998 Fermion: SD3031 precision RTC breakout (I2C real time clock, CR1220 backup)",
+  "kind": "rtc",
+  "//": "Catalog record written by /spark:research on 2026-09-29 — read, not chosen. Filled ONLY from what was actually read: DFRobot's wiki and product page, and the schematic PDF the wiki links (rendered and read as an image; it has no text layer). A null is a fact nobody has recorded. verified: true = the vendor's own text at the cited URL; read off an image, inferred or computed = false with why_it_matters.",
+  "//why_not": "Cheapest of DFRobot's RTCs ($4.90) and the only one with 4.7 k pull-ups, but it is 3.3 V only and rated -10 to +70 °C — too narrow for an unheated garden box, when the DS3231-family boards cost a few dollars more and are rated to -40 °C.",
+  "vendor": "dfrobot",
+  "sku": "DFR0998",
+  "also_known_as": [
+    "DFR0998",
+    "Fermion: SD3031 RTC Module",
+    "Fermion: SD3031 Precision RTC Module for Arduino (Breakout)",
+    "SD3031 Precise RTC",
+    "real time clock",
+    "sd3031 rtc i2c"
+  ],
+  "//variant": "True of the DFR0998 at schematic V1.0 dated 2022-10-31 (the PDF is titled '[DFR0998][M027.00775](V1.0.0)'). Same 22.5 x 21 mm outline and seven-pad row as the DS3231-family Fermion boards, but pad 6 is NC here where they have RST, the chip is Wave's SD3031 at address 0x32 instead of 0x68, and the pull-ups differ.",
+  "variant": "DFRobot DFR0998, schematic V1.0 (2022-10-31)",
+  "sources": [
+    "https://wiki.dfrobot.com/dfr0998/",
+    "https://www.dfrobot.com/product-2656.html",
+    "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf"
+  ],
+  "//sources": "The wiki links no dimension drawing and no datasheet for this board — only the schematic and the library. The library https://github.com/DFRobot/DFRobot_SD3031 is linked from the wiki and was NOT opened.",
+  "needs": [
+    {
+      "signal": "SDA",
+      "pin": "SDA",
+      "direction": "bidirectional",
+      "bus": "i2c",
+      "note": "Pulled to the module's VCC by R2 4.7k on the module (schematic image)."
+    },
+    {
+      "signal": "SCL",
+      "pin": "SCL",
+      "direction": "in",
+      "bus": "i2c",
+      "note": "Pulled to the module's VCC by R1 4.7k on the module (schematic image)."
+    },
+    {
+      "signal": "RTC_INT",
+      "pin": "INT",
+      "direction": "out",
+      "needs": [
+        "wake"
+      ],
+      "optional": true,
+      "note": "'Active-low interrupt or 1Hz square wave output' (wiki). Pulled to VCC by R3 10k on the module (schematic image)."
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "note": "'Supply Voltage: 3.3V' — DFRobot give a single value, not a range. The pull-ups return to this pin, so it also sets the bus's high level."
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
+  ],
+  "unused_pins": [
+    {
+      "pin": "NC",
+      "note": "Pad 6 is 'NC' on the wiki table and on the schematic's P1 — the position the DS3231-family Fermion boards use for RST."
+    },
+    {
+      "pin": "32K",
+      "printed": "32K",
+      "note": "'32.768KHz pulse output' (wiki); the schematic image shows it pulled to VCC by R4 10k from the chip's F32K pin."
+    }
+  ],
+  "//pin_order": "Seven pads, numbered 1..7 on the wiki's table and on the schematic's P1: VCC GND SCL SDA INT NC 32K. Which physical end is pad 1 is not known — there is no dimension drawing and nothing was measured.",
+  "pin_order": [
+    "VCC",
+    "GND",
+    "SCL",
+    "SDA",
+    "INT",
+    "NC",
+    "32K"
+  ],
+  "footprint": "pinrow7",
+  "body_mm": {
+    "width": 22.5,
+    "height": 21.0,
+    "verified": true,
+    "source": "https://wiki.dfrobot.com/dfr0998/",
+    "where": "'Dimension: 22.5×21mm/0.89×0.83\"' — vendor text; no drawing is published, so hole and header positions are unknown",
+    "why_it_matters": "every placement is arranged around it"
+  },
+  "facts": {
+    "i2c_address": {
+      "value": "0x32",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "Specification: 'I2C Address: 0x32' (the wiki prints it as '0×32')"
+    },
+    "supply_v": {
+      "value": 3.3,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "'Supply Voltage: 3.3V' — a single value, not a range",
+      "why_it_matters": "Not a 5 V part; fine for the FireBeetle's 3.3 V logic and nothing else."
+    },
+    "timekeeping_accuracy_ppm": {
+      "value": 3.8,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "'Timing Accuracy: ±3.8ppm @ 25℃' — at 25 °C only; no figure over temperature is given"
+    },
+    "operating_temperature_c": {
+      "value": [
+        -10,
+        70
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "'Operating Temperature: -10℃ to +70℃'",
+      "why_it_matters": "The reason it was passed over: a garden box in a Czech winter goes below -10 °C."
+    },
+    "backup_cell": {
+      "value": "CR1220",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "product page: CR1220 coin cell, not rechargeable, not included ('does not come with batteries')"
+    },
+    "timekeeping_battery_current_ua": {
+      "value": 1.8,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "'1.8µA when powered by button cell battery'"
+    },
+    "sram_bytes": {
+      "value": 70,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "'SRAM: 70 Byte (0x2C-0x71)'"
+    },
+    "timing_year_range": {
+      "value": [
+        2000,
+        2099
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2656.html",
+      "where": "'Timing Year Range: 2000 - 2099'"
+    },
+    "module_has_i2c_pullups": {
+      "value": true,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf",
+      "where": "read off the schematic IMAGE (the PDF has no text layer): R1 4.7k SCL to VCC, R2 4.7k SDA to VCC",
+      "why_it_matters": "The FireBeetle 2 ESP32-S3 V1.2+ has no I2C pull-ups of its own, so whether the module brings them decides whether the bus has any."
+    },
+    "i2c_pullup_ohms": {
+      "value": 4700,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf",
+      "where": "R1, R2 = 4.7k on the schematic image",
+      "why_it_matters": "4.7k is the usual value and supports 400 kHz with more bus capacitance than the DS3231-family boards' 10k; it also sinks 0.7 mA per line when low."
+    },
+    "int_pullup_ohms": {
+      "value": 10000,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf",
+      "where": "R3 10k, INT to VCC, on the schematic image",
+      "why_it_matters": "What an interrupt or wake input sees; no host pull-up is needed."
+    },
+    "cell_holder_on_board": {
+      "value": true,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf",
+      "where": "BT1 on VBAT on the schematic image, and the product page names the CR1220; no photo or drawing was read",
+      "why_it_matters": "The 'own backup cell' is this holder plus a cell you buy."
+    },
+    "cell_charged_by_module": {
+      "value": false,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf",
+      "where": "on the schematic image VBAT connects to BT1, C1 100nF and chip pin 6 only — no diode or resistor from VCC",
+      "why_it_matters": "Fit a primary CR1220, as the product page says; a rechargeable cell would not be charged."
+    }
+  },
+  "host_requirements": [
+    "Feed VCC with 3.3 V only — DFRobot state a single supply value — and from the logic rail, since the module's pull-ups return to VCC.",
+    "Add no I2C pull-ups; the module brings 4.7k on each line.",
+    "Not for an installation that sees below -10 °C or above +70 °C."
+  ],
+  "sourcing": [
+    {
+      "seller": "DFRobot store",
+      "url": "https://www.dfrobot.com/product-2656.html",
+      "price": "USD 4.90",
+      "price_czk": null,
+      "stock": "not stated on the page; ships without the CR1220",
+      "checked": "2026-09-29"
+    }
+  ],
+  "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. No EU or Czech listing was looked for.",
+  "attachments": {
+    "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf": "dfr0998-sd3031-rtc/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf"
+  }
+}

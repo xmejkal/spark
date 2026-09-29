@@ -1,0 +1,308 @@
+{
+  "schema": 1,
+  "id": "dfr0819-ds3231sn-rtc",
+  "name": "DFRobot DFR0819 Fermion: DS3231 precise RTC breakout (I2C real time clock, CR1220 backup)",
+  "kind": "rtc",
+  "//": "Catalog record written by /spark:research on 2026-09-29 — read, not chosen. Filled ONLY from what was actually read: DFRobot's wiki (both slugs), product page, the schematic PDF the wiki links (rendered and read as an image — it has no text layer), the DS3231 datasheet copy DFRobot host (grepped for the rows cited), the DFRobot_DS323X library README, and the seller pages named under sourcing. A null is a fact nobody has recorded. verified: true = the vendor's own text at the cited URL; read off an image, inferred or computed = false with why_it_matters.",
+  "//why_not": "Same outline, pad order, CR1220 and 10k I2C pull-ups as the chosen DFR0641 with a better ±3.5 ppm DS3231SN, passed over for price ($10.90 against $6.90) and thinner documentation — no text layer in its schematic PDF and a dimension-drawing link that serves a broken-image placeholder; it is the one actually in stock at EU shops (Robot Italy €13.03), so it is the swap if the DFR0641 cannot be bought.",
+  "vendor": "dfrobot",
+  "sku": "DFR0819",
+  "also_known_as": [
+    "DFR0819",
+    "DF-DFR0819",
+    "DFR0819/B",
+    "Fermion: DS3231 Precise RTC (Breakout)",
+    "Fermion: DS3231 Precise RTC Module",
+    "DS3231 Precise RTC Breakout Board",
+    "real time clock",
+    "ds3231 rtc i2c"
+  ],
+  "//variant": "True of the DFR0819 at schematic V1.0 dated 2021-04-13 (the PDF is titled '[DFR0819][M027.00618](V1.0)' and was generated 2024-01-05). The chip on the schematic image is a DS3231SN# — the -40 to +85 °C industrial variant per the datasheet's ordering table, which is what settles the temperature range DFRobot's two pages disagree on. Same 22.5 x 21 mm outline and VCC·GND·SCL·SDA·INT·RST·32K row as the DFR0641 and DFR0821; unlike the DFR0641 its INT and 32K pull-ups are 10k, not 100k.",
+  "variant": "DFRobot DFR0819, schematic V1.0 (2021-04-13)",
+  "sources": [
+    "https://wiki.dfrobot.com/Fermion_DS3231_Precise_RTC_Breakout_SKU_DFR0819",
+    "https://wiki.dfrobot.com/dfr0819/",
+    "https://www.dfrobot.com/product-2313.html",
+    "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf",
+    "https://github.com/DFRobot/DFRobot_DS323X"
+  ],
+  "//sources": "NO DIMENSION DRAWING EXISTS FOR THIS BOARD ONLINE as of 2026-09-29: the wiki lists none, and the URL that follows the siblings' pattern (https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_dimension_V1.0.pdf) answers 200 with a 324 x 200 PNG that is a broken-image placeholder. It is deliberately not cited, so --fetch does not keep a placeholder as a drawing. The 'datasheet' DFRobot host is Maxim's DS3231 datasheet, 19-5170 Rev 10, 3/15 (20 pages), read only for the rows cited below. The wiki also names a 'DS323X Library' without linking it; the README at github.com/DFRobot/DFRobot_DS323X says it covers DFR0641/DFR0819/DFR0821.",
+  "needs": [
+    {
+      "signal": "SDA",
+      "pin": "SDA",
+      "direction": "bidirectional",
+      "bus": "i2c",
+      "note": "Pulled to the module's VCC by R4 10k on the module (schematic image). The wiki's pinout table labels SDA 'I2C Clock line' and SCL 'I2C Data line' — the two descriptions are swapped on both wiki slugs; the schematic and the product page are unambiguous."
+    },
+    {
+      "signal": "SCL",
+      "pin": "SCL",
+      "direction": "in",
+      "bus": "i2c",
+      "note": "Pulled to the module's VCC by R3 10k on the module (schematic image)."
+    },
+    {
+      "signal": "RTC_INT",
+      "pin": "INT",
+      "direction": "out",
+      "needs": [
+        "wake"
+      ],
+      "optional": true,
+      "note": "'Interrupt in low level or 1Hz square wave output' (wiki). Pulled to VCC by R2 10k on the module (schematic image) — ten times stiffer than the DFR0641's 100k."
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "note": "'Power Supply Voltage: 3.3V-5.5V'. The module's I2C pull-ups return to this pin, so it sets the bus's high level — feed it from the logic rail on a 3.3 V host. Decoupled on the module by C4 100nF (schematic image)."
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
+  ],
+  "unused_pins": [
+    {
+      "pin": "RST",
+      "note": "'Reset calibration pin' (wiki). On the schematic image it runs straight from the chip's RST pin to the pad with nothing else on the module. The DS3231 datasheet copy was not read for this pin; check it there for the pull-up rule before wiring anything to it."
+    },
+    {
+      "pin": "32K",
+      "printed": "32K",
+      "note": "'32.768KHz Pulse Output' (wiki); net '32kHz' on the schematic, pulled to VCC by R1 10k (schematic image)."
+    }
+  ],
+  "//pin_order": "Seven pads numbered 1..7 on the wiki's table (text) and on the schematic's P1 'Header 7': VCC GND SCL SDA INT RST 32K. Which physical end is pad 1 is NOT known — no drawing exists and nothing was measured; the siblings put VCC at the top of a column on the right-hand edge, which is a guess here, not a fact.",
+  "pin_order": [
+    "VCC",
+    "GND",
+    "SCL",
+    "SDA",
+    "INT",
+    "RST",
+    "32K"
+  ],
+  "footprint": "pinrow7",
+  "//footprint": "The host carries the mating seven-pad 2.54 mm row; the shipping list includes a '2.54-7P Black Single Row Connector x1'.",
+  "body_mm": {
+    "width": 22.5,
+    "height": 21.0,
+    "verified": true,
+    "source": "https://www.dfrobot.com/product-2313.html",
+    "where": "'Product Size: 22.5*21mm / 0.89*0.83 inch'; both wiki slugs say 22.5×21mm",
+    "note": "Outline only. Hole positions, header position, PCB thickness and the cell holder's side are unknown for this board — no drawing is published (see //sources).",
+    "why_it_matters": "every placement is arranged around it"
+  },
+  "facts": {
+    "i2c_address": {
+      "value": "0x68",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2313.html",
+      "where": "Specification: 'I2C Address: 0x68'; the wiki says the same",
+      "why_it_matters": "Fixed in silicon for the DS3231 family — one per bus."
+    },
+    "chip_variant": {
+      "value": "DS3231SN#",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "where": "U1 on the schematic IMAGE reads 'DS3231SN#'; the datasheet's ordering table (text) gives DS3231S# 0 to +70 °C and DS3231SN# -40 to +85 °C",
+      "why_it_matters": "Decides the cold rating: DFRobot's product page says -40 to +85 °C and their newer wiki page says -20 to +60 °C. The SN# on the drawing supports the product page, but nobody has read the marking on a real board."
+    },
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.5
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2313.html",
+      "where": "'Power Supply Voltage: 3.3V-5.5V'; the wiki says the same. The datasheet rates the die 2.3-5.5 V."
+    },
+    "timekeeping_accuracy_ppm": {
+      "value": 3.5,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2313.html",
+      "where": "'Timing Accuracy: ±3.5ppm (±0.3024 seconds/day)'; the wiki gives the same over -40 to +85 °C",
+      "why_it_matters": "Better than the chosen DFR0641's ±5 ppm; about 9 s a month unsynced."
+    },
+    "operating_temperature_c": {
+      "value": [
+        -40,
+        85
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2313.html",
+      "where": "'Working Temperature: -40℃ ~ +85℃'. DFRobot's newer wiki slug (wiki.dfrobot.com/dfr0819/) says '-20℃ ~ +60℃' for the same SKU; the older slug's accuracy line says -40 to +85; the datasheet's DS3231SN# is -40 to +85.",
+      "why_it_matters": "The vendor's own pages disagree by 20 °C at the cold end. The product page and the chip variant on the schematic say -40; if the board is bought for an outdoor box, ask DFRobot which is true."
+    },
+    "timing_range": {
+      "value": [
+        1970,
+        2100
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2313.html",
+      "where": "'Timing Range: 1970 ~ 2100'"
+    },
+    "backup_cell": {
+      "value": "CR1220",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2313.html",
+      "where": "'The button cell battery model that goes with the module is CR1220' — and 'this RTC module does not come with batteries anymore' (air-cargo rule)"
+    },
+    "cell_holder_on_board": {
+      "value": true,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "where": "BT1 on the VBAT net on the schematic image; the product page names the cell it takes and says one used to ship in it. TME's listing title (search result, page not fetched) says 'Size: CR1220'.",
+      "why_it_matters": "The 'own backup cell' is this holder plus a cell you buy. Which side of the board it is on is unknown — no drawing — and that decides whether the module can lie flat on a host."
+    },
+    "cell_charged_by_module": {
+      "value": false,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "where": "on the schematic image VBAT connects to BT1, C1 100nF and the chip's VBAT pin only — no diode or resistor from VCC",
+      "why_it_matters": "Fit a primary CR1220; a rechargeable LIR1220 would never be charged."
+    },
+    "module_has_i2c_pullups": {
+      "value": true,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "where": "read off the schematic IMAGE (no text layer): R3 10K SCL to VCC, R4 10K SDA to VCC",
+      "why_it_matters": "The FireBeetle 2 ESP32-S3 V1.2+ has no I2C pull-ups of its own, so whether the module brings them decides whether the bus has any."
+    },
+    "i2c_pullup_ohms": {
+      "value": 10000,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "where": "R3, R4 = 10K on the schematic image",
+      "why_it_matters": "Same value as the DFR0641, so the same limit: at 10k alone a 400 kHz bus tolerates only a few tens of pF; a cable means 100 kHz or a parallel pull-up."
+    },
+    "int_pullup_ohms": {
+      "value": 10000,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "where": "R2 10K, INT to VCC, on the schematic image",
+      "why_it_matters": "What an interrupt or wake input sees. NOT the DFR0641's 100k — a note about one board's INT does not transfer to the other."
+    },
+    "pullup_32khz_ohms": {
+      "value": 10000,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "where": "R1 10K, 32kHz to VCC, on the schematic image",
+      "why_it_matters": "Unused by the irrigation design; noted because it differs from the DFR0641's 100k."
+    },
+    "vbat_range_v": {
+      "value": [
+        2.3,
+        5.5
+      ],
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf",
+      "where": "Recommended DC Operating Conditions: VBAT 2.3 min, 3.0 typ, 5.5 max (DS3231 datasheet 19-5170 Rev 10)"
+    },
+    "power_fail_voltage_v": {
+      "value": 2.575,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf",
+      "where": "VPF 2.45 min, 2.575 typ, 2.70 max",
+      "why_it_matters": "Below it the chip runs from the cell; a 3.3 V rail sagging under a solenoid's inrush spends cell life."
+    },
+    "timekeeping_battery_current_ua": {
+      "value": 1.0,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf",
+      "where": "IBATT: 1.0 typ, 3.5 max uA at VBAT = 5.5 V, SCL = SDA = 0 V or VBAT (Note 5). The 3.63 V row was not read; the library README says 'as low as 2uA when powered by batteries'.",
+      "why_it_matters": "Sets the cell's life: a 35 mAh CR1220 at 1 uA is about 4 years of unpowered timekeeping, at the 3.5 uA maximum about 1.1 — arithmetic, not a measurement."
+    },
+    "standby_supply_current_ua_max": {
+      "value": 110,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf",
+      "where": "ICCS: 110 uA max at VCC = 3.63 V, 170 at 5.5 V — I2C bus inactive, 32kHz output on, SQW off (Note 5)",
+      "why_it_matters": "What it costs the 3.3 V rail at rest; the active figure at 3.63 V was not read (300 uA max at 5.5 V was)."
+    },
+    "library": {
+      "value": "DFRobot_DS323X v1.0.1 (2024-12-16)",
+      "verified": true,
+      "source": "https://github.com/DFRobot/DFRobot_DS323X",
+      "where": "README: 'SKU: DFR0641/DFR0819/DFR0821'; boards table lists FireBeetle-ESP32; 'The current comsumption of the module is as low as 2uA when powered by batteries'"
+    }
+  },
+  "host_requirements": [
+    "Feed VCC from the 3.3 V logic rail, never the 5 V one: the module's 10k pull-ups tie SDA and SCL to its VCC, so VCC is the bus's high level.",
+    "Add no I2C pull-ups for this module; it brings 10k on each line (read off the schematic image). Count what every other module on the bus adds — they parallel — and set the bus speed to the result.",
+    "Fit a primary CR1220; the module charges nothing.",
+    "Where the cell holder sits, and therefore whether the module can lie flat on a host, is unknown — there is no drawing. Look at the part before designing a socket or standoffs for it.",
+    "Leave RST and 32K open unless the DS3231 datasheet has been read for them; both are brought straight to pads.",
+    "The vendor's own pages disagree on the cold rating (-40 or -20 °C); the chip on the drawing is the -40 °C variant. Settle it before an outdoor install."
+  ],
+  "sourcing": [
+    {
+      "seller": "DFRobot store",
+      "url": "https://www.dfrobot.com/product-2313.html",
+      "price": "USD 10.90",
+      "price_czk": null,
+      "stock": "not stated on the page; ships without the CR1220",
+      "checked": "2026-09-29"
+    },
+    {
+      "seller": "Robot Italy",
+      "url": "https://robot-italy.com/products/dfr0819-fermion-ds3231-precise-rtc-breakout",
+      "price": "EUR 13.03",
+      "price_czk": null,
+      "stock": "'in magazzino' (in stock); listed as SKU DFR0819/B",
+      "checked": "2026-09-29"
+    },
+    {
+      "seller": "Opencircuit (NL)",
+      "url": "https://opencircuit.shop/product/fermion-ds3231-precise-rtc-breakout",
+      "price": "EUR 17.50 (a discounted EUR 14.50 also shown)",
+      "price_czk": null,
+      "stock": "'In external warehouse, delivered in 5 to 7 days'; shipping from EUR 3.50 (NL), free from EUR 100",
+      "checked": "2026-09-29"
+    },
+    {
+      "seller": "DigiKey",
+      "url": "https://www.digikey.com/en/products/detail/dfrobot/DFR0819/14824969",
+      "price": "USD 13.71",
+      "price_czk": null,
+      "stock": "0 in stock, status 'Active', 'unable to accept backorders at this time'; DigiKey part 1738-DFR0819-ND",
+      "checked": "2026-09-29"
+    },
+    {
+      "seller": "TME",
+      "url": "https://www.tme.com/us/en-us/details/df-dfr0819/rtc-modules/dfrobot/dfr0819/",
+      "price": null,
+      "price_czk": null,
+      "stock": "NOT FETCHED — TME answers 403 to scripts (tme.eu/cz and tme.com both tried for the DFR0641). Known from the search-result title only: 'Module robotics: RTC | DS3231; I2C; 22.5x21mm; Size: CR1220; DF-DFR0819'. TME ships to Czechia; open it in a browser for the CZK price.",
+      "checked": "2026-09-29"
+    },
+    {
+      "seller": "Farnell UK",
+      "url": "https://uk.farnell.com/dfrobot/dfr0819/ds3231-precise-rtc-module-arduino/dp/3879678",
+      "price": null,
+      "price_czk": null,
+      "stock": "NOT FETCHED — Farnell timed out / answered 403 to every fetch during this research; order code 3879678 from the search result.",
+      "checked": "2026-09-29"
+    },
+    {
+      "seller": "Botland.cz",
+      "url": "https://botland.cz/hledat?s=DFR0819",
+      "price": null,
+      "price_czk": null,
+      "stock": "search returns 'Nalezené produkty: 0' — Botland stocks no DFRobot RTC (a search for 'DS3231' finds only an Adafruit 5188 and a Waveshare Pico module)",
+      "checked": "2026-09-29"
+    }
+  ],
+  "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked} — entries marked NOT FETCHED are kept because the PO asked for the TME/Farnell URLs; their price and stock are unread. No Czech shop (laskakit, dratek, rpishop, hwkitchen, gme) turned up in a search for the SKU.",
+  "attachments": {
+    "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf": "dfr0819-ds3231sn-rtc/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf": "dfr0819-ds3231sn-rtc/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf"
+  }
+}

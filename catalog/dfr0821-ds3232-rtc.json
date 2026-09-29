@@ -1,0 +1,274 @@
+{
+  "schema": 1,
+  "id": "dfr0821-ds3232-rtc",
+  "name": "DFRobot DFR0821 Fermion: DS3232 precise RTC breakout (I2C real time clock with 236 B battery-backed SRAM, CR1220 backup)",
+  "kind": "rtc",
+  "//": "Catalog record written by /spark:research on 2026-09-29 — read, not chosen. Filled ONLY from what was actually read: DFRobot's wiki and product page, the schematic PDF (text layer plus a rendered image), the dimension drawing (rendered image; its PDF has no text layer), the DS3232 datasheet copy DFRobot host (grepped for the rows cited) and the DFRobot_DS323X library README. A null is a fact nobody has recorded. verified: true = the vendor's own text at the cited URL; read off an image, inferred or computed = false with why_it_matters.",
+  "//why_not": "The DFR0819 with 236 bytes of battery-backed SRAM for $12.00; nothing in the irrigation brief needs the SRAM, and it shares the DFR0819's price gap against the chosen DFR0641.",
+  "vendor": "dfrobot",
+  "sku": "DFR0821",
+  "also_known_as": [
+    "DFR0821",
+    "Fermion: DS3232 Precise RTC (Breakout)",
+    "Fermion: DS3232 Precise RTC Module",
+    "DS3232 Precise RTC Breakout Board",
+    "real time clock",
+    "ds3232 rtc i2c"
+  ],
+  "//variant": "True of the DFR0821 at PCB V1.0 — the drawing's silkscreen reads 'DS3232 Precise Real Time Clock V1.0', its table 'DFR0821[V1.0]' dated 20210413, and the schematic is V1.0 dated 2021-04-13. The chip on the schematic image is a DS3232SN# (industrial, -40 to +85 °C per the datasheet). Same 22.5 x 21 mm outline, hole pair and VCC·GND·SCL·SDA·INT·RST·32K row as the DFR0641 and DFR0819; like the DFR0819 its INT and 32K pull-ups are 10k, not the DFR0641's 100k.",
+  "variant": "DFRobot DFR0821, PCB V1.0 (schematic V1.0, 2021-04-13)",
+  "sources": [
+    "https://wiki.dfrobot.com/dfr0821/",
+    "https://www.dfrobot.com/product-2304.html",
+    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf",
+    "https://github.com/DFRobot/DFRobot_DS323X"
+  ],
+  "//sources": "The 'datasheet' DFRobot host is Maxim's DS3232 datasheet, 19-5337 Rev 5, 7/10 (19 pages), read only for the rows cited below. A second wiki slug (wiki.dfrobot.com/Fermion_DS3232_Precise_RTC_SKU_DFR0821) appeared in search results and was not opened.",
+  "needs": [
+    {
+      "signal": "SDA",
+      "pin": "SDA",
+      "direction": "bidirectional",
+      "bus": "i2c",
+      "note": "Pulled to the module's VCC by R4 10K on the module. The wiki's pinout table labels SDA 'I2C Clock line' and SCL 'I2C Data line' — swapped descriptions, as on the DFR0819's wiki; the schematic is unambiguous."
+    },
+    {
+      "signal": "SCL",
+      "pin": "SCL",
+      "direction": "in",
+      "bus": "i2c",
+      "note": "Pulled to the module's VCC by R3 10K on the module."
+    },
+    {
+      "signal": "RTC_INT",
+      "pin": "INT",
+      "direction": "out",
+      "needs": [
+        "wake"
+      ],
+      "optional": true,
+      "note": "'Interrupt in low level or 1Hz square wave output' (wiki). Pulled to VCC by R2 10K on the module."
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "note": "'Power Supply Voltage: 3.3V-5.5V'. The pull-ups return to this pin, so it sets the bus's high level — feed it from the logic rail on a 3.3 V host. Decoupled on the module by C4 100nF."
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
+  ],
+  "unused_pins": [
+    {
+      "pin": "RST",
+      "note": "'Reset calibration pin' (wiki); runs straight from the chip's RST# pin to the pad with nothing else on the module (schematic image). The DS3232 datasheet copy was not read for this pin."
+    },
+    {
+      "pin": "32K",
+      "printed": "32K",
+      "note": "'32.768KHz Pulse Output' (wiki); net '32kHz' on the schematic, pulled to VCC by R1 10K."
+    }
+  ],
+  "//pin_order": "Seven pads numbered 1..7 on the wiki's table (text) and the schematic's P1 'Header 7' (text layer): VCC GND SCL SDA INT RST 32K. The dimension drawing's silkscreen (image) reads the same top to bottom down the right-hand edge, VCC at the top — which physical end is pad 1 is therefore image-read, see pad_1_position.",
+  "pin_order": [
+    "VCC",
+    "GND",
+    "SCL",
+    "SDA",
+    "INT",
+    "RST",
+    "32K"
+  ],
+  "footprint": "pinrow7",
+  "//footprint": "The host carries the mating seven-pad 2.54 mm row; the shipping list includes a '2.54-7P Black Single Row Connector x1'.",
+  "body_mm": {
+    "width": 22.5,
+    "height": 21.0,
+    "verified": true,
+    "source": "https://www.dfrobot.com/product-2304.html",
+    "where": "'Product Size: 22.5*21mm / 0.89*0.83 inch'; the dimension drawing (image) reads 22.50mm x 21.00mm",
+    "note": "Drawing (image, PDF has no text layer): two holes ø2.00 mm on the left edge 15.00 mm apart, the seven-pad row down the right edge, an SO-20 chip and six passives on top, no holder visible on top; PCB Information table: Thickness 1.0mm, Engineer HDJ, Date 20210413, black mask, white silkscreen.",
+    "why_it_matters": "every placement is arranged around it"
+  },
+  "facts": {
+    "i2c_address": {
+      "value": "0x68",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2304.html",
+      "where": "Specification: 'I2C Address: 0x68'; the wiki says the same"
+    },
+    "chip_variant": {
+      "value": "DS3232SN#",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "where": "U1 on the schematic IMAGE reads 'DS3232SN#' (the text layer gives only 'DS3232'); the datasheet lists commercial 0 to +70 °C and industrial -40 to +85 °C variants",
+      "why_it_matters": "Decides the cold rating; DFRobot's product page says -40 to +85 °C, which matches the SN#."
+    },
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.5
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2304.html",
+      "where": "'Power Supply Voltage: 3.3V-5.5V'"
+    },
+    "sram_bytes": {
+      "value": 236,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2304.html",
+      "where": "'SRAM: 236 Byte (0x14~0x1F)'; the datasheet: '236 bytes of battery-backed SRAM'",
+      "why_it_matters": "The one thing this board has that the DFR0819 does not: a few bytes that survive a power cut on the cell — e.g. a watering log's last entry — without a host flash write."
+    },
+    "timekeeping_accuracy_ppm": {
+      "value": 3.5,
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2304.html",
+      "where": "'Timing Accuracy: ±3.5ppm (±0.3024 sec/day)'; the datasheet: ±2ppm from 0 to +40 °C, ±3.5ppm from -40 to +85 °C"
+    },
+    "operating_temperature_c": {
+      "value": [
+        -40,
+        85
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2304.html",
+      "where": "'Working Temperature: -40℃ ~ +85℃'"
+    },
+    "timing_range": {
+      "value": [
+        1970,
+        2100
+      ],
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2304.html",
+      "where": "'Timing Range: 1970 ~ 2100'"
+    },
+    "backup_cell": {
+      "value": "CR1220",
+      "verified": true,
+      "source": "https://www.dfrobot.com/product-2304.html",
+      "where": "'The button cell model that goes with the module is CR1220'; 'does not come with batteries anymore'"
+    },
+    "cell_holder_on_board": {
+      "value": true,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "where": "BT1 on the VBAT net (text layer and image); the product page names the CR1220 it takes",
+      "why_it_matters": "Not visible on the top-side drawing, so it is on the reverse — inferred, as for the DFR0641 — which decides whether the module can lie flat on a host."
+    },
+    "cell_charged_by_module": {
+      "value": false,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "where": "on the schematic image VBAT connects to BT1, C1 100nF and the chip's VBAT pin only — no diode or resistor from VCC",
+      "why_it_matters": "Fit a primary CR1220; a rechargeable LIR1220 would never be charged."
+    },
+    "module_has_i2c_pullups": {
+      "value": true,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "where": "text layer: R3 10K, R4 10K beside VCC and the SCL/SDA lines; the image shows R3 on SCL and R4 on SDA, both to VCC",
+      "why_it_matters": "The FireBeetle 2 ESP32-S3 V1.2+ has no I2C pull-ups of its own, so these are the bus's pull-ups unless another module brings its own."
+    },
+    "i2c_pullup_ohms": {
+      "value": 10000,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "where": "R3, R4 = 10K (text layer)",
+      "why_it_matters": "Same value as the DFR0641, so the same limit: at 10k alone a 400 kHz bus tolerates only a few tens of pF; a cable means 100 kHz or a parallel pull-up."
+    },
+    "int_pullup_ohms": {
+      "value": 10000,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "where": "R1 10K, R2 10K (text layer); the image shows R2 on INT and R1 on 32kHz, both to VCC",
+      "why_it_matters": "What an interrupt or wake input sees; not the DFR0641's 100k."
+    },
+    "pullup_32khz_ohms": {
+      "value": 10000,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "where": "R1 10K (text layer), on the 32kHz net per the image"
+    },
+    "vbat_range_v": {
+      "value": [
+        2.3,
+        5.5
+      ],
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf",
+      "where": "Recommended DC Operating Conditions: VBAT 2.3 min, 3.0 typ, 5.5 max (DS3232 datasheet 19-5337 Rev 5)"
+    },
+    "power_fail_voltage_v": {
+      "value": 2.575,
+      "verified": true,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf",
+      "where": "VPF 2.45 min, 2.575 typ, 2.70 max"
+    },
+    "mounting_holes": {
+      "value": "2 x ø2.00 mm on the left edge, 15.00 mm apart",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
+      "where": "dimensioned on the drawing, but the PDF has no text layer so this is image-read: 'ø 2.00mm X2', '15.00mm'; the inset from the left edge is not dimensioned",
+      "why_it_matters": "What a host board or enclosure boss lines up with; the DFR0641's drawing dimensions the same pair as M2 at 2.5 mm from the edge."
+    },
+    "pad_1_position": {
+      "value": "VCC is the top pad of the column on the right-hand edge",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
+      "where": "silkscreen on the drawing image, VCC GND SCL SDA INT RST 32K top to bottom; no pad-1 marker is drawn",
+      "why_it_matters": "The generator numbers the row from pad 1; reversed, GND lands on VCC's pad."
+    },
+    "pcb_thickness_mm": {
+      "value": 1.0,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
+      "where": "PCB Information table on the drawing image: 'Thickness: 1.0mm'",
+      "why_it_matters": "A socket's grip and standoff arithmetic; 1.0, not the usual 1.6."
+    },
+    "library": {
+      "value": "DFRobot_DS323X v1.0.1 (2024-12-16)",
+      "verified": true,
+      "source": "https://github.com/DFRobot/DFRobot_DS323X",
+      "where": "README: 'SKU: DFR0641/DFR0819/DFR0821'; boards table lists FireBeetle-ESP32"
+    }
+  },
+  "host_requirements": [
+    "Feed VCC from the 3.3 V logic rail, never the 5 V one: the module's 10k pull-ups tie SDA and SCL to its VCC, so VCC is the bus's high level.",
+    "Add no I2C pull-ups for this module; it brings 10k on each line. Count what every other module on the bus adds — they parallel — and set the bus speed to the result.",
+    "Fit a primary CR1220; the module charges nothing. The holder is not on the top side of the drawing, so it is on the reverse (inferred) and the module cannot lie flat on a host without a socket or standoffs.",
+    "Leave RST and 32K open unless the DS3232 datasheet has been read for them; both are brought straight to pads."
+  ],
+  "sourcing": [
+    {
+      "seller": "DFRobot store",
+      "url": "https://www.dfrobot.com/product-2304.html",
+      "price": "USD 12.00",
+      "price_czk": null,
+      "stock": "not stated on the page; ships without the CR1220",
+      "checked": "2026-09-29"
+    },
+    {
+      "seller": "Botland.cz",
+      "url": "https://botland.cz/hledat?s=DFR0821",
+      "price": null,
+      "price_czk": null,
+      "stock": "search returns 'Nalezené produkty: 0'",
+      "checked": "2026-09-29"
+    }
+  ],
+  "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. No other EU or Czech listing was looked for.",
+  "attachments": {
+    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf": "dfr0821-ds3232-rtc/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf": "dfr0821-ds3232-rtc/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf": "dfr0821-ds3232-rtc/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf"
+  }
+}
