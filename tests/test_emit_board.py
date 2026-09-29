@@ -123,6 +123,43 @@ class WhatItAdmitsTest(unittest.TestCase):
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", self.tsx)
 
 
+class TheSilkscreenSurvivesTest(unittest.TestCase):
+    """
+    A part's `pin` is what a selector can parse; `printed` is what is on the module. The emitted
+    file has to show both where they differ, or a person wiring the board reads VIN in the file
+    and IN+ on the part and has no record that they are one pad.
+    """
+
+    @staticmethod
+    def buck():
+        return {"schema": 1, "id": "buck", "name": "buck", "kind": "regulator", "needs": [],
+                "power": [{"pin": "VIN", "printed": "IN+", "rail": "traction", "direction": "in"},
+                          {"pin": "GNDIN", "printed": "IN-", "rail": "ground", "direction": "in"}],
+                "pin_order": ["VIN", "GNDIN"], "footprint": "pinrow2",
+                "body_mm": {"width": 5, "height": 5, "verified": True, "source": "test"}}
+
+    def _emit(self, part):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        placements, width, height = emit_board.place(board, [part])
+        return emit_board.emit(board, [part], [], placements, width, height, {})
+
+    def test_the_wiring_name_is_what_reaches_the_selector(self):
+        tsx = self._emit(self.buck())
+        self.assertIn('pin1: "VIN"', tsx)
+        self.assertNotIn('pin1: "IN+"', tsx)
+
+    def test_the_silkscreen_is_recorded_beside_the_chip(self):
+        tsx = self._emit(self.buck())
+        self.assertIn("VIN is printed IN+", tsx)
+        self.assertIn("GNDIN is printed IN-", tsx)
+
+    def test_a_part_whose_names_match_its_silkscreen_gets_no_note(self):
+        plain = self.buck()
+        for entry in plain["power"]:
+            entry.pop("printed")
+        self.assertNotIn("silkscreen:", self._emit(plain))
+
+
 class PlaceholderFootprintsAreNamedTest(unittest.TestCase):
     """
     The generator is where a placeholder gets the name the netlist will carry, so it is where the

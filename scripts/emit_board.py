@@ -457,6 +457,13 @@ def emit(board, part_list, assignments, placements, width, height, rules=None):
                                for position, pad in enumerate(part.get("pin_order") or [], 1)
                                if pad is not None)
         lines.append("    {/* %s */}" % part["name"])
+        printed = parts_library.printed_names(part)
+        if printed:
+            # The silkscreen, kept where a person wiring the module will read it. `pin` is what
+            # a selector can parse; `printed` is what is actually on the part, and losing the
+            # second to satisfy the first is how an MP1584's IN+ became VIN with no record of it.
+            lines.append("    {/* silkscreen: %s */}" % ", ".join(
+                "%s is printed %s" % (wiring, label) for wiring, label in sorted(printed.items())))
         lines.append('    <chip name="%s" footprint="%s" pcbX={%g} pcbY={%g}'
                      % (name, part["footprint"], *placements[name]))
         lines.append("      pinLabels={{ %s }} />" % pin_labels)

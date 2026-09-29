@@ -45,6 +45,17 @@ REQUIRED_KEYS = ("schema", "id", "name", "kind", "needs")
 #: Each entry in `facts` must answer all three, or it is an opinion with a number attached.
 REQUIRED_FACT_KEYS = ("value", "verified", "source")
 
+#: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
+#: labels showed `IN+`, `OUT-` and `A.B` unresolvable as tscircuit selectors while `V_IN`,
+#: `GND2` and `3V3` resolved. An MP1584 buck's pads are silkscreened IN+ IN- OUT+ OUT-, and a
+#: record using those names produced four "could not find port" errors and a regulator joined
+#: to nothing. The fix at the time renamed the pins and LOST the silkscreen — which is exactly
+#: the failure `physical.pad_aliases` prevents on the board side. Parts had no equivalent.
+#:
+#: So an entry has a `pin` (what selectors use, restricted to this) and optionally `printed`
+#: (what is silkscreened, unrestricted). The generated file shows both where they differ.
+SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
+
 #: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
 #: here rather than keeping its own, because it had its own and the two disagreed: a servo part
 #: declaring `needs: ["pwm"]` validated as a good record and then made the pin assigner refuse
@@ -101,6 +112,17 @@ def load(part_id: str, project: Path = None) -> dict:
 #: and `sod123` is neither. A rule that read those as 23, 603 and 123 pads would contradict every
 #: honest part file it met, which is how a useful check gets switched off.
 PAD_COUNT_FAMILIES = ("pinrow", "headermodule", "jst_ph_", "jst_sh_", "jst_xh_", "dip", "bh_")
+
+
+def printed_names(part):
+    """`{wiring name: silkscreen text}` for every pin whose silkscreen differs from its name."""
+    out = {}
+    for group in ("needs", "power", "unused_pins"):
+        for entry in part.get(group) or []:
+            pin, printed = entry.get("pin"), entry.get("printed")
+            if pin and printed and printed != pin:
+                out[pin] = printed
+    return out
 
 
 def has_placeholder_footprint(part):
@@ -171,6 +193,22 @@ def validate(part: dict, path: Path) -> list:
             if not entry.get("pin"):
                 problems.append("%s[%d] has no pin, so nothing can say where it connects"
                                 % (group, index))
+
+    # The wiring name reaches a tscircuit selector verbatim, so it is restricted to what a
+    # selector can parse. The silkscreen goes in `printed`, where anything is allowed.
+    import re
+    for group in ("needs", "power", "unused_pins"):
+        for index, entry in enumerate(part.get(group) or []):
+            pin = entry.get("pin")
+            if pin and not re.match(SELECTOR_SAFE, str(pin)):
+                problems.append(
+                    "%s[%d] pin %r cannot be a selector — letters, digits and _ only. If that is "
+                    "what the silkscreen says, keep it in `printed` and give `pin` a wiring name"
+                    % (group, index, pin))
+            printed = entry.get("printed")
+            if printed is not None and not isinstance(printed, str):
+                problems.append("%s[%d] printed is %r; it is the silkscreen text, a string"
+                                % (group, index, printed))
 
     # Dimensions are a real schema, not an open fact, because every part has an outline and a
     # generator reads them structurally to decide where things go. They sat OUTSIDE the

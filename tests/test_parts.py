@@ -132,6 +132,34 @@ class TheContractTest(unittest.TestCase):
         self.assertEqual(self._problems(footprint="pinrow5"), [])
         self.assertFalse(parts.has_placeholder_footprint(part(footprint="pinrow5")))
 
+    def test_a_pin_name_a_selector_cannot_parse_is_caught_where_it_is_written(self):
+        """
+        Measured on a probe board: `IN+`, `OUT-` and `A.B` do not resolve as tscircuit selectors;
+        `V_IN`, `GND2` and `3V3` do. An MP1584's pads are silkscreened IN+ IN- OUT+ OUT-, a record
+        using those names produced four "could not find port" errors, and the rename that fixed
+        it LOST the silkscreen — the exact failure `pad_aliases` prevents on the board side.
+        """
+        for bad in ("IN+", "OUT-", "A.B", "V IN"):
+            with self.subTest(pin=bad):
+                problems = self._problems(needs=[{"signal": "S", "pin": bad, "direction": "in"}])
+                self.assertTrue(any("cannot be a selector" in p for p in problems), problems)
+
+    def test_the_names_that_DO_resolve_are_not_refused(self):
+        for good in ("VIN", "GND2", "3V3", "V_IN", "a"):
+            with self.subTest(pin=good):
+                self.assertEqual(self._problems(
+                    needs=[{"signal": "S", "pin": good, "direction": "in"}]), [])
+
+    def test_the_silkscreen_may_say_anything(self):
+        # `printed` is what is on the part. It never reaches a selector, so nothing constrains it.
+        self.assertEqual(self._problems(
+            needs=[{"signal": "S", "pin": "VIN", "printed": "IN+", "direction": "in"}]), [])
+
+    def test_printed_names_are_collected_only_where_they_differ(self):
+        record = part(needs=[{"signal": "S", "pin": "VIN", "printed": "IN+", "direction": "in"}],
+                      power=[{"pin": "GND", "printed": "GND", "rail": "ground", "direction": "in"}])
+        self.assertEqual(parts.printed_names(record), {"VIN": "IN+"})
+
     def test_a_nonsense_direction_is_caught(self):
         problems = self._problems(needs=[{"signal": "S", "pin": "P", "direction": "sideways"}])
         self.assertTrue(any("direction" in p for p in problems))

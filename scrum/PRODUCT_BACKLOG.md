@@ -104,12 +104,14 @@ Refuses, names both files, and writes nothing when it refuses. Four tests, mutat
 ### ~~R3 — A part stating a real requirement breaks the chain~~ [G12] — **DONE `9fcb3c1`**
 One `CAPABILITIES`, owned by `parts.py`; `assign_pins` imports it. `pwm` added, satisfied by every pin unless a board lists `pwm_gpio`. The RC car's servo now declares its real requirement and the board says "needs pwm, and this pin does exactly that and no more". Six tests, two mutations caught.
 
-### R4 — A pin name with `+` or `-` cannot be wired, and nothing warns [G3]
-The MP1584 buck's pads are silkscreened `IN+`/`OUT+`. tscircuit cannot select those, so all four
-power pins errored; renaming to `VIN`/`VOUT` fixed it and lost the silkscreen. Boards solved this
-years ago with `physical.pad_aliases` — **parts have no equivalent**, so the printed name is simply
-discarded.
-**Value proven by:** a part keeping `IN+` as its printed name and wiring correctly.
+### ~~R4 — A pin name with `+` or `-` cannot be wired, and nothing warns~~ [G3] — **DONE**
+Measured on a probe board rather than assumed: `IN+`, `OUT-` and `A.B` do not resolve as
+selectors; `V_IN`, `GND2` and `3V3` do. The contract now refuses a `pin` outside `[A-Za-z0-9_]`
+where the record is written, and an entry may carry `printed` — the silkscreen, unrestricted —
+mirroring `physical.pad_aliases` on the board side. The emitted file records both where they
+differ. The MP1584 keeps `IN+ IN- OUT+ OUT-` as printed names. Four mutations caught.
+
+**Tier 2 is closed.** That was the trigger for the audit.
 
 ### ~~R5 — The generator sizes no trace~~ [G6] — **DONE `dd01824`**
 Sized from `.spark/rules.json` by `copper.py`, the module `check_physics` judges with — so the two
