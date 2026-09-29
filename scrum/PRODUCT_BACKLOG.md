@@ -25,6 +25,7 @@ simulation, a link between two boards, and parts research beyond R11 below.
 
 | # | item | needed by |
 | --- | --- | --- |
+| **P31** | A part record says how it is simulated — Wokwi stand-ins and custom chips compiled to WebAssembly, values set from the scenario | the irrigation chain, which ends `????` at simulation; **ordered by the PO 2026-09-29, night** |
 | **R11** | Research parts and modules, vendor by vendor, and keep what was found | the third cold test, on day one |
 | **P6** | The generated board honours the host requirements it prints | every generated motor board |
 | **P8** | `must_not_float` false-positives on spark's own output | every generated board, at review |
@@ -90,7 +91,7 @@ itself instead of running the document's lines; `/spark:build`'s example output 
 numbers no command produced.
 **Value proven by:** each of those false; `tools/check_commit.py` green.
 
-### P31 — A part record says how it is simulated (proposed 2026-09-29, night; the PO orders)
+### P31 — A part record says how it is simulated (ordered by the PO 2026-09-29, night: "make the Wokwi simulations work, have the WebAssembly made, set the values in the test")
 **Needed by:** the irrigation cold test — its chain ends `????` at simulation because the
 converter has no Wokwi part for any of its seven modules, and the PO asked what the options are.
 A record carries a `simulation` field the converter reads: a Wokwi built-in stand-in with its
@@ -102,6 +103,15 @@ high level, a flyback clamp, an ADC filter) are hand SPICE netlists through ngsp
 item. Not built: a chip generator, a SPICE flow for whole boards.
 **Value proven by:** the irrigation chain reaches `[ok] simulation` with a diagram whose stand-ins
 are named as such, and one scenario opens a valve when a probe's slider crosses its threshold.
+**Slices, each proven on the irrigation chain:** (A) the record contract — `simulation.wokwi`
+with a built-in `part` or a `chip` beside the record, `pins`, `stand_in`; or `simulation.skip`
+with a reason — and every shipped record gets one, the bin's two chips moving beside their
+records; (B) the spine writes the converter's mapping from the design's records, copies the
+chips, compiles them with `wokwi-cli chip compile`, writes `wokwi.toml`; (C) the converter takes
+`--mapping` and `--chips` and prefers them to its hand table; (D) two chips for the irrigation
+modules — a flow meter whose pulse rate is a control, a soil probe whose moisture is a control
+driving an analog voltage; (E) the sim project kept in the project, a firmware stub, one
+scenario, one Wokwi run. The `scripts/` budget rises as needed — the PO allowed it.
 
 ## After v1 — only if a cold test asks for it
 
