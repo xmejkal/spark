@@ -55,6 +55,21 @@ The tree it holds is fine (the gate passed); the message is not. This entry and 
 it are the triage the message described. The PO question stands: **one letter, (a), (b) or (c)**;
 the close audit also recommends (c).
 
+### 2026-09-29, late
+
+**The PO chose (c)** — "alright, lets try it, we can take the irrigation" — and the third cold test
+runs in `~/Development/irrigation` (plan first, diary kept, the plugin used only as documented).
+Four PO rules arrived while it ran, each pulled into the plugin the same evening: plain parts from
+Czech sellers, local first (`sellers` in the brief); modules looked up from a photo
+(`/spark:identify`, three modules from the drawer, the owned DS3231 replacing the RTC being
+researched to buy); **everything research reads is kept, chosen or not** (`catalog/`, `--fetch`,
+`--catalog`, `--promote`, `--need` over the catalog — R11's scope, extended by the PO); and one
+meaning of `verified` (diary I6). Seven researcher agents ran at once; six records validated and
+every cited URL answered (`irrigation d0500ae`); the diary holds I1–I6. The `scripts/` budget rose
+6,000 → 6,100 with its reason beside it (`7ae7fe2` gate: 549 OK, 92 anchors present) — **the PO
+may lower it**. Not yet: the catalog mutation table (waits for the last researcher to stop calling
+`parts.py`), the requirements file, the build, the predictions scored.
+
 ## Definition of Done
 
 Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its

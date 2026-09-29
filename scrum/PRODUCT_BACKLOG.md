@@ -36,16 +36,24 @@ simulation, a link between two boards, and parts research beyond R11 below.
 **Needed by:** the third cold test on its first day, and every design that uses a part the library
 lacks — the RC car wrote three records by hand with unverified facts because nothing looked.
 The unit is the part record the chain already reads: research produces a **draft record** in the
-project's `parts/`, with every fact carrying its source and `verified: false` until a person
-checks it. Vendors in the order the project's brief prefers (`.spark/project.json` → `prefer`;
-default DFRobot, then Seeed). `parts.py --need` says what exists first; `/spark:research` runs the
+project's `parts/`, with every fact carrying its source: `verified: true` is the vendor's own text
+at the cited URL, anything read off an image, inferred or computed is `verified: false` with
+`why_it_matters` (two wordings of this rule sent three researchers back to ask — irrigation diary
+I6). Vendors in the order the project's brief prefers (`.spark/project.json` → `prefer`; default
+DFRobot, then Seeed); plain parts from the brief's `sellers`, local first (PO, 2026-09-29).
+**Everything research reads is kept, chosen or not** (PO, 2026-09-29, late — "we want a good
+database in time"): a `catalog/` in the plugin holds a record per candidate, drafts allowed, the
+datasheet and photo downloaded beside it by `parts.py --fetch`; `--need` searches it after the
+library; `--promote` moves a record into a project to build with, or into the library for the
+next project. `/spark:identify` researches a module the PO owns from its photo. `parts.py --need` says what exists first; `/spark:research` runs the
 `parts-researcher` agent; `parts.py --validate`, `--unverified` and `--sources` check the result —
 the last fetches every cited URL, so a hallucinated source is caught. A pinout read off a wiki
 image is written down as unverified, never invented. Not built: a scraper per vendor, a price
 tracker, automatic pinout verification.
 **Value proven by:** the first part the cold test needs that the library lacks goes through
 `/spark:research` and comes back as a record that validates, cites resolving sources, lists what it
-could not confirm — and the chain builds with it.
+could not confirm — and the chain builds with it. Then: a candidate the researcher passed over is
+in the catalog with its datasheet beside it, and `--need` for the same words finds it next time.
 
 ### P6 — The generated board honours the host requirements it prints
 **Needed by:** every generated board with an L9110S — the file prints "10 k pulldowns on both
