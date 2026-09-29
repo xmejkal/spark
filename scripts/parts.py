@@ -30,6 +30,8 @@ every document quietly assumed.
 import argparse
 import json
 import sys
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 #: Parts ship with the plugin, and a project may keep its own in `parts/`. A project's own wins,
@@ -411,7 +413,7 @@ def unverified(part_ids, project: Path = None) -> list:
     """Every fact nobody has checked, across these parts — the design's real open questions."""
     open_questions = []
     for part_id in part_ids:
-        part = load(part_id, project)
+        part = any_record(part_id, project)
         for name, fact in (part.get("facts") or {}).items():
             if fact.get("verified"):
                 continue
@@ -478,6 +480,14 @@ def record_home(part_id, project=None):
     return None
 
 
+def any_record(part_id, project=None):
+    """The record wherever it lives: validated from a parts/, raw from the catalog (a draft is allowed)."""
+    home = record_home(part_id, project)
+    if home == CATALOG:
+        return _parse(home / (part_id + DEFINITION_SUFFIX)) or {}
+    return load(part_id, project)
+
+
 def fetch_attachments(part_id, project=None, fetch=None):
     """
     Download every cited datasheet or image into `<home>/<id>/` and record each beside its URL
@@ -496,11 +506,11 @@ def fetch_attachments(part_id, project=None, fetch=None):
         payload = (fetch or _download)(url)
         if payload is not None:
             folder.mkdir(parents=True, exist_ok=True)
-            name = bare.rsplit("/", 1)[-1] or "attachment"
+            name = urllib.parse.unquote(bare.rsplit("/", 1)[-1]) or "attachment"
             (folder / name).write_bytes(payload)
             kept[url] = "%s/%s" % (part_id, name)
     record["attachments"] = kept
-    path.write_text(json.dumps(record, indent=2) + "\n")
+    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
     return kept
 
 
@@ -512,7 +522,6 @@ def _parse(path):
 
 
 def _download(url):
-    import urllib.request
     try:
         return urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "spark"}), timeout=30).read()
     except Exception:  # noqa: BLE001 — a source that does not answer is simply not kept
@@ -704,7 +713,7 @@ def main(argv=None):
                     where = "project" if definition_path(part["id"], project).parent != LIBRARY else "library"
                     print(_row(part["id"], part["kind"], "%-9s %s" % (where, part["name"])))
         elif args.show:
-            part = load(args.show, project)
+            part = any_record(args.show, project)
             print(json.dumps(part, indent=2) if args.json else _show(part))
         elif args.signals:
             print(json.dumps({"signals": signals_for(args.signals, project)}, indent=2))
@@ -739,7 +748,7 @@ def main(argv=None):
                 print("parts.py: %s exists; fill it in, do not overwrite it" % target, file=sys.stderr)
                 return EXIT_INVALID
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2) + "\n")
+            target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2, ensure_ascii=False) + "\n")
             print("  wrote %s — every null is a fact to record; `parts.py --validate --project .` says what is missing" % target)
         elif args.fetch:
             kept = fetch_attachments(args.fetch, project)
@@ -760,7 +769,7 @@ def main(argv=None):
                 print(_row(name, "BROKEN", "does not parse, or names no schema/id/name/kind"))
             print("  %d record(s), %d broken" % (len(records), len(broken)))
         elif args.sources:
-            record = load(args.sources, project)
+            record = any_record(args.sources, project)
             answers = sources_resolve(record)
             if args.json:
                 print(json.dumps({"tool": "parts", "part": args.sources,

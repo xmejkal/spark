@@ -34,5 +34,23 @@
   "name": "promotion overwrites",
   "find": "    if target.exists():\n        raise PartError(\"%s exists; a promotion never overwrites\" % target)",
   "replace": "    if False:\n        raise PartError(\"%s exists; a promotion never overwrites\" % target)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a catalog draft is invisible to --sources, --show and --unverified",
+  "find": "    if home == CATALOG:\n        return _parse(home / (part_id + DEFINITION_SUFFIX)) or {}",
+  "replace": "    if False:\n        return {}"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a rewrite turns the record's text into escapes",
+  "find": "    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")",
+  "replace": "    path.write_text(json.dumps(record, indent=2) + \"\\n\")"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the saved name keeps its percent-encoding",
+  "find": "            name = urllib.parse.unquote(bare.rsplit(\"/\", 1)[-1]) or \"attachment\"",
+  "replace": "            name = bare.rsplit(\"/\", 1)[-1] or \"attachment\""
  }
 ]

@@ -17,6 +17,8 @@ without anyone deciding to promote it.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -735,6 +737,32 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                                 "https://v.example/photo.jpg": "x-part/photo.jpg"})
         self.assertEqual((catalog / "x-part" / "x.pdf").read_bytes(), b"payload")
         self.assertEqual(json.loads((catalog / "x-part.json").read_text())["attachments"], kept)
+
+    def test_a_catalog_draft_answers_sources_show_and_unverified_like_any_record(self):
+        import tempfile
+        from unittest import mock
+        catalog = Path(tempfile.mkdtemp())
+        self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"],
+                             facts={"pitch_mm": {"value": 2.0, "verified": False, "why_it_matters": "the socket", "source": None}})
+        answered = lambda record: [(url, True) for url in parts.cited_urls(record)]  # noqa: E731 — no network
+        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "sources_resolve", answered):
+            self.assertEqual(parts.any_record("x-part")["id"], "x-part")
+            self.assertEqual([q["fact"] for q in parts.unverified(["x-part"])], ["pitch_mm"])
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                code = parts.main(["--sources", "x-part"])
+        self.assertEqual((code, "ok" in out.getvalue()), (0, True), out.getvalue())
+
+    def test_fetch_keeps_the_text_as_written_and_decodes_the_saved_name(self):
+        import tempfile
+        from unittest import mock
+        catalog = Path(tempfile.mkdtemp())
+        self._catalog_record(catalog, "x-part", sources=["https://v.example/DFR%20(1).pdf"],
+                             **{"//": "98 Kč — 帝江"})
+        with mock.patch.object(parts, "CATALOG", catalog):
+            kept = parts.fetch_attachments("x-part", fetch=lambda url: b"pdf")
+        self.assertEqual(kept, {"https://v.example/DFR%20(1).pdf": "x-part/DFR (1).pdf"})
+        self.assertTrue((catalog / "x-part" / "DFR (1).pdf").is_file())
+        self.assertIn("98 Kč — 帝江", (catalog / "x-part.json").read_text(), "a rewrite must not turn text into escapes")
 
     def test_promote_moves_a_record_with_its_attachments_and_never_overwrites(self):
         import tempfile
