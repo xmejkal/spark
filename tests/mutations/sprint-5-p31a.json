@@ -34,5 +34,11 @@
   "name": "validate no longer looks at simulation",
   "find": "    problems.extend(simulation_problems(part, path))",
   "replace": "    pass"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a control id a scenario cannot name passes",
+  "find": "        problems.extend(control_problems(chip, folder / (chip + \".chip.json\")))",
+  "replace": "        pass"
  }
 ]

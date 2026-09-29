@@ -29,6 +29,7 @@ every document quietly assumed.
 
 import argparse
 import json
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -239,7 +240,23 @@ def simulation_problems(part: dict, path: Path) -> list:
         for suffix in CHIP_SOURCE_SUFFIXES:
             if not (folder / (chip + suffix)).is_file():
                 problems.append("simulation.wokwi.chip %r needs %s beside the record" % (chip, folder / (chip + suffix)))
+        problems.extend(control_problems(chip, folder / (chip + ".chip.json")))
     return problems
+
+
+#: What wokwi-cli itself enforces on a control's id (its own message, 2026-09-29): a scenario's
+#: `set-control` names it, so `flow_lpm` would be a slider nothing can set.
+CONTROL_ID = re.compile(r"[a-zA-Z][a-zA-Z0-9]*")
+
+
+def control_problems(chip, definition):
+    """Controls in a chip's definition that a scenario could not name."""
+    parsed = _parse(definition) if definition.is_file() else None
+    if not isinstance(parsed, dict):
+        return []
+    return ["chip %s control %r: Wokwi requires an id of letters and digits only, starting with a letter"
+            % (chip, control.get("id"))
+            for control in parsed.get("controls") or [] if not CONTROL_ID.fullmatch(str(control.get("id")))]
 
 
 def validate(part: dict, path: Path) -> list:

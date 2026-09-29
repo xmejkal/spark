@@ -838,6 +838,18 @@ class ASimulationIsDeclaredTest(unittest.TestCase):
         unused_may_be_absent = {"wokwi": {"part": "wokwi-led", "pins": {"OUT": "A", "GND": "C", "VCC": None}, "stand_in": "s"}}
         self.assertEqual(self._problems(unused_may_be_absent)[0], [], "NC is unused and need not be placed")
 
+    def test_a_control_id_is_what_a_scenario_can_name(self):
+        # wokwi-cli's own check: /controls/0/id must match ^[a-zA-Z][a-zA-Z0-9]*$ — `flow_lpm` was refused.
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        folder = root / "x-part" / "chip"; folder.mkdir(parents=True)
+        (folder / "probe.chip.c").write_text("// c")
+        (folder / "probe.chip.json").write_text(json.dumps({"pins": ["SIG"], "controls": [{"id": "flow_lpm"}, {"id": "flowLpm"}]}))
+        chip = {"wokwi": {"chip": "probe", "pins": {"OUT": "SIG", "GND": "GND", "VCC": "VCC"}}}
+        problems = self._problems(chip, root)[0]
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("'flow_lpm'", problems[0])
+
     def test_a_chip_must_exist_beside_the_record(self):
         import tempfile
         root = Path(tempfile.mkdtemp())
