@@ -48,8 +48,8 @@ import copper  # noqa: E402
 #: time (audit A7).
 from check_footprints import package_of  # noqa: E402
 
-EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
-OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
 #: the formula this file judges them with. Two copies is how a board passes its own tool and

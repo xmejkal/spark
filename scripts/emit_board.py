@@ -40,7 +40,7 @@ import copper  # noqa: E402
 import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
 
-EXIT_OK, EXIT_COULD_NOT_RUN = 0, 2
+from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: Layout constants. Ordinal, not designed — they exist to produce something that does not
 #: overlap, so the checks have a board to run on.

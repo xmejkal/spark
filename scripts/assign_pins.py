@@ -43,7 +43,7 @@ sys.path.insert(0, str(SCRIPTS))
 import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
 
-EXIT_OK, EXIT_IMPOSSIBLE, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_IMPOSSIBLE  # noqa: E402
 
 #: What a signal can ask a pin for, from the contract that validates parts. Anything else in
 #: `needs` is refused rather than ignored, because a typo'd requirement silently dropped produces

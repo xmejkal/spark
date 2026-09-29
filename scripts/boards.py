@@ -107,11 +107,23 @@ CONSOLE_UART = "console_uart"
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
 GPIO_MIN, GPIO_MAX = 0, 63
 
-EXIT_OK, EXIT_INVALID = 0, 1
+from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
 
 
 class BoardError(Exception):
     """A board definition that cannot be used, with the reason a person needs to fix it."""
+
+
+def walk_up(start: Path):
+    """
+    `start` and every directory above it, nearest first — the one upward walk (audit B17).
+
+    Walks the path as given: a caller that wants it resolved resolves it first (`project_root`
+    does). Resolving here turned `/var/…` into `/private/var/…` under `find_toolchain`, whose
+    callers compare the path it returns.
+    """
+    start = Path(start)
+    return [start, *start.parents]
 
 
 def project_root(start: Path = None) -> Path:
@@ -120,7 +132,7 @@ def project_root(start: Path = None) -> Path:
     `.spark/`. Explicit beats clever, so `--project` overrides it.
     """
     here = (start or Path.cwd()).resolve()
-    for directory in [here, *here.parents]:
+    for directory in walk_up(here):
         if (directory / PROJECT_BOARDS_DIR / SELECTION_NAME).is_file() \
                 or (directory / SPARK_DIR).is_dir():
             return directory

@@ -54,9 +54,10 @@ sys.path.insert(0, str(SCRIPTS))
 
 import design  # noqa: E402
 
-EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
-OK, PROBLEMS, COULD_NOT_RUN, SKIPPED = "ok", "problems", "could-not-run", "skipped"
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
+SKIPPED = "skipped"   # check_all's own fourth word: not asked for, which is not could-not-run
 
 
 class Check:

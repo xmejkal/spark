@@ -37,7 +37,7 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 from design import CIRCUIT_PATHS  # noqa: E402
 
-EXIT_OK, EXIT_NOTHING_TO_DO, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
 
 #: Where a built netlist usually is, so the rails can be named from the design rather than typed.
 

@@ -47,7 +47,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-EXIT_OK, EXIT_ESCAPED, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
 
 CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
 
@@ -160,8 +160,8 @@ def main(argv=None):
     code = verdict(results, restored)
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,
-                          "status": {EXIT_OK: "ok", EXIT_ESCAPED: "escaped",
-                                     EXIT_COULD_NOT_RUN: "could-not-run"}[code],
+                          "status": {EXIT_OK: OK, EXIT_ESCAPED: "escaped",
+                                     EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code],
                           "mutations": results}, indent=2))
     else:
         sys.stdout.write(render(results, restored, code))

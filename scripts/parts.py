@@ -66,7 +66,7 @@ SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
 
-EXIT_OK, EXIT_INVALID = 0, 1
+from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
 
 
 class PartError(Exception):

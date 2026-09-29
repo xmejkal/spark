@@ -40,7 +40,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
 
-EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: `PIN_MOTOR_IA = 14` at the start of a line. Deliberately narrow: an expression, a computed
 #: value or a conditional assignment is not something to guess at, and a check that guesses is

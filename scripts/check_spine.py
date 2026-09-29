@@ -62,9 +62,9 @@ import design  # noqa: E402
 import emit_board  # noqa: E402
 import emit_footprint  # noqa: E402
 
-EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
-OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
 #: The design the chain is proven against when nobody names one. A motor driver, a sensor on a
 #: bus, and the power inlet that supplies the rail the modules only consume — the smallest set
@@ -93,7 +93,7 @@ def find_toolchain(start):
     would look, and in that order because a project's own pinned version beats whatever is
     installed globally.
     """
-    for directory in [start, *start.parents]:
+    for directory in boards.walk_up(start):
         candidate = directory / "node_modules" / ".bin" / "tsci"
         if candidate.is_file():
             return candidate
@@ -169,7 +169,7 @@ CONVERTER_PATHS = (
 
 def find_converter(start):
     """The circuit-to-Wokwi converter, or None."""
-    for directory in [start, *start.parents]:
+    for directory in boards.walk_up(start):
         for relative in CONVERTER_PATHS:
             candidate = (directory / relative).resolve()
             if candidate.is_file():

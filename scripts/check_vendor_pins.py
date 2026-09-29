@@ -32,7 +32,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-EXIT_OK, EXIT_MISMATCH, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_MISMATCH  # noqa: E402
 
 #: Where the vendor's own header lives. Only Espressif's Arduino core is understood today; a
 #: board from another vendor would need its own fetcher, which is why this is a named constant

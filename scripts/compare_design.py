@@ -22,11 +22,7 @@ import json
 import sys
 from pathlib import Path
 
-EXIT_OK = 0
-EXIT_PROBLEMS = 1
-#: Distinct from 1 on purpose: a caller that only looks at the exit code can still tell "the board
-#: is wrong" from "I never got to look at the board".
-EXIT_COULD_NOT_RUN = 2
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
 #: this and the driving pin cannot pull it down. Wide on purpose — this is a sanity band, not a

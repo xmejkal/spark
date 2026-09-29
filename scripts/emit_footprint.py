@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import boards  # noqa: E402
 
-EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: A standard 0.64 mm square header pin, across the diagonal. The pin is sold by its side, so the
 #: diagonal is the dimension people forget, and it is the only one that has to fit.

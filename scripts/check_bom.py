@@ -43,7 +43,7 @@ from pathlib import Path
 
 BOM_NAME = "bom.csv"
 
-EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: Design warnings that stop being warnings once the package is an order.
 FATAL_AT_FAB = ("supplier_footprint_mismatch_warning",)
