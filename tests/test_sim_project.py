@@ -81,6 +81,12 @@ class ChipsAreStagedAndCompiledTest(unittest.TestCase):
         staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim", compiler=fake_compiler(root))
         self.assertEqual((staged, problems), (["probe"], []))
         self.assertTrue((chip / "probe.chip.wasm").is_file(), "the compiled binary travels with the record")
+        # stale: the binary is older than the source it was compiled from
+        (chip / "probe.chip.wasm").write_bytes(b"old")
+        os.utime(chip / "probe.chip.wasm", (1, 1))
+        staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim2", compiler=fake_compiler(root))
+        self.assertEqual((staged, problems), (["probe"], []))
+        self.assertNotEqual((root / "sim2" / "chips" / "probe.chip.wasm").read_bytes(), b"old", "a stale binary is recompiled")
 
     def test_no_compiler_is_could_not_run_with_the_install_hint(self):
         root, chip = a_project()
