@@ -37,6 +37,18 @@ with "read from the photo; confirm on the bench" and how. The part is owned: `"o
 `"photo": "<path>"`, no vendor order, a `sourcing` entry `{"seller": "owned"}`. Several modules
 are sold under one chip's name with different pinouts; be true of the one in the photo (W5).
 
+## Keep everything you read
+
+The PO's rule: whatever you find online is kept, chosen or not — a good database is built in
+time, not in one go. For **every candidate you evaluated**, write a catalog record at
+`/Users/petr/Development/spark/catalog/<id>.json` (the plugin's catalog, shared by every
+project): drafts are allowed there — `schema`, `id`, `name`, `kind`, `vendor`, `sku`, `sources`,
+`sourcing`, the `facts` you actually read, and a `"//why_not"` line for the ones not chosen. In
+the chosen record list them: `"alternatives": [{"id": "<catalog id>", "why_not": "…"}]`. Then run
+`parts.py --fetch <id> --project <project>` for the chosen record and `parts.py --fetch <id>` for
+each catalog one: it downloads every cited datasheet and image beside the record, because links
+rot and a database of links is not a database.
+
 ## Where to buy — local first
 
 The brief names the sellers the person buys from (`.spark/project.json` → `sellers`; for Petr,

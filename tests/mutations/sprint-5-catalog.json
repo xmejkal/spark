@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "the catalog is no longer searched",
+  "find": "    return [dict(record, id=part_id) for part_id, record in catalog_records()[0].items()\n            if _matches(words, part_id, record)]",
+  "replace": "    return []"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a broken catalog record is passed off as a record",
+  "find": "        if isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS):",
+  "replace": "        if isinstance(record, dict):"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a fetched attachment is not recorded",
+  "find": "            kept[url] = \"%s/%s\" % (part_id, name)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a page is kept as if it were a datasheet",
+  "find": "        if not bare.lower().endswith(KEEPABLE) or url in kept:",
+  "replace": "        if url in kept:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "promotion leaves the attachments behind",
+  "find": "    if (home / part_id).is_dir():\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)",
+  "replace": "    if False:\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "promotion overwrites",
+  "find": "    if target.exists():\n        raise PartError(\"%s exists; a promotion never overwrites\" % target)",
+  "replace": "    if False:\n        raise PartError(\"%s exists; a promotion never overwrites\" % target)"
+ }
+]

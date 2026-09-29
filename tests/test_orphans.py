@@ -22,7 +22,9 @@ LIBRARIES = {"copper", "outcomes", "design"}
 
 #: The line budget for the product's scripts. A change that would exceed it deletes something
 #: first; raising the number is a decision, made here, with a reason beside it.
-SCRIPTS_LINE_BUDGET = 6_000    # 5,731 after the cut of 2026-09-29, with room for the research capability
+SCRIPTS_LINE_BUDGET = 6_100    # 5,731 after the cut of 2026-09-29; 6,020 after the catalog (PO's keep-everything
+                               # rule, 2026-09-29) once 15 lines of duplicated CLI printing were cut and nothing
+                               # dead was found — every function in scripts/ is referenced. The PO may lower it.
 
 
 def routes():

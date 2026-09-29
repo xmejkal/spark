@@ -443,6 +443,107 @@ def vendor_order(project=None):
     return DEFAULT_VENDOR_ORDER
 
 
+#: Everything research has ever read, chosen or not, datasheet and photo saved beside it (PO,
+#: 2026-09-29: "even if we end up not using that part, keep it — we want a good database in
+#: time"). A `parts/` record must pass the contract; a catalog record only has to say what it is.
+CATALOG = Path(__file__).resolve().parent.parent / "catalog"
+CATALOG_KEYS = ("schema", "id", "name", "kind")
+#: What `--fetch` keeps beside a record: the sources worth having when the link rots.
+KEEPABLE = (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".svg")
+
+
+def catalog_records():
+    """Every catalog record that parses and says what it is, by id; the rest are named as broken."""
+    records, broken = {}, []
+    for path in sorted(CATALOG.glob("*" + DEFINITION_SUFFIX)):
+        record = _parse(path)
+        if isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS):
+            records[path.stem] = record
+        else:
+            broken.append(path.name)
+    return records, broken
+
+
+def catalog_matches(words):
+    """The catalog records matching every word, the way `need` matches — researched before, unbuilt."""
+    return [dict(record, id=part_id) for part_id, record in catalog_records()[0].items()
+            if _matches(words, part_id, record)]
+
+
+def record_home(part_id, project=None):
+    """Where a record lives — a parts/ on the search path, or the catalog — or None."""
+    for directory in search_path(project) + [CATALOG]:
+        if (directory / (part_id + DEFINITION_SUFFIX)).is_file():
+            return directory
+    return None
+
+
+def fetch_attachments(part_id, project=None, fetch=None):
+    """
+    Download every cited datasheet or image into `<home>/<id>/` and record each beside its URL
+    in the record's `attachments`. `fetch(url) -> bytes or None` is a parameter for the tests.
+    """
+    home = record_home(part_id, project)
+    if home is None:
+        raise PartError("no record called %r to fetch for" % part_id)
+    path, folder = home / (part_id + DEFINITION_SUFFIX), home / part_id
+    record = json.loads(path.read_text())
+    kept = dict(record.get("attachments") or {})
+    for url in cited_urls(record):
+        bare = url.split("?")[0]
+        if not bare.lower().endswith(KEEPABLE) or url in kept:
+            continue
+        payload = (fetch or _download)(url)
+        if payload is not None:
+            folder.mkdir(parents=True, exist_ok=True)
+            name = bare.rsplit("/", 1)[-1] or "attachment"
+            (folder / name).write_bytes(payload)
+            kept[url] = "%s/%s" % (part_id, name)
+    record["attachments"] = kept
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    return kept
+
+
+def _parse(path):
+    try:
+        return json.loads(path.read_text())
+    except ValueError:
+        return None
+
+
+def _download(url):
+    import urllib.request
+    try:
+        return urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "spark"}), timeout=30).read()
+    except Exception:  # noqa: BLE001 — a source that does not answer is simply not kept
+        return None
+
+
+def promote(part_id, project, to=None):
+    """
+    Move a record one step along its life: catalog -> the project's parts/ (to build with; it must
+    then pass the contract), or the project's parts/ -> the plugin's library (for every later
+    project). Attachments and photo travel with it; nothing is ever overwritten. Returns the path.
+    """
+    import shutil
+    home = record_home(part_id, project)
+    if home is None:
+        raise PartError("no record called %r to promote" % part_id)
+    to = Path(to) if to else (Path(project) / "parts" if home == CATALOG else LIBRARY)
+    target = to / (part_id + DEFINITION_SUFFIX)
+    if target.exists():
+        raise PartError("%s exists; a promotion never overwrites" % target)
+    to.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(home / (part_id + DEFINITION_SUFFIX), target)
+    if (home / part_id).is_dir():
+        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)
+    photo = json.loads(target.read_text()).get("photo")
+    if isinstance(photo, str) and project and (Path(project) / photo).is_file() and not (to / photo).exists():
+        (to / photo).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(Path(project) / photo, to / photo)
+    return target
+
+
 def sellers(project=None):
     """
     Where the person buys, local first, from the project's brief — or nothing, which the
@@ -460,13 +561,18 @@ def sellers(project=None):
     return ()
 
 
+def _matches(words, part_id, record):
+    haystack = " ".join([part_id, record.get("name") or "", record.get("kind") or "",
+                         " ".join(record.get("also_known_as") or [])]).lower()
+    return all(word.lower() in haystack for word in words)
+
+
 def need(words, project=None):
     """
     The records matching every word — in id, name, kind or an alias — so what exists is known
     before anything is researched. Backlog R11: the RC car wrote three records by hand because
     nothing looked, and "nothing looked" was the first gap its diary named (G1).
     """
-    wanted = [word.lower() for word in words]
     found, drafts = [], []
     for part_id in available(project):
         try:
@@ -475,12 +581,10 @@ def need(words, project=None):
             # A record still being filled in — research writes a skeleton first — must not stop
             # the search for everyone: `--need` died on a researcher's draft while five ran (I3).
             # Named as a draft, matched by its id alone, never returned as usable.
-            if all(word in part_id.lower() for word in wanted):
+            if _matches(words, part_id, {}):
                 drafts.append(part_id)
             continue
-        haystack = " ".join([part_id, record.get("name") or "", record.get("kind") or "",
-                             " ".join(record.get("also_known_as") or [])]).lower()
-        if all(word in haystack for word in wanted):
+        if _matches(words, part_id, record):
             found.append(dict(record, id=part_id))
     return found, drafts
 
@@ -490,13 +594,14 @@ def skeleton(part_id, kind, vendor=None):
     A record with every field present and nothing guessed: what research fills in.
 
     Nulls are facts nobody has recorded, and `validate` refuses the file until they are — the
-    same rule `init` applies to the rules file. Every fact research adds is `verified: false`
-    until a person checks it against the source it names.
+    same rule `init` applies to the rules file. A fact is `verified: true` only when its value
+    is the vendor's own text at the cited URL; read off an image, scaled, inferred or computed,
+    it is `verified: false` with `why_it_matters` (the rule `commands/research.md` states).
     """
     return {
         "schema": 1, "id": part_id, "name": None, "kind": kind,
-        "//": ("Written by /spark:research. A null is a fact nobody has recorded; a fact is "
-               "unverified until a person checks it against the source it names."),
+        "//": ("Written by /spark:research. A null is a fact nobody has recorded. verified: true = the "
+               "vendor's own text at the cited URL; read off an image, inferred or computed = false."),
         "vendor": vendor, "sku": None, "sources": [],
         "needs": [], "power": [], "unused_pins": [], "pin_order": [], "footprint": None,
         "body_mm": {"width": None, "height": None, "verified": False, "source": None,
@@ -556,6 +661,10 @@ def _show(part):
     return "\n".join(lines)
 
 
+def _row(part_id, kind, rest):
+    return "  %-28s %-14s %s" % (part_id, kind, rest)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="parts.py", description="What a part needs, and what is known about it.")
@@ -571,11 +680,11 @@ def main(argv=None):
                       help="what exists for a need, before researching: words matched in id, name, kind, alias")
     what.add_argument("--skeleton", metavar="PART", help="write a record to fill in, to the project's parts/")
     what.add_argument("--sources", metavar="PART", help="fetch every URL a record cites; a source that does not answer is named")
+    what.add_argument("--fetch", metavar="PART", help="download the datasheets and images a record cites, beside it")
+    what.add_argument("--promote", metavar="PART", help="catalog → the project's parts/, or the project's parts/ → the plugin's library")
+    what.add_argument("--catalog", action="store_true", help="every record research has kept, chosen or not")
     parser.add_argument("--kind", help="with --skeleton: the part's kind (motor-driver, sensor, regulator, …)")
     parser.add_argument("--vendor", help="with --skeleton: who makes it")
-    # Every function in this file already took `project`, and nothing ever passed one — so the
-    # docstring's promise that "a project's own wins" was unreachable from any entry point and
-    # the library was closed at whatever ships with the plugin.
     parser.add_argument("--project", type=Path,
                         help="a project whose own parts/ beats the shipped library")
     parser.add_argument("--json", action="store_true")
@@ -592,10 +701,8 @@ def main(argv=None):
                     for part in listing]}, indent=2))
             else:
                 for part in listing:
-                    where = ("project" if project and definition_path(part["id"], project).parent
-                             != LIBRARY else "library")
-                    print("  %-22s %-16s %-9s %s"
-                          % (part["id"], part["kind"], where, part["name"]))
+                    where = "project" if definition_path(part["id"], project).parent != LIBRARY else "library"
+                    print(_row(part["id"], part["kind"], "%-9s %s" % (where, part["name"])))
         elif args.show:
             part = load(args.show, project)
             print(json.dumps(part, indent=2) if args.json else _show(part))
@@ -603,17 +710,22 @@ def main(argv=None):
             print(json.dumps({"signals": signals_for(args.signals, project)}, indent=2))
         elif args.need:
             found, drafts = need(args.need, project)
+            known = [p for p in catalog_matches(args.need) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
             order = ", ".join(vendor_order(project))
             shops = ", ".join(sellers(project)) or "none named in the brief"
             if args.json:
                 print(json.dumps({"tool": "parts", "need": args.need, "vendor_order": list(vendor_order(project)),
                                   "found": [{"id": p["id"], "kind": p["kind"], "name": p["name"]} for p in found],
-                                  "drafts": drafts}, indent=2))
-            elif found or drafts:
+                                  "drafts": drafts,
+                                  "catalog": [{"id": p["id"], "kind": p["kind"], "name": p["name"]} for p in known]}, indent=2))
+            elif found or drafts or known:
                 for part in found:
-                    print("  %-22s %-16s %s" % (part["id"], part["kind"], part["name"]))
+                    print(_row(part["id"], part["kind"], part["name"]))
                 for part_id in drafts:
-                    print("  %-22s %-16s %s" % (part_id, "(draft)", "does not yet meet the contract — being filled in"))
+                    print(_row(part_id, "(draft)", "does not yet meet the contract — being filled in"))
+                for part in known:
+                    print(_row(part["id"], part["kind"], "%s  [catalog: researched before; `--promote %s --project .` builds with it]"
+                               % (part["name"], part["id"])))
             else:
                 print("  nothing in the library matches %r.\n  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s"
                       % (" ".join(args.need), " ".join(args.need), order, shops))
@@ -629,6 +741,24 @@ def main(argv=None):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2) + "\n")
             print("  wrote %s — every null is a fact to record; `parts.py --validate --project .` says what is missing" % target)
+        elif args.fetch:
+            kept = fetch_attachments(args.fetch, project)
+            for url, local in kept.items():
+                print("  %s  <-  %s" % (local, url))
+            if not kept:
+                print("  %s cites no datasheet or image URL to keep" % args.fetch)
+        elif args.promote:
+            if not project:
+                print("parts.py: --promote needs --project", file=sys.stderr)
+                return EXIT_INVALID
+            print("  promoted to %s" % promote(args.promote, project))
+        elif args.catalog:
+            records, broken = catalog_records()
+            for part_id, record in records.items():
+                print(_row(part_id, record["kind"], record["name"]))
+            for name in broken:
+                print(_row(name, "BROKEN", "does not parse, or names no schema/id/name/kind"))
+            print("  %d record(s), %d broken" % (len(records), len(broken)))
         elif args.sources:
             record = load(args.sources, project)
             answers = sources_resolve(record)
@@ -650,8 +780,7 @@ def main(argv=None):
             else:
                 print("  %d thing(s) nobody has checked:\n" % len(questions))
                 for question in questions:
-                    print("  %s.%s = %s" % (question["part"], question["fact"],
-                                            question["assumed"]))
+                    print("  %s.%s = %s" % (question["part"], question["fact"], question["assumed"]))
                     if question["why_it_matters"]:
                         print("      %s" % question["why_it_matters"])
         else:
@@ -667,8 +796,7 @@ def main(argv=None):
                                   "checked": checked}, indent=2))
             else:
                 for one in checked:
-                    print("  %-22s %s" % (one["part"], "ok" if not one["problems"]
-                                          else "%d problem(s)" % len(one["problems"])))
+                    print("  %-28s %s" % (one["part"], "ok" if not one["problems"] else "%d problem(s)" % len(one["problems"])))
                     for problem in one["problems"]:
                         print("      - %s" % problem)
             return EXIT_INVALID if any(c["problems"] for c in checked) else EXIT_OK

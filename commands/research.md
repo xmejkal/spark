@@ -7,7 +7,10 @@ allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *)
 
 Find a part, from primary sources, and keep what was found. The unit is the part record every
 other command reads — `parts/<id>.json` in the project — with every fact carrying its source and
-`verified: false` until a person checks it. Nothing here is a database of its own.
+saying whether it was read there. `verified: true` means the value is the vendor's own text
+(datasheet, schematic, wiki table) at the cited URL; `verified: false` means it was read off an
+image or a drawing, scaled, inferred or computed, and `why_it_matters` says what rests on it.
+Three researchers in one evening asked which of two contradictory wordings to follow; this is it.
 
 ## 1. What exists already
 
@@ -58,8 +61,16 @@ the record cites and names any that does not answer — a hallucinated source is
 research tells easily. `--unverified` is the list to hand a person: each item, and what depends
 on it.
 
-Then `/spark:build`. The record is the project's; copy it into the plugin's `parts/` once it is
-verified, and the next project finds it with `--need`.
+Then `/spark:build`. The record is the project's; `parts.py --promote <id> --project .` copies it,
+with its attachments and photo, into the plugin's `parts/` once it is verified, and the next
+project finds it with `--need`.
+
+## Everything found is kept
+
+Every candidate the researcher read — chosen or not — becomes a record in the plugin's `catalog/`
+(drafts allowed; `parts.py --catalog` lists them), the chosen record names them as `alternatives`
+with why not, and `parts.py --fetch <id>` downloads the datasheets and images beside each. A later
+`--need` shows a catalog match as such, and `--promote` brings it into a project to build with.
 
 ## What this does not do
 

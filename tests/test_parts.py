@@ -694,5 +694,63 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         answers = parts.sources_resolve(record, fetch=lambda url: url.endswith("/a"))
         self.assertEqual(answers, [("https://wiki.example/a", True), ("https://wiki.example/b", False)])
 
+
+class EverythingFoundIsKeptTest(unittest.TestCase):
+    """The catalog: what research has read, chosen or not, with its datasheets kept beside it."""
+
+    def _catalog_record(self, catalog, part_id, **extra):
+        record = dict(schema=1, id=part_id, name="A candidate", kind="sensor", sources=[], facts={})
+        record.update(extra)
+        (catalog / (part_id + ".json")).write_text(json.dumps(record))
+        return record
+
+    def test_the_catalog_is_searched_like_the_library_and_a_broken_record_is_named(self):
+        import tempfile
+        from unittest import mock
+        catalog = Path(tempfile.mkdtemp())
+        self._catalog_record(catalog, "sen0193-soil-moisture", name="Gravity capacitive soil moisture sensor")
+        self._catalog_record(catalog, "dfr0831-buck-5v", name="Buck converter", kind="power")
+        (catalog / "broken.json").write_text("{not json")
+        with mock.patch.object(parts, "CATALOG", catalog):
+            known = parts.catalog_matches(["Soil", "moisture"])
+            records, broken = parts.catalog_records()
+        self.assertEqual([p["id"] for p in known], ["sen0193-soil-moisture"])
+        self.assertEqual((sorted(records), broken), (["dfr0831-buck-5v", "sen0193-soil-moisture"], ["broken.json"]))
+
+    def test_fetch_keeps_datasheets_and_images_beside_the_record_and_names_them(self):
+        import tempfile
+        from unittest import mock
+        catalog = Path(tempfile.mkdtemp())
+        self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf?v=2", "https://v.example/page.html"],
+                             facts={"w": {"value": 1, "verified": True, "source": "https://v.example/photo.jpg"}})
+        fetched = []
+        def fetch(url):
+            fetched.append(url)
+            return b"payload" if ".pdf" in url or url.endswith(".jpg") else None
+        with mock.patch.object(parts, "CATALOG", catalog):
+            kept = parts.fetch_attachments("x-part", fetch=fetch)
+        self.assertEqual(sorted(fetched), ["https://v.example/photo.jpg", "https://v.example/x.pdf?v=2"],
+                         "only datasheets and images are fetched; a page is not")
+        self.assertEqual(kept, {"https://v.example/x.pdf?v=2": "x-part/x.pdf",
+                                "https://v.example/photo.jpg": "x-part/photo.jpg"})
+        self.assertEqual((catalog / "x-part" / "x.pdf").read_bytes(), b"payload")
+        self.assertEqual(json.loads((catalog / "x-part.json").read_text())["attachments"], kept)
+
+    def test_promote_moves_a_record_with_its_attachments_and_never_overwrites(self):
+        import tempfile
+        from unittest import mock
+        catalog, project, library = (Path(tempfile.mkdtemp()) for _ in range(3))
+        (project / ".spark").mkdir()
+        self._catalog_record(catalog, "x-part")
+        (catalog / "x-part").mkdir()
+        (catalog / "x-part" / "x.pdf").write_bytes(b"pdf")
+        with mock.patch.object(parts, "CATALOG", catalog):
+            self.assertEqual(parts.promote("x-part", project), project / "parts" / "x-part.json")
+            self.assertTrue((project / "parts" / "x-part" / "x.pdf").is_file(), "the attachments travel with it")
+            with self.assertRaises(parts.PartError):
+                parts.promote("x-part", project, to=project / "parts")
+            self.assertEqual(parts.promote("x-part", project, to=library), library / "x-part.json")
+            self.assertTrue((library / "x-part" / "x.pdf").is_file())
+
 if __name__ == "__main__":
     unittest.main()
