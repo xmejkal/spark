@@ -82,6 +82,14 @@ class ScarceLastTest(unittest.TestCase):
         assignments, _ = assign_pins.assign(board(), [{"name": "SENSE", "needs": ["adc"]}])
         self.assertEqual(placed(assignments)["SENSE"], "A0")
 
+    def test_the_reason_does_not_claim_scarcity_while_a_pin_with_the_same_ability_sits_free(self):
+        # I8: the irrigation controller's three probes were each told "spent here because nothing
+        # else was available" with two ADC pins still listed under "still free".
+        two_adc = board(pins={"P0": 0, "A0": 4, "A1": 8}, adc_gpio=[4, 8], wake_capable_gpio=[4, 8])
+        assignments, free = assign_pins.assign(two_adc, [{"name": "SENSE", "needs": ["adc"]}])
+        self.assertIn("A1", free, "a second ADC pin is still free")
+        self.assertNotIn("nothing else", assignments[0]["why"], assignments[0]["why"])
+
 
 class PinsWithAnotherJobTest(unittest.TestCase):
     def test_a_strapping_pin_is_never_assigned(self):

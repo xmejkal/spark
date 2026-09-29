@@ -74,7 +74,10 @@ def net_name_for_rail(rail):
     """
     if not rail:
         return None
-    return KNOWN_RAIL_NETS.get(rail, str(rail).upper())
+    net = KNOWN_RAIL_NETS.get(rail, str(rail).upper())
+    # tscircuit refuses a net name that starts with a digit ("12V"): the irrigation controller's
+    # first build stopped inside the builder on its `12v` rail (irrigation diary I7).
+    return "V" + net if net[0].isdigit() else net
 
 
 def rails_not_established(part_list):

@@ -52,5 +52,11 @@
   "name": "the saved name keeps its percent-encoding",
   "find": "            name = urllib.parse.unquote(bare.rsplit(\"/\", 1)[-1]) or \"attachment\"",
   "replace": "            name = bare.rsplit(\"/\", 1)[-1] or \"attachment\""
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a second source with the same basename overwrites the first",
+  "find": "            if \"%s/%s\" % (part_id, name) in kept.values():  # two DS3231.pdf from two hosts: keep both",
+  "replace": "            if False:"
  }
 ]

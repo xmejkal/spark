@@ -352,6 +352,11 @@ class AnyRailCanBeNamedTest(unittest.TestCase):
         self.assertEqual(emit_board.net_name_for_rail("servo"), "SERVO")
         self.assertEqual(emit_board.net_name_for_rail("traction"), "TRACTION")
 
+    def test_a_rail_named_by_its_voltage_gets_a_net_name_the_builder_accepts(self):
+        # tscircuit: 'Net name "12V" cannot start with a number' — the irrigation build's first stop (I7)
+        self.assertEqual(emit_board.net_name_for_rail("12v"), "V12V")
+        self.assertEqual(emit_board.net_name_for_rail("5v"), "V5V")
+
     def test_the_established_names_are_unchanged(self):
         # Existing designs reference these nets by name; renaming them would be a silent rewire.
         self.assertEqual(emit_board.net_name_for_rail("logic"), "V33")

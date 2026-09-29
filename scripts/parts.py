@@ -507,6 +507,8 @@ def fetch_attachments(part_id, project=None, fetch=None):
         if payload is not None:
             folder.mkdir(parents=True, exist_ok=True)
             name = urllib.parse.unquote(bare.rsplit("/", 1)[-1]) or "attachment"
+            if "%s/%s" % (part_id, name) in kept.values():  # two DS3231.pdf from two hosts: keep both
+                name = "%s-%s" % (urllib.parse.urlsplit(url).hostname, name)
             (folder / name).write_bytes(payload)
             kept[url] = "%s/%s" % (part_id, name)
     record["attachments"] = kept

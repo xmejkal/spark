@@ -338,8 +338,10 @@ def _why(needs, pin):
     if needs:
         spare = sorted(pin["can"] - needs)
         if spare:
-            return ("needs %s; this pin also does %s, which is spent here because nothing else "
-                    "was available" % (", ".join(sorted(needs)), ", ".join(spare)))
+            # "because nothing else was available" was said here while pins with the same ability
+            # sat free below it — a reason a person can disagree with must first be true (I8).
+            return ("needs %s; the cheapest pin that has it, though it also does %s, which is spent here"
+                    % (", ".join(sorted(needs)), ", ".join(spare)))
         return "needs %s, and this pin does exactly that and no more" % ", ".join(sorted(needs))
     shared = [role for role in pin["roles"] if role in CONFLICTING_ROLES]
     if shared:

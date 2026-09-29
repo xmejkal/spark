@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "the reason claims nothing else was available while a pin with the ability sits free",
+  "find": "            return (\"needs %s; the cheapest pin that has it, though it also does %s, which is spent here\"\n                    % (\", \".join(sorted(needs)), \", \".join(spare)))",
+  "replace": "            return (\"needs %s; this pin also does %s, which is spent here because nothing else was available\"\n                    % (\", \".join(sorted(needs)), \", \".join(spare)))"
+ }
+]

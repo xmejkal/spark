@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a rail named 12v is emitted as the net 12V, which the builder refuses",
+  "find": "    return \"V\" + net if net[0].isdigit() else net",
+  "replace": "    return net"
+ }
+]

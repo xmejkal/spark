@@ -631,6 +631,10 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertIn("vl6180x-breakout", [p["id"] for p in parts.need(["rangefinder"])[0]])
         self.assertEqual(parts.need(["unobtainium"]), ([], []))
         self.assertEqual([p["id"] for p in parts.need(["motor", "driver"])[0]], ["l9110s-module"])
+        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor-driver"])[0]],
+                      "the kind alone matches — the name says 'motor driver' without the hyphen")
+        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["hg7881"])[0]],
+                      "an alias alone matches — HG7881 appears nowhere but also_known_as")
 
     def test_a_draft_still_being_filled_in_is_named_and_does_not_stop_the_search(self):
         # I3: `--need` died on a researcher's skeleton while five researchers were running.
@@ -713,11 +717,13 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self._catalog_record(catalog, "sen0193-soil-moisture", name="Gravity capacitive soil moisture sensor")
         self._catalog_record(catalog, "dfr0831-buck-5v", name="Buck converter", kind="power")
         (catalog / "broken.json").write_text("{not json")
+        (catalog / "nameless.json").write_text(json.dumps({"schema": 1, "id": "nameless", "kind": "sensor"}))
         with mock.patch.object(parts, "CATALOG", catalog):
             known = parts.catalog_matches(["Soil", "moisture"])
             records, broken = parts.catalog_records()
         self.assertEqual([p["id"] for p in known], ["sen0193-soil-moisture"])
-        self.assertEqual((sorted(records), broken), (["dfr0831-buck-5v", "sen0193-soil-moisture"], ["broken.json"]))
+        self.assertEqual((sorted(records), broken), (["dfr0831-buck-5v", "sen0193-soil-moisture"], ["broken.json", "nameless.json"]),
+                         "a record that parses but does not say what it is, is broken too")
 
     def test_fetch_keeps_datasheets_and_images_beside_the_record_and_names_them(self):
         import tempfile
@@ -763,6 +769,18 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual(kept, {"https://v.example/DFR%20(1).pdf": "x-part/DFR (1).pdf"})
         self.assertTrue((catalog / "x-part" / "DFR (1).pdf").is_file())
         self.assertIn("98 Kč — 帝江", (catalog / "x-part.json").read_text(), "a rewrite must not turn text into escapes")
+
+    def test_two_sources_with_one_basename_are_both_kept(self):
+        import tempfile
+        from unittest import mock
+        catalog = Path(tempfile.mkdtemp())
+        self._catalog_record(catalog, "x-part", sources=["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
+        with mock.patch.object(parts, "CATALOG", catalog):
+            kept = parts.fetch_attachments("x-part", fetch=lambda url: url.encode())
+        self.assertEqual(kept, {"https://a.example/DS3231.pdf": "x-part/DS3231.pdf",
+                                "https://b.example/DS3231.pdf": "x-part/b.example-DS3231.pdf"})
+        self.assertEqual((catalog / "x-part" / "DS3231.pdf").read_bytes(), b"https://a.example/DS3231.pdf",
+                         "the first copy must not be overwritten by the second")
 
     def test_promote_moves_a_record_with_its_attachments_and_never_overwrites(self):
         import tempfile
