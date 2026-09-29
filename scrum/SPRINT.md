@@ -85,6 +85,20 @@ simulation options are when Wokwi lacks a module; answered in the session and pr
 **P31** — the PO orders it or not. Spark: 555 tests, 100 mutations in 22 tables, every anchor
 present, `85963af` pushed.
 
+**Late night — P31, ordered and done.** The PO: "make the Wokwi simulations work, have the
+WebAssembly made, set the values in the test; you can also increase the limit." Five slices,
+each proven on the irrigation chain: the record contract (`simulation`: stand-in, chip beside the
+record, or skip with a reason), the spine writing the converter's mapping from the records and
+compiling the chips, the converter reading it (bin repo `bf9bf09`, 62 bun tests, its own diagram
+unchanged), two chips (a probe whose moisture is a slider driving a voltage, a flow meter whose
+rate is a slider driving pulses), a flash-image tool and one scenario — **passing**: the slider
+opens a valve and the MCU pin reads high, wets it closed, ten litres a minute counts as ten, the
+clock stand-in answers I2C. Three diagnostic runs went to Wokwi's 5 V ADC reference (diary
+I11), during which a chip-name rule was written on a theory and withdrawn when the next run
+disproved it. The PO's photos of the DS3231's back corrected five of the record's seven
+unverified facts (diary, "the RTC's back"); `identify` now asks for both sides. Budget 6,500
+(the PO's words beside it); spark 574 tests, 113 mutations in 24 tables, every anchor present.
+
 ## Definition of Done
 
 Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its

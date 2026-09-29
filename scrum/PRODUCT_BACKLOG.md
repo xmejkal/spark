@@ -25,7 +25,6 @@ simulation, a link between two boards, and parts research beyond R11 below.
 
 | # | item | needed by |
 | --- | --- | --- |
-| **P31** | A part record says how it is simulated — Wokwi stand-ins and custom chips compiled to WebAssembly, values set from the scenario | the irrigation chain, which ends `????` at simulation; **ordered by the PO 2026-09-29, night** |
 | **R11** | Research parts and modules, vendor by vendor, and keep what was found | the third cold test, on day one |
 | **P6** | The generated board honours the host requirements it prints | every generated motor board |
 | **P8** | `must_not_float` false-positives on spark's own output | every generated board, at review |
@@ -91,7 +90,7 @@ itself instead of running the document's lines; `/spark:build`'s example output 
 numbers no command produced.
 **Value proven by:** each of those false; `tools/check_commit.py` green.
 
-### P31 — A part record says how it is simulated (ordered by the PO 2026-09-29, night: "make the Wokwi simulations work, have the WebAssembly made, set the values in the test")
+### P31 — A part record says how it is simulated — DONE 2026-09-29, late night (ordered that night: "make the Wokwi simulations work, have the WebAssembly made, set the values in the test")
 **Needed by:** the irrigation cold test — its chain ends `????` at simulation because the
 converter has no Wokwi part for any of its seven modules, and the PO asked what the options are.
 A record carries a `simulation` field the converter reads: a Wokwi built-in stand-in with its
@@ -133,6 +132,7 @@ one), P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8
 by the PO).
 
 ## Done — one line each, the hash is the record
+- **P31** — a part record says how it is simulated; the spine builds the Wokwi project from the records, compiles the chips, and one irrigation scenario passes with the probe's and the flow meter's sliders set from the test (`47dbcdc`, `9a8b0e2`, `1710d94`, `dbd3c1c`; irrigation diary, late night; converter `bf9bf09` in the bin repo).
 
 P3 `831f756` · P4 `997b756` · P11 `0c21ef5` · P12 `c4d0582` · P13 `55e7bb8` · P14 `f7674b4` ·
 P15 `f35e7df` · R7 `1f769f8` + P22 `c565778` · R9 `227f5d4` · P20 `c3e2e28` · P21 `7381fed` ·

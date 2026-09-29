@@ -119,9 +119,22 @@ The first keeps the simulation project — `diagram.json`, `wokwi.toml`, the chi
 the second puts MicroPython and the project's own files into one flash image (the interpreter
 comes from micropython.org for the board's chip, the board file names the port); the third runs
 a scenario, whose `set-control` lines are the chips' sliders — a probe's `moisturePct`, a flow
-meter's `flowLpm` — and whose `wait-serial` and `expect-pin` lines are what it asserts. Chips
-compile locally and cost nothing; a scenario run spends Wokwi CI minutes, so run them on purpose.
-Stand-ins are named as such in the records: a pass here is not a bench.
+meter's `flowLpm` — and whose `wait-serial` and `expect-pin` lines are what it asserts:
+
+```yaml
+steps:
+  - wait-serial: "irrigation ready"
+  - set-control: { part-id: soil1, control: moisturePct, value: 20 }
+  - wait-serial: "valve1 open"
+  - expect-pin: { part-id: mcu, pin: 38, value: 1 }
+```
+
+(`control:` and `value:` are the keys wokwi-cli 0.27.1 reads.) Two facts about the simulator that
+a firmware meets here and not on a bench: its ADC is referenced to 5 V whatever the chip, so a
+raw reading must be converted with a 5 V full scale — the flash image's `--config` is the place
+to say so (`{"ADC_REFERENCE_V": 5.0}`); and a chip's control ids are letters and digits only.
+Chips compile locally and cost nothing; a scenario run spends Wokwi CI minutes, so run them on
+purpose. Stand-ins are named as such in the records: a pass here is not a bench.
 
 ## After it builds
 
