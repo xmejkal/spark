@@ -42,6 +42,11 @@ Design = namedtuple("Design", "path project requirements board parts rules")
 #: Where a project keeps the rules its checks and its generator both read.
 RULES_PATH = Path(".spark") / "rules.json"
 
+#: Where a built design's netlist lands, as `tsci build` lays it out: `dist/<name>/circuit.json`,
+#: the single-board convention first. Named once — `check_all` discovers by it and `init_project`
+#: seeds rules from it, and each had its own copy that the other could drift from (audit A6).
+CIRCUIT_PATHS = ("dist/board/circuit.json", "dist/*/circuit.json")
+
 
 class DesignError(Exception):
     """The input cannot be loaded, and this is why. Always a sentence, never a traceback."""

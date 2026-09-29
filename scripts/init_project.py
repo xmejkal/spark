@@ -35,11 +35,11 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+from design import CIRCUIT_PATHS  # noqa: E402
 
 EXIT_OK, EXIT_NOTHING_TO_DO, EXIT_COULD_NOT_RUN = 0, 1, 2
 
 #: Where a built netlist usually is, so the rails can be named from the design rather than typed.
-CIRCUIT_PATHS = ("dist/board/circuit.json", "dist/*/circuit.json")
 
 #: Nets whose name says they are a bus. A weak signal deliberately: it seeds the list, and a
 #: wrong guess here is visible and harmless, unlike a wrong current.

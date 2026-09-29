@@ -52,6 +52,8 @@ SCRIPTS = Path(__file__).resolve().parent
 # were different objects, so an `except` for one could not catch the other. Audit A7.
 sys.path.insert(0, str(SCRIPTS))
 
+import design  # noqa: E402
+
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 
 OK, PROBLEMS, COULD_NOT_RUN, SKIPPED = "ok", "problems", "could-not-run", "skipped"
@@ -303,7 +305,7 @@ CHECKS = [
 #: than a board definition, and it never passed `--design` or `--firmware` at all — so the
 #: flagship check was permanently unasked and the review still called itself complete.
 CONVENTIONS = {
-    "circuit": ["dist/board/circuit.json", "dist/*/circuit.json"],
+    "circuit": list(design.CIRCUIT_PATHS),
     "rules": [".spark/rules.json"],
     "package": ["*-gerbers.zip", "fab/*.zip"],
     "design": ["*.design.json", ".spark/design.json"],

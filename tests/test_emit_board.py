@@ -716,5 +716,111 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
         self.assertIn("parts[0]", err)
 
+
+class EachSectionStandsAloneTest(unittest.TestCase):
+    """
+    `emit()` was one 186-line function with ten sections and 39 branches (sprint audit A5), where
+    a rule fixed in one section stayed wrong in the next. Each section is now a function that can
+    be driven alone. The composed file is covered by the classes above; these are the sections'.
+    """
+
+    BOARD = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def test_the_file_is_the_sections_in_order_and_nothing_else(self):
+        # Every section must be NON-EMPTY here, or the order cannot be seen: the first fixture
+        # had no placeholder, and swapping the stand-in and host-requirement sections left the
+        # output identical — a mutation the tool reported escaped. So one part is a stand-in.
+        board = self.BOARD
+        part_list = [parts.load(part_id) for part_id in PARTS]
+        part_list[1] = dict(part_list[1], footprint_placeholder=True, footprint_note="stand-in")
+        assignments, _ = assign_pins.assign(board, parts.signals_for(PARTS))
+        placements, width, height = emit_board.place(board, part_list)
+        self.assertTrue(emit_board.stand_in_lines(part_list), "the fixture must have a stand-in")
+        self.assertTrue(emit_board.host_requirement_lines(part_list),
+                        "the fixture must have a part with host requirements")
+        sections = (emit_board.header_lines(board, part_list, placements, width, height)
+                    + emit_board.component_lines(part_list, placements)
+                    + emit_board.signal_lines(part_list, assignments)
+                    + emit_board.power_lines(board, part_list, {})
+                    + emit_board.stand_in_lines(part_list)
+                    + emit_board.host_requirement_lines(part_list)
+                    + ["  </board>", ")"])
+        self.assertEqual(emit_board.emit(board, part_list, assignments, placements, width, height),
+                         "\n".join(sections) + "\n")
+
+    def test_a_pad_naming_no_rail_is_said_not_skipped(self):
+        # Was `continue`: the silent drop G2 removed for module pins, kept for the MCU's own.
+        board = dict(self.BOARD, power_pads={"GND1": {"rail": "ground"}, "3V3": {}})
+        text = "\n".join(emit_board.mcu_power_lines(board, {}, set()))
+        self.assertIn("Mcu.3V3 NAMES NO RAIL", text)
+        self.assertIn('from=".Mcu > .GND1" to="net.GND"', text)
+
+    def test_a_board_with_no_power_pads_at_all_is_said(self):
+        board = {key: value for key, value in self.BOARD.items() if key != "power_pads"}
+        self.assertIn("DOES NOT SAY WHICH OF ITS PADS ARE POWER",
+                      "\n".join(emit_board.mcu_power_lines(board, {}, set())))
+
+    def test_the_unjustified_note_names_every_net_nobody_sized(self):
+        self.assertEqual(emit_board.unjustified_lines(set()), [])
+        self.assertIn("net.GND, net.V33", emit_board.unjustified_lines({"V33", "GND"})[0])
+
+    def test_stand_ins_are_listed_only_when_there_are_any(self):
+        real = parts.load("l9110s-module")
+        fake = dict(real, id="x", name="x", footprint_placeholder=True, footprint_note="stands in")
+        self.assertEqual(emit_board.stand_in_lines([real]), [])
+        self.assertIn("X drawn as %s — stands in" % real["footprint"],
+                      "\n".join(emit_board.stand_in_lines([fake])))
+
+    def test_host_requirements_are_carried_per_part(self):
+        part = dict(parts.load("l9110s-module"), host_requirements=["pull both inputs down"])
+        self.assertIn("- %s: pull both inputs down" % part["name"],
+                      "\n".join(emit_board.host_requirement_lines([part])))
+        self.assertEqual(emit_board.host_requirement_lines([dict(part, host_requirements=[])]), [])
+
+
+class OnePowerWalkTest(unittest.TestCase):
+    """
+    The power lists were walked four times, each with its own `net_for` and `continue` (audit
+    A6). One generator now; an entry with no rail is not yielded and is reported by the one rule
+    that says so.
+    """
+
+    PART = {"id": "p", "name": "p", "power": [
+        {"pin": "VCC", "rail": "logic", "direction": "in"},
+        {"pin": "OUT", "rail": "speaker", "direction": "out", "polarity": "+"},
+        {"pin": "NC"}]}
+
+    def test_every_entry_with_a_rail_is_yielded_with_its_net(self):
+        got = [(part["name"], supply["pin"], net)
+               for part, supply, net in emit_board.power_connections([self.PART])]
+        self.assertEqual(got, [("p", "VCC", "V33"), ("p", "OUT", "SPEAKER_P")])
+
+    def test_an_entry_with_no_rail_is_not_yielded_and_is_reported_by_the_one_rule(self):
+        self.assertNotIn("NC", [s["pin"] for _, s, _ in emit_board.power_connections([self.PART])])
+        self.assertEqual(emit_board.power_pins_with_no_rail([self.PART]), ["p.NC"])
+
+    def test_the_placeholder_filter_is_the_one_the_names_come_from(self):
+        real = parts.load("l9110s-module")
+        fake = dict(real, id="x", name="x", footprint_placeholder=True, footprint_note="n")
+        self.assertEqual(emit_board.placeholders([fake, real]), [fake])
+        self.assertEqual(emit_board.placeholder_components([fake, real]), ["X"])
+
+
+class WhatAPartMustRecordTest(unittest.TestCase):
+    # Three helpers the audit found untested (A15); each refusal in `main` rests on one.
+
+    def test_a_part_with_no_footprint_is_named(self):
+        part = {k: v for k, v in parts.load("l9110s-module").items() if k != "footprint"}
+        self.assertEqual(emit_board.parts_without_a_footprint([part]), [part["name"]])
+        self.assertEqual(emit_board.parts_without_a_footprint([parts.load("l9110s-module")]), [])
+
+    def test_a_part_with_no_outline_is_named_and_one_with_is_not(self):
+        with_outline = parts.load("l9110s-module")
+        without = {k: v for k, v in with_outline.items() if k != "body_mm"}
+        self.assertTrue(emit_board.has_an_outline(with_outline))
+        self.assertFalse(emit_board.has_an_outline(without))
+        self.assertEqual(emit_board.parts_without_an_outline([without]), [with_outline["name"]])
+        self.assertEqual(emit_board.parts_without_an_outline([with_outline]), [])
+
 if __name__ == "__main__":
     unittest.main()

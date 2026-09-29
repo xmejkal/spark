@@ -594,5 +594,15 @@ class OneModulePerProcessTest(unittest.TestCase):
     def test_there_is_no_path_loader_left_to_reach_for(self):
         self.assertFalse(hasattr(check_all, "load"))
 
+
+class OneCircuitConventionTest(unittest.TestCase):
+    def test_the_runner_and_the_initialiser_look_in_the_same_places(self):
+        # Two copies of the glob pair, in two files, neither knowing the other existed (audit
+        # A6). G10's fix made both refuse two matches; a third path added to one would not have
+        # reached the other.
+        import init_project
+        self.assertEqual(check_all.CONVENTIONS["circuit"], list(design.CIRCUIT_PATHS))
+        self.assertIs(init_project.CIRCUIT_PATHS, design.CIRCUIT_PATHS)
+
 if __name__ == "__main__":
     unittest.main()

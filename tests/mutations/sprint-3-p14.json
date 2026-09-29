@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the one power walk yields entries with no rail",
+  "find": "            if net:\n                yield part, supply, net",
+  "replace": "            if True:\n                yield part, supply, net"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the placeholder filter inverted",
+  "find": "    return [part for part in part_list if parts_library.has_placeholder_footprint(part)]",
+  "replace": "    return [part for part in part_list if not parts_library.has_placeholder_footprint(part)]"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a rail-less MCU pad silently skipped again",
+  "find": "            lines.append(\"    {/* Mcu.%s NAMES NO RAIL in the board file's power_pads, so it is\" % pad)\n            lines.append(\"        wired to nothing. Add a rail to that entry. */}\")\n            continue",
+  "replace": "            continue"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "two sections swapped in the composition",
+  "find": "             + stand_in_lines(part_list)\n             + host_requirement_lines(part_list)",
+  "replace": "             + host_requirement_lines(part_list)\n             + stand_in_lines(part_list)"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the unjustified note never emitted",
+  "find": "    if not unjustified:\n        return []",
+  "replace": "    if True:\n        return []"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "the contract lets a rail-less pad through",
+  "find": "        if not isinstance(supply, dict) or not supply.get(\"rail\"):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "the multi-board circuit path dropped from the one convention",
+  "find": "CIRCUIT_PATHS = (\"dist/board/circuit.json\", \"dist/*/circuit.json\")",
+  "replace": "CIRCUIT_PATHS = (\"dist/board/circuit.json\",)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "unused_pins dropped from the one pin-list constant",
+  "find": "PIN_LISTS = (\"needs\", \"power\", \"unused_pins\")",
+  "replace": "PIN_LISTS = (\"needs\", \"power\")"
+ }
+]

@@ -338,6 +338,15 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
                         f"physical.{key} is not set: no verified footprint for this board, "
                         f"so it is not ready to be laid out or fabricated")
 
+    # A power pad with no rail would be wired to nothing, and the generator's pad loop skipped
+    # such a pad with `continue` — the silent drop G2 removed for module pins, kept for the
+    # processor's own. Refused here, where the board file is read, so it never reaches a
+    # generator at all (sprint audit A6, item 8).
+    for pad, supply in sorted((board.get("power_pads") or {}).items()):
+        if not isinstance(supply, dict) or not supply.get("rail"):
+            problems.append(f"power_pads.{pad} names no rail, so the microcontroller pad would be "
+                            f"wired to nothing")
+
     return problems
 
 

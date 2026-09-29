@@ -113,11 +113,17 @@ def load(part_id: str, project: Path = None) -> dict:
 #: honest part file it met, which is how a useful check gets switched off.
 PAD_COUNT_FAMILIES = ("pinrow", "headermodule", "jst_ph_", "jst_sh_", "jst_xh_", "dip", "bh_")
 
+#: The three lists in a record that hold pins. Written out three times before 2026-09-29, and
+#: the missing-pin rule was applied to one of them for a week while the other two were read
+#: with `entry["pin"]` — G15. A fourth list added to the schema now has to be added here, and
+#: nowhere else.
+PIN_LISTS = ("needs", "power", "unused_pins")
+
 
 def printed_names(part):
     """`{wiring name: silkscreen text}` for every pin whose silkscreen differs from its name."""
     out = {}
-    for group in ("needs", "power", "unused_pins"):
+    for group in PIN_LISTS:
         for entry in part.get(group) or []:
             pin, printed = entry.get("pin"), entry.get("printed")
             if pin and printed and printed != pin:
@@ -168,9 +174,8 @@ def validate(part: dict, path: Path) -> list:
 
     for index, need in enumerate(part.get("needs") or []):
         where = "needs[%d]" % index
-        for key in ("signal", "pin"):
-            if not need.get(key):
-                problems.append("%s has no %s" % (where, key))
+        if not need.get("signal"):
+            problems.append("%s has no signal" % where)
         if need.get("direction") not in ("in", "out", "bidirectional", None):
             problems.append("%s direction is %r; expected in, out or bidirectional"
                             % (where, need.get("direction")))
@@ -184,11 +189,11 @@ def validate(part: dict, path: Path) -> list:
                             "for. Known: %s"
                             % (where, ", ".join(unknown), ", ".join(CAPABILITIES)))
 
-    # Every list of pins, not just `needs`. Only `needs` entries were checked for a pin, and then
+    # Every list of pins, in one place. Only `needs` entries were checked for a pin, and then
     # `power` and `unused_pins` were read with `entry["pin"]` in four places — so an entry missing
     # one crashed the validator instead of being reported by it. Same defect twice in one file,
     # which is what happens when a rule is written at the use site rather than the contract.
-    for group in ("power", "unused_pins"):
+    for group in PIN_LISTS:
         for index, entry in enumerate(part.get(group) or []):
             if not entry.get("pin"):
                 problems.append("%s[%d] has no pin, so nothing can say where it connects"
@@ -197,7 +202,7 @@ def validate(part: dict, path: Path) -> list:
     # The wiring name reaches a tscircuit selector verbatim, so it is restricted to what a
     # selector can parse. The silkscreen goes in `printed`, where anything is allowed.
     import re
-    for group in ("needs", "power", "unused_pins"):
+    for group in PIN_LISTS:
         for index, entry in enumerate(part.get(group) or []):
             pin = entry.get("pin")
             if pin and not re.match(SELECTOR_SAFE, str(pin)):
@@ -257,7 +262,7 @@ def validate(part: dict, path: Path) -> list:
             # was written to catch: `needs[0] has no pin` was appended, then this line raised
             # KeyError three lines later. Every real part has a pin_order, so any part broken in
             # that way took the whole run down instead of being reported.
-            named = {entry.get("pin") for group in ("needs", "power", "unused_pins")
+            named = {entry.get("pin") for group in PIN_LISTS
                      for entry in part.get(group) or []} - {None}
             for position, pad in enumerate(order, start=1):
                 if pad is not None and pad not in named:

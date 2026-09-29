@@ -154,6 +154,14 @@ class TheContractTest(unittest.TestCase):
     def test_a_good_definition_passes(self):
         self.assertEqual(self._problems(), [])
 
+    def test_a_power_pad_naming_no_rail_is_refused(self):
+        # The generator skipped such a pad with `continue`, wiring the processor's pad to
+        # nothing in silence. Refused here, where the board file is read.
+        problems = self._problems(power_pads={"GND1": {"rail": "ground"}, "3V3": {}})
+        self.assertTrue(any("power_pads.3V3" in p for p in problems), problems)
+        self.assertFalse(any("power_pads" in p for p in
+                             self._problems(power_pads={"GND1": {"rail": "ground"}})))
+
     def test_a_wrong_schema_version_is_refused_rather_than_read_hopefully(self):
         problems = self._problems(schema=99)
         self.assertTrue(any("schema" in p for p in problems))
