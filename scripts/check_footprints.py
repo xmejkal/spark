@@ -441,13 +441,38 @@ def check_what_was_not_examined(circuit):
     return findings
 
 
-def run(circuit):
-    return (check_through_hole_drills(circuit)
-            + check_annular_rings(circuit)
-            + check_vias(circuit)
-            + check_package_holds_the_value(circuit)
-            + check_cross_pluggable_connectors(circuit)
-            + check_what_was_not_examined(circuit))
+def run(circuit, placeholders=()):
+    """
+    Every rule, over every component — except the ones whose geometry is not real.
+
+    `placeholders` names components whose footprint is a stand-in. An XT30 inlet drawn as a JST
+    PH because nobody had drawn the XT30 yet was MEASURED: the JST's annular rings came out at
+    0.225 mm and the tool reported a defect about a part that is not on the board. Worse than
+    noise — it was a real-sounding finding a person would have chased.
+
+    Their findings are not dropped. They become one `could-not-run` per placeholder, because a
+    footprint nobody has drawn is precisely a thing this tool could not examine, and saying so is
+    the difference between "not yet" and "fine".
+    """
+    findings = (check_through_hole_drills(circuit)
+                + check_annular_rings(circuit)
+                + check_vias(circuit)
+                + check_package_holds_the_value(circuit)
+                + check_cross_pluggable_connectors(circuit)
+                + check_what_was_not_examined(circuit))
+    if not placeholders:
+        return findings
+    present = {name for name in placeholders if name in component_names(circuit).values()}
+    kept = [f for f in findings if not any(name in f.subject for name in present)]
+    for name in sorted(present):
+        kept.append(Finding(
+            "placeholder-footprint", name,
+            "its footprint is a stand-in for one nobody has drawn yet, so the geometry here is "
+            "not the part's and was not measured",
+            fix="draw the real footprint (tsci convert a KiCad one, or place it by hand) and "
+                "clear footprint_placeholder in the part file",
+            severity="could-not-run"))
+    return kept
 
 
 def problems_in(findings):

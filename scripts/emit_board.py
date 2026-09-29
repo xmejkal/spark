@@ -288,6 +288,18 @@ def signal_name(part, need):
     return need["signal"]
 
 
+def placeholder_components(part_list):
+    """
+    Components whose footprint is a stand-in, by the name the emitted file gives them.
+
+    Named HERE, with `component_name`, so the checker that later skips them is keyed by exactly
+    the string that reaches the netlist — a second derivation of the name in `check_all` would
+    be one more copy of a rule to drift.
+    """
+    return sorted(component_name(part) for part in part_list
+                  if parts_library.has_placeholder_footprint(part))
+
+
 def duplicate_component_names(part_list):
     """
     Names used more than once, which `tsci build` resolves by keeping one component.
@@ -544,6 +556,15 @@ def emit(board, part_list, assignments, placements, width, height, rules=None):
         lines.append("        nothing here could size them. State `max_current_a` for each in")
         lines.append("        .spark/rules.json and regenerate; `check_physics` judges the")
         lines.append("        result by the same arithmetic that would have set it. */}")
+
+    stand_ins = [(component_name(part), part.get("footprint"), part.get("footprint_note"))
+                 for part in part_list if parts_library.has_placeholder_footprint(part)]
+    if stand_ins:
+        lines += ["", "    {/* FOOTPRINTS THAT ARE PLACEHOLDERS. The netlist is right and the geometry",
+                  "        is not; every check that measures copper is told to skip these:"]
+        for name, footprint, note in stand_ins:
+            lines.append("          %s drawn as %s — %s" % (name, footprint, note))
+        lines.append("     */}")
 
     # Requirements a part states about its host, carried into the file rather than left in a
     # library nobody opens. These are the things a generated board CANNOT do for you.

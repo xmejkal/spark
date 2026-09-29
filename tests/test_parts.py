@@ -110,6 +110,28 @@ class TheContractTest(unittest.TestCase):
         import assign_pins
         self.assertIs(assign_pins.CAPABILITIES, parts.CAPABILITIES)
 
+    def test_a_placeholder_footprint_must_say_what_the_real_one_is(self):
+        """
+        The most expensive field to get wrong was the one field with no way to say "not yet".
+
+        `facts` and `body_mm` carry `verified`; the footprint carried nothing. An XT30 drawn as a
+        JST PH — wrong pitch, wrong hole, stated as a stand-in in a comment nothing reads — looked
+        identical to a footprint generated from a vendor drawing, and `check_footprints` measured
+        the JST's annular rings and reported a defect about a part that is not on the board.
+        """
+        problems = self._problems(footprint="jst_ph_2", footprint_placeholder=True)
+        self.assertTrue(any("footprint_note" in p for p in problems), problems)
+
+    def test_a_placeholder_WITH_a_note_is_a_valid_record(self):
+        self.assertEqual(self._problems(
+            footprint="jst_ph_2", footprint_placeholder=True,
+            footprint_note="stands in for an XT30-PW nobody has drawn"), [])
+
+    def test_a_real_footprint_needs_no_note(self):
+        # Opt-in, so the five shipped records and every honest footprint are untouched.
+        self.assertEqual(self._problems(footprint="pinrow5"), [])
+        self.assertFalse(parts.has_placeholder_footprint(part(footprint="pinrow5")))
+
     def test_a_nonsense_direction_is_caught(self):
         problems = self._problems(needs=[{"signal": "S", "pin": "P", "direction": "sideways"}])
         self.assertTrue(any("direction" in p for p in problems))

@@ -278,6 +278,83 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         self.assertEqual(inputs["circuit"], "given.json")
 
 
+class PlaceholdersReachTheCheckerTest(unittest.TestCase):
+    """
+    Nothing about a part record survives into circuit.json, so the checker cannot learn from the
+    netlist which footprints are stand-ins. `check_all` knows the project, and derives the list
+    with the generator's own functions rather than re-deriving the name.
+    """
+
+    @staticmethod
+    def _project(placeholder):
+        root = Path(tempfile.mkdtemp())
+        (root / "parts").mkdir()
+        record = {"schema": 1, "id": "inlet", "name": "inlet", "kind": "connector", "needs": [],
+                  # jst_ph_2 has TWO pads, and the contract checks pin_order against the
+                  # footprint's pad count. The first version of this fixture named one pad and
+                  # was refused — by the rule written for exactly that mistake.
+                  "power": [{"pin": "VCC", "rail": "logic", "direction": "in"},
+                            {"pin": "GND", "rail": "ground", "direction": "in"}],
+                  "pin_order": ["VCC", "GND"], "footprint": "jst_ph_2",
+                  "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}
+        if placeholder:
+            record.update(footprint_placeholder=True, footprint_note="stands in")
+        (root / "parts" / "inlet.json").write_text(json.dumps(record))
+        (root / "car.requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3",
+             "parts": [{"part": "inlet", "name": "PackIn"}]}))
+        return root
+
+    def test_a_placeholder_in_the_project_is_found_by_its_instance_name(self):
+        self.assertEqual(check_all.placeholder_components_in(self._project(True)), ("PackIn",))
+
+    def test_a_real_footprint_yields_nothing(self):
+        self.assertEqual(check_all.placeholder_components_in(self._project(False)), ())
+
+    def test_no_project_yields_nothing(self):
+        self.assertEqual(check_all.placeholder_components_in(None), ())
+
+    def test_buildability_actually_uses_the_list(self):
+        """
+        The integration, not the helper. A mutation that made `Buildability.call` pass an empty
+        tuple escaped every test above, because every test above exercised the derivation and
+        none exercised the check that consumes it — the same way "the generator stops sizing
+        traces" escaped a suite that tested the width arithmetic thoroughly.
+        """
+        root = self._project(True)
+        # a netlist in which PackIn has a ring under the process minimum: measured, this is a
+        # problem; skipped as a placeholder, it is a could-not-run.
+        circuit = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
+                   {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
+        circuit += [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_c",
+                     "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
+                     "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
+        (root / "circuit.json").write_text(json.dumps(circuit))
+        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
+        self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+
+    def test_and_without_a_project_the_same_netlist_is_measured(self):
+        # The control for the test above: same geometry, no way to know it is a stand-in.
+        root = self._project(True)
+        circuit = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
+                   {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
+        circuit += [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_c",
+                     "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
+                     "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
+        (root / "circuit.json").write_text(json.dumps(circuit))
+        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = check.run({"circuit": str(root / "circuit.json")})
+        self.assertEqual(result["status"], check_all.PROBLEMS, result)
+
+    def test_a_broken_requirements_file_does_not_take_buildability_down(self):
+        # Empty, and the check measures everything — which is what it did before, and not a new
+        # way to be wrong.
+        root = self._project(True)
+        (root / "broken.requirements.json").write_text("{not json")
+        self.assertEqual(check_all.placeholder_components_in(root), ())
+
+
 class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
     """
     A second board silently switched six of seven checks off and still reported `ok`.

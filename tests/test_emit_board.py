@@ -123,6 +123,46 @@ class WhatItAdmitsTest(unittest.TestCase):
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", self.tsx)
 
 
+class PlaceholderFootprintsAreNamedTest(unittest.TestCase):
+    """
+    The generator is where a placeholder gets the name the netlist will carry, so it is where the
+    list of them is made — a second derivation of the name in `check_all` would be one more copy
+    of a rule to drift.
+    """
+
+    @staticmethod
+    def part(part_id, placeholder=False, instance=None):
+        record = {"schema": 1, "id": part_id, "name": part_id, "kind": "test", "needs": [],
+                  "power": [{"pin": "GND", "rail": "ground", "direction": "in"}],
+                  "pin_order": ["GND"], "footprint": "pinrow1",
+                  "body_mm": {"width": 5, "height": 5, "verified": True, "source": "test"}}
+        if placeholder:
+            record.update(footprint_placeholder=True, footprint_note="stands in")
+        if instance:
+            record["_instance"] = instance
+        return record
+
+    def test_a_placeholder_is_named_as_the_netlist_will_see_it(self):
+        self.assertEqual(emit_board.placeholder_components(
+            [self.part("xt30-inlet", placeholder=True)]), ["Xt30Inlet"])
+
+    def test_a_named_instance_is_named_by_its_instance(self):
+        # Otherwise the checker looks for a name that is not in the netlist and skips nothing.
+        self.assertEqual(emit_board.placeholder_components(
+            [self.part("inlet", placeholder=True, instance="PackIn")]), ["PackIn"])
+
+    def test_a_real_footprint_is_not_listed(self):
+        self.assertEqual(emit_board.placeholder_components([self.part("real")]), [])
+
+    def test_the_emitted_file_says_which_footprints_are_stand_ins(self):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        parts_list = [self.part("xt30-inlet", placeholder=True)]
+        placements, width, height = emit_board.place(board, parts_list)
+        tsx = emit_board.emit(board, parts_list, [], placements, width, height, {})
+        self.assertIn("PLACEHOLDERS", tsx)
+        self.assertIn("Xt30Inlet drawn as pinrow1", tsx)
+
+
 class PowerTracesAreSizedTest(unittest.TestCase):
     """
     Every generated trace was the router's 0.15 mm default, good for about 0.6 A.

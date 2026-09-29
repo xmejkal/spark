@@ -180,10 +180,44 @@ class Physics(Check):
                       unmeasured=of("needs-measurement"))
 
 
+def placeholder_components_in(project):
+    """
+    Components in this project whose footprint is a stand-in, by emitted name.
+
+    Derived from the project's part records and requirements files with the GENERATOR's own
+    functions — `requested_parts` for instance names, `placeholder_components` for the naming —
+    so the checker is keyed by exactly the string that reached the netlist. Deriving the name a
+    second time here would be one more copy of a rule to drift.
+
+    Every requirements file is read, not one: `check_all` is handed one circuit and cannot know
+    which requirements produced it. A name from another board simply matches nothing in this
+    netlist, so the union is safe. No project, or nothing derivable, means an empty list — the
+    check then measures everything, which is what it did before and not a new way to be wrong.
+    """
+    if not project:
+        return ()
+    root = Path(project)
+    try:
+        emit_board = load("emit_board")
+        parts_library = load("parts")
+        part_list = []
+        for requirements in sorted(root.glob("*requirements.json")):
+            wanted = json.loads(requirements.read_text())
+            for part_id, instance in emit_board.requested_parts(wanted):
+                part = dict(parts_library.load(part_id, root))
+                if instance:
+                    part["_instance"] = instance
+                part_list.append(part)
+        return tuple(emit_board.placeholder_components(part_list))
+    except Exception:  # noqa: BLE001 — a broken requirements file must not take buildability down
+        return ()
+
+
 class Buildability(Check):
     def call(self, inputs):
         check_footprints = load("check_footprints")
-        findings = check_footprints.run(circuit_of(inputs))
+        findings = check_footprints.run(circuit_of(inputs),
+                                        placeholder_components_in(inputs.get("project")))
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)

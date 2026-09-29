@@ -123,12 +123,19 @@ The constriction is real and belongs to the pad, so necks are reported rather th
 `copper.py` is the refactor: no imports, no I/O, no state, checked against handbook figures rather
 than against itself. 17 tests of its own.
 
-### R6 — A placeholder footprint is indistinguishable from a real one [G4]
-The XT30 inlet has no footprint in the library, so it carries a `jst_ph_2` placeholder with the
-wrong pitch and hole size. `facts` and `body_mm` carry `verified`; the **footprint carries no
-provenance at all**, and `check_footprints` duly measured the placeholder's annular rings and
-reported a defect about a part that is not there.
-**Value proven by:** a placeholder footprint reported `could-not-run` rather than measured.
+### ~~R6 — A placeholder footprint is indistinguishable from a real one~~ [G4] — **DONE**
+`footprint_placeholder: true` requires a `footprint_note`, mirroring the provenance `facts` and
+`body_mm` always had. Four layers, each tested alone: the contract, the generator (which names
+placeholders with its own `component_name` so the checker is keyed by the string that reached the
+netlist), the checker (one `could-not-run` per stand-in, never dropped), and `check_all` wiring
+them together with the generator's own functions rather than a second derivation.
+
+The car's `buildability` went from a real-sounding defect about a part not on the board to "its
+footprint is a stand-in ... was not measured". **Zero false problems across the whole suite.**
+
+A mutation escaped — "the wiring passes nothing through" — because every test exercised the
+derivation and none the check that consumes it. Same shape as the trace-sizing escape. The
+integration test now exists, with a control that the same geometry IS measured without a project.
 
 ### R7 — The generator chain is named by no skill, no command and no agent [G13]
 `assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working

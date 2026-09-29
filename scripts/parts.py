@@ -103,6 +103,11 @@ def load(part_id: str, project: Path = None) -> dict:
 PAD_COUNT_FAMILIES = ("pinrow", "headermodule", "jst_ph_", "jst_sh_", "jst_xh_", "dip", "bh_")
 
 
+def has_placeholder_footprint(part):
+    """Whether this part's footprint is a stand-in for one nobody has drawn yet."""
+    return bool(part.get("footprint_placeholder"))
+
+
 def footprint_pad_count(footprint):
     """
     How many pads a footprinter string describes, or None when this cannot tell.
@@ -188,6 +193,17 @@ def validate(part: dict, path: Path) -> list:
             if body.get("verified") is False and not body.get("why_it_matters"):
                 problems.append("body_mm is unverified with no why_it_matters; say what depends "
                                 "on it — here, whether the modules physically fit the board")
+
+    # A footprint standing in for the real one. `facts` and `body_mm` carry `verified`; the
+    # footprint carried no provenance at all, so an XT30 inlet drawn as a JST PH — wrong pitch,
+    # wrong hole size, stated as a placeholder in a comment nothing reads — looked identical to a
+    # footprint generated from a vendor drawing. `check_footprints` duly measured the JST's
+    # annular rings and reported a defect about a part that is not on the board. The most
+    # expensive field to get wrong was the one field with no way to say "not yet".
+    if part.get("footprint_placeholder"):
+        if not part.get("footprint_note"):
+            problems.append("footprint_placeholder is set with no footprint_note — say what the "
+                            "real footprint is and why this one stands in, or nobody can finish it")
 
     # Which pad is pin 1. The generator numbered `pinLabels` from the order the pins happened to
     # appear in this file — so an L9110S whose header reads BIA BIB GND VCC AIA AIB was emitted

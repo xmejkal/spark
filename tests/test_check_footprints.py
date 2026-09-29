@@ -293,6 +293,50 @@ class AHoleThisCannotReadIsNotAHoleThisApprovedTest(unittest.TestCase):
         self.assertIn("buildable", rendered)
 
 
+class APlaceholderIsNotMeasuredTest(unittest.TestCase):
+    """
+    An XT30 drawn as a JST PH was measured: 0.225 mm annular rings, reported as a defect about a
+    part that is not on the board. Worse than noise — a real-sounding finding a person chases.
+
+    Told which components are stand-ins, the rules' findings about them become one could-not-run
+    each. Not dropped: a footprint nobody has drawn is precisely a thing this tool could not
+    examine, and saying so is the difference between "not yet" and "fine".
+    """
+
+    @staticmethod
+    def thin_ring_connector(name):
+        # A 2-pin connector whose ring is under the process minimum — the real XT30 case.
+        return [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_" + name,
+                 "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4, "outer_height": 1.2,
+                 "x": i * 2.0, "y": 0.0} for i in range(2)] + named(name)
+
+    def test_a_placeholder_is_reported_as_could_not_run_not_measured(self):
+        findings = check_footprints.run(self.thin_ring_connector("Xt30"), placeholders=["Xt30"])
+        self.assertEqual(check_footprints.problems_in(findings), [])
+        unchecked = check_footprints.unchecked_in(findings)
+        self.assertEqual([f.subject for f in unchecked], ["Xt30"])
+        self.assertEqual(unchecked[0].rule, "placeholder-footprint")
+
+    def test_the_same_geometry_IS_measured_when_it_is_real(self):
+        # The control. Without it the test above passes for a checker that measures nothing.
+        findings = check_footprints.run(self.thin_ring_connector("Xt30"))
+        self.assertTrue(any(f.rule == "annular-ring" for f in check_footprints.problems_in(findings)))
+
+    def test_a_placeholder_not_on_this_board_is_ignored_rather_than_reported(self):
+        # `check_all` unions every requirements file's placeholders, so names from another board
+        # arrive here too. They must match nothing, not produce a phantom could-not-run.
+        findings = check_footprints.run(self.thin_ring_connector("Xt30"), placeholders=["Other"])
+        self.assertEqual([f.subject for f in check_footprints.unchecked_in(findings)], [])
+        self.assertTrue(check_footprints.problems_in(findings))
+
+    def test_a_real_component_beside_a_placeholder_is_still_measured(self):
+        circuit = self.thin_ring_connector("Xt30") + self.thin_ring_connector("Speaker")
+        findings = check_footprints.run(circuit, placeholders=["Xt30"])
+        subjects = {f.subject for f in check_footprints.problems_in(findings)}
+        self.assertIn("Speaker", subjects)
+        self.assertNotIn("Xt30", subjects)
+
+
 class EveryShapeTscircuitEmitsTest(unittest.TestCase):
     """
     The rules read `hole_diameter` and `outer_diameter` and nothing else, so two of the three
