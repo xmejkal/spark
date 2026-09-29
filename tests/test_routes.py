@@ -76,5 +76,40 @@ class EveryRouteLeadsSomewhereTest(unittest.TestCase):
             self.assertIn("usage:", result.stdout, script)
 
 
+
+class TheDocumentedExampleRunsTest(unittest.TestCase):
+    """
+    The example in `/spark:build` is the first thing a user will type. Its first version named a
+    motor driver and no power inlet, so the generator said "nothing sources net.MOTOR6V" and the
+    build stopped on a one-member net — and a commit message said it ran end to end, because the
+    output was grepped rather than read. This runs the example, from the document, through every
+    stage before the build (the build needs tsci, which the suite must not depend on).
+    """
+
+    @staticmethod
+    def example(path):
+        import json
+        block = re.search(r"```json\n(.*?)```", path.read_text(), re.S).group(1)
+        return json.loads(block)
+
+    def test_the_command_and_the_skill_show_the_same_example(self):
+        self.assertEqual(self.example(BUILD_COMMAND), self.example(DESIGN_SKILL))
+
+    def test_the_example_reaches_the_build_stage_with_nothing_to_say(self):
+        import json
+        import tempfile
+        from unittest import mock
+        import check_spine
+        requirements = self.example(BUILD_COMMAND)
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
+            stages = check_spine.run(requirements, workdir)
+        names = [stage.name for stage in stages]
+        self.assertNotIn("schematic-notes", names, [s.detail for s in stages])
+        self.assertEqual(names, ["board", "schematic", "footprint", "build"], names)
+        self.assertEqual([s.status for s in stages[:-1]], [check_spine.OK] * 3)
+        self.assertEqual(stages[-1].status, check_spine.COULD_NOT_RUN)   # no tsci offered here
+
 if __name__ == "__main__":
     unittest.main()

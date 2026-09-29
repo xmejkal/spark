@@ -30,10 +30,21 @@ a rule checklist in the loop. Follow it.
 3. **Write the requirements file and run the chain.** The requirements file *is* the design:
 
    ```json
-   {"board": "firebeetle2-esp32s3",
-    "parts": ["l9110s-module", {"part": "tactile-button", "name": "BtnOpen"}],
-    "signals": [{"name": "LED_STATUS", "needs": []}]}
+   {
+     "board": "firebeetle2-esp32s3",
+     "parts": [
+       "l9110s-module",
+       "jst-ph-2-power-inlet",
+       { "part": "tactile-button", "name": "BtnOpen" },
+       { "part": "tactile-button", "name": "BtnMode" }
+     ]
+   }
    ```
+
+   A module list is a list of *consumers* — the inlet is what sources the motor driver's rail,
+   and without it the chain stops at the schematic and says so. Extra pins no part claims go in
+   `"signals": [{"name": "LED_STATUS", "needs": []}]`; the file lists each as assigned and
+   connected to nothing, for you to wire by hand.
 
    Then, in this order — each says what it decided and why:
    - `${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json` — a pin per signal, scarce

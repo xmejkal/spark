@@ -16,11 +16,9 @@ write the board file by hand. Now it is one command.
   "board": "firebeetle2-esp32s3",
   "parts": [
     "l9110s-module",
+    "jst-ph-2-power-inlet",
     { "part": "tactile-button", "name": "BtnOpen" },
     { "part": "tactile-button", "name": "BtnMode" }
-  ],
-  "signals": [
-    { "name": "LED_STATUS", "needs": [] }
   ]
 }
 ```
@@ -28,8 +26,12 @@ write the board file by hand. Now it is one command.
 `board` is an id from `boards.py --list`. Each entry in `parts` is a record id from
 `parts.py --list` — the shipped library plus the project's own `parts/*.json`, which win by name —
 or `{part, name}` when the same part appears more than once: five buttons with no names are one
-component with five GPIOs shorted to it, and the generator refuses that. `signals` adds pins no
-part record claims (an LED, a limit switch), each with what its pin must do (`wake`, `adc`, `pwm`).
+component with five GPIOs shorted to it, and the generator refuses that. The inlet is there
+because a module list is a list of *consumers*: the motor driver's rail needs a source, and
+without one the generator says so and the build stops on a net with one member — which is what
+the first version of this very example did. An optional `"signals": [{"name": "LED_STATUS",
+"needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
+*assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
 
 The project is found up from the requirements file's own directory, so this works from anywhere.
 
