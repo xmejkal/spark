@@ -301,8 +301,6 @@ def validate(part: dict, path: Path) -> list:
     outputs_by_rail = {}
     for index, supply in enumerate(part.get("power") or []):
         where = "power[%d]" % index
-        if not supply.get("pin"):
-            problems.append("%s has no pin" % where)
         direction = supply.get("direction")
         if direction not in ("in", "out"):
             problems.append(

@@ -571,5 +571,21 @@ class TheShippedLibraryTest(unittest.TestCase):
                     "does nothing at all" % part_id)
 
 
+
+class AMissingPinIsReportedOnceTest(unittest.TestCase):
+    """
+    `3b5f38f` moved the missing-pin rule to the contract and left the older use-site copy in
+    the `power` walk, so one malformation produced two problems — the patch-not-audit pattern
+    inside the commit that named it. Found by the sprint audit (A3), reproduced, copy removed.
+    """
+
+    def test_a_power_entry_without_a_pin_is_one_problem_not_two(self):
+        path = ROOT / "parts" / "l9110s-module.json"
+        record = json.loads(path.read_text())
+        record["power"] = [{"rail": "v33", "direction": "in"}]
+        problems = [p for p in parts.validate(record, path) if "no pin" in p]
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("power[0]", problems[0])
+
 if __name__ == "__main__":
     unittest.main()

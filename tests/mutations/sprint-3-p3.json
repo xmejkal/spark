@@ -34,5 +34,11 @@
   "name": "I2C dropped from the role vocabulary",
   "find": "    \"i2c\": \"the hardware I2C bus; spent last by signals that could use any pin\",\n",
   "replace": ""
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "re-add the use-site copy of the missing-pin rule (A3)",
+  "find": "        direction = supply.get(\"direction\")",
+  "replace": "        if not supply.get(\"pin\"):\n            problems.append(\"%s has no pin\" % where)\n        direction = supply.get(\"direction\")"
  }
 ]
