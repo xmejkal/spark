@@ -1,0 +1,229 @@
+{
+  "schema": 1,
+  "id": "sen0550-flow-meter",
+  "name": "DFRobot SEN0550 Gravity liquid flow sensor G1/2 (NPN pulse turbine flow meter)",
+  "kind": "sensor",
+  "//": "Written by /spark:research on 2026-09-29 as a CATALOG record: read while researching the irrigation project's flow meter and passed over for SEN0217 (see //why_not). A draft \u2014 it parses and says what it is; anything not read on DFRobot's own pages stays null. WHAT IT IS TRUE OF: DFRobot SKU SEN0550, called 'Gravity: Water Flow Sensor' on the wiki and 'Gravity: Liquid Flow Sensor (G1/2)' in the store, as both describe it on 2026-09-29. DFRobot names no revision; its drawing is 'V1.0'. The sibling sizes SEN0549 (G1/4) and SEN0551 (G3/4) sell at the same price and are not covered. DFRobot describes it as 'designed based on the electromagnetic principle', with an O-ring seal and silicone sealant at the outlet, for 'liquids with high concentration and low mucosity' \u2014 water, diesel, engine oil, milk, paint, detergent, honey \u2014 with no impurity.",
+  "//why_not": "A third of SEN0217's pulse resolution (150 against 450 pulses per litre) at about twice the price; kept because it is the DFRobot 1/2-inch flow sensor with a dimension drawing, a single consistent supply statement and a stated G1/2 thread.",
+  "vendor": "dfrobot",
+  "sku": "SEN0550",
+  "variant": "DFRobot SEN0550, drawing V1.0; 300 mm lead (read off the drawing) ending in a 3-position plug",
+  "also_known_as": [
+    "Gravity: Water Flow Sensor",
+    "Gravity: Liquid Flow Sensor (G1/2)",
+    "flow meter",
+    "flowmeter",
+    "liquid flow sensor",
+    "water flow sensor",
+    "pulse flow sensor"
+  ],
+  "sources": [
+    "https://wiki.dfrobot.com/sen0550/",
+    "https://wiki.dfrobot.com/SKU_SEN0550_Gravity_Water_Flow_Sensor_G1_2",
+    "https://www.dfrobot.com/product-2608.html",
+    "https://wiki.dfrobot.com/sen0550/docs/18408",
+    "https://dfimg.dfrobot.com/wiki/17442/SEN0550_water-flow-sensor_dimension_V1.0.jpg",
+    "https://dfimg.dfrobot.com/nobody/wiki/390a3fc739826cbf83a43c030d3036d1_0x0.png.webp",
+    "https://dfimg.dfrobot.com/nobody/wiki/e98eeeb4178c39fcb35ffa3bae55ef13_0x0.png.webp"
+  ],
+  "//sources": "DFRobot's wiki (the long URL redirects to the short one), the store page, the wiki's Arduino example page, DFRobot's own dimension drawing, and the wiki's pinout and wiring figures. All fetched on 2026-09-29. No DFRobot GitHub repository exists for it (api.github.com search for org:DFRobot+flow finds only DFRobot_FRN20, a gas sensor); the only vendor code is the wiki's sketch, which counts one rising edge as 1/150 litre.",
+  "needs": [
+    {
+      "signal": "FLOW_PULSE",
+      "pin": "OUT",
+      "printed": "OUT",
+      "direction": "out",
+      "needs": [],
+      "note": "The green wire, 'Signal Output'. An 'NPN pulse signal', 150 pulses per litre, 50 % +/- 10 % duty, swinging to the sensor's supply: DFRobot states > 4.7 V high with a 5 V supply, so with VCC at 5 V it is a 5 V signal and needs the same divider or level shifter before a 3.3 V GPIO as SEN0217 does. A pulse input asks nothing special of the pin."
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "printed": "VCC",
+      "rail": "5v",
+      "direction": "in",
+      "note": "The red wire, 'Positive Power Supply 3.5V-24V'. On the 5 V rail: 3.3 V is below DFRobot's 3.5 V minimum, and 12 V, although allowed, would make the pulse a 12 V signal. <= 10 mA at 5 V."
+    },
+    {
+      "pin": "GND",
+      "printed": "GND",
+      "rail": "ground",
+      "direction": "in",
+      "note": "The black wire, 'Negative Power Supply'."
+    }
+  ],
+  "unused_pins": [],
+  "pin_order": [
+    "OUT",
+    "VCC",
+    "GND"
+  ],
+  "//pin_order": "The wiki's pinout table lists Green Wire OUT, Red Wire VCC, Black Wire GND in that order, and its pinout figure draws them top to bottom in the same order at the plug; the dimension drawing labels the plug's end positions '1' and '3' without saying which wire is which. A row order read from a table and a figure, not numbered positions: verified false \u2014 facts.housing_pin_order carries that state.",
+  "footprint": "jst_ph_3",
+  "footprint_placeholder": true,
+  "footprint_note": "The sensor sits in the pipe run; the board carries only the socket its lead plugs into. DFRobot's store page says 'Gravity interface, easy to wire' and its drawing and figures show the 300 mm lead ending in a latched 3-position plug, which is what a Gravity PH2.0 plug looks like \u2014 so a 3-pin JST PH socket (jst_ph_3, 2.0 mm) is the placeholder. DFRobot never names the connector series or pitch. Measure the plug with the part in hand before the socket is final.",
+  "on_board": false,
+  "//on_board": "It sits in the pipe run, not on the PCB; the board carries the mating socket and no body is drawn for the sensor.",
+  "body_mm": {
+    "width": null,
+    "height": null,
+    "verified": false,
+    "source": null,
+    "why_it_matters": "This would be the outline of the mating socket on the board, which depends on the plug series nobody has confirmed (footprint_note). The sensor's own envelope, 80 x 47 x 37 mm, is on the pipe and is in facts.envelope_mm."
+  },
+  "facts": {
+    "sensing_principle": {
+      "value": "electromagnetic principle (DFRobot's words); whether that is a magnet-and-Hall turbine is not stated",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'This Gravity: Water Flow Sensor is designed based on the electromagnetic principle.' DFRobot never writes 'hall effect' for this SKU, where it does for SEN0217. The irrigation need asked for hall effect by name, which is the one reason this record was passed over and not the drawing-less SEN0217."
+    },
+    "supply_range_v": {
+      "value": [
+        3.5,
+        24
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Operating Voltage: DC3.5~24V' in the table, 'Positive Power Supply 3.5V-24V' in the pinout table, 'Wide voltage of 3.5~24V' on the store page \u2014 one statement, three places, unlike SEN0217's four. Nothing allows 3.3 V."
+    },
+    "operating_current_ma": {
+      "value": 10,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Operating Current: <= 10mA (DC5V)'. Whether it drops with the rotor still is not stated."
+    },
+    "output_mode": {
+      "value": "NPN pulse signal",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Output Mode: NPN pulse signal' \u2014 DFRobot's words. Read with output_high_level_v: an NPN output that reaches > 4.7 V at a 5 V supply is pulled up to VCC by something, so 'NPN' alone does not make it a bare open collector the host could pull to 3.3 V."
+    },
+    "output_high_level_v": {
+      "value": 4.7,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'High Level of Output Pulse: > DC4.7V (input voltage DC5V)'. The pulse rides to the supply rail: a 5 V supply is a 5 V pulse."
+    },
+    "output_low_level_v": {
+      "value": 0.5,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Low Level of Output Pulse: < DC0.5V (input voltage DC5V)'."
+    },
+    "output_stage": {
+      "value": null,
+      "verified": false,
+      "source": "not stated by DFRobot beyond the words 'NPN pulse signal': no schematic, no datasheet of the sensing board, no word on an internal pull-up. The stated > 4.7 V high at 5 V means something pulls the output to VCC.",
+      "why_it_matters": "Whether the host can make the pulse a 3.3 V signal with nothing but a pull-up. A bare open-collector NPN output would let the host pull OUT up to 3.3 V and need no divider; the stated high level says it is pulled to VCC already, so a host 3.3 V pull-up would only form a divider against that, and a divider or level shifter is the only safe reading of the documentation."
+    },
+    "pulses_per_litre": {
+      "value": 150,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Flow & Pulse Correlation: 1L=150 pulses' in the table; the wiki's sketch counts 'waterFlow += 1.0 / 150.0' per rising edge (https://wiki.dfrobot.com/sen0550/docs/18408). Derived from that and the 1200 L/h maximum: 50 Hz at full flow, 6.7 mL per pulse \u2014 a third of SEN0217's resolution."
+    },
+    "duty_cycle_pct": {
+      "value": [
+        40,
+        60
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Duty Cycle of Output Pulse: 50%+/-10%'. Count edges of one polarity."
+    },
+    "flow_range_l_h": {
+      "value": [
+        30,
+        1200
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Flow Range: 30-1200L/H' \u2014 0.5 to 20 L/min. A lower floor than SEN0217's 1 L/min, a lower ceiling than its 30 L/min."
+    },
+    "accuracy_pct": {
+      "value": 1,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Error Range: +/-1% (5-600L/H)'. The band DFRobot quotes starts at 5 L/h, below its own 30 L/h flow floor, and ends at 600 L/h, half the range \u2014 above 600 L/h nothing is promised."
+    },
+    "thread": {
+      "value": {
+        "standard": "G1/2",
+        "inner_diameter_mm": 10,
+        "outer_diameter_mm": 20.5,
+        "length_mm": 29
+      },
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Pipe Diameter: G1/2', 'Thread I.D.: 10mm/0.39\"', 'Thread O.D.: 20.5mm/0.81\"', 'Thread Length: 29mm/1.14\"'. Male on both ends in the drawing. A stated standard, which SEN0217 lacks: G1/2 (BSP parallel) fittings, not NPT."
+    },
+    "max_pressure_mpa": {
+      "value": 1.2,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Water Pressure Resistance: <= 1.2MPA' (12 bar) \u2014 lower than SEN0217's 1.75 MPa, still far above mains water."
+    },
+    "operating_temperature_c": {
+      "value": 80,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Operating Temperature: <= 80 C' as a maximum; no minimum is given. 'Storage Temperature: -25~+80 C', 'Operating Humidity: 35%~90%RH (no frosting)'. A garden box in winter is below any stated operating figure."
+    },
+    "liquids": {
+      "value": "water, diesel, engine oil, milk, paint, detergent, honey \u2014 high concentration, low mucosity, no impurity",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "DFRobot's own list; the face of the unit in its drawing reads 'Oil flow meter'."
+    },
+    "envelope_mm": {
+      "value": "80 x 47 x 37",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "note": "'Dimensions: 80x47x37mm/3.15x1.85x1.46\"' in the table. DFRobot's drawing (https://dfimg.dfrobot.com/wiki/17442/SEN0550_water-flow-sensor_dimension_V1.0.jpg) dimensions 80 along the pipe axis thread-tip to thread-tip, 47 across the body and 37 thick, with four screws on the face and a flow arrow \u2014 read off the image, so the axis assignment is a reading, the three numbers are the table's."
+    },
+    "cable_length_mm": {
+      "value": 300,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17442/SEN0550_water-flow-sensor_dimension_V1.0.jpg",
+      "why_it_matters": "Whether the lead reaches from the pipe to the enclosure without a splice. Read off DFRobot's dimension drawing, where '300' is dimensioned along the lead from the body to the plug; no text on the wiki or store page states a cable length."
+    },
+    "lead_connector": {
+      "value": "3-position latched plug on the lead; 'Gravity interface' per the store page; series and pitch not stated",
+      "verified": false,
+      "source": "https://www.dfrobot.com/product-2608.html",
+      "why_it_matters": "It decides the host footprint: a Gravity PH2.0 plug wants a JST PH 3-pin socket (jst_ph_3, the placeholder); anything else is a different socket. 'Gravity interface, easy to wire' is DFRobot's text; that the plug is a PH2.0 is read from the drawing and the wiki's figures, not stated. Measure the plug with the part in hand."
+    },
+    "housing_pin_order": {
+      "value": "OUT (green), VCC (red), GND (black) \u2014 the wiki table's row order",
+      "verified": false,
+      "source": "https://wiki.dfrobot.com/sen0550/",
+      "why_it_matters": "The socket on the board is built in this order (pin_order). The wiki's table gives no position numbers and its figure draws the three wires in that order at the plug; the drawing labels only positions '1' and '3'. If the plug's real order differs, the 5 V supply lands on the sensor's output. Confirm against the plug in hand."
+    }
+  },
+  "host_requirements": [
+    "The pulse swings to the sensor's own supply: DFRobot states > 4.7 V high with a 5 V supply. Fed from the 5 V rail it is a 5 V signal, and a 3.3 V ESP32 input is not rated for it \u2014 put a resistive divider or a level shifter on OUT between the socket and the GPIO. 'NPN pulse signal' does not license a bare host pull-up to 3.3 V: the stated high level says the output is already pulled to VCC (facts.output_stage).",
+    "Feed it from the 5 V rail: 3.3 V is below DFRobot's 3.5 V minimum, and 12 V, although inside the 3.5-24 V range, would make the pulse a 12 V signal. Budget <= 10 mA whenever it is powered.",
+    "Count on a GPIO interrupt or the ESP32's PCNT peripheral. At the 1200 L/h maximum, 150 pulses/L is 50 Hz (derived from those two DFRobot numbers) and one pulse is 6.7 mL \u2014 three times coarser than SEN0217. Count one edge polarity only; the duty cycle is 40-60 %.",
+    "The board carries a 3-pin socket, not the sensor, and which socket depends on the plug series nobody has confirmed (footprint_note). Mark position 1 = OUT on the silkscreen.",
+    "It is a +/- 1 % meter only between 5 and 600 L/h by DFRobot's own band; above 600 L/h (10 L/min) nothing is promised, and the flow range starts at 30 L/h (0.5 L/min). Calibrate the K-factor against a bucket at each zone's real flow if litres matter.",
+    "Plumbing: G1/2 male threads both ends (a stated standard \u2014 buy BSP fittings), arrow with the flow, liquid and ambient no hotter than 80 C; DFRobot states no mounting orientation for this SKU, unlike SEN0217's 'vertical'."
+  ],
+  "sourcing": [
+    {
+      "seller": "DFRobot (direct, dfrobot.com)",
+      "url": "https://www.dfrobot.com/product-2608.html",
+      "price_czk": null,
+      "price": "15.90 USD on offer, 19.90 USD list",
+      "checked": "2026-09-29",
+      "note": "The store page shows '$15.90 $19.90' for the G1/2, and the same two prices for the G1/4 (SEN0549) and G3/4 (SEN0551) sizes. Ships from China; the site's banner says DFRobot is out of office Sep 30 - Oct 7 2026."
+    }
+  ],
+  "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. Only DFRobot's own page was fetched for this SKU; a web search showed TME listing the G3/4 sibling SEN0551 ('3.5\u00f724VDC; 10mA; Output signal: NPN pulse signal'), but no SEN0550 listing was fetched, so none is recorded.",
+  "attachments": {
+    "https://dfimg.dfrobot.com/wiki/17442/SEN0550_water-flow-sensor_dimension_V1.0.jpg": "sen0550-flow-meter/SEN0550_water-flow-sensor_dimension_V1.0.jpg",
+    "https://dfimg.dfrobot.com/nobody/wiki/390a3fc739826cbf83a43c030d3036d1_0x0.png.webp": "sen0550-flow-meter/390a3fc739826cbf83a43c030d3036d1_0x0.png.webp",
+    "https://dfimg.dfrobot.com/nobody/wiki/e98eeeb4178c39fcb35ffa3bae55ef13_0x0.png.webp": "sen0550-flow-meter/e98eeeb4178c39fcb35ffa3bae55ef13_0x0.png.webp"
+  }
+}
