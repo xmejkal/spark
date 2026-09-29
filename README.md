@@ -88,6 +88,14 @@ and `copper` is a library, not a command.
 - `assign_pins.py` — a pin map with a reason per pin, spending scarce pins last.
 - `emit_board.py` — a module list and a pin map, as tscircuit you can build.
 - `init_project.py` — what `/spark:init` runs.
+- `design.py` — a design loaded once, from its requirements file: the project it belongs to
+  (found up from the file, or `--project`), the board, the parts as instances, the rules.
+  Everything wrong with the input is a sentence, never a traceback.
+- `check_spine.py` — the one gate that runs the whole chain, `idea → parts → pin map →
+  schematic → footprint → build → simulation`, and counts what came out. A build with no
+  copper is not a pass; a toolchain that cannot build a trivial board is could-not-run, named.
+- `mutate.py` — re-introduces each defect in a table and proves the suite goes red. The
+  acceptance bar for every fix (`tests/mutations/`).
 - `findings.py` — the findings store: structural identity, anchor validation, status transitions,
   and a measurement registry so a finding resting on an unmeasured number says so.
 
@@ -151,12 +159,17 @@ Nothing here has been validated on hardware by its author. Ground truth is the b
 python3 -m unittest discover -s tests -t tests
 ```
 
-265 of them, and the rule they follow: a test must **run** the thing, not read it. No assertion on
+528 of them (2026-09-29), and the rule they follow: a test must **run** the thing, not read it. No assertion on
 source text, none that is an arithmetic identity of the function under test, and every check
 exercised through the runner with an input that makes it fail. That rule exists because the test
 written to catch "a check nobody invokes" asserted that a string appeared in the runner's source
 — it verified the check was named, not that it ran, and it stayed green for the whole life of the
 bug it was written to prevent.
+
+The second rule: every fix is mutation-tested. `python3 scripts/mutate.py tests/mutations/<table>.json`
+re-introduces each defect and must report every one caught; a mutation the suite does not
+notice is a missing test, and a fixture too weak to see it is fixed rather than the mutation
+dropped.
 
 ---
 v0.6.0 · MIT · built with the tscircuit engine.

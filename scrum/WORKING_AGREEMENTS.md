@@ -106,3 +106,14 @@ reports something is "high priority" is reporting its own opinion and must label
 
 **Origin:** this is what Product Owner means, and it was worth writing down because for two days
 the ordering was done by whoever was typing.
+
+## W12 — A fixture that cannot see the defect is the defect
+
+When a mutation escapes, the first question is whether the fixture could have seen it at all.
+Four escapes in Sprint 3 were exactly that — three LEDs never reached the tie a penalty breaks;
+a fixture with no placeholder made two swapped sections invisible — and each was fixed by
+strengthening the fixture. The mutation stays in the table. Dropping a mutation because "the
+test cannot see that" is dropping the test.
+
+**Origin:** R3.1, 2026-09-29. W3 makes the tool report the escape; this says what to do with it.
+

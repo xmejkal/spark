@@ -116,8 +116,63 @@ third cold test rather than a better plan.
 
 | # | change | check that it stuck | result |
 | --- | --- | --- | --- |
-| **R2.1** | Build `scripts/mutate.py` NOW, in this retro, because R1.3 failed for want of a forcing function. | At R3: every DONE item since cites a `mutate.py` run. | *pending* |
-| **R2.2** | Every fix that touches an integration gets an integration test, not only a helper test. Named for the two escapes. | At R3: any escaped mutation whose cause was "helper tested, consumer not". | *pending* |
-| **R2.3** | Before fixing a rule at one site, `grep` for its other sites — the three recurrences all had a greppable anchor. | At R3: count of commits that say "same defect, second site". | *pending* |
-| **R2.4** | Retire the intake table's `raised` backlog: every row either promoted to a PBI, or `rejected` with a reason, before R3. | At R3: `raised` count in `INDEX.md`, and whether `rejected` is still zero. | *pending* |
-| **R2.5** | Third cold test in a different domain — to be chosen by the PO — because both silent-wrongness classes were found only by building something new. | At R3: the diary of that test exists and is scored against its plan. | *pending* |
+| **R2.1** | Build `scripts/mutate.py` NOW, in this retro, because R1.3 failed for want of a forcing function. | At R3: every DONE item since cites a `mutate.py` run. | **stuck.** Built in R2 itself (`997b756`); every DONE since — P3 `831f756`, A3 `5689147`, P11 `0c21ef5`, P12 `c4d0582`, P13 `55e7bb8`, P14 `f7674b4` — cites a `mutate.py` run: 30 mutations in five tables, all caught |
+| **R2.2** | Every fix that touches an integration gets an integration test, not only a helper test. Named for the two escapes. | At R3: any escaped mutation whose cause was "helper tested, consumer not". | **stuck, and a new shape appeared.** No escape this sprint was "helper tested, consumer not". Four escapes were **"the fixture cannot see the defect"**: P3's three (three LEDs never reached the tie the penalty breaks) and P14's one (no placeholder in the fixture, so a swapped section changed nothing). All four fixed by strengthening the fixture, none by dropping the mutation → R3.1 |
+| **R2.3** | Before fixing a rule at one site, `grep` for its other sites — the three recurrences all had a greppable anchor. | At R3: count of commits that say "same defect, second site". | **partly.** One second site found in flight — P11's converter lookup from `cwd`, the same defect one stage later, fixed in the same change — and one found by the audit from before R2 (A3, the double report). Zero "same defect, second site" commits after the fact |
+| **R2.4** | Retire the intake table's `raised` backlog: every row either promoted to a PBI, or `rejected` with a reason, before R3. | At R3: `raised` count in `INDEX.md`, and whether `rejected` is still zero. | **did not stick.** 23 rows closed on 09-29 — the audit's 16 and 7 stale ones — and **43 `raised` rows remain**, all from the 09-25 reports. `rejected` still unused → R3.2 |
+| **R2.5** | Third cold test in a different domain — to be chosen by the PO — because both silent-wrongness classes were found only by building something new. | At R3: the diary of that test exists and is scored against its plan. | **pending on the PO.** No domain chosen; three proposed in `SPRINT.md`. Not started, deliberately: the domain is the whole point of the test |
+
+
+---
+
+## R3 — 2026-09-29, evening, on the audit sprint
+
+**Present:** facilitator. No independent reader during this sprint — the audit that opened it was
+the outside read, and R3.3 makes one close every sprint from now on.
+
+### What happened
+
+Sprint 3's four items were done in one day, each mutation-tested, on top of P3 and A3 from the
+morning. The audit's sixteen claims were triaged and **none rejected**: a cold read after a fix
+sprint found the "less than asked, exit 0" family a sixth time, inside the commit that had closed
+the fifth, in the one function nothing tested. Twenty-three intake rows closed; forty-three did
+not.
+
+### What went well, with evidence
+
+- **Measure before fixing, twice more, and both times the measurement changed the fix.** P3: the
+  bus penalty is a tie-breaker, not a cost — the first value (15) was wrong and the ordering test
+  caught it. P12: the "toolchain fault" was the spine's own `node_modules` link; fixed at the
+  cause, the A/B reads `ok` / `ok` with the version named instead of `could-not-run` / `ok`.
+- **The mutation tool as a fixture critic.** Four escapes, all one shape — the fixture could not
+  see the defect — and all four fixed by strengthening the fixture, none by dropping the mutation.
+  R2.2's shape ("helper tested, consumer not") did not recur.
+- **Fixed at the contract and said in the file.** A rail-less MCU pad is refused where the board
+  file is read *and* reported by the generator if one reaches it anyway; the `continue` is gone at
+  both layers.
+- **A test's docstring caught describing a test that did not exist.** The wiring test claimed to
+  call the runner and grepped the source; the mechanism changed under it and it failed, which is
+  how the claim was found. It now asks the code, and its docstring records the episode.
+
+### What did not
+
+- **The intake did not drain — second retro in a row.** 43 `raised` rows from 09-25 remain and
+  `rejected` is still unused. The cause is plain: nobody's path crosses the old rows; only new
+  reports get read.
+- **R2.5 sat.** "To be chosen by the PO" is not a question anyone asked; a decision nobody is
+  asked for is not made.
+- **Two records overstated in the same hour** — "the table has drained" (23 of 66), corrected
+  before commit, and the summary written before the count was the pattern both times.
+- **No outside reader ran during the sprint.** Every serious defect this project has found came
+  from one (R1.5); a sprint without one is running on the author's blind spots.
+
+### Actions
+
+| # | change | check that it stuck | result |
+| --- | --- | --- | --- |
+| **R3.1** | A weak fixture is a defect: when a mutation escapes because the fixture cannot see it, the fixture is fixed and the mutation stays. Written as **W12**. | At R4: any mutation removed from a table; escapes listed with their cause | *pending* |
+| **R3.2** | Drain the 43: **P15**, first item of Sprint 4, half a day, time-boxed. Each row reproduced against today's code or `rejected` as superseded, with the commit that made it so. | At R4: `raised` count in `INDEX.md`; `rejected` > 0 | *pending* |
+| **R3.3** | An outside read CLOSES every sprint: the audit agent runs at sprint end, its claims go through `INDEX.md` before anything is acted on (W9). | At R4: the Sprint 4 report file exists and its rows are in `INDEX.md` | *pending* |
+| **R3.4** | Ask the PO the R2.5 question so it is one word: three concrete domains in `SPRINT.md`. | At R4: a domain chosen, or the item explicitly parked by the PO | *pending* |
+| **R3.5** | No summary before its count: a "N rows/tests/items" claim in a record is written from a command run that day, and the command is beside it. | At R4: count the numeric claims in `SPRINT.md` that carry their command | *pending* |
+

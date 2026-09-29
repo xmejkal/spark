@@ -1,43 +1,76 @@
-# Sprint 3
+# Sprint 4 — proposed
 
-**Started** 2026-09-29 · **Facilitator** main session · **Product Owner** Petr (order is his, W11)
+**Proposed** 2026-09-29 · **Facilitator** main session · **Product Owner** Petr. The order below
+is a proposal (W11); nothing is pulled until he has seen it. Sprint 3 is closed below.
 
-## Goal
+## Goal (proposed)
 
-> **spark reports what it did and nothing less: no documented invocation of the generator or the
-> spine emits less than it was asked, and neither blames the design for its own tools.**
+> **spark is usable by someone who has not read its source: the chain is named where a user
+> looks, a design states its own rails, and the intake table is clean.**
 
-Why this goal: the sprint audit (`docs/observations/2026-09-29-sprint-audit.md`) found the
-"less than asked, exit 0" family a sixth time — inside `emit_board.main`, the one function nothing
-tests, on the invocation its own docstring documents — and found the spine calling a broken
-toolchain a broken design. Both mislead today. Everything else open (R7–R10, P2, P5–P10) is a
-gap, and a gap does not lie.
+Why: after Sprint 3 the chain is honest on every documented command. What Petr asked for next —
+*"basic functionality done well, well-architected, extendable, really usable"* — is now blocked
+on usability, not correctness: `assign_pins`, `emit_board` and `check_spine` are named by no
+skill, command or agent (R7), and a part still has to be copied to change one rail (R9). And two
+retros in a row say the intake has not drained (R3.2).
 
-## Pulled
+## Proposed order
 
-| id | item | state | why this order |
-| --- | --- | --- | --- |
-| ~~P11~~ | One `design.load()`; `main()` tested | **done `0c21ef5`** | the live defect, and four more audit claims with the same cause |
-| ~~P12~~ | Toolchain fault ≠ design fault | **done `c4d0582`** | a wrong verdict class; small |
-| ~~P13~~ | Plain imports | **done `55e7bb8`** | two `PartError` classes in one process is a miss waiting to happen |
-| ~~P14~~ | `emit_board` says each thing once | **done `f7674b4`** | a refactor, and it lands on the code P11 just touched |
+| id | item | why here |
+| --- | --- | --- |
+| **P15** | Drain the intake: 43 `raised` rows from 09-25, each reproduced against today's code or `rejected` as superseded with the commit that did it | R2.4 failed twice; half a day, time-boxed (R3.2) |
+| **R7** | The generator chain named by a skill, a command and an agent [G13] | the usability gap: the chain exists and nothing routes to it |
+| **R9** | A rail belongs to the design, not the part [G5] | one line in a requirements file instead of a copied record |
+| **R2.5** | Third cold test — **PO: choose a domain** (below) | both silent-wrongness classes were found only by building something new |
+| — | The audit agent at sprint end (R3.3) | the outside read that produced six items last time |
 
-W6: one at a time. **Not pulled:** R2.5, the third cold test — the PO chooses the domain.
+**R2.5 — three domains; the PO's answer can be one letter.** Each is unlike both the bin and the
+car, which is the point:
+
+- **(a) a battery sensor node** — BME280 on I2C, an e-paper display on SPI, ESP-NOW uplink, deep
+  sleep. Exercises both buses on one board (P3's roles), a display part class, a second rail.
+- **(b) a USB MIDI foot controller** — eight identical buttons, an expression pedal on the ADC,
+  LEDs. Exercises many named instances (G7), the ADC budget, USB, stateful firmware.
+- **(c) a garden irrigation controller** — 12 V valves through MOSFETs, soil-moisture ADC, an
+  RTC, WiFi. Exercises high-current switching, a 12 V rail regulated to logic, and a part class
+  (MOSFET/relay driver) spark has never seen.
+
+(c) exercises the most that is new; (a) the most that exists. Not started until chosen.
 
 ## Definition of Done
 
-Full text in [`README.md`](README.md). For every item here: the `Value proven by:` command run
-and its output in the commit; `check_spine.py` green; a `mutate.py` table with every mutation
-caught (W3); both RC boards and the bin's `make check` unchanged or explained.
+Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its
+output in the commit; `check_spine.py` green; a `mutate.py` table with every mutation caught (W3,
+W12); both RC boards and the bin's `make check` unchanged or explained; any count in a record
+written from a command run that day, with the command beside it (R3.5).
 
-## Previous sprints
+---
 
-| sprint | goal | outcome |
-| --- | --- | --- |
-| 1 — 2026-09-25 | the bin is a working project | met on the measurable half: 5 of 7 fab blockers closed, `make check` green; audio identity and the bench are Petr's. Retro R1 |
-| 2 — 09-26 → 09-29 | the cold test, then its findings | RC car + remote build from scratch; 9 of 15 findings fixed, each reproduced and mutation-tested; plan scored 4/5 by area, 0/5 by mechanism. Retro R2 |
+## Sprint 3 — closed 2026-09-29
 
-## Daily log
+**Goal:** spark reports what it did and nothing less. **Met.** Four items in one day —
+P11 `0c21ef5`, P12 `c4d0582`, P13 `55e7bb8`, P14 `f7674b4` — plus P3 `831f756` and A3
+`5689147` from the morning. Retro: **R3**.
+
+### Review — validated value, run at close
+
+Commands and what they printed on 2026-09-29:
+
+```
+python3 -m unittest discover -s tests                       # Ran 528 tests — OK
+for t in tests/mutations/sprint-3-*.json; do mutate.py $t   # 5 tables, 30 mutations: every one
+                                                            #   caught, files restored (each table)
+python3 scripts/check_spine.py                              # nvm tsci first on PATH:
+                                                            #   ok build 12 trace(s), 0 errors, tsci 0.0.2600
+                                                            #   ok simulation 10 wire(s) — end to end
+PATH=…/smartbin-local/node_modules/.bin:$PATH … check_spine.py   # same, tsci 0.0.2621
+cd rc-car && emit_board.py car.requirements.json | grep -c thickness=    # 14   (was 1)
+(cd /tmp && check_spine.py ~/Development/rc-car/remote.requirements.json)
+                                                            # end to end, 12 wires
+                                                            #   (was: no part called 'sg90-servo')
+```
+
+### Daily log
 
 ### 2026-09-29
 
@@ -68,14 +101,12 @@ called the runner and it grepped the source. Fixed to ask the code, and the docs
 designs. One mutation escaped on the first run (a swapped section, invisible on a fixture with
 no placeholder) and was caught after the fixture was fixed: the tool earning its keep, again.
 
-## Review — validated value
+---
 
-Run at sprint end:
+## Previous sprints
 
-```
-python3 scripts/check_spine.py                                   # from spark; then again with
-PATH=~/.nvm/versions/node/v18.14.2/bin:$PATH python3 scripts/check_spine.py   # → ???? build, not !!
-cd ../rc-car && python3 ../spark/scripts/emit_board.py car.requirements.json | grep -c thickness=   # 14
-(cd /tmp && python3 ~/Development/spark/scripts/check_spine.py ~/Development/rc-car/remote.requirements.json)
-python3 scripts/mutate.py tests/mutations/sprint-3-p3.json       # and every table this sprint adds
-```
+| sprint | goal | outcome |
+| --- | --- | --- |
+| 1 — 2026-09-25 | the bin is a working project | met on the measurable half: 5 of 7 fab blockers closed, `make check` green; audio identity and the bench are Petr's. Retro R1 |
+| 2 — 09-26 → 09-29 | the cold test, then its findings | RC car + remote build from scratch; 9 of 15 findings fixed, each reproduced and mutation-tested; plan scored 4/5 by area, 0/5 by mechanism. Retro R2 |
+| 3 — 09-29 | spark reports what it did and nothing less | met: four audit items done, 30 mutations caught, the spine honest with either toolchain. Retro R3 |

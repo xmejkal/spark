@@ -34,9 +34,20 @@ on it is quality, not existence: the structural question under P1, and the loade
 
 ---
 
-## Sprint 3 — pulled
+## Sprint 4 — proposed to the PO
 
-See [`SPRINT.md`](SPRINT.md). Goal: **spark reports what it did and nothing less.**
+See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not read its source.**
+
+| id | item | size |
+| --- | --- | --- |
+| P15 | Drain the intake: 43 `raised` rows, reproduced or rejected | S, time-boxed |
+| R7 | The generator chain named by a skill, a command and an agent | M |
+| R9 | A rail belongs to the design, not the part | M |
+| R2.5 | Third cold test — **PO chooses the domain** | L |
+
+## Sprint 3 — done 2026-09-29
+
+Goal: **spark reports what it did and nothing less.** Met; review in `SPRINT.md`.
 
 | id | item | size |
 | --- | --- | --- |
@@ -224,6 +235,15 @@ reference board and both RC boards byte-identical before and after.
 layers (contract and generator). The composition test's first fixture could not see a swapped
 section — no placeholder, so the swap changed nothing — and the mutation tool said so; the
 fixture now has every section non-empty and asserts it. Eight mutations caught, 528 tests.
+
+### P15 — Drain the intake
+Forty-three `raised` rows in `docs/observations/INDEX.md`, all from the 09-25 reports, none read
+since. Retro actions R1.2 and R2.4 both failed on this; R3.2 makes it an item with a box around
+it. Each row is reproduced against today's code or `rejected` as superseded, with the commit
+that made it so — many will be, since the code they describe has changed under them. Rows that
+are already backlog items (P5–P10 map to seven of them) are `acted` with the item's name.
+**Value proven by:** `grep -c '\`raised\`' docs/observations/INDEX.md` → 1 (the legend), and
+`rejected` used at least once with a reason.
 
 ### R7 — The generator chain is named by no skill, no command and no agent [G13]
 `assign_pins`, `emit_board` and `emit_footprint` are the chain that just produced two working
