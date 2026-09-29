@@ -121,7 +121,12 @@ test cannot see that" is dropping the test.
 
 A count, a hash, a verdict ("the chain runs end to end") goes into a commit message, a backlog
 result or a sprint log only in a later call than the command that produced it, copied from output
-that is on the screen. A value proof in a gated chain asserts the verdict string, never the
+that is on the screen — **and measured on the tree being committed**: `check_commit.py` archives
+HEAD and runs the suite and the anchors there before every push. A commit's message said 589 OK
+while the tree it held ran 562 FAILED, because the run was on the working tree and the file it
+imported was staged one commit later (close audit C3). And a commit is made only when every step
+before it exited 0 — a chain that commits after a failed edit writes a message about edits that
+never happened (`cdc7c81`). A value proof in a gated chain asserts the verdict string, never the
 presence of output.
 
 **Origin:** R3.5 said this as a rule about care on the morning of 2026-09-29 and was broken three

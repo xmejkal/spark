@@ -478,6 +478,59 @@ for `power_note_lines`, `module_power_lines`, `power_trace`, `trace_width_mm`, `
 **Done** (`7361679`): every one named; the four rules held to saying so when they cannot look. A dead
 guard in `trace_width_mm` found by a mutation that changed nothing, and removed. 603 tests.
 
+### From the Sprint 4 close audit — 2026-09-29, night
+`docs/observations/2026-09-29-sprint-4-close-audit.md`: seventeen claims (`INDEX.md` C3–C19), read
+cold on `0678501`. Every DONE of the sprint's second half re-ran; two overclaims and one regression
+of mine (C6) were found, and three more members of the "less than asked, exit 0" family — one of
+them a commit that does not pass its own suite as committed. They come first, as that family does.
+
+### ~~P26 — One bus vocabulary; a bus the board routes through its matrix goes anywhere and says so~~ — **DONE `07821a0`**
+C6. P21 refused every bus line the board did not label, which is every line of I2S on an ESP32, so
+the shipped MAX98357A could not be placed while `parts.py --validate` called it fine — a
+regression of one evening. `parts.BUSES` is the one definition (i2c, spi, i2s), checked where the
+record is written; a bus the board states no `pin_roles` for is placed like any signal and the
+reason names the GPIO matrix. Five mutations caught, 615 tests, four designs byte-identical.
+
+### P27 — A named pin is checked against what it was asked to do; a project must exist; a signal must be well-formed
+C4, C5, C7. `assign_pins` honours a signal's own `pin` without reading its `needs` or the pin's
+roles: a wake button on GPIO47 (not wake-capable), an ADC sense on GPIO38, a button on the BOOT
+strap — all "dedicated hardware, not a choice", exit 0, while the same signals without `pin`
+land right and `check_design` refuses all three. A `--project` that does not exist resolves to a
+path nobody checks: a project whose parts are the library's builds with its rules dropped, exit 0,
+stderr empty (A2 one character away). A `signals` entry with no `name` is a `KeyError` the spine
+calls a broken chain.
+**Value proven by:** the three named pins refused by name with what the pin cannot do; a named pin
+that can do it accepted; `--project ./typo` → could-not-run naming the path; `{"signals": [{}]}` →
+could-not-run naming the entry. Mutations: each check removed.
+
+### P28 — What the close audit found in the tools and the records
+C8, C9, C10, C11, C12, C14, C16. The mutate lock is taken after the pre-check suite (a seven-second
+window, observed); `mutate.apply` reads a missing file where `anchors` refuses it; the status words
+are spelled again in `compare_design.py`; `init_project`'s `nets_in`, `rules_for` and `has_answers`
+are named by no test; the stranger test types the steps itself instead of running the document's
+lines; `/spark:build`'s example output block shows numbers no command produces; and "anchors at
+every commit" was enforced by nothing until `check_commit.py` (`8e70576`) — whether it becomes a
+versioned hook is the decision left. Three commit messages carry wrong numbers, corrected in the
+sprint log.
+**Value proven by:** the lock present during the pre-check; a missing file refused by both paths;
+one spelling of the words; the three functions named; the stranger test failing when a documented
+line is given a flag the code lacks; the example block equal to the example's own output.
+
+### P29 — The FireBeetle's power input as a power pad **[needs a source]**
+C15. `VCC` is a header pad and `power_pads` lists only `GND1-3` and `3V3`, all `out`, so no
+generated design can feed the module — the car's plan called that "the risk I am taking knowingly"
+and the tool said nothing. What the pad accepts (and from which regulator) is the vendor's fact;
+recorded with its source, or not at all.
+**Value proven by:** an inlet's `out` rail declared for the module traced to `.Mcu > .VCC`, and the
+board file carrying the pad's limits with a source.
+
+### P30 — The simulation converter matches a part by what it is, not what it is called **[bin + spark]**
+C17. The bin's `circuit-to-wokwi` matches components by NAME (`Rangefinder`, `Vl6180`, `MotorDriver`
+…), so a generated design's instance called `Near` has no Wokwi part and the spine's simulation
+stage is could-not-run. `emit_board` could carry the part id into `circuit.json` (a chip's
+manufacturer part number) and the converter match on that. Two repositories.
+**Value proven by:** two named VL6180X instances reaching `simulation … wire(s)` in the spine.
+
 ### P16 — Lift the bin's wake-polarity check into spark
 The bin's `tools/circuit-to-wokwi/lib/checks/wake-polarity.ts` (B3) compares the rail a wake
 button is tied to against the level the firmware arms for — the one defect no firmware test could

@@ -19,6 +19,9 @@ under the warning that says not to (P6).
 
 | id | item | why here |
 | --- | --- | --- |
+| ~~P26~~ | One bus vocabulary; a matrix-routed bus goes anywhere and says so | **done `07821a0`** — a regression of mine from P21, found by the close audit (C6) |
+| **P27** | A named pin checked against what it was asked to do; a project must exist; a signal well-formed | **next** — three of the "less than asked, exit 0" family, on documented forms (C4, C5, C7) |
+| **P28** | What the close audit found in the tools and the records | after P27 — the lock window, three unnamed functions, the stranger test's own lines, the example block, a hook or not (C8–C12, C14, C16) |
 | **P8** | `must_not_float` false-positives on pin-to-pin traces, on spark's own output | a rule that cries wolf is switched off, and then catches nothing |
 | **P7** | `check_design` recommends pins `assign_pins` refuses (BOOT, JTAG straps) | two tools of one product disagreeing about one board |
 | **P6** | `emit_board` honours the mechanical `host_requirements` it prints, or says which are the reader's | every generated motor board leaves the L9110S inputs floating today |
@@ -28,15 +31,37 @@ under the warning that says not to (P6).
 | — | Audit at sprint end, before the retro (R4.3) | |
 
 Still parked, the PO's: **P18** evals (run or delete), **P19** findings.py and its fake bench
-(keep, freeze or drop), **R8** parts-research routing, **R10** a link between two designs. Later
-and not misleading today: P2, P5, P9, P10.
+(keep, freeze or drop), **R8** parts-research routing, **R10** a link between two designs. Needing
+a source before it can be pulled: **P29** (the FireBeetle's VCC pad). Two repositories: **P30**.
+Later and not misleading today: P2, P5, P9, P10.
+
+## Daily log
+
+### 2026-09-29, night
+
+**The close audit reported** (`docs/observations/2026-09-29-sprint-4-close-audit.md`, C3–C19): every
+DONE of the second half re-runs, and three things I did wrong. `fd25f15` does not pass its own
+suite as committed — its message says 589 OK; the tree it holds runs 562 FAILED, because the file
+it imports was staged one commit later (C3). `73ca286`'s "sprint-2.json: 2 of 2" described two
+lines of a ten-entry table (C16). `ebb8339`'s "fourteen scripts" is sixteen (C9). And P21 had
+made the shipped I2S amplifier unplaceable for an evening (C6) — fixed first, `07821a0`.
+`check_commit.py` now measures the committed tree before every push; on its first run it caught
+the commit that added it (a `check_*.py` the runner did not import, an anchor that had moved with
+the vocabulary) and the push did not happen until `ac18a51`.
+
+**A fourth wrong message, `cdc7c81`:** it says the audit's rows were triaged and these records
+written; the script that did that had failed on its first line and the chain committed anyway.
+The tree it holds is fine (the gate passed); the message is not. This entry and the commit after
+it are the triage the message described. The PO question stands: **one letter, (a), (b) or (c)**;
+the close audit also recommends (c).
 
 ## Definition of Done
 
 Full text in [`README.md`](README.md). For every item: the `Value proven by:` command run and its
-output in the commit, written after the run (W13); `check_spine.py` green; a `mutate.py` table with
-every mutation caught (W3, W12), and `mutate.py --anchors tests/mutations/*.json` clean at every
-commit, one mutate run at a time (R4.5); a "user can" value line proven by a test that follows the
+output in the commit, written after the run and measured on the tree being committed (W13,
+`check_commit.py` before every push); `check_spine.py` green; a `mutate.py` table with every
+mutation caught (W3, W12), and `mutate.py --anchors tests/mutations/*.json` clean at every commit,
+one mutate run at a time (R4.5); a "user can" value line proven by a test that follows the
 document (R4.2); both RC boards and the bin's `make check` unchanged or explained.
 
 ---

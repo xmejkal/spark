@@ -225,3 +225,9 @@ documented steps could not be followed from a fresh directory. The stranger test
 | **R4.4** | The PO question is put once more, in the checkpoint summary, as a question that takes one letter; if unanswered by the next sprint's start, the sprint is planned without the cold test and the item stays parked, visibly. | At R5: the item is either answered or parked with the date | *pending* |
 | **R4.5** | A refused mutation guards nothing, and three were found refused at this close (R9 by the review, two in P11 by the new `--anchors` mode). `mutate.py --anchors tests/mutations/*.json` runs at every commit (DoD), and the tool refuses a second concurrent run — two overlapped tonight and both verdicts were worthless. | At R5: any table refused at the close; any overlapping runs (the lock says) | *pending* |
 
+**Postscript, the same night (close audit C18):** R4.3 says the closing audit is spawned before
+the retro is written; this retro was written first and the audit spawned after. The audit then
+found a commit that does not pass its own suite as committed (C3), a regression of P21's (C6) and
+three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
+the audit first, then the retro, citing its report.
+
