@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""
+Re-introduce each defect and prove the suite goes red.
+
+    mutate.py mutations.json
+    mutate.py mutations.json --root . --tests tests --json
+
+Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
+That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
+"the generator stops sizing traces" and "the placeholder list is never passed through" — each
+surviving a green suite until somebody happened to try it. A retro action to build this tool did
+not stick either, for want of a forcing function. This is the forcing function.
+
+THE TABLE
+
+    [{"file": "scripts/copper.py",
+      "name": "drop the width margin",
+      "find": "TRACE_WIDTH_MARGIN = 1.15",
+      "replace": "TRACE_WIDTH_MARGIN = 1.0"}, ...]
+
+`find` must occur EXACTLY ONCE in `file`, or the mutation is refused before anything runs. A
+substitution that silently matched nothing was scored "caught" by an earlier hand-rolled
+harness, because the suite it ran was the unmutated one.
+
+THE THREE RULES THE HAND-ROLLED HARNESSES LEARNED, built in:
+
+  * stderr is captured. `unittest` writes its verdict there, and a harness that drops it prints
+    nothing for every mutation — which reads as success.
+  * the file is restored in a `finally`, whatever happens, and the tool confirms the restore by
+    running the suite once more at the end and refusing to report "all caught" if it is not green.
+  * the bytecode cache is never consulted. Python validates a `.pyc` by the source's mtime in
+    whole seconds and its size. `a + b` -> `a - b` is a same-size edit, and mutate-then-restore
+    within one second is invisible to that check: the "restored" suite ran the MUTATED bytecode
+    and reported red, which this tool's own tests caught on their first full run. So every suite
+    run is `-B` with a fresh, empty cache prefix — pure source, every time.
+
+WHAT PASSING MEANS
+
+Every mutation turned the suite red, and the suite is green again with the files restored. A
+mutation that leaves the suite green is a MISSING TEST, named, and the exit code says so. That is
+the whole product: not "the tests pass" but "the tests would notice".
+"""
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+EXIT_OK, EXIT_ESCAPED, EXIT_COULD_NOT_RUN = 0, 1, 2
+
+CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
+
+
+def suite_is_green(root, tests):
+    """
+    Run the suite once, from source alone; the verdict is on stderr, which is why it is captured.
+
+    `-B` writes no bytecode and a fresh `PYTHONPYCACHEPREFIX` means none pre-existing is read.
+    Without both, a same-size mutation restored within a second is scored against stale `.pyc`.
+    """
+    import os
+    import tempfile
+    environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
+                       PYTHONPYCACHEPREFIX=tempfile.mkdtemp(prefix="mutate-pycache-"))
+    result = subprocess.run(
+        [sys.executable, "-B", "-m", "unittest", "discover", "-s", tests],
+        cwd=str(root), capture_output=True, text=True, env=environment)
+    verdict = (result.stderr or "") + (result.stdout or "")
+    return result.returncode == 0 and "\nOK" in verdict
+
+
+def apply(root, mutation):
+    """
+    Substitute, or refuse. Returns the original text so the caller can restore it.
+
+    Refusal is a result, not an error: a `find` that matches zero or two places means the table
+    is wrong, and running the suite against an unmutated file would score a phantom "caught".
+    """
+    path = root / mutation["file"]
+    original = path.read_text()
+    count = original.count(mutation["find"])
+    if count != 1:
+        return None, "`find` occurs %d time(s) in %s; it must occur exactly once" % (
+            count, mutation["file"])
+    path.write_text(original.replace(mutation["find"], mutation["replace"]))
+    return original, None
+
+
+def run(root, tests, mutations):
+    """Every mutation, each restored before the next, and the suite confirmed green at the end."""
+    results = []
+    for mutation in mutations:
+        path = root / mutation["file"]
+        original, refusal = apply(root, mutation)
+        if refusal:
+            results.append({"name": mutation.get("name", mutation["find"]),
+                            "status": REFUSED, "detail": refusal})
+            continue
+        try:
+            green = suite_is_green(root, tests)
+        finally:
+            path.write_text(original)
+        results.append({"name": mutation.get("name", mutation["find"]),
+                        "status": ESCAPED if green else CAUGHT,
+                        "detail": "" if not green else
+                        "the suite stayed green — no test notices this defect"})
+
+    restored = suite_is_green(root, tests)
+    return results, restored
+
+
+def verdict(results, restored):
+    if not restored:
+        return EXIT_COULD_NOT_RUN
+    if any(r["status"] in (ESCAPED, REFUSED) for r in results):
+        return EXIT_ESCAPED
+    return EXIT_OK
+
+
+def render(results, restored, code):
+    lines = [""]
+    for r in results:
+        mark = {CAUGHT: "caught ", ESCAPED: "ESCAPED", REFUSED: "refused"}[r["status"]]
+        lines.append("  [%s] %s%s" % (mark, r["name"], ("  — " + r["detail"]) if r["detail"] else ""))
+    lines.append("")
+    if not restored:
+        lines.append("  THE SUITE IS NOT GREEN WITH THE FILES RESTORED. Nothing above can be "
+                     "trusted; something is left mutated or was already broken.")
+    elif code == EXIT_OK:
+        lines.append("  every mutation was caught, and the suite is green with the files restored")
+    else:
+        escaped = sum(1 for r in results if r["status"] == ESCAPED)
+        refused = sum(1 for r in results if r["status"] == REFUSED)
+        lines.append("  %d escaped, %d refused: each ESCAPED line is a missing test"
+                     % (escaped, refused))
+    return "\n".join(lines) + "\n"
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    parser.add_argument("table", help="a JSON list of {file, find, replace, name?}")
+    parser.add_argument("--root", default=".", help="the project root the files are under")
+    parser.add_argument("--tests", default="tests", help="the test directory, relative to root")
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+
+    root = Path(args.root).resolve()
+    try:
+        mutations = json.loads(Path(args.table).read_text())
+    except (OSError, ValueError) as broken:
+        print("could not read the table: %s" % broken, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    if not suite_is_green(root, args.tests):
+        print("the suite is not green BEFORE any mutation; a red suite catches nothing",
+              file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+
+    results, restored = run(root, args.tests, mutations)
+    code = verdict(results, restored)
+    if args.json:
+        print(json.dumps({"tool": "mutate", "restored": restored,
+                          "status": {EXIT_OK: "ok", EXIT_ESCAPED: "escaped",
+                                     EXIT_COULD_NOT_RUN: "could-not-run"}[code],
+                          "mutations": results}, indent=2))
+    else:
+        sys.stdout.write(render(results, restored, code))
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

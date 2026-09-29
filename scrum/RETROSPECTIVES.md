@@ -49,11 +49,11 @@ went from never having been run end to end to exit 0 with 8 traces. `→ simulat
 
 | # | change | check that it stuck | result |
 | --- | --- | --- | --- |
-| **R1.1** | The chain gets one gate that runs it end to end and counts traces, not exceptions. **Done same day** — `scripts/check_spine.py`, and it is clause 3 of the Definition of Done. | At R2: has any PBI been called Done while `check_spine.py` was red or unrun? | *pending* |
-| **R1.2** | One backlog. `scrum/PRODUCT_BACKLOG.md` is the only queue; `BACKLOG.md` becomes narrative and `INDEX.md` becomes intake. A claim becomes work only by being promoted to a PBI. | At R2: count rows added to `INDEX.md` vs rows promoted or **rejected**. If `rejected` is still zero, this did not stick. | *pending* |
-| **R1.3** | Mutation testing stops being enforced by memory. → **P4** in the backlog. | At R2: does `scripts/mutate.py` exist and is it used in a commit? | *pending* |
-| **R1.4** | Every PBI names a `Value proven by:` command before it can be pulled, and review runs it. Aimed squarely at the gap between Done and valuable, which cost this project the most time. | At R2: was any PBI pulled without one? Did review actually run them? | *pending* |
-| **R1.5** | Keep an outside reader running. The evidence is now four-for-four: every serious defect came from someone not doing the work. | At R2: did an observer run during the sprint, and was its report reproduced before being acted on (W9)? | *pending* |
+| **R1.1** | The chain gets one gate that runs it end to end and counts traces, not exceptions. **Done same day** — `scripts/check_spine.py`, and it is clause 3 of the Definition of Done. | At R2: has any PBI been called Done while `check_spine.py` was red or unrun? | **stuck.** Chain green through nine fixes: 5 stages ok, 12 traces, 10 wires, exit 0 on 2026-09-29 |
+| **R1.2** | One backlog. `scrum/PRODUCT_BACKLOG.md` is the only queue; `BACKLOG.md` becomes narrative and `INDEX.md` becomes intake. A claim becomes work only by being promoted to a PBI. | At R2: count rows added to `INDEX.md` vs rows promoted or **rejected**. If `rejected` is still zero, this did not stick. | **did not stick.** 59 rows: 46 raised, 7 verified, 6 acted, **0 rejected**. G14 was rejected — in the diary and the backlog, never in the intake table |
+| **R1.3** | Mutation testing stops being enforced by memory. → **P4** in the backlog. | At R2: does `scripts/mutate.py` exist and is it used in a commit? | **did not stick.** Does not exist. ~30 mutations run by hand this sprint; two escaped (trace sizing, placeholder wiring) until happened upon |
+| **R1.4** | Every PBI names a `Value proven by:` command before it can be pulled, and review runs it. Aimed squarely at the gap between Done and valuable, which cost this project the most time. | At R2: was any PBI pulled without one? Did review actually run them? | **stuck**, with a caveat: every task item has one and each DONE cites its command. R8 and R10 lack one by design — they are PO decisions, not tasks |
+| **R1.5** | Keep an outside reader running. The evidence is now four-for-four: every serious defect came from someone not doing the work. | At R2: did an observer run during the sprint, and was its report reproduced before being acted on (W9)? | **stuck.** Gap recorder ran (G8–G14); auditor running now. W9 earned its keep: G14 was reproduced and found wrong |
 
 ### What we are deliberately not changing
 
@@ -61,3 +61,56 @@ The rework rate, directly. Two of the five actions above (R1.1, R1.3) attack its
 end-to-end gate, and a discipline held only in memory. Adding a rule that says "make fewer
 mistakes" would be the kind of action that cannot be checked, which is what this table exists to
 prevent.
+
+
+---
+
+## R2 — 2026-09-29, on the cold test and the sprint that fixed it
+
+**Present:** facilitator; independent auditor (reporting separately, reading the same evidence
+cold).
+
+### What happened
+
+The plugin was used to build something that is not the smart bin — an RC car and its remote —
+from scratch, with a plan written first so its predictions could be scored. Both boards build.
+Fifteen findings; nine fixed in three days, each reproduced first and each mutation-tested.
+
+### Scoring the plan
+
+All five predictions in `PLAN.md` hit. **But six of the fifteen findings were not predicted, and
+they were the worse ones.** The predicted gaps were *structural* — no servo part, one board per
+project, no PWM notion, no link between designs, no source for the 5 V rail. The unpredicted ones
+were *silent wrongness*: rails dropped without a word (G2), five components collapsed to one (G7),
+a second board turning six checks off with an `ok` (G8), the validator crashing on the input it
+exists to catch (G15). A plan can foresee what a tool lacks. It cannot foresee what a tool lies
+about, and those are the ones that matter.
+
+### What went well, with evidence
+
+- **Measure before fixing paid out four times.** The "1.20 mm trace" was six pad necks 0.12–0.85 mm
+  long. The selector-safe character set came from a probe board, not a guess. The intake claim
+  G14 was reproduced and found wrong — and the reproduction found G15, which was real.
+- **Fixing at the cause, not the site.** The validator crash was fixed once in `needs` and the
+  test for it found the identical crash in `power`; the contract now covers all three lists.
+- **The refactor was earned, not scheduled.** `copper.py` exists because two modules needed one
+  formula and one was reaching into the other by `importlib`.
+
+### What did not
+
+- **Two retro actions did not stick**, and the honest reading is that neither had a forcing
+  function. The intake table is not on anyone's path; the mutation discipline lives in memory.
+- **Two mutations escaped**, both the same shape: the helper was tested and the integration was
+  not — "the generator stops sizing traces" and "the wiring passes an empty list".
+- **The patch-not-audit pattern recurred three times** (signal prefix at three sites, `["pin"]`
+  at four, power traces in two loops). Caught each time, but each time *after* the first fix.
+
+### Actions
+
+| # | change | check that it stuck | result |
+| --- | --- | --- | --- |
+| **R2.1** | Build `scripts/mutate.py` NOW, in this retro, because R1.3 failed for want of a forcing function. | At R3: every DONE item since cites a `mutate.py` run. | *pending* |
+| **R2.2** | Every fix that touches an integration gets an integration test, not only a helper test. Named for the two escapes. | At R3: any escaped mutation whose cause was "helper tested, consumer not". | *pending* |
+| **R2.3** | Before fixing a rule at one site, `grep` for its other sites — the three recurrences all had a greppable anchor. | At R3: count of commits that say "same defect, second site". | *pending* |
+| **R2.4** | Retire the intake table's `raised` backlog: every row either promoted to a PBI, or `rejected` with a reason, before R3. | At R3: `raised` count in `INDEX.md`, and whether `rejected` is still zero. | *pending* |
+| **R2.5** | Third cold test in a different domain — to be chosen by the PO — because both silent-wrongness classes were found only by building something new. | At R3: the diary of that test exists and is scored against its plan. | *pending* |
