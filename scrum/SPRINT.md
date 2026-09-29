@@ -25,7 +25,8 @@ retros in a row say the intake has not drained (R3.2).
 | ~~P21~~ | A bus is shared; a name does not take a part off it | **done `7381fed`** — two named I2C parts on one bus build, 12 traces |
 | ~~P22~~ | A stranger can build [reopened R7] | **done `c565778`** — every documented step from an empty directory, build 11 traces |
 | ~~P23~~ | Two outputs on one net, across parts | **done `5605065`** |
-| **P24**, **P25** | `check_design` CLI; one outcome vocabulary | **next**, last |
+| ~~P24~~ | `check_design` CLI | **done `fd25f15`** |
+| P25 | One outcome vocabulary; a test for every rule function | vocabulary **done `ebb8339`**; the named tests open |
 | **R2.5** | Third cold test — **PO: choose a domain** (below) | both silent-wrongness classes were found only by building something new |
 | — | The audit agent at sprint end (R3.3) | the outside read that produced six items last time |
 

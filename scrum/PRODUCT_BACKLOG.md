@@ -47,8 +47,8 @@ See [`SPRINT.md`](SPRINT.md). Goal: **spark is usable by someone who has not rea
 | ~~P21~~ | A bus is shared; an instance name does not take a part off it — **done `7381fed`** | M |
 | ~~P22~~ | A stranger can build [reopened R7] — **done `c565778`** | M |
 | ~~P23~~ | Two outputs on one net, across parts — **done `5605065`** | S |
-| P24 | `check_design.py` gets a command line | S |
-| P25 | One outcome vocabulary; a test for every rule function | M |
+| ~~P24~~ | `check_design.py` gets a command line — **done `fd25f15`** | S |
+| P25 | One outcome vocabulary — **done `ebb8339`**; a test for every rule function — open | M |
 | R2.5 | Third cold test — **PO chooses the domain** | L |
 
 ## Sprint 3 — done 2026-09-29
@@ -438,12 +438,16 @@ first version flagged every design with an inlet, whose GND is rightly `out`; th
 caught it. `GROUND_NETS` is one list now, in the generator, read by the spine. Four mutations
 caught, 579 tests, four designs byte-identical.
 
-### P24 — `check_design.py` gets a command line
+### ~~P24 — `check_design.py` gets a command line~~ — **DONE `fd25f15`**
 O4c. `--help` prints `no design at --help`, exit 1: `main(argv)` reads `argv[1]` and nothing else.
 argparse, `--json` and a usage line, like every other script.
 **Value proven by:** `check_design.py --help` exits 0 with usage; the routes test covers it.
 
-### P25 — One vocabulary for the three outcomes, and a test for every rule function
+**Result.** argparse, `--json`, `CannotCheck` → could-not-run. One escape on the way (a status
+forced to `ok` passed a test that accepted either); fixed with a guaranteed-problem fixture.
+Two mutations caught, 589 tests.
+
+### P25 — One vocabulary for the three outcomes, and a test for every rule function — **half done `ebb8339`**
 B16, B17. `EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2` in 14 files and `"could-not-run"`
 in 9, four files naming the middle outcome differently; the upward directory walk at four sites;
 `power_note_lines`, `module_power_lines`, `assign_pins.main`, `power_trace`, `trace_width_mm`,
@@ -451,6 +455,11 @@ in 9, four files naming the middle outcome differently; the upward directory wal
 lands when something touches those files.
 **Value proven by:** one definition each, every script importing it, suite green, four designs
 byte-identical; every function the audit listed named by a test.
+
+**So far** (`ebb8339`): `outcomes.py`, fourteen scripts importing it, one `walk_up`; suite green, four
+designs byte-identical; no mutation, none possible for a pure refactor. **Open:** the named tests
+for `power_note_lines`, `module_power_lines`, `power_trace`, `trace_width_mm`, `roles_of`,
+`_penalty`, `_why`, `_why_not`, `design.rules_in` and the `check_physics.check_*` rules.
 
 ### P16 — Lift the bin's wake-polarity check into spark
 The bin's `tools/circuit-to-wokwi/lib/checks/wake-polarity.ts` (B3) compares the rail a wake
