@@ -76,7 +76,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it as
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per signal, with the reason
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board firebeetle2-esp32s3 -o FireBeetle2Esp32S3.tsx
-npx tsci build board.tsx                                            # needs tscircuit; the one command does this in a temp dir
+npm install && npx tsci build board.tsx                             # the project's own tscircuit (init writes the package file); the one command needs neither
 ```
 
 The board file imports `./FireBeetle2Esp32S3` — the footprint `emit_footprint.py` writes from

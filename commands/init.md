@@ -26,7 +26,9 @@ own `boards/<id>.json` beats the library.
 ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id>
 ```
 
-It writes `.spark/rules.json`, `.spark/project.json` and `boards/active.json`, and names the
+It writes `.spark/rules.json`, `.spark/project.json`, `boards/active.json` and a `package.json`
+naming tscircuit's cli (so `npm install && npx tsci build` works in the project; without the file
+tsci climbs to your home folder looking for a root — never rewritten once you add to it), and names the
 rails from the built design if there is one. Existing files are left alone unless `--force`.
 
 ## 3. Read what it could not answer

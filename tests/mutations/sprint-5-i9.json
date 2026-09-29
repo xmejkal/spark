@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/init_project.py",
+  "name": "init stops writing the package file",
+  "find": "    notes.append(write(project / \"package.json\", package_file(project), force=False)[1])",
+  "replace": "    pass"
+ },
+ {
+  "file": "scripts/init_project.py",
+  "name": "--force rewrites a package file someone added to",
+  "find": "    notes.append(write(project / \"package.json\", package_file(project), force=False)[1])",
+  "replace": "    notes.append(write(project / \"package.json\", package_file(project), force=args.force)[1])"
+ }
+]

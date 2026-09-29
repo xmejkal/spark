@@ -172,6 +172,19 @@ def write(path, payload, force, brief=False):
     return True, "wrote %s" % path.name
 
 
+def package_file(project):
+    """
+    What `npx tsci build` needs in a project. Without a package file it walks up looking for a
+    root, reaches the home folder and dies on a protected directory; with one, it resolves the
+    board's imports from the project and needs the cli installed there (irrigation diary I9 —
+    both were met in one evening). The one command never meets either: it builds in a temp
+    directory, where a global tsci resolves from its own install. Never rewritten: a person may
+    add to it. `npm install` once, then `npx tsci build`.
+    """
+    return {"name": project.name, "private": True, "dependencies": {"@tscircuit/cli": "*"},
+            "//": "written by /spark:init: `npm install` once, then `npx tsci build board.tsx` works here"}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="init_project.py",
@@ -219,6 +232,7 @@ def main(argv=None):
         notes.append(note)
         if did:
             written.append((path, payload))
+    notes.append(write(project / "package.json", package_file(project), force=False)[1])
 
     if args.board:
         available = boards.available(project)

@@ -55,6 +55,17 @@ class WhatItWritesTest(unittest.TestCase):
         brief = json.loads((self.root / ".spark" / "project.json").read_text())
         self.assertIn("must", brief)
 
+    def test_a_package_file_is_written_so_tscircuit_stops_its_walk_at_the_project(self):
+        # I9: with no package file, `npx tsci build` climbed to the home folder and died on a
+        # protected directory; the car had one from its first evening, the irrigation box did not.
+        package = json.loads((self.root / "package.json").read_text())
+        self.assertEqual((package["name"], package["private"], "@tscircuit/cli" in package["dependencies"]),
+                         (self.root.name, True, True))
+        (self.root / "package.json").write_text('{"name": "mine", "dependencies": {"tscircuit": "*"}}')
+        init_project.main(["--project", str(self.root), "--force"])
+        self.assertEqual(json.loads((self.root / "package.json").read_text())["name"], "mine",
+                         "a package file a person may have added to is never rewritten, even by --force")
+
     def test_an_existing_file_is_not_overwritten(self):
         (self.root / ".spark" / "rules.json").write_text('{"mine": true}')
         init_project.main(["--project", str(self.root)])
