@@ -41,13 +41,14 @@ generator refuse rather than invent one.
 | --- | --- |
 | `/spark:init` | Writes `.spark/rules.json`, `.spark/project.json` and `boards/active.json`. Names the rails from the built design; leaves **every value null** and lists them. A guessed rail current would poison the one check that does arithmetic. |
 | `/spark:check` | The cheap pass: pins, capabilities, shared buses, I²C addresses. Seconds, no agents. |
+| `/spark:build` | A requirements file — a board and a list of parts — to a board that builds and simulates, or the stage that stopped it: `parts → pin map → board file → build → simulation`. Seconds, no agents, refuses rather than guesses. |
 
 ## Skills
 
 | | |
 | --- | --- |
 | **spark-review** | Find what is wrong, gate it before fab, and remember it. Runs all seven deterministic checks, then five reviewers (power, signals, thermal-mechanical, manufacturability, firmware-hardware) reading primary artefacts only, into a findings store that survives between sessions. Identity is structural, so the same defect worded differently is one finding, and an anchor the design does not contain refuses the finding outright. |
-| **spark-design** | Describe → tscircuit → build headless → grade against design rules and the parts library → render. |
+| **spark-design** | Describe → `requirements.json` → parts → pin map → generated board file → build → checks → render. tscircuit by hand only where the generator stops. |
 | **spark-simulate** | Test firmware before the hardware exists: a fake `machine` module for offline tests, then Wokwi for the real binary on a simulated chip. Honest about what no simulator proves. |
 | **spark-reverse-engineer** | Board photo → copper reading + datasheet pinouts + functional wiring → netlist hypothesis and a bench protocol to confirm it. |
 

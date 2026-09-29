@@ -1,6 +1,6 @@
 ---
 name: spark-design
-description: Design an electronic circuit or PCB from a description, especially ESP32 and module-level boards. Use when the user wants to design a circuit, make a real schematic or PCB, wire up a microcontroller with peripherals, or says "design a board for...", "make a schematic for...", "wire up an ESP32 with...". Produces tscircuit code, builds it headless, and grades it against design rules and a verified-parts library.
+description: Design an electronic circuit or PCB from a description, especially ESP32 and module-level boards. Use when the user wants to design a circuit, make a real schematic or PCB, wire up a microcontroller with peripherals, or says "design a board for...", "make a schematic for...", "wire up an ESP32 with...". Generates the board from a requirements file through spark's own chain (parts → pin map → board file → build → simulation), builds it headless, and grades it against design rules and the parts library; tscircuit is written by hand only where the generator stops.
 ---
 
 # spark-design
@@ -15,30 +15,57 @@ a rule checklist in the loop. Follow it.
    State the rule up front: separate motor/high-current supply from logic; the two domains
    share only ground, never a supply rail. A motor or actuator never touches a GPIO.
 
-2. **Resolve every part from the verified-parts library first.** Read
-   `references/verified-parts.md`. Use a part only with a datasheet-checked pin map. If a part
-   is missing, resolve it from the vendor (see `references/vendor-knowledge.md`): for Espressif use
-   the `pins_arduino.h` variant header + the `espressif-docs` MCP; for DFRobot use the wiki
-   `/<sku>/docs/` pinout + the `DFRobot_<Part>` GitHub `examples/` + the Gravity connector class;
-   otherwise a JLCPCB/LCSC lookup or datasheet. Record a new library entry with provenance and a
-   `verified` flag, and flag any pin you could not confirm. NEVER invent a pinout. **First confirm
-   which exact board it is** (Seeed XIAO vs DFRobot FireBeetle/Beetle differ — see verified-parts.md).
+2. **Resolve every part from the parts library.** `${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list`
+   shows what exists — the shipped records plus the project's own `parts/*.json`, which win by
+   name — and `parts.py --show <id>` what a record asks of the host and what nobody has verified.
+   A part that is not there is written as a **record**, never resolved into prose:
+   `references/part-data.md` has the schema and `parts.py --validate --project .` says what is
+   missing. NEVER invent a pinout — a pin map comes from the vendor (`references/vendor-knowledge.md`:
+   Espressif's `pins_arduino.h` variant header, the DFRobot wiki `/<sku>/docs/` pinout and the
+   `DFRobot_<Part>` GitHub `examples/`, otherwise a datasheet or a JLCPCB/LCSC lookup), recorded
+   with provenance and a `verified` flag, and any pin you could not confirm flagged. **First
+   confirm which exact board it is** (`boards.py --list`; a Seeed XIAO and a DFRobot FireBeetle
+   differ, and one DFRobot SKU is two power designs — see the board file's `hardware_revisions`).
 
-3. **Apply the design rules.** Read `references/design-rules.md` and check the design against it
-   — decoupling at every IC power pin, bulk cap near high-current loads, I2C pull-ups, correct
-   pin roles, level compatibility, and the ESP32 module specifics.
+3. **Write the requirements file and run the chain.** The requirements file *is* the design:
 
-4. **Write the tscircuit board (`.tsx`).** Model ICs as `<chip>` with `pinLabels`; wire with
-   `<trace from=... to=... />` selectors or `sel.*` type-safe references; use `<net>` labels for
-   power/ground; pull real footprints from the registry (`tsci add`) or `footprint="jlcpcb:C..."`.
-   Prefer `sel.NAME.PIN` references so a wrong pin name fails at compile time.
-   **Name every component descriptively** — `MotorDriver`, `OledDisplay`, `PullupSda`, `MotorBulkCap`,
-   `BtnOpen`, `IrSensor` — never bare `U1`/`R2`/`SW1`. Use clear net names too (`MOTOR6V`, `GND`, `V33`).
-   Readable names make the schematic, the selectors, and the git diff self-documenting.
+   ```json
+   {"board": "firebeetle2-esp32s3",
+    "parts": ["l9110s-module", {"part": "tactile-button", "name": "BtnOpen"}],
+    "signals": [{"name": "LED_STATUS", "needs": []}]}
+   ```
 
-5. **Build and iterate on the errors.** Run `npx tsci build board.tsx`. Read
-   `dist/<board>/circuit.json` for `*_error` / `*_warning` entries (unconnected pins, missing
-   power/ground, overlaps). Fix and rebuild until clean. Do not rely on the `tsci check` CLI
+   Then, in this order — each says what it decided and why:
+   - `${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json` — a pin per signal, scarce
+     pins (wake, ADC1, the buses) spent last, with the reason beside each.
+   - `${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx` — the board file.
+     It REFUSES rather than guess: no footprint, no pin order, no measured outline
+     (`--assume-missing-sizes` proceeds with the guess declared in the file), two components of one
+     name. The file says what it invented and what it could not size.
+   - `${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json` — the whole chain,
+     `idea → parts → pin map → schematic → footprint → build → simulation`, and the stage that
+     stopped it. `????` is could-not-run and never a pass; `!!` is a defect in the design.
+
+   The project is found up from the requirements file, so this works from anywhere. `/spark:build`
+   is the same thing as a command.
+
+4. **Apply the design rules the generator cannot.** Read `references/design-rules.md` and check
+   the design against it — decoupling at every IC power pin, bulk cap near high-current loads, I2C
+   pull-ups sized from the bus, correct pin roles, level compatibility, the ESP32 module specifics.
+   The generated file lists every part's `host_requirements` and does **none** of them; those are
+   yours, in the board file, by hand.
+
+5. **Write tscircuit by hand only where the generator stops** — a passive network, a connector
+   the module list does not know, a layout decision. Model ICs as `<chip>` with `pinLabels`; wire
+   with `<trace from=... to=... />` selectors or `sel.*` type-safe references; use `<net>` labels
+   for power/ground; pull real footprints from the registry (`tsci add`) or
+   `footprint="jlcpcb:C..."`. Prefer `sel.NAME.PIN` references so a wrong pin name fails at
+   compile time. **Name every component descriptively** — `MotorDriver`, `OledDisplay`,
+   `PullupSda`, `MotorBulkCap`, `BtnOpen`, `IrSensor` — never bare `U1`/`R2`/`SW1`, and clear net
+   names (`MOTOR6V`, `GND`, `V33`): the generator does, and the schematic, the selectors and the
+   git diff stay self-documenting. Then build and iterate on the errors: `npx tsci build board.tsx`,
+   read `dist/<board>/circuit.json` for `*_error` / `*_warning` entries (unconnected pins, missing
+   power/ground, overlaps), fix and rebuild until clean. Do not rely on the `tsci check` CLI
    subcommands (work-in-progress) — read the circuit.json errors.
 
 6. **Verify before emitting fab output.** Hand off to `spark-review`, which ends with the fab
@@ -76,7 +103,8 @@ a rule checklist in the loop. Follow it.
 ## References
 
 - `references/design-rules.md` — general PCB best practices + the ESP32-C6/XIAO checklist.
-- `references/verified-parts.md` — the verified-parts library (pin maps + provenance).
+- `parts/*.json` (`parts.py --list`) — THE parts library the chain reads; `references/verified-parts.md`
+  is the older prose list and is not what the generator consults.
 - `references/vendor-knowledge.md` — how to pull verified data from Espressif & DFRobot (and others).
 - `references/part-data.md` — the part-data backbone: real footprints/3D/datasheets per part, and auto-solve-or-ask for layout.
 - `references/verification-loop.md` — the checks-to-fab gate; the enforced version is the

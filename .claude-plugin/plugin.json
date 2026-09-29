@@ -1,7 +1,7 @@
 {
   "name": "spark",
   "version": "0.6.0",
-  "description": "AI electronics design. Checks a design made of modules plugged into a dev board for the mistakes no EDA tool catches: a wake source on a pin that cannot wake the chip, an analogue input on a digital-only pin, two parts on one pin, a serial module on the boot-log UART, and two I2C devices at one address. Also bundles ESP32/PCB design-rule checklists, a verified-parts library, vendor-knowledge ingestion (Espressif, Seeed and DFRobot), a photo-to-schematic reverse-engineering procedure, and a verification gate that refuses to emit a board with unverified part pins.",
+  "description": "AI electronics design. A generator that turns a list of modules on a dev board into a board that builds and simulates (/spark:build: parts, pin map, board file, build, Wokwi diagram), refusing rather than guessing. Checks a design for the mistakes no EDA tool catches: a wake source on a pin that cannot wake the chip, an analogue input on a digital-only pin, two parts on one pin, a serial module on the boot-log UART, and two I2C devices at one address. Also bundles ESP32/PCB design-rule checklists, a parts library with provenance, vendor-knowledge ingestion (Espressif, Seeed and DFRobot), a photo-to-schematic reverse-engineering procedure, and a verification gate that refuses to emit a board with unverified part pins.",
   "author": {
     "name": "Petr Smejkal"
   },

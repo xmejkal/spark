@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "tactile-button",
+  "name": "6x6 mm tactile push button",
+  "kind": "button",
+  "//": "One of the remote's five controls. Two terminals, no polarity, no part number worth having — a 6x6 through-hole tactile switch is a commodity and the only variable that matters is cap height.",
+
+  "needs": [
+    {"signal": "BUTTON", "pin": "A", "direction": "in",
+     "note": "To a GPIO. The other terminal goes to a rail, and WHICH rail decides the polarity — see host_requirements, because on this family of chips it also decides whether the board can wake from sleep at all."}
+  ],
+
+  "power": [
+    {"pin": "B", "rail": "ground", "direction": "in",
+     "note": "Pressed pulls the GPIO to ground, so the pin idles HIGH on a pull-up and reads 0 when pressed. THIS IS A DESIGN DECISION WITH A CONSEQUENCE: see host_requirements."}
+  ],
+
+  "pin_order": ["A", "B"],
+  "//pin_order": "A 6x6 tactile switch has four legs in two pairs, and each pair is one terminal — so a 2-pin footprint is the electrical truth and a 4-pad footprint is the mechanical one. `pushbutton` in footprinter gives four pads wired as two nets, which is what a board wants; this record describes the two terminals.",
+
+  "footprint": "pushbutton",
+  "body_mm": {"width": 6.0, "height": 6.0, "verified": true,
+              "source": "the 6x6 form factor's defining dimension; the variable is CAP HEIGHT, not footprint",
+              "note": "Height is 4.3, 5, 8 or 12 mm depending on variant and is the only thing to check against an enclosure."},
+
+  "host_requirements": [
+    "Decide the polarity against deep sleep, not convenience. On an ESP32 every armed ext1 wake pin shares ONE trigger level, so a board with two wake sources must have them assert in the same direction. A button to ground asserts LOW and forces WAKEUP_ALL_LOW, which is an AND across the whole mask — with two sources armed, the board wakes only when both assert at once. If this button is a wake source, wire it to 3V3 behind a pull-down instead and arm WAKEUP_ANY_HIGH.",
+    "Give it an external pull, not just the internal one. Internal pulls are inactive for the ~300 ms between reset and firmware and through any reflash, which for a wake input means a floating pin while the chip is asleep.",
+    "Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin's first edge is the one that matters and it is not debounced by anything."
+  ],
+
+  "facts": {
+    "debounce_ms_typical": {
+      "value": 40, "verified": false,
+      "source": "the conventional figure for a tactile dome switch; not measured on any specific part",
+      "why_it_matters": "too short double-fires a control, too long makes a remote feel broken. On a driving remote it is the difference between steering and twitching."
+    },
+    "cap_height_mm": {
+      "value": null, "verified": false,
+      "source": "a variant, not a fact about the family",
+      "why_it_matters": "the only dimension that decides whether the enclosure closes"
+    }
+  }
+}

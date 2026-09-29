@@ -32,10 +32,22 @@ vendor's own pad. A hole that has to *accept* a 2.54 mm header pin needs ≥1.0 
 it moved, and three rules examined nothing for weeks afterwards. When a check reports nothing,
 confirm it is reading a field that exists before believing it.
 
+## The chain you run, in order
+
+```
+python3 scripts/parts.py --list                      # what exists; write a record for what does not
+python3 scripts/assign_pins.py requirements.json     # a pin per signal, with the reason
+python3 scripts/emit_board.py requirements.json > board.tsx
+python3 scripts/check_spine.py requirements.json     # idea -> ... -> simulation, or the stage that stopped
+```
+
+You do not write the board file by hand unless the generator stops and says why — and then
+only the part it stopped on.
+
 ## How you know you are finished
 
 ```
-python3 scripts/check_spine.py          # exit 0, and traces > 0
+python3 scripts/check_spine.py requirements.json   # exit 0, and traces > 0
 ```
 
 Not "the build did not raise". Traces, and no errors. A board with no copper is not a board.
