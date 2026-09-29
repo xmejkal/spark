@@ -43,9 +43,10 @@ car, which is the point:
 
 **P15 done** — pulled ahead of the PO's ordering because two retros mandated it (R2.4, R3.2) and
 it decides nothing about the product. `grep -c '\`raised\`' docs/observations/INDEX.md` → 1
-(the legend line and one row that quotes the word). Three rows were still true and are fixed in
+(the legend line). Three rows were still true and are fixed in
 `f35e7df`; R19 is the first `rejected` row the table has ever had. Four items came out, two of them
-the PO's.
+the PO's. **Correction:** the fix commit's message (`f35e7df`) says 533 tests; the run it cites
+printed 532. Written before the count — R3.5's exact failure mode, an hour after R3.5.
 
 ## Definition of Done
 
