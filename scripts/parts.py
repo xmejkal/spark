@@ -361,10 +361,12 @@ def signals_for(part_ids, project: Path = None) -> list:
             if need.get("pin_on_host"):
                 entry["pin"] = need["pin_on_host"]
             if need.get("bus"):
-                # A bus signal means dedicated hardware. The board almost certainly brings the
-                # peripheral out on a pin of the same name, and using any other pin either does
-                # not work or gives up the hardware peripheral for a bit-banged one.
+                # A bus signal means dedicated hardware: the board's pin for that line of that
+                # bus, found by `assign_pins.bus_line`. `line` is the part's own name for the
+                # line — SDA, or a vendor's DIN — and it has to survive the instance rename that
+                # `design.signals_of` gives `name`, or the assigner cannot find the pin (P21).
                 entry["bus"] = need["bus"]
+                entry["line"] = need["signal"]
             entry["from"] = part_id
             signals.append(entry)
     return signals

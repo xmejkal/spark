@@ -236,5 +236,16 @@ class TheSignalsAreDerivedOnceTest(unittest.TestCase):
             design.load(path)
         self.assertIn("l9110s-module", str(caught.exception))
 
+
+class ABusSignalKeepsItsLineTest(unittest.TestCase):
+    def test_a_named_instances_bus_signal_still_says_which_line_it_is(self):
+        # The instance prefix renames the signal; the bus line it is has to survive the rename,
+        # or the assigner cannot find the board's pin for it (P21).
+        root, path = project(requirements={"board": "firebeetle2-esp32s3",
+                                           "parts": [{"part": "vl6180x-breakout", "name": "Rangefinder"}]})
+        signals = {s["name"]: s for s in design.load(path).signals}
+        self.assertEqual(signals["RANGEFINDER_SDA"]["line"], "SDA")
+        self.assertEqual(signals["RANGEFINDER_SDA"]["bus"], "i2c")
+
 if __name__ == "__main__":
     unittest.main()

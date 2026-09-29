@@ -31,7 +31,10 @@ because a module list is a list of *consumers*: the motor driver's rail needs a 
 without one the generator says so and the build stops on a net with one member — which is what
 the first version of this very example did. Which rail a part's power pin sits on is the design's to say, not the record's: `{"part":
 "l9110s-module", "rails": {"VCC": "traction"}}` puts the driver on the pack rail without copying
-the record, and a pin the part does not have is refused by name. An optional `"signals":
+the record, and a pin the part does not have is refused by name. Parts on one bus share it —
+two I2C sensors both land on SDA/SCL — and a bus line named the vendor's way (DIN, CLK, CS) lands
+on the board's MOSI, SCK, SS; a line the bus does not have is refused by name, never placed
+somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
 *assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
 

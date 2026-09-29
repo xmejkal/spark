@@ -271,5 +271,74 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertEqual(code, assign_pins.EXIT_COULD_NOT_RUN)
         self.assertIn("l9110s-module", out)
 
+
+class ABusIsSharedTest(unittest.TestCase):
+    """
+    P21, from audit B2 and B3. The bus path found a signal's pin by the signal's NAME matching a
+    board label, so an instance name (`RANGEFINDER_SDA`) took a part off its bus with exit 0, two
+    I2C parts were refused as "already taken" when a bus is exactly what they share, and a bus
+    line named the vendor's way (`CLK`, `DIN`) was placed on any pin with no word — against the
+    docstring's promise that nothing is silently dropped.
+    """
+
+    def setUp(self):
+        import json
+        self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    @staticmethod
+    def on(signal, assignments):
+        return next(a["pin"] for a in assignments if a["signal"] == signal)
+
+    def test_an_instance_name_does_not_take_a_part_off_its_bus(self):
+        signals = [{"name": "RANGEFINDER_SDA", "line": "SDA", "bus": "i2c", "needs": []},
+                   {"name": "RANGEFINDER_SCL", "line": "SCL", "bus": "i2c", "needs": []}]
+        placed, _ = assign_pins.assign(self.board, signals)
+        self.assertEqual(self.on("RANGEFINDER_SDA", placed), "SDA")
+        self.assertEqual(self.on("RANGEFINDER_SCL", placed), "SCL")
+
+    def test_two_parts_on_one_bus_share_its_pins(self):
+        signals = [{"name": "A_SDA", "line": "SDA", "bus": "i2c", "needs": []},
+                   {"name": "A_SCL", "line": "SCL", "bus": "i2c", "needs": []},
+                   {"name": "B_SDA", "line": "SDA", "bus": "i2c", "needs": []},
+                   {"name": "B_SCL", "line": "SCL", "bus": "i2c", "needs": []}]
+        placed, _ = assign_pins.assign(self.board, signals)
+        self.assertEqual({self.on("A_SDA", placed), self.on("B_SDA", placed)}, {"SDA"})
+        self.assertEqual({self.on("A_SCL", placed), self.on("B_SCL", placed)}, {"SCL"})
+
+    def test_a_bus_line_named_the_vendors_way_lands_on_the_boards_pin(self):
+        # An e-paper or SPI display record written from its vendor's pinout says DIN and CLK.
+        signals = [{"name": "CLK", "bus": "spi", "needs": []}, {"name": "DIN", "bus": "spi", "needs": []},
+                   {"name": "DOUT", "bus": "spi", "needs": []}]
+        placed, _ = assign_pins.assign(self.board, signals)
+        self.assertEqual(self.on("CLK", placed), "SCK")
+        self.assertEqual(self.on("DIN", placed), "MOSI")
+        self.assertEqual(self.on("DOUT", placed), "MISO")
+
+    def test_a_bus_line_the_vocabulary_does_not_know_is_refused_not_placed_anywhere(self):
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(self.board, [{"name": "XYZ", "bus": "spi", "needs": []}])
+        self.assertIn("XYZ", str(refused.exception))
+        self.assertIn("SCK", str(refused.exception), "the refusal names the lines a bus has")
+
+    def test_a_bus_the_board_does_not_label_is_refused(self):
+        board = dict(self.board, pins={k: v for k, v in self.board["pins"].items() if k not in ("SDA", "SCL")})
+        with self.assertRaises(assign_pins.Impossible) as refused:
+            assign_pins.assign(board, [{"name": "SDA", "bus": "i2c", "needs": []}])
+        self.assertIn("SDA", str(refused.exception))
+
+    def test_a_chip_select_is_not_shared(self):
+        # Every SPI device has its own select: the first takes SS, the second any free pin.
+        signals = [{"name": "A_CS", "line": "CS", "bus": "spi", "needs": []},
+                   {"name": "B_CS", "line": "CS", "bus": "spi", "needs": []}]
+        placed, _ = assign_pins.assign(self.board, signals)
+        pins = {self.on("A_CS", placed), self.on("B_CS", placed)}
+        self.assertIn("SS", pins)
+        self.assertEqual(len(pins), 2)
+
+    def test_a_bus_pin_taken_by_a_plain_signal_is_still_a_conflict(self):
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.assign(self.board, [{"name": "LED", "pin": "SDA", "needs": []},
+                                            {"name": "SDA", "bus": "i2c", "needs": []}])
+
 if __name__ == "__main__":
     unittest.main()

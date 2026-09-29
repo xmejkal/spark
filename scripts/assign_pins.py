@@ -157,6 +157,43 @@ def candidates(board):
     return found
 
 
+#: The lines a bus has, each with the names vendors print for it. A part record says what its
+#: vendor says — DIN, CLK, CS — and a board file labels the pin the way its silkscreen does —
+#: MOSI, SCK, SS — and neither is wrong; this is the one place the two vocabularies meet. Keyed
+#: by the board label, because that is what the pin map has to name.
+BUS_LINES = {
+    "i2c": {"SDA": ("SDA",), "SCL": ("SCL",)},
+    "spi": {"SCK": ("SCK", "CLK", "SCLK"), "MOSI": ("MOSI", "DIN", "SDI", "SI"),
+            "MISO": ("MISO", "DOUT", "SDO", "SO"), "SS": ("SS", "CS", "NSS")},
+}
+
+#: Lines every device on the bus shares — which is what a bus IS. A chip select is per device:
+#: the first takes the board's SS pin and the rest are ordinary signals on any free pin.
+SHARED_LINES = frozenset({"SDA", "SCL", "SCK", "MOSI", "MISO"})
+
+
+def bus_line(signal):
+    """
+    Which line of its bus a signal is, by the board's label for it — or Impossible, by name.
+
+    The line comes from the part's own name for it (`line`, kept through the instance rename),
+    else from the signal's name. Until 2026-09-29 the bus path matched the signal's NAME against
+    the board's labels, so `RANGEFINDER_SDA` — a named instance — silently left the bus for D3,
+    and `CLK` on `bus: spi` was placed on any pin with no word (audit B2, B3).
+    """
+    lines = BUS_LINES.get(signal["bus"])
+    if lines is None:
+        raise Impossible("%s is on bus %r, which is not a bus this knows: %s"
+                         % (signal["name"], signal["bus"], ", ".join(BUS_LINES)))
+    printed = str(signal.get("line") or signal["name"]).upper()
+    for line, names in lines.items():
+        if printed in names:
+            return line
+    raise Impossible("%s is on the %s bus but %r is not one of its lines: %s"
+                     % (signal["name"], signal["bus"].upper(), printed,
+                        ", ".join("%s (%s)" % (line, "/".join(names)) for line, names in lines.items())))
+
+
 def assign(board, signals):
     """
     Place every signal, most-constrained first, on the least capable pin that will do.
@@ -171,29 +208,52 @@ def assign(board, signals):
                 "%s asks for %s, which is not something a pin can be asked for. Known: %s"
                 % (signal["name"], ", ".join(sorted(unknown)), ", ".join(CAPABILITIES)))
 
-    # A signal on a named bus is dedicated hardware. If the board brings that peripheral out on
-    # a pin of the same name — SDA, SCL, SCK — that is the pin, and no optimisation applies.
-    #
-    # Without this the assigner put I2C on two arbitrary GPIOs and then gave the pin actually
-    # labelled SDA to an analogue input, which is wrong twice: the bus loses its hardware
-    # peripheral, and the board's silkscreen now lies about what is connected to it.
-    signals = [dict(signal, pin=signal["name"])
-               if signal.get("bus") and not signal.get("pin")
-               and signal["name"] in board["pins"] else signal
-               for signal in signals]
+    # A signal on a named bus is dedicated hardware: the board's pin for that line of that bus,
+    # shared with every other device on the bus, and no optimisation applies. Without this the
+    # assigner put I2C on two arbitrary GPIOs and then gave the pin actually labelled SDA to an
+    # analogue input — the bus lost its hardware peripheral and the silkscreen lied. A bus line
+    # the board does not label is refused, not placed somewhere quiet.
+    placed_by_name, to_place = [], []
+    for signal in signals:
+        if not signal.get("bus") or signal.get("pin"):
+            (placed_by_name if signal.get("pin") else to_place).append(signal)
+            continue
+        line = bus_line(signal)
+        if line in board["pins"]:
+            placed_by_name.append(dict(signal, pin=line, line=line))
+        elif line == "SS":
+            to_place.append(dict(signal, line=line))   # a select can go anywhere; see below
+        else:
+            raise Impossible("%s needs the %s bus's %s line and this board labels no %s pin — "
+                             "add it to the board file's pins, or use another board"
+                             % (signal["name"], signal["bus"].upper(), line, line))
 
     # A signal that names its own pin is honoured first and without argument.
-    assignments, taken_gpio = [], set()
-    for signal in [s for s in signals if s.get("pin")]:
+    assignments, taken_gpio, bus_holders = [], set(), {}
+    for signal in placed_by_name:
         label = signal["pin"]
         if label not in board["pins"]:
             raise Impossible("%s asks for pin %r, which this board does not bring out"
                              % (signal["name"], label))
         gpio = board["pins"][label]
+        line = signal.get("line") if signal.get("bus") else None
         if gpio in taken_gpio:
+            if line in SHARED_LINES and bus_holders.get(gpio) == (signal["bus"], line):
+                assignments.append({
+                    "signal": signal["name"], "pin": label, "gpio": gpio,
+                    "why": "on the board's own %s pin, shared with everything else on the %s bus"
+                           % (line, signal["bus"].upper()),
+                    "roles": roles_of(board, gpio)})
+                continue
+            if line == "SS":
+                # Every SPI device has its own select; the first took SS, this one goes anywhere.
+                to_place.append(dict(signal, pin=None))
+                continue
             raise Impossible("%s asks for %s (GPIO%d), which is already taken"
                              % (signal["name"], label, gpio))
         taken_gpio.add(gpio)
+        if line in SHARED_LINES:
+            bus_holders[gpio] = (signal["bus"], line)
         assignments.append({
             "signal": signal["name"], "pin": label, "gpio": gpio,
             "why": ("on the board's own %s pin — dedicated hardware, not a choice"
@@ -206,7 +266,7 @@ def assign(board, signals):
     def difficulty(signal):
         return -len(set(signal.get("needs", [])))
 
-    for signal in sorted([s for s in signals if not s.get("pin")], key=difficulty):
+    for signal in sorted([s for s in to_place if not s.get("pin")], key=difficulty):
         needs = set(signal.get("needs", []))
         usable = {label: pin for label, pin in available.items()
                   if pin["gpio"] not in taken_gpio and needs <= pin["can"]}
@@ -220,9 +280,13 @@ def assign(board, signals):
                     key=lambda name: (_cost(usable[name], needs), usable[name]["gpio"]))
         pin = usable[label]
         taken_gpio.add(pin["gpio"])
+        why = _why(needs, pin)
+        if signal.get("line") == "SS":
+            why = "a chip select — every SPI device has its own, and the board's SS pin is " \
+                  "taken, so any pin serves; " + why
         assignments.append({
             "signal": signal["name"], "pin": label, "gpio": pin["gpio"],
-            "why": _why(needs, pin), "roles": pin["roles"]})
+            "why": why, "roles": pin["roles"]})
 
     leftover = {label: pin for label, pin in available.items()
                 if pin["gpio"] not in taken_gpio}

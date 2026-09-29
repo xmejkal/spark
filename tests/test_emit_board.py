@@ -739,6 +739,29 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertIn("l9110s-module", err)
         self.assertIn("not JSON", err)
 
+    def test_a_named_i2c_part_is_traced_to_the_boards_own_bus_pins(self):
+        # Audit B2: named, the rangefinder landed on D3/D12 "needs nothing special".
+        root = self._project()
+        (root / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3",
+             "parts": [{"part": "vl6180x-breakout", "name": "Rangefinder"}, "jst-ph-2-power-inlet"]}))
+        code, tsx, _ = self._main(["requirements.json", "--assume-missing-sizes"], root)
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertIn('<trace from=".Mcu > .SDA" to=".Rangefinder > .SDA" />', tsx)
+        self.assertIn('<trace from=".Mcu > .SCL" to=".Rangefinder > .SCL" />', tsx)
+
+    def test_two_parts_on_one_bus_are_both_traced_to_it(self):
+        root = self._project()
+        (root / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3",
+             "parts": [{"part": "vl6180x-breakout", "name": "Near"},
+                       {"part": "vl6180x-breakout", "name": "Far"}, "jst-ph-2-power-inlet"]}))
+        code, tsx, _ = self._main(["requirements.json", "--assume-missing-sizes"], root)
+        self.assertEqual(code, emit_board.EXIT_OK)
+        for name in ("Near", "Far"):
+            self.assertIn('<trace from=".Mcu > .SDA" to=".%s > .SDA" />' % name, tsx)
+            self.assertIn('<trace from=".Mcu > .SCL" to=".%s > .SCL" />' % name, tsx)
+
     def test_an_entry_without_a_part_is_could_not_run(self):
         root = self._project()
         (root / "requirements.json").write_text(json.dumps(
