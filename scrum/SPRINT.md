@@ -113,7 +113,8 @@ checked against the plugin's cached vendor header (reproduced as `????` on the i
 first). P28: the six audit rows made true — the mutate lock covers the pre-check, `apply` refuses
 a missing file, three functions are named by tests, the stranger test runs the document's own
 lines, the example block is a run's output with a test on its schematic line, the status words
-have one home, and `tools/pre-push` is the versioned gate. Every Sprint 5 item — R11, P31, P8,
+come from `outcomes` in the three files C12 named (the finding-severity strings elsewhere are
+another vocabulary, B17), and `tools/pre-push` is the versioned gate. Every Sprint 5 item — R11, P31, P8,
 P6, P10, P28 — is done; the v1 audit follows (R4.3), then retro R5 and the review.
 594 tests, 128 mutations in 28 tables, every anchor present.
 

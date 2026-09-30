@@ -25,10 +25,9 @@ simulation, a link between two boards, and parts research beyond R11 below.
 
 | # | item | needed by |
 | --- | --- | --- |
-| **R11** | Research parts and modules, vendor by vendor, and keep what was found | the third cold test, on day one |
 | R2.5 | The third cold test — **PO: one letter, (a), (b) or (c)** | it is the test |
 
-### R11 — Research parts and modules, vendor by vendor, and keep what was found
+### R11 — Research parts and modules, vendor by vendor, and keep what was found — DONE 2026-09-29
 **Needed by:** the third cold test on its first day, and every design that uses a part the library
 lacks — the RC car wrote three records by hand with unverified facts because nothing looked.
 The unit is the part record the chain already reads: research produces a **draft record** in the
@@ -108,6 +107,16 @@ modules — a flow meter whose pulse rate is a control, a soil probe whose moist
 driving an analog voltage; (E) the sim project kept in the project, a firmware stub, one
 scenario, one Wokwi run. The `scripts/` budget rises as needed — the PO allowed it.
 
+### P32 — One home for the converter and the chips (proposed 2026-09-30 from the v1 audit; the PO orders)
+**Needed by:** a stranger's simulation — the spine finds the Wokwi converter only at
+`tools/circuit-to-wokwi` in the project or at `../smartbin-local/tools/circuit-to-wokwi`
+(audit D17), so v1's "simulated board" holds only beside the bin repo; and W16 — the bin's two
+chips were copied beside their records, not moved (D19), and the converter's hand table remains
+the bin's own mapping (D20). The move is about 1,000 lines of TypeScript with bun dependencies
+and the bin's `make check` depends on it, so it is a scope decision, not a slice.
+**Value proven by:** the one command reaches `[ok] simulation` from a project with nothing beside
+it but the plugin; one copy of each chip; the bin's `make check` green against the plugin's copy.
+
 ## After v1 — only if a cold test asks for it
 
 Each parked, with its need unfilled; none is pulled without a design behind it (W14).
@@ -128,6 +137,7 @@ one), P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8
 by the PO).
 
 ## Done — one line each, the hash is the record
+- **R11** — research parts and modules, vendor by vendor, and keep what was found: `parts.py --need/--skeleton/--sources/--fetch/--catalog/--promote`, `/spark:research`, `/spark:identify`, the `parts-researcher` agent, the catalog (`e50717a`…`d4f6b0f`, `773cd41`, `040a66d`; proven on the irrigation controller: seven records, 18 candidates kept, every cited URL answering).
 - **P28** — the tools made true: the mutate lock covers the pre-check and `apply` refuses a missing file (C8); `nets_in`, `rules_for`, `has_answers` named by tests (C9); the stranger test runs build.md's own lines (C10); the example block is a run's output and a test holds its schematic line to the example (C11); the status words come from `outcomes` in the three files that spelled them (C12); `tools/pre-push` is the versioned gate, installed with one `ln -sf` (C14). Table sprint-5-p28 (2): caught.
 - **P10** — a project's own copy of a shipped board is checked against the plugin's cached vendor header instead of switching vendor-truth off: `cached_header` looks beside the board, then in the plugin (table sprint-5-p10, 1 caught; reproduced on the irrigation project first).
 - **P6** — what a record demands of its host as a component is placed and wired: `host_parts` (pulldown, pullup, divider) become 0603 resistors beside the module, a divider ends the host's trace at its midpoint; the L9110S's pull-downs, the VL6180X's I2C pull-ups and the flow meter's divider are the first three; the spine asks a passive whether an end dangles instead of whether it touches ground; the generated resistors map to Wokwi's resistor. Reference: 20 traces, 18 wires, exit 0. Table sprint-5-p6 (9): caught.

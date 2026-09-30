@@ -844,11 +844,23 @@ class ASimulationIsDeclaredTest(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         folder = root / "x-part" / "chip"; folder.mkdir(parents=True)
         (folder / "probe.chip.c").write_text("// c")
-        (folder / "probe.chip.json").write_text(json.dumps({"pins": ["SIG"], "controls": [{"id": "flow_lpm"}, {"id": "flowLpm"}]}))
+        (folder / "probe.chip.json").write_text(json.dumps({"pins": ["SIG", "GND", "VCC"], "controls": [{"id": "flow_lpm"}, {"id": "flowLpm"}]}))
         chip = {"wokwi": {"chip": "probe", "pins": {"OUT": "SIG", "GND": "GND", "VCC": "VCC"}}}
         problems = self._problems(chip, root)[0]
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("'flow_lpm'", problems[0])
+
+    def test_a_chip_pin_map_names_only_pins_the_chip_has(self):
+        # Audit D18: `AIA: "NOPE"` validated clean and was refused only by the converter.
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        folder = root / "x-part" / "chip"; folder.mkdir(parents=True)
+        (folder / "probe.chip.c").write_text("// c")
+        (folder / "probe.chip.json").write_text(json.dumps({"pins": ["SIG", "GND", "VCC"]}))
+        good = {"wokwi": {"chip": "probe", "pins": {"OUT": "SIG", "GND": "GND", "VCC": None}}}
+        self.assertEqual(self._problems(good, root)[0], [])
+        bad = {"wokwi": {"chip": "probe", "pins": {"OUT": "NOPE", "GND": "GND", "VCC": "VCC"}}}
+        self.assertTrue(any("does not have" in p and "'NOPE'" in p for p in self._problems(bad, root)[0]))
 
     def test_a_chip_must_exist_beside_the_record(self):
         import tempfile

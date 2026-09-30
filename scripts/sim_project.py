@@ -76,10 +76,12 @@ def stage_chips(chips, sim_dir, compiler=None):
     """
     Copy each chip's sources into `sim_dir/chips/` and see that a binary exists there: a
     binary beside the record no older than its source is reused, anything else is compiled
-    with wokwi-cli and the result kept beside the record too. Returns (chips staged, problems).
+    with wokwi-cli and the result kept beside the record too. Returns (staged, problems), where
+    staged maps each chip to "compiled" or "reused" — the spine printed "2 chip(s) compiled"
+    over two binaries from a week before (audit D5), the shape W1 forbids.
     """
     target = sim_dir / "chips"
-    staged, problems = [], []
+    staged, problems = {}, []
     for folder, chip in chips:
         target.mkdir(parents=True, exist_ok=True)
         source, binary = folder / (chip + ".chip.c"), folder / (chip + ".chip.wasm")
@@ -87,6 +89,7 @@ def stage_chips(chips, sim_dir, compiler=None):
             shutil.copy2(folder / (chip + suffix), target / (chip + suffix))
         if binary.is_file() and binary.stat().st_mtime >= source.stat().st_mtime:
             shutil.copy2(binary, target / binary.name)
+            staged[chip] = "reused"
         else:
             cli = compiler or find_wokwi_cli()
             if cli is None:
@@ -98,7 +101,7 @@ def stage_chips(chips, sim_dir, compiler=None):
                 problems.append("chip %s did not compile:\n%s" % (chip, (made.stderr or made.stdout)[-600:]))
                 continue
             shutil.copy2(target / binary.name, binary)
-        staged.append(chip)
+            staged[chip] = "compiled"
     return staged, problems
 
 

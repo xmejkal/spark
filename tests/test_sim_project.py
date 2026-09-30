@@ -83,33 +83,33 @@ class ChipsAreStagedAndCompiledTest(unittest.TestCase):
         os.utime(chip / "probe.chip.c", (1, 1))  # older than the binary
         sim_dir = root / "sim"
         staged, problems = sim_project.stage_chips([(chip, "probe")], sim_dir, compiler="/nonexistent")
-        self.assertEqual((staged, problems), (["probe"], []))
+        self.assertEqual((staged, problems), ({"probe": "reused"}, []), "a fresh binary is reused, and said to be")
         self.assertEqual((sim_dir / "chips" / "probe.chip.wasm").read_bytes(), b"\\0asm")
         self.assertTrue((sim_dir / "chips" / "probe.chip.json").is_file())
 
     def test_a_missing_or_stale_binary_is_compiled_and_kept_beside_the_record(self):
         root, chip = a_project()
         staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim", compiler=fake_compiler(root))
-        self.assertEqual((staged, problems), (["probe"], []))
+        self.assertEqual((staged, problems), ({"probe": "compiled"}, []))
         self.assertTrue((chip / "probe.chip.wasm").is_file(), "the compiled binary travels with the record")
         # stale: the binary is older than the source it was compiled from
         (chip / "probe.chip.wasm").write_bytes(b"old")
         os.utime(chip / "probe.chip.wasm", (1, 1))
         staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim2", compiler=fake_compiler(root))
-        self.assertEqual((staged, problems), (["probe"], []))
+        self.assertEqual((staged, problems), ({"probe": "compiled"}, []))
         self.assertNotEqual((root / "sim2" / "chips" / "probe.chip.wasm").read_bytes(), b"old", "a stale binary is recompiled")
 
     def test_no_compiler_is_could_not_run_with_the_install_hint(self):
         root, chip = a_project()
         with mock.patch.object(sim_project, "find_wokwi_cli", return_value=None):
             staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim")
-        self.assertEqual(staged, [])
+        self.assertEqual(staged, {})
         self.assertIn("wokwi-cli was not found", problems[0])
 
     def test_a_compile_failure_is_a_problem_naming_the_chip(self):
         root, chip = a_project()
         staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim", compiler=fake_compiler(root, succeeds=False))
-        self.assertEqual(staged, [])
+        self.assertEqual(staged, {})
         self.assertIn("probe did not compile", problems[0])
 
 

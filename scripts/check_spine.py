@@ -419,8 +419,9 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                "a diagram with 0 connections. Every part is placed and none is "
                                "wired, which is what an unmapped component looks like once the "
                                "converter has given up on it")]
+    compiled = sum(1 for how in staged.values() if how == "compiled")
     return stages + [Stage("simulation", OK, "%d wire(s) in the diagram%s" % (
-        wires, ", %d chip(s) compiled" % len(staged) if staged else ""))]
+        wires, ", %d chip(s): %d compiled, %d reused" % (len(staged), compiled, len(staged) - compiled) if staged else ""))]
 
 
 def verdict(stages):

@@ -271,6 +271,14 @@ def simulation_problems(part: dict, path: Path) -> list:
             if not (folder / (chip + suffix)).is_file():
                 problems.append("simulation.wokwi.chip %r needs %s beside the record" % (chip, folder / (chip + suffix)))
         problems.extend(control_problems(chip, folder / (chip + ".chip.json")))
+        definition = _parse(folder / (chip + ".chip.json")) if (folder / (chip + ".chip.json")).is_file() else None
+        chip_pins = set((definition or {}).get("pins") or []) - {""}
+        if chip_pins and isinstance(pins, dict):
+            # `AIA: "NOPE"` validated clean and was refused only by the converter (audit D18).
+            for pad, target in sorted(pins.items()):
+                if target is not None and target not in chip_pins:
+                    problems.append("simulation.wokwi.pins maps %r to %r, which chip %s does not have: %s"
+                                    % (pad, target, chip, ", ".join(sorted(chip_pins))))
     return problems
 
 

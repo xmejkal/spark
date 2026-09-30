@@ -91,7 +91,7 @@ take `--json`; `boards`, `check_bom`, `emit_board` and `init_project` do not yet
 - `check_spine.py` — the one gate that runs the whole chain, `idea → parts → pin map →
   schematic → footprint → build → simulation`, and counts what came out. A build with no
   copper is not a pass; a toolchain that cannot build a trivial board is could-not-run, named.
-- `mutate.py` — re-introduces each defect in a table and proves the suite goes red. The
+- `tools/mutate.py` — re-introduces each defect in a table and proves the suite goes red. The
   acceptance bar for every fix (`tests/mutations/`).
 
 ## Libraries
@@ -156,7 +156,7 @@ written to catch "a check nobody invokes" asserted that a string appeared in the
 — it verified the check was named, not that it ran, and it stayed green for the whole life of the
 bug it was written to prevent.
 
-The second rule: every fix is mutation-tested. `python3 scripts/mutate.py tests/mutations/<table>.json`
+The second rule: every fix is mutation-tested. `python3 tools/mutate.py tests/mutations/<table>.json`
 re-introduces each defect and must report every one caught; a mutation the suite does not
 notice is a missing test, and a fixture too weak to see it is fixed rather than the mutation
 dropped.

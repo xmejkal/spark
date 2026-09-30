@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/sim_project.py",
+  "name": "a reused binary is reported as compiled (D5)",
+  "find": "            staged[chip] = \"reused\"",
+  "replace": "            staged[chip] = \"compiled\""
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a chip pin the chip lacks validates clean again (D18)",
+  "find": "                if target is not None and target not in chip_pins:",
+  "replace": "                if False:"
+ }
+]
