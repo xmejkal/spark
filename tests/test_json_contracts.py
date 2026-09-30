@@ -106,7 +106,16 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
                     ["findings", "status", "tool"])
 
     def test_compare_design(self):
+        # P34 changed this shape deliberately: a rules file naming no rule is now a refusal, which
+        # carries `reason` and `fix` instead of `problems`. The old key set is in this file's
+        # history, which is the point of characterising it.
         self._check("compare_design", lambda: compare_design.main([self.circuit, "--rules", self.rules, "--json"]),
+                    ["checked", "design", "fix", "reason", "status", "tool"])
+
+    def test_compare_design_with_rules_to_compare(self):
+        rules = self.project / "real-rules.json"
+        rules.write_text(json.dumps({"i2c_buses": [], "must_not_float": [["U1", "GND"]], "physics": {"rails": {}}}))
+        self._check("compare_design", lambda: compare_design.main([self.circuit, "--rules", str(rules), "--json"]),
                     ["checked", "design", "problems", "status", "tool"])
 
     def test_check_all(self):

@@ -347,5 +347,58 @@ class EachRuleHasANameTest(unittest.TestCase):
     def test_resistor_power_with_no_resistors_finds_nothing(self):
         self.assertEqual(check_physics.check_resistor_power(check_physics.Board([]), {}), [])
 
+
+class TheExitCodeFollowsTheFindingsTest(unittest.TestCase):
+    """
+    P34, and W12. Three mutations escaped this suite when the fix landed — the status built from
+    `problems` alone, the exit code not following the status, and the renderer assuming every
+    could-not-run carries a `reason` — because nothing here had ever called `main()`. A file whose
+    docstring says an unchecked rail must never look like a passing one answered `status: ok`,
+    exit 0, over findings that were every one of them could-not-run.
+    """
+
+    CIRCUIT = [
+        {"type": "source_component", "source_component_id": "c1", "name": "U1", "ftype": "simple_chip"},
+        {"type": "source_net", "source_net_id": "n1", "name": "V33"},
+        {"type": "source_port", "source_port_id": "p1", "source_component_id": "c1", "name": "VCC"},
+        {"type": "source_trace", "source_trace_id": "t1",
+         "connected_source_port_ids": ["p1"], "connected_source_net_ids": ["n1"]},
+    ]
+
+    def _run(self, rules, json_flag=False):
+        import contextlib
+        import io
+        import json as json_module
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / "circuit.json").write_text(json_module.dumps(self.CIRCUIT))
+        (root / "rules.json").write_text(json_module.dumps(rules))
+        argv = [str(root / "circuit.json"), "--rules", str(root / "rules.json")]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_physics.main(argv + (["--json"] if json_flag else []))
+        return code, out.getvalue()
+
+    def test_a_run_whose_findings_are_all_could_not_run_says_so_and_exits_two(self):
+        import json as json_module
+        code, said = self._run({"physics": {}}, json_flag=True)
+        payload = json_module.loads(said)
+        self.assertEqual(payload["status"], "could-not-run", said)
+        self.assertEqual(code, check_physics.EXIT_COULD_NOT_RUN)
+        self.assertTrue(payload["findings"], "the fixture must produce a finding to be worth anything")
+        self.assertEqual({f["severity"] for f in payload["findings"]}, {"could-not-run"})
+
+    def test_the_human_output_renders_that_run_rather_than_raising(self):
+        # The renderer read `reason` unconditionally, which only the early refusals carry.
+        code, said = self._run({"physics": {}})
+        self.assertEqual(code, check_physics.EXIT_COULD_NOT_RUN)
+        self.assertIn("could-not-run", said)
+        self.assertIn("rails", said)
+
+    def test_a_rail_fully_stated_leaves_nothing_unchecked(self):
+        code, said = self._run({"physics": {"rails": {"V33": {"nominal_volts": 3.3, "max_current_a": 0.5}}}},
+                               json_flag=True)
+        self.assertEqual(code, check_physics.EXIT_OK, said)
+
 if __name__ == "__main__":
     unittest.main()

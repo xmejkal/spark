@@ -264,6 +264,17 @@ def compare(circuit_path, rules_path):
 
     failures = run(circuit, rules)
     checked = len(rules.get("i2c_buses", [])) + len(rules.get("must_not_float", []))
+    if not checked:
+        # "0 rule(s) checked against the built design" and then "every rule holds", exit 0 —
+        # printed over the RC car, whose H-bridge's floating inputs are this project's canonical
+        # defect, by the tool written because "a rule written down, an artifact that did not
+        # implement it, and nothing comparing the two". Comparing nothing is not agreement.
+        return could_not_run(
+            "the rules file states no rule to compare: i2c_buses and must_not_float are both "
+            "empty, which is what `spark init` writes and where they have stayed",
+            design=circuit_path.name, checked=0,
+            fix="name the I2C lines and the pins that must never float — a netlist records "
+                "neither, which is why this file exists")
     return {
         "tool": "compare_design",
         "status": PROBLEMS if failures else OK,

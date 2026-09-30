@@ -124,7 +124,11 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
             "rules-vs-netlist": (
                 {"circuit": written("ok2.json", a_header_drilled_too_small()),
                  "rules": written("rules2.json", {})},
-                check_all.OK, "a real netlist and no rules to break"),
+                # Was OK, "a real netlist and no rules to break" — and that expectation was the
+                # defect, the same shape as physics's above. An empty rules file is what `spark
+                # init` writes, so the RC car's H-bridge got `[ok] rules-vs-netlist` from a run
+                # that compared zero rules. Nothing was broken because nothing was looked at.
+                check_all.COULD_NOT_RUN, "a real netlist and a rules file naming no rule to compare"),
         }
 
     def test_each_check_answers_what_it_is_given(self):

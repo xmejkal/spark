@@ -31,7 +31,6 @@ council's proposal.
 
 | # | item | value | effort | why here |
 | --- | --- | --- | --- | --- |
-| **P34** | A check that compared nothing says so | 5 | S | `compare_design` prints `every rule holds` having compared zero; `check_physics` prints its own could-not-run and exits 0 |
 | **P35** | The rules see spark's own wiring | 5 | M | the generator wires signals pin-to-pin, so every rule keyed on a net name is dead on spark's own boards — P8 fixed this in one file of three |
 | **P29** | The board's own supply, and nothing left unfed | 5 | S+M | no trace reaches the microcontroller's supply on any generated board, while the file says one does; the vendor fact it waited for is already recorded |
 | **P42** | The verdict has one home | 4 | S | six copies of one rule, one of them wrong, and the shared constant that exists has zero callers |
@@ -59,7 +58,7 @@ to it.
 the documents quote; and, by hand in an empty directory, `init_project.py --project . --board
 firebeetle2-esp32s3 && npm install && npx tsci build board.tsx` → `Circuits  1 passed`.
 
-### P34 — A check that compared nothing says so
+### P34 — A check that compared nothing says so — DONE 2026-09-30
 **Needed by:** the RC car, whose `.spark/rules.json` holds the lists `init` wrote —
 `compare_design.py <its circuit> --rules <its rules>` prints `0 rule(s) checked against the built
 design` and `every rule holds`, exit 0, and `check_all` shows `[ok  ] rules-vs-netlist`, on a board
@@ -281,6 +280,7 @@ knowledge. **P5** — its audit was performed by the council's verification lens
 listed open one file down (the shape of audit row D28).
 
 ## Done — one line each, the hash is the record
+- **P34** — a check that examined nothing no longer reports a pass. The physics check built its status and exit code from problem-severity findings alone, so it answered `status: ok`, exit 0, over findings that were every one of them could-not-run; it now follows all three severities, and its renderer no longer assumes a reason it was not given. Comparing zero rules is a refusal naming what the rules file would have to say, so the RC car's `[ok] rules-vs-netlist` over zero comparisons is now `[????]`. Three mutations escaped the first run because nothing had ever called the physics check's `main`; three tests now do (W12). Table sprint-6-p34 (4): caught.
 - **P41** — the safety net: eight tests for the board tool's command line, which the smart bin's Makefile calls eight ways and no test had ever entered, and ten characterisation tests pinning every `--json` payload's top-level keys and status word. 18 tests, 596 → 614. Proven by its own table: renaming one payload key, prefixing the board id, and changing what `--get` and `--resolve` print are all caught (table sprint-6-p41, 4 caught).
 - **P40** — the architecture the refactor should aim at: five lenses read all 3,552 code lines and the answer is that this is not a refactoring project. `docs/2026-09-30-refactoring-architecture.md` names the two live defects reproduced (a check reporting `ok` over its own could-not-run; three netlist walkers giving three answers to one circuit), the duplication ledger, the four things that get one home, the safety net that must come first, the order, what not to touch and why, and the stopping rule. Net about −85 code lines. No code moved.
 - **P33** — `/spark:init` pins tscircuit to the version the documents were measured on, and a test holds the pin and `build.md`'s example output to each other; proven by hand in an empty directory: init, `npm install`, `npx tsci build` → `Circuits 1 passed`, 15 traces, no errors (table sprint-6-p33, 2 caught).

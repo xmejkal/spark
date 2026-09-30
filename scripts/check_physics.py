@@ -48,7 +48,7 @@ import copper  # noqa: E402
 #: time (audit A7).
 from check_footprints import package_of  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR  # noqa: E402
 from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
@@ -453,7 +453,11 @@ def run(circuit, rules):
 
 
 def render(result):
-    if result["status"] == COULD_NOT_RUN:
+    # Two different could-not-runs reach here: one before any rule ran, which carries a `reason`
+    # and nothing else, and one from a run whose findings were all could-not-run, which carries
+    # findings. Reading `reason` unconditionally made the second a KeyError the moment the status
+    # started telling the truth (P34).
+    if result["status"] == COULD_NOT_RUN and "reason" in result:
         return "could not run: %s" % result["reason"]
     lines = ["%s: checked against physics, not against itself" % result["design"]]
     if not result["findings"]:
@@ -495,14 +499,23 @@ def main(argv=None):
 
     findings = run(json.loads(circuit_path.read_text()), json.loads(rules_path.read_text()))
     problems = [f for f in findings if f.severity == "problem"]
+    # A rule that could not look has approved nothing. This built both the status and the exit
+    # code from `problems` alone, so every `could-not-run` this file emits — an unstated rail, a
+    # resistor whose current no netlist records — was invisible to a caller, and the script whose
+    # own docstring says an unchecked rail must never look like a passing one answered
+    # `status: ok`, exit 0, over findings that were every one of them could-not-run. `check_all`'s
+    # wrapper splits the severities itself, which is why this survived: it was wrong only where
+    # the script is run directly, which is exactly how the smart bin's `make check` runs it.
+    unchecked = [f for f in findings if f.severity == COULD_NOT_RUN]
+    status = PROBLEMS if problems else (COULD_NOT_RUN if unchecked else OK)
     result = {
         "tool": "check_physics",
-        "status": PROBLEMS if problems else OK,
+        "status": status,
         "design": circuit_path.name,
         "findings": [f.as_data() for f in findings],
     }
     print(json.dumps(result, indent=2) if args.json else render(result))
-    return EXIT_PROBLEMS if problems else EXIT_OK
+    return EXIT_FOR[status]
 
 
 if __name__ == "__main__":
