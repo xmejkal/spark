@@ -60,6 +60,7 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
+import netlist  # noqa: E402
 import sim_project  # noqa: E402
 import emit_footprint  # noqa: E402
 
@@ -208,48 +209,59 @@ GROUND_NETS = emit_board.GROUND_NETS
 PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "simple_diode")
 
 
-def components_not_on_ground(circuit):
+def islands_in(circuit, claims=()):
     """
-    Every component that reaches no ground net, by name.
+    Every component the board leaves on an island, said in its own words.
 
-    A component can be perfectly placed, carry every pad, route its signals and still share no
-    return path with anything. Nothing in a build flags it: tscircuit checks that each trace you
-    asked for is satisfiable, never that you asked for the ones a circuit needs.
+    Three questions, because a component can be stranded in three ways and a board builds,
+    routes and reports no error for any of them:
+
+    * **no ground.** A part can be perfectly placed, carry every pad, route its signals and share
+      no return path with anything. tscircuit checks that each trace you asked for is satisfiable,
+      never that you asked for the ones a circuit needs.
+    * **a terminal on nothing.** A two-terminal passive is asked a different question — a pull-up,
+      or the top of a divider, sits between a pin and a rail and reaches no ground BY DESIGN, and
+      was reported here as an island the evening P6 placed the first ones. What must hold for it
+      is that neither end dangles.
+    * **an unfed supply pin** (`claims`, from `emit_board.supply_inputs`). This is P29's half. The
+      irrigation controller's buck record says "Feeds the FireBeetle's 5 V/VCC input and the
+      sensors"; net.V5V joined the buck to a flow meter, the processor was on no 5 V net at all,
+      and the stage read `[ok]`. `claims` is what the design STATES, so this compares the built
+      circuit against the file rather than against a guess about which nets look like rails —
+      tscircuit's own `is_power` flag would not do: it is a name heuristic, and it calls the smart
+      bin's MOTOR6V a signal.
 
     Connection is counted through the source netlist rather than through copper, because a pin on
-    a poured net has no trace of its own and is connected all the same.
+    a poured net has no trace of its own and is connected all the same. The walk itself is
+    `netlist.Netlist`, shared with `compare_design` and `check_physics` — on one circuit the three
+    private copies of it gave three different answers (backlog P35).
     """
-    names, grounded, present, traced = {}, set(), set(), set()
-    ground_ids = {element["source_net_id"] for element in circuit
-                  if element.get("type") == "source_net"
-                  and (element.get("name") or "").upper() in GROUND_NETS}
-    passives = set()
-    for element in circuit:
-        if element.get("type") == "source_component":
-            names[element["source_component_id"]] = element.get("name") or "?"
-            if element.get("ftype") in PASSIVE_FTYPES:
-                passives.add(element["source_component_id"])
-    ports = {element["source_port_id"]: element for element in circuit
-             if element.get("type") == "source_port"}
-    for element in circuit:
-        if element.get("type") != "source_trace":
-            continue
-        on_ground = bool(set(element.get("connected_source_net_ids") or []) & ground_ids)
-        port_ids = [port_id for port_id in element.get("connected_source_port_ids") or [] if port_id in ports]
-        traced.update(port_ids)
-        owners = {ports[port_id].get("source_component_id") for port_id in port_ids}
-        present |= owners
-        if on_ground:
-            grounded |= owners
+    board = netlist.Netlist(circuit)
+    ground_ids = {net_id for net_id, net in board.nets.items()
+                  if (net.get("name") or "").upper() in GROUND_NETS}
+    names = {cid: element.get("name") or "?" for cid, element in board.components.items()}
+    passives = {cid for cid, element in board.components.items()
+                if element.get("ftype") in PASSIVE_FTYPES}
+    grounded, present = set(), set()
+    for port_id, net_ids in board.nets_of_port.items():
+        owner = board.ports[port_id].get("source_component_id")
+        present.add(owner)
+        if net_ids & ground_ids:
+            grounded.add(owner)
     # A component with no trace at all is a separate complaint, already covered by the parts that
-    # refuse to emit. Report only those that are wired to something and to no ground — for a
-    # chip. A two-terminal passive is asked a different question: a pull-up, or the top of a
-    # divider, sits between a pin and a rail and reaches no ground BY DESIGN, and was reported
-    # here as an island the evening P6 placed the first ones. What must hold for it is that
-    # neither end dangles.
-    findings = [names.get(owner, "?") for owner in present - grounded if owner not in passives]
-    findings += ["%s.%s (a terminal connected to nothing)" % (names.get(port.get("source_component_id"), "?"), port.get("name") or port_id)
-                 for port_id, port in ports.items() if port.get("source_component_id") in present & passives and port_id not in traced]
+    # refuse to emit. Report only those that are wired to something and to no ground — for a chip.
+    findings = ["%s reaches no ground" % names.get(owner, "?")
+                for owner in present - grounded if owner not in passives]
+    findings += ["%s.%s (a terminal connected to nothing)"
+                 % (names.get(port.get("source_component_id"), "?"), port.get("name") or port_id)
+                 for port_id, port in board.ports.items()
+                 if port.get("source_component_id") in present & passives
+                 and port_id not in board.nets_of_port]
+    for component, pin, net in claims:
+        wanted = board.net_named(net)
+        if wanted is None or wanted not in board.nets_of(component, pin):
+            findings.append("%s.%s is fed by net.%s in this design and is not on it"
+                            % (component, pin, net))
     return sorted(findings)
 
 
@@ -282,6 +294,14 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         return stages + [Stage("parts", COULD_NOT_RUN,
                                "the requirements name no parts, so there is nothing to build; a "
                                "board holding only the microcontroller proves nothing")]
+
+    # The design's own part records, so the build stage below can ask whether the circuit
+    # honoured what they state. `emit_board` reads the same records in its subprocess; if that
+    # succeeded, this cannot fail for a reason the reader has not already been told.
+    try:
+        part_list = design.parts_of(requirements, project)
+    except design.DesignError as broken:
+        return stages + [Stage("parts", COULD_NOT_RUN, str(broken))]
 
     board_file = workdir / "board.tsx"
     emitted = subprocess.run(
@@ -348,14 +368,13 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # sharing a net with NONE of its 32 pins — no ground, no 3.3 V — on a board that built,
     # routed and reported zero errors, while every module around it was correctly wired to a
     # ground the processor was not on.
-    ungrounded = components_not_on_ground(json.loads(circuit_path.read_text()))
-    if ungrounded:
+    islands = islands_in(json.loads(circuit_path.read_text()),
+                         emit_board.supply_inputs(board, part_list))
+    if islands:
         return stages + [Stage("build", PROBLEMS,
-                               "%s no ground. A board builds, routes and reports no error with "
-                               "a component grounded to nothing — the parts around it are wired "
-                               "to a net it is simply not on"
-                               % (("%s reaches" % ungrounded[0]) if len(ungrounded) == 1
-                                  else ("%s reach" % ", ".join(ungrounded))))]
+                               "%s. A board builds, routes and reports no error with a component "
+                               "joined to nothing — the parts around it are wired to nets it is "
+                               "simply not on" % "; ".join(islands))]
     if errors:
         kinds = sorted({element["type"] for element in errors})
         return stages + [Stage("build", PROBLEMS, "%d error(s): %s" % (len(errors),

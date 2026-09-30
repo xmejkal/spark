@@ -610,7 +610,53 @@ def signal_lines(part_list, assignments):
     return lines
 
 
-def mcu_power_lines(board, rules, unjustified):
+def rails_driven_by(part_list):
+    """The non-ground nets something on this board SOURCES. A ground is not a rail anybody drives."""
+    return {net for _, supply, net in power_connections(part_list)
+            if supply.get("direction") == "out" and net not in GROUND_NETS}
+
+
+def mcu_power_nets(board, part_list):
+    """
+    The module's own power pads, as (pad, net, wired): which ones this board joins, and to what.
+
+    A pad the module DRIVES — its grounds, its 3.3 V regulator output — is wired always; it is
+    what the rest of the board hangs off. A pad the module RECEIVES on is wired only when
+    something on this board drives that rail, and that condition is the whole of backlog P29.
+
+    Both halves have cost a board. Wiring a receiving pad unconditionally puts a net with one
+    member on every design that has no such supply — and on the FireBeetle it would carry the USB
+    5 V out to whatever is on the rail, which is how 5 V reaches a 3.3 V part. Never wiring it is
+    what shipped until 2026-09-30: the irrigation controller's buck record says "Feeds the
+    FireBeetle's 5 V/VCC input and the sensors", and the generated board had no such trace. Its
+    processor was fed by nothing, on a board that built, routed and reported no error.
+
+    ONE home, because `check_spine` asks the same question of the built circuit and the two must
+    not be able to disagree — this file's own history is three defects of exactly that shape.
+    """
+    driven = rails_driven_by(part_list)
+    for pad, supply in sorted((board.get("power_pads") or {}).items()):
+        net = net_name_for_rail(supply.get("rail"))
+        receives = supply.get("direction", "in") == "in" and net not in GROUND_NETS
+        yield pad, net, bool(net) and (not receives or net in driven)
+
+
+def supply_inputs(board, part_list):
+    """
+    Every power connection this design STATES as an input, as (component, pin, net).
+
+    The claim a built circuit has to honour. Outputs are left out on purpose: a driven net with
+    nothing on it is a different complaint, and `outputs_with_nothing_on_them` already makes it.
+    """
+    claims = [(component_name(part), supply["pin"], net)
+              for part, supply, net in power_connections(part_list)
+              if supply.get("direction", "in") == "in" and net not in GROUND_NETS]
+    claims += [("Mcu", pad, net) for pad, net, wired in mcu_power_nets(board, part_list)
+               if wired and net not in GROUND_NETS]
+    return sorted(claims)
+
+
+def mcu_power_lines(board, part_list, rules, unjustified):
     """
     The microcontroller's OWN supply pins.
 
@@ -620,14 +666,21 @@ def mcu_power_lines(board, rules, unjustified):
     component connected to anything" was a question no check asked.
     """
     lines = []
-    for pad, supply in sorted((board.get("power_pads") or {}).items()):
-        net = net_name_for_rail(supply.get("rail"))
+    for pad, net, wired in mcu_power_nets(board, part_list):
         if not net:
             # Said, not skipped. This was `continue` — the silent drop G2 removed for module
             # pins, kept for the processor's own pads. The board contract now refuses a pad
             # with no rail; this is the generator refusing to hide one that reaches it anyway.
             lines.append("    {/* Mcu.%s NAMES NO RAIL in the board file's power_pads, so it is" % pad)
             lines.append("        wired to nothing. Add a rail to that entry. */}")
+            continue
+        if not wired:
+            # Also said, not skipped, and for the same reason: an absent trace reads the same
+            # whether it was reasoned about or forgotten, and one of those two is a fault.
+            lines.append("    {/* Mcu.%s receives net.%s and NOTHING ON THIS BOARD DRIVES that" % (pad, net))
+            lines.append("        rail, so it is left open — on this module that pad is then a")
+            lines.append("        source, carrying USB power out. Add a regulator or an inlet")
+            lines.append("        whose record declares an output on that rail to feed it. */}")
             continue
         lines.append(power_trace("Mcu", pad, net, rules, unjustified=unjustified))
     if not board.get("power_pads"):
@@ -696,7 +749,7 @@ def power_lines(board, part_list, rules):
     """The power section. `unjustified` collects, across both trace loops, what could not be sized."""
     unjustified = set()
     lines = ["    {/* Power. Which rail each module pin belongs to comes from its part file. */}"]
-    lines += mcu_power_lines(board, rules, unjustified)
+    lines += mcu_power_lines(board, part_list, rules, unjustified)
     lines += power_note_lines(part_list)
     lines += module_power_lines(part_list, rules, unjustified)
     lines += unjustified_lines(unjustified)

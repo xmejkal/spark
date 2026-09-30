@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
+import emit_board  # noqa: E402
 
 
 def stage(name, status):
@@ -135,11 +136,11 @@ class EveryComponentNeedsAGroundTest(unittest.TestCase):
         # It has a trace, so "does it connect to anything" would pass it. The question is
         # whether it shares a RETURN PATH, and that is a different question.
         self.assertEqual(
-            check_spine.components_not_on_ground(self.circuit(ground_the_mcu=False)), ["Mcu"])
+            check_spine.islands_in(self.circuit(ground_the_mcu=False)), ["Mcu reaches no ground"])
 
     def test_grounding_it_clears_the_finding(self):
         self.assertEqual(
-            check_spine.components_not_on_ground(self.circuit(ground_the_mcu=True)), [])
+            check_spine.islands_in(self.circuit(ground_the_mcu=True)), [])
 
     def test_a_ground_under_another_name_still_counts(self):
         # A design with an analogue return calls it AGND, and "the net called GND" stops being
@@ -148,7 +149,7 @@ class EveryComponentNeedsAGroundTest(unittest.TestCase):
         for element in circuit:
             if element.get("name") == "GND":
                 element["name"] = "AGND"
-        self.assertEqual(check_spine.components_not_on_ground(circuit), [])
+        self.assertEqual(check_spine.islands_in(circuit), [])
 
     def test_a_passive_between_a_pin_and_a_rail_is_not_an_island(self):
         # P6 placed the first pull-ups a generated board ever carried, and this check reported
@@ -161,16 +162,116 @@ class EveryComponentNeedsAGroundTest(unittest.TestCase):
             {"type": "source_trace", "source_trace_id": "t4", "connected_source_port_ids": ["p_r1", "p_mod_sda"], "connected_source_net_ids": []},
             {"type": "source_trace", "source_trace_id": "t5", "connected_source_port_ids": ["p_r2"], "connected_source_net_ids": ["n_v33"]},
         ]
-        self.assertEqual(check_spine.components_not_on_ground(circuit), [])
+        self.assertEqual(check_spine.islands_in(circuit), [])
         dangling = [e for e in circuit if e.get("source_trace_id") != "t5"]
-        self.assertEqual(check_spine.components_not_on_ground(dangling), ["SdaPullup.pin2 (a terminal connected to nothing)"])
+        self.assertEqual(check_spine.islands_in(dangling), ["SdaPullup.pin2 (a terminal connected to nothing)"])
 
     def test_a_component_in_no_trace_at_all_is_not_reported_here(self):
         # Already covered by the generators, which refuse to emit a part they cannot wire.
         # Reporting it twice, in different words, is how a finding gets scrolled past.
         circuit = self.circuit(ground_the_mcu=True) + [
             {"type": "source_component", "source_component_id": "c_lonely", "name": "Lonely"}]
-        self.assertNotIn("Lonely", check_spine.components_not_on_ground(circuit))
+        self.assertNotIn("Lonely", check_spine.islands_in(circuit))
+
+
+class TheSupplyThePartRecordsPromiseTest(unittest.TestCase):
+    """
+    P29. A module whose record says something feeds it, on a board where nothing does.
+
+    Reproduced on the irrigation controller before this was written: its buck's record says
+    "Feeds the FireBeetle's 5 V/VCC input and the sensors", `net.V5V` joined the buck's VOUT to
+    the flow meter's VCC, no trace reached the processor, and the build stage said `[ok]`.
+    """
+
+    @staticmethod
+    def circuit(*, feed_the_mcu):
+        elements = [
+            {"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+            {"type": "source_net", "source_net_id": "n_5v", "name": "V5V"},
+            {"type": "source_component", "source_component_id": "c_mcu", "name": "Mcu"},
+            {"type": "source_port", "source_port_id": "p_mcu_gnd", "source_component_id": "c_mcu", "name": "GND1"},
+            {"type": "source_port", "source_port_id": "p_mcu_vcc", "source_component_id": "c_mcu", "name": "VCC"},
+            {"type": "source_trace", "source_trace_id": "t1",
+             "connected_source_port_ids": ["p_mcu_gnd"], "connected_source_net_ids": ["n_gnd"]},
+        ]
+        if feed_the_mcu:
+            elements.append({"type": "source_trace", "source_trace_id": "t2",
+                             "connected_source_port_ids": ["p_mcu_vcc"],
+                             "connected_source_net_ids": ["n_5v"]})
+        return elements
+
+    def test_a_pin_the_design_feeds_and_the_board_does_not_is_named(self):
+        self.assertEqual(
+            check_spine.islands_in(self.circuit(feed_the_mcu=False), [("Mcu", "VCC", "V5V")]),
+            ["Mcu.VCC is fed by net.V5V in this design and is not on it"])
+
+    def test_wiring_it_clears_the_finding(self):
+        self.assertEqual(
+            check_spine.islands_in(self.circuit(feed_the_mcu=True), [("Mcu", "VCC", "V5V")]), [])
+
+    def test_a_rail_the_build_never_created_is_named_too(self):
+        # The failure mode that is easy to miss: the trace was asked for, tscircuit dropped it,
+        # and the net does not exist at all. `net_named` returns None and that must not read as
+        # "no claim to check".
+        circuit = [e for e in self.circuit(feed_the_mcu=True) if e.get("name") != "V5V"]
+        self.assertEqual(
+            check_spine.islands_in(circuit, [("Mcu", "VCC", "V5V")]),
+            ["Mcu.VCC is fed by net.V5V in this design and is not on it"])
+
+    def test_no_claims_asks_no_supply_question(self):
+        # A button has no supply pin, and asking every component whether it reaches a rail is how
+        # a check that fires on correct designs gets ignored. Only what a record states is asked.
+        self.assertEqual(check_spine.islands_in(self.circuit(feed_the_mcu=False)), [])
+
+
+class WhichOfTheModulesOwnPadsGetWiredTest(unittest.TestCase):
+    """P29's other half, in the generator: a pad that RECEIVES is conditional, one that drives is not."""
+
+    BOARD = {"power_pads": {"GND1": {"rail": "ground", "direction": "out"},
+                            "3V3": {"rail": "logic", "direction": "out"},
+                            "VCC": {"rail": "5v", "direction": "in"}}}
+
+    @staticmethod
+    def part(direction, rail):
+        return {"id": "psu", "name": "Psu", "power": [{"pin": "VOUT", "rail": rail, "direction": direction}]}
+
+    def test_a_receiving_pad_is_left_open_when_nothing_drives_its_rail(self):
+        wired = {pad: on for pad, _, on in emit_board.mcu_power_nets(self.BOARD, [])}
+        self.assertEqual(wired, {"GND1": True, "3V3": True, "VCC": False})
+
+    def test_a_supply_on_that_rail_wires_it(self):
+        wired = dict((pad, on) for pad, _, on in
+                     emit_board.mcu_power_nets(self.BOARD, [self.part("out", "5v")]))
+        self.assertTrue(wired["VCC"])
+
+    def test_another_consumer_of_the_rail_does_not_count_as_a_source(self):
+        # Two sinks and no source is a rail nobody drives, which is the state this exists to
+        # refuse to paper over.
+        wired = dict((pad, on) for pad, _, on in
+                     emit_board.mcu_power_nets(self.BOARD, [self.part("in", "5v")]))
+        self.assertFalse(wired["VCC"])
+
+    def test_the_generated_file_says_why_a_pad_was_left_open(self):
+        # W1's shape: a connection that was reasoned about and one that was forgotten must not
+        # look the same in the output.
+        lines = "\n".join(emit_board.mcu_power_lines(self.BOARD, [], {}, set()))
+        self.assertIn("Mcu.VCC receives net.V5V and NOTHING ON THIS BOARD DRIVES", lines)
+        self.assertNotIn('from=".Mcu > .VCC"', lines)
+
+    def test_the_claim_the_spine_checks_is_the_trace_the_generator_wrote(self):
+        # One home: if these two could disagree the check would be worthless, and three defects
+        # in this file's history are exactly that disagreement.
+        parts = [self.part("out", "5v")]
+        lines = "\n".join(emit_board.mcu_power_lines(self.BOARD, parts, {}, set()))
+        self.assertIn('from=".Mcu > .VCC" to="net.V5V"', lines)
+        self.assertIn(("Mcu", "VCC", "V5V"), emit_board.supply_inputs(self.BOARD, parts))
+
+    def test_a_grounds_direction_is_never_asked_about(self):
+        # A connector declares its GND as `out` and a module declares its GND as `in`; neither is
+        # a rail anybody drives, and making ground conditional would unwire every board.
+        board = {"power_pads": {"GND1": {"rail": "ground", "direction": "in"}}}
+        self.assertEqual([on for _, _, on in emit_board.mcu_power_nets(board, [])], [True])
+        self.assertEqual(emit_board.supply_inputs(board, []), [])
 
 
 class FindingTheToolchainTest(unittest.TestCase):

@@ -46,6 +46,8 @@ class Netlist:
         self.members = {net_id: [] for net_id in self.nets}
         #: port id -> the net ids it sits on, so "is this pin wired at all" is one lookup.
         self.nets_of_port = {}
+        #: (component name, ANY name that port answers to) -> net ids. See `names_of`.
+        self.by_name = {}
         for element in circuit:
             if element.get("type") != TRACE:
                 continue
@@ -62,6 +64,8 @@ class Netlist:
                 for net_id in net_ids:
                     self.members[net_id].append(member)
                     self.nets_of_port.setdefault(port_id, set()).add(net_id)
+                    for alias in self.names_of(port):
+                        self.by_name.setdefault((member[0], alias), set()).add(net_id)
 
     @staticmethod
     def trace_net_id(trace):
@@ -82,10 +86,29 @@ class Netlist:
     def power_nets(self):
         return {net_id for net_id, net in self.nets.items() if net.get("is_power")}
 
+    @staticmethod
+    def names_of(port):
+        """
+        Every name a port answers to: what it is called, and every hint the builder recorded.
+
+        A component built from `pinLabels` carries the label as the port's NAME — the flow
+        meter's `VCC` is a port called VCC. A component built from a FOOTPRINT does not: the
+        FireBeetle module's ports are called `pin17`, `pin32`, and the silkscreen label lives
+        only in `port_hints`. That is the only name a person, a board file or a rule ever uses.
+
+        Keying membership on `name` alone therefore made every rule about the microcontroller's
+        own pads miss, silently and in both directions. Reproduced on the irrigation controller
+        on 2026-09-30, both on a board that is correct: `compare_design` with
+        `must_not_float: [["Mcu", "D11"]]` answered "Mcu.D11 connects to nothing" while
+        `board.tsx` line 81 wires it to Valve4.SIGNAL, and P29's supply walk reported the
+        processor's own 3.3 V pad as unfed. A pad has one identity and several spellings.
+        """
+        names = [port.get("name")] + list(port.get("port_hints") or [])
+        return {name for name in names if name}
+
     def nets_of(self, component_name, port_name):
-        """Which nets a given pin sits on. Empty means the pin is joined to nothing."""
-        return {net_id for net_id, members in self.members.items()
-                if (component_name, port_name) in members}
+        """Which nets a given pin sits on, by any of its names. Empty means joined to nothing."""
+        return set(self.by_name.get((component_name, port_name), ()))
 
     def component(self, name):
         for element in self.components.values():

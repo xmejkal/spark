@@ -113,6 +113,60 @@ class AMalformedElementIsNotATracebackTest(unittest.TestCase):
         self.assertEqual((n.members, n.net_names(), n.components_on("GND")), ({}, [], []))
 
 
+class APadHasOneIdentityAndSeveralSpellingsTest(unittest.TestCase):
+    """
+    A port answers to its name AND to every hint the builder recorded.
+
+    tscircuit names a port after the label only when the component was built from `pinLabels`.
+    A component built from a FOOTPRINT — which is what every microcontroller module in this
+    plugin is — gets ports called `pin17`, `pin32`, and the silkscreen label survives only in
+    `port_hints`. That label is the one name a board file, a rule or a person ever uses, so
+    keying membership on `name` alone made every rule about the processor's own pads miss.
+
+    Both directions reproduced on the irrigation controller, 2026-09-30, on a CORRECT board:
+    `compare_design` with `must_not_float: [["Mcu", "D11"]]` answered "connects to nothing"
+    while `board.tsx` wires D11 to a valve, and P29's supply walk called the 3.3 V pad unfed.
+    """
+
+    @staticmethod
+    def circuit_with_a_footprint_module():
+        return [
+            {"type": "source_component", "source_component_id": "c1", "name": "Mcu"},
+            {"type": "source_net", "source_net_id": "n1", "name": "V33"},
+            {"type": "source_port", "source_port_id": "p1", "source_component_id": "c1",
+             "name": "pin17", "port_hints": ["pin17", "3V3", "17"]},
+            {"type": "source_trace", "source_trace_id": "t1",
+             "connected_source_port_ids": ["p1"], "connected_source_net_ids": ["n1"]},
+        ]
+
+    def setUp(self):
+        self.n = netlist.Netlist(self.circuit_with_a_footprint_module())
+        self.rail = self.n.net_named("V33")
+
+    def test_the_silkscreen_label_finds_the_pad(self):
+        self.assertEqual(self.n.nets_of("Mcu", "3V3"), {self.rail})
+
+    def test_so_does_the_name_the_builder_gave_it(self):
+        self.assertEqual(self.n.nets_of("Mcu", "pin17"), {self.rail})
+
+    def test_and_so_does_the_pin_number(self):
+        self.assertEqual(self.n.nets_of("Mcu", "17"), {self.rail})
+
+    def test_a_pad_that_answers_to_nothing_of_the_sort_is_still_unwired(self):
+        # The alias index must not turn every lookup into a hit; that would make the floating-pin
+        # rule unable to fail, which is worse than the false alarm it replaced.
+        self.assertEqual(self.n.nets_of("Mcu", "D11"), set())
+
+    def test_a_port_with_no_hints_keeps_its_one_name(self):
+        self.assertEqual(netlist.Netlist.names_of({"name": "VCC"}), {"VCC"})
+
+    def test_the_rules_checker_stops_calling_a_wired_pad_floating(self):
+        # The false alarm itself, through the caller that raised it.
+        import compare_design
+        n = compare_design.Netlist(self.circuit_with_a_footprint_module())
+        self.assertTrue(n.nets_of("Mcu", "3V3"), "a wired pad read as floating again")
+
+
 class TheTwoCallersShareIt(unittest.TestCase):
     def test_the_rules_checker_and_the_physics_checker_answer_alike(self):
         import check_physics

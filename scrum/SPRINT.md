@@ -22,6 +22,13 @@ false alarm that would abort a good board's build. Both are the class this produ
 | 3 | **P42** | The verdict has one home; six copies become calls | S |
 | 4 | **P35** | One netlist walker, three callers | M |
 | 5 | **P29** | The board's own supply, and nothing left unfed; joins the walker as its third caller | S+M |
+| 6 | **P46** | A number a fab house could change is data, not code — one file, read by every script | S |
+| 7 | **P45** | The rules a project is checked against are seeded from its design | M |
+
+**Steps 6 and 7 were added on 2026-09-30 by the PO**, after the desk reported what is still code
+that should not be: "the data should be shared if possible. Can't they all read the same file
+where the data are? And yes, you can add P45 and the other one and do them." That sentence is also
+P46's acceptance test — **one file**, not two agreeing copies.
 
 Not in this sprint, by the PO: **P32** (a day of TypeScript, and it must not interleave with
 Python moves), **R2.6** the fourth cold test (parked 2026-09-30, with the date), and P39, P43,

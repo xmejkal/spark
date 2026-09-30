@@ -69,13 +69,21 @@ class WhatItEmitsTest(unittest.TestCase):
                          if '<trace from=".Mcu' in line and 'to="net.' not in line]
         self.assertEqual(len(signal_traces), len(parts.signals_for(PARTS)))
 
-    def test_the_microcontroller_is_wired_to_ground_and_its_logic_rail(self):
+    def test_every_pad_the_board_file_calls_power_is_wired_or_says_why_not(self):
         # The board file says which of its pads are power; every one of them must appear. A
         # processor connected to no ground builds, routes, and reports no error.
+        #
+        # Since P29 a pad the module RECEIVES on is conditional — this design has no 5 V source,
+        # so Mcu.VCC is not wired — but conditional is not silent, and that is the whole value:
+        # a trace that was reasoned about and one that was forgotten must not read the same.
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        for pad in (board.get("power_pads") or {}):
+        for pad, supply in (board.get("power_pads") or {}).items():
             with self.subTest(pad=pad):
-                self.assertIn('<trace from=".Mcu > .%s" to="net.' % pad, self.tsx)
+                wired = '<trace from=".Mcu > .%s" to="net.' % pad in self.tsx
+                self.assertTrue(wired or ("Mcu.%s receives net." % pad) in self.tsx,
+                                "%s is neither wired nor accounted for" % pad)
+                if supply.get("direction", "in") == "out":
+                    self.assertTrue(wired, "a pad the module DRIVES is never conditional")
 
     def test_each_module_pin_appears_on_the_trace_that_reaches_it(self):
         for part_id in PARTS:
@@ -820,14 +828,14 @@ class EachSectionStandsAloneTest(unittest.TestCase):
     def test_a_pad_naming_no_rail_is_said_not_skipped(self):
         # Was `continue`: the silent drop G2 removed for module pins, kept for the MCU's own.
         board = dict(self.BOARD, power_pads={"GND1": {"rail": "ground"}, "3V3": {}})
-        text = "\n".join(emit_board.mcu_power_lines(board, {}, set()))
+        text = "\n".join(emit_board.mcu_power_lines(board, [], {}, set()))
         self.assertIn("Mcu.3V3 NAMES NO RAIL", text)
         self.assertIn('from=".Mcu > .GND1" to="net.GND"', text)
 
     def test_a_board_with_no_power_pads_at_all_is_said(self):
         board = {key: value for key, value in self.BOARD.items() if key != "power_pads"}
         self.assertIn("DOES NOT SAY WHICH OF ITS PADS ARE POWER",
-                      "\n".join(emit_board.mcu_power_lines(board, {}, set())))
+                      "\n".join(emit_board.mcu_power_lines(board, [], {}, set())))
 
     def test_the_unjustified_note_names_every_net_nobody_sized(self):
         self.assertEqual(emit_board.unjustified_lines(set()), [])

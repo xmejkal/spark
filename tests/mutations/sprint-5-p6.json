@@ -38,14 +38,14 @@
  {
   "file": "scripts/check_spine.py",
   "name": "a pull-up is an island again",
-  "find": "    findings = [names.get(owner, \"?\") for owner in present - grounded if owner not in passives]",
-  "replace": "    findings = [names.get(owner, \"?\") for owner in present - grounded]"
+  "find": "    findings = [\"%s reaches no ground\" % names.get(owner, \"?\")\n                for owner in present - grounded if owner not in passives]",
+  "replace": "    findings = [\"%s reaches no ground\" % names.get(owner, \"?\")\n                for owner in present - grounded]"
  },
  {
   "file": "scripts/check_spine.py",
   "name": "a passive's dangling terminal is not reported",
-  "find": "                 for port_id, port in ports.items() if port.get(\"source_component_id\") in present & passives and port_id not in traced]",
-  "replace": "                 for port_id, port in [] if port.get(\"source_component_id\") in present & passives and port_id not in traced]"
+  "find": "                 for port_id, port in board.ports.items()\n                 if port.get(\"source_component_id\") in present & passives\n                 and port_id not in board.nets_of_port]",
+  "replace": "                 for port_id, port in []\n                 if port.get(\"source_component_id\") in present & passives\n                 and port_id not in board.nets_of_port]"
  },
  {
   "file": "scripts/sim_project.py",

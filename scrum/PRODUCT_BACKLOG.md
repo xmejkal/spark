@@ -116,7 +116,7 @@ gets one home.
 **Value proven by:** raising the annular-ring minimum in a project's rules file makes that
 project's generated footprints fail their own check, and the package table appears once.
 
-### P29 — The board's own supply, and nothing left unfed
+### P29 — The board's own supply, and nothing left unfed — DONE 2026-09-30
 **Needed by:** the irrigation controller. Its buck's record says "Feeds the FireBeetle's 5 V/VCC
 input and the sensors" and the generated board has no such trace: `net.V5V` joins the buck's VOUT
 and the flow meter's VCC, and the only supply trace on the board is `.Mcu > .3V3`, the module's own
@@ -128,6 +128,19 @@ feeds it, a sink when a regulator does); then the spine's island walk asks every
 it reaches a supply as well as a ground, so an unfed module can never again be `[ok]`.
 **Value proven by:** the spine names the unfed module on today's irrigation board, and after the
 fix `grep 'Mcu > .VCC' board.tsx` finds the trace and the stage is clean.
+**Done.** On the board that existed: `Mcu.VCC is fed by net.V5V in this design and is not on it`.
+After regenerating and rebuilding: 40 traces, 0 errors, no islands, one `.Mcu > .VCC` trace. The
+two RC boards gained the four-line comment saying nothing drives their 5 V rail and no trace —
+their buck declares its output on a rail called `servo`, so the condition is correctly false.
+
+**It exposed a second defect, reproduced before it was fixed.** tscircuit names a port after its
+label only for a component built from `pinLabels`; one built from a FOOTPRINT — which every
+microcontroller module here is — gets ports called `pin17`, `pin32`, with the silkscreen label
+only in `port_hints`. The shared walker keyed membership on the name alone, so every rule naming
+a pad of the processor missed, in both directions: `compare_design` with
+`must_not_float: [["Mcu", "D11"]]` answered "Mcu.D11 connects to nothing" about a pin the
+irrigation board wires to a valve. `netlist.Netlist.names_of` now indexes a port under every name
+it answers to, which fixes all three callers at once.
 
 ### P40 — The architecture the refactor should aim at — DONE 2026-09-30, `docs/2026-09-30-refactoring-architecture.md`
 **Needed by:** W15b — the budget now counts code and says refactor before raising, so the first
