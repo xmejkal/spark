@@ -152,6 +152,17 @@ within a line budget that a change may not exceed without deleting something. `t
 holds all of it, so dead code cannot accumulate silently again — every piece cut on 09-29 had
 tests, and looked alive.
 
+## W15b — The budget is on code, and it pinches in this order: refactor, delete, raise
+
+The `scripts/` ceiling counts code lines only: docstrings, comments and blanks are free, because
+the prose recording why a fix is shaped as it is, is the most valuable thing in this repository
+and charging it against complexity taught the wrong lesson. When the ceiling pinches, the first
+question is whether the same behaviour fits in less code — the three-outcome verdict was written
+out in three places and one of the three was wrong, which is how a check came to report `ok` over
+its own `could-not-run` (P34). Deleting comes second, raising the number third, and each is
+written down with its reason. Changed 2026-09-30, at the PO's question: "if it's code, it could
+be refactored?"
+
 ## W16 — A replacement deletes what it replaces, in the same commit
 
 When a new path replaces an old one — a file format, a check, a command — the old one goes in the
