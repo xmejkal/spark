@@ -5,7 +5,8 @@ The single ordered list. If work is not here, it is not happening. **Order is th
 `**Value proven by:**` command whose output Petr can read; an item that cannot name both is not
 pulled. The suite refuses a backlog with an open item missing its need line.
 
-Last ordered: 2026-09-29, night — **by the PO: need-based; cut what nothing uses.**
+Last ordered: 2026-09-30 — council of five lenses, every claim reproduced first; **the PO's
+to confirm.** Before it: 2026-09-29, by the PO — need-based; cut what nothing uses.
 
 ## The product goal
 
@@ -21,120 +22,193 @@ would accept as a first draft — host requirements honoured, no false alarms fr
 two example projects, with the docs alone.** Out of v1, by the PO's call: real PCB layout, analogue
 simulation, a link between two boards, and parts research beyond R11 below.
 
-## Sprint 5 — in this order
+## Ordered — by value against effort, 2026-09-30
 
-| # | item | needed by |
-| --- | --- | --- |
-| R2.5 | The third cold test — **PO: one letter, (a), (b) or (c)** | it is the test |
+Reordered by a council of five lenses (hardware, firmware, a stranger's first hour, verification,
+the scrum master), each scoring every item and probing the product to do it; every claim below was
+reproduced before it was written down (W9). **The order is the PO's** (W11) — this is the
+council's proposal.
 
-### R11 — Research parts and modules, vendor by vendor, and keep what was found — DONE 2026-09-29
-**Needed by:** the third cold test on its first day, and every design that uses a part the library
-lacks — the RC car wrote three records by hand with unverified facts because nothing looked.
-The unit is the part record the chain already reads: research produces a **draft record** in the
-project's `parts/`, with every fact carrying its source: `verified: true` is the vendor's own text
-at the cited URL, anything read off an image, inferred or computed is `verified: false` with
-`why_it_matters` (two wordings of this rule sent three researchers back to ask — irrigation diary
-I6). Vendors in the order the project's brief prefers (`.spark/project.json` → `prefer`; default
-DFRobot, then Seeed); plain parts from the brief's `sellers`, local first (PO, 2026-09-29).
-**Everything research reads is kept, chosen or not** (PO, 2026-09-29, late — "we want a good
-database in time"): a `catalog/` in the plugin holds a record per candidate, drafts allowed, the
-datasheet and photo downloaded beside it by `parts.py --fetch`; `--need` searches it after the
-library; `--promote` moves a record into a project to build with, or into the library for the
-next project. `/spark:identify` researches a module the PO owns from its photo. `parts.py --need` says what exists first; `/spark:research` runs the
-`parts-researcher` agent; `parts.py --validate`, `--unverified` and `--sources` check the result —
-the last fetches every cited URL, so a hallucinated source is caught. A pinout read off a wiki
-image is written down as unverified, never invented. Not built: a scraper per vendor, a price
-tracker, automatic pinout verification.
-**Value proven by:** the first part the cold test needs that the library lacks goes through
-`/spark:research` and comes back as a record that validates, cites resolving sources, lists what it
-could not confirm — and the chain builds with it. Then: a candidate the researcher passed over is
-in the catalog with its datasheet beside it, and `--need` for the same words finds it next time.
+| # | item | value | effort | why here |
+| --- | --- | --- | --- | --- |
+| **P33** | The documented setup must build the documented example | 5 | S | `/spark:init` writes a package file pinning nothing; `npm install` then fetches a tscircuit that fails on the plugin's own example |
+| **P34** | A check that compared nothing says so | 5 | S | `compare_design` prints `every rule holds` having compared zero; `check_physics` prints its own could-not-run and exits 0 |
+| **P35** | The rules see spark's own wiring | 5 | M | the generator wires signals pin-to-pin, so every rule keyed on a net name is dead on spark's own boards — P8 fixed this in one file of three |
+| **P29** | The board's own supply, and nothing left unfed | 5 | S+M | no trace reaches the microcontroller's supply on any generated board, while the file says one does; the vendor fact it waited for is already recorded |
+| **P39** | The library answers a need it has no words for | 4 | S | `--need measure distance` misses the rangefinder and `--need switch 12 V load` misses the MOSFET module — both send a researcher to write a record that exists |
+| **P32** | One home for the converter and the chips — **PO: (a), move now** | 4 | L | v1's last word, "simulated", is true only beside the bin's repo (D17); two copies of each chip (D19, D20) |
+| **P36** | The pin map is a file the firmware imports | 4 | S | twelve GPIO numbers are hand-copied into the irrigation firmware and a thirteenth into its scenario; nothing compares them |
+| **P37** | What this simulation cannot show, printed | 4 | S | every stand-in record carries a mandatory honesty sentence and no command prints it, so a green scenario reads like a bench |
+| **P38** | The capacitors P6 promised | 3 | M | `host_parts` has pulldown, pullup and divider; P6's own text promised a decoupling and a bulk capacitor |
+| **P2** | A simulation that costs no Wokwi minutes | 3 | M | its "needed by: none yet" is false now: the irrigation firmware has no test of any kind and three diagnostic runs went to the quota |
+| **R2.6** | A fourth cold test — **PO: the domain** | 5 | L | the cold tests found 13 and 12 gaps; ten of the twelve were invisible to every test in this repo |
 
-### P6 — The generated board honours the host requirements it prints — DONE 2026-09-29, late night
-**Needed by:** every generated board with an L9110S — the file prints "10 k pulldowns on both
-inputs" and leaves the inputs floating; the reference design and the RC car both.
-`emit_board` acts on the mechanical requirements it can (a pulldown, a decoupling capacitor, a
-bulk capacitor on a rail) as real components on the board, and says plainly which requirements
-are the reader's.
-**Value proven by:** the reference design's L9110S inputs carry pulldowns in the built netlist;
-`check_all` on it reports no floating input; the file lists the requirements it did not do.
+### P33 — The documented setup must build the documented example
+**Needed by:** every stranger who follows `/spark:init` then `/spark:build` — and it is a defect
+introduced on 2026-09-29 by P28's own fix (I9). `init_project.py` writes `"@tscircuit/cli": "*"`,
+so `npm install` fetches 0.0.2687, which fails on this plugin's documented example with
+`Port [Mcu.pin17] is not connected to net [V33] by a PCB trace`, exit 1 — while 0.0.2600, the
+version every number in `README.md` and `build.md` was measured on, builds the same file to 15
+traces and no errors. Following the documented first step turns a passing chain into a failing one.
+Pin the exact version, say in one line why it is pinned and how to move it, and hold the documents
+to it.
+**Value proven by:** a test that fails if the written package file names anything but the version
+the documents quote; and, by hand in an empty directory, `init_project.py --project . --board
+firebeetle2-esp32s3 && npm install && npx tsci build board.tsx` → `Circuits  1 passed`.
 
-### P8 — `must_not_float` false-positives on spark's own output — DONE 2026-09-29, late night
-**Needed by:** every generated board at review — `check_all` on the reference design reports
-`L9110sModule.AIA: connects to nothing` on a trace that exists. A rule that cries wolf is switched
-off, and then catches nothing.
-Reproduced a third time on 2026-09-29, night, on the irrigation controller: four valve inputs
-declared `must_not_float`, four traces in the built `circuit.json` touching them, four findings
-"connects to nothing" — and the finding names neither component nor pin (irrigation diary I10),
-so the list cannot even be acted on by hand.
-**Value proven by:** `check_all` on the generated reference design reports no `must_not_float`
-finding, while a genuinely floating input still does — and a finding names its component and pin.
+### P34 — A check that compared nothing says so
+**Needed by:** the RC car, whose `.spark/rules.json` holds the lists `init` wrote —
+`compare_design.py <its circuit> --rules <its rules>` prints `0 rule(s) checked against the built
+design` and `every rule holds`, exit 0, and `check_all` shows `[ok  ] rules-vs-netlist`, on a board
+carrying the H-bridge whose floating inputs are this project's canonical defect. And the
+irrigation controller, where `check_physics.py` prints `1 could-not-run: three of this tool's four
+rules were not checked at all` and returns `status: ok`, exit 0, because its `main` builds both
+from the `problem`-severity findings alone (`check_physics.py:497-505`) where `check_footprints`
+builds them from all three.
+Two lines in `check_physics.main`, copied from `check_footprints`; and in `compare_design`, zero
+rules compared is `could-not-run` naming what the rules file would have to say.
+**Value proven by:** `check_physics.py <irrigation circuit> --rules <its rules>` exits 2;
+`compare_design.py <rc-car circuit> --rules <its rules>` exits 2; `check_all --project ../rc-car`
+shows `[????] rules-vs-netlist`, not `[ok]`.
 
-### P10 — A project's own board file must not switch `vendor-truth` off — DONE 2026-09-29, late night
-**Needed by:** any project whose board is its own file rather than the library's — the mechanism
-you are told to use to record what you verified turns off the check that verifies.
-**Value proven by:** a project with a board override still gets a `vendor-truth` verdict against
-the override.
+### P35 — The rules see spark's own wiring
+**Needed by:** every board this tool generates. The generator wires each signal pin-to-pin — a
+trace that names no net — so a generated board has named nets only for its rails. `init` therefore
+writes `i2c_buses: []` and `must_not_float: []`, `compare_design.check_i2c_pullups` iterates an
+empty list, and `check_physics.Board.members` (`:112`) counts members only from net-named traces,
+so its capacitor and resistor rules see a fraction of the board. The irrigation controller's
+DS3231 sits on SDA and SCL and no check looks at them. P8 gave `compare_design`'s netlist model the
+fallback that fixes this; the other two places never got it.
+Give `check_physics.Board` the same fallback, and have `init` seed `must_not_float` from the chosen
+records' inputs and `i2c_buses` from the board's own bus pins — so an empty list means "nothing to
+check here", not "nobody filled it in".
+**Value proven by:** `check_all --project ../irrigation` reports the I2C lines as checked or as
+could-not-run, never silently absent; a mutation removing the fallback is caught.
 
-### P28 — The tools this repository relies on, made true — DONE 2026-09-29, late night
-**Needed by:** this repository's own Definition of Done (close audit C8–C12, C14, C16). The mutate
-lock is taken after the pre-check suite; `mutate.apply` reads a missing file where `anchors`
-refuses it; the outcome words are spelled again in `compare_design.py`; `init_project`'s
-`nets_in`, `rules_for` and `has_answers` are named by no test; the stranger test types the steps
-itself instead of running the document's lines; `/spark:build`'s example output block shows
-numbers no command produced.
-**Value proven by:** each of those false; `tools/check_commit.py` green.
+### P29 — The board's own supply, and nothing left unfed
+**Needed by:** the irrigation controller. Its buck's record says "Feeds the FireBeetle's 5 V/VCC
+input and the sensors" and the generated board has no such trace: `net.V5V` joins the buck's VOUT
+and the flow meter's VCC, and the only supply trace on the board is `.Mcu > .3V3`, the module's own
+output. The same hole is in the RC car. The vendor fact this item waited for is already recorded
+and verified in `boards/firebeetle2-esp32s3.json` — DFRobot's "5 V DC for powering the board
+(cannot charge Li-ion battery)".
+Record VCC as a power pad that can receive, with the dual role said (a USB source when nothing else
+feeds it, a sink when a regulator does); then the spine's island walk asks every component whether
+it reaches a supply as well as a ground, so an unfed module can never again be `[ok]`.
+**Value proven by:** the spine names the unfed module on today's irrigation board, and after the
+fix `grep 'Mcu > .VCC' board.tsx` finds the trace and the stage is clean.
 
-### P31 — A part record says how it is simulated — DONE 2026-09-29, late night (ordered that night: "make the Wokwi simulations work, have the WebAssembly made, set the values in the test")
-**Needed by:** the irrigation cold test — its chain ends `????` at simulation because the
-converter has no Wokwi part for any of its seven modules, and the PO asked what the options are.
-A record carries a `simulation` field the converter reads: a Wokwi built-in stand-in with its
-pin map and an honest note (a DS1307 for the DS3231's time registers, a potentiometer for a soil
-probe, an LED or relay module for a valve driver), or a custom chip in the project's `sim/chips/`
-(a pulse train for the flow meter — the bin's `vl6180x` and `l9110s` chips are the precedent,
-five scenarios passing). Research fills it beside the pinout. Analogue questions (a divider's
-high level, a flyback clamp, an ADC filter) are hand SPICE netlists through ngspice, not this
-item. Not built: a chip generator, a SPICE flow for whole boards.
-**Value proven by:** the irrigation chain reaches `[ok] simulation` with a diagram whose stand-ins
-are named as such, and one scenario opens a valve when a probe's slider crosses its threshold.
-**Slices, each proven on the irrigation chain:** (A) the record contract — `simulation.wokwi`
-with a built-in `part` or a `chip` beside the record, `pins`, `stand_in`; or `simulation.skip`
-with a reason — and every shipped record gets one, the bin's two chips moving beside their
-records; (B) the spine writes the converter's mapping from the design's records, copies the
-chips, compiles them with `wokwi-cli chip compile`, writes `wokwi.toml`; (C) the converter takes
-`--mapping` and `--chips` and prefers them to its hand table; (D) two chips for the irrigation
-modules — a flow meter whose pulse rate is a control, a soil probe whose moisture is a control
-driving an analog voltage; (E) the sim project kept in the project, a firmware stub, one
-scenario, one Wokwi run. The `scripts/` budget rises as needed — the PO allowed it.
+### P39 — The library answers a need it has no words for
+**Needed by:** the irrigation design and the smart bin. `parts.py --need switch 12 V load` finds
+nothing, though `dfr0457-mosfet-power-controller` is the part that design already switches its
+valves with; `--need measure distance` finds nothing, though `vl6180x-breakout` is the bin's
+sensor. Matching requires every word as a substring of id + name + kind + aliases, and the records
+say "MOSFET Power Controller" and "time-of-flight rangefinder". A miss then prints "Research it",
+which is how a second record for a part we own gets written — the very waste the catalog exists to
+end (this is intake I1 and audit D21, open since 2026-09-29).
+The reader of this output is Claude, not a person typing, and every record's label together is
+about 1,600 tokens — two existing commands already print the whole index in under 1,000. So a miss
+prints the index rather than sending anyone to research, and says that is what it is doing.
+**Value proven by:** `parts.py --need measure distance --project ../irrigation` puts
+`vl6180x-breakout` in front of the reader, and `--need switch 12 V load` does the same for
+`dfr0457-mosfet-power-controller`; a test asserts a miss never prints only the research command.
 
-### P32 — One home for the converter and the chips (proposed 2026-09-30 from the v1 audit; the PO orders)
+### P32 — One home for the converter and the chips — **PO: (a), move now** (2026-09-30)
 **Needed by:** a stranger's simulation — the spine finds the Wokwi converter only at
 `tools/circuit-to-wokwi` in the project or at `../smartbin-local/tools/circuit-to-wokwi`
 (audit D17), so v1's "simulated board" holds only beside the bin repo; and W16 — the bin's two
 chips were copied beside their records, not moved (D19), and the converter's hand table remains
-the bin's own mapping (D20). The move is about 1,000 lines of TypeScript with bun dependencies
-and the bin's `make check` depends on it, so it is a scope decision, not a slice.
+the bin's own mapping (D20). About 1,000 lines of TypeScript with bun dependencies, and the bin's
+`make check` rides on it, so it is a day's work, not a slice.
 **Value proven by:** the one command reaches `[ok] simulation` from a project with nothing beside
 it but the plugin; one copy of each chip; the bin's `make check` green against the plugin's copy.
 
-## After v1 — only if a cold test asks for it
+### P36 — The pin map is a file the firmware imports
+**Needed by:** the irrigation controller's firmware — twelve GPIO numbers are typed into
+`firmware/main.py` by hand and a thirteenth into `sim/scenarios/wet-and-dry.scenario.yaml`, and
+nothing compares any of them with the assigner's output; they agree today by luck. The bin needed
+121 lines of its own checker to police the same copy.
+`assign_pins --emit-pins <file>` writes the map as constants a firmware imports, each with its
+signal name, its pad and the reason the pin was chosen.
+**Value proven by:** the irrigation firmware imports the generated file and its scenario passes
+unchanged; a test asserts every signal the design has appears exactly once in it.
 
-Each parked, with its need unfilled; none is pulled without a design behind it (W14).
+### P37 — What this simulation cannot show, printed
+**Needed by:** anyone reading a passing scenario. Every stand-in record already carries a mandatory
+`stand_in` sentence — Wokwi's DS1307 answers at the DS3231's address with the same seven time
+registers and has no alarms, no temperature; each valve is an LED with no MOSFET, no 12 V and no
+flyback — and no command prints any of it, so a green run reads like a bench result.
+The spine's simulation stage and `parts.py --show` print the stand-in limits for the design.
+**Value proven by:** `check_spine.py <irrigation>` prints the three limits under its simulation
+line, and a record whose `stand_in` is empty is already refused by the contract.
 
-- **P2** a simulation run that costs no Wokwi minutes — **Needed by:** none yet.
-- **P5** audit the remaining checks for what they skip — **Needed by:** none yet.
-- **P9** `check_all` keeps the subject on every aggregated finding — **Needed by:** none yet.
-- **P16** the bin's wake-polarity check, in spark — **Needed by:** none yet (the bin has its own).
+### P38 — The capacitors P6 promised
+**Needed by:** the irrigation controller's 12 V rail, which switches four solenoids off an unfused
+barrel jack with no bulk capacitor, and every module on the 3.3 V rail with no decoupling. P6's own
+backlog text promised "a pulldown, a decoupling capacitor, a bulk capacitor on a rail"; the kinds
+it shipped are pulldown, pullup and divider.
+Add the two capacitor kinds to `HOST_PART_KINDS`, wired to the rail the record names, placed with
+the other passives. (The valves' flyback diodes stay prose: the record puts them across the coil,
+between the module's own screw terminals, which is harness wiring and not this board's to place.)
+**Value proven by:** the irrigation board carries the bulk capacitor its record asks for; the
+file's prose block shrinks by that requirement; a mutation removing the kind is caught.
+
+### P2 — A simulation that costs no Wokwi minutes
+**Needed by:** the irrigation controller's firmware, which has no test of any kind, and the quota —
+three diagnostic runs went to discovering one documented fact (diary I11), and two audit rows could
+not be checked because a scenario run costs minutes. The bin proves both shapes already: a fake
+`machine` module for unit tests, and `run_on_micropython.py` for the whole firmware on a real
+MicroPython runtime, 113 and 14 checks, free.
+**Value proven by:** the irrigation firmware's logic is tested on this Mac with no Wokwi run, and
+the scenario is kept for what only a simulator can show.
+
+### R2.6 — A fourth cold test — **PO: the domain**
+**Needed by:** the product itself: the third cold test found twelve gaps in one evening and ten of
+them were invisible to every test in this repository. Two domains from the earlier menu are
+unchosen — a battery sensor node, a USB MIDI foot controller — and the PO may name another.
+Written first as a plan with predictions, diary kept as it goes, the plugin used only as
+documented. **Its definition of done adds one thing this time: the test ends in firmware that
+runs**, because no cold test has yet written any.
+**Value proven by:** the diary, the predictions scored by someone who did not write them, and every
+gap either fixed in the plugin or in this list with its need.
+
+## Asked and answered — 2026-09-30, the PO's question about a vector store
+
+**Would the boards, modules and components be better in a vector store, searchable by what they
+do?** Researched two ways before answering. **No, and not at this size — revisit at about 550
+records.** The corpus is 37 records whose whole searchable surface is ~1,600 tokens, and two
+commands already print the entire index in under 1,000 — retrieval earns its keep only when the
+corpus cannot be shown to the reader, and here it can. It would also be this plugin's first
+third-party dependency (there are none today), a model larger than the repository, and a float
+blob that diffs as noise in a repo reviewed as diffs.
+The outside evidence says the same: no distributor or EDA tool ships embedding search — Octopart,
+DigiKey, KiCad, Altium and LCSC all parse units and filter parameters — and the only published
+evaluation of embedding retrieval over datasheets covers 18 documents at 72% top-1. The two things
+a part record is made of are exactly what embeddings are measured to handle worst: rare exact
+identifiers, and numbers with units (13 embedding models averaged 0.54 against a 0.50 random
+baseline on numeric retrieval). **P39 is the cheap thing that fixes the real failure instead.**
+
+## Parked — no design needs it yet (W14)
+
 - **P17** an off-board part emitted as its header, not its footprint — **Needed by:** none yet.
-- **P29** the FireBeetle's VCC input as a power pad **[needs the vendor's fact]** — **Needed by:** any design that feeds the module from its own regulator; the RC car's plan called it a known risk.
-- **P30** the simulation converter matching a part by what it is, not its name **[bin + spark]** — **Needed by:** a generated design with a named instance of a mapped part, in simulation.
-- **R10** a link between two designs **[PO]** — **Needed by:** the RC car's car and remote, if their agreement is ever to be checked.
+- **P29's neighbours** none.
+- **R10** a link between two designs **[PO]** — **Needed by:** the RC car's two boards, if their
+  agreement is ever to be checked; the PO put it out of v1.
 
-## Deleted on 2026-09-29 — in git history, not in this list
+## Deleted — in git history, not in this list
 
-P1 (its value delivered; the move is the PO's), P7 (with `check_design`, which had made two tools of
-one), P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8 (became R11, pulled
-by the PO).
+2026-09-29: P1 (its value delivered), P7 (with `check_design`, which had made two tools of one),
+P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8 (became R11).
+
+2026-09-30, by the council, each with the reason reproduced:
+**P9** — delivered by P8: every aggregation site in `check_all` now prints `subject: detail`, and
+the irrigation run names `[floating-input] Ds3231At24c32RtcModule.32K`. **P30** — delivered by
+P31: `sim_project.mapping_for` keys the mapping on each instance's component name, so a named
+instance maps; what remains is P32's hand table. **P16** — its own need line argued against itself
+("the bin has its own"), and a wake-polarity rule derived from one board's constant is that board's
+knowledge. **P5** — its audit was performed by the council's verification lens; its findings are
+**P34** and **P35**, which carry the need. **R2.5** — the third cold test, done 2026-09-29, still
+listed open one file down (the shape of audit row D28).
 
 ## Done — one line each, the hash is the record
 - **R11** — research parts and modules, vendor by vendor, and keep what was found: `parts.py --need/--skeleton/--sources/--fetch/--catalog/--promote`, `/spark:research`, `/spark:identify`, the `parts-researcher` agent, the catalog (`e50717a`…`d4f6b0f`, `773cd41`, `040a66d`; proven on the irrigation controller: seven records, 18 candidates kept, every cited URL answering).
