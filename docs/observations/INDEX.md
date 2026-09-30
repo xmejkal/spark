@@ -160,7 +160,7 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | D1 | 594 tests | v1 close audit, 09-30 | **verified** | see `2026-09-29-v1-close-audit.md`  |
 | D2 | 128 anchors in 28 tables | v1 close audit, 09-30 | **verified** | see `2026-09-29-v1-close-audit.md`  |
 | D3 | per-table counts | v1 close audit, 09-30 | **verified** | see `2026-09-29-v1-close-audit.md`  |
-| D4 | mutation tables took 17–34 min in the audit's arena; ~15 s here | v1 close audit, 09-30 | **raised** | see `2026-09-29-v1-close-audit.md` — not reproduced; observed under concurrent load (the push hook's suite, the audit's own runs); a timing run alone is owed |
+| D4 | mutation tables took 17–34 min in the audit's arena; ~15 s here | v1 close audit, 09-30 | **closed** | see `2026-09-29-v1-close-audit.md` — timed alone 2026-09-30 (R5.3): 34 s here, 38 s in an archive arena for one mutation, 111 s for seven; not reproduced — the audit's runs coincided with the push hook's suite and its own |
 | D5 | "2 chip(s) compiled" printed over reused binaries | v1 close audit, 09-30 | **acted** | see `2026-09-29-v1-close-audit.md` — `stage_chips` says compiled or reused per chip; the spine prints both counts (table sprint-5-audit) |
 | D6 | the example block is the run's | v1 close audit, 09-30 | **verified** | see `2026-09-29-v1-close-audit.md`  |
 | D7 | the documented steps work; the stranger runs the document's lines | v1 close audit, 09-30 | **verified** | see `2026-09-29-v1-close-audit.md`  |
