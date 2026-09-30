@@ -55,6 +55,19 @@ class WhatItWritesTest(unittest.TestCase):
         brief = json.loads((self.root / ".spark" / "project.json").read_text())
         self.assertIn("must", brief)
 
+    def test_the_toolchain_is_pinned_to_the_version_the_documents_were_measured_on(self):
+        # P33: `"*"` fetched a tscircuit that fails the plugin's own documented example, while the
+        # version every number in the documents came from builds it. The two must not drift apart.
+        import re
+        pinned = json.loads((self.root / "package.json").read_text())["dependencies"]["@tscircuit/cli"]
+        self.assertRegex(pinned, r"^\d+\.\d+\.\d+$", "an exact version, not a range: %r" % pinned)
+        self.assertEqual(pinned, init_project.PINNED_TSCI)
+        documented = re.search(r"tsci (\d+\.\d+\.\d+)", (ROOT / "commands" / "build.md").read_text())
+        self.assertIsNotNone(documented, "build.md's example output names the version it was run with")
+        self.assertEqual(documented.group(1), pinned,
+                         "the documents show tsci %s and a new project would install %s"
+                         % (documented.group(1), pinned))
+
     def test_a_package_file_is_written_so_tscircuit_stops_its_walk_at_the_project(self):
         # I9: with no package file, `npx tsci build` climbed to the home folder and died on a
         # protected directory; the car had one from its first evening, the irrigation box did not.

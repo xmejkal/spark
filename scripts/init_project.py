@@ -172,6 +172,15 @@ def write(path, payload, force, brief=False):
     return True, "wrote %s" % path.name
 
 
+#: The tscircuit the documents were measured on, and the one a new project gets. Pinned exactly,
+#: because `"*"` fetched 0.0.2687, which fails this plugin's own documented example with
+#: `Port [Mcu.pin17] is not connected to net [V33] by a PCB trace` while this version builds it to
+#: 15 traces and no errors (backlog P33; the wildcard was P28's own fix, one night old). To move
+#: it: build the documented example with the new version, update the output block in
+#: `commands/build.md`, and change this — the suite holds the two to each other.
+PINNED_TSCI = "0.0.2600"
+
+
 def package_file(project):
     """
     What `npx tsci build` needs in a project. Without a package file it walks up looking for a
@@ -181,8 +190,9 @@ def package_file(project):
     directory, where a global tsci resolves from its own install. Never rewritten: a person may
     add to it. `npm install` once, then `npx tsci build`.
     """
-    return {"name": project.name, "private": True, "dependencies": {"@tscircuit/cli": "*"},
-            "//": "written by /spark:init: `npm install` once, then `npx tsci build board.tsx` works here"}
+    return {"name": project.name, "private": True, "dependencies": {"@tscircuit/cli": PINNED_TSCI},
+            "//": "written by /spark:init: `npm install` once, then `npx tsci build board.tsx` works here. "
+                  "The version is pinned to the one spark's documents were measured on; see init_project.PINNED_TSCI."}
 
 
 def main(argv=None):
