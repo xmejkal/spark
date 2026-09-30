@@ -382,8 +382,15 @@ I²S amp the board now assumes.
 
 ## Proposed 2026-09-30, unordered — the PO asked what we get wrong and how to stop it
 
-Three, each from evidence in this repository rather than from good practice in general. **None is
-started** (W19); the order is the PO's (W11).
+Each from evidence in this repository rather than from good practice in general. **None is
+started** (W19); the order is the PO's (W11). P48 was ordered and done the same day.
+
+The last two came from a second question — whether the tests, mutations, gates and bash this desk
+runs should be agents or skills. Most of the answer is **no, and the PO has already given it**:
+the cut of 2026-09-29 deleted the scrum-master, verification-engineer and firmware-engineer agents
+with the reason *"my working process shipped as product; nothing routed to them."* That reason
+still holds. What survives the test — isolation, restricted tools, fan-out, or context budget — is
+one script and one agent, below.
 
 ### P48 — The words this repository uses are written down somewhere a stranger finds them — DONE 2026-09-30
 **Needed by:** the v1 line itself — "a stranger goes from a requirements file to a built, checked,
@@ -400,6 +407,40 @@ its scar is not memorable. Linked from the README so it is not a document nobody
 **Value proven by:** a test fails if the glossary defines a word this repository does not use, or
 if the README stops linking it; and the PO's own question — what is a mutation, an anchor, a gate
 — is answered by the file.
+
+### P49 — One command runs this repository's own gate
+**Needed by:** this desk, measurably, in the session of 2026-09-30. The suite was run with the
+wrong `-t` flag and gave an ImportError; files were read twice while a mutation run was still
+rewriting them, and from that reading this desk concluded a killed run had corrupted the tree —
+it had not, a run was simply still alive; and the line budget and the anchor check were run ad
+hoc rather than always, because both are remembered rather than demanded. `spark` has no Makefile
+and every gate command is typed by hand in an order held in someone's head.
+One runner that **refuses while `.mutate.lock` is held**, naming the process that holds it; runs
+the suite the one correct way; runs `--anchors` over every table; prints the code budget against
+its ceiling; optionally runs one named mutation table; and answers in the three outcomes.
+**It must not be a second copy of `tools/check_commit.py`** — that is what P46 was about. One
+runner, two callers: the hook asks it about the COMMITTED tree, a person asks it about the
+working tree.
+**Value proven by:** every number in a commit message comes from one invocation of it, and an
+invocation started while a mutation run holds the lock refuses instead of reporting.
+
+### P50 — An adversarial reading of what the tests would not notice
+**Needed by:** five escaped mutations in one day — one in P29, three in P45, one in P48 — each a
+hole this desk could not see **because it wrote both the fix and the test that was meant to catch
+it**. Mutations written by the author are written to be caught; that is the blind spot, and it is
+the textbook case for isolation, which is the only thing that earns an agent its place here.
+An agent given the diff of a finished item and its test files, and NOT the reasoning that produced
+them, asked for one thing: changes to this code that the suite would not notice. Read-only tools,
+output a mutation table.
+**Its output cannot lie, which is what makes it different from the reviewer agents.** A finding
+from a reviewer needs adjudication — the v1 close audit made 33 claims and 11 were false. A
+proposed mutation is *executed*: a wrong anchor is refused, and a real one is scored caught or
+escaped by `mutate.py`. The agent cannot cost anyone a false alarm; at worst it costs a minute.
+**Kill criterion, stated up front:** if across three items it produces no escape that this desk's
+own table did not already contain, it is deleted, on the same reasoning as the 09-29 cut. Written
+into the item so the experiment ends rather than lingering.
+**Value proven by:** run against P45 as it was first committed, it proposes at least one of the
+three mutations that escaped there — with the escapes already known, so the answer is checkable.
 
 ### P47 — The same number is never written twice
 **Needed by:** the reading that produced P40. Five lenses read all 3,552 code lines and did not
