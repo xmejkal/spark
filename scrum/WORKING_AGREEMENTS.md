@@ -166,3 +166,16 @@ or the output the way a number is (W13): "moved" means the old copy is gone, "fi
 gap's own command now passes, "one home" means a grep finds one, "unchanged" means the file was
 regenerated and compared. The v1 close audit found every count true and four verbs false (D9,
 D13, D19, D21, D22): the words were the numbers in disguise. Written 2026-09-30 (R5.1).
+
+## W18 — Refinement is the team's, and the PO has the last word before the order is fixed
+
+An item is refined **with the team** — the expert lenses and the scrum master, never by the person
+who will implement it alone — and the refined text goes to the Product Owner with a concrete
+question before a sprint is planned around it. Each item must be small enough to finish in one
+sitting, testable by a command whose output the PO can read, sensible on its face, free of
+anything no design needs (W14), and **started things finish before new ones start**.
+
+The failure this prevents is the one the PO named on 2026-09-29 — "I don't want it to get AI
+bloated, never finishing, too many not even used parts" — which a refinement done alone
+reintroduces, because whoever is doing the work is the worst judge of whether the work is needed.
+Written 2026-09-30, at the PO's word.
