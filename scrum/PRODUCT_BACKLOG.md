@@ -34,6 +34,7 @@ council's proposal.
 | **P34** | A check that compared nothing says so | 5 | S | `compare_design` prints `every rule holds` having compared zero; `check_physics` prints its own could-not-run and exits 0 |
 | **P35** | The rules see spark's own wiring | 5 | M | the generator wires signals pin-to-pin, so every rule keyed on a net name is dead on spark's own boards — P8 fixed this in one file of three |
 | **P29** | The board's own supply, and nothing left unfed | 5 | S+M | no trace reaches the microcontroller's supply on any generated board, while the file says one does; the vendor fact it waited for is already recorded |
+| **P40** | The architecture the refactor should aim at | 4 | M | the budget's new rule is refactor-before-raise, and duplication has already caused three defects; decide the target once, by people who did not write the code |
 | **P39** | The library answers a need it has no words for | 4 | S | `--need measure distance` misses the rangefinder and `--need switch 12 V load` misses the MOSFET module — both send a researcher to write a record that exists |
 | **P32** | One home for the converter and the chips — **PO: (a), move now** | 4 | L | v1's last word, "simulated", is true only beside the bin's repo (D17); two copies of each chip (D19, D20) |
 | **P36** | The pin map is a file the firmware imports | 4 | S | twelve GPIO numbers are hand-copied into the irrigation firmware and a thirteenth into its scenario; nothing compares them |
@@ -96,6 +97,23 @@ feeds it, a sink when a regulator does); then the spine's island walk asks every
 it reaches a supply as well as a ground, so an unfed module can never again be `[ok]`.
 **Value proven by:** the spine names the unfed module on today's irrigation board, and after the
 fix `grep 'Mcu > .VCC' board.tsx` finds the trace and the stage is clean.
+
+### P40 — The architecture the refactor should aim at
+**Needed by:** W15b — the budget now counts code and says refactor before raising, so the first
+question at every ceiling is "does this fit in less code", and nobody has answered what the target
+shape is. Duplication has already caused three live defects: the three-outcome verdict written out
+in three places with one copy wrong (P34), three netlist walkers of which only one learned that a
+trace may name no net (P35), and each check's own CLI tail. Deciding the shape while moving code is
+how a refactor becomes a rewrite.
+A council of five technical lenses — Python engineering, the domain model, agent-system design,
+test and change-safety, and migration planning — reads all 3,550 code lines and produces a written
+architecture: the target module boundaries, what becomes a shared library and what stays a
+standalone command, the sequence of steps each of which leaves the suite green and fits one
+sitting, the interleaving with P34 and P35 which touch the same code, and the stopping rule.
+**No code moves under this item.** Each step of the plan becomes its own item, ordered by the PO.
+**Value proven by:** a document in `docs/` naming every proposed move with its code-line delta and
+the defect it prevents or kills; a first step small enough to finish in one sitting; and the
+council's own answer to whether this codebase should be refactored now at all.
 
 ### P39 — The library answers a need it has no words for
 **Needed by:** the irrigation design and the smart bin. `parts.py --need switch 12 V load` finds

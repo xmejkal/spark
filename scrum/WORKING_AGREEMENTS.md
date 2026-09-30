@@ -178,6 +178,18 @@ gap's own command now passes, "one home" means a grep finds one, "unchanged" mea
 regenerated and compared. The v1 close audit found every count true and four verbs false (D9,
 D13, D19, D21, D22): the words were the numbers in disguise. Written 2026-09-30 (R5.1).
 
+## W19 — The item exists before the work starts
+
+The backlog's first line says "if work is not here, it is not happening"; W19 says when. An item
+is written and ordered **before** the first command of the work is run, including for work that
+only produces a document — an audit, an architecture, a piece of research. The item may be a
+single paragraph, and it may be refined once the work reveals its shape, but it exists first, so
+the work can be tracked, sized, and stopped.
+
+Written 2026-09-30, at the PO's word — "whenever we want to do something, let's first make sure
+the PBI is created, so we can keep track, really just like scrum" — after an architecture review
+was set going with no item behind it.
+
 ## W18 — Refinement is the team's, and the PO has the last word before the order is fixed
 
 An item is refined **with the team** — the expert lenses and the scrum master, never by the person
