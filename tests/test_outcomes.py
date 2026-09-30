@@ -32,6 +32,28 @@ class ThreeOutcomesTest(unittest.TestCase):
         self.assertEqual(outcomes.EXIT_FOR[outcomes.COULD_NOT_RUN], outcomes.EXIT_COULD_NOT_RUN)
         self.assertEqual(set(outcomes.EXIT_FOR), {outcomes.OK, outcomes.PROBLEMS, outcomes.COULD_NOT_RUN})
 
+    def test_the_two_maps_are_each_other_reversed(self):
+        # Five scripts wrote EXIT_FOR inline and two wrote its inverse; P42 gave both one home,
+        # so a mutation that breaks the round trip must be caught here or nowhere.
+        self.assertEqual(set(outcomes.STATUS_FOR), {0, 1, 2})
+        for status, code in outcomes.EXIT_FOR.items():
+            self.assertEqual(outcomes.STATUS_FOR[code], status)
+        for code, status in outcomes.STATUS_FOR.items():
+            self.assertEqual(outcomes.EXIT_FOR[status], code)
+
+    def test_the_rule_itself(self):
+        # The expression six scripts used to restate, one of them wrongly (P34).
+        self.assertEqual(outcomes.status_of(), outcomes.OK)
+        self.assertEqual(outcomes.status_of(unchecked=["a rail nobody stated"]), outcomes.COULD_NOT_RUN)
+        self.assertEqual(outcomes.status_of(problems=["a short"]), outcomes.PROBLEMS)
+        self.assertEqual(outcomes.status_of(problems=["a short"], unchecked=["and one unread"]), outcomes.PROBLEMS)
+
+    def test_the_answer_a_check_hands_back(self):
+        self.assertEqual(outcomes.answer(), {"status": outcomes.OK, "problems": [], "unchecked": []})
+        self.assertEqual(outcomes.answer(unchecked=["x"])["status"], outcomes.COULD_NOT_RUN)
+        self.assertNotIn("unmeasured", outcomes.answer())
+        self.assertEqual(outcomes.answer(unmeasured=["a current nobody took"])["unmeasured"], ["a current nobody took"])
+
     def test_every_script_answers_in_the_one_vocabulary(self):
         for name, no in SCRIPTS.items():
             module = importlib.import_module(name)

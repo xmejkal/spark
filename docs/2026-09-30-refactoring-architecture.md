@@ -99,7 +99,7 @@ symbol-level assertions already over-specify the internals.
 | --- | --- | --- | --- | --- |
 | 0 | **P41** | the safety net above | +180 test lines | 0 |
 | 1 | **P34** | fix `check_physics` in place; zero rules compared becomes could-not-run | +6 | 0 |
-| 2 | **P42** | `outcomes.verdict` and `report`; six callers converted | −45 | 0, with `answer` kept as an alias |
+| 2 | **P42** | `outcomes.verdict` and `report`; six callers converted | −45 estimated, **−8 measured** | 0, with `answer` kept as an alias |
 | 3 | **P35** | `netlist.py`; three callers | −40 | 2, re-anchored in the same commit |
 | 4 | **P29** | the supply walk joins as a third caller | +20 | 0 |
 | — | stop | | | |
@@ -143,3 +143,12 @@ Five different JSON shapes across the scripts, plus a fourth status word (`"mism
 `subject: detail`, throwing away `rule` and `fix` — so an agent that reads the aggregate must re-run
 a second command to learn how to fix anything. And `assign_pins --json` is 35,852 bytes, of which
 28,739 is a list of unverified part facts that has its own command; the answer is 8%.
+
+## Postscript, 2026-09-30: what step 2 actually cost
+
+P42 came to **−8 code lines**, not the −45 estimated above. The six copies of the rule were one
+expression each, not the blocks they looked like from a distance, and `outcomes` grew six lines
+taking them in. The estimate was wrong in the direction that matters least: the reason to do it
+was never the lines. It was that one mutation now sits in `outcomes.status_of` and guards all six
+callers, where before it guarded one, and three exit codes that no test had ever asserted now have
+tests. Read the remaining estimates in the table above as the same kind of guess.

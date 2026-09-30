@@ -1,9 +1,9 @@
 [
  {
-  "file": "scripts/check_physics.py",
-  "name": "the physics status forgets could-not-run again (P34)",
-  "find": "    status = PROBLEMS if problems else (COULD_NOT_RUN if unchecked else OK)\n    result = {\n        \"tool\": \"check_physics\",",
-  "replace": "    status = PROBLEMS if problems else OK\n    result = {\n        \"tool\": \"check_physics\","
+  "file": "scripts/outcomes.py",
+  "name": "the shared rule forgets could-not-run (P34, now one home for six callers)",
+  "find": "    return PROBLEMS if problems else (COULD_NOT_RUN if unchecked else OK)",
+  "replace": "    return PROBLEMS if problems else OK"
  },
  {
   "file": "scripts/check_physics.py",

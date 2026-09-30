@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/outcomes.py",
+  "name": "the shared answer stops carrying what went unchecked",
+  "find": "    result = {\"status\": status_of(problems, unchecked), \"problems\": problems, \"unchecked\": unchecked}",
+  "replace": "    result = {\"status\": status_of(problems), \"problems\": problems, \"unchecked\": unchecked}"
+ },
+ {
+  "file": "scripts/outcomes.py",
+  "name": "an exit code stops following its status word",
+  "find": "STATUS_FOR = {code: status for status, code in EXIT_FOR.items()}",
+  "replace": "STATUS_FOR = {code: OK for status, code in EXIT_FOR.items()}"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the chain's verdict ignores a stage that could not run",
+  "find": "        unchecked=[s for s in stages if s.status == COULD_NOT_RUN])]",
+  "replace": "        unchecked=[])]"
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "the vendor check's refusal reads as a pass",
+  "find": "        unchecked=[r for r in results if r[\"status\"] == \"could-not-run\"])]",
+  "replace": "        unchecked=[])]"
+ },
+ {
+  "file": "scripts/check_footprints.py",
+  "name": "buildability's exit stops following its status",
+  "find": "    return EXIT_FOR[status]",
+  "replace": "    return EXIT_OK"
+ }
+]

@@ -169,5 +169,41 @@ class TheRealBoardsAgreeWithTheirVendors(unittest.TestCase):
                 self.assertEqual(result["status"], "ok", result.get("problems"))
 
 
+
+class TheExitCodeTellsTheThreeApartTest(unittest.TestCase):
+    """
+    P42. `main` never ran in this suite, so a mutation that made a refusal read as a pass stayed
+    green — in the one check whose whole job is to catch a board file that disagrees with its
+    vendor.
+    """
+
+    def _exit(self, *boards):
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return check_vendor_pins.main(["--offline", *boards])
+
+    def test_a_board_that_agrees_with_its_vendor_exits_ok(self):
+        self.assertEqual(self._exit(str(ROOT / "boards" / "firebeetle2-esp32s3.json")), check_vendor_pins.EXIT_OK)
+
+    def test_a_board_naming_no_vendor_source_exits_could_not_run(self):
+        import json
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / "boards").mkdir()
+        path = root / "boards" / "mystery.json"
+        path.write_text(json.dumps({"pins": {"D3": 38}}))
+        self.assertEqual(self._exit(str(path)), check_vendor_pins.EXIT_COULD_NOT_RUN)
+
+    def test_a_board_that_disagrees_exits_mismatch(self):
+        import json
+        import tempfile
+        shipped = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        root = Path(tempfile.mkdtemp())
+        (root / "boards").mkdir()
+        path = root / "boards" / "wrong.json"
+        path.write_text(json.dumps(dict(shipped, pins=dict(shipped["pins"], D3=3))))
+        self.assertEqual(self._exit(str(path)), check_vendor_pins.EXIT_MISMATCH)
+
 if __name__ == "__main__":
     unittest.main()

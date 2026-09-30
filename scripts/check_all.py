@@ -55,7 +55,7 @@ import design  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
-from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN, EXIT_FOR, answer, status_of  # noqa: E402
 SKIPPED = "skipped"   # check_all's own fourth word: not asked for, which is not could-not-run
 
 
@@ -95,26 +95,8 @@ class Check:
                     "problems": [], "unchecked": ["%s: %s" % (type(broken).__name__, broken)]}
 
 
-def answer(problems=(), unchecked=(), unmeasured=()):
-    """
-    The one place a check's status is decided.
-
-    Every check used to decide its own, and two got it wrong in the same direction: a board that
-    could not be read, and a finding whose own severity was `could-not-run`, both landed in a
-    notes field while the status stayed `ok`. Deciding it here makes `ok` unreachable while
-    anything went unchecked — not by convention, but because there is no other way to build the
-    answer.
-
-    `unchecked` is a property of the RUN: something was asked and did not happen. `unmeasured` is
-    a property of the BOARD: a real finding that needs a number nobody has taken. They were one
-    field, which meant a caller could not tell "I could not look" from "look at this yourself".
-    """
-    problems, unchecked = list(problems), list(unchecked)
-    status = PROBLEMS if problems else (COULD_NOT_RUN if unchecked else OK)
-    result = {"status": status, "problems": problems, "unchecked": unchecked}
-    if unmeasured:
-        result["unmeasured"] = list(unmeasured)
-    return result
+#: `answer` and `status_of` live in `outcomes` since P42, imported above: the rule they hold was
+#: written out in six scripts and one copy was wrong. Every call site here is unchanged.
 
 
 
@@ -444,8 +426,7 @@ def main(argv=None):
                 print("    %s" % note)
             print()
         print(render(results))
-    return {OK: EXIT_OK, PROBLEMS: EXIT_PROBLEMS,
-            COULD_NOT_RUN: EXIT_COULD_NOT_RUN}[overall]
+    return EXIT_FOR[overall]
 
 
 if __name__ == "__main__":

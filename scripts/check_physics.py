@@ -48,7 +48,7 @@ import copper  # noqa: E402
 #: time (audit A7).
 from check_footprints import package_of  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
 from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
@@ -507,7 +507,7 @@ def main(argv=None):
     # wrapper splits the severities itself, which is why this survived: it was wrong only where
     # the script is run directly, which is exactly how the smart bin's `make check` runs it.
     unchecked = [f for f in findings if f.severity == COULD_NOT_RUN]
-    status = PROBLEMS if problems else (COULD_NOT_RUN if unchecked else OK)
+    status = status_of(problems, unchecked)
     result = {
         "tool": "check_physics",
         "status": status,

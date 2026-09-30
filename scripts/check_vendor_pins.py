@@ -32,7 +32,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_MISMATCH  # noqa: E402
+from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_FOR, EXIT_PROBLEMS as EXIT_MISMATCH, status_of  # noqa: E402
 
 #: Where the vendor's own header lives. Only Espressif's Arduino core is understood today; a
 #: board from another vendor would need its own fetcher, which is why this is a named constant
@@ -178,11 +178,11 @@ def main(argv=None):
                 print("      note: the vendor also defines %s, which this board file does not "
                       "record" % ", ".join(result["not_recorded"]))
 
-    if any(r["status"] == "mismatch" for r in results):
-        return EXIT_MISMATCH
-    if any(r["status"] == "could-not-run" for r in results):
-        return EXIT_COULD_NOT_RUN
-    return EXIT_OK
+    # Its own word for "ran, and the answer is no" is `mismatch`; the exit code is the shared
+    # rule all the same (P42). Giving every payload one shape is P43's.
+    return EXIT_FOR[status_of(
+        problems=[r for r in results if r["status"] == "mismatch"],
+        unchecked=[r for r in results if r["status"] == "could-not-run"])]
 
 
 if __name__ == "__main__":

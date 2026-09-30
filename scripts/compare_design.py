@@ -22,7 +22,7 @@ import json
 import sys
 from pathlib import Path
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS, COULD_NOT_RUN, status_of  # noqa: E402
 
 #: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
 #: this and the driving pin cannot pull it down. Wide on purpose — this is a sanity band, not a
@@ -277,7 +277,7 @@ def compare(circuit_path, rules_path):
                 "neither, which is why this file exists")
     return {
         "tool": "compare_design",
-        "status": PROBLEMS if failures else OK,
+        "status": status_of(failures),
         "design": circuit_path.name,
         "checked": checked,
         "problems": [f.as_data() for f in failures],
@@ -300,8 +300,7 @@ def main(argv=None):
     result = compare(args.circuit, args.rules or default_rules)
 
     print(json.dumps(result, indent=2) if args.json else render(result))
-    return {OK: EXIT_OK, PROBLEMS: EXIT_PROBLEMS, COULD_NOT_RUN: EXIT_COULD_NOT_RUN}[
-        result["status"]]
+    return EXIT_FOR[result["status"]]
 
 
 if __name__ == "__main__":

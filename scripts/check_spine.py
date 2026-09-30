@@ -65,7 +65,7 @@ import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
-from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 
 #: The design the chain is proven against when nobody names one. A motor driver, a sensor on a
 #: bus, and the power inlet that supplies the rail the modules only consume — the smallest set
@@ -425,11 +425,10 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
 
 
 def verdict(stages):
-    if any(stage.status == PROBLEMS for stage in stages):
-        return EXIT_PROBLEMS
-    if any(stage.status == COULD_NOT_RUN for stage in stages):
-        return EXIT_COULD_NOT_RUN
-    return EXIT_OK
+    """The chain's exit code, by the same rule a single check answers by (P42)."""
+    return EXIT_FOR[status_of(
+        problems=[s for s in stages if s.status == PROBLEMS],
+        unchecked=[s for s in stages if s.status == COULD_NOT_RUN])]
 
 
 def render(stages, code):
@@ -502,8 +501,7 @@ def report(stages, args, workdir=None):
     """The verdict, rendered the way it was asked for; the working directory kept or removed."""
     code = verdict(stages)
     if args.json:
-        print(json.dumps({"check": "spine", "status": {EXIT_OK: OK, EXIT_PROBLEMS: PROBLEMS,
-                                                       EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code],
+        print(json.dumps({"check": "spine", "status": STATUS_FOR[code],
                           "stages": [{"name": s.name, "status": s.status, "detail": s.detail}
                                      for s in stages]}))
     else:

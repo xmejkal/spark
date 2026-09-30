@@ -427,5 +427,40 @@ class EveryShapeTscircuitEmitsTest(unittest.TestCase):
             check_footprints.unchecked_in(check_footprints.run(self.rect_pad(1.0, 1.8, 1.8))), [])
 
 
+
+class TheExitCodeFollowsTheStatusTest(unittest.TestCase):
+    """
+    P42. `main` ended with its own three-way expression, and the suite asserted none of it: a
+    mutation returning EXIT_OK for everything stayed green. The exit code is what a Makefile
+    reads, so it is what a caller acts on.
+    """
+
+    def _exit(self, circuit):
+        import contextlib
+        import io
+        import json
+        import tempfile
+        path = Path(tempfile.mkdtemp()) / "circuit.json"
+        path.write_text(json.dumps(circuit))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return check_footprints.main([str(path)])
+
+    def test_a_shape_it_cannot_read_exits_could_not_run(self):
+        pill = [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_J1",
+                 "x": index * 2.54, "y": 0.0} for index in range(4)]
+        self.assertEqual(self._exit(pill), check_footprints.EXIT_COULD_NOT_RUN)
+
+    def test_a_hole_too_small_for_its_pin_exits_problems(self):
+        tight = [{"type": "pcb_plated_hole", "shape": "circle", "pcb_component_id": "pcb_J1",
+                  "hole_diameter": 0.5, "outer_diameter": 1.6, "x": index * 2.54, "y": 0.0}
+                 for index in range(4)]
+        self.assertEqual(self._exit(tight), check_footprints.EXIT_PROBLEMS)
+
+    def test_a_board_with_nothing_to_answer_for_exits_ok(self):
+        fine = [{"type": "pcb_plated_hole", "shape": "circle", "pcb_component_id": "pcb_J1",
+                 "hole_diameter": 1.0, "outer_diameter": 1.6, "x": index * 2.54, "y": 0.0}
+                for index in range(4)]
+        self.assertEqual(self._exit(fine), check_footprints.EXIT_OK)
+
 if __name__ == "__main__":
     unittest.main()
