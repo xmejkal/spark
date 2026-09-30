@@ -18,8 +18,5 @@
     "espressif",
     "seeed",
     "dfrobot"
-  ],
-  "experimental": {
-    "evals": "./evals"
-  }
+  ]
 }

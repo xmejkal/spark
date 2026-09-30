@@ -1,4 +1,103 @@
-# Sprint 6
+# Sprint 7
+
+**Planned** 2026-09-30 · **Facilitator** main session · **Product Owner** Petr, who ordered
+"fix the lie first, then v1" after a five-lens council read the whole backlog and reproduced
+every claim it made.
+
+## Goal
+
+> **The documented path works on somebody else's machine, and the last word of v1 — "simulated" —
+> becomes true anywhere rather than only beside one repository.**
+
+Why: the first-hour lens followed `commands/init.md` in an empty directory and could not finish
+step one. `npm install` fails, because `init` pins `@tscircuit/cli@0.0.2600` and that version
+belongs to a **different package** — `@tscircuit/cli`'s 0.0.x line stops at `0.0.394`. **P33 is
+marked DONE and that is its own acceptance command.** Worse than a bug: a green record over a
+broken path.
+
+And the same lens found the chain's headline green is reproducible only here — the same
+requirements file gives `[ok] simulation` in a bare directory and `[????] no converter found` after
+running the documented `/spark:init`, because the search walks up from the plugin and finds the
+author's own bin repo.
+
+## The order — as the PO set it
+
+| # | item | what it does | size |
+| --- | --- | --- | --- |
+| 1 | **P51** | the npm pin is a version that exists, and `/spark:build` leaves its board in the project | S+M |
+| 2 | **P32a** | the converter and the chips move into the plugin; the chain reaches `[ok] simulation` from a directory with nothing beside it | L |
+| 3 | **P53** | the rules reach a project that already exists — the RC car's floating bridge inputs are checked by something | S |
+| 4 | **P37** | what this simulation cannot show, printed, so a green scenario stops reading like a bench result | S |
+
+**P32a only, not P32b.** The firmware lens counted the move: ~1,307 lines in, 558 staying, and
+spark gains its first JS dependency tree. The second half — the bin dropping its own copy — can
+leave the bin red overnight, so it is a separate item and a separate sitting.
+
+Not in this sprint: P54, P55, P49, W20 (the trust items the verification lens found — six escapes
+on a green suite), P43, P44, P39, P36, P38, P2, P50, R2.6.
+
+## Definition of Done
+
+Per item: the `Value proven by:` command run and its output in the commit, written after the run
+(W13, W17). **New this sprint, from R6:** that command is run **in the project its `Needed by:`
+line names**, on that project's own tree — not in a temp directory that resembles it. A mutation
+table with every mutation caught, `--anchors` clean at every commit, one run at a time. Both RC
+boards and the bin's `make check` unchanged **or regenerated and committed in the same commit** —
+never described without being produced.
+
+---
+
+# Sprint 6 — closed 2026-09-30
+
+### Review — validated value, run at close
+
+**Goal met, and exceeded by two items the PO added mid-sprint.** A check that examined nothing now
+says so (P34, P42: the verdict has one home, so a `main` cannot invent a status). The three walks
+over a netlist became one (P35), and the shared type immediately answered a question none of the
+three private copies had been asked — which is how P29 found that `compare_design` called a
+correctly wired pin floating.
+
+**Beyond the goal, at the PO's order:** P46, because he asked whether the scripts could all read
+one file where the data are — they can, and four numbers were duplicated. P45, the seeding half
+split out of P35. P48, a glossary, because he asked what a mutation and an anchor are.
+
+**Evidence, each from a run at close:**
+
+| | |
+| --- | --- |
+| spark's suite | 692 tests, OK |
+| mutations | 179 in 38 tables, every anchor present, once |
+| `scripts/` | 3,612 code lines of 4,000 |
+| the reference design | the chain runs end to end — 20 traces, 0 errors, 18 wires, 2 chips |
+| the irrigation board | 40 traces, 0 errors, no islands; `rules-vs-netlist` **ok**, `buildability` FAIL on two 0.225 mm rings, `physics` could-not-run |
+| the smart bin | `make check` unchanged — red on one line, CurrentShunt's unmeasured current |
+| the RC car and remote | wiring unchanged; each **now** carries the comment saying nothing drives its 5 V rail — `cb11dc7`, committed at close |
+
+**One claim in this sprint's own commit messages was false, and the retro check caught it.** P29's
+message said the two RC boards "gained" the four-line comment. They had not: the generator's output
+was diffed in a temp file and never written. Reproduced by the scrum master lens against retro
+action R5.1 — `grep -c "receives net.V5V" car.tsx remote.tsx` returned 0 on both. The boards were
+regenerated and committed at close (`cb11dc7`), so the claim is now true. Same shape as Sprint 5's
+audit row D13. Two headlines were soft rather than false: P46's title says "read by every script"
+where 5 of 20 import `fab` (its body is exact), and P42's acceptance line claims the status
+expression appears once where `parts.py:918` still builds one inline — recorded as P43's.
+
+**Two defects were found by doing the work, neither predicted by the item that found them.** A port
+is named after its silkscreen label only when its component came from `pinLabels`; one built from a
+FOOTPRINT — every microcontroller module here — is called `pin17`, with the label only in
+`port_hints`. Every rule naming a pad of the processor had been missing, silently, in both
+directions. And `check_footprints` demanded 0.25 mm of annular ring while `emit_footprint` drew
+0.35, related by a sentence in a comment rather than by arithmetic.
+
+**Five mutations escaped** across the sprint — one in P29, three in P45, one in P48 — and every one
+was closed by strengthening the fixture, never by dropping the mutation (W12). Two of the three in
+P45 were only visible after the suite was made honest again: the first run reported *NOT GREEN WITH
+THE FILES RESTORED*, because W14's own test had caught three backlog proposals written minutes
+earlier with no `Needed by:` line.
+
+---
+
+# Sprint 6 — as planned
 
 **Planned** 2026-09-30 · **Facilitator** main session · **Product Owner** Petr, who ordered the
 five steps below in this order and chose how the smart bin absorbs P34.
@@ -14,6 +113,10 @@ defects. The physics check reports `status: ok` and exits 0 while every finding 
 false alarm that would abort a good board's build. Both are the class this product exists to kill.
 
 ## The order — the architecture's steps, as the PO set them
+
+**Eight items closed, not five.** P33 and P40 landed inside this window and are in no table below; P48
+was ordered mid-sprint and is in none either. The table is what was PLANNED; the review above is
+what happened. Corrected at close, after the scrum master lens found the header counting five.
 
 | # | item | what it does | size |
 | --- | --- | --- | --- |

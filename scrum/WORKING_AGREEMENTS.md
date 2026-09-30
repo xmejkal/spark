@@ -178,6 +178,34 @@ gap's own command now passes, "one home" means a grep finds one, "unchanged" mea
 regenerated and compared. The v1 close audit found every count true and four verbs false (D9,
 D13, D19, D21, D22): the words were the numbers in disguise. Written 2026-09-30 (R5.1).
 
+## W20 — An item's own acceptance line is a hypothesis until reproduced
+
+W9 says this about an **observer's** claim. It did not say it about ours, and that gap cost a whole
+sprint's worth of credibility twice in one day.
+
+**P45's acceptance line** said `init` should write the DS3231's two bus lines. That module's record
+says, in its own words, *"Add NO pull-ups: the module carries 4.7 k on SDA and SCL."* Meeting the
+criterion as written would have shipped a check that fires on a **correct** board — the one failure
+this product exists to prevent.
+
+**P33 is worse**, because it shipped. Its `Value proven by` line is `npm install` in a fresh
+project. That command fails today: `init` pins `@tscircuit/cli@0.0.2600`, and `0.0.2600` is a
+version of the **`tscircuit`** package — `@tscircuit/cli`'s 0.0.x line stops at `0.0.394`. The item
+was marked DONE without its own proof command being run on a machine with no global CLI on PATH.
+
+**And it catches a gameable line before it is built.** P50's proof line asked an isolated agent to
+rediscover three escapes that are written down in `scrum/SPRINT.md` — readable by any agent with
+`Read`. An open-book exam scored as isolation.
+
+So: **before an acceptance line is relied on, reproduce the state it assumes** — or mark it
+unverified, the way a part record marks a fact nobody has confirmed. An item may be written with an
+unreproduced criterion; it may not be *closed* on one.
+
+**W13 gains a clause with it:** a number that has not been run carries the word *estimate*, and the
+measured one replaces it in the same table. `docs/2026-09-30-refactoring-architecture.md` put
+**−45 code lines** for P42 in the same table as measured facts; it came to −8. P35 was estimated at
+−40 and measured −22, P29 at +20 and measured +22.
+
 ## W19 — The item exists before the work starts
 
 The backlog's first line says "if work is not here, it is not happening"; W19 says when. An item

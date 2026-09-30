@@ -45,7 +45,7 @@ council's proposal.
 | **P2** | A simulation that costs no Wokwi minutes | 3 | M | its "needed by: none yet" is false now: the irrigation firmware has no test of any kind and three diagnostic runs went to the quota |
 | **R2.6** | A fourth cold test — **PO: the domain** | 5 | L | the cold tests found 13 and 12 gaps; ten of the twelve were invisible to every test in this repo |
 
-### P33 — The documented setup must build the documented example — DONE 2026-09-30
+### P33 — The documented setup must build the documented example — **REOPENED 2026-09-30**, its proof line fails
 **Needed by:** every stranger who follows `/spark:init` then `/spark:build` — and it is a defect
 introduced on 2026-09-29 by P28's own fix (I9). `init_project.py` writes `"@tscircuit/cli": "*"`,
 so `npm install` fetches 0.0.2687, which fails on this plugin's documented example with
@@ -217,6 +217,80 @@ as_json, render)` generalises the shape `emit_footprint` already has. Six caller
 **Value proven by:** the status-from-severities expression appears once in `scripts/`; every
 script's exit code still matches its printed status, proven by P41's tests.
 
+### P54 — The suite cannot pass by asking the code to confirm itself
+**Needed by:** `flash_image.py`, whose docstring names the symptom it controls — *"the simulated
+board boots to a bare REPL with no main.py"*. The verification lens found the live instance:
+`tests/test_flash_image.py:22-38` computes **both** its block count and its slice from
+`flash_image.FILESYSTEM_OFFSET` and `**flash_image.LITTLEFS_SETTINGS`. It is an arithmetic identity
+of the function under test, which **W2 forbids by name**, and the one number that has to match
+MicroPython's ESP32 partition table is guarded by nothing. 81 code lines, 4 tests, **0 mutations
+ever written.** Mutation testing is blind to this class by construction: a mutation on a constant
+the test imports moves both sides of the assertion.
+Two mechanical checks, ~15 and ~10 lines: a test may not build its expected value out of a
+module-level constant imported from the module under test (legitimate shared vocabulary like
+`outcomes.EXIT_OK` is the exception list, and `check_all` has 41 self-references to read through);
+and **every file under `scripts/`, `agents/`, `skills/`, `boards/`, `catalog/` is named by at least
+one mutation table, or listed as an exception with a reason** — the same shape as the orphan budget.
+That second check is what produced every finding below; it needs no agent and runs in a second.
+**Value proven by:** it fails on `test_flash_image.py` today, and its unmutated-file list names
+`check_bom.py` and `flash_image.py`.
+
+### P55 — The catalog is knowledge, so something must read the real thing
+**Needed by:** the 35 research records in `catalog/`, which are the product's actual accumulated
+knowledge and are asserted by nothing. All six catalog tests mock the directory away
+(`mock.patch.object(parts, "CATALOG", …)` at `test_parts.py:721, 738, 754, 767, 778, 793`);
+`test_parts.py:617` walks `parts/` and **nothing walks `catalog/`**. The verification lens flipped
+`module_has_i2c_pullups` to false and set `i2c_pullup_ohms` to 1 MΩ in a shipped record and **both
+escaped a green 692-test suite.** Per P45's own story, that first field is what decides whether a
+bus gets pull-ups at all — so the field that drives the rule is in a file no test reads.
+**Value proven by:** setting a shipped catalog record's `module_has_i2c_pullups` to the wrong value
+turns the suite red.
+
+### P51 — The documented setup runs on a machine that is not the author's
+**Needed by:** every stranger, which is the whole v1 line. Reproduced by the first-hour lens in an
+empty directory, following `commands/init.md` exactly:
+```
+npm ERR! notarget No matching version found for @tscircuit/cli@0.0.2600.
+```
+`init_project.PINNED_TSCI = "0.0.2600"` pins **the wrong package's** number: `0.0.2600` is a version
+of `tscircuit`, and `@tscircuit/cli`'s 0.0.x line tops out at `0.0.394` (`npm view` both, 09-30).
+`npx tsci build` succeeded for the lens only because a global CLI was already on PATH. **P33 is
+marked DONE and this is its own `Value proven by` command** — the first and best evidence for W20.
+Second half, same shape: after the two documented commands the project holds only
+`requirements.json`. The board is built in a temp directory and deleted, so `check_all --project .`
+answers *"4 not asked for"* and the word **checked** is unreachable from the documented path.
+`--keep` exists, is documented nowhere, and writes to `/var/folders` — delete it or make it write
+into the project, not both (W16).
+**Value proven by:** in an empty directory with no global tscircuit on PATH, the two documented
+commands leave a built, checked board in the project.
+
+### P52 — A rail states what it carries, from the records that know
+**Needed by:** the irrigation controller and the RC car. The generated board says the gap in its own
+text — *"THE WIDTH OF THE TRACES ABOVE ON net.GND, net.V12V, net.V33, net.V5V IS UNJUSTIFIED…
+Nobody has stated what these rails carry"* — and `check_physics` exits 2 there, three of its four
+rules unchecked, because `physics.rails` is `{}`. **But the summands are already in the records
+with their verification flags**: the flow meter's 15 mA (verified), the DS3231's 200 µA (verified),
+the soil probe's unstated current; and the source's rating is in the board file — `TPS62A02 buck,
+2 A`. The RC car is the sharper case: two SG90s at 700 mA stall each against a 3 A buck, and
+nothing sums them. Stall is the number that burns a regulator.
+P29 answered *does a trace reach a supply*. Nothing asks *can that supply carry what is on it*.
+Sum each rail's declared loads, compare against the feeding part's rating, and a load with no
+stated current is **could-not-run naming the part** rather than a guessed total — which also fills
+`max_current_a` so trace sizing stops asking for a number the records already hold.
+**Value proven by:** on the RC car the two servos' stall currents are summed against the buck's
+rating and reported; on the irrigation board the soil probe is named as the one load nobody has
+stated, instead of the rails being empty.
+
+### P53 — The rules reach a project that already exists
+**Needed by:** the RC car, whose `.spark/rules.json` still holds `i2c_buses: []` and
+`must_not_float: []` — so `compare_design` exits 2 there today, and **the canonical defect of this
+whole product, the L9110S's floating bridge inputs, is checked by nobody on the board that carries
+them.** P45 seeds at `init`, and `init` never reaches a project that already ran it. The same hole
+one level over: `physics.rails` is `{}` on the irrigation project, which P45 left alone.
+**Value proven by:** the RC car's rules file gains its eight floating-input rules and the
+irrigation project its rails, without either project's hand-filled values being lost — `--force`
+already preserves those and a migration must too.
+
 ### P43 — What an agent reads back
 **Needed by:** every skill and command that reads a script's output, and `/spark:build` most of
 all. Measured: five different top-level JSON shapes; `check_vendor_pins` returns a fourth status
@@ -256,7 +330,58 @@ prints the index rather than sending anyone to research, and says that is what i
 `vl6180x-breakout` in front of the reader, and `--need switch 12 V load` does the same for
 `dfr0457-mosfet-power-controller`; a test asserts a miss never prints only the research command.
 
-### P32 — One home for the converter and the chips — **PO: (a), move now** (2026-09-30)
+### P32 — One home for the converter and the chips — **PO: (a), move now** — SPLIT into P32a/P32b
+**Needed by:** v1's last word. `check_spine.py:166-168` looks for the converter in the project and
+then at `../smartbin-local/…`, so the chain reaches `[ok] simulation` only on a machine where the
+bin's repo sits beside the project. The first-hour lens reproduced the sharper form: the same
+requirements file gives `[ok] simulation` in a bare directory and `[????] no circuit-to-wokwi
+converter found` after running the documented `/spark:init` — because `project or SCRIPTS.parent`
+then walks up from the plugin and finds the author's own bin repo. **The headline green is
+reproducible only on this machine, and doing the documented first step is what turns it red.**
+**Refined by the firmware lens, which counted it: ~1,307 lines move, 558 stay.** It is two sittings,
+not one, and the second can leave the bin red overnight — so it is two items.
+
+**P32a — the converter moves and the chain finds it anywhere.** The nine core files
+(`cli.ts`, `lib/{mapping,emitters/wokwi,netlist,board,geometry,merge,validate,types,placement}`) and
+their ~590 lines of tests, plus `package.json` — **spark's first JS dependency tree; it has no
+`package.json` today.** Make `--circuit/--out/--chips` required rather than defaulted to the bin's
+paths, make `SPARK_BOARD_JSON`-or-`--board` mandatory (the fallback `../../../.spark/board.json`
+resolves to the bin's and dies on arrival — spark's own `.spark/` holds only `cache`), add the
+plugin's own location to `CONVERTER_PATHS`, and move `parts/*/chip/` as the one home for chips.
+**Value proven by:** `check_spine.py` reaches `[ok] simulation` **from a directory with nothing
+beside it**, and `bun test` is 62/62 inside the plugin.
+
+**P32b — the bin stops carrying its own copy.** The bin's `Makefile:95,241,249` call the plugin's
+converter with explicit paths; `check-consistency.ts` imports across; the hand mapping table is
+deleted (W16) once the bin's parts have spark records; the bin's duplicate chip sources go — `cmp`
+says all six files are byte-identical to `spark/parts/*/chip/`.
+**Value proven by:** the bin's `make check` is green but for its one allowed red line, the
+unmeasured motor current, with no converter inside the bin repo.
+**Staying in the bin, and it should:** `check-consistency.ts` and `lib/checks/{firmware-pins,
+scenario-pins,wake-polarity,bringup-pins}.ts` — 558 lines of that board's knowledge of itself, and
+`firmware-pins.ts` imports the bin's own root `mcu-pins`. Same reasoning that deleted P16.
+
+### ~~P18 — evals~~ / two files nothing reads — **PO's call, verified 2026-09-30**
+**Needed by:** nobody, which is the point. Three verified deletions, each reproduced:
+- **`evals/`** — `git ls-files evals` returns **0 tracked files**, 760 KB of HTML reports from
+  2026-09-24 sit on disk, and **`.claude-plugin/plugin.json:23` declares `"evals": "./evals"`** — so
+  the manifest ships every installer a pointer to an empty promise. P18 has been "run or delete"
+  since Sprint 2.
+- **`chips/wokwi-api.h`** — the only tracked file in `chips/`, and `grep` across `scripts tools
+  commands skills tests` finds **nothing that reads it**. `CHIP_SOURCE_SUFFIXES` is `.chip.c` and
+  `.chip.json` only; `wokwi-cli chip compile` downloads its own header and produces a byte-identical
+  wasm without it. Three stale copies sit in the irrigation project too.
+- **`check_spine.py --keep`** — documented in no command, skill or README, and it keeps the board in
+  `/var/folders`, which is not a place anyone looks. Delete it, or make it write into the project as
+  P51 requires — not both (W16).
+
+**The PO's decision, 2026-09-30: `evals/` and its manifest key go; the other two stay for now.**
+`evals/` is deleted and `"experimental": {"evals": "./evals"}` is out of
+`.claude-plugin/plugin.json` — the directory was untracked, so it was moved to this session's
+scratchpad rather than destroyed. `chips/wokwi-api.h` and `--keep` remain; `--keep` is P51's to
+resolve, since P51 must make the board land in the project and W16 then forbids keeping both.
+
+### ~~P32, the original text~~ — superseded by P32a and P32b above (2026-09-30)
 **Needed by:** a stranger's simulation — the spine finds the Wokwi converter only at
 `tools/circuit-to-wokwi` in the project or at `../smartbin-local/tools/circuit-to-wokwi`
 (audit D17), so v1's "simulated board" holds only beside the bin repo; and W16 — the bin's two
@@ -415,16 +540,27 @@ rewriting them, and from that reading this desk concluded a killed run had corru
 it had not, a run was simply still alive; and the line budget and the anchor check were run ad
 hoc rather than always, because both are remembered rather than demanded. `spark` has no Makefile
 and every gate command is typed by hand in an order held in someone's head.
-One runner that **refuses while `.mutate.lock` is held**, naming the process that holds it; runs
-the suite the one correct way; runs `--anchors` over every table; prints the code budget against
-its ceiling; optionally runs one named mutation table; and answers in the three outcomes.
-**It must not be a second copy of `tools/check_commit.py`** — that is what P46 was about. One
-runner, two callers: the hook asks it about the COMMITTED tree, a person asks it about the
-working tree.
+**Refined smaller by the hardware lens, and it is right: this is not a new runner, it is
+`--working-tree` on `tools/check_commit.py`**, which already runs the suite and every anchor before
+each push. The flag adds: refuse while `.mutate.lock` is held, naming the process that holds it;
+print the code budget against its ceiling; answer in the three outcomes. Nothing is copied — that
+is what P46 was about. One runner, two callers: the hook asks it about the COMMITTED tree, a person
+asks it about the working tree. Effort S, not the script it was drafted as.
 **Value proven by:** every number in a commit message comes from one invocation of it, and an
 invocation started while a mutation run holds the lock refuses instead of reporting.
 
-### P50 — An adversarial reading of what the tests would not notice
+### P50 — An adversarial reading of what the tests would not notice — **REWRITE, says the lens that IS it**
+**The verification lens was the isolation this item asks for** — it wrote neither the fixes nor the
+tests — and it found **six real escapes on a green suite** in one pass. So isolation pays. But it
+did not pay the way this item predicts, and the item as written is gameable three ways:
+its escapes live in code **no Sprint 6 item touched** (`flash_image`, the catalog, the agents),
+while this item scopes the agent to the finished item's diff, which is where the desk's own table
+already saturates; what actually found them was **a query, not an agent** — *which files appear in
+no mutation table?*, ten lines of Python; and its acceptance line is an **open-book exam**, because
+the three P45 escapes it asks the agent to rediscover are written down in `scrum/SPRINT.md`, which
+any agent with `Read` can read. W20 is the rule that catches exactly that.
+**So: the query becomes P54, and what stays here is the once-per-sprint-close adversarial pass
+aimed at the unmutated list — with the kill criterion verbatim.** The original text follows.
 **Needed by:** five escaped mutations in one day — one in P29, three in P45, one in P48 — each a
 hole this desk could not see **because it wrote both the fix and the test that was meant to catch
 it**. Mutations written by the author are written to be caught; that is the blind spot, and it is
@@ -442,17 +578,22 @@ into the item so the experiment ends rather than lingering.
 **Value proven by:** run against P45 as it was first committed, it proposes at least one of the
 three mutations that escaped there — with the escapes already known, so the answer is checkable.
 
-### P47 — The same number is never written twice
-**Needed by:** the reading that produced P40. Five lenses read all 3,552 code lines and did not
-notice that `PACKAGE_POWER_W` was a second copy in two checkers, that the square header pin and
-the hole plating were likewise duplicated, or that the annular ring was 0.25 mm in the checker and
-0.35 in the generator. The duplication ledger in that document counted IDEAS and missed DATA. A
-grep for repeated literals would have found all four in a minute, and P46 then had to.
-A test that collects every module-level numeric constant and every numeric literal in `scripts/`
-and fails when one value appears in two files without one importing the other. Exceptions are
-listed with a reason, as the orphan budget's are.
-**Value proven by:** the test fails on a commit that restores any one of P46's four copies, and
-passes on today's tree.
+### ~~P47 — The same number is never written twice~~ — **DELETED 2026-09-30, unbuilt**
+Proposed in the morning, cut the same afternoon, and the cut is right for a reason nobody had
+first. **Two lenses disagreed and both were wrong on the count**: the hardware lens said no number
+appears in two scripts, the verification lens said six with about three exceptions. Measured — every
+non-trivial numeric literal in `scripts/`, by `ast`:
+
+> **44 distinct, 8 in more than one script, and all 8 are coincidences.** `1e6` is microfarads, an
+> I2C bus-speed key, and megohms. `1000` is a rise time in nanoseconds, a minimum pull-up in ohms,
+> and a kilohm threshold. `4` is a gap in millimetres, a rounding precision, and 4 MB of flash.
+> `25.0` is a watch distance and a default module width. `300`, `60`: a timeout and a dimension.
+> `400`, `200`: a string slice and an HTTP status.
+
+Not one is duplicated **data**, so the exception list would be all eight — a ledger of exceptions
+with a test attached, which is noise that has to be maintained. P46 already ships `test_no_script_restates_a_number_the_file_holds`, which guards
+the actual data. If a copy returns, extend that. This is the AI-bloat shape: a test about code
+shape, written because one review missed something once.
 
 ### W20 (proposed) — An item's acceptance line is a hypothesis until reproduced
 **Needed by:** P45, which this nearly broke today, and every item whose proof line is written
@@ -464,15 +605,14 @@ and SCL." Meeting the criterion as written would have shipped a check that fires
 board. The rule: before an acceptance line is relied on, reproduce the state it assumes — or mark
 it unverified, the way a part record marks a fact nobody has confirmed.
 
-### W21 (proposed) — A number that has not been run is marked as a guess
+### ~~W21 (proposed) — A number that has not been run is marked as a guess~~ — **MERGED into W13**
 **Needed by:** `docs/2026-09-30-refactoring-architecture.md`, whose estimate table a reader cannot
-tell from its measurements, and any future plan that puts a delta beside a fact.
-W13 covers numbers in messages. It does not cover numbers in plans, and the architecture document
-stated **−45 code lines** for P42 in the same table as measured facts. It came to −8. P29 was
-estimated at +20 and came to +22; P35 at −40 and came to −22. The rule: an unrun number carries
-the word estimate, and the measured one replaces it in the same table when it exists. The
-architecture document already does this by hand for three rows — this makes it the habit rather
-than the apology.
+tell from its measurements.
+The hardware lens is right that this is not a second agreement. W13 already says a number enters a
+message only after its output is read; this is the same rule about plans, so it is one more clause
+on W13, not a rule of its own. Two agreements saying "do not write a number you did not run" is
+exactly the duplication this team deletes code for. Evidence it is needed at all: P42 was estimated
+at −45 code lines and measured −8, P35 at −40 and measured −22, P29 at +20 and measured +22.
 
 **Still unwritten, from before the compaction:** the layer-rule test — a command may import a
 library, and a command importing another command must be listed with a reason. Mentioned to the

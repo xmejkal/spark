@@ -231,6 +231,51 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
+## R6 — 2026-09-30, on Sprint 6 and the council that read it
+
+Eight items closed in one morning — ten commits between 09:14 and 12:28. Then five lenses read the
+whole backlog and reproduced every claim they made. This retro is mostly their findings, because
+they are better evidence than anything the desk could say about itself.
+
+### R5's actions, checked
+
+| | |
+| --- | --- |
+| **R5.1** (W17 — a summary claims no more than it summarises) | **partly stuck.** The check ran as written: each Done line's verbs against its diff. One **false** claim — P29's message said the two RC boards "gained" the VCC comment; `grep -c` returned 0 on both, because the generator's output was diffed in a temp file and never written. Same shape as Sprint 5's D13. Regenerated and committed at close (`cb11dc7`). Two soft headlines: P46's "read by every script" where 5 of 20 import `fab`, and P42's acceptance line claiming the status expression appears once where `parts.py:918` still builds one inline. Everything else held. |
+| **R5.2** (the simulator's doc is read and cited before a second paid run) | **not exercised — rolls forward.** No paid run happened in Sprint 6. Its second half held: no contract rule was written and withdrawn. |
+| **R5.3** (one mutation table timed) | **done**, `66a2a0d`. |
+| **R5.4** (P32 put to the PO as one letter) | **answered** — (a), move now, and now split into P32a/P32b because the firmware lens counted it at ~1,307 lines moving. |
+
+### What the council found that the desk had not
+
+**Six mutations escaped a green 692-test suite**, found by the verification lens writing an
+adversarial table against the areas no table names — and every one of them is in code **no Sprint 6
+item touched**. A live W2 violation: `test_flash_image.py` computes both sides of its assertion from
+the constants under test, so the one number that must match MicroPython's partition table is
+guarded by nothing. The shipped `catalog/` — 35 records, the product's actual knowledge — is
+asserted by no test at all; all six catalog tests mock the directory away. → **P54**, **P55**.
+
+**The documented setup cannot be completed by anyone else.** `init` pins a version of the wrong
+package. P33 is DONE and that is its own acceptance command. → **P51**, and the best argument yet
+for W20.
+
+**Two lenses disagreed about P47 and both were wrong on the count.** Measured: 44 distinct
+non-trivial numeric literals in `scripts/`, 8 in more than one file, **all 8 coincidences**. Deleted
+with the measurement attached.
+
+### Actions
+
+| # | change | check at R7 |
+| --- | --- | --- |
+| **R6.1** | A Done line describing a file in another repository is proven by regenerating that file and diffing **in the same commit** — or it says "the generator now emits", not "the board gained". | At R7: for every Sprint 7 Done line naming a file in `rc-car`, `irrigation` or `smartbin-local`, `git show` that commit. Zero lines describing a file nobody regenerated. |
+| **R6.2** | An item's text is committed **before** the commit that does its work. P48's item and its 222-line glossary landed together, so nothing in history shows the item came first — the rule was kept in time and left no evidence. | At R7: for each Sprint 7 item, `git log -S "<id> —" -- scrum/PRODUCT_BACKLOG.md \| tail -1` names an earlier commit than its implementation. Zero same-commit items. |
+| **R6.3** | An item's acceptance command is run **in the project its `Needed by:` names**, on that project's tree, and the output goes in the commit. Seeding a rule into `init` is not the same as the named project being checked — P45's need names the RC car and is still unmet there. | At R7: run each Sprint 7 item's `Value proven by` command in the project its need line names. Zero refusals, zero "would write". |
+| **R6.4** | **W20 is adopted**: an item's own acceptance line is a hypothesis until reproduced, and W13 gains a clause — a number that has not been run carries the word *estimate*. This is what P33, P42 and P50's open-book proof line all needed. | At R7: every Sprint 7 item's `Value proven by` line was run before it was relied on, or is marked unverified; no estimate in a plan sits unlabelled beside a measurement. |
+
+**R5.2 rolls forward unchanged** — it was never tested, so it is neither stuck nor failed.
+
+---
+
 ## R5 — 2026-09-30, on Sprint 5 and the third cold test
 
 **Present:** facilitator. The v1 close audit — `docs/observations/2026-09-29-v1-close-audit.md`,
