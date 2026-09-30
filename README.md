@@ -24,7 +24,7 @@ Then, in a project:
 
 ```
 /spark:init              # writes what the checks need; guesses nothing
-/spark:build             # a requirements file to a built, simulated board
+/spark:build             # a requirements file to a built, simulated board, left in the project
 ```
 
 ## The one rule everything here is built around

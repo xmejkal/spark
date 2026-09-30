@@ -274,6 +274,95 @@ class WhichOfTheModulesOwnPadsGetWiredTest(unittest.TestCase):
         self.assertEqual(emit_board.supply_inputs(board, []), [])
 
 
+class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
+    """
+    P51. The chain built in a temp directory and deleted it, so after the one documented command a
+    stranger's project held only `requirements.json` and `check_all --project .` answered "not
+    asked for" — the word **checked** was unreachable from the documented path. `--keep` printed
+    the temp path instead, which is not a place anyone looks, and was documented nowhere.
+    """
+
+    def workdir(self):
+        work = Path(tempfile.mkdtemp())
+        (work / "board.tsx").write_text("// the board")
+        (work / "FireBeetle2Esp32S3.tsx").write_text("// the footprint")
+        (work / "dist" / "board").mkdir(parents=True)
+        (work / "dist" / "board" / "circuit.json").write_text("[]")
+        return work
+
+    def test_the_board_its_footprint_and_dist_all_arrive(self):
+        into = Path(tempfile.mkdtemp()) / "project"
+        said = check_spine.keep_into(self.workdir(), into)
+        self.assertTrue((into / "board.tsx").is_file())
+        self.assertTrue((into / "FireBeetle2Esp32S3.tsx").is_file())
+        # dist is the one that matters: it is what design.CIRCUIT_PATHS names.
+        self.assertTrue((into / "dist" / "board" / "circuit.json").is_file())
+        self.assertTrue(any("every check reads" in line for line in said))
+
+    def test_a_destination_that_does_not_exist_yet_is_made(self):
+        into = Path(tempfile.mkdtemp()) / "not" / "there"
+        check_spine.keep_into(self.workdir(), into)
+        self.assertTrue((into / "board.tsx").is_file())
+
+    def test_a_board_someone_has_edited_is_left_alone_and_said(self):
+        # `board.tsx` is the thing a person edits — the smart bin's is hand-maintained. Silently
+        # overwriting it is how a tool loses somebody's afternoon.
+        into = Path(tempfile.mkdtemp())
+        (into / "board.tsx").write_text("// MINE, hand-edited")
+        said = check_spine.keep_into(self.workdir(), into)
+        self.assertEqual((into / "board.tsx").read_text(), "// MINE, hand-edited")
+        self.assertTrue(any("left alone" in line and "board.tsx" in line for line in said),
+                        "an untouched file must be named, not silently skipped: %s" % said)
+
+    def test_dist_is_replaced_because_it_is_pure_output(self):
+        into = Path(tempfile.mkdtemp())
+        (into / "dist" / "board").mkdir(parents=True)
+        (into / "dist" / "board" / "circuit.json").write_text("stale")
+        check_spine.keep_into(self.workdir(), into)
+        self.assertEqual((into / "dist" / "board" / "circuit.json").read_text(), "[]")
+
+    def test_report_actually_calls_it_and_still_clears_the_temp_directory(self):
+        # The helper was tested and its one caller was not — R2.2's shape, and a mutation putting
+        # `report` back to printing a /var/folders path escaped a green suite because of it.
+        import argparse, contextlib, io
+        work = self.workdir()
+        into = Path(tempfile.mkdtemp()) / "project"
+        args = argparse.Namespace(json=False, keep=into)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        self.assertTrue((into / "dist" / "board" / "circuit.json").is_file(),
+                        "report did not put the board where the checks look")
+        self.assertFalse(work.exists(), "the temp directory is still cleared away")
+        self.assertIn("every check reads", err.getvalue())
+
+    def test_without_it_the_temp_directory_is_still_removed(self):
+        import argparse, contextlib, io
+        work = self.workdir()
+        args = argparse.Namespace(json=False, keep=None)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        self.assertFalse(work.exists())
+
+    def test_the_documented_one_command_leaves_the_board_behind(self):
+        # The document is the product: a stranger runs what build.md prints, and without `--keep`
+        # their project holds only requirements.json after a perfect build (P51).
+        import re
+        text = (ROOT / "commands" / "build.md").read_text()
+        heading = text.index("## The one command")
+        block = re.search(r"```\n(.*?)```", text[heading:], re.S).group(1)
+        self.assertIn("check_spine.py", block)
+        self.assertIn("--keep", block,
+                      "the one command builds in a temp directory and deletes it: %r" % block)
+
+    def test_it_is_a_directory_now_not_a_flag(self):
+        # W16: the old `--keep` printed a /var/folders path. One behaviour replaced the other.
+        import argparse, contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stderr(out), self.assertRaises(SystemExit):
+            check_spine.main(["--keep"])
+        self.assertIn("expected one argument", out.getvalue())
+
+
 class FindingTheToolchainTest(unittest.TestCase):
     def test_a_projects_own_tsci_is_preferred_over_the_global_one(self):
         # A project pins a version for a reason; silently building with a different one produces

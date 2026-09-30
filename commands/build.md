@@ -46,8 +46,15 @@ design's own parts, boards and rules live.
 ## The one command
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json
+${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --keep .
 ```
+
+`--keep .` writes the board into the project: `board.tsx`, its footprint, and `dist/`, which is
+where every check already looks. **Without it the chain builds in a temp directory and deletes it**,
+which is right for a check and wrong for the command someone is told to run first — the project
+would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
+a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, so a
+`board.tsx` you have edited is never overwritten; delete it to have it regenerated.
 
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation

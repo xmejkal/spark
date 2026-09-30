@@ -490,7 +490,10 @@ def main(argv=None):
     parser.add_argument("requirements", nargs="?",
                         help="a requirements.json; omit for the reference design")
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--keep", action="store_true", help="leave the working directory behind")
+    parser.add_argument("--keep", metavar="DIR", type=Path,
+                        help="write the built board into DIR: board.tsx, its footprint and "
+                             "dist/, where every check already looks. Existing .tsx files are "
+                             "left alone and named")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
@@ -537,6 +540,37 @@ def main(argv=None):
     return report(stages, args, workdir)
 
 
+def keep_into(workdir, destination):
+    """
+    Put the built board where a person — and every check — will look for it.
+
+    The chain builds in a temp directory and deletes it, which is right for a check and wrong for
+    the one command a stranger is told to run: after `/spark:build` their project held only
+    `requirements.json`, so `check_all --project .` answered "not asked for" and the word
+    **checked** was unreachable from the documented path. `--keep` used to print the temp path
+    instead, which is not a place anyone looks, and was documented nowhere (backlog P51).
+
+    `dist/` is pure build output and is replaced. A `.tsx` file is NOT: `board.tsx` is the thing a
+    person edits — the smart bin's is hand-maintained — so an existing one is left alone and
+    named. Delete it to have it regenerated. One behaviour, no flag to get it wrong with.
+    """
+    destination = Path(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    said = []
+    for source in sorted(workdir.glob("*.tsx")):
+        target = destination / source.name
+        if target.exists():
+            said.append("left alone: %s (delete it to have it regenerated)" % target)
+        else:
+            shutil.copy2(source, target)
+            said.append("wrote %s" % target)
+    built = workdir / "dist"
+    if built.is_dir():
+        shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
+        said.append("wrote %s — this is what every check reads" % (destination / "dist"))
+    return said
+
+
 def report(stages, args, workdir=None):
     """The verdict, rendered the way it was asked for; the working directory kept or removed."""
     code = verdict(stages)
@@ -549,8 +583,9 @@ def report(stages, args, workdir=None):
     if workdir is None:
         return code
     if args.keep:
-        print("  working directory: %s" % workdir, file=sys.stderr)
-    elif workdir.exists():
+        for line in keep_into(workdir, args.keep):
+            print("  %s" % line, file=sys.stderr)
+    if workdir.exists():
         shutil.rmtree(workdir, ignore_errors=True)
     return code
 
