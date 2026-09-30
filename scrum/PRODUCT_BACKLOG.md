@@ -34,6 +34,10 @@ council's proposal.
 | **P34** | A check that compared nothing says so | 5 | S | `compare_design` prints `every rule holds` having compared zero; `check_physics` prints its own could-not-run and exits 0 |
 | **P35** | The rules see spark's own wiring | 5 | M | the generator wires signals pin-to-pin, so every rule keyed on a net name is dead on spark's own boards — P8 fixed this in one file of three |
 | **P29** | The board's own supply, and nothing left unfed | 5 | S+M | no trace reaches the microcontroller's supply on any generated board, while the file says one does; the vendor fact it waited for is already recorded |
+| **P41** | The safety net the refactor needs first | 5 | S | 79% of tests reach into modules by symbol; the board tool's command line is a cross-repo contract with zero tests, and ten `--json` shapes are asserted by nothing |
+| **P42** | The verdict has one home | 4 | S | six copies of one rule, one of them wrong, and the shared constant that exists has zero callers |
+| **P43** | What an agent reads back | 3 | M | five JSON shapes, a fourth status word, the aggregate throws away `rule` and `fix`, and one payload is 80% something that has its own command |
+| **P44** | Nothing shipped names one person's machine | 4 | S | a shipped agent file names an absolute home directory, and two files hard-code one country's shops as prose |
 | **P40** | The architecture the refactor should aim at | 4 | M | the budget's new rule is refactor-before-raise, and duplication has already caused three defects; decide the target once, by people who did not write the code |
 | **P39** | The library answers a need it has no words for | 4 | S | `--need measure distance` misses the rangefinder and `--need switch 12 V load` misses the MOSFET module — both send a researcher to write a record that exists |
 | **P32** | One home for the converter and the chips — **PO: (a), move now** | 4 | L | v1's last word, "simulated", is true only beside the bin's repo (D17); two copies of each chip (D19, D20) |
@@ -98,7 +102,7 @@ it reaches a supply as well as a ground, so an unfed module can never again be `
 **Value proven by:** the spine names the unfed module on today's irrigation board, and after the
 fix `grep 'Mcu > .VCC' board.tsx` finds the trace and the stage is clean.
 
-### P40 — The architecture the refactor should aim at
+### P40 — The architecture the refactor should aim at — DONE 2026-09-30, `docs/2026-09-30-refactoring-architecture.md`
 **Needed by:** W15b — the budget now counts code and says refactor before raising, so the first
 question at every ceiling is "does this fit in less code", and nobody has answered what the target
 shape is. Duplication has already caused three live defects: the three-outcome verdict written out
@@ -114,6 +118,56 @@ sitting, the interleaving with P34 and P35 which touch the same code, and the st
 **Value proven by:** a document in `docs/` naming every proposed move with its code-line delta and
 the defect it prevents or kills; a first step small enough to finish in one sitting; and the
 council's own answer to whether this codebase should be refactored now at all.
+
+### P41 — The safety net the refactor needs first
+**Needed by:** P34, P42, P35 and P29, which all move or change code in the check family, and by
+the smart bin, whose `make check` calls this plugin's board tool eight different ways. Measured:
+79% of the 596 tests reach into a module by symbol, so a move breaks them at import level rather
+than at behaviour level; the board tool's command line has zero tests although a sibling
+repository depends on it, and that repository's own Makefile records this exact break happening
+before; ten scripts declare `--json`, one test passes the flag, and it asserts only the exit code,
+so any payload key could be renamed with the suite still green.
+Six tests for the board tool's eight documented invocations, asserting the exit code and the
+single line of output; ten tests asserting each `--json` payload's top-level key set and that its
+status is one of the three words. Key sets only, never values. About 180 test lines, which are not
+budgeted.
+**Value proven by:** renaming a key in any `--json` payload turns the suite red; so does changing
+what the board tool prints for `--get chip`.
+
+### P42 — The verdict has one home
+**Needed by:** P34, whose defect is that this rule is written out six times and one copy omits an
+outcome. `outcomes.py` already owns the three words and the three exit codes, and its `EXIT_FOR`
+map has **zero callers** while five scripts write the same dictionary inline.
+`outcomes.verdict(problems, unchecked, unmeasured)` is `check_all.answer` moved verbatim, prose
+intact, with `answer` kept as an alias so its mutation anchor survives; `outcomes.report(payload,
+as_json, render)` generalises the shape `emit_footprint` already has. Six callers convert. A
+`main` can then no longer invent a status, so the defect class is unrepeatable rather than fixed.
+**Value proven by:** the status-from-severities expression appears once in `scripts/`; every
+script's exit code still matches its printed status, proven by P41's tests.
+
+### P43 — What an agent reads back
+**Needed by:** every skill and command that reads a script's output, and `/spark:build` most of
+all. Measured: five different top-level JSON shapes; `check_vendor_pins` returns a fourth status
+word, `"mismatch"`; `parts.py --catalog --json` ignores the flag and prints prose; `check_all`
+flattens each check's finding to `subject: detail`, throwing away the `rule` and the `fix` the
+check produced, so an agent reading the aggregate must run a second command to learn how to fix
+anything; and `assign_pins --json` is 35,852 bytes of which 28,739 is a list of unverified part
+facts that has its own command, leaving the answer at 8%.
+One envelope in `outcomes.py`, findings passed through rather than flattened, and the unverified
+list dropped from the assigner's payload.
+**Value proven by:** `check_all --json` on the irrigation board carries a `fix` for every problem
+it reports; `assign_pins --json` is under 4 KB; every `--json` payload has the same top-level
+shape, which P41's tests then hold.
+
+### P44 — Nothing shipped names one person's machine
+**Needed by:** anyone who installs this plugin who is not its author. A shipped agent file names
+an absolute path under one home directory for the catalog, which `parts.py` already knows how to
+find; two shipped files hard-code one country's shops as prose while `.spark/project.json` already
+carries a `sellers` list and the tool already prints "sellers: none named in the brief". (The
+third instance, the converter looked for in a sibling repository, is P32's.)
+**Value proven by:** a test that fails on an absolute path or a home directory in anything under
+`commands/`, `skills/` or `agents/`; and the researcher agent reading the brief's sellers instead
+of a list.
 
 ### P39 — The library answers a need it has no words for
 **Needed by:** the irrigation design and the smart bin. `parts.py --need switch 12 V load` finds
@@ -228,6 +282,7 @@ knowledge. **P5** — its audit was performed by the council's verification lens
 listed open one file down (the shape of audit row D28).
 
 ## Done — one line each, the hash is the record
+- **P40** — the architecture the refactor should aim at: five lenses read all 3,552 code lines and the answer is that this is not a refactoring project. `docs/2026-09-30-refactoring-architecture.md` names the two live defects reproduced (a check reporting `ok` over its own could-not-run; three netlist walkers giving three answers to one circuit), the duplication ledger, the four things that get one home, the safety net that must come first, the order, what not to touch and why, and the stopping rule. Net about −85 code lines. No code moved.
 - **P33** — `/spark:init` pins tscircuit to the version the documents were measured on, and a test holds the pin and `build.md`'s example output to each other; proven by hand in an empty directory: init, `npm install`, `npx tsci build` → `Circuits 1 passed`, 15 traces, no errors (table sprint-6-p33, 2 caught).
 - **R11** — research parts and modules, vendor by vendor, and keep what was found: `parts.py --need/--skeleton/--sources/--fetch/--catalog/--promote`, `/spark:research`, `/spark:identify`, the `parts-researcher` agent, the catalog (`e50717a`…`d4f6b0f`, `773cd41`, `040a66d`; proven on the irrigation controller: seven records, 18 candidates kept, every cited URL answering).
 - **P28** — the tools made true: the mutate lock covers the pre-check and `apply` refuses a missing file (C8); `nets_in`, `rules_for`, `has_answers` named by tests (C9); the stranger test runs build.md's own lines (C10); the example block is a run's output and a test holds its schematic line to the example (C11); the status words come from `outcomes` in the three files that spelled them (C12); `tools/pre-push` is the versioned gate, installed with one `ln -sf` (C14). Table sprint-5-p28 (2): caught.
