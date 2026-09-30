@@ -219,11 +219,11 @@ documented steps could not be followed from a fresh directory. The stranger test
 
 | # | change | check that it stuck | result |
 | --- | --- | --- | --- |
-| **R4.1** | R3.5 in its mechanical form becomes **W13**: a number or a verdict enters a commit message or a record only in a later call than the command that produced it. | At R5: an audit compares every number in the sprint's commit messages with the runs they cite — zero mismatches | *pending* |
-| **R4.2** | An item whose value line says "a user can …" is proven by a test that follows the document from nowhere (`AStrangerCanBuildTest` is the pattern), never by a name check. | At R5: any such item DONE without one | *pending* |
-| **R4.3** | The closing audit is spawned before the retro is written, on the committed HEAD, and the retro cites its report. | At R5: R5 names the Sprint 5 audit's file | *pending* |
-| **R4.4** | The PO question is put once more, in the checkpoint summary, as a question that takes one letter; if unanswered by the next sprint's start, the sprint is planned without the cold test and the item stays parked, visibly. | At R5: the item is either answered or parked with the date | *pending* |
-| **R4.5** | A refused mutation guards nothing, and three were found refused at this close (R9 by the review, two in P11 by the new `--anchors` mode). `mutate.py --anchors tests/mutations/*.json` runs at every commit (DoD), and the tool refuses a second concurrent run — two overlapped tonight and both verdicts were worthless. | At R5: any table refused at the close; any overlapping runs (the lock says) | *pending* |
+| **R4.1** | R3.5 in its mechanical form becomes **W13**: a number or a verdict enters a commit message or a record only in a later call than the command that produced it. | At R5: an audit compares every number in the sprint's commit messages with the runs they cite — zero mismatches | **nearly**: every suite and anchor count at every commit matches its archive (D24, D25); one message counted the parent's tree (`6557c71`, D26) and a diary paragraph counted by eye (D22). Words overclaimed where numbers did not — R5.1 |
+| **R4.2** | An item whose value line says "a user can …" is proven by a test that follows the document from nowhere (`AStrangerCanBuildTest` is the pattern), never by a name check. | At R5: any such item DONE without one | **held**; and the pattern test itself typed the steps instead of running the document's lines (C10) — it runs them now (P28) |
+| **R4.3** | The closing audit is spawned before the retro is written, on the committed HEAD, and the retro cites its report. | At R5: R5 names the Sprint 5 audit's file | **held**: `docs/observations/2026-09-29-v1-close-audit.md`, spawned on `ca997ed` before a word of R5 (the first agent stalled at its start and was relaunched) |
+| **R4.4** | The PO question is put once more, in the checkpoint summary, as a question that takes one letter; if unanswered by the next sprint's start, the sprint is planned without the cold test and the item stays parked, visibly. | At R5: the item is either answered or parked with the date | **held**: (c) chosen 2026-09-29 and run; P18, P19 deleted in the cut; R8 became R11 and is done; R10 parked with its date |
+| **R4.5** | A refused mutation guards nothing, and three were found refused at this close (R9 by the review, two in P11 by the new `--anchors` mode). `mutate.py --anchors tests/mutations/*.json` runs at every commit (DoD), and the tool refuses a second concurrent run — two overlapped tonight and both verdicts were worthless. | At R5: any table refused at the close; any overlapping runs (the lock says) | **held**: 130 anchors present at the close; three went stale during the night and were re-anchored before their commits; no overlap — and the lock now covers the pre-check window C8 found (P28) |
 
 **Postscript, the same night (close audit C18):** R4.3 says the closing audit is spawned before
 the retro is written; this retro was written first and the audit spawned after. The audit then
@@ -231,3 +231,75 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
+## R5 — 2026-09-30, on Sprint 5 and the third cold test
+
+**Present:** facilitator. The v1 close audit — `docs/observations/2026-09-29-v1-close-audit.md`,
+33 rows, spawned on `ca997ed` before this was written (R4.3) — read the whole sprint cold: 20
+rows held, 11 did not, 2 could not be checked. Its rows are in `INDEX.md` as D1–D33.
+
+### What happened
+
+Six items done in one night and a day — R11 with the catalog, P31 ordered by the PO mid-sprint
+and done, P8, P6, P10, P28 — and the third cold test, a 12 V irrigation controller, from a brief
+to a built, checked board with one Wokwi scenario passing, diary I1–I12. Four PO rules arrived
+while it ran (Czech sellers, lookup by photo, keep everything read, make the simulation work) and
+each was pulled into the plugin the same evening. The PO's photos of one module's back corrected
+five facts a record had marked unverified.
+
+### What went well, with evidence
+
+- **The cold test is the best gap finder this project has.** Twelve diary entries in one evening,
+  seven fixed in the plugin the same night and two pulled as capabilities; the previous cold test
+  found thirteen over two days. Ten of the twelve were things no test inside the repo could have
+  seen: a net named by its voltage, a walk up to the home folder, a simulator's fixed ADC
+  reference.
+- **Pull, never push held.** Every item shipped had a `Needed by:` naming a design; the two
+  capabilities the PO asked for were built to the size of their need — 119 lines for the catalog,
+  a `simulation` field and one Python module for P31 — and the budget rose twice with the PO's
+  word beside it, never silently.
+- **The unverified discipline paid.** Seven facts read through a bag were marked `verified:
+  false` with a bench check named; the back photo settled all seven and five were wrong. The
+  cost of a wrong reading was one photo, because nothing downstream had treated it as true.
+- **W12 held nine times.** Every escape this sprint was a fixture that could not see the defect
+  — a catalog record that parsed but named nothing, a search matched by name where kind was
+  claimed, a fresh binary where a stale one was meant, three tests that bypassed the validator,
+  a template value the fixture could not tell from a person's — and every one was fixed by the
+  fixture, none by dropping the mutation.
+- **The audit before the retro, as agreed.** And it found what this retro could not have: a
+  message saying "compiled" over week-old binaries, a pin map the contract could not see was
+  wrong, a README routing to a moved file.
+
+### What did not
+
+- **Words overclaimed where numbers did not.** W13 held for every count the audit checked and
+  failed for every verb: "the status words have one home" (three more files spell them, D9), the
+  chips "moving" beside their records (copied, D19), I1 "fixed" (worked around, D21), "six fixed"
+  over a list of seven (D22). A summary sentence is a number in disguise.
+- **A rule written on a theory.** When a chip did not seem to drive its pin, a contract rule
+  forbidding hyphens in chip names was written and committed on a hypothesis; the next run showed
+  the chip had been driving all along and the rule was withdrawn within the hour. The right part
+  was the withdrawal; the wrong part was committing a rule before the experiment that would test
+  it.
+- **Three simulator runs went to a documented fact.** Wokwi's virtual ADC is referenced to 5 V
+  whatever the chip, and its documentation says so in one sentence; three diagnostic runs and two
+  theories preceded reading it.
+- **A summary claimed "unchanged" where a file had changed.** The car's committed board file no
+  longer matched what the generator emits after P6 (D13); "unchanged or explained" was said
+  without regenerating it.
+- **One observation without a cause.** In the audit's arena the mutation tables took 17 to 34
+  minutes each; here they take 15 to 60 seconds. Not reproduced, not understood (D4).
+
+### Actions
+
+| # | change | check that it stuck | result |
+| --- | --- | --- | --- |
+| **R5.1** | W13 extends to words: a summary — a Done line, a log sentence, a diary count — claims no more than the diff or the output it summarises; "moved", "fixed", "one home", "unchanged" are verified the way a number is, against the tree. **W17.** | At R6: the close audit compares each Done line's verbs against its diff — zero overclaims | *pending* |
+| **R5.2** | Before the second diagnostic run on a paid simulator, the simulator's documentation for the feature under test is read and cited in the diary; a theory is written as a theory, and no rule is committed on it until the run that tests it has run. | At R6: the next simulation diary names the page read before its second run; no contract rule withdrawn within a day of being written | *pending* |
+| **R5.3** | D4: one mutation table is timed alone, on this machine and in an archive arena, and the time written into the table's log; if either exceeds two minutes the cause is found before the next table is written. | At R6: the two timings exist in the log | *pending* |
+| **R5.4** | P32 — one home for the converter and the chips — is put to the PO as one letter: (a) move both into spark now, the bin depending on it; (b) after the fourth cold test; (c) two homes, documented, closed. If unanswered by Sprint 6's start it is parked with the date. | At R6: answered or parked | *pending* |
+
+### What we are deliberately not changing
+
+The line budget. It rose twice tonight, both times with the PO's word and a reason beside the
+number, and both times it made the additions a decision rather than a drift. A budget that never
+pinches is not one; one that pinches at every real need and is raised in writing is doing its job.

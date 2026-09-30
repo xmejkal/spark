@@ -1,7 +1,50 @@
-# Sprint 5 — proposed
+# Sprint 6 — proposed
 
-**Proposed** 2026-09-29, night · **Facilitator** main session · **Product Owner** Petr. The order
-below is a proposal (W11). Sprint 4 is closed below it, with its review.
+**Proposed** 2026-09-30 · **Facilitator** main session · **Product Owner** Petr. The order below is
+a proposal (W11). Sprint 5 is closed below it, with its review and the v1 audit.
+
+## Goal (proposed)
+
+> **v1 holds away from this desk: a stranger with the plugin alone simulates a board, and a fourth
+> cold test finds what the third could not.**
+
+## Proposed order
+
+| id | item | why here |
+| --- | --- | --- |
+| **P32** | One home for the converter and the chips — **the PO's letter first** (a: move now; b: after the fourth cold test; c: two homes, documented) | v1's "simulated" holds only beside the bin repo (audit D17); W16 on the chips and the hand table (D19, D20) |
+| **R5.3** | Time one mutation table alone, here and in an archive arena | the audit saw 17–34 minutes where this desk sees seconds (D4); unexplained |
+| **R2.6** | A fourth cold test, domain the PO's — after the third found twelve gaps in one evening | the cold tests are the best gap finders this project has (R5) |
+| — | P29 (the FireBeetle's VCC pad) needs a source before it can be pulled; P2, P5, P9, P16, P17, R10 parked, **Needed by:** none yet | |
+| — | Audit at the sprint's end, before the retro (R4.3) | |
+
+---
+
+# Sprint 5 — closed 2026-09-30
+
+**Proposed** 2026-09-29, night · **Closed** 2026-09-30 · **Facilitator** main session · **Product
+Owner** Petr.
+
+### Review — validated value, run at close
+
+**Goal met.** A generated board's own rules are honoured as components or named as the reader's
+(P6: three records' pull-downs, pull-ups and a divider placed and wired; the rest said as prose);
+its checks do not cry wolf on its own output (P8: four declared inputs pass, a floating one is
+still named); two tools no longer disagree about one board (P7 went with `check_design`; P10 keeps
+vendor-truth on for a project's own board file). Beyond the goal, at the PO's order: research
+with a catalog (R11) and a simulation built from the records with one scenario passing on the
+irrigation board (P31). The third cold test met its definition of done.
+
+**The v1 line** — a stranger goes from a requirements file to a built, checked, simulated board an
+engineer would accept as a draft — holds with the documents alone for every stage but the last,
+which holds only beside the bin repo where the converter lives (audit D17 → P32, the PO's).
+
+**Evidence, each from a run at close:** spark 595 tests OK; 130 mutations in 29 tables, every
+anchor present, every sprint-5 table caught; reference design 20 traces, 18 wires, exit 0; the
+irrigation board 39 traces, 33 wires, one Wokwi scenario passing (`irrigation/sim/runs/`); the
+bin's `make check` in step; the RC car regenerated for P6 and both RC boards building. The v1
+close audit: 33 rows, 20 true, 11 false — all eleven acted on or raised the same day — 2 could not
+be checked (the quota, and the bin's check, which this desk ran).
 
 ## Goal (proposed)
 

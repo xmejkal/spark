@@ -159,3 +159,10 @@ same commit. Two formats for one thing is a bug, not a transition: `design.json`
 lived beside the requirements chain for four days, and the item "the two tools disagree" existed
 only because both did.
 
+## W17 — A summary claims no more than what it summarises
+
+A Done line, a log sentence, a diary count or a commit's first line is checked against the diff
+or the output the way a number is (W13): "moved" means the old copy is gone, "fixed" means the
+gap's own command now passes, "one home" means a grep finds one, "unchanged" means the file was
+regenerated and compared. The v1 close audit found every count true and four verbs false (D9,
+D13, D19, D21, D22): the words were the numbers in disguise. Written 2026-09-30 (R5.1).
