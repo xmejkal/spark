@@ -22,6 +22,7 @@ import json
 import sys
 from pathlib import Path
 
+import netlist  # noqa: E402
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS, COULD_NOT_RUN, status_of  # noqa: E402
 
 #: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
@@ -90,65 +91,10 @@ def render(result):
     return "\n".join(lines)
 
 
-class Netlist:
-    """
-    The built design, as connectivity.
-
-    Connectivity comes from `source_trace`, which states its ports and nets explicitly. It is
-    tempting to group ports by `subcircuit_connectivity_map_key` instead — but in a real export
-    16 of 92 ports carry no key at all, and grouping on that joins every one of them into a
-    single phantom net, wiring a 5 V pin to an H-bridge input. Unconnected is a state, not a
-    grouping.
-    """
-
-    def __init__(self, circuit):
-        self.components = {
-            e["source_component_id"]: e for e in circuit if e["type"] == "source_component"}
-        self.ports = {e["source_port_id"]: e for e in circuit if e["type"] == "source_port"}
-        self.nets = {e["source_net_id"]: e for e in circuit if e["type"] == "source_net"}
-
-        #: net id -> [(component name, port name)]
-        self.members = {net_id: [] for net_id in self.nets}
-        for element in circuit:
-            if element["type"] != "source_trace":
-                continue
-            net_ids = [net_id for net_id in element.get("connected_source_net_ids", []) if net_id in self.members]
-            if not net_ids:
-                # A pin-to-pin trace names no net, and it is still a connection: spark's generator
-                # wires every signal this way, and this loop skipped them, so every such pin read
-                # as floating on three projects (backlog P8). Its connectivity key groups the
-                # traces of one wire; the trace's own id stands in when there is none.
-                net_ids = ["trace:" + (element.get("subcircuit_connectivity_map_key") or element["source_trace_id"])]
-                self.members.setdefault(net_ids[0], [])
-            for net_id in net_ids:
-                for port_id in element.get("connected_source_port_ids", []):
-                    port = self.ports.get(port_id)
-                    if not port:
-                        continue
-                    owner = self.components.get(port["source_component_id"], {})
-                    self.members[net_id].append((owner.get("name", "?"), port.get("name", "?")))
-
-    def net_named(self, name):
-        for net_id, net in self.nets.items():
-            if net.get("name") == name:
-                return net_id
-        return None
-
-    def power_nets(self):
-        return {net_id for net_id, net in self.nets.items() if net.get("is_power")}
-
-    def nets_of(self, component_name, port_name):
-        """Which nets a given pin sits on."""
-        return {
-            net_id for net_id, members in self.members.items()
-            if (component_name, port_name) in members
-        }
-
-    def component(self, name):
-        for element in self.components.values():
-            if element.get("name") == name:
-                return element
-        return None
+#: The one walk over a built netlist (P35). This file's own class was the only one of three that
+#: had learned a trace may name no net; `netlist.Netlist` is that class, moved, so the other
+#: callers inherit the lesson instead of each rediscovering it.
+Netlist = netlist.Netlist
 
 
 def check_i2c_pullups(netlist, buses):

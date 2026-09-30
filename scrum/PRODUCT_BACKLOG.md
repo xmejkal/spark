@@ -31,7 +31,8 @@ council's proposal.
 
 | # | item | value | effort | why here |
 | --- | --- | --- | --- | --- |
-| **P35** | The rules see spark's own wiring | 5 | M | the generator wires signals pin-to-pin, so every rule keyed on a net name is dead on spark's own boards — P8 fixed this in one file of three |
+| **P45** | The rules a project is checked against are seeded from its design | 4 | M | `init` writes empty rule lists, so the irrigation DS3231's I2C lines are checked by nobody and `compare_design` refuses for want of a rule nobody wrote |
+| **P46** | A number a fab house could change is data, not code | 3 | S | the same package table is copied into two scripts, and the via geometry is stated in three places |
 | **P29** | The board's own supply, and nothing left unfed | 5 | S+M | no trace reaches the microcontroller's supply on any generated board, while the file says one does; the vendor fact it waited for is already recorded |
 | **P43** | What an agent reads back | 3 | M | five JSON shapes, a fourth status word, the aggregate throws away `rule` and `fix`, and one payload is 80% something that has its own command |
 | **P44** | Nothing shipped names one person's machine | 4 | S | a shipped agent file names an absolute home directory, and two files hard-code one country's shops as prose |
@@ -72,7 +73,7 @@ rules compared is `could-not-run` naming what the rules file would have to say.
 `compare_design.py <rc-car circuit> --rules <its rules>` exits 2; `check_all --project ../rc-car`
 shows `[????] rules-vs-netlist`, not `[ok]`.
 
-### P35 — The rules see spark's own wiring
+### P35 — The rules see spark's own wiring — DONE 2026-09-30 (the walker; the seeding split out as P45)
 **Needed by:** every board this tool generates. The generator wires each signal pin-to-pin — a
 trace that names no net — so a generated board has named nets only for its rails. `init` therefore
 writes `i2c_buses: []` and `must_not_float: []`, `compare_design.check_i2c_pullups` iterates an
@@ -85,6 +86,35 @@ records' inputs and `i2c_buses` from the board's own bus pins — so an empty li
 check here", not "nobody filled it in".
 **Value proven by:** `check_all --project ../irrigation` reports the I2C lines as checked or as
 could-not-run, never silently absent; a mutation removing the fallback is caught.
+
+### P45 — The rules a project is checked against are seeded from its design
+**Needed by:** the irrigation controller, whose DS3231 sits on SDA and SCL and whose I2C lines are
+checked by nobody, and the RC car, whose `compare_design` now refuses because its rules file names
+no rule. This is the half of P35 that was **not** done with the walker, and splitting it out is
+deliberate: the walker was a move within `scripts/`, this needs `init` to read the design's part
+records, which it does not do today. `init` writes `must_not_float: []` and `i2c_buses: []`, and
+the generator wires signals pin-to-pin so no net is ever named SDA — so both lists stay empty and
+an empty list is indistinguishable from "nobody filled it in".
+`init` seeds `must_not_float` from the chosen records' inputs and `i2c_buses` from the board's own
+bus pins, so an empty list means "nothing here to check" and is written as such.
+**Value proven by:** `init` on the irrigation project writes the DS3231's two bus lines and the
+four valve inputs; `check_all --project ../irrigation` reports them as checked rather than absent.
+
+### P46 — A number a fab house could change is data, not code
+**Needed by:** anyone whose board house is not the one these numbers came from, and the three
+scripts that already disagree about how to say the same thing. Measured: `PACKAGE_POWER_W` is a
+**second copy**, not an import, in `check_footprints` and `check_physics`, so a package added to
+one is missing from the other. The via and annular-ring geometry is stated in three files —
+`check_footprints` demands at least 0.25 mm of ring, `emit_footprint` draws 0.35, `emit_board`
+repeats the via numbers — and they agree today only by having been written on the same afternoon;
+raise the checker's minimum and the generator keeps emitting footprints that fail it.
+The rule to apply: **a number a fab house, a project or a person could change belongs in
+`.spark/rules.json` with a default; a number that is a law or a published standard stays in code
+with its source in a comment.** By that test, the process geometry and the pull-up window move;
+IPC-2221's coefficients, the I2C rise times and the package ratings stay, and the package table
+gets one home.
+**Value proven by:** raising the annular-ring minimum in a project's rules file makes that
+project's generated footprints fail their own check, and the package table appears once.
 
 ### P29 — The board's own supply, and nothing left unfed
 **Needed by:** the irrigation controller. Its buck's record says "Feeds the FireBeetle's 5 V/VCC
@@ -279,6 +309,7 @@ knowledge. **P5** — its audit was performed by the council's verification lens
 listed open one file down (the shape of audit row D28).
 
 ## Done — one line each, the hash is the record
+- **P35** — one walk over a built netlist, in `scripts/netlist.py`, where there were three that gave three different answers to one circuit. The rules checker's class is now an alias for it and the physics checker subclasses it, keeping only the two questions it alone asks; the chain's ground walk joins in P29. Identical findings on the bin and the irrigation board, so nothing moved but the code. **Minus 22 code lines.** P8's two mutations moved with the lines and now guard both callers. The seeding half of the item was split out as P45 rather than silently narrowed. 627 → 641 tests. Table sprint-6-p35 (3): caught.
 - **P42** — the three-outcome rule has one home: `outcomes.status_of`, called by the six scripts that each restated it; `check_all.answer` moved to `outcomes.answer` keeping every call site and its prose; `EXIT_FOR` came alive after existing with zero callers, and `STATUS_FOR` replaced two hand-written inverses. **Minus 8 code lines, not the minus 45 the architecture estimated** — the copies were smaller than they looked, and the value is elsewhere: P34's mutation now sits in `outcomes` and guards all six callers instead of one. Three of P42's five mutations escaped first, in exit codes no test had ever asserted, and were caught by strengthening the fixtures rather than dropping them (W12). 618 → 627 tests. Table sprint-6-p42 (5): caught.
 - **P34** — a check that examined nothing no longer reports a pass. The physics check built its status and exit code from problem-severity findings alone, so it answered `status: ok`, exit 0, over findings that were every one of them could-not-run; it now follows all three severities, and its renderer no longer assumes a reason it was not given. Comparing zero rules is a refusal naming what the rules file would have to say, so the RC car's `[ok] rules-vs-netlist` over zero comparisons is now `[????]`. Three mutations escaped the first run because nothing had ever called the physics check's `main`; three tests now do (W12). Table sprint-6-p34 (4): caught.
 - **P41** — the safety net: eight tests for the board tool's command line, which the smart bin's Makefile calls eight ways and no test had ever entered, and ten characterisation tests pinning every `--json` payload's top-level keys and status word. 18 tests, 596 → 614. Proven by its own table: renaming one payload key, prefixing the board id, and changing what `--get` and `--resolve` print are all caught (table sprint-6-p41, 4 caught).

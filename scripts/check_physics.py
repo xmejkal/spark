@@ -48,6 +48,7 @@ import copper  # noqa: E402
 #: time (audit A7).
 from check_footprints import package_of  # noqa: E402
 
+import netlist  # noqa: E402
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
 from outcomes import OK, PROBLEMS, COULD_NOT_RUN  # noqa: E402
 
@@ -92,48 +93,20 @@ trace_current_capacity_a = copper.current_capacity_a
 width_for_current_mm = copper.width_for_current_mm
 
 
-class Board:
-    """Just enough of the built netlist to do arithmetic on."""
+class Board(netlist.Netlist):
+    """
+    The built netlist, plus the two questions only this file asks of it.
+
+    The walk itself is `netlist.Netlist` since P35. This class had its own, and that one dropped
+    every trace naming no net — which is how spark's own generator wires every signal — so on a
+    generated board its member lists were a fraction of the truth and its arithmetic sized rails
+    from what was left. Three walks, three answers to one circuit; now one.
+    """
 
     def __init__(self, circuit):
-        self.elements = circuit
-        self.components = {e["source_component_id"]: e
-                           for e in circuit if e["type"] == "source_component"}
-        self.ports = {e["source_port_id"]: e for e in circuit if e["type"] == "source_port"}
-        self.nets = {e["source_net_id"]: e for e in circuit if e["type"] == "source_net"}
+        super().__init__(circuit)
         self.pcb_components = {e["pcb_component_id"]: e
-                               for e in circuit if e["type"] == "pcb_component"}
-
-        #: net name -> [(component name, port name)]
-        self.members = {}
-        for element in circuit:
-            if element["type"] != "source_trace":
-                continue
-            for net_id in element.get("connected_source_net_ids", []):
-                net = self.nets.get(net_id)
-                if not net:
-                    continue
-                name = net.get("name")
-                for port_id in element.get("connected_source_port_ids", []):
-                    port = self.ports.get(port_id)
-                    if not port:
-                        continue
-                    owner = self.components.get(port["source_component_id"], {})
-                    self.members.setdefault(name, []).append(
-                        (owner.get("name", "?"), port.get("name", "?")))
-
-    def named(self, component_name):
-        for element in self.components.values():
-            if element.get("name") == component_name:
-                return element
-        return None
-
-    def components_on(self, net_name):
-        return sorted({name for name, _ in self.members.get(net_name, [])})
-
-    def net_names(self):
-        """Every net's name, for rules that ask whether a thing exists before asking about it."""
-        return [net.get("name") for net in self.nets.values() if net.get("name")]
+                               for e in circuit if e.get("type") == "pcb_component"}
 
     def footprint_of(self, component_name):
         """
