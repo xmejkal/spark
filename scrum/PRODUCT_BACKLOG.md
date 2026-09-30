@@ -34,7 +34,6 @@ council's proposal.
 | **P34** | A check that compared nothing says so | 5 | S | `compare_design` prints `every rule holds` having compared zero; `check_physics` prints its own could-not-run and exits 0 |
 | **P35** | The rules see spark's own wiring | 5 | M | the generator wires signals pin-to-pin, so every rule keyed on a net name is dead on spark's own boards — P8 fixed this in one file of three |
 | **P29** | The board's own supply, and nothing left unfed | 5 | S+M | no trace reaches the microcontroller's supply on any generated board, while the file says one does; the vendor fact it waited for is already recorded |
-| **P41** | The safety net the refactor needs first | 5 | S | 79% of tests reach into modules by symbol; the board tool's command line is a cross-repo contract with zero tests, and ten `--json` shapes are asserted by nothing |
 | **P42** | The verdict has one home | 4 | S | six copies of one rule, one of them wrong, and the shared constant that exists has zero callers |
 | **P43** | What an agent reads back | 3 | M | five JSON shapes, a fourth status word, the aggregate throws away `rule` and `fix`, and one payload is 80% something that has its own command |
 | **P44** | Nothing shipped names one person's machine | 4 | S | a shipped agent file names an absolute home directory, and two files hard-code one country's shops as prose |
@@ -119,7 +118,7 @@ sitting, the interleaving with P34 and P35 which touch the same code, and the st
 the defect it prevents or kills; a first step small enough to finish in one sitting; and the
 council's own answer to whether this codebase should be refactored now at all.
 
-### P41 — The safety net the refactor needs first
+### P41 — The safety net the refactor needs first — DONE 2026-09-30
 **Needed by:** P34, P42, P35 and P29, which all move or change code in the check family, and by
 the smart bin, whose `make check` calls this plugin's board tool eight different ways. Measured:
 79% of the 596 tests reach into a module by symbol, so a move breaks them at import level rather
@@ -282,6 +281,7 @@ knowledge. **P5** — its audit was performed by the council's verification lens
 listed open one file down (the shape of audit row D28).
 
 ## Done — one line each, the hash is the record
+- **P41** — the safety net: eight tests for the board tool's command line, which the smart bin's Makefile calls eight ways and no test had ever entered, and ten characterisation tests pinning every `--json` payload's top-level keys and status word. 18 tests, 596 → 614. Proven by its own table: renaming one payload key, prefixing the board id, and changing what `--get` and `--resolve` print are all caught (table sprint-6-p41, 4 caught).
 - **P40** — the architecture the refactor should aim at: five lenses read all 3,552 code lines and the answer is that this is not a refactoring project. `docs/2026-09-30-refactoring-architecture.md` names the two live defects reproduced (a check reporting `ok` over its own could-not-run; three netlist walkers giving three answers to one circuit), the duplication ledger, the four things that get one home, the safety net that must come first, the order, what not to touch and why, and the stopping rule. Net about −85 code lines. No code moved.
 - **P33** — `/spark:init` pins tscircuit to the version the documents were measured on, and a test holds the pin and `build.md`'s example output to each other; proven by hand in an empty directory: init, `npm install`, `npx tsci build` → `Circuits 1 passed`, 15 traces, no errors (table sprint-6-p33, 2 caught).
 - **R11** — research parts and modules, vendor by vendor, and keep what was found: `parts.py --need/--skeleton/--sources/--fetch/--catalog/--promote`, `/spark:research`, `/spark:identify`, the `parts-researcher` agent, the catalog (`e50717a`…`d4f6b0f`, `773cd41`, `040a66d`; proven on the irrigation controller: seven records, 18 candidates kept, every cited URL answering).

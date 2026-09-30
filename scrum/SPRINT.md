@@ -1,22 +1,47 @@
-# Sprint 6 — proposed
+# Sprint 6
 
-**Proposed** 2026-09-30 · **Facilitator** main session · **Product Owner** Petr. The order below is
-a proposal (W11). Sprint 5 is closed below it, with its review and the v1 audit.
+**Planned** 2026-09-30 · **Facilitator** main session · **Product Owner** Petr, who ordered the
+five steps below in this order and chose how the smart bin absorbs P34.
 
-## Goal (proposed)
+## Goal
 
-> **v1 holds away from this desk: a stranger with the plugin alone simulates a board, and a fourth
-> cold test finds what the third could not.**
+> **The checks tell the truth, and one command's behaviour has one home: a check that examined
+> nothing says so, and the three walks over a netlist become one.**
 
-## Proposed order
+Why: the v1 close audit and a five-lens architecture review both landed on the same two live
+defects. The physics check reports `status: ok` and exits 0 while every finding it emits is
+`could-not-run`. Three netlist walkers give three different answers to one circuit, one of them a
+false alarm that would abort a good board's build. Both are the class this product exists to kill.
 
-| id | item | why here |
-| --- | --- | --- |
-| **P32** | One home for the converter and the chips — **the PO's letter first** (a: move now; b: after the fourth cold test; c: two homes, documented) | v1's "simulated" holds only beside the bin repo (audit D17); W16 on the chips and the hand table (D19, D20) |
-| **R5.3** | Time one mutation table alone, here and in an archive arena | the audit saw 17–34 minutes where this desk sees seconds (D4); unexplained |
-| **R2.6** | A fourth cold test, domain the PO's — after the third found twelve gaps in one evening | the cold tests are the best gap finders this project has (R5) |
-| — | P29 (the FireBeetle's VCC pad) needs a source before it can be pulled; P2, P5, P9, P16, P17, R10 parked, **Needed by:** none yet | |
-| — | Audit at the sprint's end, before the retro (R4.3) | |
+## The order — the architecture's steps, as the PO set them
+
+| # | item | what it does | size |
+| --- | --- | --- | --- |
+| 1 | **P41** | The safety net: the board tool's cross-repo command line, and every `--json` payload's shape | S |
+| 2 | **P34** | A check that compared nothing says so — in place, no move | S |
+| 3 | **P42** | The verdict has one home; six copies become calls | S |
+| 4 | **P35** | One netlist walker, three callers | M |
+| 5 | **P29** | The board's own supply, and nothing left unfed; joins the walker as its third caller | S+M |
+
+Not in this sprint, by the PO: **P32** (a day of TypeScript, and it must not interleave with
+Python moves), **R2.6** the fourth cold test (parked 2026-09-30, with the date), and P39, P43,
+P44, P36, P37, P38, P2, which wait behind these five.
+
+**The smart bin absorbs P34 by stating the facts it knows:** P34 makes the physics check exit
+honestly, which turns the bin's `make check` red on two pull-down resistors whose dissipation a
+netlist cannot derive. The PO's call is to state those two currents in the bin's rules file, so
+the check goes green by being answered rather than by being silenced.
+
+## Definition of Done
+
+Full text in [`README.md`](README.md). Per item: the `Value proven by:` command run and its output
+in the commit, written after the run and measured on the tree being committed (W13, W17 for the
+words); `check_spine.py` green; a `mutate.py` table with every mutation caught, and
+`mutate.py --anchors tests/mutations/*.json` clean at every commit, one run at a time; both RC
+boards and the bin's `make check` unchanged or explained. The architecture document's stopping
+rule applies: after step 4, stop.
+
+---
 
 ---
 

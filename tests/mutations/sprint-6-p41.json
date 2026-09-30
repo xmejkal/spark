@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a payload key is renamed and nothing notices",
+  "find": "        \"tool\": \"check_physics\",",
+  "replace": "        \"toolname\": \"check_physics\","
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "the board id the smart bin reads gains a prefix",
+  "find": "            print(active_id(project))",
+  "replace": "            print(\"board: \" + active_id(project))"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "--get stops printing one bare value",
+  "find": "            print(get(project, args.get))",
+  "replace": "            print(\"%s = %s\" % (args.get, get(project, args.get)))"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "--resolve stops writing where the converter reads",
+  "find": "            print(resolve(project))",
+  "replace": "            print(definition_path(project))"
+ }
+]

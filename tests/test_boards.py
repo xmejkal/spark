@@ -252,5 +252,77 @@ class TheShippedLibraryTest(unittest.TestCase):
                 self.assertIn(boards.CONSOLE_UART, roles)
 
 
+
+class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
+    """
+    P41: every invocation `~/Development/smartbin-local/Makefile` makes of this script, and its
+    exact output shape. That Makefile's own comment records this contract breaking once already —
+    "it imported a `tools/boards.py` that moved into the plugin, and nothing noticed for weeks" —
+    and until now not one of the eight was exercised by any test. These are characterisation
+    tests: they pin what the caller reads today, so a refactor cannot change it in silence.
+    """
+
+    BOARD = "firebeetle2-esp32s3"
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+        (self.project / ".spark").mkdir()
+        (self.project / "boards").mkdir()
+        (self.project / "boards" / "active.json").write_text(
+            json.dumps({"schema": 1, "board": self.BOARD}))
+
+    def _run(self, *argv):
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = boards.main([*argv, "--project", str(self.project)])
+        return code, out.getvalue().strip(), err.getvalue().strip()
+
+    def test_path_prints_one_readable_board_file(self):
+        code, said, err = self._run("--path")
+        self.assertEqual(code, 0, err)
+        self.assertTrue(Path(said).is_file(), said)
+        self.assertEqual(json.loads(Path(said).read_text())["id"], self.BOARD)
+
+    def test_id_prints_the_board_id_alone(self):
+        self.assertEqual(self._run("--id")[:2], (0, self.BOARD))
+
+    def test_paths_prints_every_definition_space_separated(self):
+        code, said, err = self._run("--paths")
+        self.assertEqual(code, 0, err)
+        paths = said.split(" ")
+        self.assertTrue(all(Path(p).is_file() for p in paths), said)
+        self.assertNotIn("active.json", said, "a selection is not a board definition")
+
+    def test_get_chip_prints_one_bare_value(self):
+        # `BOARD_CHIP := $(shell … --get chip)` is used to name a file; it must be one token.
+        code, said, err = self._run("--get", "chip")
+        self.assertEqual((code, said.split()), (0, [said]), err)
+        self.assertEqual(said, json.loads((ROOT / "boards" / (self.BOARD + ".json")).read_text())["chip"])
+
+    def test_get_micropython_port_prints_one_bare_value(self):
+        code, said, err = self._run("--get", "micropython_port")
+        self.assertEqual((code, said.split()), (0, [said]), err)
+
+    def test_get_a_field_that_does_not_exist_fails_loudly(self):
+        code, said, err = self._run("--get", "no_such_field")
+        self.assertEqual(code, 1, said)
+        self.assertIn("no_such_field", err)
+
+    def test_resolve_writes_the_board_where_the_converter_reads_it(self):
+        code, said, err = self._run("--resolve")
+        self.assertEqual(code, 0, err)
+        written = self.project / ".spark" / "board.json"
+        self.assertTrue(written.is_file(), said)
+        self.assertEqual(json.loads(written.read_text())["id"], self.BOARD)
+
+    def test_validate_and_validate_for_fab_both_answer(self):
+        for argv in (("--validate",), ("--validate", "--for-fab")):
+            with self.subTest(argv=argv):
+                code, said, err = self._run(*argv)
+                self.assertIn(code, (0, 1), err)
+                self.assertTrue(said or err, "it must say something either way")
+
 if __name__ == "__main__":
     unittest.main()
