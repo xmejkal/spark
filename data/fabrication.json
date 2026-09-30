@@ -1,0 +1,51 @@
+{
+  "//": "The numbers that are not this code's opinion: what a board house can make, and what a physical part is. One file, because every one of these was stated in two or three scripts that agreed only by having been written on the same afternoon - the package power table was a second copy rather than an import, and the annular ring was 0.25 mm in the checker and 0.35 mm in the generator, related by a sentence in a comment instead of by arithmetic.",
+  "//boundary": "What is HERE: a number more than one script needs, or one a fab house, a project or a person could change. What stays in CODE, beside the arithmetic that uses it and with its source in a comment: a law or a published standard nobody here may vary - IPC-2221's coefficients and copper's thickness-to-area conversion in copper.py, the I2C bus's maximum rise times in check_physics.py (NXP UM10204), 2.54 mm header pitch in check_footprints.py (0.1 inch), and the capacitor voltage derating in check_physics.py, which is engineering practice rather than a fab capability. Moving those would trade prose that explains a formula for a lookup that does not.",
+  "schema": 1,
+
+  "//process": "What THIS board house can make. A project states its own in .spark/rules.json under `fabrication`, by name, and every script that reads one of these reads the project's value instead. These are the defaults for a cheap two-layer process: below them an order is quoted higher, bounced for engineering review, or silently altered into something nobody checked clearances against.",
+  "process": {
+    "//min_annular_ring_mm": "Copper left around a hole, pad minus hole halved. Too little and the ring tears off the barrel. The one number the checker judges by.",
+    "min_annular_ring_mm": 0.25,
+
+    "//annular_ring_margin_mm": "What the GENERATOR adds on top of the minimum when it draws a pad. Sitting exactly on a minimum means any tolerance in drill placement breaks out of the pad. This used to be a separate 0.35 mm constant in emit_footprint.py whose comment said 'check_footprints fails below 0.25 mm, so this carries 0.1 mm of margin' - true, and stated in prose, so raising the checker's minimum left the generator drawing the old ring and emitting footprints that failed its own check. It is arithmetic now. 0.25 + 0.10 also reproduces the 1.7 mm pad on the hand-checked reference footprint.",
+    "annular_ring_margin_mm": 0.10,
+
+    "//min_via_hole_mm": "Vias left at a tool's default are usually below what a cheap process will quote. A real board came out with 0.2 mm holes and a 0.05 mm ring, below every cheap process's minimum and an upcharge besides. Nobody chose it.",
+    "min_via_hole_mm": 0.3,
+    "min_via_pad_mm": 0.6,
+
+    "//board_thickness_mm": "Set rather than inherited, for the same reason as the vias above.",
+    "board_thickness_mm": 1.6,
+
+    "//plating_thickness_mm": "Plating grows into the hole from every side, so the finished hole is smaller than the drill. Both the footprint generator and the footprint checker size holes by this, and they were two copies.",
+    "plating_thickness_mm": 0.03,
+
+    "//drill_step_mm": "Drills come in steps. Rounding up is the safe direction: a hole slightly too big still seats.",
+    "drill_step_mm": 0.1,
+
+    "//copper_thickness_mm": "35 um, which is 1 oz. A fab offering 2 oz halves every trace width this tool computes, so it is a project's to state.",
+    "copper_thickness_mm": 0.035,
+
+    "//min_trace_width_mm": "Below this the tool stops asking for a width and takes the router's default. A finer process can lower it.",
+    "min_trace_width_mm": 0.15
+  },
+
+  "//parts": "What a physical part IS. Not a project's to change - an 0603 dissipates what an 0603 dissipates - but shared, because more than one script asks.",
+  "parts": {
+    "//package_power_w": "What a chip resistor of each size can dissipate, in watts. Conservative, standard values. This was two separate copies, in check_footprints.py and check_physics.py, so a package added to one was missing from the other and nothing said so.",
+    "package_power_w": {
+      "0402": 0.063, "0603": 0.1, "0805": 0.125, "1206": 0.25,
+      "1210": 0.5, "2010": 0.75, "2512": 1.0
+    },
+
+    "//max_capacitance_f": "The largest capacitance that exists in a given package, across all chemistries and voltages, generously rounded up. A plausibility band, not a catalogue: the point is to catch 220 uF on an 0805, not to adjudicate 22 uF against 24.",
+    "max_capacitance_f": {
+      "0402": 1.0e-05, "0603": 4.7e-05, "0805": 1.0e-04,
+      "1206": 2.2e-04, "1210": 4.7e-04, "1812": 1.0e-03
+    },
+
+    "//header_pin_side_mm": "A standard square header pin, by its SIDE. The dimension that has to fit is the diagonal, which is the one people forget because the pin is sold by its side - so nothing here states the diagonal; `fab.header_pin_diagonal_mm()` computes it, once.",
+    "header_pin_side_mm": 0.64
+  }
+}

@@ -102,6 +102,16 @@ of the same name wins, so what you verified yourself is never replaced by an upd
 `boards/README.md` for the schema and for the fact-versus-decision rule that keeps a board file
 swappable.
 
+`data/fabrication.json` is the third: what a board house can make (minimum annular ring, via and
+drill sizes, copper thickness, board thickness) and what a physical part is (chip package power
+ratings, the square header pin). Every script reads it rather than restating it — the package
+table used to be a second copy in two checkers, and the annular ring was 0.25 mm in the checker
+and 0.35 in the generator, related by a sentence in a comment. **Your board house is not this
+one:** state yours in `.spark/rules.json` under `fabrication`, by the same names, and both the
+check and the generator that draws for it move together. A law or a published standard stays in
+code beside the arithmetic that uses it, with its source; the file's own `//boundary` note says
+which is which and why.
+
 ## What you install alongside (declared, not bundled)
 
 **Companion skills**

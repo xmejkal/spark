@@ -101,7 +101,7 @@ symbol-level assertions already over-specify the internals.
 | 1 | **P34** | fix `check_physics` in place; zero rules compared becomes could-not-run | +6 | 0 |
 | 2 | **P42** | `outcomes.verdict` and `report`; six callers converted | −45 estimated, **−8 measured** | 0, with `answer` kept as an alias |
 | 3 | **P35** | `netlist.py`; three callers | −40 | 2, re-anchored in the same commit |
-| 4 | **P29** | the supply walk joins as a third caller | +20 | 0 |
+| 4 | **P29** | the supply walk joins as a third caller | +20 estimated, **+22 measured** | 2, re-anchored |
 | — | stop | | | |
 
 P34 goes before any move so the fix is one line in the log and not hidden inside a refactor. P29
@@ -152,3 +152,30 @@ taking them in. The estimate was wrong in the direction that matters least: the 
 was never the lines. It was that one mutation now sits in `outcomes.status_of` and guards all six
 callers, where before it guarded one, and three exit codes that no test had ever asserted now have
 tests. Read the remaining estimates in the table above as the same kind of guess.
+
+## Postscript, 2026-09-30: the stopping rule held, and what the shared type then found
+
+Step 4 landed at +22 code lines against +20 estimated — the first estimate in this table that was
+close, and only because it was the one adding a rule rather than merging copies. `grep` for the
+trace fallback returns one file. No fourth walker appeared. Stop.
+
+The part worth recording is what the shared type found once it existed. P29 asked it a question
+none of the three private walkers had asked — "is this pin on the net the design says feeds it" —
+and the answer came back wrong about a pad that was correctly wired. tscircuit names a port after
+its label only for a component built from `pinLabels`; one built from a FOOTPRINT, which every
+microcontroller module in this plugin is, gets ports called `pin17` and `pin32` with the
+silkscreen label only in `port_hints`. Membership had been keyed on the name alone in all three
+copies, so every rule naming a pad of the processor missed — `compare_design` with
+`must_not_float: [["Mcu", "D11"]]` reported a pin the irrigation board wires to a valve as
+connected to nothing.
+
+That defect was three years of nobody noticing away from being found by reading. It surfaced
+within an hour of the three walks becoming one, because a shared type gets asked questions its
+private copies never were. That is the argument for this kind of refactor, and it is not the one
+this document made: the lines were never the point, and neither was the tidiness.
+
+**P46 was not in this plan** and belongs beside it. The same reading that produced this document
+missed that `PACKAGE_POWER_W` is a second copy rather than an import in two checkers, that the
+header pin and the hole plating are likewise duplicated, and that the annular ring is 0.25 mm in
+the checker and 0.35 in the generator, related by a sentence in a comment. The duplication ledger
+above counted ideas and missed data. A ledger of literals would have found all four in a minute.

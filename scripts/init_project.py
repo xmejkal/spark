@@ -102,6 +102,13 @@ def rules_for(nets):
                                          "enough for the clock you chose."),
             "rails": rails,
         },
+        "fabrication": {},
+        "//fabrication": ("What YOUR board house can make, by the names in the plugin's "
+                          "data/fabrication.json — min_annular_ring_mm, min_via_hole_mm, "
+                          "min_via_pad_mm, board_thickness_mm, copper_thickness_mm and the "
+                          "rest. Empty means the plugin's defaults for a cheap two-layer "
+                          "process. Stating one moves both the check and the generator that "
+                          "draws for it, because they read the same number."),
     }
 
 

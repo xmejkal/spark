@@ -44,35 +44,37 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import design  # noqa: E402
+import fab  # noqa: E402
 import boards  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, STATUS_FOR  # noqa: E402
 
-#: A standard 0.64 mm square header pin, across the diagonal. The pin is sold by its side, so the
-#: diagonal is the dimension people forget, and it is the only one that has to fit.
-HEADER_PIN_SIDE_MM = 0.64
-HEADER_PIN_DIAGONAL_MM = HEADER_PIN_SIDE_MM * math.sqrt(2)
-
-#: Plating grows into the hole from every side, so a finished hole is smaller than its drill.
-PLATING_THICKNESS_MM = 0.03
-
-#: Copper left around the hole. `check_footprints` fails below 0.25 mm; sitting exactly on a
-#: minimum means any tolerance in drill placement breaks out of the pad, so this carries 0.1 mm
-#: of margin. It also reproduces the 1.7 mm pad on the hand-checked reference footprint.
-ANNULAR_RING_MM = 0.35
-
-#: Drills come in steps. Rounding up is the safe direction: a hole slightly too big still seats.
-DRILL_STEP_MM = 0.1
+#: From `data/fabrication.json` through `fab`, so a project that states a coarser process in its
+#: rules file gets pads drawn for it — and so the ring this DRAWS can never drift from the ring
+#: `check_footprints` demands. That relationship used to be a sentence in this comment.
+HEADER_PIN_DIAGONAL_MM = fab.header_pin_diagonal_mm()
+#: Kept as a module name because a test reads it; the value is the file's, not a literal.
+PLATING_THICKNESS_MM = fab.process("plating_thickness_mm")
 
 
-def hole_diameter_mm():
+def hole_diameter_mm(rules=None):
     """The drill that admits a header pin once plating has closed in on it."""
-    needed = HEADER_PIN_DIAGONAL_MM + 2 * PLATING_THICKNESS_MM
-    return math.ceil(needed / DRILL_STEP_MM) * DRILL_STEP_MM
+    step = fab.process("drill_step_mm", rules)
+    needed = HEADER_PIN_DIAGONAL_MM + 2 * fab.process("plating_thickness_mm", rules)
+    return math.ceil(needed / step) * step
 
 
-def pad_diameter_mm(hole_mm):
-    return round(hole_mm + 2 * ANNULAR_RING_MM, 3)
+def pad_diameter_mm(hole_mm, rules=None):
+    """
+    The pad around that hole: the ring `check_footprints` demands, plus the margin.
+
+    Never a literal. This was `ANNULAR_RING_MM = 0.35` with a comment saying "check_footprints
+    fails below 0.25 mm, so this carries 0.1 mm of margin" — true, and said in prose, so raising
+    the checker's minimum left this drawing the old ring and emitting footprints that fail the
+    check they were drawn for. The sentence is arithmetic now (backlog P46).
+    """
+    return round(hole_mm + 2 * fab.annular_ring_to_draw_mm(rules), 3)
 
 
 def _missing(physical, header):
@@ -130,12 +132,12 @@ def pads(board):
     return placed
 
 
-def render(board):
-    """The footprint module, as TSX."""
+def render(board, rules=None):
+    """The footprint module, as TSX, sized for the process the project states."""
     physical = board["physical"]
     export = physical["footprint_export"]
-    hole = hole_diameter_mm()
-    pad = pad_diameter_mm(hole)
+    hole = hole_diameter_mm(rules)
+    pad = pad_diameter_mm(hole, rules)
     half_w = physical["width_mm"] / 2.0
     half_h = physical["height_mm"] / 2.0
 
@@ -199,15 +201,16 @@ def main(argv=None):
             "%s cannot have a footprint generated — these are not recorded, and none of them "
             "can be derived from the rest:\n  %s" % (args.board, "\n  ".join(gaps)))
 
+    rules = design.rules_in(project)
     try:
-        text = render(board)
+        text = render(board, rules)
     except (ValueError, KeyError) as exc:
         return _report(args, EXIT_PROBLEMS, "the board definition disagrees with itself: %s" % exc)
 
     if args.out:
         Path(args.out).write_text(text)
         return _report(args, EXIT_OK, "wrote %s (%d pads, %.2f mm holes)"
-                       % (args.out, len(pads(board)), hole_diameter_mm()))
+                       % (args.out, len(pads(board)), hole_diameter_mm(rules)))
     sys.stdout.write(text)
     return EXIT_OK
 

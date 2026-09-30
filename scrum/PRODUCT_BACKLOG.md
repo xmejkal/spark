@@ -100,7 +100,7 @@ bus pins, so an empty list means "nothing here to check" and is written as such.
 **Value proven by:** `init` on the irrigation project writes the DS3231's two bus lines and the
 four valve inputs; `check_all --project ../irrigation` reports them as checked rather than absent.
 
-### P46 — A number a fab house could change is data, not code
+### P46 — A number a fab house could change is data, not code — DONE 2026-09-30
 **Needed by:** anyone whose board house is not the one these numbers came from, and the three
 scripts that already disagree about how to say the same thing. Measured: `PACKAGE_POWER_W` is a
 **second copy**, not an import, in `check_footprints` and `check_physics`, so a package added to
@@ -115,6 +115,18 @@ IPC-2221's coefficients, the I2C rise times and the package ratings stay, and th
 gets one home.
 **Value proven by:** raising the annular-ring minimum in a project's rules file makes that
 project's generated footprints fail their own check, and the package table appears once.
+**Done.** `data/fabrication.json` is the one file; `scripts/fab.py` reads it and applies a
+project's `fabrication` section. Five scripts stopped restating numbers. The PO's own acceptance
+test — "can't they all read the same file where the data are?" — is `test_fab.py`'s
+`test_no_script_restates_a_number_the_file_holds`. Proven on the irrigation board: with this
+plugin's defaults `check_footprints` reports two 0.225 mm rings; with a project stating
+`min_annular_ring_mm: 0.45` the same board fails on rings of 0.250 mm that were fine a moment
+before. The 0.35 mm the generator draws is now `0.25 + 0.10` and still reproduces the 1.70 mm pad
+on the hand-checked reference footprint.
+The boundary that was drawn, and is written into the file itself: IPC-2221's coefficients stay in
+`copper.py`, the I2C rise times in `check_physics.py` and 2.54 mm pitch in `check_footprints.py` —
+a published standard is not a project's to override, and the formula beside it is what explains
+it. Moving those would trade prose for a lookup.
 
 ### P29 — The board's own supply, and nothing left unfed — DONE 2026-09-30
 **Needed by:** the irrigation controller. Its buck's record says "Feeds the FireBeetle's 5 V/VCC

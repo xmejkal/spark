@@ -36,6 +36,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import assign_pins  # noqa: E402
+import fab  # noqa: E402
 import boards  # noqa: E402
 import copper  # noqa: E402
 import design as design_library  # noqa: E402
@@ -107,14 +108,11 @@ def power_pins_with_no_rail(part_list):
 POLARITY_SUFFIX = {"+": "_P", "-": "_N"}
 
 
-#: Fabrication defaults, set rather than inherited.
-#:
-#: A tool's floor is what you get when nothing is stated, and on a real board that produced
-#: 0.2 mm vias with a 0.05 mm annular ring — below every cheap process's minimum, and an
-#: upcharge besides. Nobody chose it. A generated board should not hand anyone that.
-VIA_HOLE_MM = 0.3
-VIA_PAD_MM = 0.6
-BOARD_THICKNESS_MM = 1.6
+#: Fabrication defaults, set rather than inherited, and from `data/fabrication.json` rather than
+#: from a literal here — these are the same two numbers `check_footprints` judges vias by.
+VIA_HOLE_MM = fab.process("min_via_hole_mm")
+VIA_PAD_MM = fab.process("min_via_pad_mm")
+BOARD_THICKNESS_MM = fab.process("board_thickness_mm")
 
 #: Rails the microcontroller module itself supplies, so a design made only of consumers still
 #: has a source for them.

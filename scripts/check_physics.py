@@ -38,6 +38,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import fab  # noqa: E402
 import copper  # noqa: E402
 
 
@@ -71,9 +72,10 @@ I2C_MAX_RISE_NS = {100_000: 1000, 400_000: 300, 1_000_000: 120}
 #: derated hard because a tantalum above its rating fails short rather than open.
 VOLTAGE_DERATING = {"tantalum": 2.0, "electrolytic": 1.5, "ceramic": 1.5, "unknown": 2.0}
 
-#: What a chip resistor of each size can dissipate, in watts. Conservative, standard values.
-PACKAGE_POWER_W = {"0402": 0.063, "0603": 0.1, "0805": 0.125, "1206": 0.25,
-                   "1210": 0.5, "2010": 0.75, "2512": 1.0}
+#: What a chip resistor of each size can dissipate. THE SAME table `check_footprints` judges by:
+#: it was a second copy here, so a package added to one checker was missing from the other and
+#: nothing said so.
+PACKAGE_POWER_W = fab.part("package_power_w")
 
 
 class Finding:

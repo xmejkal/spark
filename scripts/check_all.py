@@ -184,7 +184,14 @@ class Buildability(Check):
     def call(self, inputs):
         import check_footprints
         placeholders, notes = placeholder_components_in(inputs.get("project"))
-        findings = check_footprints.run(circuit_of(inputs), placeholders)
+        # The project's own process, so a board house that can do less than this plugin's
+        # default judges by ITS numbers rather than by these (P46).
+        # Opportunistic, never required: without a rules file this judges by the plugin's own
+        # defaults, which is the right answer and not a skip. Declaring `rules` among this
+        # check's inputs made a project that has none skip buildability altogether.
+        stated = inputs.get("rules")
+        rules = json.loads(Path(stated).read_text()) if stated else None
+        findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)

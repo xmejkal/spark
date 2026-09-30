@@ -26,13 +26,18 @@ is a lump of copper bonded to a barrel and it sinks the heat — which is why `s
 exists rather than simply taking the narrowest segment anywhere.
 """
 
-#: IPC-2221 external-layer constants: I = k * dT^0.44 * A^0.725, with A in square mils.
+import fab
+
+#: IPC-2221 external-layer constants: I = k * dT^0.44 * A^0.725, with A in square mils. These stay
+#: here, beside the arithmetic: a published standard is not a project's to override, and the
+#: formula is what explains them (`data/fabrication.json`'s `//boundary` note).
 IPC_K_EXTERNAL = 0.048
 IPC_DT_EXPONENT = 0.44
 IPC_AREA_EXPONENT = 0.725
 
-#: 1 oz/ft^2 finished copper, the default on every cheap 2-layer process.
-COPPER_THICKNESS_MM = 0.035
+#: Finished copper and the width below which this stops asking — both a fab's to state, so both
+#: come from `data/fabrication.json`. 2 oz copper halves every width computed here.
+COPPER_THICKNESS_MM = fab.process("copper_thickness_mm")
 MM_PER_MIL = 0.0254
 
 #: The rise every trace-width calculator opens with, and what this plugin assumes when a project
@@ -45,7 +50,7 @@ DEFAULT_RISE_C = 10
 #: router's own 0.15 mm default and at the edge of what a cheap process etches repeatably
 #: (JLCPCB's economy minimum is 0.127 mm and their recommendation is higher). Going below buys
 #: nothing: a narrower trace is not cheaper, only more fragile.
-MIN_TRACE_WIDTH_MM = 0.15
+MIN_TRACE_WIDTH_MM = fab.process("min_trace_width_mm")
 
 #: How much wider than the IPC minimum to ask for.
 #:

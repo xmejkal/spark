@@ -34,33 +34,15 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+import fab  # noqa: E402
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS, COULD_NOT_RUN, status_of  # noqa: E402
 
-#: A standard 0.64 mm square header pin, across the diagonal — the dimension that has to fit,
-#: and the one people forget because the pin is quoted by its side.
-HEADER_PIN_SIDE_MM = 0.64
-HEADER_PIN_DIAGONAL_MM = HEADER_PIN_SIDE_MM * math.sqrt(2)
-
-#: Plating grows into the hole from every side, so the finished hole is smaller than the drill.
-PLATING_THICKNESS_MM = 0.03
-
-#: What a cheap two-layer process guarantees. Below these an order is quoted higher, bounced for
-#: engineering review, or silently altered into something nobody checked clearances against.
-MIN_ANNULAR_RING_MM = 0.25
-MIN_VIA_HOLE_MM = 0.3
-MIN_VIA_PAD_MM = 0.6
-
-#: The largest capacitance that exists in a given package, across all chemistries and voltages,
-#: generously rounded up. A plausibility band, not a catalogue: the point is to catch 220 uF on
-#: an 0805, not to adjudicate 22 uF against 24.
-MAX_CAPACITANCE_F = {
-    "0402": 10e-6, "0603": 47e-6, "0805": 100e-6, "1206": 220e-6,
-    "1210": 470e-6, "1812": 1000e-6,
-}
-
-#: What a chip resistor of each size can dissipate, in watts.
-PACKAGE_POWER_W = {"0402": 0.063, "0603": 0.1, "0805": 0.125, "1206": 0.25,
-                   "1210": 0.5, "2010": 0.75, "2512": 1.0}
+#: Every number below comes from `data/fabrication.json` through `fab`, so the generator that
+#: draws a footprint and the check that judges it cannot hold different values. See that file's
+#: `//boundary` note for what deliberately stays in code: 2.54 mm pitch is 0.1 inch, a standard.
+HEADER_PIN_DIAGONAL_MM = fab.header_pin_diagonal_mm()
+MAX_CAPACITANCE_F = fab.part("max_capacitance_f")
+PACKAGE_POWER_W = fab.part("package_power_w")
 
 
 class Finding:
@@ -168,14 +150,15 @@ def annular_ring_mm(element):
                pad_height / 2 - offset_y - hole_height / 2)
 
 
-def check_through_hole_drills(circuit):
+def check_through_hole_drills(circuit, rules=None):
     """
     Every plated hole that a header pin goes into has to admit one.
 
     Reported per component rather than per hole: 32 identical messages about one footprint is
     how a real finding gets scrolled past.
     """
-    finished_min = HEADER_PIN_DIAGONAL_MM + 2 * PLATING_THICKNESS_MM
+    plating = fab.process("plating_thickness_mm", rules)
+    finished_min = HEADER_PIN_DIAGONAL_MM + 2 * plating
     by_component = defaultdict(set)
     positions = defaultdict(list)
     for element in circuit:
@@ -198,17 +181,18 @@ def check_through_hole_drills(circuit):
             "through-hole-drill", names.get(component_id, str(component_id)),
             "drills %.2f mm, which finishes near %.2f mm after plating. A 2.54 mm header pin is "
             "%.2f mm square and %.3f mm across the diagonal, so it does not go in"
-            % (smallest, smallest - 2 * PLATING_THICKNESS_MM,
-               HEADER_PIN_SIDE_MM, HEADER_PIN_DIAGONAL_MM),
+            % (smallest, smallest - 2 * plating,
+               fab.part("header_pin_side_mm"), HEADER_PIN_DIAGONAL_MM),
             fix="drill at least %.1f mm. If this footprint came from a vendor drawing, that "
                 "number is their finished hole for their own pad, not a hole for a pin in yours"
                 % (math.ceil(finished_min * 10) / 10)))
     return findings
 
 
-def check_annular_rings(circuit):
+def check_annular_rings(circuit, rules=None):
     """Pad minus hole, halved. Too little and the ring tears off the barrel."""
     findings = []
+    minimum = fab.process("min_annular_ring_mm", rules)
     names = component_names(circuit)
     seen = set()
     for element in circuit:
@@ -219,29 +203,31 @@ def check_annular_rings(circuit):
             continue
         pad = hole + 2 * ring
         owner = names.get(element.get("pcb_component_id"), "?")
-        if ring < MIN_ANNULAR_RING_MM and (owner, round(ring, 3)) not in seen:
+        if ring < minimum and (owner, round(ring, 3)) not in seen:
             seen.add((owner, round(ring, 3)))
             findings.append(Finding(
                 "annular-ring", owner,
                 "pad %.2f mm around a %.2f mm hole leaves %.3f mm of ring, under the %.2f mm "
-                "a cheap process guarantees" % (pad, hole, ring, MIN_ANNULAR_RING_MM),
-                fix="grow the pad to at least %.2f mm" % (hole + 2 * MIN_ANNULAR_RING_MM)))
+                "this process guarantees" % (pad, hole, ring, minimum),
+                fix="grow the pad to at least %.2f mm" % (hole + 2 * minimum)))
     return findings
 
 
-def check_vias(circuit):
+def check_vias(circuit, rules=None):
     """Vias left at a tool's default are usually below what a cheap process will quote."""
     sizes = {(element.get("hole_diameter"), element.get("outer_diameter"))
              for element in circuit if element.get("type") == "pcb_via"}
     findings = []
+    min_hole = fab.process("min_via_hole_mm", rules)
+    min_pad = fab.process("min_via_pad_mm", rules)
     for hole, pad in sorted(s for s in sizes if s[0] is not None and s[1] is not None):
-        if hole >= MIN_VIA_HOLE_MM and pad >= MIN_VIA_PAD_MM:
+        if hole >= min_hole and pad >= min_pad:
             continue
         ring = (pad - hole) / 2
         findings.append(Finding(
             "via-class", "%.2f/%.2f mm vias" % (hole, pad),
             "hole %.2f mm and pad %.2f mm, a %.3f mm ring. A cheap two-layer process wants "
-            "%.1f/%.1f mm" % (hole, pad, ring, MIN_VIA_HOLE_MM, MIN_VIA_PAD_MM),
+            "%.1f/%.1f mm" % (hole, pad, ring, min_hole, min_pad),
             fix="set the via size explicitly. Left at a default this is an upcharge at best, "
                 "and at worst the fab enlarges them into clearances nobody checked"))
     return findings
@@ -441,7 +427,7 @@ def check_what_was_not_examined(circuit):
     return findings
 
 
-def run(circuit, placeholders=()):
+def run(circuit, placeholders=(), rules=None):
     """
     Every rule, over every component — except the ones whose geometry is not real.
 
@@ -453,10 +439,14 @@ def run(circuit, placeholders=()):
     Their findings are not dropped. They become one `could-not-run` per placeholder, because a
     footprint nobody has drawn is precisely a thing this tool could not examine, and saying so is
     the difference between "not yet" and "fine".
+
+    `rules` is the project's own `.spark/rules.json`. Its `fabrication` section states what its
+    board house can make, and every number below that a fab could change is read through it — so
+    a project on a coarser process is judged by ITS minimum, not by this plugin's default.
     """
-    findings = (check_through_hole_drills(circuit)
-                + check_annular_rings(circuit)
-                + check_vias(circuit)
+    findings = (check_through_hole_drills(circuit, rules)
+                + check_annular_rings(circuit, rules)
+                + check_vias(circuit, rules)
                 + check_package_holds_the_value(circuit)
                 + check_cross_pluggable_connectors(circuit)
                 + check_what_was_not_examined(circuit))
@@ -512,6 +502,8 @@ def main(argv=None):
         prog="check_footprints.py",
         description="Check that a board can actually be built and populated.")
     parser.add_argument("circuit", help="the built netlist, usually dist/board/circuit.json")
+    parser.add_argument("--rules", help="the project's .spark/rules.json, whose `fabrication` "
+                                        "section says what ITS board house can make")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -520,7 +512,15 @@ def main(argv=None):
         print("no built design at %s — build it first" % path)
         return EXIT_COULD_NOT_RUN
 
-    findings = run(json.loads(path.read_text()))
+    rules = None
+    if args.rules:
+        rules_path = Path(args.rules)
+        if not rules_path.is_file():
+            print("no rules file at %s" % rules_path)
+            return EXIT_COULD_NOT_RUN
+        rules = json.loads(rules_path.read_text())
+
+    findings = run(json.loads(path.read_text()), rules=rules)
     problems, unchecked = problems_in(findings), unchecked_in(findings)
     status = status_of(problems, unchecked)
     if args.json:

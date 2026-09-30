@@ -44,8 +44,8 @@
  {
   "file": "scripts/check_all.py",
   "name": "placeholder wiring passes nothing (escaped once)",
-  "find": "        findings = check_footprints.run(circuit_of(inputs), placeholders)",
-  "replace": "        findings = check_footprints.run(circuit_of(inputs), ())"
+  "find": "        findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)",
+  "replace": "        findings = check_footprints.run(circuit_of(inputs), (), rules=rules)"
  },
  {
   "file": "scripts/check_all.py",
