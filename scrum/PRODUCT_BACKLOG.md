@@ -87,7 +87,7 @@ check here", not "nobody filled it in".
 **Value proven by:** `check_all --project ../irrigation` reports the I2C lines as checked or as
 could-not-run, never silently absent; a mutation removing the fallback is caught.
 
-### P45 — The rules a project is checked against are seeded from its design
+### P45 — The rules a project is checked against are seeded from its design — DONE 2026-09-30
 **Needed by:** the irrigation controller, whose DS3231 sits on SDA and SCL and whose I2C lines are
 checked by nobody, and the RC car, whose `compare_design` now refuses because its rules file names
 no rule. This is the half of P35 that was **not** done with the walker, and splitting it out is
@@ -97,8 +97,28 @@ the generator wires signals pin-to-pin so no net is ever named SDA — so both l
 an empty list is indistinguishable from "nobody filled it in".
 `init` seeds `must_not_float` from the chosen records' inputs and `i2c_buses` from the board's own
 bus pins, so an empty list means "nothing here to check" and is written as such.
-**Value proven by:** `init` on the irrigation project writes the DS3231's two bus lines and the
+**Value proven by:** ~~`init` on the irrigation project writes the DS3231's two bus lines~~ and the
 four valve inputs; `check_all --project ../irrigation` reports them as checked rather than absent.
+
+**The struck half of that line was wrong, and reproducing it is what showed so.** The DS3231
+module's own record says: *"Add NO pull-ups: the module carries 4.7 k on SDA and SCL."* Seeding
+its bus lines would have made `compare_design` report a bus nothing pulls up, on a bus that is
+pulled up — a check firing on a correct board, which is the failure this product exists to avoid.
+The records already draw the line: a part that needs the HOST to pull its bus up declares a
+`host_parts` pull-up on that pin (the VL6180X does, for exactly this reason); a part that carries
+its own declares none. So the seed is the lines this design makes the host responsible for, and an
+empty list carries the reason, naming the module. Proposed as **W20**.
+
+**Done, measured.** `init` on the irrigation project writes six floating-input rules (the four
+valves, the DS3231's SCL, the mode button) where it wrote none; on the RC car, eight, including
+both L9110S bridge inputs — the canonical case, which had no rule at all. On the reference design
+it writes `Vl6180xBreakout.SDA` and `.SCL` as buses and two bridge inputs, and `compare_design`
+then reports **checked: 4, status ok** against a board the chain built in the same run, where
+before it refused for want of a rule.
+A bus line may now be written `Component.PIN` as well as a net name, because spark's generator
+wires every signal pin-to-pin and no generated net is ever called SDA — which was the other half
+of why the list stayed empty and unusable. It resolves through the walker P29 taught to know a pad
+by every name it answers to.
 
 ### P46 — A number a fab house could change is data, not code — DONE 2026-09-30
 **Needed by:** anyone whose board house is not the one these numbers came from, and the three
@@ -359,6 +379,47 @@ the cut `066c4af` · the cold test's G-items in `~/Development/rc-car/DIARY.md` 
 DFPlayer Mini; micro-USB and "Voice Module V1.0" means DFR0534; pads marked BCLK/LRC/DIN means the
 I²S amp the board now assumes.
 **Value proven by:** the bin's `make check` against the module that is actually there.
+
+## Proposed 2026-09-30, unordered — the PO asked what we get wrong and how to stop it
+
+Three, each from evidence in this repository rather than from good practice in general. **None is
+started** (W19); the order is the PO's (W11).
+
+### P47 — The same number is never written twice
+**Needed by:** the reading that produced P40. Five lenses read all 3,552 code lines and did not
+notice that `PACKAGE_POWER_W` was a second copy in two checkers, that the square header pin and
+the hole plating were likewise duplicated, or that the annular ring was 0.25 mm in the checker and
+0.35 in the generator. The duplication ledger in that document counted IDEAS and missed DATA. A
+grep for repeated literals would have found all four in a minute, and P46 then had to.
+A test that collects every module-level numeric constant and every numeric literal in `scripts/`
+and fails when one value appears in two files without one importing the other. Exceptions are
+listed with a reason, as the orphan budget's are.
+**Value proven by:** the test fails on a commit that restores any one of P46's four copies, and
+passes on today's tree.
+
+### W20 (proposed) — An item's acceptance line is a hypothesis until reproduced
+**Needed by:** P45, which this nearly broke today, and every item whose proof line is written
+before the state it assumes has been looked at.
+W9 says that about an OBSERVER's claim. It does not say it about our own, and today that cost a
+false alarm's worth of design: P45's "Value proven by" line said `init` should write the DS3231's
+two bus lines, and that module's own record says "Add NO pull-ups: the module carries 4.7 k on SDA
+and SCL." Meeting the criterion as written would have shipped a check that fires on a correct
+board. The rule: before an acceptance line is relied on, reproduce the state it assumes — or mark
+it unverified, the way a part record marks a fact nobody has confirmed.
+
+### W21 (proposed) — A number that has not been run is marked as a guess
+**Needed by:** `docs/2026-09-30-refactoring-architecture.md`, whose estimate table a reader cannot
+tell from its measurements, and any future plan that puts a delta beside a fact.
+W13 covers numbers in messages. It does not cover numbers in plans, and the architecture document
+stated **−45 code lines** for P42 in the same table as measured facts. It came to −8. P29 was
+estimated at +20 and came to +22; P35 at −40 and came to −22. The rule: an unrun number carries
+the word estimate, and the measured one replaces it in the same table when it exists. The
+architecture document already does this by hand for three rows — this makes it the habit rather
+than the apology.
+
+**Still unwritten, from before the compaction:** the layer-rule test — a command may import a
+library, and a command importing another command must be listed with a reason. Mentioned to the
+PO, never made an item, so it is named here rather than lost.
 
 ## Intake, not backlog
 

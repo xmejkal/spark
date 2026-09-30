@@ -25,7 +25,7 @@ false alarm that would abort a good board's build. Both are the class this produ
 | 6 | **P46** | A number a fab house could change is data, not code — one file, read by every script | S |
 | 7 | **P45** | The rules a project is checked against are seeded from its design | M |
 
-**Steps 6 and 7 were added on 2026-09-30 by the PO**, after the desk reported what is still code
+All seven are done. **Steps 6 and 7 were added on 2026-09-30 by the PO**, after the desk reported what is still code
 that should not be: "the data should be shared if possible. Can't they all read the same file
 where the data are? And yes, you can add P45 and the other one and do them." That sentence is also
 P46's acceptance test — **one file**, not two agreeing copies.

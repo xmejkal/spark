@@ -81,5 +81,88 @@ class TheFindingNamesItsPinTest(unittest.TestCase):
         self.assertIn("Valve1.SIGNAL", result["problems"][0], result["problems"])
 
 
+class ABusLineNamedByItsPinTest(unittest.TestCase):
+    """
+    P45. spark's own generator wires every signal PIN TO PIN, so no net is ever called SDA.
+
+    A rule naming the net could only ever answer "no net of that name" on a board this tool
+    produced — which is why `i2c_buses` stayed empty and unusable on every generated project.
+    A line may now be written `Component.PIN`, and the pull-up is looked for on whatever net
+    that pin is actually on.
+    """
+
+    @staticmethod
+    def circuit(*, pull_up=True):
+        elements = [
+            {"type": "source_component", "source_component_id": "c_m", "name": "Mcu"},
+            {"type": "source_component", "source_component_id": "c_s", "name": "Sensor"},
+            {"type": "source_net", "source_net_id": "n_v33", "name": "V33", "is_power": True},
+            {"type": "source_port", "source_port_id": "p_m", "source_component_id": "c_m",
+             "name": "pin9", "port_hints": ["pin9", "SDA", "9"]},
+            {"type": "source_port", "source_port_id": "p_s", "source_component_id": "c_s", "name": "SDA"},
+            # the signal, pin to pin and naming no net — which is how spark wires everything
+            {"type": "source_trace", "source_trace_id": "t1", "subcircuit_connectivity_map_key": "k",
+             "connected_source_port_ids": ["p_m", "p_s"], "connected_source_net_ids": []},
+        ]
+        if pull_up:
+            elements += [
+                {"type": "source_component", "source_component_id": "c_r", "name": "SensorPullupSDA",
+                 "ftype": "simple_resistor", "resistance": 4700},
+                {"type": "source_port", "source_port_id": "p_r1", "source_component_id": "c_r", "name": "pin1"},
+                {"type": "source_port", "source_port_id": "p_r2", "source_component_id": "c_r", "name": "pin2"},
+                {"type": "source_trace", "source_trace_id": "t2", "subcircuit_connectivity_map_key": "k",
+                 "connected_source_port_ids": ["p_r1", "p_s"], "connected_source_net_ids": []},
+                {"type": "source_trace", "source_trace_id": "t3",
+                 "connected_source_port_ids": ["p_r2"], "connected_source_net_ids": ["n_v33"]},
+            ]
+        return elements
+
+    def failures(self, buses, **kwargs):
+        netlist = compare_design.Netlist(self.circuit(**kwargs))
+        return compare_design.check_i2c_pullups(netlist, buses)
+
+    def test_a_pulled_up_line_named_by_a_pin_passes(self):
+        self.assertEqual(self.failures(["Sensor.SDA"]), [])
+
+    def test_the_host_pins_silkscreen_name_finds_the_same_line(self):
+        # The pad is called pin9 in the netlist; SDA is the only name anyone writes down.
+        self.assertEqual(self.failures(["Mcu.SDA"]), [])
+
+    def test_an_unpulled_line_named_by_a_pin_still_fails(self):
+        # The rule has to be able to fail, or seeding it is decoration.
+        failures = self.failures(["Sensor.SDA"], pull_up=False)
+        self.assertEqual([f.rule for f in failures], ["i2c-pullups"])
+        self.assertIn("nothing pulls it up", failures[0].detail)
+
+    def test_a_name_that_is_neither_a_net_nor_a_pin_is_said(self):
+        failures = self.failures(["Sensor.SCL"])
+        self.assertIn("nothing of that name", failures[0].detail)
+
+    def test_a_pin_on_more_than_one_net_is_searched_on_all_of_them(self):
+        # A pad can sit on a NAMED net and be joined pin-to-pin to something else at the same
+        # time — which is exactly the smart bin's shape, where SDA is a net and the pull-up
+        # reaches the sensor's pad. Searching only the first net found the named one and missed
+        # the resistor.
+        circuit = self.circuit() + [
+            {"type": "source_net", "source_net_id": "n_sda", "name": "SDA"},
+            {"type": "source_trace", "source_trace_id": "t5",
+             "connected_source_port_ids": ["p_s"], "connected_source_net_ids": ["n_sda"]},
+        ]
+        netlist = compare_design.Netlist(circuit)
+        self.assertGreater(len(netlist.nets_of("Sensor", "SDA")), 1, "the fixture must span two nets")
+        self.assertEqual(compare_design.check_i2c_pullups(netlist, ["Sensor.SDA"]), [])
+
+    def test_a_net_name_still_works(self):
+        # Both forms, because a hand-written board.tsx names its nets and the smart bin's does.
+        circuit = self.circuit() + [
+            {"type": "source_net", "source_net_id": "n_bus", "name": "SCL"},
+            {"type": "source_port", "source_port_id": "p_s2", "source_component_id": "c_s", "name": "SCL"},
+            {"type": "source_trace", "source_trace_id": "t4",
+             "connected_source_port_ids": ["p_s2"], "connected_source_net_ids": ["n_bus"]},
+        ]
+        failures = compare_design.check_i2c_pullups(compare_design.Netlist(circuit), ["SCL"])
+        self.assertIn("nothing pulls it up", failures[0].detail)
+
+
 if __name__ == "__main__":
     unittest.main()

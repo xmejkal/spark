@@ -254,5 +254,104 @@ class ABriefIsYoursTest(unittest.TestCase):
         self._init(root, "--force")
         self.assertEqual(brief.read_text(), "{half-written")
 
+class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
+    """
+    P45. `must_not_float: []` and `i2c_buses: []` on every project this tool has ever set up.
+
+    An empty list and "nobody filled it in" were the same thing on disk, so `compare_design`
+    had no rule to apply and said it compared nothing — on the RC car, on the irrigation
+    controller, on the reference design.
+    """
+
+    L9110S = {"id": "l9110s-module", "name": "L9110S dual motor driver module",
+              "needs": [{"signal": "MOTOR_IA", "pin": "AIA", "direction": "in"},
+                        {"signal": "MOTOR_IB", "pin": "AIB", "direction": "in"}],
+              "host_parts": [{"kind": "pulldown", "pin": "AIA", "ohms": 10000, "why": "x"},
+                             {"kind": "pulldown", "pin": "AIB", "ohms": 10000, "why": "x"}]}
+    #: A breakout with no pull-ups of its own: the host has to supply them.
+    NEEDY = {"id": "vl6180x-breakout", "name": "VL6180X breakout",
+             "needs": [{"signal": "SDA", "pin": "SDA", "direction": "bidirectional", "bus": "i2c"},
+                       {"signal": "SCL", "pin": "SCL", "direction": "bidirectional", "bus": "i2c"}],
+             "host_parts": [{"kind": "pullup", "pin": "SDA", "ohms": 4700, "why": "x"},
+                            {"kind": "pullup", "pin": "SCL", "ohms": 4700, "why": "x"}]}
+    #: A module that brings its own 4.7 k, like the irrigation controller's DS3231.
+    SELF_PULLED = {"id": "ds3231", "name": "DS3231 RTC module",
+                   "needs": [{"signal": "SDA", "pin": "SDA", "direction": "bidirectional", "bus": "i2c"},
+                             {"signal": "SCL", "pin": "SCL", "direction": "in", "bus": "i2c"}]}
+
+    def test_every_declared_input_becomes_a_rule(self):
+        self.assertEqual(init_project.declared_inputs([self.L9110S]),
+                         [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
+
+    def test_the_rules_file_actually_carries_them(self):
+        # The helper was tested and the file it writes was not — the shape R2.2 was written for,
+        # and a mutation setting `must_not_float` back to `[]` escaped a green suite because of
+        # it. The defect being guarded against is the FILE coming out empty, not the function
+        # returning nothing.
+        self.assertEqual(init_project.rules_for([], [self.L9110S])["must_not_float"],
+                         [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
+
+    def test_and_the_written_file_does_too(self):
+        work = Path(tempfile.mkdtemp())
+        (work / "a.requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
+        init_project.main(["--project", str(work)])
+        written = json.loads((work / ".spark" / "rules.json").read_text())
+        self.assertEqual(written["must_not_float"],
+                         [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
+
+    def test_a_pin_that_is_not_an_input_is_not_one(self):
+        # A bidirectional bus line and an interrupt output are not floating-input rules; naming
+        # every pin is how a check becomes noise.
+        self.assertEqual(init_project.declared_inputs([self.NEEDY]), [])
+
+    def test_a_bus_the_host_must_pull_up_is_seeded(self):
+        self.assertEqual(init_project.i2c_lines([self.NEEDY])[0],
+                         ["Vl6180xBreakout.SCL", "Vl6180xBreakout.SDA"])
+
+    def test_only_a_pull_up_makes_the_bus_the_hosts(self):
+        # The record schema allows any `kind` on any pin, and what makes a line THIS board's to
+        # pull up is specifically a pull-up. A pull-down on a bus line is a mistake in the
+        # record; counting it here would hide that mistake behind a rule that passes.
+        wrong = dict(self.SELF_PULLED,
+                     host_parts=[{"kind": "pulldown", "pin": "SDA", "ohms": 10000, "why": "x"}])
+        host, carried = init_project.i2c_lines([wrong])
+        self.assertEqual(host, [])
+        self.assertIn("Ds3231.SDA", carried)
+
+    def test_a_module_that_carries_its_own_pullups_is_not(self):
+        # The false alarm this avoids, reproduced from a real record: the irrigation DS3231's
+        # own text is "Add NO pull-ups: the module carries 4.7 k on SDA and SCL". Seeding its
+        # lines would report a bus nothing pulls up, on a bus that is pulled up.
+        host, carried = init_project.i2c_lines([self.SELF_PULLED])
+        self.assertEqual(host, [])
+        self.assertEqual(carried, ["Ds3231.SCL", "Ds3231.SDA"])
+
+    def test_an_empty_list_says_why_it_is_empty(self):
+        rules = init_project.rules_for([], [self.SELF_PULLED])
+        self.assertEqual(rules["i2c_buses"], [])
+        self.assertIn("carries its own pull-ups", rules["//i2c_buses"])
+        # the note names the MODULE, not every line of it
+        self.assertIn("(Ds3231)", rules["//i2c_buses"])
+
+    def test_a_bus_is_named_by_a_pin_because_no_generated_net_is_called_sda(self):
+        # spark's generator wires every signal pin-to-pin. A rule naming the net SDA could only
+        # ever report "no net of that name" on a board this tool produced.
+        self.assertTrue(all("." in line for line in init_project.i2c_lines([self.NEEDY])[0]))
+
+    def test_a_net_actually_called_sda_is_still_a_bus(self):
+        # A hand-written board.tsx has one. The smart bin's does.
+        self.assertEqual(init_project.rules_for(["SDA", "SCL", "V33"], [])["i2c_buses"],
+                         ["SCL", "SDA"])
+
+    def test_a_requirements_file_that_will_not_read_is_a_note_not_a_silence(self):
+        work = Path(tempfile.mkdtemp())
+        (work / "broken.requirements.json").write_text("{ not json")
+        part_list, notes = init_project.design_in(work)
+        self.assertEqual(part_list, [])
+        self.assertEqual(len(notes), 1)
+        self.assertIn("no rule was seeded from it", notes[0])
+
+
 if __name__ == "__main__":
     unittest.main()

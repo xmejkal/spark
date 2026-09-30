@@ -97,6 +97,23 @@ def render(result):
 Netlist = netlist.Netlist
 
 
+def nets_for_line(netlist, line):
+    """
+    Which nets a bus line names: a net by its name, or a pin by `Component.PIN`.
+
+    Both, because a bus is written down two ways and neither covers the other. A hand-written
+    board.tsx wires SDA to a net actually called SDA — the smart bin does. spark's own generator
+    wires every signal PIN TO PIN, so on a board it produced no net is called SDA at all and a
+    rule naming one could only ever report "no net of that name" (backlog P45). The pin form
+    resolves through the shared walker, which since P29 knows a pad by every name it answers to.
+    """
+    named = netlist.net_named(line)
+    if named is not None:
+        return [named]
+    component, _, pin = line.partition(".")
+    return sorted(netlist.nets_of(component, pin)) if pin else []
+
+
 def check_i2c_pullups(netlist, buses):
     """
     Every I2C line has a pull-up to a power rail, of a plausible value.
@@ -111,16 +128,16 @@ def check_i2c_pullups(netlist, buses):
     failures = []
 
     for line in buses:
-        net_id = netlist.net_named(line)
-        if net_id is None:
+        net_ids = nets_for_line(netlist, line)
+        if not net_ids:
             failures.append(Failure(
-                "i2c-pullups", line, "no net of that name in the built design",
+                "i2c-pullups", line, "nothing of that name in the built design",
                 "nets present: %s" % ", ".join(
                     sorted(n.get("name", "?") for n in netlist.nets.values()))))
             continue
 
         pulled_up = []
-        for component_name, _ in netlist.members[net_id]:
+        for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):
             component = netlist.component(component_name)
             if not component or component.get("ftype") != "simple_resistor":
                 continue
@@ -133,7 +150,8 @@ def check_i2c_pullups(netlist, buses):
                 pulled_up.append((component_name, component.get("resistance")))
 
         if not pulled_up:
-            on_the_net = sorted({name for name, _ in netlist.members[net_id]})
+            on_the_net = sorted({name for net_id in net_ids
+                                 for name, _ in netlist.members[net_id]})
             failures.append(Failure(
                 "i2c-pullups", line,
                 "nothing pulls it up: no resistor on it reaches a power net",

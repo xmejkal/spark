@@ -55,7 +55,80 @@ def nets_in(circuit_path):
                    if element.get("type") == "source_net" and element.get("name")})
 
 
-def rules_for(nets):
+def design_in(project):
+    """
+    Every part record this project's requirements name, and a note for each file that would not read.
+
+    Every requirements file, not one, for the reason `check_all` reads them all: a project may
+    hold two boards, and a rule from the other one simply matches no component in this netlist.
+    A file that cannot be read is a NOTE rather than an empty list — silence here is how a rules
+    file comes out blank and looks deliberate.
+    """
+    import design
+    part_list, notes = [], []
+    for requirements in sorted(Path(project).glob("*requirements.json")):
+        try:
+            part_list += design.parts_of(design.read(requirements), Path(project))
+        except design.DesignError as broken:
+            notes.append("%s could not be read, so no rule was seeded from it: %s"
+                         % (requirements.name, broken))
+    return part_list, notes
+
+
+def declared_inputs(part_list):
+    """
+    Every input pin the design's own records declare, as ["Component", "PIN"].
+
+    `must_not_float` was written `[]` and stayed `[]`, so `compare_design` had no rule to apply
+    and answered that it compared nothing — on the RC car, on the irrigation controller, on every
+    project this tool has ever set up. An empty list and "nobody filled it in" were the same
+    thing on disk.
+
+    A record already says which of its pins are inputs, and an input that connects to nothing is
+    exactly the defect the rule exists for. Names come from the GENERATOR's own
+    `component_name`, so a rule is keyed by the string that actually reached the netlist — an
+    instance name is not a record id (`59b7a0b`).
+    """
+    import emit_board
+    pins = []
+    for part in part_list:
+        for need in part.get("needs") or []:
+            if need.get("direction") == "in" and need.get("pin"):
+                pins.append([emit_board.component_name(part), need["pin"]])
+    return sorted(pins)
+
+
+def i2c_lines(part_list):
+    """
+    The I2C lines THIS board has to pull up, as "Component.PIN", and the modules that bring their own.
+
+    Not every bus line is the host's problem, and seeding them all would have been a false alarm
+    on a correct board. The irrigation controller's DS3231 module says in its own record: "Add NO
+    pull-ups: the module carries 4.7 k on SDA and SCL." Naming its lines here would make
+    `compare_design` report a bus nothing pulls up, on a bus that is pulled up.
+
+    The records already draw the line: a part that needs the HOST to pull its bus up declares a
+    `host_parts` pull-up on that pin — the VL6180X breakout does, for exactly this reason — and a
+    part that carries its own declares none. So an empty list means "nothing here for this board
+    to do", and the second return value is what says so by name.
+
+    Named as `Component.PIN` rather than as a net, because spark's own generator wires every
+    signal pin-to-pin and no net is ever called SDA. That was the other half of why this list
+    stayed empty and unusable.
+    """
+    import emit_board
+    host_pulls, carried = [], []
+    for part in part_list:
+        pulled = {p["pin"] for p in (part.get("host_parts") or []) if p.get("kind") == "pullup"}
+        for need in part.get("needs") or []:
+            if need.get("bus") != "i2c" or not need.get("pin"):
+                continue
+            where = "%s.%s" % (emit_board.component_name(part), need["pin"])
+            (host_pulls if need["pin"] in pulled else carried).append(where)
+    return sorted(host_pulls), sorted(carried)
+
+
+def rules_for(nets, part_list=()):
     """
     The rules skeleton. Every value null, every key explained.
 
@@ -63,7 +136,10 @@ def rules_for(nets):
     else: someone filling this in is being asked for numbers they may have to go and measure,
     and a bare `null` with no explanation is a thing people delete rather than fill.
     """
-    buses = [net for net in nets if net.upper() in I2C_NAMES]
+    buses, carried = i2c_lines(part_list)
+    #: A net actually CALLED SDA is still a bus, and a hand-written board.tsx has them (the smart
+    #: bin does). Both sources, because neither covers the other.
+    buses += [net for net in nets if net.upper() in I2C_NAMES]
     rails = {}
     for net in nets:
         if net in buses:
@@ -83,13 +159,21 @@ def rules_for(nets):
     return {
         "//": ("Things no netlist format records. Written by spark init from the nets in the "
                "built design; every value is null until someone establishes it."),
-        "i2c_buses": buses,
-        "//i2c_buses": ("Net names carrying an I2C bus. Seeded from nets called SDA/SCL — add "
-                        "or remove as the design actually is."),
-        "must_not_float": [],
+        "i2c_buses": sorted(set(buses)),
+        "//i2c_buses": ("Where an I2C bus is, as a net name or as Component.PIN. Seeded from the "
+                        "part records: a line is here when a module needs THIS board to pull it "
+                        "up. " + ("Empty because every I2C device in this design carries its own "
+                                  "pull-ups (%s) — nothing for this board to do, which is not the "
+                                  "same as nobody having looked."
+                                  % ", ".join(sorted({line.split(".")[0] for line in carried}))
+                                  if carried and not buses else
+                                  "Add or remove as the design actually is.")),
+        "must_not_float": declared_inputs(part_list),
         "//must_not_float": ('Pins that must never be left floating, as ["Component", "PIN"] '
                              'pairs. An H-bridge input is the usual one: floating, it can turn '
-                             'both halves on.'),
+                             'both halves on. Seeded from every pin the design\'s own part '
+                             'records declare as an input — an empty list means the records '
+                             'declare none, not that nobody filled it in.'),
         "physics": {
             "trace_temperature_rise_c": 10,
             "//trace_temperature_rise_c": ("How much warmer a trace may run than ambient. 10 is "
@@ -241,9 +325,10 @@ def main(argv=None):
                 break
 
     nets = nets_in(circuit)
-    written, notes = [], []
+    part_list, notes = design_in(project)
+    written = []
 
-    for path, payload, brief in ((project / ".spark" / "rules.json", rules_for(nets), False),
+    for path, payload, brief in ((project / ".spark" / "rules.json", rules_for(nets, part_list), False),
                                  (project / ".spark" / "project.json", PROJECT_TEMPLATE, True)):
         did, note = write(path, payload, args.force, brief=brief)
         notes.append(note)
