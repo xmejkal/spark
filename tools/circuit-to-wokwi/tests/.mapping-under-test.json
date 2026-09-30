@@ -1,0 +1,1 @@
+{"Valve1":{"wokwiType":"wokwi-led","pins":{"SIGNAL":"A","GND":"C","VCC":null},"attrs":{"color":"red"}},"DcBarrelJack12vInlet":{"skip":"a connector is wiring, not a part to simulate"}}

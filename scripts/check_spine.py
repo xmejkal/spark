@@ -164,20 +164,26 @@ def tsci_version(toolchain):
 #: a Python plugin is a structural decision nobody has made. Until then this stage is honest
 #: about not having run rather than absent, because "the spine reaches simulation" is the whole
 #: product goal and a chain that quietly stops at `build` misrepresents it.
-CONVERTER_PATHS = (
-    "tools/circuit-to-wokwi/cli.ts",
-    "../smartbin-local/tools/circuit-to-wokwi/cli.ts",
-)
+#: A project may carry its own converter; otherwise the plugin's is used. The second entry used to
+#: be `../smartbin-local/tools/circuit-to-wokwi/cli.ts` — one person's checkout, beside which the
+#: chain's last stage was the only place it worked. The same requirements file reached
+#: `[ok] simulation` in a bare directory and `[????] no converter found` after running the
+#: documented `/spark:init`, because the search then walked up from the plugin and found that
+#: repository. v1's last word was true on one machine (backlog P32a).
+CONVERTER_PATHS = ("tools/circuit-to-wokwi/cli.ts",)
+
+#: The plugin's own copy, which needs no walking to find and is the answer when nothing nearer is.
+PLUGIN_CONVERTER = SCRIPTS.parent / "tools" / "circuit-to-wokwi" / "cli.ts"
 
 
 def find_converter(start):
-    """The circuit-to-Wokwi converter, or None."""
+    """A project's own converter if it has one, else the plugin's, else None."""
     for directory in boards.walk_up(start):
         for relative in CONVERTER_PATHS:
             candidate = (directory / relative).resolve()
             if candidate.is_file():
                 return candidate
-    return None
+    return PLUGIN_CONVERTER if PLUGIN_CONVERTER.is_file() else None
 
 
 #: What the converter says when it has no Wokwi part for a component. That is a limit of the

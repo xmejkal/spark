@@ -324,5 +324,38 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
                 self.assertIn(code, (0, 1), err)
                 self.assertTrue(said or err, "it must say something either way")
 
+class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
+    """
+    Found by P32a, caused by P29: a pad became wirable and nothing checked Wokwi knew it.
+
+    P29 made the FireBeetle's VCC wired whenever something on the board drives its 5 V rail. The
+    irrigation controller then stopped at `"VCC" is not a pin of board-esp32-s3-devkitc-1` — the
+    stand-in devkit calls that pin `5V`. Two lists in one file disagreed and the only thing that
+    compared them was a person running the chain on one project.
+    """
+
+    def board(self):
+        return json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def test_the_shipped_board_holds(self):
+        problems = boards.validate(self.board(), ROOT / "boards" / "firebeetle2-esp32s3.json")
+        self.assertEqual([p for p in problems if "wokwi_power_pins" in p], [])
+
+    def test_a_pad_with_no_simulator_name_is_reported(self):
+        board = self.board()
+        board["wokwi_power_pins"].pop("VCC")
+        problems = boards.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
+        self.assertTrue(any("VCC" in p and "wokwi_power_pins" in p for p in problems),
+                        "a pad that can be wired and cannot be simulated passed: %s" % problems)
+
+    def test_a_board_with_no_wokwi_part_is_not_asked(self):
+        # A board nothing simulates has no simulator names to be missing, and demanding them
+        # would fail a definition that is complete.
+        board = self.board()
+        board.pop("wokwi_part_type")
+        problems = boards.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
+        self.assertEqual([p for p in problems if "wokwi_power_pins" in p], [])
+
+
 if __name__ == "__main__":
     unittest.main()

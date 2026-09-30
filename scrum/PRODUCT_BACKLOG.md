@@ -246,7 +246,7 @@ bus gets pull-ups at all — so the field that drives the rule is in a file no t
 **Value proven by:** setting a shipped catalog record's `module_has_i2c_pullups` to the wrong value
 turns the suite red.
 
-### P51 — The documented setup runs on a machine that is not the author's
+### P51 — The documented setup runs on a machine that is not the author's — DONE 2026-09-30
 **Needed by:** every stranger, which is the whole v1 line. Reproduced by the first-hour lens in an
 empty directory, following `commands/init.md` exactly:
 ```
@@ -263,6 +263,17 @@ answers *"4 not asked for"* and the word **checked** is unreachable from the doc
 into the project, not both (W16).
 **Value proven by:** in an empty directory with no global tscircuit on PATH, the two documented
 commands leave a built, checked board in the project.
+**Done** (`7028a08`, `6c1bec5`), and the cause was worse than this item said. `@tscircuit/cli`
+declares **`tscircuit: "*"` as a peer dependency** and `tscircuit` was never in the package file at
+all — so pinning the CLI could never have constrained the build, and every project spark has ever
+created took whatever core npm had newest. The wrong version number is only what made that break
+loudly. Both are pinned now. P33's own finding held: core 0.0.2687 stops the documented example at
+`pcb_port_not_connected_error`, 0.0.2600 builds it to 15 traces and 0 errors.
+Measured from an empty directory: **4 checks not asked for → 1**, buildability now runs, and
+`init` seeds 3 rails from the built circuit — which it could never do while the design was being
+deleted in `/var/folders` before `init` could read it.
+**`--keep` is resolved rather than deleted:** it takes a directory and writes the board where the
+checks look, which is the one behaviour W16 allows.
 
 ### P52 — A rail states what it carries, from the records that know
 **Needed by:** the irrigation controller and the RC car. The generated board says the gap in its own
@@ -341,7 +352,7 @@ reproducible only on this machine, and doing the documented first step is what t
 **Refined by the firmware lens, which counted it: ~1,307 lines move, 558 stay.** It is two sittings,
 not one, and the second can leave the bin red overnight — so it is two items.
 
-**P32a — the converter moves and the chain finds it anywhere.** The nine core files
+**P32a — the converter moves and the chain finds it anywhere. DONE 2026-09-30.** The nine core files
 (`cli.ts`, `lib/{mapping,emitters/wokwi,netlist,board,geometry,merge,validate,types,placement}`) and
 their ~590 lines of tests, plus `package.json` — **spark's first JS dependency tree; it has no
 `package.json` today.** Make `--circuit/--out/--chips` required rather than defaulted to the bin's
@@ -350,6 +361,19 @@ resolves to the bin's and dies on arrival — spark's own `.spark/` holds only `
 plugin's own location to `CONVERTER_PATHS`, and move `parts/*/chip/` as the one home for chips.
 **Value proven by:** `check_spine.py` reaches `[ok] simulation` **from a directory with nothing
 beside it**, and `bun test` is 62/62 inside the plugin.
+**Done**, with two corrections to the plan. The suite is **38 tests, not 62**: `real-board.test.ts`
+stayed in the bin because it reads that repo's `dist/`, its chips and its root `mcu-pins` — it
+tests a board end to end, which is knowledge of that board, not of this tool. And the lens said
+only `lib/checks/firmware-pins.ts` imported `mcu-pins`; three test files did too. Two needed four
+silkscreen names, which are now the tests' own vocabulary.
+**It also found a live regression P29 had shipped**: the irrigation chain stopped at `"VCC" is not
+a pin of board-esp32-s3-devkitc-1`, because P29 made that pad wirable and Wokwi's stand-in devkit
+calls the pin `5V`. Found by running the chain in the project the need line names — R6.3, written
+this morning. Fixed in the board file, and the board CONTRACT now compares `power_pads` against
+`wokwi_power_pins` so the class cannot recur.
+**And the gate now runs the TypeScript**: `tests/test_converter.py` runs the converter's own suite,
+and `check_commit.py` lends the archived tree its installed dependencies. Without that the move
+would have taken 1,300 lines of the product out of reach of every guard here.
 
 **P32b — the bin stops carrying its own copy.** The bin's `Makefile:95,241,249` call the plugin's
 converter with explicit paths; `check-consistency.ts` imports across; the hand mapping table is

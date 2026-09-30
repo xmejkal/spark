@@ -31,8 +31,25 @@ def archive(root, commit, into):
     subprocess.run(["tar", "-x", "-C", str(into)], input=listed.stdout, check=True)
 
 
+def lend_node_modules(tree):
+    """
+    Let the archived tree use this checkout's installed JS dependencies.
+
+    `git archive` carries `bun.lock` and not `node_modules`, so the converter's own suite cannot
+    run in the archive without either a network install on every push or this. The code under test
+    is still the COMMITTED code — only the dependencies are borrowed, and they are the ones the
+    committed lockfile names. `check_spine` lends `node_modules` to its build directory for exactly
+    the same reason.
+    """
+    installed = ROOT / "tools" / "circuit-to-wokwi" / "node_modules"
+    borrower = tree / "tools" / "circuit-to-wokwi"
+    if installed.is_dir() and borrower.is_dir() and not (borrower / "node_modules").exists():
+        (borrower / "node_modules").symlink_to(installed)
+
+
 def measure(tree):
     """(suite verdict line, anchors verdict line, ok) for the tree at `tree`."""
+    lend_node_modules(tree)
     suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"],
                            cwd=str(tree), capture_output=True, text=True)
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines()

@@ -284,6 +284,19 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
         problems.append(f"id is {board.get('id')!r} but the file is named {path.stem!r}; "
                         f"the two must match, because active.json selects by filename")
 
+    # A pad this board can WIRE must have a name in the simulator, or the first design that feeds
+    # it is unsimulable. P29 made the FireBeetle's VCC wirable when something drives its rail, and
+    # the irrigation controller then stopped at `"VCC" is not a pin of board-esp32-s3-devkitc-1` —
+    # the stand-in devkit calls that pin `5V`. Nothing compared the two lists; a person running
+    # the chain on one project was the check.
+    wokwi_pins = board.get("wokwi_power_pins")
+    if isinstance(wokwi_pins, dict) and board.get("wokwi_part_type"):
+        for pad in sorted(board.get("power_pads") or {}):
+            if pad not in wokwi_pins:
+                problems.append(f"power pad {pad!r} has no entry in wokwi_power_pins, so a board "
+                                f"that wires it cannot be simulated: the Wokwi part needs the "
+                                f"name IT gives that pin")
+
     pins = board.get("pins")
     if isinstance(pins, dict):
         if not pins:

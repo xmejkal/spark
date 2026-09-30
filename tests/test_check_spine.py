@@ -422,9 +422,36 @@ class ReachingSimulationTest(unittest.TestCase):
         # this fail on a path difference that is not one.
         self.assertEqual(check_spine.find_converter(deep), converter.resolve())
 
-    def test_no_converter_anywhere_is_none_not_a_guess(self):
+    def test_a_directory_with_nothing_beside_it_gets_the_plugins_own(self):
+        # THE CONTRACT CHANGED WITH P32a, and this is the change. Before, a project with no
+        # converter beside it got None, because the only other candidate was a path inside one
+        # person's checkout — `../smartbin-local/tools/circuit-to-wokwi/cli.ts`. The plugin now
+        # carries the converter, so "nowhere" no longer exists for anyone who installed it.
         import tempfile
-        self.assertIsNone(check_spine.find_converter(Path(tempfile.mkdtemp())))
+        self.assertEqual(check_spine.find_converter(Path(tempfile.mkdtemp())),
+                         check_spine.PLUGIN_CONVERTER)
+
+    def test_the_plugins_converter_is_really_there(self):
+        # The fallback is only worth having if it resolves. If this file ever moves, the stage
+        # goes quietly back to could-not-run for every project that has no converter of its own.
+        self.assertTrue(check_spine.PLUGIN_CONVERTER.is_file(),
+                        "%s is gone, so no project without its own converter can simulate"
+                        % check_spine.PLUGIN_CONVERTER)
+
+    def test_a_project_with_its_own_converter_still_wins(self):
+        # A project may carry a modified one; the plugin's is the fallback, not an override.
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        mine = root / "tools" / "circuit-to-wokwi"
+        mine.mkdir(parents=True)
+        (mine / "cli.ts").write_text("// mine\n")
+        self.assertEqual(check_spine.find_converter(root), (mine / "cli.ts").resolve())
+
+    def test_no_converter_at_all_is_still_none_not_a_guess(self):
+        from unittest import mock
+        import tempfile
+        with mock.patch.object(check_spine, "PLUGIN_CONVERTER", Path("/nowhere/cli.ts")):
+            self.assertIsNone(check_spine.find_converter(Path(tempfile.mkdtemp())))
 
     def test_the_stage_appears_in_the_rendering(self):
         # If the banner still stops at `build`, a reader is told the chain is shorter than it is.
