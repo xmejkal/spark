@@ -385,6 +385,22 @@ I²S amp the board now assumes.
 Three, each from evidence in this repository rather than from good practice in general. **None is
 started** (W19); the order is the PO's (W11).
 
+### P48 — The words this repository uses are written down somewhere a stranger finds them — DONE 2026-09-30
+**Needed by:** the v1 line itself — "a stranger goes from a requirements file to a built, checked,
+simulated board an engineer would accept as a draft" — and by the PO, who asked on 2026-09-30 what
+a mutation, an anchor and a gate are. Six sprints built a private vocabulary: mutation, anchor,
+re-anchor, caught/escaped/refused, the gate, the three outcomes and the fourth word, the spine,
+fixture, characterisation test, cold test, the budget, orphan, needed-by, verified, stand-in,
+catalog. Every one is used in the README, the skills, the scripts and the agreements as though it
+were ordinary English. None is defined. The person most likely to need them is the one who has
+read none of the commit messages.
+`GLOSSARY.md` at the root, one entry per term, each with the failure that produced it rather than
+a definition in the abstract — the same standard as the working agreements, because a word without
+its scar is not memorable. Linked from the README so it is not a document nobody opens.
+**Value proven by:** a test fails if the glossary defines a word this repository does not use, or
+if the README stops linking it; and the PO's own question — what is a mutation, an anchor, a gate
+— is answered by the file.
+
 ### P47 — The same number is never written twice
 **Needed by:** the reading that produced P40. Five lenses read all 3,552 code lines and did not
 notice that `PACKAGE_POWER_W` was a second copy in two checkers, that the square header pin and

@@ -1,0 +1,20 @@
+[
+ {
+  "file": "GLOSSARY.md",
+  "name": "the glossary defines a word this repository does not use",
+  "find": "## The checks\n",
+  "replace": "## The checks\n\n### Thermal budget envelope\n\nA term nobody here has ever used.\n"
+ },
+ {
+  "file": "GLOSSARY.md",
+  "name": "a term is renamed in the glossary and nowhere else",
+  "find": "### Anchor, and re-anchoring",
+  "replace": "### Grapnel, and re-grapnelling"
+ },
+ {
+  "file": "README.md",
+  "name": "nothing sends a newcomer to the glossary any more",
+  "find": "**New to the repository?** `GLOSSARY.md` defines the words this one uses differently from",
+  "replace": "**New to the repository?** The words this one uses differently from"
+ }
+]

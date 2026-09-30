@@ -9,6 +9,10 @@ That is narrower than "AI electronics design", and it is the part that works. Th
 is here too, and it is useful, but the measured value is in the arithmetic: a script runs in a
 second, costs nothing, cannot change its mind, and does it identically on the seventieth hole.
 
+**New to the repository?** `GLOSSARY.md` defines the words this one uses differently from
+everyone else — mutation, anchor, the gate, `could-not-run`, stand-in, cold test — each with the
+failure that produced it.
+
 ## Install
 
 ```

@@ -117,5 +117,56 @@ class NothingShipsUnusedTest(unittest.TestCase):
         self.assertEqual(missing, [], "open items with no `**Needed by:**` line: %s" % missing)
 
 
+class TheGlossaryDefinesWordsThisRepositoryActuallyUsesTest(unittest.TestCase):
+    """
+    P48. A glossary drifts in one direction: it keeps defining what the code stopped doing.
+
+    So the test is not that every word is defined — that cannot be scoped — but that every word it
+    DOES define is still used here. A term that has left the code takes its entry with it.
+    """
+
+    #: Words the glossary explains as plain English inside an entry rather than as repository
+    #: vocabulary, so nothing outside is expected to say them.
+    NOT_VOCABULARY = {"The three outcomes", "The words this repository uses"}
+
+    @staticmethod
+    def terms():
+        text = (ROOT / "GLOSSARY.md").read_text()
+        for line in text.splitlines():
+            if line.startswith("### "):
+                # "### Anchor, and re-anchoring" -> "Anchor"; "### `verified`" -> "verified"
+                head = line[4:].split(" — ")[0]
+                for term in re.split(r",| and ", head):
+                    term = re.sub(r"^(or|and) ", "", term.strip()).strip("`")
+                    if term:
+                        yield term
+
+    def test_the_glossary_exists_and_the_readme_points_at_it(self):
+        self.assertTrue((ROOT / "GLOSSARY.md").is_file())
+        self.assertIn("GLOSSARY.md", (ROOT / "README.md").read_text(),
+                      "a document nobody is sent to is a document nobody opens")
+
+    def test_every_word_it_defines_is_used_somewhere_else(self):
+        # NOT tests/mutations: a table quotes the text it mutates, so a glossary entry would
+        # prove itself real by appearing in the mutation written to break it. Found by that
+        # mutation escaping.
+        haystack = "\n".join(
+            path.read_text() for folder in ("scripts", "scrum", "tests", "commands", "skills")
+            for path in (ROOT / folder).rglob("*")
+            if path.is_file() and path.suffix in (".py", ".md", ".json")
+            and "mutations" not in path.parts)
+        haystack += (ROOT / "README.md").read_text()
+        stale = [term for term in self.terms()
+                 if term not in self.NOT_VOCABULARY and term.lower() not in haystack.lower()]
+        self.assertEqual(stale, [], "the glossary defines words this repository no longer uses: %s"
+                                    % stale)
+
+    def test_it_defines_the_terms_the_product_owner_had_to_ask_about(self):
+        # The question that made this an item, on 2026-09-30: what is a mutation, an anchor, a gate.
+        defined = " ".join(self.terms()).lower()
+        for asked in ("mutation", "anchor", "gate"):
+            self.assertIn(asked, defined, "%s is why this file exists" % asked)
+
+
 if __name__ == "__main__":
     unittest.main()
