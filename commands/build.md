@@ -56,7 +56,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json
   [ok  ] schematic        18 trace(s) written
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
   [ok  ] build            15 trace(s), 0 errors, tsci 0.0.2600
-  [ok  ] simulation       13 wire(s) in the diagram, 1 chip(s) compiled
+  [ok  ] simulation       13 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
 
   the chain runs end to end
 ```

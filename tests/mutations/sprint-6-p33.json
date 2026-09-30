@@ -2,13 +2,13 @@
  {
   "file": "scripts/init_project.py",
   "name": "the toolchain is unpinned again (P33)",
-  "find": "\"dependencies\": {\"@tscircuit/cli\": PINNED_TSCI}",
-  "replace": "\"dependencies\": {\"@tscircuit/cli\": \"*\"}"
+  "find": "\"dependencies\": {\"@tscircuit/cli\": PINNED_TSCI, \"tscircuit\": PINNED_CORE}",
+  "replace": "\"dependencies\": {\"@tscircuit/cli\": \"*\", \"tscircuit\": \"*\"}"
  },
  {
   "file": "scripts/init_project.py",
   "name": "the pin drifts from the version the documents show",
-  "find": "PINNED_TSCI = \"0.0.2600\"",
-  "replace": "PINNED_TSCI = \"0.0.2687\""
+  "find": "PINNED_CORE = \"0.0.2600\"",
+  "replace": "PINNED_CORE = \"0.0.2687\""
  }
 ]

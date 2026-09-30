@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/init_project.py",
+  "name": "the core goes unpinned again, so a new project takes whatever npm has newest",
+  "find": "            \"dependencies\": {\"@tscircuit/cli\": PINNED_TSCI, \"tscircuit\": PINNED_CORE},",
+  "replace": "            \"dependencies\": {\"@tscircuit/cli\": PINNED_TSCI},"
+ },
+ {
+  "file": "scripts/init_project.py",
+  "name": "the cli is pinned to a core version again — the exact P33 defect",
+  "find": "PINNED_TSCI = \"0.1.2113\"",
+  "replace": "PINNED_TSCI = \"0.0.2600\""
+ },
+ {
+  "file": "scripts/init_project.py",
+  "name": "the pinned core drifts from the one the documents were measured on",
+  "find": "PINNED_CORE = \"0.0.2600\"",
+  "replace": "PINNED_CORE = \"0.0.2663\""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a build on an unmeasured core passes in silence",
+  "find": "    return \"; the documents were measured on core %s\" % init_project.PINNED_CORE",
+  "replace": "    return \"\""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a version nobody could read is reported as a drift",
+  "find": "    if version in (\"unknown version\", init_project.PINNED_CORE):",
+  "replace": "    if version == init_project.PINNED_CORE:"
+ },
+ {
+  "file": "commands/build.md",
+  "name": "the documented output stops naming the core it was run on",
+  "find": "  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.2600",
+  "replace": "  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.9999"
+ }
+]

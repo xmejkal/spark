@@ -263,13 +263,31 @@ def write(path, payload, force, brief=False):
     return True, "wrote %s" % path.name
 
 
-#: The tscircuit the documents were measured on, and the one a new project gets. Pinned exactly,
-#: because `"*"` fetched 0.0.2687, which fails this plugin's own documented example with
-#: `Port [Mcu.pin17] is not connected to net [V33] by a PCB trace` while this version builds it to
-#: 15 traces and no errors (backlog P33; the wildcard was P28's own fix, one night old). To move
-#: it: build the documented example with the new version, update the output block in
-#: `commands/build.md`, and change this — the suite holds the two to each other.
-PINNED_TSCI = "0.0.2600"
+#: What a new project installs. TWO packages, and the second is the one that decides anything.
+#:
+#: `@tscircuit/cli` declares **`tscircuit: "*"` as a peer dependency**, and npm installs the newest
+#: core that satisfies it. So the CLI's version has never determined the build, and pinning the CLI
+#: alone cannot: `@tscircuit/cli@0.1.2113` installed fresh on 2026-09-30 reported core `0.0.2687`,
+#: while the same CLI version installed here weeks ago reports `0.0.2600`. The core was never in
+#: the package file at all, so every project spark has ever created fetched whatever was newest.
+#:
+#: P33 measured the right number and attached it to the wrong package. It found core `0.0.2600`
+#: builds this plugin's documented example and `0.0.2687` does not — still true, reproduced
+#: 2026-09-30: on `0.0.2687` the example stops at `1 error(s): pcb_port_not_connected_error`, and
+#: on `0.0.2600` it builds to 15 traces and no errors. But it wrote `0.0.2600` as the version of
+#: `@tscircuit/cli`, which numbers its releases `0.1.2xxx` and whose `0.0.x` line stopped at
+#: `0.0.394`. `npm install` then failed for everyone: `No matching version found for
+#: @tscircuit/cli@0.0.2600`. It went unseen because a global CLI was already on PATH here,
+#: installed back when `0.0.2600` was the newest core (backlog P51).
+#:
+#: To move them: build the documented example in a project with **no global `tsci`**, calling
+#: `./node_modules/.bin/tsci` explicitly, update the output block in `commands/build.md`, and
+#: change both — the suite holds them to each other and to the document.
+PINNED_TSCI = "0.1.2113"
+
+#: The `tscircuit` core every number in the documents was measured on. Pinned as a direct
+#: dependency, because the CLI's peer range accepts anything and would take the newest.
+PINNED_CORE = "0.0.2600"
 
 
 def package_file(project):
@@ -281,9 +299,12 @@ def package_file(project):
     directory, where a global tsci resolves from its own install. Never rewritten: a person may
     add to it. `npm install` once, then `npx tsci build`.
     """
-    return {"name": project.name, "private": True, "dependencies": {"@tscircuit/cli": PINNED_TSCI},
+    return {"name": project.name, "private": True,
+            "dependencies": {"@tscircuit/cli": PINNED_TSCI, "tscircuit": PINNED_CORE},
             "//": "written by /spark:init: `npm install` once, then `npx tsci build board.tsx` works here. "
-                  "The version is pinned to the one spark's documents were measured on; see init_project.PINNED_TSCI."}
+                  "BOTH are pinned: the cli, and the `tscircuit` core it takes as a `*` peer dependency "
+                  "and would otherwise fetch newest. Every number in spark's documents was measured on "
+                  "this core; see init_project.PINNED_TSCI and PINNED_CORE."}
 
 
 def main(argv=None):

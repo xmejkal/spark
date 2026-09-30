@@ -60,6 +60,7 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
+import init_project  # noqa: E402
 import netlist  # noqa: E402
 import sim_project  # noqa: E402
 import emit_footprint  # noqa: E402
@@ -265,6 +266,25 @@ def islands_in(circuit, claims=()):
     return sorted(findings)
 
 
+def core_note(version):
+    """
+    What to add when the `tscircuit` core is not the one the documents were measured on.
+
+    `tsci --version` prints the CORE, not the CLI, and `@tscircuit/cli` takes `tscircuit: "*"` as a
+    peer dependency — so a project whose package file pins only the CLI gets whatever core is
+    newest, and every number this plugin publishes was measured on a different one. That is not
+    hypothetical: it is how P33 came to pin `0.0.2600` as a version of the CLI, which does not
+    exist, and nobody noticed for a sprint because a global CLI carrying the right core sat on
+    this machine's PATH (P51).
+
+    Silence means they agree. A build is never failed for this — a newer core may be perfectly
+    good — but it is never passed in silence either.
+    """
+    if version in ("unknown version", init_project.PINNED_CORE):
+        return ""
+    return "; the documents were measured on core %s" % init_project.PINNED_CORE
+
+
 def run(requirements, workdir, toolchain=None, project=None, from_library=False, firmware=None):
     """
     Every stage, in order, stopping at the first that cannot produce input for the next.
@@ -386,7 +406,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                "built with 0 pcb_traces — every component is placed and no "
                                "copper joins any of them. tscircuit skips routing entirely when "
                                "one net is unroutable, and that does not raise")]
-    stages.append(Stage("build", OK, "%d trace(s), 0 errors, tsci %s" % (traces, version)))
+    stages.append(Stage("build", OK, "%d trace(s), 0 errors, tsci %s%s"
+                        % (traces, version, core_note(version))))
 
     # --- simulation: the last step of the product goal -------------------------
     # From the project, not from `cwd`: the same defect the project resolution had, one stage

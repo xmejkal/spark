@@ -55,18 +55,54 @@ class WhatItWritesTest(unittest.TestCase):
         brief = json.loads((self.root / ".spark" / "project.json").read_text())
         self.assertIn("must", brief)
 
-    def test_the_toolchain_is_pinned_to_the_version_the_documents_were_measured_on(self):
-        # P33: `"*"` fetched a tscircuit that fails the plugin's own documented example, while the
-        # version every number in the documents came from builds it. The two must not drift apart.
+    def test_the_toolchain_is_pinned_to_a_version_of_the_package_it_names(self):
+        # THIS TEST HELD THE WRONG PAIR, and that is why P33 shipped a project nobody could
+        # install. It asserted that the `@tscircuit/cli` pin equals the version printed in
+        # build.md's example output — but `tsci --version` prints the `tscircuit` CORE the CLI
+        # bundles, not the CLI. Making them equal is the conflation itself: it forced the pin to
+        # be a core number, and `npm install` then failed with `No matching version found for
+        # @tscircuit/cli@0.0.2600` for everyone without a global CLI already on PATH (P51).
         import re
         pinned = json.loads((self.root / "package.json").read_text())["dependencies"]["@tscircuit/cli"]
         self.assertRegex(pinned, r"^\d+\.\d+\.\d+$", "an exact version, not a range: %r" % pinned)
         self.assertEqual(pinned, init_project.PINNED_TSCI)
         documented = re.search(r"tsci (\d+\.\d+\.\d+)", (ROOT / "commands" / "build.md").read_text())
-        self.assertIsNotNone(documented, "build.md's example output names the version it was run with")
-        self.assertEqual(documented.group(1), pinned,
-                         "the documents show tsci %s and a new project would install %s"
-                         % (documented.group(1), pinned))
+        self.assertIsNotNone(documented, "build.md's example output names the core it was run with")
+        self.assertEqual(documented.group(1), init_project.PINNED_CORE,
+                         "the documents show core %s and the pinned CLI carries %s"
+                         % (documented.group(1), init_project.PINNED_CORE))
+
+    def test_the_two_version_numbers_are_not_the_same_kind_of_thing(self):
+        # The guard against re-conflating them. `@tscircuit/cli` numbers its releases 0.1.2xxx and
+        # its 0.0.x line stopped at 0.0.394; `tscircuit` is on 0.0.2xxx. A pin that looks like a
+        # core version is the defect P51 fixed, and it is invisible without a network call.
+        self.assertNotEqual(init_project.PINNED_TSCI, init_project.PINNED_CORE)
+        self.assertTrue(init_project.PINNED_TSCI.startswith("0.1."),
+                        "the CLI's own line is 0.1.x; %r looks like a core version"
+                        % init_project.PINNED_TSCI)
+        self.assertTrue(init_project.PINNED_CORE.startswith("0.0."),
+                        "the core's line is 0.0.2xxx; %r looks like a CLI version"
+                        % init_project.PINNED_CORE)
+
+    def test_the_core_is_pinned_too_because_the_cli_takes_it_as_a_wildcard_peer(self):
+        # THE DEFECT P51 FIXED. `@tscircuit/cli` declares `tscircuit: "*"` as a peerDependency, so
+        # npm installs whatever core is newest and the CLI's own pin constrains nothing. Proved in
+        # clean projects on 2026-09-30: `@tscircuit/cli@0.1.2113` installed fresh reported core
+        # 0.0.2687, the same CLI version installed here weeks ago reports 0.0.2600. `tscircuit` was
+        # never in the package file at all, so every project spark ever made took the newest core.
+        deps = json.loads((self.root / "package.json").read_text())["dependencies"]
+        self.assertEqual(deps.get("tscircuit"), init_project.PINNED_CORE,
+                         "the core is unpinned, so a new project gets whatever npm has newest")
+        self.assertRegex(deps["tscircuit"], r"^\d+\.\d+\.\d+$", "an exact version, not a range")
+
+    def test_a_core_the_documents_were_not_measured_on_is_said_not_swallowed(self):
+        # W1's shape, for the toolchain: a build on a different core is not failed — a newer core
+        # may be perfectly good — but it is never passed in silence either.
+        import check_spine
+        self.assertEqual(check_spine.core_note(init_project.PINNED_CORE), "")
+        self.assertIn(init_project.PINNED_CORE, check_spine.core_note("0.0.9999"))
+        self.assertEqual(check_spine.core_note("unknown version"), "",
+                         "a version nobody could read is not a drift claim")
 
     def test_a_package_file_is_written_so_tscircuit_stops_its_walk_at_the_project(self):
         # I9: with no package file, `npx tsci build` climbed to the home folder and died on a
