@@ -912,7 +912,13 @@ the MP3 board for a week: a picture nobody regenerates is a picture of the past.
 exports; it names the components the netlist has (the I²S amplifier, no `Mp3`), and changing
 `board.tsx` makes it out of date to `make`.
 
-### B6 — The documents describing the bin as it is now describe the board that exists — **PO, 2026-10-01: now, with the guard**
+### B6 — The documents describing the bin as it is now describe the board that exists — **PO, 2026-10-01: now, with the guard** — DONE 2026-10-01, bin `5b61e86`
+**Run after the last change:** `make check` exit 0 with a new step, `docs-current`; the committed
+stale documents raise 59 problems under it; a planted "Seeed XIAO ESP32-C6 with a DFR0534" line in
+the README fails it. A first version excused any passage holding a history word and let the
+README's headline through ("its brain was replaced: a XIAO"), so deliberate mentions are listed by
+exact quote with a reason instead. The brief's `parts_on_hand` was NOT stale — the XIAO and the
+DFR0534 are in the drawer — and stays; it gained the two decisions that moved the board off them.
 **Needed by:** anyone reading the bin's repository, and spark's reviewers, which read its brief. The
 PO opened `.spark/findings.json` and found the MP3 module in it. A sweep the same hour: the store is
 dead (frozen 2026-09-24, its tool deleted 09-29) and the bin's `README.md` still calls the brain a
@@ -924,6 +930,16 @@ Out of scope, already tracked: the firmware README's bench steps (P58), `SHOPPIN
 **Value proven by:** the dead store is gone; each listed document describes the FireBeetle S3 and the
 I2S amplifier; and `make check` fails when a retired part name (XIAO, DFR0534/Mp3, TB6612, OLED,
 VBAT) appears in a current-state document on a line that does not say it is history.
+
+### B7 — The bin's CI runs, or says why it cannot — **found 2026-10-01, the PO's call**
+**Needed by:** the bin's public repository, whose CI has failed on **every push since 2026-09-24**
+(25 runs; last green 09-23) while STATUS.md said "CI green on every push". Each run dies at the
+first step: `python3: can't open file '/home/runner/Development/spark/scripts/boards.py'`. The
+Makefile calls spark at `$(HOME)/Development/spark`; CI checks out only the bin, and spark is
+private. Options for the PO: a token with read access to spark as a repository secret, and a
+checkout step; or wait for spark to be public (P61's ruling), then check it out plainly.
+**Value proven by:** `gh run list` shows the bin's next push green, or the workflow says in its own
+log that it skipped the spark-dependent steps and why — never a red run nobody reads.
 
 ### B5 — A derived file in git is checked current, or not kept in git — **from R8.2, unordered**
 **Needed by:** anyone reading the bin's repository: its `board-sch.svg` and `board-pcb-routed.svg`
