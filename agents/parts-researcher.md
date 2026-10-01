@@ -89,7 +89,9 @@ under a name is worse than no record.
 - `body_mm` — width and height from the vendor's drawing, with the URL; an invented size makes
   every overlap check meaningless.
 - `facts` — the numbers a design rests on: supply range, current, thresholds, limits — each with
-  its source.
+  its source. A module on an I2C bus says where its pull-ups come from: `module_has_i2c_pullups`
+  (and `i2c_pullup_ohms`, 1k–10k) when it carries them, or pull-up `host_parts` on SDA and SCL when
+  the host must add them — the validator refuses a bus nobody pulls up, because some boards have none.
 - `host_requirements` — what the part demands of the board it plugs into, written as the
   consequence: "a large DC output cooks the speaker", not "observe the datasheet".
 - `sources` — every URL you read. `parts.py --sources` will fetch each one.

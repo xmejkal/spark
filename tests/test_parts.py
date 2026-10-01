@@ -619,6 +619,68 @@ class ABusIsCheckedWhereTheRecordIsWrittenTest(unittest.TestCase):
             self.assertEqual([p for p in parts.validate(record, path) if "bus" in p], [], path.name)
 
 
+class AnI2cBusIsPulledUpBySomebodyTest(unittest.TestCase):
+    """
+    P55. I2C only ever pulls down, and the FireBeetle V1.2+ has no pull-ups of its own, so every
+    record on the bus must say where its pull-ups come from: the module (a fact) or the host
+    (`host_parts`). The fact sat in four catalog records that no test read, and flipping it, or
+    setting a 1 MOhm pull-up, passed a green suite — while the RTC the PO owns said the same thing
+    under a second name the catalog does not use.
+    """
+
+    I2C = [{"signal": "SDA", "pin": "SDA", "bus": "i2c"}, {"signal": "SCL", "pin": "SCL", "bus": "i2c"}]
+
+    def _problems(self, facts=None, host_parts=None):
+        definition = part(needs=self.I2C, facts=facts or {})
+        if host_parts is not None:
+            definition["host_parts"] = host_parts
+        return [p for p in parts.validate(definition, written(definition)) if "pull" in p]
+
+    @staticmethod
+    def fact(value):
+        return {"value": value, "verified": True, "source": "test"}
+
+    def test_a_module_that_carries_its_pull_ups_says_so_and_passes(self):
+        self.assertEqual(self._problems({"module_has_i2c_pullups": self.fact(True)}), [])
+
+    def test_a_host_that_adds_them_passes(self):
+        pullups = [{"kind": "pullup", "pin": line, "ohms": 2200, "why": "the bus"} for line in ("SDA", "SCL")]
+        self.assertEqual(self._problems(host_parts=pullups), [])
+
+    def test_a_host_pull_up_on_one_line_does_not_cover_the_other(self):
+        half = [{"kind": "pullup", "pin": "SDA", "ohms": 2200, "why": "the data line"}]
+        self.assertEqual(len(self._problems(host_parts=half)), 1, "SCL still floats")
+
+    def test_a_bus_nobody_pulls_up_is_refused(self):
+        refused = self._problems({"module_has_i2c_pullups": self.fact(False)})
+        self.assertEqual(len(refused), 1, refused)
+        self.assertIn("module_has_i2c_pullups", refused[0])
+
+    def test_silence_is_refused_too(self):
+        self.assertEqual(len(self._problems()), 1, "saying nothing is how a bus floats")
+
+    def test_a_module_pull_up_that_cannot_hold_a_bus_is_refused(self):
+        refused = self._problems({"module_has_i2c_pullups": self.fact(True),
+                                  "i2c_pullup_ohms": self.fact(1_000_000)})
+        self.assertTrue(any("i2c_pullup_ohms" in p for p in refused), refused)
+
+    def test_every_shipped_record_library_and_catalog_holds_the_contract(self):
+        # The real files — not a temporary directory standing in for them. Nothing read the
+        # catalog before this; all six catalog tests mock it away.
+        # A catalog record may be a DRAFT — a candidate passed over, read raw (parts.record_home) —
+        # so it may lack what only placing it needs; `--promote` demands those. What it may not
+        # lack is the knowledge: its facts, their sources, and where its bus is pulled up.
+        placing_only = ("pin_order", "body_mm")
+        paths = sorted((ROOT / "parts").glob("*.json")) + sorted((ROOT / "catalog").glob("*.json"))
+        self.assertGreaterEqual(len([p for p in paths if p.parent.name == "catalog"]), 18)
+        for path in paths:
+            problems = parts.validate(json.loads(path.read_text()), path)
+            if path.parent.name == "catalog":
+                problems = [p for p in problems if not p.startswith(placing_only)]
+            with self.subTest(record=path.name):
+                self.assertEqual(problems, [])
+
+
 class ResearchStartsFromWhatExistsTest(unittest.TestCase):
     """
     Backlog R11, pulled by the PO for the third cold test: research parts vendor by vendor and

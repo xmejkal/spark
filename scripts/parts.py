@@ -205,6 +205,34 @@ def chip_folder(part: dict, path: Path) -> Path:
 HOST_PART_KINDS = ("pulldown", "pullup", "divider")
 
 
+def i2c_pullup_problems(part: dict) -> list:
+    """
+    A record on an I2C bus says where its pull-ups come from (P55).
+
+    I2C only ever pulls down, and a board may have none of its own — the FireBeetle V1.2+ has none
+    anywhere. So the module carries them (`facts.module_has_i2c_pullups`), or the host adds them
+    (`host_parts` pull-ups on every bus line); saying neither is how a bus floats. A module
+    pull-up must also be one that can hold a bus: the same band `compare_design` judges by.
+    """
+    from compare_design import PULLUP_MIN_OHM, PULLUP_MAX_OHM
+    lines = [need.get("pin") for need in part.get("needs") or [] if need.get("bus") == "i2c"]
+    if not lines:
+        return []
+    facts = part.get("facts") or {}
+    on_module = (facts.get("module_has_i2c_pullups") or {}).get("value") is True
+    by_host = {extra.get("pin") for extra in part.get("host_parts") or [] if extra.get("kind") == "pullup"}
+    problems = []
+    if not on_module and not set(lines) <= by_host:
+        problems.append("on an I2C bus that nothing pulls up: facts.module_has_i2c_pullups is not true "
+                        "and host_parts adds no pullup on %s — I2C only pulls down, and a board may "
+                        "have none of its own" % ", ".join(lines))
+    ohms = (facts.get("i2c_pullup_ohms") or {}).get("value")
+    if isinstance(ohms, (int, float)) and not PULLUP_MIN_OHM <= ohms <= PULLUP_MAX_OHM:
+        problems.append("facts.i2c_pullup_ohms is %g ohm, outside the %d-%d ohm that can hold a bus"
+                        % (ohms, PULLUP_MIN_OHM, PULLUP_MAX_OHM))
+    return problems
+
+
 def host_part_problems(part: dict) -> list:
     """What is wrong with a record's `host_parts`: a kind nothing can place, a pad, a value, a why."""
     problems = []
@@ -492,6 +520,7 @@ def validate(part: dict, path: Path) -> list:
                             "depends on it or do not carry the number" % name)
 
     problems.extend(host_part_problems(part))
+    problems.extend(i2c_pullup_problems(part))
     problems.extend(simulation_problems(part, path))
     return problems
 

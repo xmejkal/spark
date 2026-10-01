@@ -67,7 +67,8 @@ MAY_READ = {
 
 #: Files no mutation table names, and why that is not a hole.
 UNMUTATED = {
-    "catalog/*": "records nobody chose and their kept sources; P55 is the item that makes a test read them",
+    "catalog/*": "records nobody chose: every one is read by test_parts' walk over the real catalog (P55), "
+                 "and two carry mutations of the facts that rule acts on; the rest are drafts' knowledge",
     "catalog/*/*": "the sources kept beside catalog records (P61) — documents, not behaviour",
     "agents/*.md": "instructions to a model, judged by reading; W15 checks each is named where a user looks",
     "skills/*/SKILL.md": "instructions to a model, judged by reading; W15 checks each is named where a user looks",

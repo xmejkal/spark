@@ -248,7 +248,15 @@ That second check is what produced every finding below; it needs no agent and ru
 **Value proven by:** it fails on `test_flash_image.py` today, and its unmutated-file list names
 `check_bom.py` and `flash_image.py`.
 
-### P55 — The catalog is knowledge, so something must read the real thing
+### P55 — The catalog is knowledge, so something must read the real thing — DONE 2026-10-01
+**Reproduced first (W20):** 18 catalog records, not 35 (35 counted files and folders); and NO script
+reads `module_has_i2c_pullups` — what adds pull-ups is a record's `host_parts`, so the fact and the
+behaviour sat side by side with nothing checking they agree. Now `parts.validate` refuses a record
+on an I2C bus that neither says its module carries pull-ups nor adds them as `host_parts` on every
+line, and a module pull-up outside compare_design's 1k–10k band. `test_parts` walks the REAL
+catalog and library (drafts may lack only `pin_order` and `body_mm`). **Acceptance, as a mutation:
+flipping `module_has_i2c_pullups` in `catalog/dfr0819` turns the suite red** — caught, with 5 more.
+The walk found the PO's own RTC saying the same fact under a second name; renamed (irrigation).
 **Needed by:** the 35 research records in `catalog/`, which are the product's actual accumulated
 knowledge and are asserted by nothing. All six catalog tests mock the directory away
 (`mock.patch.object(parts, "CATALOG", …)` at `test_parts.py:721, 738, 754, 767, 778, 793`);
