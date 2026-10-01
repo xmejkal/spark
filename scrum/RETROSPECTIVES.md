@@ -277,7 +277,7 @@ irrigation and rc-car, found only because P52 happened to regenerate a board.
 
 | # | change | check at R9 |
 | --- | --- | --- |
-| **R8.1** | The bin's gate goes back to meaning something **before its next commit**: either CurrentShunt's current is stated with its source — the L9110S's 1.5 A limit as an upper bound, 0.225 W in a 1 W 2512, which `SHOPPING.md` already argues — or the PO rules that the hook blocks on problems and reports could-not-run. The PO chooses (W11). | At R9: `git log --format=%B` over the bin's Sprint 9 commits contains no `--no-verify`. |
+| **R8.1** | The bin's gate goes back to meaning something **before its next commit**: either CurrentShunt's current is stated with its source — the L9110S's 1.5 A limit as an upper bound, 0.225 W in a 1 W 2512, which `SHOPPING.md` already argues — or the PO rules that the hook blocks on problems and reports could-not-run. The PO chooses (W11). | At R9: `git log --format=%B` over the bin's Sprint 9 commits contains no `--no-verify`. **Done the same day, by the PO's choice of the bound:** bin `852f1c6`, committed through the gate, `make check` exit 0 for the first time since 09-25. |
 | **R8.2** | Every derived file a repository commits is either checked current by its gate, the way `diagram-current` checks the simulation, or untracked and made, the way the viewer is. Written as **B5** for the PO to order. | At R9: B5 exists in the backlog with the PO's order, and the bin's tracked derived files are listed in it, each with its check or its removal. |
 | **R8.3** | A commit that corrects a fact carries the sweep: the grep over all four repositories and its empty output. | At R9: every fact-correcting commit in Sprint 9 quotes its sweep; zero copies found later by anything else. |
 
