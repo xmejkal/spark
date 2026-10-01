@@ -301,6 +301,34 @@ deleted in `/var/folders` before `init` could read it.
 **`--keep` is resolved rather than deleted:** it takes a directory and writes the board where the
 checks look, which is the one behaviour W16 allows.
 
+### P60 — Should there be a firmware skill, and for which runtime? — the PO's question of 2026-10-01
+**Needed by:** P56's answer, which puts the firmware in the conversation's hands rather than a
+generator's — so how well the conversation writes it becomes the product's quality, and nothing in
+this repository helps it. The PO asked, at the end of the day and explicitly to be taken up on
+restart: *"do you think we should have something like micropython skill so that claude can write the
+firmware well? Or also Arduino or ESP-IDF, lets take a look at this question when I restart."*
+**Unanalysed. Do not start it as work** — it is a question to put to a council the way P56 was, and
+the PO orders from the answer (W18, W11).
+What it has to settle, and the evidence that already exists here:
+- **Which runtime, and is it one or three?** The plugin's boards record `micropython_port`
+  (`ESP32_GENERIC_S3`, `ESP32_GENERIC_C6`) and nothing else; the bin's firmware is MicroPython and
+  its v1 Arduino reference was kept only because the state machine's shape came from it. ESP-IDF is
+  named nowhere. Three runtimes is three harnesses, three fakes and three test stories — W14 asks
+  which DESIGN needs each.
+- **Skill or reference?** `skills/spark-design/references/` already holds the pattern: prose a
+  skill loads, not code. A MicroPython skill would be the first that produces something a person
+  runs on hardware, which is a different risk class from a skill that produces a board file.
+- **What would actually go in it** that the model does not already know. The bin's hard-won facts
+  are candidates and are written down: a task cannot cancel itself (`RuntimeError("can't cancel
+  self")`), `Pin.irq(wake=DEEPSLEEP)` silently no-ops, `esp32.wake_on_ext0` does not exist on the
+  C6, `WAKEUP_ALL_LOW` is an AND across every armed pin, the S3 has no per-pin ext1 polarity, no LP
+  core from MicroPython. Those are not general knowledge and each cost a bench session.
+- **The bloat test.** A skill that restates the MicroPython manual is the shape the 09-29 cut
+  deleted. One that carries only what was learned the hard way, with its source, is the shape
+  `references/` already proves.
+**Value proven by:** a document naming one runtime to support first with its reason, and either a
+skill with every line traceable to a fact this project established, or a decision not to write one.
+
 ### P57 — A stand-in's geometry is could-not-run, not a failure
 **Needed by:** v1's own words, *"no false alarms from the checks"*, and the documented example,
 which fails spark's own manufacturability check out of the box. Reproduced 2026-10-01:
