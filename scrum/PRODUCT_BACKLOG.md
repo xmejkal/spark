@@ -251,6 +251,27 @@ bus gets pull-ups at all — so the field that drives the rule is in a file no t
 **Value proven by:** setting a shipped catalog record's `module_has_i2c_pullups` to the wrong value
 turns the suite red.
 
+### P56 — Does spark produce tested firmware? — DONE 2026-10-01, `docs/2026-10-01-firmware-and-tests.md`
+**Needed by:** the product's own definition, which the PO restated today: *"the whole point, to make
+DIY projects with ESP32 … to write the firmware and then simulate and test it to make sure it
+actually works all together."* The v1 line stops at the board — *a stranger goes from a
+requirements file to a built, checked, simulated board* — and spark writes no firmware at all: its
+commands are `init`, `build`, `identify`, `research`.
+The consequence is measured and uncomfortable. The irrigation controller's `firmware/main.py` is
+**95 lines with zero tests of any kind**, written in one night so a Wokwi scenario had something to
+run. The smart bin's firmware is **4,152 lines with 113 unit tests and 14 checks on a real
+MicroPython runtime**, and that is the PO's own hand-built work, not spark's output. So the only
+thing exercising a spark-generated project's firmware is a **paid** simulator — which is why the
+quota became load-bearing, and why the PO asked today how to stop paying for it.
+**This item is the analysis, not the build** (W19 covers work that only produces a document). It
+must answer: **when** in the flow firmware and its tests appear; **how** they are produced without
+spark becoming a code generator that writes bloat nobody reads; **why** each layer of test earns
+its place, against what it catches and what it costs; and **where the boundary is** — what spark
+owes a project and what stays the builder's.
+**Value proven by:** a document a council of lenses reproduced its claims for, naming the smallest
+increment that gives a generated project a test it did not have, and what that displaces in the
+backlog. The PO orders from it (W11).
+
 ### P51 — The documented setup runs on a machine that is not the author's — DONE 2026-09-30
 **Needed by:** every stranger, which is the whole v1 line. Reproduced by the first-hour lens in an
 empty directory, following `commands/init.md` exactly:
@@ -279,6 +300,45 @@ Measured from an empty directory: **4 checks not asked for → 1**, buildability
 deleted in `/var/folders` before `init` could read it.
 **`--keep` is resolved rather than deleted:** it takes a directory and writes the board where the
 checks look, which is the one behaviour W16 allows.
+
+### P57 — A stand-in's geometry is could-not-run, not a failure
+**Needed by:** v1's own words, *"no false alarms from the checks"*, and the documented example,
+which fails spark's own manufacturability check out of the box. Reproduced 2026-10-01:
+`check_all --project .` on a fresh project built from `commands/build.md` gives
+`[FAIL] buildability` on **four** 0.225 mm annular rings, every one of them on a **stand-in**
+footprint — `jst-ph-2-power-inlet` drawn as a placeholder because nobody has drawn the real part.
+P37 established the principle already: a stand-in declares what it cannot show, and its findings
+become one could-not-run each rather than measurements of a part that is not on the board.
+`check_footprints` has `placeholders` and does exactly this; `check_all` passes the list only when
+a project's requirements name them, and the documented example's do not reach it.
+**Value proven by:** the documented example's `buildability` becomes could-not-run naming the
+stand-in, and a REAL footprint with a thin ring still FAILs.
+
+### P58 — The bench instructions name the board you are holding
+**Needed by:** the PO, this week — bench bring-up is item 2 on the smart bin's own NEXT list.
+`smartbin-local/firmware/micropython/README.md` steps 2–4 still give the **XIAO's** pins: *"OPEN btn
+D1, MODE btn D6, LED D7/D10"*, *"VL6180X on D4/D5 (+ INT to D0)"*, *"DFR0534 on D9"* — against
+`config.py`'s D11, D14, D7/D5 and SDA/SCL — and step 4 names `bringup/04_mp3.py`, which became
+`04_audio.py` when the audio went I2S on 09-25. Following that table wires a FireBeetle to a XIAO's
+pin map, and `01_board_alive.py`'s own comment records what happens next: *"step 1 failed on a good
+board and the obvious conclusion was 'bad board or bad flash'."*
+The bin's own repo, not the plugin's — but the plugin is where the fix generalises (P36 → the
+bring-up steps take their pins from the pin map rather than from prose).
+**Value proven by:** every pin named in that README appears in `config.py` for the active board, and
+every `bringup/*.py` it names exists. A check in the bin's `make check`, so it cannot rot again.
+
+### P59 — A generated project's firmware can be imported without running
+**Needed by:** every test tier after the first. `irrigation/firmware/main.py` ends with `main()` at
+module scope and `main()` is `while True`, so **the file cannot be imported** — no test can ever
+exist for it, by anyone, whoever writes it. 95 lines is not the problem; one line is. The bin shows
+the shape: a two-line `main.py` over an importable package.
+Reproduced the same day: with the file importable, a ten-line check finds that `VALVE_PINS` has four
+entries and the loop drives three, so **GPIO13 (Valve4) is set to 0 at boot and never driven again**
+— on a board whose requirements ask for Valve4 and whose netlist routes it. The paid Wokwi scenario
+asserts two pins and passed over it. The firmware calls itself a stub, which renames the defect
+rather than removing it: nothing says the stub covers less than the design.
+**Value proven by:** `python3 -c "import firmware.main"` returns in a spark-generated project, and
+the chain reports a signal the requirements ask for that the firmware never drives.
 
 ### P52 — A rail states what it carries, from the records that know
 **Needed by:** the irrigation controller and the RC car. The generated board says the gap in its own
@@ -609,7 +669,12 @@ asks it about the working tree. Effort S, not the script it was drafted as.
 **Value proven by:** every number in a commit message comes from one invocation of it, and an
 invocation started while a mutation run holds the lock refuses instead of reporting.
 
-### P50 — An adversarial reading of what the tests would not notice — **REWRITE, says the lens that IS it**
+### P50 — An adversarial reading of what the tests would not notice — **KEPT by the PO 2026-10-01**
+**The PO declined to delete it** when the scope lens proposed it, and the rule supports him: P50 is
+**unbuilt**, so keeping it costs one line in this file, its need is reproduced (five mutations
+escaped because one desk wrote both the fix and the test meant to catch it), and its kill criterion
+is already written. The lens was arguing about its SHAPE, not its necessity — a judgement better
+made after one attempt than before it.
 **The verification lens was the isolation this item asks for** — it wrote neither the fixes nor the
 tests — and it found **six real escapes on a green suite** in one pass. So isolation pays. But it
 did not pay the way this item predicts, and the item as written is gameable three ways:
@@ -655,15 +720,9 @@ with a test attached, which is noise that has to be maintained. P46 already ship
 the actual data. If a copy returns, extend that. This is the AI-bloat shape: a test about code
 shape, written because one review missed something once.
 
-### W20 (proposed) — An item's acceptance line is a hypothesis until reproduced
-**Needed by:** P45, which this nearly broke today, and every item whose proof line is written
-before the state it assumes has been looked at.
-W9 says that about an OBSERVER's claim. It does not say it about our own, and today that cost a
-false alarm's worth of design: P45's "Value proven by" line said `init` should write the DS3231's
-two bus lines, and that module's own record says "Add NO pull-ups: the module carries 4.7 k on SDA
-and SCL." Meeting the criterion as written would have shipped a check that fires on a correct
-board. The rule: before an acceptance line is relied on, reproduce the state it assumes — or mark
-it unverified, the way a part record marks a fact nobody has confirmed.
+### ~~W20 (proposed)~~ — **ADOPTED, and this copy deleted 2026-10-01**
+It lives in `scrum/WORKING_AGREEMENTS.md`. A backlog carrying the proposal text for an agreement
+already in force is two statements of one rule, which is what W16 exists to stop.
 
 ### ~~W21 (proposed) — A number that has not been run is marked as a guess~~ — **MERGED into W13**
 **Needed by:** `docs/2026-09-30-refactoring-architecture.md`, whose estimate table a reader cannot

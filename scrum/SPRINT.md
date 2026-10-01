@@ -1,3 +1,59 @@
+# Sprint 8
+
+**Planned** 2026-10-01 · **Facilitator** main session · **Product Owner** Petr, who chose
+"close v1, bridge to firmware" after five lenses analysed whether spark should produce tested
+firmware (P56, `docs/2026-10-01-firmware-and-tests.md`).
+
+## Goal
+
+> **v1's checks stop crying wolf on their own example project, and one generated project's firmware
+> stops agreeing with its board by luck.**
+
+Why: R7 claimed the v1 line "holds mechanically". That was true only of the stranger clause.
+Reproduced on the documented example: `[FAIL] buildability` on four 0.225 mm annular rings — every
+one on a **stand-in** footprint — and `[????] physics` with all four rails unstated. v1's own words
+are *"no false alarms from the checks"*.
+
+And the PO has set the product's direction: spark should take a DIY ESP32 project to firmware that
+is tested before it meets hardware. The analysis says spark exports facts and ships a harness while
+the conversation writes the code. **P36 is the bridge** — the smallest item that proves that
+direction, with no new concept, no quota and no bench.
+
+## The order — as the PO set it
+
+| # | item | what it does | size |
+| --- | --- | --- | --- |
+| 1 | **P52** | a rail states what it carries, summed from the records that already hold it | M |
+| 2 | **P57** | a stand-in's geometry is could-not-run naming the stand-in, not a FAIL | S |
+| 3 | **P36** | the pin map becomes a file the firmware imports instead of retyping | S |
+| 4 | **P54** | the suite cannot pass by asking the code to confirm itself | S |
+| 5 | **P55** | something reads the real catalog — 35 records no test touches | S |
+
+**Five items, deliberately below Sprint 6's eight.** The reason is measured and in R7: of the last
+twelve items, **five had acceptance lines that were false when reproduced**, and both sprints found
+faults in their own record at close. The constraint is not throughput; it is the distance between
+what gets written down and what has been run.
+
+Not in this sprint, with reasons: **R2.6** (the fourth cold test is the firmware direction's
+acceptance — running it now tests an unchanged tool); **P2** (needs P36's export to exist first);
+**P43** (right and urgent, but it is the sprint after the export, or this becomes eight items
+again); **P32b**, **P16-reopened** (decisions for the PO, not work); **P58, P59** (raised today,
+unordered); **P38, P39, P44, P49, P50**; anything at the bench; any `wokwi-cli` run.
+
+## Definition of Done
+
+Per item: the `Value proven by:` command run **in the project its `Needed by:` names** (R6.3), its
+output in the commit, written after the run (W13, W17, W20). A mutation table with every mutation
+caught; `--anchors` clean at every commit, one run at a time. **New from R7:** the document
+describing anything that moves changes in the same commit (R7.1); a `(was N)` is measured from the
+parent's archive, not recalled (R7.2); `DONE <date>` is the implementation commit's date (R7.3);
+this sprint's review is written into this file before its last commit (R7.4).
+
+**The PO's first act of planning is still owed:** the 09-30 council table is stale by its own header
+and reordering it is his (W11).
+
+---
+
 # Sprint 7 — closed 2026-10-01
 
 ### Review — validated value, every number rerun at close
