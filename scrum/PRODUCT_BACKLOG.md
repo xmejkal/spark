@@ -824,6 +824,15 @@ DFPlayer Mini; micro-USB and "Voice Module V1.0" means DFR0534; pads marked BCLK
 I²S amp the board now assumes.
 **Value proven by:** the bin's `make check` against the module that is actually there.
 
+### B4 — The viewer is made by `make`, not kept by hand — **PO, 2026-10-01: regenerate it via make**
+**Needed by:** anyone opening the bin's `board-viewer.html`, which CLAUDE.md calls the viewer. It
+shows the **XIAO** board of 2026-09-22 — two boards ago — and nothing in the repository makes it.
+Found while remaking the board (bin `2367fa1`), whose schematic and PCB images had themselves shown
+the MP3 board for a week: a picture nobody regenerates is a picture of the past.
+**Value proven by:** `make all` rebuilds `board-viewer.html` from the current schematic, PCB and 3D
+exports; it names the components the netlist has (the I²S amplifier, no `Mp3`), and changing
+`board.tsx` makes it out of date to `make`.
+
 ## Proposed 2026-09-30, unordered — the PO asked what we get wrong and how to stop it
 
 Each from evidence in this repository rather than from good practice in general. **None is
