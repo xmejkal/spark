@@ -329,6 +329,9 @@ What it has to settle, and the evidence that already exists here:
   self")`), `Pin.irq(wake=DEEPSLEEP)` silently no-ops, `esp32.wake_on_ext0` does not exist on the
   C6, `WAKEUP_ALL_LOW` is an AND across every armed pin, the S3 has no per-pin ext1 polarity, no LP
   core from MicroPython. Those are not general knowledge and each cost a bench session.
+  *(The council found otherwise, kept here as asked: `ALL_LOW` is an OR on the S3/C6, the `Pin.irq`
+  and LP-core claims hold for the C6 only, and none cost a bench session — nothing has run on
+  hardware. Corrected where it is read, by P63.)*
 - **The bloat test.** A skill that restates the MicroPython manual is the shape the 09-29 cut
   deleted. One that carries only what was learned the hard way, with its source, is the shape
   `references/` already proves.
@@ -376,6 +379,7 @@ v1.1 datasheet and the board fact that cites its Table 12; and `git ls-files cat
 prints 0.
 
 ### P63 — A fact this project wrote down wrongly is corrected where a conversation will read it
+**Spark's half DONE 2026-10-01** (`tactile-button.json`, both board records); the bin's half follows in the same sitting.
 **Needed by:** every conversation that writes firmware for an S3 or C6 — spark's
 `parts/tactile-button.json:37` teaches that `WAKEUP_ALL_LOW` is an AND across every armed pin, and
 ESP-IDF v5.5.2's `esp_sleep.h` makes it an alias of `ANY_LOW` (an OR) on every chip after the

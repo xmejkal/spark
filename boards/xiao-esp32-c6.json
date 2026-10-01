@@ -67,6 +67,16 @@
   ],
   "//pin_roles": "What a pin IS, beyond its number. Typed so a program can read it: the arrays are for checks, the notes are for people. A pin with a role is not unusable - it is usable with a caveat, and the caveat is the note.",
   "pin_roles": {
+    "strapping": {
+      "gpio": [
+        4,
+        5,
+        8,
+        9,
+        15
+      ],
+      "note": "ESP32-C6 strapping pins per Espressif's GPIO reference (esp-idf stable, esp32c6 gpio.html, read 2026-10-01). None is on the XIAO's header; GPIO15 is the on-board LED, so whatever the LED circuit holds it at during reset is what the strap reads."
+    },
     "console_uart": {
       "gpio": [
         16
@@ -100,6 +110,7 @@
   "deep_sleep": {
     "wake_api": "esp32.wake_on_ext1",
     "single_polarity_for_all_pins": true,
+    "//single_polarity_for_all_pins": "True of MicroPython's API, not of the silicon: esp32.wake_on_ext1 takes one level for the whole mask (ports/esp32/modesp32.c, v1.29.0), while the C6 itself defines SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN (ESP-IDF v5.5.2 soc_caps.h). A firmware on another runtime could give each pin its own level.",
     "simulated_by_wokwi": false,
     "//simulated_by_wokwi": "Wokwi wakes this chip from a timer but not from a GPIO - established by experiment, see firmware/micropython/sim/README.md. Deep sleep is a bench test.",
     "//polarity_is_a_wiring_decision": "Which level wakes the chip follows from how the buttons are wired, not from this board, so it lives in config.WAKE_ON_HIGH. See boards/README.md."
