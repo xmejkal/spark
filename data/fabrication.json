@@ -5,8 +5,10 @@
 
   "//process": "What THIS board house can make. A project states its own in .spark/rules.json under `fabrication`, by name, and every script that reads one of these reads the project's value instead. These are the defaults for a cheap two-layer process: below them an order is quoted higher, bounced for engineering review, or silently altered into something nobody checked clearances against.",
   "process": {
-    "//min_annular_ring_mm": "Copper left around a hole, pad minus hole halved. Too little and the ring tears off the barrel. The one number the checker judges by.",
-    "min_annular_ring_mm": 0.25,
+    "//min_annular_ring_mm": "Copper left around a hole, pad minus hole halved. Too little and the ring tears off the barrel. Below THIS the checker fails the board. JLCPCB, https://jlcpcb.com/capabilities/pcb-capabilities, PTH annular ring, 2-layer 1 oz: 'Recommended 0.25 mm or above; absolute minimum 0.18 mm' (read 2026-10-01). Until P57 this was 0.25 with no source: the recommendation enforced as a limit, which failed the documented example on a real JST PH footprint.",
+    "min_annular_ring_mm": 0.18,
+    "//recommended_annular_ring_mm": "What the board house recommends. JLCPCB, https://jlcpcb.com/capabilities/pcb-capabilities, PTH annular ring, 2-layer 1 oz: 'Recommended 0.25 mm or above' (read 2026-10-01). A ring between the two is made, and the checker says so as an advisory rather than failing it. A generator drawing a new pad aims here plus the margin, never at the minimum.",
+    "recommended_annular_ring_mm": 0.25,
 
     "//annular_ring_margin_mm": "What the GENERATOR adds on top of the minimum when it draws a pad. Sitting exactly on a minimum means any tolerance in drill placement breaks out of the pad. This used to be a separate 0.35 mm constant in emit_footprint.py whose comment said 'check_footprints fails below 0.25 mm, so this carries 0.1 mm of margin' - true, and stated in prose, so raising the checker's minimum left the generator drawing the old ring and emitting footprints that failed its own check. It is arithmetic now. 0.25 + 0.10 also reproduces the 1.7 mm pad on the hand-checked reference footprint.",
     "annular_ring_margin_mm": 0.10,

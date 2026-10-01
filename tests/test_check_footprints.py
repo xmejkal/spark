@@ -13,6 +13,9 @@ small holes for their own good reasons are left alone.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
+import io
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -21,6 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_footprints  # noqa: E402
+import fab  # noqa: E402
 
 
 def holes(component, drill, pad, positions):
@@ -305,9 +309,11 @@ class APlaceholderIsNotMeasuredTest(unittest.TestCase):
 
     @staticmethod
     def thin_ring_connector(name):
-        # A 2-pin connector whose ring is under the process minimum — the real XT30 case.
+        # A 2-pin connector whose ring is under the process's absolute minimum: 0.15 mm. The
+        # XT30 case measured 0.225, which since P57 is under the RECOMMENDATION only — an advisory,
+        # so it no longer makes this control a defect.
         return [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_" + name,
-                 "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4, "outer_height": 1.2,
+                 "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4, "outer_height": 1.05,
                  "x": i * 2.0, "y": 0.0} for i in range(2)] + named(name)
 
     def test_a_placeholder_is_reported_as_could_not_run_not_measured(self):
@@ -335,6 +341,54 @@ class APlaceholderIsNotMeasuredTest(unittest.TestCase):
         subjects = {f.subject for f in check_footprints.problems_in(findings)}
         self.assertIn("Speaker", subjects)
         self.assertNotIn("Xt30", subjects)
+
+
+class TheFabsRecommendationIsNotItsLimitTest(unittest.TestCase):
+    """
+    P57. The documented example failed buildability on a real JST PH's 0.225 mm ring — tscircuit's
+    footprint of that connector, and KiCad's has the same: 2 mm pitch leaves no room. The 0.25 mm
+    it was judged by is JLCPCB's RECOMMENDATION for a 2-layer 1 oz board; its absolute minimum is
+    0.18 mm. A recommendation enforced as a limit is a false alarm — and a ring under the minimum
+    is still a defect.
+    """
+
+    @staticmethod
+    def jst_ph(pad_height):
+        return [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_Inlet",
+                 "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
+                 "outer_height": pad_height, "x": i * 2.0, "y": 0.0} for i in range(2)] + named("Inlet")
+
+    def test_a_ring_between_the_minimum_and_the_recommendation_is_advisory_not_a_problem(self):
+        findings = check_footprints.run(self.jst_ph(1.2))          # 0.225 mm
+        self.assertEqual(check_footprints.problems_in(findings), [])
+        advisory = [f for f in check_footprints.advisories_in(findings) if f.rule == "annular-ring"]
+        self.assertEqual([f.subject for f in advisory], ["Inlet"])
+        self.assertIn("0.25 mm", advisory[0].detail, "the recommendation it is under")
+        self.assertIn("0.18 mm", advisory[0].detail, "and the minimum it is over")
+
+    def test_a_ring_under_the_absolute_minimum_still_fails(self):
+        problems = check_footprints.problems_in(check_footprints.run(self.jst_ph(1.05)))   # 0.15
+        self.assertEqual([f.rule for f in problems], ["annular-ring"])
+
+    def test_a_ring_at_the_recommendation_says_nothing(self):
+        findings = check_footprints.run(self.jst_ph(1.25))         # 0.25 mm
+        self.assertEqual([f for f in findings if f.rule == "annular-ring"], [])
+
+    def test_an_advisory_does_not_change_the_exit(self):
+        import tempfile
+        circuit = Path(tempfile.mkdtemp()) / "circuit.json"
+        circuit.write_text(json.dumps(self.jst_ph(1.2)))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_footprints.main([str(circuit)])
+        self.assertEqual(code, check_footprints.EXIT_OK)
+        self.assertIn("Inlet", out.getvalue(), "said, even though it does not fail")
+
+    def test_both_ring_numbers_carry_their_source(self):
+        notes = json.loads(fab.FILE.read_text())["process"]   # the `//` notes, which DATA omits
+        for name in ("min_annular_ring_mm", "recommended_annular_ring_mm"):
+            with self.subTest(number=name):
+                self.assertIn("jlcpcb.com/capabilities", notes["//" + name])
 
 
 class EveryShapeTscircuitEmitsTest(unittest.TestCase):
@@ -407,7 +461,7 @@ class EveryShapeTscircuitEmitsTest(unittest.TestCase):
             dict(centred, hole_offset_x=0.3)), 0.2)
 
     def test_a_thin_ring_on_an_obround_pad_is_caught(self):
-        circuit = self.pill(1.6, 0.75, 2.4, 1.2) + named("J1")
+        circuit = self.pill(1.6, 0.75, 2.4, 1.05) + named("J1")   # 0.15 mm, under the minimum
         findings = check_footprints.problems_in(check_footprints.run(circuit))
         self.assertTrue(any(f.rule == "annular-ring" for f in findings), findings)
 

@@ -317,13 +317,13 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         traces" escaped a suite that tested the width arithmetic thoroughly.
         """
         root = self._project(True)
-        # a netlist in which PackIn has a ring under the process minimum: measured, this is a
-        # problem; skipped as a placeholder, it is a could-not-run.
+        # a netlist in which PackIn has a ring under the process minimum (0.15 mm; 0.225 is only
+        # under the recommendation since P57): measured, a problem; as a placeholder, could-not-run.
         circuit = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
                    {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
         circuit += [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_c",
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
-                     "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
+                     "outer_height": 1.05, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
         check = next(c for c in check_all.CHECKS if c.name == "buildability")
         result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
@@ -336,7 +336,7 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
                    {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
         circuit += [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_c",
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
-                     "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
+                     "outer_height": 1.05, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
         check = next(c for c in check_all.CHECKS if c.name == "buildability")
         result = check.run({"circuit": str(root / "circuit.json")})
@@ -368,6 +368,23 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
         self.assertNotEqual(result["status"], check_all.OK, result)
         self.assertIn("broken.requirements.json", json.dumps(result))
+
+
+class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):
+    """P57: a ring the board house makes but does not recommend reaches the answer as a `?`."""
+
+    def test_buildability_carries_an_advisory_without_failing(self):
+        root = Path(tempfile.mkdtemp())
+        circuit = [{"type": "source_component", "source_component_id": "c", "name": "Inlet"},
+                   {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
+        circuit += [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_c",
+                     "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
+                     "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
+        (root / "circuit.json").write_text(json.dumps(circuit))
+        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = check.run({"circuit": str(root / "circuit.json")})
+        self.assertEqual(result["status"], check_all.OK, result)
+        self.assertIn("Inlet", json.dumps(result.get("unmeasured", [])), result)
 
 
 class TheRecordsReachPhysicsTest(unittest.TestCase):
@@ -610,7 +627,7 @@ class OneModulePerProcessTest(unittest.TestCase):
                    {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
         circuit += [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_c",
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
-                     "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
+                     "outer_height": 1.05, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
         return str(root / "circuit.json")
 

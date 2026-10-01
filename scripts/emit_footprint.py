@@ -67,7 +67,9 @@ def hole_diameter_mm(rules=None):
 
 def pad_diameter_mm(hole_mm, rules=None):
     """
-    The pad around that hole: the ring `check_footprints` demands, plus the margin.
+    The pad around that hole: the ring the board house recommends — or a project's own stricter
+    minimum — plus the margin (`fab.annular_ring_to_draw_mm`). `check_footprints` fails only under
+    the absolute minimum since P57; a generator drawing a new pad never aims there.
 
     Never a literal. This was `ANNULAR_RING_MM = 0.35` with a comment saying "check_footprints
     fails below 0.25 mm, so this carries 0.1 mm of margin" — true, and said in prose, so raising

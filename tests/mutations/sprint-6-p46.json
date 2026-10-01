@@ -8,7 +8,7 @@
  {
   "file": "scripts/fab.py",
   "name": "the drawn ring stops following the demanded one",
-  "find": "    return process(\"min_annular_ring_mm\", rules) + process(\"annular_ring_margin_mm\", rules)",
+  "find": "    return aim + process(\"annular_ring_margin_mm\", rules)",
   "replace": "    return 0.35"
  },
  {

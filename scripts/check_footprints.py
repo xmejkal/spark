@@ -190,9 +190,16 @@ def check_through_hole_drills(circuit, rules=None):
 
 
 def check_annular_rings(circuit, rules=None):
-    """Pad minus hole, halved. Too little and the ring tears off the barrel."""
+    """
+    Pad minus hole, halved. Too little and the ring tears off the barrel.
+
+    Two limits, both the board house's own (P57): under its absolute minimum the board fails;
+    between that and its recommendation it is made, and this says so as an advisory. The
+    recommendation was enforced as the limit, which failed a real JST PH footprint.
+    """
     findings = []
     minimum = fab.process("min_annular_ring_mm", rules)
+    recommended = fab.process("recommended_annular_ring_mm", rules)
     names = component_names(circuit)
     seen = set()
     for element in circuit:
@@ -203,13 +210,24 @@ def check_annular_rings(circuit, rules=None):
             continue
         pad = hole + 2 * ring
         owner = names.get(element.get("pcb_component_id"), "?")
-        if ring < minimum and (owner, round(ring, 3)) not in seen:
-            seen.add((owner, round(ring, 3)))
+        if ring >= max(minimum, recommended) or (owner, round(ring, 3)) in seen:
+            continue
+        seen.add((owner, round(ring, 3)))
+        if ring < minimum:
             findings.append(Finding(
                 "annular-ring", owner,
                 "pad %.2f mm around a %.2f mm hole leaves %.3f mm of ring, under the %.2f mm "
-                "this process guarantees" % (pad, hole, ring, minimum),
-                fix="grow the pad to at least %.2f mm" % (hole + 2 * minimum)))
+                "this process can make" % (pad, hole, ring, minimum),
+                fix="grow the pad to at least %.2f mm" % (hole + 2 * recommended)))
+        else:
+            findings.append(Finding(
+                "annular-ring", owner,
+                "pad %.2f mm around a %.2f mm hole leaves %.3f mm of ring: over the %.2f mm this "
+                "process can make, under the %.2f mm it recommends"
+                % (pad, hole, ring, minimum, recommended),
+                fix="made as drawn; grow the pad to %.2f mm where the pitch allows"
+                    % (hole + 2 * recommended),
+                severity="advisory"))
     return findings
 
 
@@ -473,6 +491,11 @@ def unchecked_in(findings):
     return [f for f in findings if f.severity == "could-not-run"]
 
 
+def advisories_in(findings):
+    """Made as drawn, and worth a look: under what the board house recommends (P57)."""
+    return [f for f in findings if f.severity == "advisory"]
+
+
 def render(findings, design):
     problems, unchecked = problems_in(findings), unchecked_in(findings)
 
@@ -480,9 +503,9 @@ def render(findings, design):
     if problems:
         lines.append("%s: %d thing(s) that would survive DRC and fail at assembly\n"
                      % (design, len(problems)))
-    for finding in problems + unchecked:
-        marker = "  [%s]" % finding.rule if finding.severity == "problem" \
-            else "  [%s, NOT EXAMINED]" % finding.rule
+    for finding in problems + unchecked + advisories_in(findings):
+        marker = {"problem": "  [%s]", "could-not-run": "  [%s, NOT EXAMINED]"}.get(
+            finding.severity, "  [%s, advisory]") % finding.rule
         lines.append("%s %s: %s" % (marker, finding.subject, finding.detail))
         if finding.fix:
             lines.append("      %s" % finding.fix)

@@ -232,8 +232,10 @@ class Buildability(Check):
 
         # Split, for the same reason physics does: a rule that could not read an element has not
         # approved it, and folding the two together is what let 10 of 70 holes go unexamined
-        # under a tick.
-        return answer(problems=of("problem"), unchecked=of("could-not-run") + notes)
+        # under a tick. An advisory — made as drawn, under what the board house recommends — is
+        # said and does not fail (P57).
+        return answer(problems=of("problem"), unchecked=of("could-not-run") + notes,
+                      unmeasured=of("advisory"))
 
 
 class VendorTruth(Check):

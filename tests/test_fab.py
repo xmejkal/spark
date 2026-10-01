@@ -72,9 +72,16 @@ class TheRingIsArithmeticNotProseTest(unittest.TestCase):
 
     STRICTER = {"fabrication": {"min_annular_ring_mm": 0.45}}
 
-    def test_the_drawn_ring_is_the_demanded_ring_plus_the_margin(self):
+    def test_the_drawn_ring_is_the_recommended_ring_plus_the_margin(self):
+        # P57: the checker FAILS only under the absolute minimum now, but a generator drawing a
+        # new pad aims at what the board house recommends, with margin — never at the bare minimum.
         self.assertAlmostEqual(fab.annular_ring_to_draw_mm(),
-                               fab.process("min_annular_ring_mm") + fab.process("annular_ring_margin_mm"))
+                               fab.process("recommended_annular_ring_mm")
+                               + fab.process("annular_ring_margin_mm"))
+
+    def test_a_project_minimum_stricter_than_the_recommendation_is_what_gets_drawn(self):
+        self.assertAlmostEqual(fab.annular_ring_to_draw_mm(self.STRICTER),
+                               0.45 + fab.process("annular_ring_margin_mm"))
 
     def test_raising_the_minimum_moves_the_pad_the_generator_draws(self):
         hole = emit_footprint.hole_diameter_mm()

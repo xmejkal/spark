@@ -49,5 +49,9 @@ def header_pin_diagonal_mm():
 
 
 def annular_ring_to_draw_mm(rules=None):
-    """What a generator puts around a hole: the checker's minimum plus the margin, never a literal."""
-    return process("min_annular_ring_mm", rules) + process("annular_ring_margin_mm", rules)
+    """
+    What a generator puts around a hole: the board house's recommendation plus the margin — or a
+    project's own minimum, where it is stricter than that (P57). Never a literal.
+    """
+    aim = max(process("recommended_annular_ring_mm", rules), process("min_annular_ring_mm", rules))
+    return aim + process("annular_ring_margin_mm", rules)

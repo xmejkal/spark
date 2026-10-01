@@ -31,6 +31,15 @@ is `could-not-run`. Conflating them is how a review calls itself complete while 
 was never run — which happened here, because a documented command passed five paths and got two
 wrong.
 
+### `needs-measurement` and `advisory` — findings that do not change the outcome
+
+Both reach `check_all` as a `?` line and leave the status where it was. **`needs-measurement`**: a
+real question about the board that needs a number nobody has taken — a rail's current, a pour's
+continuity. **`advisory`**: something the board house will make, but under what it recommends — a
+0.225 mm ring on a 2 mm-pitch JST PH, over JLCPCB's 0.18 mm minimum and under its 0.25 mm
+recommendation. It was a FAIL until P57, which is how the documented example failed spark's own
+check on a real connector: a recommendation enforced as a limit is a false alarm with a source.
+
 ### The spine, or the chain — `scripts/check_spine.py`
 
 The whole flow, end to end, stopping at the first stage that cannot produce input for the next:

@@ -426,7 +426,12 @@ count; one isolated pass over the board and library records reports each claim s
 unsupported or contradicted with the quoted line; and it finds the `ALL_LOW` claim on its own if
 P63 has not yet removed it (run against `5056703`'s tree if it has).
 
-### P57 — A stand-in's geometry is could-not-run, not a failure
+### P57 — A stand-in's geometry is could-not-run, not a failure — DONE 2026-10-01, as re-cut by the PO
+**Run on the documented example after the last change** (an empty directory, `init`, the one build
+command, `check_all --project .`): `[ok  ] buildability … ? JstPh2PowerInlet: pad 1.20 mm around a
+0.75 mm hole leaves 0.225 mm of ring: over the 0.18 mm this process can make, under the 0.25 mm it
+recommends`. A ring under 0.18 mm still FAILs (tested); both numbers cite JLCPCB's page in
+`data/fabrication.json`. The bin's blocker 7 is the same ring and is an advisory now (bin `22677e6`).
 **Needed by:** v1's own words, *"no false alarms from the checks"*, and the documented example,
 which fails spark's own manufacturability check out of the box. Reproduced 2026-10-01:
 `check_all --project .` on a fresh project built from `commands/build.md` gives
