@@ -301,7 +301,12 @@ deleted in `/var/folders` before `init` could read it.
 **`--keep` is resolved rather than deleted:** it takes a directory and writes the board where the
 checks look, which is the one behaviour W16 allows.
 
-### P60 — Should there be a firmware skill, and for which runtime? — the PO's question of 2026-10-01
+### P60 — Should there be a firmware skill, and for which runtime? — ANSWERED 2026-10-01, `docs/2026-10-01-firmware-skill.md`
+**The council's answer, for the PO to accept or overrule:** no skill; MicroPython only; the facts a
+model gets wrong (10 of 30 runs) are chip, part and tool facts, so they go in records, reach the
+firmware through P36's file and are enforced by P56's seeded fake. The bin's headline lesson —
+`WAKEUP_ALL_LOW` is an AND — is false on the S3 and C6, and spark's own parts library repeats it: P63.
+
 **Needed by:** P56's answer, which puts the firmware in the conversation's hands rather than a
 generator's — so how well the conversation writes it becomes the product's quality, and nothing in
 this repository helps it. The PO asked, at the end of the day and explicitly to be taken up on
@@ -368,6 +373,21 @@ into the store in the same commit (W16). *Estimate* ~30–60 code lines.
 v1.1 datasheet and the board fact that cites its Table 12; and `git ls-files catalog | grep -c pdf`
 prints 0.
 
+### P63 — A fact this project wrote down wrongly is corrected where a conversation will read it
+**Needed by:** every conversation that writes firmware for an S3 or C6 — spark's
+`parts/tactile-button.json:37` teaches that `WAKEUP_ALL_LOW` is an AND across every armed pin, and
+ESP-IDF v5.5.2's `esp_sleep.h` makes it an alias of `ANY_LOW` (an OR) on every chip after the
+original ESP32. P60 found it, with three more stated wider than their source: `Pin.irq(wake=DEEPSLEEP)`
+no-ops on the C6 only (on the S3 a level trigger arms ext0); "no LP core" is the C6's, the S3 has
+`esp32.ULP`; the PSRAM 140 µA is Light-sleep in the kept datasheet (P61). Also stale or misfiled:
+`firebeetle2-esp32s3.json:283` (`WAKE_ON_HIGH is False`; the bin says `True`; "#17334 was hit"
+on no hardware), `:327-328` (PSRAM), `xiao-esp32-c6.json:102` (an API fact filed as silicon), the
+C6 record's missing strapping role (its `onboard_led` GPIO15 is a strap).
+spark's records here; the bin's own copies (`CLAUDE.md`, `HANDOVER.md`, `STATUS.md`, `config.py`,
+`smartbin/board.py`, the `fd24455` reasoning) are the bin's, in the same sitting.
+**Value proven by:** `grep -rn "ALL_LOW" parts boards` in spark and the bin's docs shows no claim
+that it is an AND on the S3 or C6, and each corrected fact cites the source line it now rests on.
+
 ### P57 — A stand-in's geometry is could-not-run, not a failure
 **Needed by:** v1's own words, *"no false alarms from the checks"*, and the documented example,
 which fails spark's own manufacturability check out of the box. Reproduced 2026-10-01:
@@ -404,8 +424,12 @@ entries and the loop drives three, so **GPIO13 (Valve4) is set to 0 at boot and 
 — on a board whose requirements ask for Valve4 and whose netlist routes it. The paid Wokwi scenario
 asserts two pins and passed over it. The firmware calls itself a stub, which renames the defect
 rather than removing it: nothing says the stub covers less than the design.
-**Value proven by:** `python3 -c "import firmware.main"` returns in a spark-generated project, and
-the chain reports a signal the requirements ask for that the firmware never drives.
+**Value proven by:** `firmware.main` imports **with a fake `machine` on the path** (CPython or the
+`micropython` unix port) in a spark-generated project, and the chain reports a signal the
+requirements ask for that the firmware never drives **or never reads**.
+*(Acceptance line corrected 2026-10-01 by P60's builder lens, W20: the first version — bare
+`python3 -c "import firmware.main"` — fails on a CORRECT firmware too, for want of `machine`. And
+the lens found a third defect of the same class: irrigation's `BUTTON_PIN = 18` is never read.)*
 
 ### P52 — A rail states what it carries, from the records that know
 **Needed by:** the irrigation controller and the RC car. The generated board says the gap in its own
@@ -574,6 +598,11 @@ nothing compares any of them with the assigner's output; they agree today by luc
 signal name, its pad and the reason the pin was chosen.
 **Value proven by:** the irrigation firmware imports the generated file and its scenario passes
 unchanged; a test asserts every signal the design has appears exactly once in it.
+**Bound by P60 (2026-10-01):** the file is plain integer assignments, not `const()`, so it imports
+under CPython and MicroPython alike; the assignments are data first, rendered as Python, so a later
+`pins.h` is one renderer and is not built now. **Proposed, for the PO:** each pin's comment carries
+the record facts for that pin (*"GPIO11 — ADC2, unusable with WiFi"*) — P60 measured short notes
+fixing 7 of 7 failing runs, and this delivers them at the moment of writing, from a record.
 
 ### P37 — What this simulation cannot show, printed — DONE 2026-10-01
 **Needed by:** anyone reading a passing scenario. Every stand-in record already carries a mandatory
