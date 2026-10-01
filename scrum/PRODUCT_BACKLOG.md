@@ -912,6 +912,19 @@ the MP3 board for a week: a picture nobody regenerates is a picture of the past.
 exports; it names the components the netlist has (the I²S amplifier, no `Mp3`), and changing
 `board.tsx` makes it out of date to `make`.
 
+### B6 — The documents describing the bin as it is now describe the board that exists — **PO, 2026-10-01: now, with the guard**
+**Needed by:** anyone reading the bin's repository, and spark's reviewers, which read its brief. The
+PO opened `.spark/findings.json` and found the MP3 module in it. A sweep the same hour: the store is
+dead (frozen 2026-09-24, its tool deleted 09-29) and the bin's `README.md` still calls the brain a
+"XIAO ESP32-C6" with a DFR0534; the brief `.spark/project.json` lists both; `STATUS.md`'s next list
+points at the deleted `findings.py` and says the bin "cannot wake at all"; `DESIGN_RULES.md` Part 2 is
+a XIAO C6 checklist; `PCB_PIPELINE.md` names XIAO, MP3, OLED; a `vl6180x.py` docstring reasons with
+the C6. The board changed twice in a week and the code was swept; the prose was not.
+Out of scope, already tracked: the firmware README's bench steps (P58), `SHOPPING.md` and `BOM.md`.
+**Value proven by:** the dead store is gone; each listed document describes the FireBeetle S3 and the
+I2S amplifier; and `make check` fails when a retired part name (XIAO, DFR0534/Mp3, TB6612, OLED,
+VBAT) appears in a current-state document on a line that does not say it is history.
+
 ### B5 — A derived file in git is checked current, or not kept in git — **from R8.2, unordered**
 **Needed by:** anyone reading the bin's repository: its `board-sch.svg` and `board-pcb-routed.svg`
 showed the MP3 board for a week after the board changed (remade in bin `2367fa1`), and nothing
