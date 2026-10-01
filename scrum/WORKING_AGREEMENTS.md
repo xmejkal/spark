@@ -161,7 +161,10 @@ question is whether the same behaviour fits in less code — the three-outcome v
 out in three places and one of the three was wrong, which is how a check came to report `ok` over
 its own `could-not-run` (P34). Deleting comes second, raising the number third, and each is
 written down with its reason. Changed 2026-09-30, at the PO's question: "if it's code, it could
-be refactored?"
+be refactored?" **Raised 4,000 → 5,000 on 2026-10-01 by the PO** at 3,879 code lines: the ceiling
+was about to stop work every item of which a design needed, while W15's orphan tests — the checks
+that catch unused code — stay exactly as they are. The reason is beside the number in
+`tests/test_orphans.py`.
 
 ## W16 — A replacement deletes what it replaces, in the same commit
 

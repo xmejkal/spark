@@ -28,7 +28,12 @@ LIBRARIES = {"copper", "outcomes", "design"}
 #: ceiling is on the code, and the order when it pinches is **refactor, delete, raise** — each
 #: written down. 3,550 code lines on the day it changed (6,536 total); 4,000 leaves room for the
 #: sprint's five items, which are about 250.
-SCRIPTS_CODE_BUDGET = 4_000
+#: RAISED to 5,000 on 2026-10-01 by the PO, at 3,879: "the limit is too low ... lets keep checking
+#: that we dont produce bloat or leave unused code". Sprint 8 grew ~40 code lines an item, so 4,000
+#: would have been reached within three items while every one of them was needed (W14) and nothing
+#: was left unused (the orphan tests below, unchanged). A ceiling that stops needed work measures
+#: the ceiling, not bloat. 5,000 is ~25 items of headroom (estimate) — still a number someone sees.
+SCRIPTS_CODE_BUDGET = 5_000
 
 
 def code_lines(path):
