@@ -44,6 +44,28 @@ does**, which is what spark's records are for.
 Limits, stated: the installed CLI reaches `claude-opus-5` and `claude-sonnet-5`, not this session's
 Opus 5.5; no web tools; user-level plugins still loaded; two runs per cell.
 
+### Rerun on the 5.5 models, as the PO asked
+
+Same prompts, same grading, `claude-opus-5-5` and `claude-sonnet-5-5` (CLI 2.1.285, each run's
+JSON names its model). **4 of 32 graded runs wrong, every one of them the Wokwi ADC task** —
+counted by the facilitator from `grades55.tsv` after the runs; four opus runs timed out at 500 s,
+were rerun at 1200 s, and are graded from the rerun.
+
+| task | 5.0 wrong | 5.5 wrong |
+| --- | --- | --- |
+| Wokwi's 5 V ADC (tool) | 4 of 4 | **4 of 4** — *"raw ≈ 2482 … ≈ 2.000 V"*; Wokwi gives 1638 and 1.32 V |
+| C6 deep-sleep wake (chip) | 3 of 4 | 0 of 4 |
+| VL6180X GPIO1 register (part) | 2 of 4 | 0 of 4 |
+| ADC2 with WiFi (chip) | 1 of 4 | 0 of 4 |
+| the four runtime tasks | 0 of 14 | 0 of 16 |
+
+**So the answer stands, and narrower.** The chip and part facts the older models missed, the newer
+ones know. The one fact both generations miss — 8 of 8 — is a fact about the **simulator**, and a
+two-line note fixed it 4 of 4 on 5.0. A MicroPython skill would carry nothing the current model
+lacks; what it lacks belongs with the simulation, printed where a scenario's expectations are
+written. Two outdated beliefs persist on 5.5 and cost nothing yet: that MicroPython cannot say
+which ext1 pin woke it (it has `machine.wake_pins()`), and, once in four, that the S3 has no ext0.
+
 ## Verified at source: the bin's lessons are not all true
 
 Twenty-four candidate facts, checked against MicroPython v1.29.0 (what the bin's image reports),

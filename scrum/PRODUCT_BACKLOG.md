@@ -303,7 +303,9 @@ checks look, which is the one behaviour W16 allows.
 
 ### P60 — Should there be a firmware skill, and for which runtime? — ANSWERED 2026-10-01, `docs/2026-10-01-firmware-skill.md`
 **PO, 2026-10-01: accepted provisionally — rerun the measurement on Opus 5.5 once the CLI is
-updated, and revisit if it changes the picture.** The council's answer: no skill; MicroPython only; the facts a
+updated, and revisit if it changes the picture.** *Rerun the same day: 4 of 32 runs wrong on the
+5.5 models, all four the Wokwi 5 V ADC task (8 of 8 across both generations); the chip and part
+misses of 5.0 are gone. The answer stands, narrower — see the document.* The council's answer: no skill; MicroPython only; the facts a
 model gets wrong (10 of 30 runs) are chip, part and tool facts, so they go in records, reach the
 firmware through P36's file and are enforced by P56's seeded fake. The bin's headline lesson —
 `WAKEUP_ALL_LOW` is an AND — is false on the S3 and C6, and spark's own parts library repeats it: P63.
