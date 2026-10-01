@@ -931,7 +931,14 @@ Out of scope, already tracked: the firmware README's bench steps (P58), `SHOPPIN
 I2S amplifier; and `make check` fails when a retired part name (XIAO, DFR0534/Mp3, TB6612, OLED,
 VBAT) appears in a current-state document on a line that does not say it is history.
 
-### B7 — The bin's CI runs, or says why it cannot — **found 2026-10-01, the PO's call**
+### B7 — The bin's CI runs, or says why it cannot — **found 2026-10-01, the PO's call** — DONE 2026-10-01, the token-free half (bin `f4e6bf5`, `d1ca1aa`)
+**The PO's rule: no token on GitHub, in the code or anywhere.** So without spark the Makefile reads
+the board's facts from the committed resolved board and SKIPS the checks that run spark's own
+scripts — named in the log, raised as warnings on the run, and in the last line. **CI green on
+`f4e6bf5` and `d1ca1aa`, the first since 2026-09-23**, with six skip warnings (board contract
+twice, vendor pins, BOM twice, physics) and 113 tests, the compiler, pins, simulation and documents
+really run. With spark present `make check` is unchanged (zero skips). **Left for when spark is
+public:** check it out beside the bin in the workflow, no token, and the skips go.
 **Needed by:** the bin's public repository, whose CI has failed on **every push since 2026-09-24**
 (25 runs; last green 09-23) while STATUS.md said "CI green on every push". Each run dies at the
 first step: `python3: can't open file '/home/runner/Development/spark/scripts/boards.py'`. The
@@ -940,6 +947,15 @@ private. Options for the PO: a token with read access to spark as a repository s
 checkout step; or wait for spark to be public (P61's ruling), then check it out plainly.
 **Value proven by:** `gh run list` shows the bin's next push green, or the workflow says in its own
 log that it skipped the spark-dependent steps and why — never a red run nobody reads.
+
+### B8 — A firmware test failed once and was never caught again — **found 2026-10-01, unordered**
+**Needed by:** the bin's commit gate, which is only trusted while it never fails for nothing. A
+local no-spark `make check` failed at `firmware-tests` once; the same suite then passed 31 of 31
+times alone and the rehearsal 4 of 4 — one failure in 36 runs, and the failing test's name was not
+kept (the output went through `tail -1`). The suite runs real asyncio with real sleeps, so a test
+racing the scheduler under load is the likely shape; unproven.
+**Value proven by:** the failure reproduced and named — e.g. the suite run 200 times under CPU load
+with every failure kept — and the test fixed so it cannot race; or 200 clean runs recorded.
 
 ### B5 — A derived file in git is checked current, or not kept in git — **from R8.2, unordered**
 **Needed by:** anyone reading the bin's repository: its `board-sch.svg` and `board-pcb-routed.svg`
