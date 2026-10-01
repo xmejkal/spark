@@ -426,7 +426,7 @@ count; one isolated pass over the board and library records reports each claim s
 unsupported or contradicted with the quoted line; and it finds the `ALL_LOW` claim on its own if
 P63 has not yet removed it (run against `5056703`'s tree if it has).
 
-## Seeing the board — the PO's request of 2026-10-01, all four chosen, not yet ordered
+## Seeing the board — the PO's request of 2026-10-01, all four chosen and ordered the same day
 
 The PO: *"I'd like to have the viewer accessible when working with the plugin … both the schema and
 circuit to 3d model, but also the wokwi simulator. Is there a nice way to show them?"* Found the
@@ -435,14 +435,14 @@ same day: tscircuit ships a live viewer (`tsci dev`, every spark project has it)
 is installed here, and wokwi.com/pricing lists "Wokwi for VS Code" from **Hobby+** up, which the PO
 does not hold or is unsure of — so it is documented, not tried.
 
-### P65 — The board is one command from being seen while you work
+### P65 — The board is one command from being seen while you work — **PO: Sprint 8, after P55**
 **Needed by:** the PO, working in any spark project. `npx tsci dev board.tsx` serves the schematic,
 PCB and 3D on localhost:3020 and reloads on every change; nothing in spark mentions it.
 **Value proven by:** `commands/build.md` names the command and the port, and in a fresh project
 built from its own example the server answers (`curl -s -o /dev/null -w %{http_code}
 localhost:3020` → 200). No code.
 
-### P66 — Every build writes a viewer page
+### P66 — Every build writes a viewer page — **PO: Sprint 9, after P62 and P64**
 **Needed by:** the PO and anyone the board is shown to. The bin's generator (B4) moves into the
 plugin as `scripts/viewer.py`; `/spark:build` writes `board-viewer.html` beside the board; the bin's
 Makefile calls the plugin's copy and its own is deleted (W16). It needs the SVG and GLB exports,
@@ -452,7 +452,7 @@ which the chain does not make today — say what that costs in seconds before de
 whose three tabs render (headless Chrome screenshot); the bin's `make all` builds its viewer through
 the plugin's script.
 
-### P67 — The simulation can be watched, not only asserted
+### P67 — The simulation can be watched, not only asserted — **PO: Sprint 8, after P65**
 **Needed by:** the PO — a passing scenario says nothing you can see. The Wokwi VS Code extension
 opens the project's `wokwi.toml` and `diagram.json` — the files spark already writes — and runs the
 firmware live, custom chips included. Needs a Wokwi licence of Hobby+ or above (wokwi.com/pricing,
@@ -460,7 +460,7 @@ read 2026-10-01); whether it spends CI minutes is not stated there.
 **Value proven by:** `commands/build.md` says how to open it, what licence it needs, and that it was
 not tried here. No code. Tried for real only once the PO holds a licence.
 
-### P68 — The viewer can be opened anywhere
+### P68 — The viewer can be opened anywhere — **PO: Sprint 9, after P66**
 **Needed by:** P66's page, away from the machine that made it. After a build the conversation
 offers — never does unasked — to publish the viewer as a private Claude artifact; the PO decides
 each time, because publishing is outward-facing. Depends on P66.

@@ -29,8 +29,13 @@ direction, with no new concept, no quota and no bench.
 | 4 | **P36** | the pin map becomes a file the firmware imports instead of retyping — plain ints, each pin's record facts as comments (PO, after P60) | S |
 | 5 | **P54** | the suite cannot pass by asking the code to confirm itself | S |
 | 6 | **P55** | something reads the real catalog — 35 records no test touches | S |
+| 7 | **P65** | the board is one command from being seen while you work (`tsci dev`, documented) — **added by the PO 2026-10-01** | XS |
+| 8 | **P67** | the simulation can be watched in VS Code (documented; needs a Wokwi Hobby+ licence) — **added by the PO 2026-10-01** | XS |
 
-**Six items since 2026-10-01**, when the PO put P63 first: P60's council found spark's own parts
+**Sprint 9 opens P62 → P64 → P66 → P68** (the PO, 2026-10-01): the viewer page and its artifact
+follow the source work, now that the `scripts/` ceiling is 5,000 code lines.
+
+**Eight items since 2026-10-01**: P63 put first by the PO, and two documentation items (P65, P67) added last: P60's council found spark's own parts
 library teaching a false wake fact, and a false fact in a record is what every conversation reads.
 **Planned as five, deliberately below Sprint 6's eight.** The reason is measured and in R7: of the last
 twelve items, **five had acceptance lines that were false when reproduced**, and both sprints found
