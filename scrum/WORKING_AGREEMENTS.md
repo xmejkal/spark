@@ -27,6 +27,12 @@ test.
 there; the call beneath it named a function that did not exist. The test was green for the entire
 life of the defect — it verified the check was *named*, not that it *ran*.
 
+**Mechanical since P54 (2026-10-01):** `tests/test_self_confirmation.py` fails when a test reads a
+module-under-test constant that is not shared vocabulary and has no written reason, and when a
+shipped file is named by no mutation table and has no written reason. Its first catch:
+`test_flash_image` found the filesystem at `flash_image.FILESYSTEM_OFFSET` — and passed with it
+moved to an offset MicroPython never reads.
+
 ## W3 — Mutation testing is the acceptance bar
 
 Re-introduce the defect; the suite must go red. Before commit, not after somebody finds it again.

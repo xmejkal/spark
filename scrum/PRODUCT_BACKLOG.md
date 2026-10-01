@@ -222,7 +222,15 @@ as_json, render)` generalises the shape `emit_footprint` already has. Six caller
 **Value proven by:** the status-from-severities expression appears once in `scripts/`; every
 script's exit code still matches its printed status, proven by P41's tests.
 
-### P54 — The suite cannot pass by asking the code to confirm itself
+### P54 — The suite cannot pass by asking the code to confirm itself — DONE 2026-10-01
+**Run on the tree before the fix:** both checks failed — 39 module constants read outside the shared
+vocabulary, and 84 files no mutation table names, `check_bom.py` and `flash_image.py` the two
+scripts among them. Triaged one by one: 38 are sameness, agreement with a second source, a relation
+between tuning numbers, or structure, each with its written reason; **one was the identity the item
+named** — `test_flash_image` found the filesystem at the module's own offset. Rewritten against
+MicroPython v1.29.0's literals (4 MiB, 0x200000, littlefs 4096/32/32/32/128/100), each cited to its
+source file. **Shown both ways in a scratch copy:** the old test passes with the offset moved to
+0x100000; the new one fails. 12 mutations on the two unmutated scripts, every one caught.
 **Needed by:** `flash_image.py`, whose docstring names the symptom it controls — *"the simulated
 board boots to a bare REPL with no main.py"*. The verification lens found the live instance:
 `tests/test_flash_image.py:22-38` computes **both** its block count and its slice from

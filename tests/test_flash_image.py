@@ -11,6 +11,17 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import flash_image  # noqa: E402
 
+#: MicroPython v1.29.0's own numbers for ESP32_GENERIC_S3, which the image has to match. Literals
+#: from its source, never read back from `flash_image`: the test used the module's constants to
+#: find the filesystem, so a wrong offset moved the module and the test together and nothing
+#: noticed (P54). Each was read at the tag on 2026-10-01.
+MICROPYTHON_FLASH_SIZE = 4 * 1024 * 1024   # ports/esp32/boards/sdkconfig.base: CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+MICROPYTHON_VFS_OFFSET = 0x200000          # ports/esp32/partitions-4MiBplus.csv: factory ends at 0x10000 + 0x1F0000; "The remaining flash is for the user filesystem(s)"
+MICROPYTHON_LITTLEFS = dict(               # how MicroPython itself mounts that partition:
+    block_size=4096,                       # ports/esp32/esp32_partition.c: NATIVE_BLOCK_SIZE_BYTES (4096)
+    read_size=32, prog_size=32, lookahead_size=32,   # extmod/vfs_lfs.c: readsize/progsize/lookahead default 32
+    cache_size=128, block_cycles=100)      # extmod/vfs_lfsx.c: MIN(block, 4 * MAX(read, prog)); block_cycles = 100
+
 
 class TheImageTest(unittest.TestCase):
     def setUp(self):
@@ -25,11 +36,12 @@ class TheImageTest(unittest.TestCase):
         files = flash_image.files_under(self.root / "fw")
         self.assertEqual([name for name, _ in files], ["/lib/rtc.py", "/main.py"])
         flash = flash_image.image((self.root / "micropython.bin").read_bytes(), files, {"T": 40})
-        self.assertEqual(len(flash), flash_image.FLASH_SIZE)
+        self.assertEqual(len(flash), MICROPYTHON_FLASH_SIZE)
         self.assertEqual(flash[:1], b"\xe9")
-        fs = LittleFS(block_count=(flash_image.FLASH_SIZE - flash_image.FILESYSTEM_OFFSET) // flash_image.BLOCK_SIZE,
-                      mount=False, **flash_image.LITTLEFS_SETTINGS)
-        fs.context.buffer = bytearray(flash[flash_image.FILESYSTEM_OFFSET:])
+        # Mounted the way MicroPython mounts it, where MicroPython looks — not where the module says.
+        fs = LittleFS(block_count=(MICROPYTHON_FLASH_SIZE - MICROPYTHON_VFS_OFFSET) // 4096,
+                      mount=False, **MICROPYTHON_LITTLEFS)
+        fs.context.buffer = bytearray(flash[MICROPYTHON_VFS_OFFSET:])
         fs.mount()
         with fs.open("/main.py", "rb") as handle:
             self.assertEqual(handle.read(), b"print('hi')\n")
@@ -40,7 +52,7 @@ class TheImageTest(unittest.TestCase):
 
     def test_an_interpreter_too_large_for_its_slot_is_refused(self):
         with self.assertRaises(ValueError):
-            flash_image.image(b"\x00" * (flash_image.FILESYSTEM_OFFSET + 1), [])
+            flash_image.image(b"\x00" * (MICROPYTHON_VFS_OFFSET + 1), [])
 
     def test_the_command_writes_the_image_and_names_what_went_in(self):
         import contextlib
@@ -50,7 +62,7 @@ class TheImageTest(unittest.TestCase):
             code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--files", str(self.root / "fw"),
                                      "-o", str(self.root / "flash.bin")])
         self.assertEqual(code, 0, out.getvalue())
-        self.assertEqual((self.root / "flash.bin").stat().st_size, flash_image.FLASH_SIZE)
+        self.assertEqual((self.root / "flash.bin").stat().st_size, MICROPYTHON_FLASH_SIZE)
         self.assertIn("/main.py", out.getvalue())
 
     def test_a_missing_interpreter_is_could_not_run_with_where_to_get_one(self):
