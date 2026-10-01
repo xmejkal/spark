@@ -1,4 +1,46 @@
-# Sprint 7
+# Sprint 7 — closed 2026-10-01
+
+### Review — validated value, every number rerun at close
+
+**Goal met.** A stranger can install this and get a built, checked, simulated board, and none of
+those three words depended on this machine before.
+
+| | before | after |
+| --- | --- | --- |
+| `npm install` in a fresh project | failed: `No matching version found for @tscircuit/cli@0.0.2600` | exit 0, and the **core** is pinned for the first time |
+| after the one documented command | only `requirements.json` | a built board in the project |
+| `check_all --project .` | 4 not asked for | **1** (the fab package nobody exported) |
+| simulation off this machine | `[????] no converter found` | runs wherever the plugin is installed |
+| RC car's rules | none — `compare_design` refused | **8**, both boards `every rule holds` |
+| irrigation's rails | none — `check_physics` refused | **4**, the check runs |
+| what a green scenario admits | nothing | **7 lines**, in the records' own words |
+
+**Evidence at close:** 741 tests OK · 212 mutations in 43 tables, every anchor present · 38/38 in
+the converter's own suite inside the plugin · scripts 3,710 code lines of 4,000 · the bin's
+`make check` unchanged, red only on CurrentShunt's unmeasured current.
+
+**Three of four items had an acceptance line that was FALSE when reproduced**, which is W20 — adopted
+the morning this sprint began — earning its place three times in one day. P51's understated the
+defect: the pin was not merely wrong, `tscircuit` was never in the package file at all and
+`@tscircuit/cli` takes it as a `"*"` peer dependency, so **every project spark has ever created
+installed an unpinned core**. P53's said `--force` preserves hand-filled values; it deleted them,
+in the one workflow the documents prescribe. P32a's said 62 tests would move; 38 did, because a
+board's end-to-end test is knowledge of that board.
+
+**P32a found a regression P29 had shipped**: the irrigation chain stopped at `"VCC" is not a pin of
+board-esp32-s3-devkitc-1`. The board contract now compares `power_pads` against `wokwi_power_pins`,
+so two lists in one file can no longer disagree with a person as the only comparator.
+
+**Two faults this close found in its own record**, both by R6's checks run as written: three
+`(was N)` baselines in commit messages were written from memory and are wrong — 692 not 693, 703
+not 706, 716 not 718, each understating its own delta (W13); and `commands/build.md` still told a
+stranger the converter *"is not shipped with the plugin yet"* and pointed at
+`../smartbin-local`. The code moved and the document did not. Both corrected at close, the second
+with a test that fails if any shipped prose names another repository.
+
+---
+
+# Sprint 7 — as planned
 
 **Planned** 2026-09-30 · **Facilitator** main session · **Product Owner** Petr, who ordered
 "fix the lie first, then v1" after a five-lens council read the whole backlog and reproduced

@@ -29,6 +29,11 @@ the scrum master), each scoring every item and probing the product to do it; eve
 reproduced before it was written down (W9). **The order is the PO's** (W11) — this is the
 council's proposal.
 
+**Stale as a list of what is next — 2026-10-01.** Five of its thirteen rows are done (P45, P46,
+P29, P37, P32 as P32a) and it was ordered before Sprints 6 and 7 found P51 to P55. It is kept as
+the council's reasoning of 2026-09-30, not as the queue; the queue is the sprint plan and the
+items below. Reordering it is the PO's (W11) and is the first thing Sprint 8's planning should do.
+
 | # | item | value | effort | why here |
 | --- | --- | --- | --- | --- |
 | **P45** | The rules a project is checked against are seeded from its design | 4 | M | `init` writes empty rule lists, so the irrigation DS3231's I2C lines are checked by nobody and `compare_design` refuses for want of a rule nobody wrote |
@@ -45,7 +50,7 @@ council's proposal.
 | **P2** | A simulation that costs no Wokwi minutes | 3 | M | its "needed by: none yet" is false now: the irrigation firmware has no test of any kind and three diagnostic runs went to the quota |
 | **R2.6** | A fourth cold test — **PO: the domain** | 5 | L | the cold tests found 13 and 12 gaps; ten of the twelve were invisible to every test in this repo |
 
-### P33 — The documented setup must build the documented example — **REOPENED 2026-09-30**, its proof line fails
+### P33 — The documented setup must build the documented example — REOPENED 2026-09-30, **CLOSED by P51 2026-10-01** (its proof line was rerun green in an empty directory)
 **Needed by:** every stranger who follows `/spark:init` then `/spark:build` — and it is a defect
 introduced on 2026-09-29 by P28's own fix (I9). `init_project.py` writes `"@tscircuit/cli": "*"`,
 so `npm install` fetches 0.0.2687, which fails on this plugin's documented example with
@@ -292,7 +297,7 @@ stated current is **could-not-run naming the part** rather than a guessed total 
 rating and reported; on the irrigation board the soil probe is named as the one load nobody has
 stated, instead of the rails being empty.
 
-### P53 — The rules reach a project that already exists — DONE 2026-09-30
+### P53 — The rules reach a project that already exists — DONE 2026-10-01
 **Needed by:** the RC car, whose `.spark/rules.json` still holds `i2c_buses: []` and
 `must_not_float: []` — so `compare_design` exits 2 there today, and **the canonical defect of this
 whole product, the L9110S's floating bridge inputs, is checked by nobody on the board that carries
@@ -443,7 +448,7 @@ signal name, its pad and the reason the pin was chosen.
 **Value proven by:** the irrigation firmware imports the generated file and its scenario passes
 unchanged; a test asserts every signal the design has appears exactly once in it.
 
-### P37 — What this simulation cannot show, printed — DONE 2026-09-30
+### P37 — What this simulation cannot show, printed — DONE 2026-10-01
 **Needed by:** anyone reading a passing scenario. Every stand-in record already carries a mandatory
 `stand_in` sentence — Wokwi's DS1307 answers at the DS3231's address with the same seven time
 registers and has no alarms, no temperature; each valve is an LED with no MOSFET, no 12 V and no

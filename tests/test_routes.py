@@ -216,5 +216,37 @@ class AStrangerCanBuildTest(unittest.TestCase):
         self.assertIn('from "./FireBeetle2Esp32S3"', board)
         self.assertTrue((self.here / "FireBeetle2Esp32S3.tsx").is_file())
 
+class NoDocumentPointsAtSomebodysMachineTest(unittest.TestCase):
+    """
+    R7.1. P32a moved the converter into the plugin and rewrote the comment beside the code; the
+    document a stranger reads kept saying *"not shipped with the plugin yet… then at
+    `../smartbin-local/tools/circuit-to-wokwi` (the smart bin repo beside the project)"*. The
+    code was right and the product was wrong, which is the same shape as Sprint 6's false claim
+    one layer over — and worse, because a stranger would not try the thing that now works.
+    """
+
+    USER_FACING = ("commands", "skills", "agents")
+
+    def shipped_prose(self):
+        texts = {}
+        for folder in self.USER_FACING:
+            for path in sorted((ROOT / folder).rglob("*.md")):
+                texts[str(path.relative_to(ROOT))] = path.read_text()
+        for name in ("README.md", "GLOSSARY.md"):
+            texts[name] = (ROOT / name).read_text()
+        return texts
+
+    def test_nothing_a_user_reads_names_another_repository(self):
+        for name, text in self.shipped_prose().items():
+            with self.subTest(file=name):
+                self.assertNotIn("smartbin-local", text,
+                                 "%s names one person's checkout" % name)
+
+    def test_nothing_says_the_converter_is_unshipped(self):
+        for name, text in self.shipped_prose().items():
+            with self.subTest(file=name):
+                self.assertNotIn("not shipped with the plugin", text)
+
+
 if __name__ == "__main__":
     unittest.main()

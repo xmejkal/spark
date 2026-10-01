@@ -231,6 +231,50 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
+## R7 — 2026-10-01, on Sprint 7 and the checks that caught their author
+
+Four items, five commits, and the v1 line now holds mechanically: an outside reading took an empty
+directory to a built, checked, simulated board with the documents alone and no repository beside
+it. The useful part of this retro is what R6's own actions caught.
+
+### R6's four actions, checked as written
+
+| | |
+| --- | --- |
+| **R6.1** (a Done line about another repo's file is proven by regenerating it in the same commit) | **held.** The only cross-repo lines are P53's, and both files were regenerated and committed in their own repos within ten seconds of spark's — `rc-car 1869b64`, `irrigation 2f6631e`. Both rerun read-only at close. Zero lines describing a file nobody regenerated. |
+| **R6.2** (the item's text is committed before its work) | **held.** All four items trace to `af6b766` or earlier. Zero same-commit items. |
+| **R6.3** (the acceptance command runs in the project the need line names) | **held**, all four rerun there, zero refusals. This is the action that made the sprint honest: it is why P51's npm install was tested in an empty directory with no global CLI, and why P32a's regression in P29 was found at all. |
+| **R6.4 / R5.2** (the simulator's documentation is cited before a second paid run) | **not exercised, a third sprint.** No paid run happened. Rolls forward unchanged — it is neither stuck nor failed. |
+
+### What the close found in its own record
+
+**Three `(was N)` baselines were written from memory and are wrong** — 692 not 693, 703 not 706,
+716 not 718. Each understates its own delta, so nothing was inflated, but three numbers entered
+commit messages without their output being read. That is W13, which has existed since R4.1.
+
+**`commands/build.md` still said the converter "is not shipped with the plugin yet"** and pointed a
+stranger at `../smartbin-local`. P32a moved the code and rewrote the comment beside it; the
+document somebody actually reads was not touched. Worse than a stale note: a stranger would not
+try the thing that now works. Corrected, with a test that fails if any shipped prose names another
+repository.
+
+**Three of four acceptance lines proved false on contact** — P51's, P53's, P32a's. W20 was adopted
+the morning this sprint started and earned its place three times in one day. It is working as
+intended: each was corrected in writing beside the measurement rather than quietly met.
+
+### Actions
+
+| # | change | check at R8 |
+| --- | --- | --- |
+| **R7.1** | A document is part of the tree a Done line claims. A commit that changes where something lives, or what a command does, changes the user-facing file describing it **in the same commit**. | At R8: `grep -rn "smartbin-local\|not shipped with the plugin" commands/ skills/ agents/ README.md` returns nothing — now a test — and every Sprint 8 item either carries its document change in its own diff or says no document described it. |
+| **R7.2** | A `(was N)` is a measurement, not a memory. | At R8: for each Sprint 8 commit message, the baseline equals the suite count at its parent, measured from `git archive`. Zero mismatches. |
+| **R7.3** | `DONE <date>` carries the date of the commit that did the work, and closing an item closes what it fixes. | At R8: every Sprint 8 `DONE` equals its implementation commit's author date, and no item whose proof line now passes is still marked REOPENED or open. |
+| **R7.4** | The sprint's close is written inside the sprint. `SPRINT.md` gains its review section before the last commit, as Sprint 6 had and Sprint 7 did not. | At R8: `git log <sprint range> -- scrum/SPRINT.md` is non-empty, and SPRINT.md carries a review for Sprint 8. |
+
+**R5.2 rolls forward a third time**, unchanged and still untested.
+
+---
+
 ## R6 — 2026-09-30, on Sprint 6 and the council that read it
 
 Eight items closed in one morning — ten commits between 09:14 and 12:28. Then five lenses read the

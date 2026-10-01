@@ -143,10 +143,9 @@ to say so (`{"ADC_REFERENCE_V": 5.0}`); and a chip's control ids are letters and
 Chips compile locally and cost nothing; a scenario run spends Wokwi CI minutes, so run them on
 purpose. Stand-ins are named as such in the records: a pass here is not a bench.
 
-The converter that writes `diagram.json` is not shipped with the plugin yet: the spine looks for
-`tools/circuit-to-wokwi/cli.ts` in the project, then at `../smartbin-local/tools/circuit-to-wokwi`
-(the smart bin repo beside the project). Elsewhere the stage is an honest could-not-run naming
-both places (backlog P32).
+The converter that writes `diagram.json` **ships with the plugin** (`tools/circuit-to-wokwi`). A
+project may carry its own at `tools/circuit-to-wokwi/cli.ts` and that one wins; otherwise the
+plugin's is used, so this stage works wherever the plugin is installed. It needs `bun`.
 
 ## After it builds
 
