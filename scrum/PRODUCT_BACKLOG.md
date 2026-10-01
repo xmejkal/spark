@@ -329,7 +329,7 @@ What it has to settle, and the evidence that already exists here:
 **Value proven by:** a document naming one runtime to support first with its reason, and either a
 skill with every line traceable to a fact this project established, or a decision not to write one.
 
-### P61 — Where a source we read is kept, so nobody researches it twice — the PO's question of 2026-10-01
+### P61 — Where a source we read is kept, so nobody researches it twice — ANSWERED 2026-10-01, `docs/2026-10-01-keeping-sources.md`
 **Needed by:** every board and part record, and P60's fact lens, which re-downloaded the
 ESP32-S3-WROOM-1 datasheet from the web and reported the cited version (v1.1) as *"not obtained"* —
 while `smartbin-local/parts/datasheets/ESP32-S3-WROOM-1_datasheet_Espressif_v1.1.pdf` sat on disk,
@@ -350,6 +350,23 @@ it (version, checksum, the page or line a fact rests on); size and growth; and w
 plugin may redistribute vendor PDFs at all.
 **Value proven by:** a document naming where each kind of source lives and why, and the one
 command a researcher runs to find a source before fetching it again.
+
+**The PO's answer (2026-10-01): spark will eventually be public.** So a record carries the pointer
+and the file lives in one store on the person's machine, outside the plugin; the work is P62.
+
+### P62 — A record points at the exact source it rests on, and the file is found before it is fetched again
+**Needed by:** the FireBeetle board record, whose deep-sleep PSRAM claim cites "WROOM-1 v1.1 Table
+12" as prose — nothing could find the kept v1.1, and the vendor URL now serves v1.8 with different
+table numbers; and every researcher, since one fetch in five repeats one already made (P61).
+Per P61's document: board records join the fetch path (`cited_urls` reads nested `source` fields);
+every attachment holds URL, printed document version, page/table, sha256 and retrieved date; source
+code is cited at a tag or commit; `--fetch` writes to a per-person store outside the plugin that
+every project shares; `parts.py --kept <words>` finds a kept source without the network and is the
+first step in `commands/research.md` and the researcher agent; the catalog's 45 vendor files move
+into the store in the same commit (W16). *Estimate* ~30–60 code lines.
+**Value proven by:** with the network refused, `parts.py --kept wroom` prints the local path of the
+v1.1 datasheet and the board fact that cites its Table 12; and `git ls-files catalog | grep -c pdf`
+prints 0.
 
 ### P57 — A stand-in's geometry is could-not-run, not a failure
 **Needed by:** v1's own words, *"no false alarms from the checks"*, and the documented example,
