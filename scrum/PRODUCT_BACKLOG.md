@@ -438,6 +438,18 @@ become one could-not-run each rather than measurements of a part that is not on 
 a project's requirements name them, and the documented example's do not reach it.
 **Value proven by:** the documented example's `buildability` becomes could-not-run naming the
 stand-in, and a REAL footprint with a thin ring still FAILs.
+**Premise FALSE when reproduced, 2026-10-01 (W20), and the item re-cut by the PO the same hour.**
+Built from `commands/build.md` in an empty directory: `[FAIL] buildability … JstPh2PowerInlet: pad
+1.20 mm around a 0.75 mm hole leaves 0.225 mm of ring, under the 0.25 mm this process guarantees`.
+But `jst-ph-2-power-inlet` is **not a stand-in** — no `footprint_placeholder`, a body verified from
+JST's B2B-PH-K-S drawing, and `jst_ph_2` is tscircuit's footprint of that very connector (KiCad's
+own JST PH footprint has the same 0.225 mm across its narrow axis; 2 mm pitch leaves no room). The
+false alarm is elsewhere: `data/fabrication.json`'s 0.25 mm has no source, and JLCPCB's
+capabilities page says for 2-layer 1 oz PTH *"Recommended 0.25 mm or above; absolute minimum
+0.18 mm"* — a recommendation enforced as a limit. **PO: two sourced limits.**
+**Value proven by (re-cut):** the documented example's `buildability` no longer FAILs and says the
+inlet's 0.225 mm ring is under JLCPCB's recommended 0.25 mm and over its 0.18 mm minimum; a ring
+under 0.18 mm still FAILs; both numbers carry their source in `data/fabrication.json`.
 
 ### P58 — The bench instructions name the board you are holding
 **Needed by:** the PO, this week — bench bring-up is item 2 on the smart bin's own NEXT list.
