@@ -329,6 +329,25 @@ What it has to settle, and the evidence that already exists here:
 **Value proven by:** a document naming one runtime to support first with its reason, and either a
 skill with every line traceable to a fact this project established, or a decision not to write one.
 
+### P61 — Where a source we read is kept, so nobody researches it twice — the PO's question of 2026-10-01
+**Needed by:** every board and part record, and P60's fact lens, which re-downloaded the
+ESP32-S3-WROOM-1 datasheet from the web and reported the cited version (v1.1) as *"not obtained"* —
+while `smartbin-local/parts/datasheets/ESP32-S3-WROOM-1_datasheet_Espressif_v1.1.pdf` sat on disk,
+unlinked from any spark record. The PO asked: *"are we actually keeping them? … it might be good
+not to have to reresearch datasheets and board infos … would it be too much data? … should it be in
+the project folder, or the spark itself?"*
+Measured 2026-10-01: `parts.py --fetch` keeps a record's cited files beside it; the catalog has
+files for 16 of 18 records (45 PDFs/images in git, 10 MB); the library's 8 records hold 4
+attachments; **the two board records hold none**; the bin keeps 13 PDFs (13 MB) spark cannot see;
+everything an agent reads during research lands in a session scratchpad and is lost. spark's
+`.git` is 33 MB and the repository is on GitHub.
+**A question for a council (W18, W11), not work.** It must settle: plugin, project, or a cache
+outside both; what is kept (PDF, the source file at a tag, a text extract); how a record points at
+it (version, checksum, the page or line a fact rests on); size and growth; and whether a published
+plugin may redistribute vendor PDFs at all.
+**Value proven by:** a document naming where each kind of source lives and why, and the one
+command a researcher runs to find a source before fetching it again.
+
 ### P57 — A stand-in's geometry is could-not-run, not a failure
 **Needed by:** v1's own words, *"no false alarms from the checks"*, and the documented example,
 which fails spark's own manufacturability check out of the box. Reproduced 2026-10-01:
