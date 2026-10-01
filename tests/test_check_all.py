@@ -370,6 +370,57 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         self.assertIn("broken.requirements.json", json.dumps(result))
 
 
+class TheRecordsReachPhysicsTest(unittest.TestCase):
+    """
+    P52. The part records know what each rail carries; `check_physics` is handed a netlist and a
+    rules file, neither of which does. `check_all` knows the project, so it is the one that
+    finds the design behind THIS circuit — a project can hold a car and its remote.
+    """
+
+    @staticmethod
+    def _project():
+        root = Path(tempfile.mkdtemp())
+        (root / "parts").mkdir()
+        probe = {"schema": 1, "id": "probe", "name": "probe", "kind": "sensor", "needs": [],
+                 "power": [{"pin": "VCC", "rail": "logic", "direction": "in",
+                            "draws": "operating_current_ma"},
+                           {"pin": "GND", "rail": "ground", "direction": "in"}],
+                 "facts": {"operating_current_ma": {"value": None, "verified": False,
+                                                    "source": "nobody states it",
+                                                    "why_it_matters": "the rail's sum"}},
+                 "pin_order": ["VCC", "GND"], "footprint": "jst_ph_2",
+                 "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}
+        (root / "parts" / "probe.json").write_text(json.dumps(probe))
+        (root / "garden.requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": [{"part": "probe", "name": "Soil1"}]}))
+        (root / "other.requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": [{"part": "probe", "name": "Elsewhere"}]}))
+        circuit = [{"type": "source_component", "source_component_id": "c", "name": "Soil1"},
+                   {"type": "source_net", "source_net_id": "n", "name": "V33"}]
+        (root / "circuit.json").write_text(json.dumps(circuit))
+        return root, circuit
+
+    def test_the_design_behind_this_circuit_is_the_one_summed(self):
+        root, circuit = self._project()
+        loads, _ = check_all.rail_loads_in(root, circuit)
+        self.assertIn("Soil1.VCC", " ".join(loads["V33"]["missing"]))
+        self.assertNotIn("Elsewhere", json.dumps(loads), "the other design is another board")
+
+    def test_a_circuit_no_design_explains_is_said_rather_than_summed(self):
+        root, _ = self._project()
+        loads, notes = check_all.rail_loads_in(root, [{"type": "source_component", "name": "X"}])
+        self.assertIsNone(loads)
+        self.assertTrue(notes)
+
+    def test_physics_names_the_load_nobody_stated(self):
+        root, _ = self._project()
+        (root / "rules.json").write_text(json.dumps({"physics": {"rails": {}}}))
+        check = next(c for c in check_all.CHECKS if c.name == "physics")
+        result = check.run({"circuit": str(root / "circuit.json"), "rules": str(root / "rules.json"),
+                            "project": str(root)})
+        self.assertIn("Soil1.VCC", json.dumps(result), result)
+
+
 class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
     """
     A second board silently switched six of seven checks off and still reported `ok`.

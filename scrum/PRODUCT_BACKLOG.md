@@ -467,7 +467,20 @@ requirements ask for that the firmware never drives **or never reads**.
 `python3 -c "import firmware.main"` — fails on a CORRECT firmware too, for want of `machine`. And
 the lens found a third defect of the same class: irrigation's `BUTTON_PIN = 18` is never read.)*
 
-### P52 — A rail states what it carries, from the records that know
+### P52 — A rail states what it carries, from the records that know — DONE 2026-10-01
+**Run where `Needed by:` points, after the last change (W13, R6.3):**
+- irrigation, `check_all --project .`: `V33: draws at least 355 mA; not stated: Soil1.VCC:
+  operating_current_ma is not stated; Soil2.VCC …; Soil3.VCC …` — the soil probe, named.
+- rc-car, `check_all --project . --circuit dist/car/circuit.json`: `SERVO: draws 700 mA of 3.00 A,
+  resting on figures nobody has verified: Sg90Servo.VCC: stall_current_ma; Mp1584Buck5v.VOUT:
+  output_current_a`.
+**My own corrected line was wrong too (W20, the same day):** it said the car sums "the servo's stall
+current AND the module's own draw" against the buck. The car's module is not on that rail — its VCC
+pad sits on `V5V`, which the generated board already reports as undriven — so SERVO carries the
+servo alone. Found by reading `car.tsx` before believing the output.
+Also found while proving it: P63 had missed three copies of the false wake fact — irrigation's
+generated `board.tsx`, and the RC car's own `parts/tactile-button.json` with the `remote.tsx` it
+generates. Corrected the same sitting (irrigation `bbc8271`, rc-car `87443a0`).
 **Needed by:** the irrigation controller and the RC car. The generated board says the gap in its own
 text — *"THE WIDTH OF THE TRACES ABOVE ON net.GND, net.V12V, net.V33, net.V5V IS UNJUSTIFIED…
 Nobody has stated what these rails carry"* — and `check_physics` exits 2 there, three of its four

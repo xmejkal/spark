@@ -193,21 +193,32 @@ class Board(netlist.Netlist):
         return narrowest
 
 
-def check_trace_currents(board, rails, rise_c):
-    """Can the copper carry what the rail is expected to carry?"""
+def check_trace_currents(board, rails, rise_c, loads=None):
+    """
+    Can the copper carry what the rail is expected to carry?
+
+    A stated `max_current_a` comes first, because a measurement beats a sum. Where the rules leave
+    it null, the part records' own figures are used when they are complete (P52): sizing was
+    asking for a number the records already held.
+    """
     findings = []
     narrowest = board.narrowest_by_net()
+    loads = loads or {}
 
     # Deliberately no early return when nothing is routed. An earlier version bailed out here,
     # which preempted every per-rail rule below — so a board whose returns are all poured, or
     # one checked before routing, reported "could not run" instead of what is actually known
     # about each rail. Absence of copper is a fact about a rail, not a reason to stop.
     for rail, spec in sorted(rails.items()):
-        current = spec.get("max_current_a")
+        current, summed, origin = spec.get("max_current_a"), loads.get(rail), ""
+        if current is None and summed and summed["complete"]:
+            current, origin = summed["amps"], " (summed from the part records)"
         if current is None:
+            still_open = ("; the part records leave it open: " + ", ".join(
+                gap.split(":")[0] for gap in summed["missing"]) if summed else "")
             findings.append(Finding(
                 "trace-current", rail,
-                "no maximum current stated, so nothing here can be verified",
+                "no maximum current stated, so nothing here can be verified" + still_open,
                 severity="needs-measurement",
                 fix="measure it, then put it in the rules file as max_current_a"))
             continue
@@ -217,8 +228,8 @@ def check_trace_currents(board, rails, rise_c):
             # answers and only one of them is reassuring.
             findings.append(Finding(
                 "trace-current", rail,
-                "carries up to %.2f A and is served by a copper pour, which this check cannot "
-                "size" % current,
+                "carries up to %.2f A%s and is served by a copper pour, which this check cannot "
+                "size" % (current, origin),
                 severity="needs-measurement",
                 fix="confirm the pour actually reaches every return on a 2-layer board with "
                     "components on top — a pour broken into islands by traces is not a plane"))
@@ -228,8 +239,8 @@ def check_trace_currents(board, rails, rise_c):
         if width is None:
             findings.append(Finding(
                 "trace-current", rail,
-                "carries up to %.2f A but has no routed trace of its own — if it is served by "
-                "a copper pour, say so in the rules file" % current,
+                "carries up to %.2f A%s but has no routed trace of its own — if it is served by "
+                "a copper pour, say so in the rules file" % (current, origin),
                 severity="needs-measurement"))
             continue
         capacity = trace_current_capacity_a(width, rise_c)
@@ -238,9 +249,56 @@ def check_trace_currents(board, rails, rise_c):
         needed = width_for_current_mm(current, rise_c)
         findings.append(Finding(
             "trace-current", rail,
-            "carries up to %.2f A, but its narrowest segment is %.2f mm, good for %.2f A at a "
-            "%g C rise" % (current, width, capacity, rise_c),
+            "carries up to %.2f A%s, but its narrowest segment is %.2f mm, good for %.2f A at a "
+            "%g C rise" % (current, origin, width, capacity, rise_c),
             fix="widen this net to at least %.2f mm, or pour it" % needed))
+    return findings
+
+
+def current_text(amps):
+    """Under an amp in milliamps: "0.01 A" was a 15 mA flow meter on the irrigation board."""
+    return "%.2f A" % amps if amps >= 1 else "%.0f mA" % (amps * 1000)
+
+
+def check_rail_supply(loads):
+    """
+    Can each rail's source deliver what its members draw? (P52)
+
+    P29 answered *does a trace reach a supply*; nothing asked *can that supply carry what is on
+    it*. `loads` is `emit_board.rail_loads`: the figures each power pin's record names, summed. A
+    load nobody stated is named rather than taken as zero; a sum that fits on figures nobody
+    verified says what it rests on. A rail with no single source is the generator's to report.
+    """
+    findings = []
+    for rail, load in sorted(loads.items()):
+        supply = load["supply"]
+        if supply is None:
+            continue
+        drawn, rated = load["amps"], supply["amps"]
+        if rated is not None and drawn > rated:
+            findings.append(Finding(
+                "rail-supply", rail,
+                "draws at least %s, more than %s is rated for (%s)"
+                % (current_text(drawn), supply["who"], current_text(rated)),
+                fix="a bigger supply, or a second rail for the heaviest load"))
+        elif load["missing"] or rated is None:
+            gaps = load["missing"] + ([] if rated is not None else
+                                      ["%s: %s" % (supply["who"], supply["why"])])
+            findings.append(Finding(
+                "rail-supply", rail,
+                "draws at least %s; not stated: %s" % (current_text(drawn), "; ".join(gaps)),
+                severity="could-not-run",
+                fix="state each figure in its part record and name it from the pin's `draws` "
+                    "or `can_supply`"))
+        elif load["unverified"] or not supply["verified"]:
+            resting = load["unverified"] + ([] if supply["verified"] else
+                                            ["%s: %s" % (supply["who"], supply["why"])])
+            findings.append(Finding(
+                "rail-supply", rail,
+                "draws %s of %s, resting on figures nobody has verified: %s"
+                % (current_text(drawn), current_text(rated), "; ".join(resting)),
+                severity="needs-measurement",
+                fix="verify each at its source, or measure the rail"))
     return findings
 
 
@@ -367,7 +425,7 @@ def check_i2c_rise_time(board, buses, bus_hz, capacitance_pf):
     return findings
 
 
-def run(circuit, rules):
+def run(circuit, rules, loads=None):
     """
     Every physics rule, and an honest answer about the ones that could not run.
 
@@ -390,15 +448,19 @@ def run(circuit, rules):
     rise_c = physics.get("trace_temperature_rise_c", 10)
 
     findings = []
+    # `loads` is None when the caller had no part records to offer — this file's own CLI, which
+    # is handed a netlist and a rules file only. `check_all --project` passes them, or says why not.
+    if loads is not None:
+        findings += check_rail_supply(loads)
     if rails:
-        findings += check_trace_currents(board, rails, rise_c)
+        findings += check_trace_currents(board, rails, rise_c, loads)
         findings += check_capacitor_voltages(board, rails)
         findings += check_resistor_power(board, rails)
     else:
         findings.append(Finding(
             "rails-not-stated", "physics.rails",
             "no rail is described, so trace current, capacitor derating and resistor power were "
-            "not checked at all — three of this tool's four rules",
+            "not checked at all — three of this tool's five rules",
             fix="fill physics.rails in the rules file: each net's nominal_volts and "
                 "max_current_a. `spark init` writes the names from the built design and leaves "
                 "the numbers null, which is where they have stayed.",

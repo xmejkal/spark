@@ -269,7 +269,7 @@ class AnEmptyRulesFileIsNotACleanBoardTest(unittest.TestCase):
         rails = [f for f in findings if f.rule == "rails-not-stated"]
         self.assertEqual(len(rails), 1, findings)
         self.assertEqual(rails[0].severity, "could-not-run")
-        self.assertIn("three of this tool's four rules", rails[0].detail)
+        self.assertIn("three of this tool's five rules", rails[0].detail)
 
     def test_a_board_with_an_i2c_bus_and_no_clock_is_reported(self):
         findings = check_physics.run([net("SDA"), net("SCL")], {"physics": {"rails": {}}})
@@ -399,6 +399,103 @@ class TheExitCodeFollowsTheFindingsTest(unittest.TestCase):
         code, said = self._run({"physics": {"rails": {"V33": {"nominal_volts": 3.3, "max_current_a": 0.5}}}},
                                json_flag=True)
         self.assertEqual(code, check_physics.EXIT_OK, said)
+
+
+def summed(amps, missing=(), unverified=(), rating=3.0, rating_verified=True, who="Buck.VOUT"):
+    """One rail as `emit_board.rail_loads` returns it."""
+    return {"amps": amps, "complete": not missing, "missing": list(missing),
+            "unverified": list(unverified),
+            "supply": {"who": who, "amps": rating, "verified": rating_verified,
+                       "why": "output_current_a"}}
+
+
+class CanTheSupplyCarryItTest(unittest.TestCase):
+    """
+    P52. P29 answered *does a trace reach a supply*; nothing asked *can that supply carry what is
+    on it*. Two SG90s at 700 mA stall on a 1 A regulator is the classic RC brown-out, and the
+    figures were in the records the whole time.
+    """
+
+    def test_a_rail_drawing_more_than_its_source_is_rated_for_is_a_problem(self):
+        findings = check_physics.check_rail_supply({"SERVO": summed(3.4)})
+        self.assertEqual([f.severity for f in findings], ["problem"])
+        self.assertIn("3.40 A", findings[0].detail)
+        self.assertIn("3.00 A", findings[0].detail)
+        self.assertIn("Buck.VOUT", findings[0].detail)
+
+    def test_a_load_nobody_stated_is_named_and_the_rest_is_still_summed(self):
+        findings = check_physics.check_rail_supply(
+            {"V33": summed(0.37, missing=["Soil1.VCC: operating_current_ma is not stated"])})
+        self.assertEqual([f.severity for f in findings], ["could-not-run"])
+        self.assertIn("Soil1.VCC", findings[0].detail)
+        self.assertIn("at least 370 mA", findings[0].detail, "under an amp, in milliamps")
+
+    def test_an_open_rail_already_over_its_rating_is_still_a_problem(self):
+        findings = check_physics.check_rail_supply(
+            {"SERVO": summed(3.4, missing=["Mute.VCC: names no fact for its current"])})
+        self.assertEqual(findings[0].severity, "problem", "the unknown can only make it worse")
+
+    def test_a_source_with_no_stated_rating_cannot_be_judged(self):
+        findings = check_physics.check_rail_supply({"SERVO": summed(0.7, rating=None)})
+        self.assertEqual([f.severity for f in findings], ["could-not-run"])
+        self.assertIn("Buck.VOUT", findings[0].detail)
+
+    def test_a_sum_that_fits_on_figures_nobody_verified_says_what_it_rests_on(self):
+        findings = check_physics.check_rail_supply(
+            {"SERVO": summed(1.06, unverified=["Sg90Servo.VCC: stall_current_ma"],
+                             rating_verified=False)})
+        self.assertEqual([f.severity for f in findings], ["needs-measurement"])
+        self.assertIn("Sg90Servo.VCC", findings[0].detail)
+        self.assertIn("Buck.VOUT", findings[0].detail, "the rating is unverified too")
+        self.assertIn("1.06 A of 3.00 A", findings[0].detail)
+
+    def test_a_verified_sum_within_a_verified_rating_says_nothing(self):
+        self.assertEqual(check_physics.check_rail_supply({"V5V": summed(0.4)}), [])
+
+    def test_a_rail_with_no_single_source_is_left_to_the_generator_that_reports_it(self):
+        rail = dict(summed(0.4), supply=None)
+        self.assertEqual(check_physics.check_rail_supply({"MOTOR6V": rail}), [])
+
+    def test_run_judges_the_records_when_it_is_given_them_and_not_otherwise(self):
+        rules = {"physics": {"rails": {"SERVO": {"max_current_a": 1.0}}}}
+        circuit = [net("SERVO")]
+        with_records = check_physics.run(circuit, rules, loads={"SERVO": summed(3.4)})
+        self.assertIn("rail-supply", [f.rule for f in with_records])
+        self.assertNotIn("rail-supply", [f.rule for f in check_physics.run(circuit, rules)])
+
+
+class CurrentIsWrittenSoASmallOneIsReadableTest(unittest.TestCase):
+    def test_under_an_amp_is_milliamps_and_over_is_amps(self):
+        # "0.01 A" was a 15 mA flow meter on the irrigation board's first run.
+        self.assertEqual(check_physics.current_text(0.015), "15 mA")
+        self.assertEqual(check_physics.current_text(0.355), "355 mA")
+        self.assertEqual(check_physics.current_text(3.4), "3.40 A")
+
+
+class TheRecordsFillAnUnstatedRailTest(unittest.TestCase):
+    """P52's second half: trace sizing stops asking for a number the records already hold."""
+
+    def _judge(self, stated, loads):
+        circuit = [net("SERVO"), port("Load", "VCC"), component("Load", "simple_chip")]
+        circuit += trace("SERVO", ["Load.VCC"], [0.15])
+        rails = {"SERVO": {"max_current_a": stated}}
+        return check_physics.check_trace_currents(check_physics.Board(circuit), rails, 10, loads)
+
+    def test_a_null_rail_is_judged_by_the_sum_its_records_give(self):
+        findings = self._judge(None, {"SERVO": summed(1.5)})
+        self.assertEqual([f.severity for f in findings], ["problem"])
+        self.assertIn("1.50 A", findings[0].detail)
+        self.assertIn("summed from the part records", findings[0].detail)
+
+    def test_a_stated_current_beats_the_sum_because_a_measurement_beats_arithmetic(self):
+        self.assertEqual(self._judge(0.1, {"SERVO": summed(1.5)}), [])
+
+    def test_a_null_rail_whose_records_are_open_names_what_is_missing(self):
+        findings = self._judge(None, {"SERVO": summed(0.2, missing=["Soil1.VCC: x is not stated"])})
+        self.assertEqual([f.severity for f in findings], ["needs-measurement"])
+        self.assertIn("Soil1.VCC", findings[0].detail)
+        self.assertNotIn("x is not stated", findings[0].detail,
+                         "who is open, not why — the supply finding beside it says why")
 
 if __name__ == "__main__":
     unittest.main()

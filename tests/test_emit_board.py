@@ -1035,5 +1035,134 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
             self.assertGreater(placements[name][0], module_x + emit_board.body_of(self._part())[0] / 2,
                                "%s sits to the right of the module's body" % name)
 
+
+class WhatARailCarries(unittest.TestCase):
+    """
+    P52: a rail's load is summed from the facts its members' power pins name, never guessed.
+
+    The figures were already in the records — a servo's 700 mA stall, a buck's 3 A — and nothing
+    linked a pin to the fact that states its current, so nothing summed them.
+    """
+
+    @staticmethod
+    def part(part_id, power, facts=None, instance=None):
+        made = {"schema": 1, "id": part_id, "name": part_id, "kind": "test", "needs": [],
+                "power": power, "facts": facts or {}}
+        if instance:
+            made["_instance"] = instance
+        return made
+
+    @staticmethod
+    def fact(value, verified=True):
+        return {"value": value, "verified": verified, "source": "test"}
+
+    def servo(self, stall=700, verified=False):
+        return self.part("sg90-servo", [{"pin": "VCC", "rail": "servo", "direction": "in",
+                                         "draws": "stall_current_ma"},
+                                        {"pin": "GND", "rail": "ground", "direction": "in"}],
+                         {"stall_current_ma": self.fact(stall, verified),
+                          "idle_current_ma": self.fact(10)})
+
+    def buck(self, rating=3.0, out_rail="servo"):
+        return self.part("buck", [{"pin": "VIN", "rail": "traction", "direction": "in",
+                                   "feeds": "VOUT"},
+                                  {"pin": "VOUT", "rail": out_rail, "direction": "out",
+                                   "can_supply": "output_current_a"}],
+                         {"output_current_a": self.fact(rating)})
+
+    def test_a_load_is_read_from_the_fact_its_pin_names_in_that_facts_unit(self):
+        rail = emit_board.rail_loads([self.servo(), self.buck()])["SERVO"]
+        self.assertAlmostEqual(rail["amps"], 0.7, msg="stall_current_ma, not idle_current_ma")
+        self.assertTrue(rail["complete"])
+
+    def test_microamps_and_amps_are_scaled_too(self):
+        rtc = self.part("rtc", [{"pin": "VCC", "rail": "servo", "direction": "in",
+                                 "draws": "active_supply_current_ua.active_max"}],
+                        {"active_supply_current_ua": self.fact({"active_max": 200, "standby_max": 110})})
+        motor = self.part("motor", [{"pin": "VCC", "rail": "servo", "direction": "in",
+                                     "draws": "run_current_a"}], {"run_current_a": self.fact(1.5)})
+        rail = emit_board.rail_loads([rtc, motor, self.buck()])["SERVO"]
+        self.assertAlmostEqual(rail["amps"], 1.5002, msg="a dotted pointer reads one key of the value")
+
+    def test_a_load_whose_figure_is_null_is_named_not_summed_as_zero(self):
+        probe = self.part("probe", [{"pin": "VCC", "rail": "servo", "direction": "in",
+                                     "draws": "operating_current_ma"}],
+                          {"operating_current_ma": self.fact(None, verified=False)}, instance="Soil1")
+        rail = emit_board.rail_loads([probe, self.servo(), self.buck()])["SERVO"]
+        self.assertFalse(rail["complete"])
+        self.assertAlmostEqual(rail["amps"], 0.7, msg="what IS stated is still summed")
+        self.assertEqual(len(rail["missing"]), 1)
+        self.assertIn("Soil1.VCC", rail["missing"][0])
+        self.assertIn("operating_current_ma", rail["missing"][0])
+
+    def test_an_input_that_names_no_fact_is_named_as_missing(self):
+        mute = self.part("mute", [{"pin": "VCC", "rail": "servo", "direction": "in"}])
+        rail = emit_board.rail_loads([mute, self.buck()])["SERVO"]
+        self.assertFalse(rail["complete"])
+        self.assertIn("Mute.VCC", rail["missing"][0])
+
+    def test_a_pointer_to_a_fact_with_no_current_unit_is_refused_not_read_as_amps(self):
+        odd = self.part("odd", [{"pin": "VCC", "rail": "servo", "direction": "in",
+                                 "draws": "stall_current"}], {"stall_current": self.fact(700)})
+        rail = emit_board.rail_loads([odd, self.buck()])["SERVO"]
+        self.assertFalse(rail["complete"], "700 of what — amps, milliamps? Not a guess to make")
+
+    def test_the_supply_and_its_rating_come_from_the_output_pin(self):
+        supply = emit_board.rail_loads([self.servo(), self.buck(rating=3.0)])["SERVO"]["supply"]
+        self.assertEqual(supply["who"], "Buck.VOUT")
+        self.assertAlmostEqual(supply["amps"], 3.0)
+
+    def test_a_converter_input_draws_what_its_output_carries(self):
+        rails = emit_board.rail_loads([self.servo(stall=700), self.buck()])
+        self.assertAlmostEqual(rails["TRACTION"]["amps"], 0.7,
+                               msg="a step-down converter draws at most what it delivers")
+        self.assertTrue(rails["TRACTION"]["complete"])
+
+    def test_a_converter_whose_output_is_not_fully_stated_leaves_its_input_open(self):
+        mute = self.part("mute", [{"pin": "VCC", "rail": "servo", "direction": "in"}])
+        rails = emit_board.rail_loads([mute, self.buck()])
+        self.assertFalse(rails["TRACTION"]["complete"])
+        self.assertIn("Buck.VIN", rails["TRACTION"]["missing"][0])
+
+    def test_unverified_figures_are_carried_so_a_sum_can_say_what_it_rests_on(self):
+        rail = emit_board.rail_loads([self.servo(verified=False), self.buck()])["SERVO"]
+        self.assertIn("Sg90Servo.VCC", " ".join(rail["unverified"]))
+
+    def test_ground_is_not_a_rail_with_a_load(self):
+        self.assertNotIn("GND", emit_board.rail_loads([self.servo(), self.buck()]))
+
+    def test_the_module_feeds_its_own_logic_rail_and_takes_its_own_share_of_it(self):
+        board = {"power_pads": {"VCC": {"rail": "servo", "direction": "in", "feeds": "3V3"},
+                                "3V3": {"rail": "logic", "direction": "out",
+                                        "can_supply": "regulator_3v3_a",
+                                        "own_draw": "module_peak_a"},
+                                "GND1": {"rail": "ground", "direction": "out"}},
+                 "power": {"regulator_3v3_a": self.fact(1.5), "module_peak_a": self.fact(0.355)}}
+        rails = emit_board.rail_loads([self.servo(stall=700), self.buck()], board)
+        self.assertAlmostEqual(rails["V33"]["amps"], 0.355)
+        self.assertAlmostEqual(rails["V33"]["supply"]["amps"], 1.5)
+        self.assertAlmostEqual(rails["SERVO"]["amps"], 1.055,
+                               msg="the servo's stall plus everything the module draws through VCC")
+
+    def test_the_generator_sizes_a_rail_the_rules_leave_null_from_its_records(self):
+        """
+        P52's second half: the trace was emitted at the router's default with a note calling it
+        unjustified, while the records held the servo's stall the whole time — and the checker,
+        reading the same records, would then judge the default against it.
+        """
+        lines = "\n".join(emit_board.power_lines({}, [self.servo(stall=1500), self.buck()], {}))
+        self.assertRegex(lines, r'from="\.Sg90Servo > \.VCC" to="net\.SERVO" thickness="[\d.]+mm"')
+        unjustified = [line for line in lines.splitlines() if "IS UNJUSTIFIED" in line]
+        self.assertNotIn("net.SERVO", " ".join(unjustified))
+
+    def test_a_stated_current_still_beats_the_records(self):
+        rules = {"physics": {"rails": {"SERVO": {"max_current_a": 0.05}}}}
+        filled = emit_board.rules_with_record_currents(rules, {"SERVO": {"amps": 1.5, "complete": True}})
+        self.assertEqual(filled["physics"]["rails"]["SERVO"]["max_current_a"], 0.05)
+
+    def test_an_open_rail_is_not_filled_from_a_partial_sum(self):
+        filled = emit_board.rules_with_record_currents({}, {"SERVO": {"amps": 0.7, "complete": False}})
+        self.assertNotIn("SERVO", filled["physics"]["rails"], "a partial sum would size it too thin")
+
 if __name__ == "__main__":
     unittest.main()

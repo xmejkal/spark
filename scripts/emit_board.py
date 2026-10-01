@@ -393,6 +393,99 @@ def outputs_in_contention(part_list):
     return contended
 
 
+#: What a current fact's name says its unit is. A pointer to a fact named anything else is
+#: refused rather than read as amps: `stall_current: 700` is a guess about a factor of a thousand.
+CURRENT_UNITS = (("_ua", 1e-6), ("_ma", 1e-3), ("_a", 1.0))
+
+
+def current_of(part, pointer):
+    """
+    A figure a power pin names: `stall_current_ma`, or one key of a fact whose value is a table,
+    `active_supply_current_ua.active_max`. `amps` is None when the record does not state it, and
+    `why` then says what is missing — the part's own words for the gap, not a zero.
+    """
+    if not pointer:
+        return {"amps": None, "verified": False, "why": "names no fact for its current"}
+    name, _, key = pointer.partition(".")
+    fact = (part.get("facts") or {}).get(name)
+    scale = next((scale for suffix, scale in CURRENT_UNITS if name.endswith(suffix)), None)
+    if not isinstance(fact, dict) or scale is None:
+        return {"amps": None, "verified": False,
+                "why": "names %r, which is not a current this record states" % pointer}
+    value = fact.get("value")
+    if key:
+        value = value.get(key) if isinstance(value, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return {"amps": None, "verified": False, "why": "%s is not stated" % pointer}
+    return {"amps": value * scale, "verified": bool(fact.get("verified")), "why": pointer}
+
+
+def module_as_part(board):
+    """The board's power pads in the shape of a part's power entries, its `power` as its facts."""
+    return {"id": "module", "_instance": "Mcu", "facts": board.get("power") or {},
+            "power": [dict(entry, pin=pad) for pad, entry in (board.get("power_pads") or {}).items()]}
+
+
+def rail_loads(part_list, board=None):
+    """
+    What each rail carries, summed from the facts its members' power pins name (P52).
+
+    `{net: {amps, complete, missing, unverified, supply}}`. A pin names its figure — `draws` on an
+    input, `can_supply` on an output, `own_draw` where a module takes from the rail it makes —
+    because a servo has a stall AND an idle current and only the record can say which one its
+    pin draws. `amps` is what IS stated, so an open rail still says what it carries at least;
+    `missing` names every load the records leave open, where a total would be a guess.
+
+    A converter's input `feeds` an output and draws at most what that output delivers: an upper
+    bound for a step-down converter, and the only figure its record can honestly give.
+    """
+    members = list(part_list) + ([module_as_part(board)] if board else [])
+    rails, outputs = {}, {}
+    for part, supply, net in power_connections(members):
+        if net in GROUND_NETS:
+            continue
+        rail = rails.setdefault(net, {"loads": [], "supplies": []})
+        who = "%s.%s" % (component_name(part), supply["pin"])
+        if supply.get("direction") == "out":
+            outputs[(id(part), supply["pin"])] = net
+            rail["supplies"].append(dict(current_of(part, supply.get("can_supply")), who=who))
+            if supply.get("own_draw"):
+                rail["loads"].append(dict(current_of(part, supply["own_draw"]), who=who))
+        elif supply.get("feeds"):
+            rail["loads"].append({"who": who, "part": part, "feeds": supply["feeds"]})
+        else:
+            rail["loads"].append(dict(current_of(part, supply.get("draws")), who=who))
+
+    settled = {}
+
+    def settle(net, through=()):
+        if net in settled:
+            return settled[net]
+        amps, missing, unverified = 0.0, [], []
+        for load in rails[net]["loads"]:
+            if "feeds" in load:
+                fed = outputs.get((id(load["part"]), load["feeds"]))
+                inner = settle(fed, through + (net,)) if fed and fed not in through + (net,) else None
+                load = {"who": load["who"],
+                        "why": "carries what %s carries%s" % (
+                            fed, "" if inner and inner["complete"] else ", which is not fully stated"),
+                        "amps": inner["amps"] if inner and inner["complete"] else None,
+                        "verified": bool(inner) and not inner["unverified"]}
+            if load["amps"] is None:
+                missing.append("%s: %s" % (load["who"], load["why"]))
+                continue
+            amps += load["amps"]
+            if not load["verified"]:
+                unverified.append("%s: %s" % (load["who"], load["why"]))
+        supplies = rails[net]["supplies"]
+        settled[net] = {"amps": amps, "complete": not missing, "missing": missing,
+                        "unverified": unverified,
+                        "supply": supplies[0] if len(supplies) == 1 else None}
+        return settled[net]
+
+    return {net: settle(net) for net in rails}
+
+
 def outputs_with_nothing_on_them(part_list):
     """
     Nets a part drives that nothing on this board receives.
@@ -738,13 +831,32 @@ def unjustified_lines(unjustified):
             % ", ".join("net." + net for net in sorted(unjustified)),
             "        They take the router's default, which is about 0.15 mm and good",
             "        for roughly 0.6 A. Nobody has stated what these rails carry, so",
-            "        nothing here could size them. State `max_current_a` for each in",
-            "        .spark/rules.json and regenerate; `check_physics` judges the",
-            "        result by the same arithmetic that would have set it. */}"]
+            "        nothing here could size them. Name each load's figure in its part",
+            "        record (`draws` or `can_supply` on the power pin), or state",
+            "        `max_current_a` in .spark/rules.json, and regenerate; `check_physics`",
+            "        judges the result by the same arithmetic that would have set it. */}"]
+
+
+def rules_with_record_currents(rules, loads):
+    """
+    The rules, with each rail they leave unstated sized from its records' complete sum (P52).
+
+    A stated `max_current_a` is kept, because a measurement beats a sum; an open sum is not used,
+    because a partial one sizes a trace too thin. `check_physics` makes the same choice from the
+    same `rail_loads`, so the generator and the checker read one number.
+    """
+    physics = dict((rules or {}).get("physics") or {})
+    rails = {net: dict(spec) for net, spec in (physics.get("rails") or {}).items()}
+    for net, load in loads.items():
+        stated = rails.get(net, {}).get("max_current_a")
+        if load["complete"] and not isinstance(stated, (int, float)):
+            rails.setdefault(net, {})["max_current_a"] = load["amps"]
+    return dict(rules or {}, physics=dict(physics, rails=rails))
 
 
 def power_lines(board, part_list, rules):
     """The power section. `unjustified` collects, across both trace loops, what could not be sized."""
+    rules = rules_with_record_currents(rules, rail_loads(part_list, board))
     unjustified = set()
     lines = ["    {/* Power. Which rail each module pin belongs to comes from its part file. */}"]
     lines += mcu_power_lines(board, part_list, rules, unjustified)

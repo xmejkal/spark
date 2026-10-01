@@ -132,8 +132,9 @@ class RulesVsNetlist(Check):
 class Physics(Check):
     def call(self, inputs):
         import check_physics
-        findings = check_physics.run(circuit_of(inputs),
-                                     json.loads(Path(inputs["rules"]).read_text()))
+        circuit = circuit_of(inputs)
+        loads, notes = rail_loads_in(inputs.get("project"), circuit)
+        findings = check_physics.run(circuit, json.loads(Path(inputs["rules"]).read_text()), loads)
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)
@@ -141,7 +142,9 @@ class Physics(Check):
 
         # `could-not-run` findings were dropped on the floor here — an unknown I2C bus speed made
         # the rise-time rule unanswerable and the check still printed a tick with no note at all.
-        return answer(problems=of("problem"), unchecked=of("could-not-run"),
+        # A rail the records could not be summed for is unchecked, and says why (P52).
+        return answer(problems=of("problem"),
+                      unchecked=of("could-not-run") + ([] if loads is not None else notes),
                       unmeasured=of("needs-measurement"))
 
 
@@ -178,6 +181,36 @@ def placeholder_components_in(project):
             notes.append("%s could not be read, so any stand-in footprint it names was "
                          "measured as if real: %s" % (requirements.name, broken))
     return tuple(sorted(names)), notes
+
+
+def rail_loads_in(project, circuit):
+    """
+    What each rail of THIS circuit carries, summed from the part records (P52), and why not.
+
+    A project can hold several requirements files — the car and its remote — and `check_all` is
+    handed one circuit. The design summed is the one every one of whose components is in this
+    netlist; none or several is said, not guessed between. Returns (loads or None, notes). With
+    no project at all nothing was asked of the records, the way `check_physics` alone asks nothing.
+    """
+    if not project:
+        return None, []
+    import emit_board
+    root = Path(project)
+    present = {e.get("name") for e in circuit if e.get("type") == "source_component"}
+    matched, notes = [], []
+    for requirements in sorted(root.glob("*requirements.json")):
+        try:
+            made = design.load(requirements, root)
+        except design.DesignError as broken:
+            notes.append("%s could not be read: %s" % (requirements.name, broken))
+            continue
+        names = {emit_board.component_name(part) for part in made.parts}
+        if names and names <= present:
+            matched.append(made)
+    if len(matched) != 1:
+        return None, notes + ["%d requirements files describe this circuit, so no rail was "
+                              "summed from the part records" % len(matched)]
+    return emit_board.rail_loads(matched[0].parts, matched[0].board), notes
 
 
 class Buildability(Check):

@@ -75,6 +75,13 @@ under a name is worse than no record.
   this.
 - `power` — every supply pin with `rail` and `direction`: `in` joins a shared rail, `out` drives a
   load and gets its own net. Wrong once, it wired both halves of a bridged amplifier together.
+  Each pin also names the fact that states its current, so a rail can be summed against its
+  supply: `draws` on an input (`"draws": "stall_current_ma"` — the worst case, not the idle),
+  `can_supply` on an output (`"can_supply": "output_current_a"`), `feeds` on a converter's input
+  (`"feeds": "VOUT"` — it draws at most what that output delivers). The fact's name carries its
+  unit (`_a`, `_ma`, `_ua`); a dotted name reads one key of a table (`active_supply_current_ua.active_max`).
+  A pin whose figure nobody publishes still names its fact, with `value: null` — the check then
+  names the part instead of summing a zero.
 - `pin_order` — pad 1..N by name, unused pads `null`. **Pads, not pins**: a record saying `pinrow5`
   beside seven names shipped boards with no routing.
 - `footprint` — a footprinter string (`pinrow4`, `headermodule6`, `jst_ph_2`) whose pad count
