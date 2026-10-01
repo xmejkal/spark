@@ -480,9 +480,20 @@ P29 answered *does a trace reach a supply*. Nothing asks *can that supply carry 
 Sum each rail's declared loads, compare against the feeding part's rating, and a load with no
 stated current is **could-not-run naming the part** rather than a guessed total — which also fills
 `max_current_a` so trace sizing stops asking for a number the records already hold.
-**Value proven by:** on the RC car the two servos' stall currents are summed against the buck's
-rating and reported; on the irrigation board the soil probe is named as the one load nobody has
-stated, instead of the rails being empty.
+**Value proven by:** on the RC car the servo's stall current and the module's own draw are summed
+against the buck's rating and reported; on the irrigation board the soil probe is named as the one
+load nobody has stated, instead of the rails being empty.
+*(Acceptance line corrected 2026-10-01 before any code, W20: the car has ONE SG90, not two
+(`car.requirements.json`); and irrigation's `physics.rails` is no longer `{}` — P53 seeded four
+rails, all `max_current_a: null`. The car's rails are hand-filled (SERVO 1.2 A) and nothing compares
+them with the MP1584's rating, which is the half of this item the car proves.)*
+**Design, decided at the start (2026-10-01):** a record's power entry names the fact that states its
+current — `draws` on an input, `can_supply` on an output, `feeds` on a converter's input (it draws at
+most what the named output delivers, an upper bound for a step-down converter), `own_draw` on a
+module's output it also consumes from; units from the fact name's `_a`/`_ma`/`_ua`. Linked, not
+inferred by name: a part with a stall and an idle figure must say which one its pin draws. The sum
+is computed where it is judged, never written into the rules file — a stated `max_current_a` still
+wins, because a measurement beats a sum.
 
 ### P53 — The rules reach a project that already exists — DONE 2026-10-01
 **Needed by:** the RC car, whose `.spark/rules.json` still holds `i2c_buses: []` and
