@@ -389,6 +389,30 @@ spark's records here; the bin's own copies (`CLAUDE.md`, `HANDOVER.md`, `STATUS.
 **Value proven by:** `grep -rn "ALL_LOW" parts boards` in spark and the bin's docs shows no claim
 that it is an AND on the S3 or C6, and each corrected fact cites the source line it now rests on.
 
+### P64 — Every claim spark ships is checked against its source by someone who did not write it — the PO's proposal of 2026-10-01
+**Needed by:** every conversation that reads spark's records, so a wrong fact stops spreading. The
+PO: *"maybe we should have some agent that rechecks our files for halucinations in the already
+defined data and code in spark, so that it doesn't then spread further"*.
+Measured the same day: P60's false wake fact lives in `parts/tactile-button.json`
+`host_requirements` — a **prose field the schema never asks for a source**, so it passed every
+check by sitting one field over from `facts`. And `verified: true` is self-declared: **217 of 270**
+library and catalog facts carry it, and the first one read (`tactile-button.json`, the 6x6 size) is
+`verified: true` with a prose source, not the URL the rule demands. Nobody but the writer has ever
+checked a flag.
+The shape, for the council to refine: **mechanical first** — a check that every claim-bearing field
+(facts, `host_requirements`, a board record's notes) carries a pointer, and that `verified: true`
+carries a URL (with P62's version and page once it exists); it cannot hallucinate. **Then an
+isolated reader** for what only judgement can do — fresh context, restricted tools, denied the
+project's own notes (the reason `design-reviewer` is built that way): for each claim, quote the
+source line that supports it, or say it does not. Its findings are hypotheses — raised in
+`docs/observations/INDEX.md` and reproduced before any record changes (W9, W20) — because P60's own
+lenses misread a footnote and miscounted twice. A checked fact records who checked it, when, and
+against which version, so the next pass reads only what changed.
+**Value proven by:** the mechanical check lists every unsourced claim in spark's records, with a
+count; one isolated pass over the board and library records reports each claim supported,
+unsupported or contradicted with the quoted line; and it finds the `ALL_LOW` claim on its own if
+P63 has not yet removed it (run against `5056703`'s tree if it has).
+
 ### P57 — A stand-in's geometry is could-not-run, not a failure
 **Needed by:** v1's own words, *"no false alarms from the checks"*, and the documented example,
 which fails spark's own manufacturability check out of the box. Reproduced 2026-10-01:
