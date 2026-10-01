@@ -81,6 +81,7 @@ point.
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list                       # what exists, and where from
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per signal, with the reason
+${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board firebeetle2-esp32s3 -o FireBeetle2Esp32S3.tsx
 npm install && npx tsci build board.tsx                             # the project's own tscircuit (init writes the package file); the one command needs neither
@@ -91,7 +92,11 @@ the board file's measured geometry; without that step `tsci build` stops at the 
 one command writes it for you.
 
 `assign_pins` spends scarce pins last — wake-capable, ADC1, the SPI and I2C pins — and prints why
-each signal landed where it did. `emit_board` writes tscircuit you can build and check; the file
+each signal landed where it did. **Firmware never types a GPIO number:** `--emit-pins` writes the
+map as plain constants (`VALVE1_VALVE_CTRL = 38`), each commented with its silkscreen pad, why it
+was chosen and what the board record says about that pin (`adc2_unusable_with_wifi: on ADC2, which
+shares hardware with the radio`), and the firmware does `import pins`. Plain integers, so the same
+file imports under CPython's tests and on MicroPython; regenerate it whenever the design changes. `emit_board` writes tscircuit you can build and check; the file
 says what it invented (a placeholder size, a rail nobody named) and what it could not size (a
 rail with no `max_current_a` in `.spark/rules.json`).
 

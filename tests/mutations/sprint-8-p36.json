@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "the map is written as const(), which CPython cannot import",
+  "find": "        lines.append(\"%s = %d  # %s\" % (entry[\"signal\"], entry[\"gpio\"], \"; \".join(said)))",
+  "replace": "        lines.append(\"%s = const(%d)  # %s\" % (entry[\"signal\"], entry[\"gpio\"], \"; \".join(said)))"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "a signal Python cannot spell is written anyway",
+  "find": "        if not entry[\"signal\"].isidentifier():",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "the pad is the board's key, not its silkscreen",
+  "find": "        pad = ((board.get(\"physical\") or {}).get(\"pad_aliases\") or {}).get(entry[\"pin\"], entry[\"pin\"])",
+  "replace": "        pad = entry[\"pin\"]"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "a pin's role is named without the board record's words",
+  "find": "    return \"%s: %s\" % (role, note.split(\". \")[0].rstrip(\".\")) if note else role",
+  "replace": "    return role"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "why a pin was chosen is left out",
+  "find": "        said = [\"pad %s\" % pad, entry[\"why\"]]",
+  "replace": "        said = [\"pad %s\" % pad]"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "the file no longer says it is generated",
+  "find": "             \"# for the %s. Regenerate it; do not edit it.\" % board[\"name\"], \"\"]",
+  "replace": "             \"# for the %s.\" % board[\"name\"], \"\"]"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "--emit-pins writes nothing",
+  "find": "        target.write_text(module)",
+  "replace": "        pass"
+ }
+]

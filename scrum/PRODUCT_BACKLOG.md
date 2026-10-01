@@ -709,7 +709,14 @@ the bin's own mapping (D20). About 1,000 lines of TypeScript with bun dependenci
 **Value proven by:** the one command reaches `[ok] simulation` from a project with nothing beside
 it but the plugin; one copy of each chip; the bin's `make check` green against the plugin's copy.
 
-### P36 — The pin map is a file the firmware imports
+### P36 — The pin map is a file the firmware imports — DONE 2026-10-01
+**Run in irrigation after the last change** (`8117b27`): `assign_pins.py irrigation.requirements.json
+--emit-pins firmware/pins.py` writes twelve plain constants, each with its silkscreen pad (`STATUS_LED
+= 15  # pad MO` — the board's key is MOSI, its silkscreen MO), why, and the board record's words for
+its roles; `main.py` imports them and types no GPIO. On the `micropython` unix port with a fake
+`machine` recording every Pin, ADC, I2C, irq and write over 20 loops: **before and after identical,
+24 lines**; a planted VALVE2 = 10 shows on both lines it touches. The test that every signal appears
+exactly once is `ThePinMapIsAFileTheFirmwareImportsTest`. The scenario's `pin: 38` is YAML and stays typed.
 **Needed by:** the irrigation controller's firmware — twelve GPIO numbers are typed into
 `firmware/main.py` by hand and a thirteenth into `sim/scenarios/wet-and-dry.scenario.yaml`, and
 nothing compares any of them with the assigner's output; they agree today by luck. The bin needed

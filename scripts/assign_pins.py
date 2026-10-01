@@ -383,6 +383,34 @@ def render(board, assignments, leftover):
     return "\n".join(lines)
 
 
+def role_note(board, role):
+    """The board record's own first sentence about a pin role — what a firmware author must know."""
+    note = ((board.get("pin_roles") or {}).get(role) or {}).get("note") or ""
+    return "%s: %s" % (role, note.split(". ")[0].rstrip(".")) if note else role
+
+
+def pin_module(board, assignments, source):
+    """
+    The pin map as a module the firmware imports (P36), instead of numbers typed by hand.
+
+    Plain integers, so CPython (the fake-`machine` tests) and MicroPython read it alike (P60); one
+    line per signal with its pad, why it was chosen, and what the board record says about the pin
+    (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
+    refused, not mangled: a renamed constant is a pin the firmware silently stops finding.
+    """
+    lines = ["# The pin map: written by spark's assign_pins.py from %s" % source,
+             "# for the %s. Regenerate it; do not edit it." % board["name"], ""]
+    for entry in assignments:
+        if not entry["signal"].isidentifier():
+            raise Impossible("signal %r is not a Python name, so no firmware could import it"
+                             % entry["signal"])
+        pad = ((board.get("physical") or {}).get("pad_aliases") or {}).get(entry["pin"], entry["pin"])
+        said = ["pad %s" % pad, entry["why"]] + [role_note(board, role)
+                                                          for role in entry["roles"]]
+        lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], "; ".join(said)))
+    return "\n".join(lines) + "\n"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="assign_pins.py",
@@ -391,6 +419,8 @@ def main(argv=None):
     parser.add_argument("--board", help="board id (default: the project's active board)")
     parser.add_argument("--project", help="the project to resolve the board from")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--emit-pins", metavar="FILE",
+                        help="also write the map as a module the firmware imports (P36)")
     args = parser.parse_args(argv)
 
     # One loader for the whole chain (`design.py`): the project is the requirements FILE's, the
@@ -412,6 +442,16 @@ def main(argv=None):
     except Impossible as refused:
         print("cannot place every signal on this board:\n\n  %s" % refused)
         return EXIT_IMPOSSIBLE
+
+    if args.emit_pins:
+        try:
+            module = pin_module(board, assignments, Path(args.requirements).name)
+        except Impossible as refused:
+            print("cannot write the pin map:\n\n  %s" % refused)
+            return EXIT_IMPOSSIBLE
+        target = Path(args.emit_pins)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(module)
 
     # Whatever the parts do not know about themselves travels with the answer. A pin map that
     # looks complete while resting on unmeasured numbers is the thing this plugin exists to stop.

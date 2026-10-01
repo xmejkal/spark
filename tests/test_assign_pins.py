@@ -456,5 +456,80 @@ class ANamedPinIsStillCheckedTest(unittest.TestCase):
         self.assertEqual(placed[0]["pin"], "D12")
         self.assertIn("by name", placed[0]["why"])
 
+class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
+    """
+    P36. The irrigation firmware typed twelve GPIO numbers by hand and its scenario a thirteenth,
+    and nothing compared any of them with this file's answer: they agreed by luck. Now the answer
+    is written as a module the firmware imports — plain integers, so CPython and MicroPython read
+    it alike (P60), each with what the board record says about that pin.
+    """
+
+    SIGNALS = [{"name": "LED", "needs": []}, {"name": "SENSE", "needs": ["adc"]},
+               {"name": "WAKE_BTN", "needs": ["wake"]}, {"name": "TX_LINE", "needs": []},
+               {"name": "SPARE", "needs": []}, {"name": "LAST", "needs": []}]
+
+    def _module(self):
+        assignments, _ = assign_pins.assign(board(), self.SIGNALS)
+        return assignments, assign_pins.pin_module(board(), assignments, "garden.requirements.json")
+
+    def test_every_signal_appears_exactly_once_as_its_gpio(self):
+        assignments, text = self._module()
+        names = {}
+        exec(text, names)       # plain Python: no `const`, no import of `micropython`
+        self.assertEqual({k: v for k, v in names.items() if not k.startswith("__")},
+                         {entry["signal"]: entry["gpio"] for entry in assignments})
+        for entry in assignments:
+            self.assertEqual(text.count("\n%s = " % entry["signal"]), 1, entry["signal"])
+
+    def test_each_line_says_its_pad_and_why(self):
+        assignments, text = self._module()
+        sense = next(e for e in assignments if e["signal"] == "SENSE")
+        line = next(l for l in text.splitlines() if l.startswith("SENSE = "))
+        self.assertIn("pad %s" % sense["pin"], line)
+        self.assertIn(sense["why"], line)
+
+    def test_the_pad_named_is_the_one_silkscreened_on_the_board(self):
+        # The FireBeetle's key is MOSI and its silkscreen reads MO (physical.pad_aliases): a
+        # firmware author holding the board looks for MO.
+        assignments, _ = assign_pins.assign(board(), [{"name": "LED", "needs": []}])
+        aliased = board(physical={"pad_aliases": {assignments[0]["pin"]: "SILK"}})
+        self.assertIn("# pad SILK;", assign_pins.pin_module(aliased, assignments, "r.json"))
+
+    def test_a_pin_with_a_role_carries_the_board_records_own_words(self):
+        # The probe models were told nothing and got ADC2-with-WiFi wrong; a note in the file
+        # the firmware imports is where the next one reads it (P60: notes fixed 7 of 7).
+        assignments, text = self._module()
+        with_role = [e for e in assignments if e["roles"]]
+        self.assertTrue(with_role, "the fixture must spend a pin that carries a role")
+        role = with_role[0]["roles"][0]
+        line = next(l for l in text.splitlines() if l.startswith(with_role[0]["signal"] + " = "))
+        self.assertIn("%s: %s" % (role, board()["pin_roles"][role]["note"]), line)
+
+    def test_the_file_names_its_source_and_says_not_to_edit_it(self):
+        _, text = self._module()
+        self.assertIn("garden.requirements.json", text.splitlines()[0] + text.splitlines()[1])
+        self.assertIn("Test Board", text)
+        self.assertIn("do not edit", text.lower())
+
+    def test_a_signal_name_python_cannot_spell_is_refused_not_mangled(self):
+        assignments, _ = assign_pins.assign(board(), [{"name": "2ND-LED", "needs": []}])
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.pin_module(board(), assignments, "r.json")
+
+    def test_the_command_writes_the_file(self):
+        import json
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
+        code, out = TheDocumentedInvocationTest._main(
+            ["requirements.json", "--emit-pins", "firmware/pins.py"], root)
+        self.assertEqual(code, assign_pins.EXIT_OK, out)
+        names = {}
+        exec((root / "firmware" / "pins.py").read_text(), names)
+        self.assertIn("MOTOR_IA", names)
+
+
 if __name__ == "__main__":
     unittest.main()
