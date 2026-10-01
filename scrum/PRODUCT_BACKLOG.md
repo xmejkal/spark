@@ -680,6 +680,30 @@ baseline on numeric retrieval). **P39 is the cheap thing that fixes the real fai
 - **R10** a link between two designs **[PO]** — **Needed by:** the RC car's two boards, if their
   agreement is ever to be checked; the PO put it out of v1.
 
+**The firmware horizon — parked by the PO 2026-10-01, after P60.** His direction: all three runtimes
+(MicroPython, ESP-IDF, Arduino) eventually; firmware written by Claude **or a human**, tested the same
+way either way, in the simulator and then by assisted deployment to real hardware; and when AI
+writes it, no hallucinated API, constant or practice. P60 measured why documents cannot promise that:
+the version-matched `micropython-esp32-*-stubs` 1.29.0 for the S3 and C6 both declare
+`Pin.IRQ_LOW_LEVEL`, which the port's `machine_pin.c` does not define, and the C6's declares
+`wake_on_ext0`, which is compiled out. **The guarantee is a check against the real runtime, never a
+reference.** Each item below names what pulls it in; none is ordered.
+- **F1** Arduino-ESP32 as a runtime — P36's map rendered as a header, `arduino-cli compile` for the
+  exact board as the API check, a host test harness. **Pulled by:** the first design whose firmware
+  is Arduino.
+- **F2** ESP-IDF as a runtime — the same, with `idf.py build`. **Pulled by:** the first design that
+  needs what MicroPython cannot reach (e.g. the LP core).
+- **F3** The fake's API surface taken from the real firmware image — every module, function and
+  constant a firmware may call, read from the build it will run on, never from stubs or docs.
+  **Pulled by:** the start of P56's increment II (the harness).
+- **F4** Assisted deployment — flashing, deploy and bring-up steps generated from the board record
+  (which image, which port, which pin is the LED), run with a person at the bench. **Pulled by:** the
+  first spark board on a bench — the bin is next (its NEXT list, item 2; P58).
+- **F5** Firmware practices as checks — watchdog, a safe stop on every exit, strap pins untouched,
+  driver inputs pulled down; what cannot be checked becomes a question for the reviewer's
+  firmware-hardware dimension, not prose. **Pulled by:** the first firmware that drives a motor or a
+  battery through spark's harness.
+
 ## Deleted — in git history, not in this list
 
 2026-09-29: P1 (its value delivered), P7 (with `check_design`, which had made two tools of one),
