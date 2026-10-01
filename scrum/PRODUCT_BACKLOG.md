@@ -912,6 +912,16 @@ the MP3 board for a week: a picture nobody regenerates is a picture of the past.
 exports; it names the components the netlist has (the I²S amplifier, no `Mp3`), and changing
 `board.tsx` makes it out of date to `make`.
 
+### B5 — A derived file in git is checked current, or not kept in git — **from R8.2, unordered**
+**Needed by:** anyone reading the bin's repository: its `board-sch.svg` and `board-pcb-routed.svg`
+showed the MP3 board for a week after the board changed (remade in bin `2367fa1`), and nothing
+noticed. Tracked and derived today: `board-sch.svg`, `board-pcb-routed.svg`, `board.glb`,
+`board-gerbers.zip`, `sim/diagram.json`, `.spark/board.json`, `firmware/micropython/smartbin/board_spec.py`.
+Two are already checked (`diagram-current`, `board-spec-current`); the rest are not.
+**Value proven by:** changing `board.tsx` without regenerating makes `make check` fail on each export
+still committed, or that export is untracked and made by `make all`; a timestamp-only difference
+(the gerbers regenerate with new dates) is not a failure.
+
 ## Proposed 2026-09-30, unordered — the PO asked what we get wrong and how to stop it
 
 Each from evidence in this repository rather than from good practice in general. **None is

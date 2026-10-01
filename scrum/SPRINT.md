@@ -1,4 +1,37 @@
-# Sprint 8
+# Sprint 8 — closed 2026-10-01
+
+### Review — validated value, every number rerun at close
+
+**Goal met, both halves.** The documented example's buildability no longer cries wolf, and the
+irrigation firmware takes its pins from a file spark writes instead of agreeing with the board by luck.
+
+| | before | after, rerun at close |
+| --- | --- | --- |
+| documented example, `buildability` | `[FAIL]` on a real JST PH's 0.225 mm ring | `[ok]`, one advisory: over JLCPCB's 0.18 mm minimum, under its 0.25 mm recommendation |
+| a rail's load | `max_current_a: null`, nothing summed | irrigation `V33: draws at least 355 mA; not stated: Soil1.VCC…`; car `SERVO: draws 700 mA of 3.00 A, resting on figures nobody has verified` |
+| irrigation firmware's pins | twelve GPIO numbers typed by hand | `import pins`; the MicroPython trace before and after identical |
+| a test confirming the code with its own numbers | `test_flash_image` read the module's offset | mechanical (W2): 39 reads triaged, one identity fixed against MicroPython's literals |
+| the catalog | read by nothing; a flipped fact passed a green suite | walked for real; the flip is a caught mutation |
+| the false wake fact | in spark's parts library and the bin's docs | corrected at source in four repos |
+| seeing the board | nothing said how | `tsci dev` and Wokwi for VS Code in `build.md`; the bin's viewer is a `make` product |
+
+**Evidence at close:** 795 tests OK (741 at the start) · 267 mutations in 48 tables, every anchor
+present (212 at the start; 55 new, every one caught) · `scripts/` 3,897 code lines of 5,000 (the PO
+raised the ceiling from 4,000 mid-sprint, W15b) · the bin's `make check` red only on CurrentShunt.
+
+**Eight items planned as five.** The PO put P63 first when P60's council found spark's library
+teaching a false fact, and added the two documentation items P65 and P67. Outside the sprint, the
+same day: P60 and P61 answered by councils, P62 and P64 written and ordered into Sprint 9 with P66
+and P68, the firmware horizon parked as F1–F5, the bin's viewer made by `make` (B4).
+
+**What was true of the items, measured:** three of the six code items had a premise or an
+acceptance line that was false when reproduced (P52 twice, P57, P55), one needed a paid run its own
+sprint excluded (P36, amended by the PO), and one missed copies of what it fixed (P63, completed the
+same day). Every one was caught before code by reproducing it first — W20.
+
+---
+
+# Sprint 8 — as planned
 
 **Planned** 2026-10-01 · **Facilitator** main session · **Product Owner** Petr, who chose
 "close v1, bridge to firmware" after five lenses analysed whether spark should produce tested

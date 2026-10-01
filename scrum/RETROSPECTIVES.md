@@ -231,6 +231,58 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
+## R8 — 2026-10-01, on Sprint 8 and the premises that did not survive reproduction
+
+Eight items, planned as five, closed the same day they were planned. The sprint's own measurement
+is the useful part: three of its six code items stood on a claim that was false when reproduced,
+and the rule that caught all three — reproduce before you design (W20) — cost minutes each.
+
+### R7's four actions, checked as written
+
+| | |
+| --- | --- |
+| **R7.1** (a document moves in the same commit as the thing it describes) | **held.** The grep for another repository's name in shipped prose returns nothing, and every Sprint 8 item carries its document change in its own diff: the researcher agent (P52, P55), the glossary and the generator's docstring (P57), `build.md` (P36, P65, P67), W2 itself (P54). |
+| **R7.2** (a `(was N)` is a measurement) | **held, 5 of 5.** Each Sprint 8 implementation commit's baseline equals the suite run on its parent from `git archive`: 741, 770, 777, 784, 788. |
+| **R7.3** (`DONE <date>` is the implementation commit's date) | **held.** Every Sprint 8 DONE and its commit are 2026-10-01. |
+| **R7.4** (the review is written inside the sprint) | **held** — this sprint's review landed in `SPRINT.md` before its last commit. |
+
+**R5.2 rolls forward a fourth time, by plan:** Sprint 8 excluded paid simulator runs.
+
+### What the sprint found about itself
+
+**The premises were the weak point, not the code.** P52 named two servos on a car that has one, and
+its corrected line — mine — named the module on a rail it is not on. P57 called a real JST PH
+footprint a stand-in; the false alarm was an unsourced number. P55 counted 35 records where there
+are 18 and named a field no code reads. Each was found by running the item's own claim first, and
+each correction is written beside its measurement in the backlog.
+
+**My own numbers were wrong three times** — P61's three counts (caught by a lens), and a P52 commit's
+line count written from an earlier run (caught rereading, amended before push). W13 held only
+because something re-read them.
+
+**A gate that is always red is a gate nobody runs.** The bin's pre-commit hook fails on one
+could-not-run — CurrentShunt's unstated current — so **four of the bin's four commits this sprint
+skipped it** with `--no-verify`. `check_physics`'s own tests say this in as many words: a gate
+permanently red for a measurement nobody has taken gets switched off. It has been.
+
+**Committed derived files went stale without a word.** The bin's schematic and PCB images showed the
+MP3 board for a week after it was replaced; its viewer showed the XIAO board for nine days;
+irrigation's generated `board.tsx` kept a corrected fact's old text. None was checked against its
+source. B4 made the viewer a `make` product; the images are still committed and still unchecked.
+
+**A corrected fact was edited, not swept.** P63 fixed spark and the bin and missed three copies in
+irrigation and rc-car, found only because P52 happened to regenerate a board.
+
+### Actions
+
+| # | change | check at R9 |
+| --- | --- | --- |
+| **R8.1** | The bin's gate goes back to meaning something **before its next commit**: either CurrentShunt's current is stated with its source — the L9110S's 1.5 A limit as an upper bound, 0.225 W in a 1 W 2512, which `SHOPPING.md` already argues — or the PO rules that the hook blocks on problems and reports could-not-run. The PO chooses (W11). | At R9: `git log --format=%B` over the bin's Sprint 9 commits contains no `--no-verify`. |
+| **R8.2** | Every derived file a repository commits is either checked current by its gate, the way `diagram-current` checks the simulation, or untracked and made, the way the viewer is. Written as **B5** for the PO to order. | At R9: B5 exists in the backlog with the PO's order, and the bin's tracked derived files are listed in it, each with its check or its removal. |
+| **R8.3** | A commit that corrects a fact carries the sweep: the grep over all four repositories and its empty output. | At R9: every fact-correcting commit in Sprint 9 quotes its sweep; zero copies found later by anything else. |
+
+---
+
 ## R7 — 2026-10-01, on Sprint 7 and the checks that caught their author
 
 Four items, five commits, and the v1 line now holds mechanically: an outside reading took an empty
