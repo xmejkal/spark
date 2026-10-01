@@ -378,8 +378,12 @@ into the store in the same commit (W16). *Estimate* ~30–60 code lines.
 v1.1 datasheet and the board fact that cites its Table 12; and `git ls-files catalog | grep -c pdf`
 prints 0.
 
-### P63 — A fact this project wrote down wrongly is corrected where a conversation will read it
-**Spark's half DONE 2026-10-01** (`tactile-button.json`, both board records); the bin's half follows in the same sitting.
+### P63 — A fact this project wrote down wrongly is corrected where a conversation will read it — DONE 2026-10-01
+**Spark `f5e2c66`, the bin `62a3139`.** Every correction reproduced at source before the edit (W20).
+Acceptance, run: in spark `grep -on "[^.]*ALL_LOW[^.]*\." parts boards` → two sentences, both
+"an AND only on the original ESP32"; in the bin, every remaining mention is that or the old claim
+quoted as corrected. The bin's `STATUS.md` row 5 now reads **misdiagnosed, and closed anyway**. The
+bin was committed `--no-verify` for its pre-existing CurrentShunt red alone, by the PO's ruling.
 **Needed by:** every conversation that writes firmware for an S3 or C6 — spark's
 `parts/tactile-button.json:37` teaches that `WAKEUP_ALL_LOW` is an AND across every armed pin, and
 ESP-IDF v5.5.2's `esp_sleep.h` makes it an alias of `ANY_LOW` (an OR) on every chip after the
