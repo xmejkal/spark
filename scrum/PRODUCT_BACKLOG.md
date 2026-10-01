@@ -302,7 +302,8 @@ deleted in `/var/folders` before `init` could read it.
 checks look, which is the one behaviour W16 allows.
 
 ### P60 — Should there be a firmware skill, and for which runtime? — ANSWERED 2026-10-01, `docs/2026-10-01-firmware-skill.md`
-**The council's answer, for the PO to accept or overrule:** no skill; MicroPython only; the facts a
+**PO, 2026-10-01: accepted provisionally — rerun the measurement on Opus 5.5 once the CLI is
+updated, and revisit if it changes the picture.** The council's answer: no skill; MicroPython only; the facts a
 model gets wrong (10 of 30 runs) are chip, part and tool facts, so they go in records, reach the
 firmware through P36's file and are enforced by P56's seeded fake. The bin's headline lesson —
 `WAKEUP_ALL_LOW` is an AND — is false on the S3 and C6, and spark's own parts library repeats it: P63.
@@ -600,7 +601,7 @@ signal name, its pad and the reason the pin was chosen.
 unchanged; a test asserts every signal the design has appears exactly once in it.
 **Bound by P60 (2026-10-01):** the file is plain integer assignments, not `const()`, so it imports
 under CPython and MicroPython alike; the assignments are data first, rendered as Python, so a later
-`pins.h` is one renderer and is not built now. **Proposed, for the PO:** each pin's comment carries
+`pins.h` is one renderer and is not built now. **PO, 2026-10-01: yes, in P36:** each pin's comment carries
 the record facts for that pin (*"GPIO11 — ADC2, unusable with WiFi"*) — P60 measured short notes
 fixing 7 of 7 failing runs, and this delivers them at the moment of writing, from a record.
 

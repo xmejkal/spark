@@ -23,13 +23,16 @@ direction, with no new concept, no quota and no bench.
 
 | # | item | what it does | size |
 | --- | --- | --- | --- |
-| 1 | **P52** | a rail states what it carries, summed from the records that already hold it | M |
-| 2 | **P57** | a stand-in's geometry is could-not-run naming the stand-in, not a FAIL | S |
-| 3 | **P36** | the pin map becomes a file the firmware imports instead of retyping | S |
-| 4 | **P54** | the suite cannot pass by asking the code to confirm itself | S |
-| 5 | **P55** | something reads the real catalog — 35 records no test touches | S |
+| 1 | **P63** | a fact this project wrote down wrongly is corrected where a conversation reads it — **added first by the PO 2026-10-01** | S |
+| 2 | **P52** | a rail states what it carries, summed from the records that already hold it | M |
+| 3 | **P57** | a stand-in's geometry is could-not-run naming the stand-in, not a FAIL | S |
+| 4 | **P36** | the pin map becomes a file the firmware imports instead of retyping — plain ints, each pin's record facts as comments (PO, after P60) | S |
+| 5 | **P54** | the suite cannot pass by asking the code to confirm itself | S |
+| 6 | **P55** | something reads the real catalog — 35 records no test touches | S |
 
-**Five items, deliberately below Sprint 6's eight.** The reason is measured and in R7: of the last
+**Six items since 2026-10-01**, when the PO put P63 first: P60's council found spark's own parts
+library teaching a false wake fact, and a false fact in a record is what every conversation reads.
+**Planned as five, deliberately below Sprint 6's eight.** The reason is measured and in R7: of the last
 twelve items, **five had acceptance lines that were false when reproduced**, and both sprints found
 faults in their own record at close. The constraint is not throughput; it is the distance between
 what gets written down and what has been run.
