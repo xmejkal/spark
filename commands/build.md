@@ -115,6 +115,27 @@ The generator refuses rather than guess, and each refusal says what to record:
 A rail nothing sources (a motor rail with no connector) is not a refusal: the file says so and the
 build stops on a net with one member. Add the connector to the parts list.
 
+## See it
+
+**The board, live** — tscircuit's own viewer, which every spark project already has (`init` writes
+the package file that installs it):
+
+```
+npx tsci dev board.tsx        # then open http://localhost:3020/#file=board.tsx — PCB, schematic, 3D
+```
+
+It rebuilds whenever `board.tsx` changes, so it is the window to keep open while a board is being
+worked on. Its interface loads from a CDN, so it needs a network; the server itself is local.
+
+**The simulation, watched rather than asserted** — the Wokwi for VS Code extension opens the files
+the last stage already writes into `sim/` (`wokwi.toml`, `diagram.json`, the chips) and runs the
+flash image live: press the board's buttons, drag a sensor's slider, read its serial port. Open the
+project in VS Code, run **Wokwi: Select Config File** and pick `sim/wokwi.toml`, then **Wokwi: Start
+Simulator** (the command names are the extension's own, from its package). It needs a Wokwi licence
+that includes VS Code — Hobby+ or above, per wokwi.com/pricing (read 2026-10-01); **Wokwi: Request a
+New License** starts one. Whether it spends the CI minutes `wokwi-cli` does is not stated there, and
+nobody has run it on a spark project yet, so treat the first run as the check.
+
 ## Simulate it — for real, with the values set in the test
 
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom

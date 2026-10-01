@@ -451,7 +451,12 @@ same day: tscircuit ships a live viewer (`tsci dev`, every spark project has it)
 is installed here, and wokwi.com/pricing lists "Wokwi for VS Code" from **Hobby+** up, which the PO
 does not hold or is unsure of — so it is documented, not tried.
 
-### P65 — The board is one command from being seen while you work — **PO: Sprint 8, after P55**
+### P65 — The board is one command from being seen while you work — **PO: Sprint 8, after P55** — DONE 2026-10-01
+**Run in the fresh project built from `build.md`'s example:** `npx tsci dev board.tsx --port 3020` →
+`ready in 8372ms`, `curl localhost:3020` → **200** in about 3 s. **Not shown:** a headless Chrome
+screenshot after 60 s of page time showed the viewer's PCB / Schematic / 3D tabs and its loading
+tip, not the board — so whether the board renders in it is for a person to see, not claimed here.
+`commands/build.md` → *See it*.
 **Needed by:** the PO, working in any spark project. `npx tsci dev board.tsx` serves the schematic,
 PCB and 3D on localhost:3020 and reloads on every change; nothing in spark mentions it.
 **Value proven by:** `commands/build.md` names the command and the port, and in a fresh project
@@ -468,7 +473,10 @@ which the chain does not make today — say what that costs in seconds before de
 whose three tabs render (headless Chrome screenshot); the bin's `make all` builds its viewer through
 the plugin's script.
 
-### P67 — The simulation can be watched, not only asserted — **PO: Sprint 8, after P65**
+### P67 — The simulation can be watched, not only asserted — **PO: Sprint 8, after P65** — DONE 2026-10-01 (documented, untried)
+`commands/build.md` → *See it*: the extension's own command names read from its installed
+`package.json` (3.7.0) — *Wokwi: Select Config File*, *Wokwi: Start Simulator*, *Wokwi: Request a New
+License* — the licence it needs, and that nobody has run it on a spark project. No code.
 **Needed by:** the PO — a passing scenario says nothing you can see. The Wokwi VS Code extension
 opens the project's `wokwi.toml` and `diagram.json` — the files spark already writes — and runs the
 firmware live, custom chips included. Needs a Wokwi licence of Hobby+ or above (wokwi.com/pricing,
