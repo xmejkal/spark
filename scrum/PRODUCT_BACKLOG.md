@@ -824,7 +824,11 @@ DFPlayer Mini; micro-USB and "Voice Module V1.0" means DFR0534; pads marked BCLK
 I²S amp the board now assumes.
 **Value proven by:** the bin's `make check` against the module that is actually there.
 
-### B4 — The viewer is made by `make`, not kept by hand — **PO, 2026-10-01: regenerate it via make**
+### B4 — The viewer is made by `make`, not kept by hand — **PO, 2026-10-01: regenerate it via make** — DONE 2026-10-01, bin `ee2c638`
+**Run after the last change:** `make board-viewer.html` → 25 parts, 60 traces, 0 routing errors,
+4.3 MB; `AudioAmp` 14 times, `Mp3` and `XIAO` 0; `make -q` 0 when current, 1 after touching
+`board.tsx`. All three tabs screenshotted in headless Chrome, the 3D one drawing the real GLB
+through the three.js tscircuit installs. Untracked at 4.3 MB, like the bin's flash images.
 **Needed by:** anyone opening the bin's `board-viewer.html`, which CLAUDE.md calls the viewer. It
 shows the **XIAO** board of 2026-09-22 — two boards ago — and nothing in the repository makes it.
 Found while remaking the board (bin `2367fa1`), whose schematic and PCB images had themselves shown
