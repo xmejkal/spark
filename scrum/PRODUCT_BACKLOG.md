@@ -337,10 +337,13 @@ unlinked from any spark record. The PO asked: *"are we actually keeping them? �
 not to have to reresearch datasheets and board infos … would it be too much data? … should it be in
 the project folder, or the spark itself?"*
 Measured 2026-10-01: `parts.py --fetch` keeps a record's cited files beside it; the catalog has
-files for 16 of 18 records (45 PDFs/images in git, 10 MB); the library's 8 records hold 4
-attachments; **the two board records hold none**; the bin keeps 13 PDFs (13 MB) spark cannot see;
-everything an agent reads during research lands in a session scratchpad and is lost. spark's
-`.git` is 33 MB and the repository is on GitHub.
+files for 16 of 18 records (45 PDFs/images in git, 10 MB); the library's **6** records hold **0**
+attachments (its 4 other files are chip sources); **the two board records hold none**; the bin
+keeps 13 PDFs (6.8 MB) spark cannot see; everything an agent reads during research lands in a
+session scratchpad and is lost. spark's `.git` is 33 MB and the repository is **private** on GitHub.
+*(Corrected the same day: the first version said 8 records, 4 attachments and 13 MB — the first two
+counted chip files as records and attachments, the third was `du` of the bin's whole `parts/`. Found
+by the architecture lens, rerun before correcting. W13.)*
 **A question for a council (W18, W11), not work.** It must settle: plugin, project, or a cache
 outside both; what is kept (PDF, the source file at a tag, a text extract); how a record points at
 it (version, checksum, the page or line a fact rests on); size and growth; and whether a published
