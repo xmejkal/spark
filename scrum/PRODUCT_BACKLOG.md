@@ -361,6 +361,7 @@ command a researcher runs to find a source before fetching it again.
 and the file lives in one store on the person's machine, outside the plugin; the work is P62.
 
 ### P62 — A record points at the exact source it rests on, and the file is found before it is fetched again
+**PO, 2026-10-01: Sprint 9, first — P64 follows it.**
 **Needed by:** the FireBeetle board record, whose deep-sleep PSRAM claim cites "WROOM-1 v1.1 Table
 12" as prose — nothing could find the kept v1.1, and the vendor URL now serves v1.8 with different
 table numbers; and every researcher, since one fetch in five repeats one already made (P61).
@@ -390,6 +391,8 @@ spark's records here; the bin's own copies (`CLAUDE.md`, `HANDOVER.md`, `STATUS.
 that it is an AND on the S3 or C6, and each corrected fact cites the source line it now rests on.
 
 ### P64 — Every claim spark ships is checked against its source by someone who did not write it — the PO's proposal of 2026-10-01
+**PO, 2026-10-01: Sprint 9, after P62** — P62 gives every claim a document version and page, so the
+checker reads the document a fact was written from rather than whatever its URL serves today.
 **Needed by:** every conversation that reads spark's records, so a wrong fact stops spreading. The
 PO: *"maybe we should have some agent that rechecks our files for halucinations in the already
 defined data and code in spark, so that it doesn't then spread further"*.
