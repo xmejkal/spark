@@ -292,15 +292,33 @@ stated current is **could-not-run naming the part** rather than a guessed total 
 rating and reported; on the irrigation board the soil probe is named as the one load nobody has
 stated, instead of the rails being empty.
 
-### P53 — The rules reach a project that already exists
+### P53 — The rules reach a project that already exists — DONE 2026-09-30
 **Needed by:** the RC car, whose `.spark/rules.json` still holds `i2c_buses: []` and
 `must_not_float: []` — so `compare_design` exits 2 there today, and **the canonical defect of this
 whole product, the L9110S's floating bridge inputs, is checked by nobody on the board that carries
 them.** P45 seeds at `init`, and `init` never reaches a project that already ran it. The same hole
 one level over: `physics.rails` is `{}` on the irrigation project, which P45 left alone.
 **Value proven by:** the RC car's rules file gains its eight floating-input rules and the
-irrigation project its rails, without either project's hand-filled values being lost — `--force`
-already preserves those and a migration must too.
+irrigation project its rails, without either project's hand-filled values being lost — ~~`--force`
+already preserves those~~ and a migration must too.
+
+**The struck clause was false, and it was the item's whole premise.** Reproduced on a copy of the
+RC car: `--force` REPLACED the rules file, so `i2c_hz` set to 400000 came back `null` and a rail
+current of 0.5 A came back nulls. The documents say *"build, then re-run with --force"* — so the
+one workflow this tool prescribes destroyed the answers it had just asked somebody to go and
+measure. The brief was protected by `has_answers`; the rules file, which holds the numbers that
+need a meter, was not. Third time in a day that an acceptance line assumed a state nobody had
+checked, which is W20.
+
+**Done.** `init` merges: a value the file states always wins, a missing or null key is filled, an
+empty list is seeded, a list somebody filled in stays theirs — and what the records would add to
+it is NAMED rather than silently skipped. The two-board refusal was also blocking the wrong thing:
+the RC car's rails genuinely cannot be chosen between, but `must_not_float` comes from part records
+and a record says the same thing whichever board was built. That refusal is why the L9110S's
+floating bridge inputs went unchecked for two sprints on the board that carries them.
+Measured: RC car **0 → 8 rules**, both boards `every rule holds`, its 4 rails untouched; irrigation
+**0 → 4 rails**, `check_physics` runs where it refused, its 4 hand-written rules kept and the 2 the
+records add named.
 
 ### P43 — What an agent reads back
 **Needed by:** every skill and command that reads a script's output, and `/spark:build` most of

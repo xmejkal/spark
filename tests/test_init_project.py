@@ -201,6 +201,80 @@ class WithoutABuiltDesignTest(unittest.TestCase):
         self.assertFalse((root / "boards" / "active.json").exists())
 
 
+class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
+    """
+    P53. `--force` REPLACED the rules file, and the documents tell people to use it: *"no built
+    design found, so the rails are empty — build, then re-run with --force"*. So the one workflow
+    this tool prescribes destroyed the answers it had just asked somebody to go and measure.
+    Reproduced on a copy of the RC car: `i2c_hz` set to 400000 came back `null`, a rail current of
+    0.5 A came back nulls. The brief was protected by `has_answers`; the rules file — the one
+    holding numbers you need a meter for — was not.
+    """
+
+    def test_a_stated_value_beats_a_derived_null(self):
+        self.assertEqual(init_project.merged({"i2c_hz": 400000}, {"i2c_hz": None}),
+                         {"i2c_hz": 400000})
+
+    def test_a_missing_key_is_filled_in(self):
+        self.assertEqual(init_project.merged({}, {"i2c_hz": None}), {"i2c_hz": None})
+
+    def test_a_null_somebody_left_is_filled_in(self):
+        self.assertEqual(init_project.merged({"rails": None}, {"rails": {"V33": {}}}),
+                         {"rails": {"V33": {}}})
+
+    def test_nested_answers_merge_rather_than_being_replaced(self):
+        was = {"physics": {"i2c_hz": 400000, "rails": {"V33": {"max_current_a": 0.5}}}}
+        now = {"physics": {"i2c_hz": None, "rails": {"GND": {"max_current_a": None}}}}
+        after = init_project.merged(was, now)
+        self.assertEqual(after["physics"]["i2c_hz"], 400000)
+        self.assertEqual(after["physics"]["rails"]["V33"]["max_current_a"], 0.5)
+        self.assertIn("GND", after["physics"]["rails"], "a new rail was not added")
+
+    def test_an_empty_list_is_seeded(self):
+        # Exactly where P45's lists stayed: empty and indistinguishable from "nobody looked".
+        self.assertEqual(init_project.merged({"must_not_float": []},
+                                             {"must_not_float": [["U1", "IN"]]}),
+                         {"must_not_float": [["U1", "IN"]]})
+
+    def test_a_list_somebody_filled_in_is_theirs(self):
+        # A rule they deleted stays deleted.
+        self.assertEqual(init_project.merged({"must_not_float": [["U1", "IN"]]},
+                                             {"must_not_float": [["U2", "IN"]]}),
+                         {"must_not_float": [["U1", "IN"]]})
+
+    def test_a_key_this_tool_knows_nothing_about_is_kept(self):
+        self.assertEqual(init_project.merged({"mine": 1}, {})["mine"], 1)
+
+    def test_the_notes_take_the_derived_text_because_they_are_ours(self):
+        self.assertEqual(init_project.merged({"//x": "old"}, {"//x": "new"}), {"//x": "new"})
+
+    def test_what_the_records_add_to_a_filled_list_is_named(self):
+        said = init_project.not_yet_stated(
+            {"must_not_float": [["Valve1", "SIGNAL"]]},
+            {"must_not_float": [["Valve1", "SIGNAL"], ["BtnMode", "A"]]})
+        self.assertEqual(len(said), 1)
+        self.assertIn("BtnMode.A", said[0])
+
+    def test_an_empty_list_says_nothing_because_the_merge_filled_it(self):
+        self.assertEqual(init_project.not_yet_stated({"must_not_float": []},
+                                                     {"must_not_float": [["U1", "IN"]]}), [])
+
+    def test_force_through_the_command_line_keeps_the_answers(self):
+        # The helper above is not the product; this is. R2.2's shape, named twice already.
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / ".spark" / "rules.json").write_text(json.dumps(
+            {"i2c_buses": [], "must_not_float": [],
+             "physics": {"i2c_hz": 400000, "rails": {"V33": {"max_current_a": 0.5}}}}))
+        (root / "a.requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
+        init_project.main(["--project", str(root), "--force"])
+        after = json.loads((root / ".spark" / "rules.json").read_text())
+        self.assertEqual(after["physics"]["i2c_hz"], 400000, "--force ate a measured value")
+        self.assertEqual(after["physics"]["rails"]["V33"]["max_current_a"], 0.5)
+        self.assertEqual(after["must_not_float"], [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
+
+
 class TwoBuiltDesignsTest(unittest.TestCase):
     """
     Two halves of one tool disagreed about whether choosing is allowed.
@@ -221,16 +295,41 @@ class TwoBuiltDesignsTest(unittest.TestCase):
                 [{"type": "source_net", "source_net_id": "n1", "name": "V33"}]))
         return root
 
-    def test_two_built_designs_are_refused_rather_than_one_chosen(self):
+    def test_the_rails_of_one_board_never_become_the_rules_for_both(self):
+        # The invariant, unchanged: choosing between them silently is the defect.
+        root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
+        init_project.main(["--project", str(root)])
+        written = json.loads((root / ".spark" / "rules.json").read_text())
+        self.assertEqual(written["physics"]["rails"], {},
+                         "it seeded the rails from one of two designs")
+
+    def test_it_still_answers_could_not_run(self):
         root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
         self.assertEqual(init_project.main(["--project", str(root)]),
                          init_project.EXIT_COULD_NOT_RUN)
 
-    def test_nothing_is_written_when_it_refuses(self):
-        # Refusing after writing half the files would be worse than choosing.
+    def test_but_what_the_part_records_give_is_still_written(self):
+        # THE CONTRACT CHANGED WITH P53. This used to refuse and write nothing, so a two-board
+        # project could never get its floating-input rules — and the RC car, which carries the
+        # canonical example in its L9110S, had `must_not_float: []` for two sprints. A record
+        # says the same thing whichever board was built, so the ambiguity does not reach it.
         root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
+        (root / "a.requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
         init_project.main(["--project", str(root)])
-        self.assertFalse((root / ".spark" / "rules.json").exists())
+        written = json.loads((root / ".spark" / "rules.json").read_text())
+        self.assertEqual(written["must_not_float"],
+                         [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
+
+    def test_and_it_says_which_designs_it_could_not_choose_between(self):
+        import contextlib, io
+        root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            init_project.main(["--project", str(root)])
+        said = out.getvalue()
+        self.assertIn("dist/car/circuit.json", said)
+        self.assertIn("dist/remote/circuit.json", said)
 
     def test_naming_one_settles_it(self):
         root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")

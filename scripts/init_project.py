@@ -245,7 +245,62 @@ def has_answers(path, template):
         return True
 
 
-def write(path, payload, force, brief=False):
+def not_yet_stated(existing, derived):
+    """
+    What the part records suggest that a rules file does not already say, as sentences.
+
+    `merged` keeps a list somebody has filled in, because it is theirs — a rule they deleted stays
+    deleted. But a list filled in BEFORE the records could seed it never learns the rest: the
+    irrigation controller had four valve inputs written by hand and would never have gained the
+    DS3231's clock line or the mode button. Keeping theirs is right; staying quiet about the
+    difference is the silent-skip this repository refuses everywhere else (W1).
+    """
+    said = []
+    for key in ("must_not_float", "i2c_buses"):
+        have = existing.get(key) or []
+        if not have:
+            continue  # merged() filled it; nothing to say
+        missing = [entry for entry in (derived.get(key) or []) if entry not in have]
+        for entry in missing:
+            where = ".".join(entry) if isinstance(entry, list) else entry
+            said.append("%s: the part records also name %s, which this file does not. Add it, or "
+                        "leave it out deliberately." % (key, where))
+    return said
+
+
+def merged(existing, derived):
+    """
+    What this tool derived, folded into what a person has already answered. Theirs always wins.
+
+    `--force` used to REPLACE the rules file, and the documents tell people to use it: *"no built
+    design found, so the rails are empty — build, then re-run with --force"*. So the one workflow
+    this tool prescribes destroyed the answers it had just asked for. Reproduced 2026-09-30 on a
+    copy of the RC car: `i2c_hz` set to 400000 came back `null`, and a rail current of 0.5 A came
+    back nulls (backlog P53). The brief was protected by `has_answers`; the rules file, which is
+    the one holding measurements somebody had to go and take, was not.
+
+    The rule, applied at every depth: a value the file STATES is kept. A key that is missing, or
+    holds `null`, or holds an empty list where the derivation found something, is filled in. A
+    key the person added and this tool knows nothing about is left where it is. `//` notes take
+    the derived text, because they are this tool's own documentation and they improve.
+    """
+    if not isinstance(existing, dict) or not isinstance(derived, dict):
+        return existing
+    result = dict(existing)
+    for key, value in derived.items():
+        if key.startswith("//"):
+            result[key] = value
+        elif key not in result or result[key] is None:
+            result[key] = value
+        elif isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = merged(result[key], value)
+        elif isinstance(result[key], list) and not result[key] and value:
+            # An empty list is "nobody filled this in", which is exactly what P45 set out to end.
+            result[key] = value
+    return result
+
+
+def write(path, payload, force, brief=False, merge=False, unstated=None):
     """
     Write, or say why not. `--force` rewrites what this tool derived — never a brief with
     answers in it: `init --force` was the only way to re-seed the rails from a new build, and it
@@ -258,6 +313,13 @@ def write(path, payload, force, brief=False):
                            "rewrites only what this tool derived" % path.name)
         if not force:
             return False, "%s already exists, left alone" % path.name
+        if merge:
+            was = json.loads(path.read_text())
+            if unstated is not None:
+                unstated.extend(not_yet_stated(was, payload))
+            payload = merged(was, payload)
+            path.write_text(json.dumps(payload, indent=2) + "\n")
+            return True, ("merged into %s — every answer already in it was kept" % path.name)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n")
     return True, "wrote %s" % path.name
@@ -322,7 +384,7 @@ def main(argv=None):
         print("no directory at %s" % project, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
-    circuit = args.circuit
+    circuit, ambiguous = args.circuit, None
     if not circuit:
         for pattern in CIRCUIT_PATHS:
             matches = sorted(project.glob(pattern))
@@ -334,28 +396,40 @@ def main(argv=None):
                 #
                 # `check_all` calls the same two matches ambiguous and refuses. Two halves of one
                 # tool disagreeing about whether choosing is allowed is worse than either answer.
-                print("%d built designs here, and this would seed the rails from ONE of them:\n"
-                      "  %s\n"
-                      "  The rails of one board are not the rules for both. Name one with "
-                      "--circuit, or run this in each design's own project."
-                      % (len(matches), "\n  ".join(str(m.relative_to(project))
-                                                   for m in matches)), file=sys.stderr)
-                return EXIT_COULD_NOT_RUN
+                # The RAILS cannot be chosen between; everything derived from the part
+                # RECORDS can, because a record says the same thing whichever board was built.
+                # This used to refuse outright and write nothing, so a two-board project could
+                # never get its floating-input rules at all — and the RC car, which carries the
+                # canonical example of one in its L9110S, had `must_not_float: []` for two
+                # sprints (backlog P53).
+                ambiguous = ("%d built designs here, so the rails were NOT seeded — the rails of "
+                             "one board are not the rules for both:\n    %s\n  Name one with "
+                             "--circuit, or run this in each design's own project. Everything "
+                             "that comes from the part records was seeded."
+                             % (len(matches), "\n    ".join(str(m.relative_to(project))
+                                                           for m in matches)))
+                circuit = None
+                break
             if matches:
                 circuit = str(matches[0])
                 break
 
     nets = nets_in(circuit)
     part_list, notes = design_in(project)
+    unstated = []
+    if ambiguous:
+        notes.append(ambiguous)
     written = []
 
-    for path, payload, brief in ((project / ".spark" / "rules.json", rules_for(nets, part_list), False),
-                                 (project / ".spark" / "project.json", PROJECT_TEMPLATE, True)):
-        did, note = write(path, payload, args.force, brief=brief)
+    for path, payload, brief, merge in ((project / ".spark" / "rules.json", rules_for(nets, part_list), False, True),
+                                 (project / ".spark" / "project.json", PROJECT_TEMPLATE, True, False)):
+        did, note = write(path, payload, args.force, brief=brief, merge=merge,
+                          unstated=unstated)
         notes.append(note)
         if did:
             written.append((path, payload))
     notes.append(write(project / "package.json", package_file(project), force=False)[1])
+    notes.extend(unstated)
 
     if args.board:
         available = boards.available(project)
@@ -390,7 +464,9 @@ def main(argv=None):
     if not written and not args.board:
         print("\nnothing to do — everything already exists. --force rewrites it.")
         return EXIT_NOTHING_TO_DO
-    return EXIT_OK
+    # Part of the job could not be done, and W1 applies to this tool as much as to a check: the
+    # rails are unseeded and the exit code says so, even though everything else was written.
+    return EXIT_COULD_NOT_RUN if ambiguous else EXIT_OK
 
 
 if __name__ == "__main__":
