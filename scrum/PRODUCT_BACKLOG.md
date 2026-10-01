@@ -677,6 +677,9 @@ nothing compares any of them with the assigner's output; they agree today by luc
 signal name, its pad and the reason the pin was chosen.
 **Value proven by:** the irrigation firmware imports the generated file and its scenario passes
 unchanged; a test asserts every signal the design has appears exactly once in it.
+**Amended by the PO, 2026-10-01, before any code:** "passes unchanged" is proven FREE — the
+firmware run before and after on the real `micropython` unix port with a fake `machine` drives
+exactly the same GPIOs — because Sprint 8 excludes any `wokwi-cli` run and the scenario is metered.
 **Bound by P60 (2026-10-01):** the file is plain integer assignments, not `const()`, so it imports
 under CPython and MicroPython alike; the assignments are data first, rendered as Python, so a later
 `pins.h` is one renderer and is not built now. **PO, 2026-10-01: yes, in P36:** each pin's comment carries
