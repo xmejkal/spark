@@ -126,5 +126,84 @@ class TheProjectFileTest(unittest.TestCase):
         self.assertNotIn("[[chip]]", toml)
 
 
+class WhatTheSimulationCannotShowTest(unittest.TestCase):
+    """
+    P37. Every stand-in record is REQUIRED to carry this sentence — `parts.py` refuses a built-in
+    stand-in without one — and no command printed a single one. The irrigation controller's valve
+    driver says it plainly: *"an LED on the gate drive... No opto, no MOSFET, no 12 V load and no
+    flyback."* A green scenario over that read exactly like a bench result.
+    """
+
+    class FakeDesign:
+        def __init__(self, parts):
+            self.parts = parts
+
+    @staticmethod
+    def part(name, **simulation):
+        return {"id": name.lower(), "name": name, "simulation": simulation}
+
+    def test_a_stand_ins_sentence_is_collected(self):
+        design = self.FakeDesign([self.part("Valve", wokwi={"part": "wokwi-led", "stand_in": "an LED"})])
+        self.assertEqual(sim_project.limits_of(design), [("Valve", "an LED")])
+
+    def test_a_custom_chips_note_counts_too(self):
+        # A chip is closer to the part than a stand-in is, and still not the part.
+        design = self.FakeDesign([self.part("Tof", wokwi={"chip": "vl6180x", "note": "no optics"})])
+        self.assertEqual(sim_project.limits_of(design), [("Tof", "no optics")])
+
+    def test_a_part_nobody_simulates_says_so_with_its_reason(self):
+        design = self.FakeDesign([self.part("Jack", skip="a connector is wiring")])
+        self.assertEqual(sim_project.limits_of(design),
+                         [("Jack", "not simulated at all: a connector is wiring")])
+
+    def test_a_part_that_is_really_simulated_says_nothing(self):
+        design = self.FakeDesign([self.part("Btn", wokwi={"part": "wokwi-pushbutton"})])
+        self.assertEqual(sim_project.limits_of(design), [])
+
+    def test_identical_sentences_are_grouped(self):
+        # Three identical soil probes printed three identical paragraphs, and a finding that long
+        # is one that gets scrolled past — which is how this one stayed invisible.
+        same = {"part": "wokwi-led", "stand_in": "an LED"}
+        design = self.FakeDesign([self.part("Soil1", wokwi=dict(same)),
+                                  self.part("Soil3", wokwi=dict(same)),
+                                  self.part("Soil2", wokwi=dict(same))])
+        self.assertEqual(sim_project.limits_of(design), [("Soil1, Soil2, Soil3", "an LED")])
+
+    def test_the_file_is_actually_written_beside_the_diagram(self):
+        import tempfile
+        work = Path(tempfile.mkdtemp())
+        design = self.FakeDesign([self.part("Valve", wokwi={"part": "wokwi-led", "stand_in": "an LED"})])
+        said = sim_project.write_limits(work, design)
+        self.assertEqual(said, [("Valve", "an LED")])
+        self.assertIn("an LED", (work / "WHAT-THIS-CANNOT-SHOW.md").read_text())
+
+    def test_nothing_is_written_when_nothing_stands_in(self):
+        import tempfile
+        work = Path(tempfile.mkdtemp())
+        design = self.FakeDesign([self.part("Btn", wokwi={"part": "wokwi-pushbutton"})])
+        self.assertEqual(sim_project.write_limits(work, design), [])
+        self.assertFalse((work / "WHAT-THIS-CANNOT-SHOW.md").exists())
+
+    def test_the_stage_says_it_too_for_the_person_watching_the_run(self):
+        import check_spine
+        detail = check_spine.simulation_detail(34, {"l9110s": "reused"}, 0,
+                                               [("Valve1, Valve2", "no MOSFET")])
+        self.assertIn("34 wire(s)", detail)
+        self.assertIn("what it cannot show", detail)
+        self.assertIn("Valve1, Valve2: no MOSFET", detail)
+
+    def test_a_simulation_with_nothing_to_admit_says_only_what_it_did(self):
+        import check_spine
+        self.assertEqual(check_spine.simulation_detail(5, {}, 0, []), "5 wire(s) in the diagram")
+
+    def test_the_note_beside_the_diagram_carries_every_line(self):
+        # The terminal gets closed; the sim directory is what somebody opens a week later.
+        note = sim_project.limits_note([("Valve1, Valve2", "no MOSFET"), ("Jack", "not simulated")])
+        self.assertIn("no MOSFET", note)
+        self.assertIn("Valve1, Valve2", note)
+        self.assertIn("Jack", note)
+        self.assertIn("cannot show", note.splitlines()[0])
+
+
 if __name__ == "__main__":
     unittest.main()

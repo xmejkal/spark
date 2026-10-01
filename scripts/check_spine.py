@@ -466,8 +466,31 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                "wired, which is what an unmapped component looks like once the "
                                "converter has given up on it")]
     compiled = sum(1 for how in staged.values() if how == "compiled")
-    return stages + [Stage("simulation", OK, "%d wire(s) in the diagram%s" % (
-        wires, ", %d chip(s): %d compiled, %d reused" % (len(staged), compiled, len(staged) - compiled) if staged else ""))]
+    # What the simulation cannot show, in the records' own words. Every stand-in record is
+    # required to carry this sentence and no command printed one, so a green scenario read exactly
+    # like a bench result (backlog P37). It goes beside the diagram as well, because the terminal
+    # gets closed and the sim directory is what somebody opens a week later.
+    limits = sim_project.write_limits(sim_dir, loaded)
+    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits))]
+
+
+def simulation_detail(wires, staged, compiled, limits):
+    """
+    What the simulation stage says, including what it cannot show.
+
+    Separated from `run` so it can be tested at all: no test on this machine reaches run's
+    simulation stage, which needs a toolchain and a converter, so everything written inside it was
+    guarded by nobody — the verification lens's finding, and two of P37's own mutations escaped on
+    exactly that.
+    """
+    detail = "%d wire(s) in the diagram%s" % (
+        wires, ", %d chip(s): %d compiled, %d reused"
+        % (len(staged), compiled, len(staged) - compiled) if staged else "")
+    if limits:
+        detail += "\n           what it cannot show, from the records (%d):" % len(limits)
+        for component, sentence in limits:
+            detail += "\n             %s: %s" % (component, sentence)
+    return detail
 
 
 def verdict(stages):

@@ -443,7 +443,7 @@ signal name, its pad and the reason the pin was chosen.
 **Value proven by:** the irrigation firmware imports the generated file and its scenario passes
 unchanged; a test asserts every signal the design has appears exactly once in it.
 
-### P37 — What this simulation cannot show, printed
+### P37 — What this simulation cannot show, printed — DONE 2026-09-30
 **Needed by:** anyone reading a passing scenario. Every stand-in record already carries a mandatory
 `stand_in` sentence — Wokwi's DS1307 answers at the DS3231's address with the same seven time
 registers and has no alarms, no temperature; each valve is an LED with no MOSFET, no 12 V and no
@@ -451,6 +451,19 @@ flyback — and no command prints any of it, so a green run reads like a bench r
 The spine's simulation stage and `parts.py --show` print the stand-in limits for the design.
 **Value proven by:** `check_spine.py <irrigation>` prints the three limits under its simulation
 line, and a record whose `stand_in` is empty is already refused by the contract.
+
+**Done.** The sentences were already written and already **mandatory** — `parts.py` refuses a
+built-in stand-in without one — and no command had ever printed a single one. The chain's
+simulation stage now names them, and `WHAT-THIS-CANNOT-SHOW.md` lands beside the diagram, because
+the terminal gets closed and the sim directory is what somebody opens a week later.
+Measured on the irrigation controller: **7 lines** — the four valves are an LED on a gate drive
+with no opto, no MOSFET, no 12 V load and no flyback; the buck is not simulated at all because the
+simulator powers the board itself; the DS3231 is a DS1307 with no EEPROM at 0x57.
+Twelve lines became seven by grouping identical sentences: three identical soil probes printing
+three identical paragraphs is how a finding gets scrolled past, which is partly how this one
+stayed invisible. And both the detail and the file write were **extracted out of `run`'s
+simulation stage first** — no test on this machine reaches it, so two of this item's own mutations
+were about to escape through that hole.
 
 ### P38 — The capacitors P6 promised
 **Needed by:** the irrigation controller's 12 V rail, which switches four solenoids off an unfused

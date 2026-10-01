@@ -65,6 +65,57 @@ def mapping_for(design):
     return mapping, list(dict.fromkeys(chips)), unmapped
 
 
+def limits_of(design):
+    """
+    What this simulation cannot show, as (component, sentence) — from the records, in their words.
+
+    Every stand-in record is REQUIRED to carry one of these (`parts.py` refuses a built-in
+    stand-in without it), and until P37 no command printed a single one. So a green scenario read
+    exactly like a bench result. The irrigation controller's valve driver says it plainly: *"an
+    LED on the gate drive: lit means the valve is commanded open. No opto, no MOSFET, no 12 V load
+    and no flyback."* A passing run over that proves the firmware commanded the valve, and nothing
+    whatever about the thing that switches 12 V.
+
+    A custom chip's `note` counts too: a chip is closer to the part than a stand-in is, and still
+    not the part.
+    """
+    said = []
+    for part in design.parts:
+        wokwi = ((part.get("simulation") or {}).get("wokwi") or {})
+        sentence = wokwi.get("stand_in") or wokwi.get("note")
+        if sentence:
+            said.append((emit_board.component_name(part), sentence))
+        skip = (part.get("simulation") or {}).get("skip")
+        if skip:
+            said.append((emit_board.component_name(part), "not simulated at all: %s" % skip))
+    # Grouped by the sentence, because three identical soil probes printed three identical
+    # paragraphs and a finding that long gets scrolled past — which is how this one was invisible
+    # in the first place.
+    together = {}
+    for component, sentence in said:
+        together.setdefault(sentence, []).append(component)
+    return sorted((", ".join(sorted(names)), sentence) for sentence, names in together.items())
+
+
+def limits_note(limits):
+    """The same, as the file a person finds beside the diagram rather than in a terminal they closed."""
+    lines = ["# What this simulation cannot show", "",
+             "Generated beside the diagram by spark. Every line is a part record's own words.",
+             "A scenario passing over any of these proves what the FIRMWARE did, and nothing about",
+             "the hardware the stand-in replaced.", ""]
+    for component, sentence in limits:
+        lines.append("- **%s** — %s" % (component, sentence))
+    return "\n".join(lines) + "\n"
+
+
+def write_limits(sim_dir, design):
+    """Put the note beside the diagram and hand back what it said, or () when there is nothing."""
+    limits = limits_of(design)
+    if limits:
+        (Path(sim_dir) / "WHAT-THIS-CANNOT-SHOW.md").write_text(limits_note(limits))
+    return limits
+
+
 def unmapped_detail(unmapped):
     """The could-not-run message: which records to finish, and what to write."""
     return ("no simulation in the record for %s — add `simulation.wokwi` (a stand-in part or a "
