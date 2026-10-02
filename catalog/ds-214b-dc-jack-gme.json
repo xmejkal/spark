@@ -39,6 +39,5 @@
       "checked": "2026-09-29",
       "note": "The canonical URL from GME's own HTML; the search-indexed URL https://www.gme.cz/napajeci-souosy-konektor-wealthmetal-ds-214b returns the same empty shell. Price and stock unreadable. A person with a browser fills this in; the sibling 'K375L DC konektor 5,5/2,1' (https://gme.cz/napajeci-souosy-konektor-k375l, GME code 806-013 per the search snippet) is in the same state."
     }
-  ],
-  "attachments": {}
+  ]
 }

@@ -13,19 +13,19 @@
  },
  {
   "file": "scripts/parts.py",
-  "name": "a fetched attachment is not recorded",
-  "find": "            kept[url] = \"%s/%s\" % (part_id, name)",
-  "replace": "            pass"
+  "name": "a fetched document is not recorded",
+  "find": "            documents[document_key(name, documents)] = {",
+  "replace": "            _unrecorded = {"
  },
  {
   "file": "scripts/parts.py",
   "name": "a page is kept as if it were a datasheet",
-  "find": "        if not bare.lower().endswith(KEEPABLE) or url in kept:",
-  "replace": "        if url in kept:"
+  "find": "        if not bare.lower().endswith(KEEPABLE) or url in known:",
+  "replace": "        if url in known:"
  },
  {
   "file": "scripts/parts.py",
-  "name": "promotion leaves the attachments behind",
+  "name": "promotion leaves the record's folder (its chip) behind",
   "find": "    if (home / part_id).is_dir():\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)",
   "replace": "    if False:\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)"
  },
@@ -50,13 +50,13 @@
  {
   "file": "scripts/parts.py",
   "name": "the saved name keeps its percent-encoding",
-  "find": "            name = urllib.parse.unquote(bare.rsplit(\"/\", 1)[-1]) or \"attachment\"",
-  "replace": "            name = bare.rsplit(\"/\", 1)[-1] or \"attachment\""
+  "find": "            name = urllib.parse.unquote(bare.rsplit(\"/\", 1)[-1]) or \"document\"",
+  "replace": "            name = bare.rsplit(\"/\", 1)[-1] or \"document\""
  },
  {
   "file": "scripts/parts.py",
-  "name": "a second source with the same basename overwrites the first",
-  "find": "            if \"%s/%s\" % (part_id, name) in kept.values():  # two DS3231.pdf from two hosts: keep both",
-  "replace": "            if False:"
+  "name": "a second document's entry overwrites the first's",
+  "find": "    while key in taken:",
+  "replace": "    while False:"
  }
 ]

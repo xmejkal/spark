@@ -116,14 +116,70 @@
       "note": "structured data price 8.5; schema.org InStock on the day"
     }
   ],
-  "attachments": {
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Main_01.jpg": "dfr0884-usb-buck/DFR0884_Main_01.jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_TOP_03.jpg": "dfr0884-usb-buck/DFR0884_TOP_03.jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Back_04.jpg": "dfr0884-usb-buck/DFR0884_Back_04.jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Detail_05.jpg": "dfr0884-usb-buck/DFR0884_Detail_05.jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Detail_06.jpg": "dfr0884-usb-buck/DFR0884_Detail_06.jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884-detail-002.jpg": "dfr0884-usb-buck/DFR0884-detail-002.jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884-detail-003.jpg": "dfr0884-usb-buck/DFR0884-detail-003.jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884-detail-004.JPG": "dfr0884-usb-buck/DFR0884-detail-004.JPG"
+  "documents": {
+    "dfr0884-main-01": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Main_01.jpg",
+      "sha256": "c2a54105484562b730860d9616c5d0dbec7a6a628045221bbcb0cb3300857522",
+      "file": "DFR0884_Main_01.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0884-top-03": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_TOP_03.jpg",
+      "sha256": "093c17570b1eb26443a28144aa37d5705bb6c7f2f8eacf26037d425051de3f57",
+      "file": "DFR0884_TOP_03.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0884-back-04": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Back_04.jpg",
+      "sha256": "9d9553487740f8a07a59999b4522f1b52d74e6461d71b171efed78f0c7c9b771",
+      "file": "DFR0884_Back_04.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0884-detail-05": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Detail_05.jpg",
+      "sha256": "f5b6ad42238bf5b9aedcccbe6bacf9a3bf8df14d2f75bee4332182c6ae5d8808",
+      "file": "DFR0884_Detail_05.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0884-detail-06": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884_Detail_06.jpg",
+      "sha256": "6eb155a2088aa61d6d742ccfd7f0833ecabbd96b818f72d941814ba5afd02a7f",
+      "file": "DFR0884_Detail_06.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0884-detail-002": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884-detail-002.jpg",
+      "sha256": "be036cceb9bdad8283b64bc9d8f6863b01d80bb3786e6cc2bc254b7c5ee074f3",
+      "file": "DFR0884-detail-002.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0884-detail-003": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884-detail-003.jpg",
+      "sha256": "ae6c38dc333ae77995c1d334cc54eb7d1d0ec7eb1f64439a03fc97384ee604bd",
+      "file": "DFR0884-detail-003.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0884-detail-004": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0884/DFR0884-detail-004.JPG",
+      "sha256": "708d5359a96f07a3b349400735bf7c4f9add8f721d4d88e0d9ad39322d9a49a3",
+      "file": "DFR0884-detail-004.JPG",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

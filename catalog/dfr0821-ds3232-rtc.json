@@ -266,9 +266,30 @@
     }
   ],
   "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. No other EU or Czech listing was looked for.",
-  "attachments": {
-    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf": "dfr0821-ds3232-rtc/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
-    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf": "dfr0821-ds3232-rtc/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
-    "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf": "dfr0821-ds3232-rtc/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf"
+  "documents": {
+    "dfr0821-ds3232-rtc-module-schematics-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "sha256": "f3a3d6379bf6bd80f85bd57f4967dcc59f7632dac4b92b420cbfa85d07877ba3",
+      "file": "DFR0821_ds3232-rtc-module_schematics_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0821-ds3232-rtc-module-dimension-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
+      "sha256": "987fa3762cd994bbe0d8018006f60e90df6b067da5b02408c8f0a34f78d18df6",
+      "file": "DFR0821_ds3232-rtc-module_dimension_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0821-ds3232-rtc-module-datasheet-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/21798/DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf",
+      "sha256": "45c2398d51ed9955d79a384be6b40dd9ecdf258cad2074b8cf71d10f0d5a2bd5",
+      "file": "DFR0821_ds3232-rtc-module_datasheet_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

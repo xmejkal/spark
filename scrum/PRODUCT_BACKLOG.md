@@ -527,7 +527,13 @@ bin's viewer, with the PO's yes, returns a link that renders the three tabs.
 `data:` modules (the CSP allows scripts from five CDN hosts). One private test publish settles it;
 the PO said not now. Until then P68 is not an item, only a question.
 
-### P62a — The catalog's files move to the store, and a record says which document it kept — **Sprint 9, first**
+### P62a — The catalog's files move to the store, and a record says which document it kept — **Sprint 9, first** — DONE 2026-10-02
+**Run after the last change:** `git ls-files catalog | grep -ciE '\.(pdf|jpe?g|png|webp|svg)$'` → **0**
+(was 48); `attachments` appears in no catalog record, command or agent — in `scripts/` only in the
+rule that refuses it (the acceptance line's "scripts → nothing" was overspecified: refusing a key
+means naming it); `parts.py --sources dfr0534-module` lists **both** URLs (before: "cites no URL");
+**48 of 48** store files match their recorded sha256. Irrigation's 7 records had the old format too
+and migrated the same sitting (irrigation `894f4a3`, 42 files, chips left in place).
 **Needed by:** a published plugin, which cannot ship the 48 vendor files (P61), and every record whose sources `--sources` cannot see today.
 `documents` replaces `attachments` on every kind of record — keyed by a short name: `title` and
 `version` as printed (null when nobody read it), `url`, `sha256`, `file`, `retrieved` — and a fact

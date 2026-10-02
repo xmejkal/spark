@@ -167,8 +167,22 @@
     }
   ],
   "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. Local sellers first, from the brief.",
-  "attachments": {
-    "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf": "sen0193-soil-moisture/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
-    "https://dfimg.dfrobot.com/enshop/SEN0193/SEN0193_Main_01.jpg": "sen0193-soil-moisture/SEN0193_Main_01.jpg"
+  "documents": {
+    "sen0193-capacitive-soil-moisture-sensor-schematics-1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/17627/SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "sha256": "a5b99d15fbb0fcd7cc3d083f13bf4d2f2891c48fe21a494b5e816aa72dd161b6",
+      "file": "SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "sen0193-main-01": {
+      "url": "https://dfimg.dfrobot.com/enshop/SEN0193/SEN0193_Main_01.jpg",
+      "sha256": "d32d9ac7093d90087ce3b012ea7e45f4241dbb62c945615db299ad5d4f7a98b2",
+      "file": "SEN0193_Main_01.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

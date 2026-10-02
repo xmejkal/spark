@@ -221,9 +221,30 @@
     }
   ],
   "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. Only DFRobot's own page was fetched for this SKU; a web search showed TME listing the G3/4 sibling SEN0551 ('3.5\u00f724VDC; 10mA; Output signal: NPN pulse signal'), but no SEN0550 listing was fetched, so none is recorded.",
-  "attachments": {
-    "https://dfimg.dfrobot.com/wiki/17442/SEN0550_water-flow-sensor_dimension_V1.0.jpg": "sen0550-flow-meter/SEN0550_water-flow-sensor_dimension_V1.0.jpg",
-    "https://dfimg.dfrobot.com/nobody/wiki/390a3fc739826cbf83a43c030d3036d1_0x0.png.webp": "sen0550-flow-meter/390a3fc739826cbf83a43c030d3036d1_0x0.png.webp",
-    "https://dfimg.dfrobot.com/nobody/wiki/e98eeeb4178c39fcb35ffa3bae55ef13_0x0.png.webp": "sen0550-flow-meter/e98eeeb4178c39fcb35ffa3bae55ef13_0x0.png.webp"
+  "documents": {
+    "sen0550-water-flow-sensor-dimension-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/17442/SEN0550_water-flow-sensor_dimension_V1.0.jpg",
+      "sha256": "742c73f911e478992f601d24f1c62bf088bf0074029722cba01ae8bc6c20e705",
+      "file": "SEN0550_water-flow-sensor_dimension_V1.0.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "390a3fc739826cbf83a43c030d3036d1-0x0-png": {
+      "url": "https://dfimg.dfrobot.com/nobody/wiki/390a3fc739826cbf83a43c030d3036d1_0x0.png.webp",
+      "sha256": "578d195b478201366340e34a0fe7de139eb00909021c44046df6f14a88dd6bde",
+      "file": "390a3fc739826cbf83a43c030d3036d1_0x0.png.webp",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "e98eeeb4178c39fcb35ffa3bae55ef13-0x0-png": {
+      "url": "https://dfimg.dfrobot.com/nobody/wiki/e98eeeb4178c39fcb35ffa3bae55ef13_0x0.png.webp",
+      "sha256": "ca2f5b1103a52bc89c6a6290b6dda445dfc07b23817e1867c69d72450c78f770",
+      "file": "e98eeeb4178c39fcb35ffa3bae55ef13_0x0.png.webp",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

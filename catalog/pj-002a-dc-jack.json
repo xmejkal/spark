@@ -163,7 +163,14 @@
       "note": "TME symbol PJ002A; description 'Konektor: napájecí DC; zásuvka; 2,5A; 24V; PIN: 2; THT; 2mm'. JSON-LD: priceCurrency CZK, lowPrice 9.15, highPrice 15.092, InStock, inventoryLevel 1200; the visible '0 skladem' contradicts it. The English page shows 1,200 units at USD 0.36-0.58. VAT status not stated on what was read. TME answers 403 to a bare HEAD, so this URL is here and not in sources."
     }
   ],
-  "attachments": {
-    "https://www.sameskydevices.com/product/resource/pj-002a.pdf": "pj-002a-dc-jack/pj-002a.pdf"
+  "documents": {
+    "pj-002a": {
+      "url": "https://www.sameskydevices.com/product/resource/pj-002a.pdf",
+      "sha256": "5021fbf2ed5de1fe85ff075b30edc6e6f860c20d1f22b3818285b25ea1f742c2",
+      "file": "pj-002a.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

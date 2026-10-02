@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "a dict of sources is read as its keys again, and --sources goes blind",
+  "find": "    texts = list(sources.values()) if isinstance(sources, dict) else list(sources)",
+  "replace": "    texts = list(sources)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a URL inside a sentence is not seen",
+  "find": "    urls = [url for text in texts if isinstance(text, str) for url in URL.findall(text)]",
+  "replace": "    urls = [text for text in texts if isinstance(text, str) and text.startswith(\"http\")]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a parenthesis the URL never opened is kept as part of it",
+  "find": "    while url.endswith(\")\") and url.count(\")\") > url.count(\"(\"):",
+  "replace": "    while False:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a file is kept under its name, not its checksum",
+  "find": "    (STORE / digest / name).write_bytes(payload)",
+  "replace": "    (STORE / name).write_bytes(payload)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a document records no date it was fetched",
+  "find": "                \"retrieved\": datetime.date.today().isoformat(), \"title\": None, \"version\": None}",
+  "replace": "                \"retrieved\": None, \"title\": None, \"version\": None}"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a record still carrying attachments passes",
+  "find": "    if \"attachments\" in part:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a checksum that is not one passes",
+  "find": "        if not isinstance(entry, dict) or not re.fullmatch(r\"[0-9a-f]{64}\", str(entry.get(\"sha256\"))):",
+  "replace": "        if not isinstance(entry, dict):"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the validator never asks about documents",
+  "find": "    problems.extend(document_problems(part))\n",
+  "replace": ""
+ }
+]

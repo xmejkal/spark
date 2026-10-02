@@ -201,7 +201,14 @@
     }
   ],
   "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. No EU or Czech listing was looked for.",
-  "attachments": {
-    "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf": "dfr0998-sd3031-rtc/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf"
+  "documents": {
+    "dfr0998-sd3031-rtc-module-schematics-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/20548/DFR0998_sd3031-rtc-module_schematics_V1.0.pdf",
+      "sha256": "8b56667ab569d69cd8ec93fc190ccbda6acc7748542531308d5f45f5ea5c1e10",
+      "file": "DFR0998_sd3031-rtc-module_schematics_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

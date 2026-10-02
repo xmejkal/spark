@@ -94,7 +94,14 @@
       "note": "USD 0.55; 'Out of stock'. Not a Czech seller; here because it was read."
     }
   ],
-  "attachments": {
-    "https://media-cdn.seeedstudio.com/media/catalog/product/cache/48035b5512857d0ab907b31a092da78f/h/t/httpsstatics3.seeedstudio.comimagesproductdcbarrel.jpg": "seeed-320120010-dc-jack/httpsstatics3.seeedstudio.comimagesproductdcbarrel.jpg"
+  "documents": {
+    "httpsstatics3-seeedstudio-comimagesproductdcbarrel": {
+      "url": "https://media-cdn.seeedstudio.com/media/catalog/product/cache/48035b5512857d0ab907b31a092da78f/h/t/httpsstatics3.seeedstudio.comimagesproductdcbarrel.jpg",
+      "sha256": "20ef93c698ede5d22c3320c7a5359384f82114d6be06e62bf70e43b762ad220e",
+      "file": "httpsstatics3.seeedstudio.comimagesproductdcbarrel.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

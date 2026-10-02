@@ -118,13 +118,62 @@
       "note": "structured data price 9.9; volume $9.70 (3+), $9.50 (5+), $9.20 (10+); schema.org InStock on the day"
     }
   ],
-  "attachments": {
-    "https://dfimg.dfrobot.com/wiki/17419/DFR1025_dc-dc-buck-converter-module_dimension_V1.0.pdf": "dfr1025-buck-adjustable/DFR1025_dc-dc-buck-converter-module_dimension_V1.0.pdf",
-    "https://dfimg.dfrobot.com/enshop/DFR1025/DFR1025_Main_01.jpg": "dfr1025-buck-adjustable/DFR1025_Main_01.jpg",
-    "https://dfimg.dfrobot.com/enshop/DFR1025_Dim_02.jpg": "dfr1025-buck-adjustable/DFR1025_Dim_02.jpg",
-    "https://dfimg.dfrobot.com/enshop/DFR1025_Back_03.jpg": "dfr1025-buck-adjustable/DFR1025_Back_03.jpg",
-    "https://dfimg.dfrobot.com/enshop/DFR1025_ShipList_04.jpg": "dfr1025-buck-adjustable/DFR1025_ShipList_04.jpg",
-    "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_05.jpg": "dfr1025-buck-adjustable/DFR1025_Detail_05.jpg",
-    "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_06.jpg": "dfr1025-buck-adjustable/DFR1025_Detail_06.jpg"
+  "documents": {
+    "dfr1025-dc-dc-buck-converter-module-dimension-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/17419/DFR1025_dc-dc-buck-converter-module_dimension_V1.0.pdf",
+      "sha256": "dba2be197399f624c05abdcad0103640873d3fe035f5f7a0c62fab552410d1c6",
+      "file": "DFR1025_dc-dc-buck-converter-module_dimension_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr1025-main-01": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR1025/DFR1025_Main_01.jpg",
+      "sha256": "e767a08469d880b629d56490d4d54781c3b60121567e7b9cce3de47423f5e88b",
+      "file": "DFR1025_Main_01.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr1025-dim-02": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR1025_Dim_02.jpg",
+      "sha256": "2f7d8292d1ee901237bf6905584548167dd5a3fcb91d39c4d60d41ff4dc14059",
+      "file": "DFR1025_Dim_02.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr1025-back-03": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR1025_Back_03.jpg",
+      "sha256": "3f2fc845e89a4ad4bdfe332f5f2164d94e9c16e6cc44d0a0ea6baa2a1d559036",
+      "file": "DFR1025_Back_03.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr1025-shiplist-04": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR1025_ShipList_04.jpg",
+      "sha256": "8e2b458188edc8b83e3f425afbbeb33a7f0ebc8c8425a4ba89a95477d4ee9f84",
+      "file": "DFR1025_ShipList_04.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr1025-detail-05": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_05.jpg",
+      "sha256": "6eae4199b116b1bfd24f2b7565d8d1ec920add8893369efe47ad8003e8c2a00e",
+      "file": "DFR1025_Detail_05.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr1025-detail-06": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR1025_Detail_06.jpg",
+      "sha256": "d287e731ca58e647a051a7342e9f6d9ea34cc953af07a5ebbcb75400916d1054",
+      "file": "DFR1025_Detail_06.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

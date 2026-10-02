@@ -62,14 +62,15 @@ research tells easily. `--unverified` is the list to hand a person: each item, a
 on it.
 
 Then `/spark:build`. The record is the project's; `parts.py --promote <id> --project .` copies it,
-with its attachments and photo, into the plugin's `parts/` once it is verified, and the next
+with its documents and photo, into the plugin's `parts/` once it is verified, and the next
 project finds it with `--need`.
 
 ## Everything found is kept
 
 Every candidate the researcher read — chosen or not — becomes a record in the plugin's `catalog/`
 (drafts allowed; `parts.py --catalog` lists them), the chosen record names them as `alternatives`
-with why not, and `parts.py --fetch <id>` downloads the datasheets and images beside each. A later
+with why not, and `parts.py --fetch <id>` downloads the datasheets and images each cites into your
+own store (`~/.local/share/spark/sources`), pointed at from the record's `documents`. A later
 `--need` shows a catalog match as such, and `--promote` brings it into a project to build with.
 
 ## What this does not do

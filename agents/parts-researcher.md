@@ -49,8 +49,10 @@ project): drafts are allowed there — `schema`, `id`, `name`, `kind`, `vendor`,
 `sourcing`, the `facts` you actually read, and a `"//why_not"` line for the ones not chosen. In
 the chosen record list them: `"alternatives": [{"id": "<catalog id>", "why_not": "…"}]`. Then run
 `parts.py --fetch <id> --project <project>` for the chosen record and `parts.py --fetch <id>` for
-each catalog one: it downloads every cited datasheet and image beside the record, because links
-rot and a database of links is not a database.
+each catalog one: it downloads every cited datasheet and image into the person's store
+(`~/.local/share/spark/sources`) and records each under the record's `documents` — never beside
+the record, because the plugin will be published and cannot carry vendor files. Links rot, and a
+database of links is not a database.
 
 ## Where to buy — local first
 

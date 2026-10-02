@@ -108,12 +108,54 @@
       "note": "structured data price 2.9; schema.org InStock on the day"
     }
   ],
-  "attachments": {
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DC-DC-Fast-Charge-Module_0x0.png.webp": "dfr0756-usb-buck/DC-DC-Fast-Charge-Module_0x0.png.webp",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(1).jpg": "dfr0756-usb-buck/DFR0756_260710%20(1).jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(2).jpg": "dfr0756-usb-buck/DFR0756_260710%20(2).jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(3).jpg": "dfr0756-usb-buck/DFR0756_260710%20(3).jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(4).jpg": "dfr0756-usb-buck/DFR0756_260710%20(4).jpg",
-    "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(5).jpg": "dfr0756-usb-buck/DFR0756_260710%20(5).jpg"
+  "documents": {
+    "dc-dc-fast-charge-module-0x0-png": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DC-DC-Fast-Charge-Module_0x0.png.webp",
+      "sha256": "5585d745f37bc1f08ec2c4e7f152d8af2870a3fe663aa41a8c53b64a7096061c",
+      "file": "DC-DC-Fast-Charge-Module_0x0.png.webp",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0756-260710-20-1": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(1).jpg",
+      "sha256": "1d37b3e7e3f55c423f762bc6674072b70709ed643e4674ba52e03ab8e5966d14",
+      "file": "DFR0756_260710%20(1).jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0756-260710-20-2": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(2).jpg",
+      "sha256": "eec6130ff3d7b664dd8b366911916103ba715ccb70d5aadf41a8b3e804f9de48",
+      "file": "DFR0756_260710%20(2).jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0756-260710-20-3": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(3).jpg",
+      "sha256": "c2481a93c3eeb69697d31458d3e079bbf06bed0732eaa0ab9f516cf86de2cc70",
+      "file": "DFR0756_260710%20(3).jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0756-260710-20-4": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(4).jpg",
+      "sha256": "b0e86f8e2ff1d2278670e0926513df05f4710929d7dd5a6bdfd2d82d0c702d6b",
+      "file": "DFR0756_260710%20(4).jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0756-260710-20-5": {
+      "url": "https://dfimg.dfrobot.com/enshop/image/data/DFR0756/DFR0756_260710%20(5).jpg",
+      "sha256": "dc4251874d6b1d4714298e4eaf5b7bd1c6014a697f9ef70c98794ca9a52402e6",
+      "file": "DFR0756_260710%20(5).jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

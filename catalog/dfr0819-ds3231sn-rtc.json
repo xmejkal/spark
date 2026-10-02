@@ -301,8 +301,22 @@
     }
   ],
   "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked} — entries marked NOT FETCHED are kept because the PO asked for the TME/Farnell URLs; their price and stock are unread. No Czech shop (laskakit, dratek, rpishop, hwkitchen, gme) turned up in a search for the SKU.",
-  "attachments": {
-    "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf": "dfr0819-ds3231sn-rtc/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
-    "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf": "dfr0819-ds3231sn-rtc/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf"
+  "documents": {
+    "dfr0819-ds3231-rtc-module-schematics-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "sha256": "36982862e3c32f282485f0d25bb09be599f5f84d49a9b41c553cda5f7ca474df",
+      "file": "DFR0819_ds3231-rtc-module_schematics_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0819-ds3231-rtc-module-datasheet-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/21786/DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf",
+      "sha256": "dc81cd89bee82d0c57b654d6315e03dec913fb8fe753cc80b2a3f1cca71cbb34",
+      "file": "DFR0819_ds3231-rtc-module_datasheet_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

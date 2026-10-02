@@ -54,7 +54,14 @@
       "note": "'5,00 Kč' s DPH, '4,13 Kč' bez DPH; 3,00 Kč/ks at 10-99, 2,20 Kč/ks at 100+. 'Není skladem, vyrábí se, předpokládaný termín dodání: Leden 2027'."
     }
   ],
-  "attachments": {
-    "https://www.hadex.cz/files/images/product/800/napajeci-dc-zdirka-21mm-do-plspoje-vypinaci-kontakt-LQNQ.jpg": "d228a-dc-jack-hadex/napajeci-dc-zdirka-21mm-do-plspoje-vypinaci-kontakt-LQNQ.jpg"
+  "documents": {
+    "napajeci-dc-zdirka-21mm-do-plspoje-vypinaci-kontakt-lqnq": {
+      "url": "https://www.hadex.cz/files/images/product/800/napajeci-dc-zdirka-21mm-do-plspoje-vypinaci-kontakt-LQNQ.jpg",
+      "sha256": "9e7a3ec13b0f4215fc54550a685d8780d12bbbcfc094e441a3e63c79c9998a5c",
+      "file": "napajeci-dc-zdirka-21mm-do-plspoje-vypinaci-kontakt-LQNQ.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

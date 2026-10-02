@@ -228,9 +228,30 @@
     }
   ],
   "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. Search results also named CPC Farnell (cpc.farnell.com/dfrobot/dfr0469/gravity-i2c-sd2405-rtc-module/dp/SC15102), Opencircuit NL (opencircuit.shop/product/gravity-i2c-sd2405-rtc-module) and Little Bird AU; none was fetched.",
-  "attachments": {
-    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf": "dfr0469-sd2405al-rtc/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
-    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf": "dfr0469-sd2405al-rtc/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf",
-    "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf": "dfr0469-sd2405al-rtc/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf"
+  "documents": {
+    "dfr0469-sd2405al-rtc-module-schematics-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+      "sha256": "c8d947097ee9ce78a58e4381c664a2533646c5f30d9c390053f60e4a3c4cf0c0",
+      "file": "DFR0469_sd2405al-rtc-module_schematics_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0469-sd2405al-rtc-module-dimension-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf",
+      "sha256": "6cbd3c0ee28ce5eed3f8803c034a9adff2e1919916e87c630f92fb92d57ab17b",
+      "file": "DFR0469_sd2405al-rtc-module_dimension_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0469-sd2405al-rtc-module-datasheet-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/18543/DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf",
+      "sha256": "130766e19f8bcb7222c1eb98689e0bc46673d3e6fb108e4368ede85d0516806f",
+      "file": "DFR0469_sd2405al-rtc-module_datasheet_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

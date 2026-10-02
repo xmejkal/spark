@@ -787,24 +787,47 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual((sorted(records), broken), (["dfr0831-buck-5v", "sen0193-soil-moisture"], ["broken.json", "nameless.json"]),
                          "a record that parses but does not say what it is, is broken too")
 
-    def test_fetch_keeps_datasheets_and_images_beside_the_record_and_names_them(self):
+    @staticmethod
+    def _store():
+        import tempfile
+        return Path(tempfile.mkdtemp()) / "sources"
+
+    def test_fetch_keeps_datasheets_and_images_in_the_store_under_their_checksum(self):
+        """P62a: a published plugin cannot carry vendor files, so nothing lands beside the record."""
+        import datetime
+        import hashlib
         import tempfile
         from unittest import mock
-        catalog = Path(tempfile.mkdtemp())
+        catalog, store = Path(tempfile.mkdtemp()), self._store()
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf?v=2", "https://v.example/page.html"],
                              facts={"w": {"value": 1, "verified": True, "source": "https://v.example/photo.jpg"}})
         fetched = []
         def fetch(url):
             fetched.append(url)
             return b"payload" if ".pdf" in url or url.endswith(".jpg") else None
-        with mock.patch.object(parts, "CATALOG", catalog):
-            kept = parts.fetch_attachments("x-part", fetch=fetch)
+        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+            kept = parts.fetch_documents("x-part", fetch=fetch)
         self.assertEqual(sorted(fetched), ["https://v.example/photo.jpg", "https://v.example/x.pdf?v=2"],
                          "only datasheets and images are fetched; a page is not")
-        self.assertEqual(kept, {"https://v.example/x.pdf?v=2": "x-part/x.pdf",
-                                "https://v.example/photo.jpg": "x-part/photo.jpg"})
-        self.assertEqual((catalog / "x-part" / "x.pdf").read_bytes(), b"payload")
-        self.assertEqual(json.loads((catalog / "x-part.json").read_text())["attachments"], kept)
+        digest = hashlib.sha256(b"payload").hexdigest()
+        self.assertEqual(kept["x"], {"url": "https://v.example/x.pdf?v=2", "sha256": digest, "file": "x.pdf",
+                                     "retrieved": datetime.date.today().isoformat(), "title": None, "version": None})
+        self.assertEqual(kept["photo"]["file"], "photo.jpg")
+        self.assertEqual((store / digest / "x.pdf").read_bytes(), b"payload")
+        self.assertFalse((catalog / "x-part").exists(), "nothing is kept beside the record any more")
+        written = json.loads((catalog / "x-part.json").read_text())
+        self.assertEqual((written["documents"], "attachments" in written), (kept, False))
+
+    def test_a_document_already_kept_is_not_fetched_again(self):
+        import tempfile
+        from unittest import mock
+        catalog, store = Path(tempfile.mkdtemp()), self._store()
+        self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
+        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+            parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
+            again = []
+            parts.fetch_documents("x-part", fetch=lambda url: again.append(url))
+        self.assertEqual(again, [])
 
     def test_a_catalog_draft_answers_sources_show_and_unverified_like_any_record(self):
         import tempfile
@@ -823,42 +846,68 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_fetch_keeps_the_text_as_written_and_decodes_the_saved_name(self):
         import tempfile
         from unittest import mock
-        catalog = Path(tempfile.mkdtemp())
+        catalog, store = Path(tempfile.mkdtemp()), self._store()
         self._catalog_record(catalog, "x-part", sources=["https://v.example/DFR%20(1).pdf"],
                              **{"//": "98 Kč — 帝江"})
-        with mock.patch.object(parts, "CATALOG", catalog):
-            kept = parts.fetch_attachments("x-part", fetch=lambda url: b"pdf")
-        self.assertEqual(kept, {"https://v.example/DFR%20(1).pdf": "x-part/DFR (1).pdf"})
-        self.assertTrue((catalog / "x-part" / "DFR (1).pdf").is_file())
+        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+            kept = parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
+        (key, entry), = kept.items()
+        self.assertEqual(entry["file"], "DFR (1).pdf")
+        self.assertTrue((store / entry["sha256"] / "DFR (1).pdf").is_file())
         self.assertIn("98 Kč — 帝江", (catalog / "x-part.json").read_text(), "a rewrite must not turn text into escapes")
 
     def test_two_sources_with_one_basename_are_both_kept(self):
         import tempfile
         from unittest import mock
-        catalog = Path(tempfile.mkdtemp())
+        catalog, store = Path(tempfile.mkdtemp()), self._store()
         self._catalog_record(catalog, "x-part", sources=["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
-        with mock.patch.object(parts, "CATALOG", catalog):
-            kept = parts.fetch_attachments("x-part", fetch=lambda url: url.encode())
-        self.assertEqual(kept, {"https://a.example/DS3231.pdf": "x-part/DS3231.pdf",
-                                "https://b.example/DS3231.pdf": "x-part/b.example-DS3231.pdf"})
-        self.assertEqual((catalog / "x-part" / "DS3231.pdf").read_bytes(), b"https://a.example/DS3231.pdf",
-                         "the first copy must not be overwritten by the second")
+        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+            kept = parts.fetch_documents("x-part", fetch=lambda url: url.encode())
+        self.assertEqual(sorted(entry["url"] for entry in kept.values()),
+                         ["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
+        self.assertEqual(len({entry["sha256"] for entry in kept.values()}), 2, "two documents, two checksums")
+        for entry in kept.values():
+            self.assertEqual((store / entry["sha256"] / "DS3231.pdf").read_bytes(), entry["url"].encode())
 
-    def test_promote_moves_a_record_with_its_attachments_and_never_overwrites(self):
+    def test_promote_moves_a_record_with_its_documents_and_its_folder_and_never_overwrites(self):
         import tempfile
         from unittest import mock
         catalog, project, library = (Path(tempfile.mkdtemp()) for _ in range(3))
         (project / ".spark").mkdir()
-        self._catalog_record(catalog, "x-part")
-        (catalog / "x-part").mkdir()
-        (catalog / "x-part" / "x.pdf").write_bytes(b"pdf")
+        documents = {"x": {"url": "https://v.example/x.pdf", "sha256": "a" * 64, "file": "x.pdf",
+                           "retrieved": "2026-10-02", "title": None, "version": None}}
+        self._catalog_record(catalog, "x-part", documents=documents)
+        (catalog / "x-part" / "chip").mkdir(parents=True)
+        (catalog / "x-part" / "chip" / "x.chip.json").write_text("{}")
         with mock.patch.object(parts, "CATALOG", catalog):
             self.assertEqual(parts.promote("x-part", project), project / "parts" / "x-part.json")
-            self.assertTrue((project / "parts" / "x-part" / "x.pdf").is_file(), "the attachments travel with it")
+            self.assertEqual(json.loads((project / "parts" / "x-part.json").read_text())["documents"], documents)
+            self.assertTrue((project / "parts" / "x-part" / "chip" / "x.chip.json").is_file(), "a chip travels with it")
             with self.assertRaises(parts.PartError):
                 parts.promote("x-part", project, to=project / "parts")
             self.assertEqual(parts.promote("x-part", project, to=library), library / "x-part.json")
-            self.assertTrue((library / "x-part" / "x.pdf").is_file())
+            self.assertTrue((library / "x-part" / "chip" / "x.chip.json").is_file())
+
+    def test_cited_urls_reads_a_dict_of_sources_and_a_url_inside_prose(self):
+        # Both P62 lenses: four library records keep `sources` as a dict, and `--sources` saw none.
+        record = {"sources": {"pins": "the vendor header, https://a.example/pins.h, read 09-24",
+                              "wiki": "https://b.example/wiki"},
+                  "facts": {"w": {"source": "Table 3 of https://c.example/ds.pdf (rev 7)"},
+                            "v": {"source": "the drawing (see https://d.example/dim.pdf)."},
+                            "u": {"source": "https://e.example/DFR%20(1).pdf"}}}
+        self.assertEqual(sorted(parts.cited_urls(record)),
+                         ["https://a.example/pins.h", "https://b.example/wiki", "https://c.example/ds.pdf",
+                          "https://d.example/dim.pdf", "https://e.example/DFR%20(1).pdf"],
+                         "a parenthesis the URL opened is its own; one it never opened is the prose's")
+
+    def test_a_record_still_carrying_attachments_is_refused(self):
+        definition = part(attachments={"https://v.example/x.pdf": "thing/x.pdf"})
+        self.assertTrue(any("attachments" in p for p in parts.validate(definition, written(definition))))
+
+    def test_a_document_whose_checksum_is_not_one_is_refused(self):
+        definition = part(documents={"x": {"url": "https://v.example/x.pdf", "sha256": "abc", "file": "x.pdf",
+                                           "retrieved": "2026-10-02", "title": None, "version": None}})
+        self.assertTrue(any("sha256" in p for p in parts.validate(definition, written(definition))))
 
 
 class ASimulationIsDeclaredTest(unittest.TestCase):

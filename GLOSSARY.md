@@ -175,8 +175,9 @@ the nearest wins: the **project's** own `parts/`, then the plugin's **library**,
 
 ### The catalog
 
-Everything research has ever read, chosen or not — a record per candidate with its datasheet and
-photo downloaded beside it, because links rot. Passing a part over does not throw the work away;
+Everything research has ever read, chosen or not — a record per candidate, its datasheet and
+photo kept in the person's own store (`~/.local/share/spark/sources`, never in the plugin) and
+pointed at from the record's `documents`, because links rot. Passing a part over does not throw the work away;
 the record stays and names itself as an alternative.
 
 ### `verified`

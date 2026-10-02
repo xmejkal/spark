@@ -183,7 +183,14 @@
       "note": "TME symbol MKDS1.5/2-5.08; description 'Konektor: svorkovnice do plošného spoje; 17,5A; 400V; PIN: 2'. JSON-LD: priceCurrency CZK, lowPrice 13.13, highPrice 25.18, InStock, inventoryLevel 231 - the visible '0 skladem' contradicts it, as on TME's other pages. VAT status not stated on what was read. The page links the maker's datasheet at phoenixcontact.com/gb/products/1715721/pdf (not fetched). EAN 4017918024192."
     }
   ],
-  "attachments": {
-    "https://datasheet.octopart.com/1715721-Phoenix-Contact-datasheet-66579234.pdf": "mkds-1-5-2-5-08-screw-terminal/1715721-Phoenix-Contact-datasheet-66579234.pdf"
+  "documents": {
+    "1715721-phoenix-contact-datasheet-66579234": {
+      "url": "https://datasheet.octopart.com/1715721-Phoenix-Contact-datasheet-66579234.pdf",
+      "sha256": "95ab499d9ee16dac27b84514fde0fa500f93a0c0f08db6db3c1b2b247c7e1d90",
+      "file": "1715721-Phoenix-Contact-datasheet-66579234.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

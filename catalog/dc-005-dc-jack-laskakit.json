@@ -105,8 +105,22 @@
       "note": "'4 Kč' s DPH, '3,30 Kč bez DPH'; 'Skladem (368 ks)'. The English page shows EUR 0.16 / 0.13. Warranty 2 years, weight 0.001 kg."
     }
   ],
-  "attachments": {
-    "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg": "dc-005-dc-jack-laskakit/DC-005-dim.jpg",
-    "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/shop/big/1607_napajeci-konektor-dc-005-5-5-2-1mm-do-pcb.jpg": "dc-005-dc-jack-laskakit/1607_napajeci-konektor-dc-005-5-5-2-1mm-do-pcb.jpg"
+  "documents": {
+    "dc-005-dim": {
+      "url": "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/documents/upload/Katalog/DC-005-dim.jpg",
+      "sha256": "8a0bc9fa23b14d90987757a203f7e1ae2757527e5dd6e5fbf88f6532d27b0b5a",
+      "file": "DC-005-dim.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "1607-napajeci-konektor-dc-005-5-5-2-1mm-do-pcb": {
+      "url": "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/shop/big/1607_napajeci-konektor-dc-005-5-5-2-1mm-do-pcb.jpg",
+      "sha256": "0cc2c8e11af9286fac559b8afb779bf481d1a79654c2291877ecb167552dbb6e",
+      "file": "1607_napajeci-konektor-dc-005-5-5-2-1mm-do-pcb.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

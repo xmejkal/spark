@@ -178,8 +178,22 @@
       "note": "'5 Kč' s DPH, '4,10 Kč' bez DPH; 597 ks skladem. The listing states 18A, 250V AC, rozteč 5.08mm, 2 kontakty, zelená, and links the maker's datasheet."
     }
   ],
-  "attachments": {
-    "https://www.laskakit.cz/user/related_files/1912251636_ningbo-kangnex-elec-wj500v-5-08-2p_c8465.pdf": "wj500v-5-08-2p-screw-terminal/1912251636_ningbo-kangnex-elec-wj500v-5-08-2p_c8465.pdf",
-    "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/shop/big/4310-1_laskakit-ningbo-kangnex-elec-wj500v-5-08-2p-sroubovaci-svorkovnice-do-dps.jpg": "wj500v-5-08-2p-screw-terminal/4310-1_laskakit-ningbo-kangnex-elec-wj500v-5-08-2p-sroubovaci-svorkovnice-do-dps.jpg"
+  "documents": {
+    "1912251636-ningbo-kangnex-elec-wj500v-5-08-2p-c8465": {
+      "url": "https://www.laskakit.cz/user/related_files/1912251636_ningbo-kangnex-elec-wj500v-5-08-2p_c8465.pdf",
+      "sha256": "d88d1c0cf380aac9c05bc7b9f4de84a368ba6fefcd0d4797db3d2d6f128604b9",
+      "file": "1912251636_ningbo-kangnex-elec-wj500v-5-08-2p_c8465.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "4310-1-laskakit-ningbo-kangnex-elec-wj500v-5-08-2p-sroubovaci-svorkovnice-do-dps": {
+      "url": "https://cdn.myshoptet.com/usr/www.laskakit.cz/user/shop/big/4310-1_laskakit-ningbo-kangnex-elec-wj500v-5-08-2p-sroubovaci-svorkovnice-do-dps.jpg",
+      "sha256": "c7e7b146f585f81cf446544508110c9336801b5a2bb6148babe4667908afb8a2",
+      "file": "4310-1_laskakit-ningbo-kangnex-elec-wj500v-5-08-2p-sroubovaci-svorkovnice-do-dps.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    }
   }
 }

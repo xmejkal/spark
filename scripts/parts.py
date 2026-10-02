@@ -28,6 +28,8 @@ every document quietly assumed.
 """
 
 import argparse
+import datetime
+import hashlib
 import json
 import re
 import sys
@@ -203,6 +205,24 @@ def chip_folder(part: dict, path: Path) -> Path:
 #: pad to ground or to the part's rail, or a divider that brings a signal down before the host's
 #: pin. The generator places and wires these; every other requirement stays prose, and is said.
 HOST_PART_KINDS = ("pulldown", "pullup", "divider")
+
+
+def document_problems(part: dict) -> list:
+    """
+    A record points at its kept sources from `documents`, which replaced `attachments` (P62a,
+    W16: one format, no reader for both). Each entry names a URL, the file, and a checksum that
+    is one — the store finds a file by it, so a wrong one is a pointer to nothing.
+    """
+    problems = []
+    if "attachments" in part:
+        problems.append("`attachments` was replaced by `documents` (P62a): the file goes to the "
+                        "store, the record keeps the pointer — run parts.py --fetch to redo it")
+    for key, entry in (part.get("documents") or {}).items():
+        if not isinstance(entry, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256"))):
+            problems.append("documents.%s has no sha256 that is one, so the store cannot find it" % key)
+        elif not entry.get("file") or not entry.get("url"):
+            problems.append("documents.%s names no file or no url" % key)
+    return problems
 
 
 def i2c_pullup_problems(part: dict) -> list:
@@ -521,6 +541,7 @@ def validate(part: dict, path: Path) -> list:
 
     problems.extend(host_part_problems(part))
     problems.extend(i2c_pullup_problems(part))
+    problems.extend(document_problems(part))
     problems.extend(simulation_problems(part, path))
     return problems
 
@@ -592,8 +613,26 @@ def vendor_order(project=None):
 #: time"). A `parts/` record must pass the contract; a catalog record only has to say what it is.
 CATALOG = Path(__file__).resolve().parent.parent / "catalog"
 CATALOG_KEYS = ("schema", "id", "name", "kind")
-#: What `--fetch` keeps beside a record: the sources worth having when the link rots.
+#: What `--fetch` keeps: the sources worth having when the link rots.
 KEEPABLE = (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".svg")
+
+#: Where a person's kept sources live (P61, P62a): ONE store outside the plugin — a published plugin
+#: cannot carry vendor documents — shared by every project, each file under its own checksum so a
+#: record finds it without searching. The PO chose the place on 2026-10-02; its backup is the
+#: machine's. A record holds the pointer (`documents`), never the file.
+STORE = Path.home() / ".local" / "share" / "spark" / "sources"
+
+#: An http(s) URL inside prose: "Table 3 of https://x/ds.pdf (rev 7)" cites https://x/ds.pdf. A
+#: parenthesis belongs to the URL when it is balanced — DFRobot names files "DFR (1).pdf" — and
+#: to the prose when it closes one the URL never opened.
+URL = re.compile(r"https?://[^\s,;\]>'\"]+")
+
+
+def _url_in_prose(url):
+    url = url.rstrip(".:")
+    while url.endswith(")") and url.count(")") > url.count("("):
+        url = url[:-1].rstrip(".:")
+    return url
 
 
 def catalog_records():
@@ -630,32 +669,50 @@ def any_record(part_id, project=None):
     return load(part_id, project)
 
 
-def fetch_attachments(part_id, project=None, fetch=None):
+def keep_in_store(payload, name):
+    """Put a file in the store under its checksum and return the checksum (P62a)."""
+    digest = hashlib.sha256(payload).hexdigest()
+    (STORE / digest).mkdir(parents=True, exist_ok=True)
+    (STORE / digest / name).write_bytes(payload)
+    return digest
+
+
+def document_key(name, taken):
+    """A short, unique name for a document in a record: its file name's stem, made plain."""
+    stem = re.sub(r"[^a-z0-9]+", "-", name.rsplit(".", 1)[0].lower()).strip("-") or "document"
+    key, number = stem, 2
+    while key in taken:
+        key, number = "%s-%d" % (stem, number), number + 1
+    return key
+
+
+def fetch_documents(part_id, project=None, fetch=None):
     """
-    Download every cited datasheet or image into `<home>/<id>/` and record each beside its URL
-    in the record's `attachments`. `fetch(url) -> bytes or None` is a parameter for the tests.
+    Download every cited datasheet or image into the store and point at each from the record's
+    `documents`: its URL, checksum, file name and the date it was fetched — `title` and `version`
+    stay null until someone reads them, because a version is what the document PRINTS, not a
+    guess (P61). `fetch(url) -> bytes or None` is a parameter for the tests.
     """
     home = record_home(part_id, project)
     if home is None:
         raise PartError("no record called %r to fetch for" % part_id)
-    path, folder = home / (part_id + DEFINITION_SUFFIX), home / part_id
+    path = home / (part_id + DEFINITION_SUFFIX)
     record = json.loads(path.read_text())
-    kept = dict(record.get("attachments") or {})
+    documents = dict(record.get("documents") or {})
+    known = {entry.get("url") for entry in documents.values()}
     for url in cited_urls(record):
         bare = url.split("?")[0]
-        if not bare.lower().endswith(KEEPABLE) or url in kept:
+        if not bare.lower().endswith(KEEPABLE) or url in known:
             continue
         payload = (fetch or _download)(url)
         if payload is not None:
-            folder.mkdir(parents=True, exist_ok=True)
-            name = urllib.parse.unquote(bare.rsplit("/", 1)[-1]) or "attachment"
-            if "%s/%s" % (part_id, name) in kept.values():  # two DS3231.pdf from two hosts: keep both
-                name = "%s-%s" % (urllib.parse.urlsplit(url).hostname, name)
-            (folder / name).write_bytes(payload)
-            kept[url] = "%s/%s" % (part_id, name)
-    record["attachments"] = kept
+            name = urllib.parse.unquote(bare.rsplit("/", 1)[-1]) or "document"
+            documents[document_key(name, documents)] = {
+                "url": url, "sha256": keep_in_store(payload, name), "file": name,
+                "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
+    record["documents"] = documents
     path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
-    return kept
+    return documents
 
 
 def _parse(path):
@@ -676,7 +733,8 @@ def promote(part_id, project, to=None):
     """
     Move a record one step along its life: catalog -> the project's parts/ (to build with; it must
     then pass the contract), or the project's parts/ -> the plugin's library (for every later
-    project). Attachments and photo travel with it; nothing is ever overwritten. Returns the path.
+    project). Its folder (a simulation chip) and its photo travel with it; its documents are
+    pointers into the store and need nothing moved. Nothing is ever overwritten. Returns the path.
     """
     import shutil
     home = record_home(part_id, project)
@@ -767,13 +825,17 @@ def skeleton(part_id, kind, vendor=None):
 
 
 def cited_urls(record):
-    """Every http(s) source the record cites — the top-level list and each fact's own."""
-    urls = [s for s in record.get("sources") or [] if isinstance(s, str) and s.startswith("http")]
-    for fact in (record.get("facts") or {}).values():
-        source = fact.get("source") if isinstance(fact, dict) else None
-        if isinstance(source, str) and source.startswith("http"):
-            urls.append(source)
-    return list(dict.fromkeys(urls))
+    """
+    Every http(s) URL the record cites: in its `sources` — a list, or a dict of them, as four
+    library records keep it — and in each fact's own source, wherever in the sentence it sits.
+    Read only as a list of strings that START with http, this saw no URL at all in any of the
+    eight library and board records (both P62 lenses, 2026-10-02).
+    """
+    sources = record.get("sources") or []
+    texts = list(sources.values()) if isinstance(sources, dict) else list(sources)
+    texts += [fact.get("source") for fact in (record.get("facts") or {}).values() if isinstance(fact, dict)]
+    urls = [url for text in texts if isinstance(text, str) for url in URL.findall(text)]
+    return list(dict.fromkeys(_url_in_prose(url) for url in urls))
 
 
 def reachable(url):
@@ -895,9 +957,9 @@ def main(argv=None):
             target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2, ensure_ascii=False) + "\n")
             print("  wrote %s — every null is a fact to record; `parts.py --validate --project .` says what is missing" % target)
         elif args.fetch:
-            kept = fetch_attachments(args.fetch, project)
-            for url, local in kept.items():
-                print("  %s  <-  %s" % (local, url))
+            kept = fetch_documents(args.fetch, project)
+            for entry in kept.values():
+                print("  %s/%s  <-  %s" % (entry["sha256"][:12], entry["file"], entry["url"]))
             if not kept:
                 print("  %s cites no datasheet or image URL to keep" % args.fetch)
         elif args.promote:
