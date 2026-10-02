@@ -1,3 +1,46 @@
+# Sprint 9
+
+**Planned** 2026-10-02 · **Facilitator** main session · **Product Owner** Petr, who chose the
+composition after three council lenses refined P62, P64, P66 and P68 — each reproducing its item
+first, and each item changed shape when they did (backlog, "Refined 2026-10-02").
+
+## Goal
+
+> **A fact spark ships can be traced to the page it rests on, nothing marked verified lacks a
+> source a reader can open, and every board spark builds leaves a page you can open.**
+
+Why: P60 found spark's own library teaching a false fact, and the lens found the rule meant to
+prevent that — `verified: true` means the vendor's text at the cited URL — broken by 36 fields that
+predate it. P61 decided where sources live; nothing implements it. And the PO asked to see the board.
+
+## The order — as the PO set it
+
+| # | item | what it does | size |
+| --- | --- | --- | --- |
+| 1 | **P62a** | the catalog's 48 files move to `~/.local/share/spark/sources`; `documents` replaces `attachments`; `--sources` stops being blind to dict-shaped sources | S–M |
+| 2 | **P62b** | `--keep` imports a local file, `--kept` finds one with no network; the FireBeetle cites its WROOM-1 v1.1 page | S |
+| 3 | **P64a** | "verified" requires a URL or a kept document; the 36 fields go to 0; prose claims are listed | S |
+| 4 | **P66** | every `--keep` build leaves `dist/board-viewer.html`; the bin uses the plugin's generator | M |
+
+**Four items**, below Sprint 8's planned five — R7 and R8 found the risk is false premises, not
+throughput. Not in this sprint, with reasons: **P64b** (a schema change for prose claims — the PO's
+decision); **P64c** (the isolated checker — after P62, ideally after P64b; Sprint 10); **P59**
+(Sprint 10, first — its Valve4 and unread-button defects reproduced 2026-10-02); **B5**, **B8**
+(the bin's, next sprint); **P68** (parked: its premise needs a test publish the PO declined for now).
+
+## Definition of Done
+
+Per item: the `Value proven by:` command run in the project its `Needed by:` names (R6.3), its output
+in the commit, written after the run (W13, W17, W20); a mutation table with every mutation caught;
+`--anchors` clean at every commit, one run at a time; a document that describes what moved changes
+in the same commit (R7.1); `DONE <date>` is the implementation commit's date (R7.3).
+**New from R8.3:** a commit that corrects a fact carries the sweep — the grep over spark, the bin,
+irrigation and the RC car — and its output.
+**New from B8:** a gate's output is kept in full, never cut to its last line, so a failure names itself.
+This sprint's review is written into this file before its last commit (R7.4).
+
+---
+
 # Sprint 8 — closed 2026-10-01
 
 ### Review — validated value, every number rerun at close

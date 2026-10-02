@@ -396,6 +396,17 @@ into the store in the same commit (W16). *Estimate* ~30–60 code lines.
 v1.1 datasheet and the board fact that cites its Table 12; and `git ls-files catalog | grep -c pdf`
 prints 0.
 
+**Refined 2026-10-02 by a council lens and the PO — SPLIT into P62a and P62b below.** Reproduced:
+the catalog holds **48** vendor files (16 PDF, 29 JPG, 3 WEBP — the earlier "45" left out the WEBPs);
+`grep -c pdf` would read 0 with 32 images still in git; `--kept` does not exist; no spark record
+points at the WROOM v1.1 datasheet and nothing can fetch it — it exists only as the bin's file, so an
+IMPORT step is needed; the board records hold 0 keepable URLs. And a bug two lenses found
+independently: `cited_urls` (parts.py:769) iterates a dict-shaped `sources` by its keys and accepts a
+source only if it STARTS with http, so `--sources`/`--fetch` see **0 URLs in all 8 library and board
+records** (`parts.py --sources dfr0534-module` says "cites no URL"; the record holds 2).
+**PO, 2026-10-02: the store lives at `~/.local/share/spark/sources/<sha256>/<file>`.** Its backup is
+the PO's machine backup; on another machine a pointer reads MISSING until re-fetched.
+
 ### P63 — A fact this project wrote down wrongly is corrected where a conversation will read it — DONE 2026-10-01
 **Spark `f5e2c66`, the bin `62a3139`.** Every correction reproduced at source before the edit (W20).
 Acceptance, run: in spark `grep -on "[^.]*ALL_LOW[^.]*\." parts boards` → two sentences, both
@@ -451,6 +462,14 @@ same day: tscircuit ships a live viewer (`tsci dev`, every spark project has it)
 is installed here, and wokwi.com/pricing lists "Wokwi for VS Code" from **Hobby+** up, which the PO
 does not hold or is unsure of — so it is documented, not tried.
 
+**Refined 2026-10-02 by a council lens and the PO — SPLIT into P64a, P64b and P64c below.** Reproduced:
+217 of 270 holds exactly, but points the wrong way — the catalog's 200 verified facts all cite a URL;
+the **36** failing fields are in the 6 library records and the FireBeetle's `power.*`. The mechanical
+check would NOT have caught ALL_LOW: none of the library's 19 `host_requirements` cites anything, so
+the false one looked like the other 18 — and `emit_board` copies them verbatim into every generated
+board, which is how it spread. **Needed by (W14, corrected):** every design that reads the library —
+the bin, irrigation and the RC car all received the false sentence through their generated boards.
+
 ### P65 — The board is one command from being seen while you work — **PO: Sprint 8, after P55** — DONE 2026-10-01
 **Run in the fresh project built from `build.md`'s example:** `npx tsci dev board.tsx --port 3020` →
 `ready in 8372ms`, `curl localhost:3020` → **200** in about 3 s. **Not shown:** a headless Chrome
@@ -473,6 +492,19 @@ which the chain does not make today — say what that costs in seconds before de
 whose three tabs render (headless Chrome screenshot); the bin's `make all` builds its viewer through
 the plugin's script.
 
+**Refined 2026-10-02 (council lens, measured):** the chain exports nothing today; the bin's generator
+built irrigation's page unchanged in 0.04 s (2.7 MB, all three tabs rendered headless, title still
+"Smart Bin Board" — hard-coded). Exports from the BUILT circuit take ~1 s each and are byte-identical
+to exporting `board.tsx`; for the bin they are byte-identical to its committed exports. Design:
+`scripts/viewer.py` exports from `circuit.json` into a temp dir, writes `dist/board-viewer.html` only
+under `--keep`, never changes the chain's verdict ("viewer not written: why"), titles the page from the
+project, and answers `#pcb` / `#3d`. The bin's `make board-viewer.html` calls the plugin's script, its
+own three files are deleted (W16), and without spark `make all` says SKIPPED for the viewer.
+**Value proven by (corrected):** in a fresh project `check_spine.py requirements.json --keep .` writes
+`dist/board-viewer.html` and headless screenshots of `#schematic`, `#pcb`, `#3d` show the board; with
+three.js absent the verdict is unchanged and the reason printed; in the bin `git ls-files tools | grep
+-c viewer` → 0 and `make board-viewer.html` runs the plugin's script.
+
 ### P67 — The simulation can be watched, not only asserted — **PO: Sprint 8, after P65** — DONE 2026-10-01 (documented, untried)
 `commands/build.md` → *See it*: the extension's own command names read from its installed
 `package.json` (3.7.0) — *Wokwi: Select Config File*, *Wokwi: Start Simulator*, *Wokwi: Request a New
@@ -490,6 +522,59 @@ offers — never does unasked — to publish the viewer as a private Claude arti
 each time, because publishing is outward-facing. Depends on P66.
 **Value proven by:** `commands/build.md` carries the offer and its condition; one publish of the
 bin's viewer, with the PO's yes, returns a link that renders the three tabs.
+
+**Parked by the PO, 2026-10-02:** its premise is untested — a published artifact may block the 3D tab's
+`data:` modules (the CSP allows scripts from five CDN hosts). One private test publish settles it;
+the PO said not now. Until then P68 is not an item, only a question.
+
+### P62a — The catalog's files move to the store, and a record says which document it kept — **Sprint 9, first**
+**Needed by:** a published plugin, which cannot ship the 48 vendor files (P61), and every record whose sources `--sources` cannot see today.
+`documents` replaces `attachments` on every kind of record — keyed by a short name: `title` and
+`version` as printed (null when nobody read it), `url`, `sha256`, `file`, `retrieved` — and a fact
+cites one with `"cites": {"document": "<key>", "at": "Table 12, page 15"}`. `--fetch` writes into
+the store. The 48 catalog files move there and their folders leave git in the same commit (W16),
+with the documents that describe them. `cited_urls` reads dict-shaped `sources` and URLs inside prose.
+**Value proven by:** `git ls-files catalog | grep -ciE '\.(pdf|jpe?g|png|webp|svg)$'` → 0;
+`grep -rl attachments catalog scripts commands agents` → nothing; `parts.py --sources dfr0534-module`
+lists its 2 URLs; each moved file's sha256 in the store equals the one its record states.
+
+### P62b — A source is found before it is fetched again — **Sprint 9, after P62a**
+**Needed by:** the FireBeetle record, whose deep-sleep figure cites a datasheet page nothing can find, and every researcher (one fetch in five repeated one already made, P61).
+`parts.py --keep FILE` copies a local file into the store and prints the `documents` entry to paste;
+`parts.py --kept WORDS` searches every record's `documents` (library, catalog, boards, a project's own)
+with no network and prints the store path — present or MISSING — and every fact that cites it. The
+FireBeetle record gains the WROOM-1 v1.1 as a document and `cites` on the two facts it backs; `--kept`
+becomes step 1 of `commands/research.md` and of the researcher agent.
+**Value proven by:** with outbound network denied (`sandbox-exec`), `parts.py --kept wroom` prints the
+v1.1's store path as present and `firebeetle2-esp32s3 power.deep_sleep_ua — Table 12, page 15`, and
+`shasum -a 256` of that path equals the recorded sha256.
+
+### P64a — Nothing is marked verified without a source a reader can open — **Sprint 9, after P62b**
+**Needed by:** the bin, irrigation and the RC car, which read the library records whose 36 `verified: true` fields cite no source.
+`parts.py --validate` and `boards.py --validate` refuse a `verified: true` fact-shaped object (facts,
+`body_mm`, a board's `power.*`) whose source holds no URL and cites no kept document. The 36 fields
+that fail today go to 0 in the same commit — each cited, or downgraded to `verified: false` with its
+`why_it_matters`. A listing prints every prose claim with no pointer, with its count (65
+`host_requirements` today) — the input to P64b.
+**Value proven by:** the validators refuse a fixture with `verified: true` and a prose source (a
+mutation caught); the real library, catalog and boards pass; the prose listing prints its count.
+
+### P64b — A prose claim can point at the fact it rests on — **the PO's decision, unordered**
+**Needed by:** every generated board, into which `emit_board` copies `host_requirements` verbatim — the path ALL_LOW took into irrigation and the remote.
+`host_requirements` and world-claims in `//` notes carry no pointer, and no schema lets them; the false
+ALL_LOW sentence was one of them. A contract change (e.g. `{text, rests_on: [fact]}`) that
+`emit_board` and `parts.py --show` both read. The PO decides whether, and when.
+
+### P64c — An isolated reader checks every claim against its kept source — **after P62, ideally after P64b; Sprint 10**
+**Needed by:** the same three designs as P64a — a claim with a source can still misread it, which only a reader of the source finds.
+A new read-only agent (`claim-checker`, Read and Grep only — TEAM.md's four tests all pass) reads one
+record and its kept documents, denied the project's own notes; returns per claim a verdict
+(supported / unsupported / contradicted / no-source / suspect), the document@version, the locator and
+the exact quote; a script greps each quote in the document's text, and a quote not found is the
+checker's error. Non-supported verdicts are `raised` in `docs/observations/INDEX.md` and reproduced
+before any record changes. It ships only if `/spark:research` or `--promote` routes to it (W15).
+**Value proven by:** one pass over the 8 library and board records, every quote found by script, and —
+run against `5056703` — ALL_LOW comes back contradicted or suspect naming the ANY_LOW alias.
 
 ### P57 — A stand-in's geometry is could-not-run, not a failure — DONE 2026-10-01, as re-cut by the PO
 **Run on the documented example after the last change** (an empty directory, `init`, the one build
