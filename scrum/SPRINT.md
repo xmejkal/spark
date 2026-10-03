@@ -1,3 +1,39 @@
+# Sprint 10 — to be ordered by the PO
+
+Slice 1 (public) is first: the PO asked for it on 2026-10-03. Then slices 2 and 3 side by side,
+as the PO chose — the bin's bench (his parts, the team's P58, P73, B8, B5) and firmware that fails
+on a Mac (P59, P74). The order inside it is the PO's (W11).
+
+---
+
+# Sprint 9 — closed 2026-10-03
+
+### Review
+
+**Goal half met, and the rest re-placed by the story map.** A fact spark ships can be traced to the
+page it rests on — the FireBeetle's two WROOM-1 figures cite Table 11 and Table 12 on page 15, found
+offline by `parts.py --kept wroom`, the file's checksum equal to the record's (P62b). The 48 catalog
+files left the repository for each person's store (P62a). "Nothing verified without an openable
+source" moved to slice 4 with P64a, and "a page for every build" was parked with P66: `tsci dev`
+already shows the board (P65). Found on the way and fixed: **B9**, the summary line that counted
+three checks that could not look as completed, and a P62b defect its own first acceptance run
+caught (15 unrelated records "citing" the WROOM). Discovery (P69) ran inside the sprint and gave the
+work an order: `VISION.md`, `STORY_MAP.md`.
+
+### Retro R9 — at most two actions (P72)
+
+R8.1 held: no bin commit since `852f1c6` used `--no-verify`. R8.2 became B5, now on slice 2 with new
+evidence. **R8.3 broke:** STATUS.md's stale shopping claim was corrected while CLAUDE.md's copy of it
+waited for a lens to point at it — the sweep is a habit, and habits are what break.
+- **R9.1** — P72's first cut decides R8.3: the sweep becomes one command that a fact-correcting
+  commit runs, or it goes to the habits page and stops being called a rule. *Check:* the next
+  fact correction's commit shows the command's output.
+- **R9.2** — counts are read with `/usr/bin/grep`: in Claude's shell `grep` is a wrapper function
+  that prints nothing for `-c` on a file, so a missing number looked like a clean one twice today.
+  *Check:* `type grep` in the session; no `grep -c FILE` in a pasted count.
+
+---
+
 # Sprint 9
 
 **Planned** 2026-10-02 · **Facilitator** main session · **Product Owner** Petr, who chose the

@@ -121,6 +121,18 @@ class NothingShipsUnusedTest(unittest.TestCase):
                 missing.append(head[4:60])
         self.assertEqual(missing, [], "open items with no `**Needed by:**` line: %s" % missing)
 
+    def test_every_open_backlog_item_sits_on_the_story_map(self):
+        # P69: an item that hangs on no slice is parked or deleted. W14's line says a design needs
+        # it; this says WHEN — five items once passed W14 naming no design at all.
+        closed = re.compile(r"DONE|ANSWERED|CLOSED|PARKED|MERGED|DELETED|SPLIT|~~")
+        text = (ROOT / "scrum" / "PRODUCT_BACKLOG.md").read_text()
+        story_map = (ROOT / "scrum" / "STORY_MAP.md").read_text()
+        open_items = [line.split()[1] for line in text.splitlines()
+                      if line.startswith("### ") and not closed.search(line)]
+        unplaced = [item for item in open_items if not re.search(r"\*\*%s\*\*" % re.escape(item), story_map)]
+        self.assertTrue(open_items, "the backlog's open items were not found at all")
+        self.assertEqual(unplaced, [], "open items on no slice of STORY_MAP.md: %s" % unplaced)
+
 
 class TheGlossaryDefinesWordsThisRepositoryActuallyUsesTest(unittest.TestCase):
     """

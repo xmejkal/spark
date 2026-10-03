@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scrum/STORY_MAP.md",
+  "name": "an open item falls off the story map",
+  "find": "**P58**, **P73**, **B8**",
+  "replace": "**P58**, P73, **B8**"
+ },
+ {
+  "file": "scrum/PRODUCT_BACKLOG.md",
+  "name": "a parked item is reopened without a slice",
+  "find": "### P49 — One command runs this repository's own gate — **PARKED 2026-10-03**",
+  "replace": "### P49 — One command runs this repository's own gate — **reopened**"
+ }
+]

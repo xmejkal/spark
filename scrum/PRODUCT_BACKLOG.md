@@ -5,50 +5,12 @@ The single ordered list. If work is not here, it is not happening. **Order is th
 `**Value proven by:**` command whose output Petr can read; an item that cannot name both is not
 pulled. The suite refuses a backlog with an open item missing its need line.
 
-Last ordered: 2026-09-30 — council of five lenses, every claim reproduced first; **the PO's
-to confirm.** Before it: 2026-09-29, by the PO — need-based; cut what nothing uses.
+**The order lives in `STORY_MAP.md`; who it is for and what v1 means, in `VISION.md`** — both
+confirmed by the PO on 2026-10-03 (P69). Every open item below sits on one of the map's slices, or
+is parked or deleted; the suite fails on one that is not placed. The council table of 2026-09-30
+that used to stand here was stale by its own header and is in git history.
 
-## The product goal
-
-From a requirements file to a built, checked, simulated board:
-`idea → parts → pin map → schematic → footprint → build → simulation`. Where it stands: the chain
-runs end to end from a directory holding nothing but the requirements file, proven by
-`check_spine.py` and by a test that follows the documents as a stranger would.
-
-## v1 — the line we are finishing to
-
-**A stranger goes from a requirements file to a built, checked, simulated board that an engineer
-would accept as a first draft — host requirements honoured, no false alarms from the checks — on
-two example projects, with the docs alone.** Out of v1, by the PO's call: real PCB layout, analogue
-simulation, a link between two boards, and parts research beyond R11 below.
-
-## Ordered — by value against effort, 2026-09-30
-
-Reordered by a council of five lenses (hardware, firmware, a stranger's first hour, verification,
-the scrum master), each scoring every item and probing the product to do it; every claim below was
-reproduced before it was written down (W9). **The order is the PO's** (W11) — this is the
-council's proposal.
-
-**Stale as a list of what is next — 2026-10-01.** Five of its thirteen rows are done (P45, P46,
-P29, P37, P32 as P32a) and it was ordered before Sprints 6 and 7 found P51 to P55. It is kept as
-the council's reasoning of 2026-09-30, not as the queue; the queue is the sprint plan and the
-items below. Reordering it is the PO's (W11) and is the first thing Sprint 8's planning should do.
-
-| # | item | value | effort | why here |
-| --- | --- | --- | --- | --- |
-| **P45** | The rules a project is checked against are seeded from its design | 4 | M | `init` writes empty rule lists, so the irrigation DS3231's I2C lines are checked by nobody and `compare_design` refuses for want of a rule nobody wrote |
-| **P46** | A number a fab house could change is data, not code | 3 | S | the same package table is copied into two scripts, and the via geometry is stated in three places |
-| **P29** | The board's own supply, and nothing left unfed | 5 | S+M | no trace reaches the microcontroller's supply on any generated board, while the file says one does; the vendor fact it waited for is already recorded |
-| **P43** | What an agent reads back | 3 | M | five JSON shapes, a fourth status word, the aggregate throws away `rule` and `fix`, and one payload is 80% something that has its own command |
-| **P44** | Nothing shipped names one person's machine | 4 | S | a shipped agent file names an absolute home directory, and two files hard-code one country's shops as prose |
-| **P40** | The architecture the refactor should aim at | 4 | M | the budget's new rule is refactor-before-raise, and duplication has already caused three defects; decide the target once, by people who did not write the code |
-| **P39** | The library answers a need it has no words for | 4 | S | `--need measure distance` misses the rangefinder and `--need switch 12 V load` misses the MOSFET module — both send a researcher to write a record that exists |
-| **P32** | One home for the converter and the chips — **PO: (a), move now** | 4 | L | v1's last word, "simulated", is true only beside the bin's repo (D17); two copies of each chip (D19, D20) |
-| **P36** | The pin map is a file the firmware imports | 4 | S | twelve GPIO numbers are hand-copied into the irrigation firmware and a thirteenth into its scenario; nothing compares them |
-| **P37** | What this simulation cannot show, printed | 4 | S | every stand-in record carries a mandatory honesty sentence and no command prints it, so a green scenario reads like a bench |
-| **P38** | The capacitors P6 promised | 3 | M | `host_parts` has pulldown, pullup and divider; P6's own text promised a decoupling and a bulk capacitor |
-| **P2** | A simulation that costs no Wokwi minutes | 3 | M | its "needed by: none yet" is false now: the irrigation firmware has no test of any kind and three diagnostic runs went to the quota |
-| **R2.6** | A fourth cold test — **PO: the domain** | 5 | L | the cold tests found 13 and 12 gaps; ten of the twelve were invisible to every test in this repo |
+## Items
 
 ### P33 — The documented setup must build the documented example — REOPENED 2026-09-30, **CLOSED by P51 2026-10-01** (its proof line was rerun green in an empty directory)
 **Needed by:** every stranger who follows `/spark:init` then `/spark:build` — and it is a defect
@@ -381,7 +343,7 @@ command a researcher runs to find a source before fetching it again.
 **The PO's answer (2026-10-01): spark will eventually be public.** So a record carries the pointer
 and the file lives in one store on the person's machine, outside the plugin; the work is P62.
 
-### P62 — A record points at the exact source it rests on, and the file is found before it is fetched again
+### P62 — A record points at the exact source it rests on, and the file is found before it is fetched again — **SPLIT into P62a and P62b, both DONE**
 **PO, 2026-10-01: Sprint 9, first — P64 follows it.**
 **Needed by:** the FireBeetle board record, whose deep-sleep PSRAM claim cites "WROOM-1 v1.1 Table
 12" as prose — nothing could find the kept v1.1, and the vendor URL now serves v1.8 with different
@@ -427,7 +389,7 @@ spark's records here; the bin's own copies (`CLAUDE.md`, `HANDOVER.md`, `STATUS.
 **Value proven by:** `grep -rn "ALL_LOW" parts boards` in spark and the bin's docs shows no claim
 that it is an AND on the S3 or C6, and each corrected fact cites the source line it now rests on.
 
-### P64 — Every claim spark ships is checked against its source by someone who did not write it — the PO's proposal of 2026-10-01
+### P64 — Every claim spark ships is checked against its source by someone who did not write it — **SPLIT into P64a, P64b and P64c**
 **PO, 2026-10-01: Sprint 9, after P62** — P62 gives every claim a document version and page, so the
 checker reads the document a fact was written from rather than whatever its URL serves today.
 **Needed by:** every conversation that reads spark's records, so a wrong fact stops spreading. The
@@ -482,7 +444,7 @@ PCB and 3D on localhost:3020 and reloads on every change; nothing in spark menti
 built from its own example the server answers (`curl -s -o /dev/null -w %{http_code}
 localhost:3020` → 200). No code.
 
-### P66 — Every build writes a viewer page — **PO: Sprint 9, after P62 and P64**
+### P66 — Every build writes a viewer page — **PARKED 2026-10-03 by the story map**: `tsci dev` already shows the board where you work (P65); pulled back the day someone opens it and the board does not render
 **Needed by:** the PO and anyone the board is shown to. The bin's generator (B4) moves into the
 plugin as `scripts/viewer.py`; `/spark:build` writes `board-viewer.html` beside the board; the bin's
 Makefile calls the plugin's copy and its own is deleted (W16). It needs the SVG and GLB exports,
@@ -516,7 +478,7 @@ read 2026-10-01); whether it spends CI minutes is not stated there.
 **Value proven by:** `commands/build.md` says how to open it, what licence it needs, and that it was
 not tried here. No code. Tried for real only once the PO holds a licence.
 
-### P68 — The viewer can be opened anywhere — **PO: Sprint 9, after P66**
+### P68 — The viewer can be opened anywhere — **PARKED** with P66, which it builds on
 **Needed by:** P66's page, away from the machine that made it. After a build the conversation
 offers — never does unasked — to publish the viewer as a private Claude artifact; the PO decides
 each time, because publishing is outward-facing. Depends on P66.
@@ -527,7 +489,7 @@ bin's viewer, with the PO's yes, returns a link that renders the three tabs.
 `data:` modules (the CSP allows scripts from five CDN hosts). One private test publish settles it;
 the PO said not now. Until then P68 is not an item, only a question.
 
-### P69 — A roadmap with milestones, and the backlog reordered against it — **the PO's request of 2026-10-03**
+### P69 — A roadmap with milestones, and the backlog reordered against it — **DONE 2026-10-03**
 **Needed by:** the PO — *"let's review what the roadmap is, reprioritize the backlog, let's finish
 open, have the team do that so we have clear milestones and let's go."* The backlog holds about a
 hundred headings across nine sprints of history, done items beside open ones, proposals beside
@@ -562,6 +524,53 @@ Needs the PO once: `gh auth refresh -s project`.
 **Value proven by:** `gh project item-list` lists every open item with *Needed by* filled; the frozen
 file states it is the archive; `test_orphans`' W14 check runs against the issues and fails on one
 without *Needed by*.
+
+**Done 2026-10-03.** The council ran four lenses (vision, personas, story map, skeptic) on top of
+the three of the morning; the PO chose: **the hobbyist is the primary persona** (a hypothesis, until a
+real outsider tries spark); fabrication is later, **pulled by the bin once its first copper passes**;
+the process takes **all three cuts** (P72); bench and firmware-on-a-Mac first, and the repository
+public now (P71). `VISION.md` and `STORY_MAP.md` hold it; `test_orphans` fails on an open item the
+map does not place. Found on the way and fixed the same day: B9.
+
+### P71 — spark is public, and a stranger can install it — **slice 1; the PO's request of 2026-10-03**
+**Needed by:** the hobbyist, spark's primary persona, for whom the README's first line —
+`/plugin marketplace add xmejkal/spark` — fails while the repository is private; and slice 5's real
+outsider, who cannot start before it.
+**Audit of 2026-10-03, all 221 commits:** no secret — the only token-shaped strings are two `wok_...`
+placeholders in documentation; **48 vendor binaries**, all under `catalog/`, first added 2026-09-29
+(`773cd41`) and untracked since P62a, in 88 commits that a rewrite changes; no LICENSE file, though
+the manifest says MIT; five tracked files name `/Users/` (P44). An in-place force-push can leave the
+old commits reachable by their hashes on GitHub, so the history is published as a repository that
+never held the files; how is the PO's.
+**Value proven by:** `gh repo view xmejkal/spark --json visibility` says PUBLIC; `git clone` of it with
+no credentials succeeds in an empty directory; in that clone `git rev-list --objects --all` lists no
+`.pdf`, `.jpg`, `.png` or `.webp`, and `git grep -l /Users/ -- commands skills agents` finds nothing.
+
+### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
+**Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
+touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules
+that held are the ones that fail a command.
+Three cuts, all chosen by the PO: (1) a working agreement either fails a command or moves to one
+unnumbered page of habits; (2) one sprint per slice, a retro of at most two actions, each with the
+command that checks it; (3) mutation tables only for code that gives a verdict — the rest excepted in
+`test_self_confirmation` with that reason — and the backlog's done and answered history archived
+when P70 moves the open items.
+**Value proven by:** `WORKING_AGREEMENTS.md` lists only agreements that each name their enforcing
+command; the next retro has at most two actions; `UNMUTATED` names the non-verdict files.
+
+### P73 — A bench session leaves a verdict a command can read — **slice 2**
+**Needed by:** the bin's bring-up: `bringup/01..06` each end "PASS if …", judged by the person at
+the bench, with nowhere to keep the judgement — and F4, which starts from it.
+One log per step, kept in the bin: the script's output and the person's PASS or FAIL; the motor's
+measured current and a `wake_reason()` after a wave as named lines.
+**Value proven by:** a command lists every step with its verdict and exits 1 on a step without one.
+
+### P74 — Firmware is checked against the pin map it imports — **slice 3**
+**Needed by:** irrigation, whose requirements ask for four valves and a mode button while its
+firmware never drives Valve4 and never reads the button — the sixth `check_all` entry P56's
+increment I named and P36 did not build.
+**Value proven by:** on irrigation the check names Valve4 as never driven and the mode button as
+never read, and exits 1; after P59's fix it exits 0.
 
 ### P62a — The catalog's files move to the store, and a record says which document it kept — **Sprint 9, first** — DONE 2026-10-02
 **Run after the last change:** `git ls-files catalog | grep -ciE '\.(pdf|jpe?g|png|webp|svg)$'` → **0**
@@ -601,7 +610,7 @@ the work exposed are closed with it: a board's `documents` were never validated 
 there), and a `cites` naming a document the record does not hold was accepted. Mutations
 `sprint-9-p62b.json`: 10, all caught. Suite 808 OK.
 
-### P64a — Nothing is marked verified without a source a reader can open — **Sprint 9, after P62b**
+### P64a — Nothing is marked verified without a source a reader can open — **slice 4**
 **Needed by:** the bin, irrigation and the RC car, which read the library records whose 36 `verified: true` fields cite no source.
 `parts.py --validate` and `boards.py --validate` refuse a `verified: true` fact-shaped object (facts,
 `body_mm`, a board's `power.*`) whose source holds no URL and cites no kept document. The 36 fields
@@ -611,13 +620,13 @@ that fail today go to 0 in the same commit — each cited, or downgraded to `ver
 **Value proven by:** the validators refuse a fixture with `verified: true` and a prose source (a
 mutation caught); the real library, catalog and boards pass; the prose listing prints its count.
 
-### P64b — A prose claim can point at the fact it rests on — **the PO's decision, unordered**
+### P64b — A prose claim can point at the fact it rests on — **slice 6; whether is the PO's**
 **Needed by:** every generated board, into which `emit_board` copies `host_requirements` verbatim — the path ALL_LOW took into irrigation and the remote.
 `host_requirements` and world-claims in `//` notes carry no pointer, and no schema lets them; the false
 ALL_LOW sentence was one of them. A contract change (e.g. `{text, rests_on: [fact]}`) that
 `emit_board` and `parts.py --show` both read. The PO decides whether, and when.
 
-### P64c — An isolated reader checks every claim against its kept source — **after P62, ideally after P64b; Sprint 10**
+### P64c — An isolated reader checks every claim against its kept source — **slice 6, after P64b**
 **Needed by:** the same three designs as P64a — a claim with a source can still misread it, which only a reader of the source finds.
 A new read-only agent (`claim-checker`, Read and Grep only — TEAM.md's four tests all pass) reads one
 record and its kept documents, denied the project's own notes; returns per claim a verdict
@@ -658,7 +667,7 @@ capabilities page says for 2-layer 1 oz PTH *"Recommended 0.25 mm or above; abso
 inlet's 0.225 mm ring is under JLCPCB's recommended 0.25 mm and over its 0.18 mm minimum; a ring
 under 0.18 mm still FAILs; both numbers carry their source in `data/fabrication.json`.
 
-### P58 — The bench instructions name the board you are holding
+### P58 — The bench instructions name the board you are holding — **slice 2**
 **Needed by:** the PO, this week — bench bring-up is item 2 on the smart bin's own NEXT list.
 `smartbin-local/firmware/micropython/README.md` steps 2–4 still give the **XIAO's** pins: *"OPEN btn
 D1, MODE btn D6, LED D7/D10"*, *"VL6180X on D4/D5 (+ INT to D0)"*, *"DFR0534 on D9"* — against
@@ -671,7 +680,7 @@ bring-up steps take their pins from the pin map rather than from prose).
 **Value proven by:** every pin named in that README appears in `config.py` for the active board, and
 every `bringup/*.py` it names exists. A check in the bin's `make check`, so it cannot rot again.
 
-### P59 — A generated project's firmware can be imported without running
+### P59 — A generated project's firmware can be imported without running — **slice 3** (P2 merged in)
 **Needed by:** every test tier after the first. `irrigation/firmware/main.py` ends with `main()` at
 module scope and `main()` is `while True`, so **the file cannot be imported** — no test can ever
 exist for it, by anyone, whoever writes it. 95 lines is not the problem; one line is. The bin shows
@@ -757,7 +766,7 @@ Measured: RC car **0 → 8 rules**, both boards `every rule holds`, its 4 rails 
 **0 → 4 rails**, `check_physics` runs where it refused, its 4 hand-written rules kept and the 2 the
 records add named.
 
-### P43 — What an agent reads back
+### P43 — What an agent reads back — **slice 4: the `fix` half only**; the rest parked, as it blocks no design
 **Needed by:** every skill and command that reads a script's output, and `/spark:build` most of
 all. Measured: five different top-level JSON shapes; `check_vendor_pins` returns a fourth status
 word, `"mismatch"`; `parts.py --catalog --json` ignores the flag and prints prose; `check_all`
@@ -771,7 +780,7 @@ list dropped from the assigner's payload.
 it reports; `assign_pins --json` is under 4 KB; every `--json` payload has the same top-level
 shape, which P41's tests then hold.
 
-### P44 — Nothing shipped names one person's machine
+### P44 — Nothing shipped names one person's machine — **slice 1**
 **Needed by:** anyone who installs this plugin who is not its author. A shipped agent file names
 an absolute path under one home directory for the catalog, which `parts.py` already knows how to
 find; two shipped files hard-code one country's shops as prose while `.spark/project.json` already
@@ -781,7 +790,7 @@ third instance, the converter looked for in a sibling repository, is P32's.)
 `commands/`, `skills/` or `agents/`; and the researcher agent reading the brief's sellers instead
 of a list.
 
-### P39 — The library answers a need it has no words for
+### P39 — The library answers a need it has no words for — **slice 4**
 **Needed by:** the irrigation design and the smart bin. `parts.py --need switch 12 V load` finds
 nothing, though `dfr0457-mosfet-power-controller` is the part that design already switches its
 valves with; `--need measure distance` finds nothing, though `vl6180x-breakout` is the bin's
@@ -917,7 +926,7 @@ stayed invisible. And both the detail and the file write were **extracted out of
 simulation stage first** — no test on this machine reaches it, so two of this item's own mutations
 were about to escape through that hole.
 
-### P38 — The capacitors P6 promised
+### P38 — The capacitors P6 promised — **slice 4**
 **Needed by:** the irrigation controller's 12 V rail, which switches four solenoids off an unfused
 barrel jack with no bulk capacitor, and every module on the 3.3 V rail with no decoupling. P6's own
 backlog text promised "a pulldown, a decoupling capacitor, a bulk capacitor on a rail"; the kinds
@@ -928,7 +937,7 @@ between the module's own screw terminals, which is harness wiring and not this b
 **Value proven by:** the irrigation board carries the bulk capacitor its record asks for; the
 file's prose block shrinks by that requirement; a mutation removing the kind is caught.
 
-### P2 — A simulation that costs no Wokwi minutes
+### P2 — A simulation that costs no Wokwi minutes — **MERGED into P59 2026-10-03**: three lenses found nothing in it P59 and P56's increment II do not carry
 **Needed by:** the irrigation controller's firmware, which has no test of any kind, and the quota —
 three diagnostic runs went to discovering one documented fact (diary I11), and two audit rows could
 not be checked because a scenario run costs minutes. The bin proves both shapes already: a fake
@@ -937,7 +946,7 @@ MicroPython runtime, 113 and 14 checks, free.
 **Value proven by:** the irrigation firmware's logic is tested on this Mac with no Wokwi run, and
 the scenario is kept for what only a simulator can show.
 
-### R2.6 — A fourth cold test — **PO: the domain**
+### R2.6 — A fourth cold test — **slice 5: run by a real person outside the project; the PO picks the domain**
 **Needed by:** the product itself: the third cold test found twelve gaps in one evening and ten of
 them were invisible to every test in this repository. Two domains from the earlier menu are
 unchosen — a battery sensor node, a USB MIDI foot controller — and the PO may name another.
@@ -965,8 +974,8 @@ baseline on numeric retrieval). **P39 is the cheap thing that fixes the real fai
 
 ## Parked — no design needs it yet (W14)
 
-- **P17** an off-board part emitted as its header, not its footprint — **Needed by:** none yet.
-- **P29's neighbours** none.
+- **P66, P68** the viewer page and sharing it — pulled back the day `tsci dev` fails to show a board.
+- **P49** one command for this repository's gate; **P50** the adversarial reading — on no slice.
 - **R10** a link between two designs **[PO]** — **Needed by:** the RC car's two boards, if their
   agreement is ever to be checked; the PO put it out of v1.
 
@@ -995,6 +1004,8 @@ reference.** Each item below names what pulls it in; none is ordered.
   battery through spark's harness.
 
 ## Deleted — in git history, not in this list
+
+2026-10-03, by the story map: **P17** — "Needed by: none yet" since Sprint 5.
 
 2026-09-29: P1 (its value delivered), P7 (with `check_design`, which had made two tools of one),
 P18 (`evals/` deleted), P19 (`findings.py` and its fake bench deleted), R8 (became R11).
@@ -1030,7 +1041,7 @@ the cut `066c4af` · the cold test's G-items in `~/Development/rc-car/DIARY.md` 
 
 ## The bin
 
-### B1 — Identify the audio module **[PO — blocked on Petr]**
+### B1 — Identify the audio module — **slice 2 [PO — blocked on Petr]**
 **Needed by:** the bin's audio path — four things wait on a look in a drawer. microSD slot means
 DFPlayer Mini; micro-USB and "Voice Module V1.0" means DFR0534; pads marked BCLK/LRC/DIN means the
 I²S amp the board now assumes.
@@ -1085,7 +1096,7 @@ checkout step; or wait for spark to be public (P61's ruling), then check it out 
 **Value proven by:** `gh run list` shows the bin's next push green, or the workflow says in its own
 log that it skipped the spark-dependent steps and why — never a red run nobody reads.
 
-### B9 — check_all's last line counted checks that could not look as completed — **found 2026-10-03 by the vision lens, fixed the same day**
+### B9 — check_all's last line counted checks that could not look as completed — **DONE 2026-10-03** (`a260b01`)
 **Needed by:** the RC car, irrigation and the bin, whose `check_all` all exit 2 today — and README:32,
 spark's founding rule: a check that could not look must never read as one that passed. Reproduced
 on the RC car with wokwi-cli off PATH: one `[ok  ]`, three `[????]`, one `[--  ]`, then *"nothing found
@@ -1094,7 +1105,7 @@ by the 4 check(s) that completed, of 5"*. `render` counted a check as completed 
 **Value proven by:** the RC car's last line names one completed check; a test renders a could-not-run
 that carries only a reason and fails on "completed" counting it; its mutation is caught.
 
-### B8 — A firmware test failed once and was never caught again — **found 2026-10-01, unordered**
+### B8 — A firmware test failed once and was never caught again — **slice 2**
 **Needed by:** the bin's commit gate, which is only trusted while it never fails for nothing. A
 local no-spark `make check` failed at `firmware-tests` once; the same suite then passed 31 of 31
 times alone and the rehearsal 4 of 4 — one failure in 36 runs, and the failing test's name was not
@@ -1103,7 +1114,7 @@ racing the scheduler under load is the likely shape; unproven.
 **Value proven by:** the failure reproduced and named — e.g. the suite run 200 times under CPU load
 with every failure kept — and the test fixed so it cannot race; or 200 clean runs recorded.
 
-### B5 — A derived file in git is checked current, or not kept in git — **from R8.2, unordered**
+### B5 — A derived file in git is checked current, or not kept in git — **slice 2**
 **Needed by:** anyone reading the bin's repository: its `board-sch.svg` and `board-pcb-routed.svg`
 showed the MP3 board for a week after the board changed (remade in bin `2367fa1`), and nothing
 noticed. Tracked and derived today: `board-sch.svg`, `board-pcb-routed.svg`, `board.glb`,
@@ -1112,6 +1123,9 @@ Two are already checked (`diagram-current`, `board-spec-current`); the rest are 
 **Value proven by:** changing `board.tsx` without regenerating makes `make check` fail on each export
 still committed, or that export is untracked and made by `make all`; a timestamp-only difference
 (the gerbers regenerate with new dates) is not a failure.
+**Seen 2026-10-03:** a gated commit left `board-gerbers.zip` modified — unzipped and diffed, every
+Gerber and drill file differed in exactly its two creation-date lines, `bom.csv` and
+`pick_and_place.csv` not at all. Every commit through the gate dirties the tree this way.
 
 ## Proposed 2026-09-30, unordered — the PO asked what we get wrong and how to stop it
 
@@ -1141,7 +1155,7 @@ its scar is not memorable. Linked from the README so it is not a document nobody
 if the README stops linking it; and the PO's own question — what is a mutation, an anchor, a gate
 — is answered by the file.
 
-### P49 — One command runs this repository's own gate
+### P49 — One command runs this repository's own gate — **PARKED 2026-10-03**: the desk's tooling, on no step of the map
 **Needed by:** this desk, measurably, in the session of 2026-09-30. The suite was run with the
 wrong `-t` flag and gave an ImportError; files were read twice while a mutation run was still
 rewriting them, and from that reading this desk concluded a killed run had corrupted the tree —
@@ -1157,7 +1171,7 @@ asks it about the working tree. Effort S, not the script it was drafted as.
 **Value proven by:** every number in a commit message comes from one invocation of it, and an
 invocation started while a mutation run holds the lock refuses instead of reporting.
 
-### P50 — An adversarial reading of what the tests would not notice — **KEPT by the PO 2026-10-01**
+### P50 — An adversarial reading of what the tests would not notice — **PARKED 2026-10-03** under the story map's rule (on no slice); kept by the PO 2026-10-01, never run
 **The PO declined to delete it** when the scope lens proposed it, and the rule supports him: P50 is
 **unbuilt**, so keeping it costs one line in this file, its need is reproduced (five mutations
 escaped because one desk wrote both the fix and the test meant to catch it), and its kill criterion
