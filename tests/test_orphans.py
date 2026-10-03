@@ -9,6 +9,7 @@ one looked alive. Nothing asked "who calls this?" — this does, at every commit
     python3 -m unittest discover -s tests
 """
 
+import json
 import re
 import sys
 import unittest
@@ -120,6 +121,27 @@ class NothingShipsUnusedTest(unittest.TestCase):
             if head.startswith("### ") and "~~" not in head and "**Needed by:**" not in section:
                 missing.append(head[4:60])
         self.assertEqual(missing, [], "open items with no `**Needed by:**` line: %s" % missing)
+
+    #: Scripts that still name a tool's executable, until their task moves them to tools.find (P82).
+    NOT_YET_MOVED = {"sim_project.py": {"wokwi-cli"}, "check_spine.py": {"tsci", "bun"}}
+
+    def test_no_script_but_tools_names_a_tool_s_executable(self):
+        names = {entry.get("exe") for key, entry in json.loads((ROOT / "data" / "tools.json").read_text()).items()
+                 if isinstance(entry, dict) and entry.get("exe")} | {"bun"}
+        named = {}
+        for path in sorted((ROOT / "scripts").glob("*.py")):
+            if path.name == "tools.py":
+                continue
+            text = path.read_text()
+            found = {name for name in names if '"%s"' % name in text}
+            if found - self.NOT_YET_MOVED.get(path.name, set()):
+                named[path.name] = sorted(found - self.NOT_YET_MOVED.get(path.name, set()))
+        self.assertEqual(named, {}, "ask tools.find for the tool instead (P82)")
+
+    def test_every_script_still_allowed_to_name_a_tool_still_does(self):
+        stale = {name: sorted(tools_named) for name, tools_named in self.NOT_YET_MOVED.items()
+                 if not all('"%s"' % tool in (ROOT / "scripts" / name).read_text() for tool in tools_named)}
+        self.assertEqual(stale, {}, "a moved script left in NOT_YET_MOVED")
 
     def test_nothing_shipped_names_one_persons_home(self):
         # P44: an agent file named a path in its author's home for the catalog; on anyone else's machine that

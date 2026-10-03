@@ -824,12 +824,12 @@ def scan_datasheet(pages, wanted, labels=None):
     return found
 
 
-def datasheet_pages(path):
-    """(number, text) per page of a PDF, as `pdftotext -layout` lays it out — one page at a time, on demand."""
+def datasheet_pages(path, command):
+    """(number, text) per page of a PDF, as the pdf-text tool lays it out — one page at a time, on demand."""
     import subprocess
     number = 1
     while True:
-        done = subprocess.run(["pdftotext", "-layout", "-f", str(number), "-l", str(number), str(path), "-"],
+        done = subprocess.run(list(command) + ["-layout", "-f", str(number), "-l", str(number), str(path), "-"],
                               capture_output=True, text=True)
         if done.returncode != 0:
             return
@@ -837,15 +837,17 @@ def datasheet_pages(path):
         number += 1
 
 
-def read_datasheet(path, wanted, labels=None):
+def read_datasheet(path, wanted, labels=None, project=None):
     """Print what `scan_datasheet` found, with the pages read; EXIT_OK only when every fact was FOUND."""
-    import shutil
-    if not shutil.which("pdftotext"):
-        print("parts.py: --read needs pdftotext — brew install poppler (or apt install poppler-utils)", file=sys.stderr)
+    import tools
+    try:
+        reader = tools.find("pdf-text", project)
+    except tools.ToolProblem as missing:
+        print("parts.py: --read: %s" % missing, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     read = []
     def counted():
-        for page in datasheet_pages(path):
+        for page in datasheet_pages(path, reader.command):
             read.append(page[0])
             yield page
     found = scan_datasheet(counted(), wanted, labels)
@@ -1270,7 +1272,7 @@ def main(argv=None):
             for given in args.label or []:
                 fact, _, words = given.partition("=")
                 labels[fact] = [word.strip().lower() for word in words.split("|") if word.strip()]
-            return read_datasheet(args.read, args.want or [], labels)
+            return read_datasheet(args.read, args.want or [], labels, project)
         elif args.kept:
             found = find_kept(args.kept, project)
             print("\n".join(found) if found else "nothing kept matches %s — fetch it, or --keep a file "

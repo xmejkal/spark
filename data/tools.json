@@ -1,0 +1,12 @@
+{
+  "//": "The tools spark depends on (P82, docs/2026-10-03-tools-design.md). A person's ~/.local/share/spark/tools.json and a project's .spark/tools.json override any field of any entry; the project wins. `roles` points a job at a tool; `contracts` says what the job needs, and only this file states them.",
+  "roles": {"pdf-text": "pdftotext"},
+  "contracts": {"pdf-text": "page-text"},
+  "pdftotext": {
+    "for": "reading a datasheet page by page (parts.py --read)",
+    "kind": "path",
+    "exe": "pdftotext",
+    "meets": ["page-text"],
+    "install": {"brew": "brew install poppler", "apt": "sudo apt install poppler-utils"}
+  }
+}
