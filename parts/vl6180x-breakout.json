@@ -71,6 +71,18 @@
       "verified": false,
       "source": "not measured",
       "why_it_matters": "It free-runs while the host sleeps, so on a battery design it is one of the two or three loads that decide the answer."
+    },
+    "module_has_i2c_pullups": {
+      "value": true,
+      "verified": true,
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
+      "note": "10 k to VIN on the host side of the Q1A/Q1B shifter, on SDA and SCL (the carrier_has_level_shifters fact). Corrected 2026-10-03 (P81): the host_parts reasons used to say the module carries none."
+    },
+    "i2c_pullup_ohms": {
+      "value": 10000,
+      "verified": true,
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
+      "note": "to VIN, the host's supply, on the host side of the level shifter"
     }
   },
   "host_requirements": [
@@ -123,7 +135,7 @@
       "kind": "pullup",
       "pin": "SDA",
       "ohms": 4700,
-      "why": "the module carries no I2C pull-ups and the host's internal ones are tens of kiloohms; 4.7 k suits 100-400 kHz on a short bus — a ribbon wants less (the bin chose 2.2 k for its cable)"
+      "why": "the carrier's own 10 k to VIN are weak for anything but a short bus; 4.7 k in parallel makes about 3.2 k, which suits 100-400 kHz — a ribbon wants less (the bin chose 2.2 k for its cable)"
     },
     {
       "kind": "pullup",

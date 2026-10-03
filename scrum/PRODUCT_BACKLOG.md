@@ -688,7 +688,18 @@ order, the amplifier's missing pad-1 marker, the 12 V jack's meter check before 
 lead, and the RC car's buck, servo and XT30 reversals. Only the LED's proof is verified — the one that
 cites a page of a kept datasheet; the other 17 say honestly how they were read until their documents
 are kept and cited (B12, P64a). The DS3231's contradictory note is replaced by what the PO's photo
-shows. Mutations `sprint-10-p81.json`: 4, all caught. Open: increment 2, B11's pull-up arithmetic.
+shows. Mutations `sprint-10-p81.json`: 4, all caught.
+**Increment 2 done 2026-10-03 (with B11):** `parts.pull_conflicts` computes a pull-down the board adds
+against the module's own pull-up — the divider, the voltage range over the module's supply range, the
+supply above which the pin idles HIGH — and `--show` and the generated board file print it: *"AIA: the
+board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at
+0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply
+above 5 V; the module's input-low threshold is not recorded, so below that the level is undefined."*
+Quiet when the pull-down holds the pin under the threshold across the whole range. The VL6180X record
+now states its carrier's 10 k pull-ups to VIN as verified facts (Pololu's schematic) and its reason no
+longer says it carries none — 4.7 k in parallel makes about 3.2 k; the circuit is unchanged. What to do
+about the L9110S is a design decision, after the meter reading the bin's STATUS asks for and the
+input-low threshold the record lacks. Mutations `sprint-10-p81-pulls.json`: 5, all caught.
 
 ### P83 — The catalog leaves the plugin, slim; candidates' photos and seller listings go — **slice 4; the PO's decision of 2026-10-03 (W21)**
 **Needed by:** everyone who installs spark — the researcher writes catalog records into the plugin's
@@ -1279,7 +1290,7 @@ unknown, so this is a hypothesis about P51, not a finding against it.
 example through `check_spine` to its simulation stage: it either compiles the diagram, or stops with
 one sentence naming the command to run — never a bun stack.
 
-### B11 — A part demanded of the board that the part's own verified fact defeats is placed silently — **slice 2; found 2026-10-03 by the P80 council**
+### B11 — A part demanded of the board that the part's own verified fact defeats is placed silently — **slice 2; found 2026-10-03 by the P80 council** — DONE 2026-10-03, as P81's increment 2
 **Needed by:** the quickstart and the bin, both of which put 10 k pull-downs on the L9110S's inputs
 while the same record states, verified from the vendor schematic, 10 k pull-ups to VCC on all four —
 a divider near 3 V on a 6 V pack, above the part's 2.5 V input threshold; the record's own note says

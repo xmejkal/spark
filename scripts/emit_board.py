@@ -942,6 +942,9 @@ def host_requirement_lines(part_list):
              if done else "        None of it is done here — each one is a design decision:"]
     for part_name, text in requirements:
         lines.append("          - %s: %s" % (part_name, text))
+    for part in part_list:  # P81: a pull this board adds that the part's own defeats, with the arithmetic
+        for conflict in parts_library.pull_conflicts(part):
+            lines.append("          - CONFLICT %s: %s" % (part["name"], conflict))
     lines.append("     */}")
     return lines
 

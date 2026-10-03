@@ -1215,6 +1215,35 @@ class APinOrderSaysHowItWasReadTest(unittest.TestCase):
         self.assertEqual(len(listed), 1)
         self.assertEqual(listed[0]["source"], "read off a photo")
 
+class APullTheBoardAddsAgainstTheModulesOwnIsShownWithItsArithmeticTest(unittest.TestCase):
+    """
+    P81 increment 2, B11. The L9110S record states, verified, 10 k pull-ups to VCC on its inputs, and
+    demands 10 k pull-downs of the board "so both are held low" — together a divider at half the
+    supply, above the 2.5 V input threshold on the 6 V pack. The record's own note said so; no
+    output did. A pull the board adds against the module's own is now shown, with the arithmetic.
+    """
+
+    def record(self, pulldown_ohms=10000):
+        return part(facts={"onboard_input_pullups_ohms": {"value": 10000, "verified": True, "source": "schematic"},
+                           "input_high_threshold_v": {"value": 2.5, "verified": True, "source": "datasheet"},
+                           "supply_range_v": {"value": [2.5, 12.0], "verified": True, "source": "datasheet"}},
+                    needs=[{"signal": "MOTOR_IA", "pin": "AIA"}],
+                    host_parts=[{"kind": "pulldown", "pin": "AIA", "ohms": pulldown_ohms, "why": "held low"}])
+
+    def test_the_divider_and_where_it_crosses_the_threshold_are_said(self):
+        said = " ".join(parts.pull_conflicts(self.record()))
+        self.assertIn("AIA", said)
+        self.assertIn("0.5 of the supply", said)
+        self.assertIn("5 V", said, "2.5 V x (10k + 10k) / 10k: the supply above which the pin idles HIGH")
+        self.assertIn("input-low threshold is not recorded", said, "what is missing to decide, named")
+
+    def test_a_pulldown_strong_enough_for_the_whole_supply_range_is_quiet(self):
+        # 1 k against 10 k: at 12 V the pin idles at 1.09 V, under the 2.5 V threshold everywhere.
+        self.assertEqual(parts.pull_conflicts(self.record(pulldown_ohms=1000)), [])
+
+    def test_show_prints_it_where_a_person_reads_the_part(self):
+        self.assertIn("5 V", parts.describe(self.record()))
+
 class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
     """
     P80. A research run printed a whole datasheet early and paid for it on every later turn; the

@@ -1058,6 +1058,12 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
             self._emit(part, parts.signals_for(["l9110s-module"]))
         self.assertIn("forward_voltage_v", str(refused.exception))
 
+    def test_a_pulldown_the_modules_own_pullup_defeats_is_named_in_the_board_file(self):
+        # B11 / P81: the shipped L9110S states 10 k pull-ups to VCC and demands 10 k pull-downs.
+        tsx, _ = self._emit(self._part())
+        self.assertIn("CONFLICT", tsx)
+        self.assertIn("idles HIGH, not low, on any supply above 5 V", tsx)
+
     def test_the_passives_sit_beside_the_modules_not_on_them(self):
         _, placements = self._emit(self._part())
         positions = list(placements.values())

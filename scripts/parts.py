@@ -1116,7 +1116,41 @@ def sources_resolve(record, fetch=reachable):
     return [(url, fetch(url)) for url in cited_urls(record)]
 
 
-def _show(part):
+def pull_conflicts(part):
+    """
+    A pull-down the board adds against the module's own pull-up, said with its arithmetic (P81, B11).
+    The L9110S states 10 k pull-ups to VCC on its inputs and asked the board for 10 k pull-downs "so
+    both are held low": a divider at half the supply, above its 2.5 V input threshold on a 6 V pack.
+    The record's note said so; no output did. Quiet when the pin stays under the input-high threshold
+    across the module's whole supply range.
+    """
+    facts = part.get("facts") or {}
+    value = lambda name: (facts.get(name) or {}).get("value")
+    pull_up, high, supply = value("onboard_input_pullups_ohms"), value("input_high_threshold_v"), value("supply_range_v")
+    if not isinstance(pull_up, (int, float)):
+        return []
+    said = []
+    for host_part in part.get("host_parts") or []:
+        if host_part.get("kind") != "pulldown" or not isinstance(host_part.get("ohms"), (int, float)):
+            continue
+        ratio = host_part["ohms"] / (pull_up + host_part["ohms"])
+        line = ("%s: the board's %g ohm pull-down against the module's own %g ohm pull-up to its supply "
+                "holds the pin at %.2g of the supply" % (host_part["pin"], host_part["ohms"], pull_up, ratio))
+        if isinstance(high, (int, float)):
+            crossover = high / ratio
+            if isinstance(supply, list) and len(supply) == 2 and supply[1] < crossover:
+                continue
+            if isinstance(supply, list) and len(supply) == 2:
+                line += " (%g V to %g V over its %g-%g V range)" % (supply[0] * ratio, supply[1] * ratio, *supply)
+            line += (", so it idles HIGH, not low, on any supply above %g V (input-high threshold %g V)"
+                     % (crossover, high))
+        if value("input_low_threshold_v") is None:
+            line += "; the module's input-low threshold is not recorded, so below that the level is undefined"
+        said.append(line)
+    return said
+
+
+def describe(part):
     lines = ["%s — %s" % (part["name"], part["kind"]), ""]
     lines.append("  asks the host for:")
     for need in part.get("needs") or []:
@@ -1135,6 +1169,8 @@ def _show(part):
 
     for requirement in part.get("host_requirements") or []:
         lines.append("\n  the board must: %s" % requirement)
+    for conflict in pull_conflicts(part):
+        lines.append("\n  CONFLICT: %s" % conflict)
     return "\n".join(lines)
 
 
@@ -1189,7 +1225,7 @@ def main(argv=None):
                     print(_row(part["id"], part["kind"], "%-9s %s" % (where, part["name"])))
         elif args.show:
             part = any_record(args.show, project)
-            print(json.dumps(part, indent=2) if args.json else _show(part))
+            print(json.dumps(part, indent=2) if args.json else describe(part))
         elif args.signals:
             print(json.dumps({"signals": signals_for(args.signals, project)}, indent=2))
         elif args.need:
