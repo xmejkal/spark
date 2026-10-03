@@ -118,7 +118,31 @@ What changes in existing code:
 One rule holds everywhere: **no script names a tool's executable directly** — a test enforces it, the
 way spark's tests already refuse an orphan script.
 
-## 3. Swapping a tool: what each step needs from it (to come)
+## 3. Swapping a tool: what each step needs from it (proposed)
+
+A role names **what the step needs from whatever tool fills it** — its contract. A tool's entry says
+which contracts it meets (`"meets": ["wokwi-project"]`). Point a role at a tool that does not declare
+the role's contract and the step refuses by name, before running anything:
+`simulator: my-sim does not say it runs a Wokwi project (contract "wokwi-project"), so the
+simulation step will not use it`. Where a contract has a tiny sample, `/spark:setup` also runs the
+tool on it once, so "declares it" is checked against "does it".
+
+| role | default | the contract — what the step needs | swappable in practice |
+| --- | --- | --- | --- |
+| `board-engine` | tscircuit | builds the board file spark writes (tscircuit TSX) into `circuit.json` | **versions only** — the generator writes tscircuit; another engine would need its own generator, which no design asks for (W14) |
+| `simulator` | Wokwi (`wokwi-cli`) | runs a Wokwi project (`diagram.json`, `wokwi.toml`, a flash image, a scenario file) and exits 0 when the scenario passes | **yes**, for anything that runs a Wokwi project |
+| `pdf-text` | `pdftotext` (poppler) | prints one page's text, laid out, for a page number; says when the page is past the end | **yes** — e.g. MuPDF's `mutool` behind a one-line wrapper |
+| `littlefs` | `littlefs-python` | packs files into the ESP32 port's littlefs image | versions only |
+| `micropython-<chip>` | micropython.org's build for the chip | the interpreter `.bin` the flash image starts with | **yes** — another release, or your own build, as a file |
+| `parts-search` (MCP) | jlcpcb | finds candidates with a datasheet link | **yes** — any MCP server whose tool returns that |
+| `chip-docs` (MCP) | espressif-docs | searches the chip maker's documentation | **yes** |
+| `bench` (MCP) | sigrok (off) | reads an instrument at the bench | **yes** |
+
+**One limit, said plainly.** spark's own agents (`part-finder`, `datasheet-reader`) can use only the
+MCP tools their files name — that is how Claude Code works, and spark's files ship with spark. A server
+the person adds is used by spark's **commands**, which run in the conversation and see every connected
+server; the commands hand what it found to the agents. So "add your own MCP" works through the
+commands, not inside the agents.
 
 ## 4. `/spark:setup` (to come)
 
