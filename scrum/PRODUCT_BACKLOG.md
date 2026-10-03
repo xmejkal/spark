@@ -599,6 +599,18 @@ requirements in an empty directory with the published spark, every scenario reru
 kept, the steps written down so a reader can repeat them, and no file left that today's spark would
 not write or the steps do not explain.
 
+### P78 — An LED is a part, and its series resistor is placed with it — **slice 4; found by the PO 2026-10-03, building the quickstart**
+**Needed by:** the quickstart the PO built step by step — offered a status LED as a bare `signals`
+entry, he asked: *"Why would the LED hang in the air? Shouldn't there just be some LED and maybe some
+pull-up or something?"* — and irrigation, whose `STATUS_LED` ends `check_spine` in `!!`, and the bin,
+whose bicolour LED and its resistors exist only because a person drew them. No LED record exists in
+the library or the catalog, and a record can ask the board only for `pulldown`, `pullup` or `divider`
+(`parts.HOST_PART_KINDS`): a current-limiting resistor in series is none of them.
+**Value proven by:** a requirements file listing an LED builds with the LED and its series resistor
+wired GPIO → resistor → LED → GND, the resistor's value computed from the LED's forward voltage and
+current and the board's logic level and printed with that arithmetic; irrigation's `STATUS_LED`
+becomes that part and its `check_spine` stops ending in `!!`.
+
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
 touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules
