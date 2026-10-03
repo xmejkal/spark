@@ -527,6 +527,18 @@ bin's viewer, with the PO's yes, returns a link that renders the three tabs.
 `data:` modules (the CSP allows scripts from five CDN hosts). One private test publish settles it;
 the PO said not now. Until then P68 is not an item, only a question.
 
+### P69 — A roadmap with milestones, and the backlog reordered against it — **the PO's request of 2026-10-03**
+**Needed by:** the PO — *"let's review what the roadmap is, reprioritize the backlog, let's finish
+open, have the team do that so we have clear milestones and let's go."* The backlog holds about a
+hundred headings across nine sprints of history, done items beside open ones, proposals beside
+parked ones; Sprint 9 is half-started. Nothing names the milestones between here and a spark a
+stranger installs and a bin that works.
+**A council question, then the PO's order (W18, W11).** Lenses: an inventory of every open item and
+its real state; milestones with exit criteria a command can prove; and a W14 pass — what no design
+needs is parked or deleted.
+**Value proven by:** `scrum/ROADMAP.md` names each milestone, its exit criterion and the items in it;
+every open backlog item is in exactly one milestone, parked, or deleted; and the PO has ordered it.
+
 ### P62a — The catalog's files move to the store, and a record says which document it kept — **Sprint 9, first** — DONE 2026-10-02
 **Run after the last change:** `git ls-files catalog | grep -ciE '\.(pdf|jpe?g|png|webp|svg)$'` → **0**
 (was 48); `attachments` appears in no catalog record, command or agent — in `scripts/` only in the
