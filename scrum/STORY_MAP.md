@@ -9,6 +9,7 @@ log proves. **An open backlog item sits on one slice below, or it is parked or d
 
 | # | step | spark today | gap |
 | --- | --- | --- | --- |
+| 0 | **Shape the idea** — a conversation: what it must do, which *kinds* of module do it, what else it could do; a block diagram with no part numbers yet | nothing: `/spark:build` starts from a requirements file | **all of it** (P76) |
 | 1 | Install, start a project | README; `/spark:init` (`init_project.py`) | **the install line fails: the repository is private** |
 | 2 | Know what you own | `/spark:identify` (a module from a photo) | never pointed at the bin's drawer (B1) |
 | 3 | Choose parts | `/spark:research`, `parts.py --need/--kept`, the catalog | `--need measure distance` misses the rangefinder (P39) |
@@ -19,7 +20,8 @@ log proves. **An open backlog item sits on one slice below, or it is parked or d
 | 8 | Simulate | `check_spine` → Wokwi (paid minutes) | — |
 | 9 | Firmware | `pins.py` only | nothing tests firmware against the board (P59, P74) |
 | 10 | Bench | the bin's `bringup/01..06` | never run; no log of a verdict (P73) |
-| 11 | Fab | `fab.py`, `check_bom`, the review's fab gate | a non-goal until the bin's first copper |
+| 11 | Fab — order the board | `fab.py`, `check_bom`, the review's fab gate | optional, after the firmware works (slice 8) |
+| 12 | Enclosure — 3D export, Fusion 360, printed parts | `tsci export -f glb` only | everything past the board's own model (slice 9) |
 
 Two halves: the maker uses spark to *check* a hand-written board; only the cold tests used the
 generator. Steps 9–11 hold almost nothing from spark yet.
@@ -29,12 +31,18 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
 | **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | **P71**, **P75**, P44 (done) |
+| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | a conversation turns a one-sentence idea into what it must do, the kinds of module that do it and what else they could do, and a block-level schematic with no part numbers — which then becomes the requirements file the chain already takes | **P76** |
 | **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | **B1**, **P58**, **P73**, **B8**, **B5** |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59**, **P74** |
 | **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a**, **P39**, **P38**, **P43** (the `fix` half) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6**, then F3 and F4 as they pull |
+| **8** | **A board you can order** | hobbyist | after the firmware works: the review's fab gate passes and the package is one a fab house takes | pulled by the first design that wants one |
+| **9** | **An enclosure** | hobbyist | the board's 3D model in Fusion 360; printed parts that fit it | pulled by the first design that wants one |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b**, **P64b**, **P64c** |
 
+**The PO, 2026-10-03:** slice 1b comes straight after going public — *"we first need to make it
+work, really from just talking about some vague idea"*; slices 8 and 9 make ordering a board and
+printing an enclosure part of the journey, optional and after the firmware works.
 Slices 2 and 3 run side by side: the maker's share of 2 is parts and a bench, the team's is the
 items. **The desk lane** — the PO's own process decisions, at most two open: **P70**, **P72**.
 

@@ -6,8 +6,20 @@ hypothesis; the PO chose among what they found. `STORY_MAP.md` turns this page i
 
 ## What spark is
 
+**The PO, 2026-10-03, after the council:** *"We first need to make it work, really from just
+talking about some vague idea the human says — the AI guides him through brainstorming the DIY idea,
+what modules are available that do something we'd need, what else it could also do; helps the
+human formulate the idea and walks him through the whole process to an actual circuit of connected
+modules, or just a schematic first, without specific parts — just what it does, like an MP3 player
+module. Then, if the human wants, a PCB he can order, with the firmware already working enough and
+tested and improved agile-style — and later 3D model export, even Fusion 360, 3D-printed parts."*
+
+So the journey starts one step earlier than spark does today — at a conversation, not a
+requirements file — and ends later: at a board you can order and a printed enclosure, both optional.
+
 spark is a Claude Code plugin for someone building a DIY gadget from an ESP32 dev board and
-off-the-shelf modules. You describe the idea and list what you have; spark researches each part from
+off-the-shelf modules. You start from an idea in words; spark helps shape it into what the device
+must do and which kinds of module do it, then researches each part from
 vendor documents, assigns every pin with a reason, generates a board that builds and simulates, and
 checks it — refusing rather than guessing, and saying when a check could not look. Next, the
 firmware you or Claude write imports spark's pin facts and is tested free on a laptop, then proven
@@ -38,7 +50,7 @@ ahead of everything after it.
 
 | not a goal | why |
 | --- | --- |
-| Ordering a board, production layout | **Later, pulled by a named design: the bin, once its first copper passes (slice 2).** Until then the fab pieces (`fab.py`, `data/fabrication.json`, `check_bom`) are kept working, not grown. The PO, 2026-10-03. |
+| Production layout, chip-down design, volume | the anti-persona's needs. **Ordering a board of modules is IN the journey** (the PO, 2026-10-03, revising the morning's "later"): optional, after the firmware works — slice 8 |
 | Analogue simulation; a link between two boards | out of v1 by the PO; R10 parked |
 | A firmware generator, or anything that writes behaviour | P56: spark exports facts and a harness; the conversation writes the firmware |
 | A knowledge skill per firmware runtime | P60: the current models already know the runtimes; the guarantee is a check against the real runtime, never a reference |

@@ -555,6 +555,18 @@ ever shared, publishes the place.
 **Value proven by:** `parts.py --keep` on a JPEG with a GPS block stores a file with none (EXIF tag
 0x8825 absent) and says so; a test with a fixture photo, and its mutation caught.
 
+### P76 — From a vague idea to a block-level schematic, by conversation — **slice 1b; the PO's direction of 2026-10-03**
+**Needed by:** the hobbyist, spark's primary persona, who arrives with an idea in words and no list
+of modules — while every spark command today starts from a requirements file or a module someone
+already chose. The PO: *"really from just talking about some vague idea … without specific parts,
+just what it does, like an MP3 player module."*
+Not yet designed: how the conversation runs, what it writes, where it hands over to `/spark:build`,
+and what of the catalog it can offer are for a brainstorming session with the PO before anything is
+built (W14: the item exists, the design does not).
+**Value proven by:** to be written with the PO — at least: a one-sentence idea becomes a file naming
+the functions, the kind of module for each, and a block diagram with no part numbers, which the
+existing chain then accepts once parts are chosen.
+
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
 touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules

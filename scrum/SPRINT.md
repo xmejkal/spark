@@ -1,8 +1,9 @@
-# Sprint 10 — to be ordered by the PO
+# Sprint 10 — slice 1, then 1b
 
-Slice 1 (public) is first: the PO asked for it on 2026-10-03. Then slices 2 and 3 side by side,
-as the PO chose — the bin's bench (his parts, the team's P58, P73, B8, B5) and firmware that fails
-on a Mac (P59, P74). The order inside it is the PO's (W11).
+**Ordered by the PO 2026-10-03.** First **public** (P71, P75): a fresh public repository whose history
+never held the vendor files, today's repository kept private as the archive, and irrigation published
+scrubbed. Then **from a vague idea** (P76), designed with the PO in a brainstorming session before
+anything is built. The bench and firmware-on-a-Mac (slices 2, 3) follow.
 
 ---
 
