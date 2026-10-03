@@ -148,7 +148,7 @@ class TheSilkscreenSurvivesTest(unittest.TestCase):
         return {"schema": 1, "id": "buck", "name": "buck", "kind": "regulator", "needs": [],
                 "power": [{"pin": "VIN", "printed": "IN+", "rail": "traction", "direction": "in"},
                           {"pin": "GNDIN", "printed": "IN-", "rail": "ground", "direction": "in"}],
-                "pin_order": ["VIN", "GNDIN"], "footprint": "pinrow2",
+                "pin_order": ["VIN", "GNDIN"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "pinrow2",
                 "body_mm": {"width": 5, "height": 5, "verified": True, "source": "test"}}
 
     def _emit(self, part):
@@ -184,7 +184,7 @@ class PlaceholderFootprintsAreNamedTest(unittest.TestCase):
     def part(part_id, placeholder=False, instance=None):
         record = {"schema": 1, "id": part_id, "name": part_id, "kind": "test", "needs": [],
                   "power": [{"pin": "GND", "rail": "ground", "direction": "in"}],
-                  "pin_order": ["GND"], "footprint": "pinrow1",
+                  "pin_order": ["GND"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "pinrow1",
                   "body_mm": {"width": 5, "height": 5, "verified": True, "source": "test"}}
         if placeholder:
             record.update(footprint_placeholder=True, footprint_note="stands in")
@@ -235,7 +235,7 @@ class PowerTracesAreSizedTest(unittest.TestCase):
         return {"schema": 1, "id": part_id, "name": part_id, "kind": "test", "needs": [],
                 "power": [{"pin": "VCC", "rail": rail, "direction": "in"},
                           {"pin": "GND", "rail": "ground", "direction": "in"}],
-                "pin_order": ["VCC", "GND"], "footprint": "pinrow2",
+                "pin_order": ["VCC", "GND"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "pinrow2",
                 "body_mm": {"width": 5, "height": 5, "verified": True, "source": "test"}}
 
     def _emit(self, rules):
@@ -291,7 +291,7 @@ class ManyOfOnePartTest(unittest.TestCase):
         part = {"schema": 1, "id": "tactile-button", "name": "button", "kind": "button",
                 "needs": [{"signal": "BUTTON", "pin": "A", "direction": "in"}],
                 "power": [{"pin": "B", "rail": "ground", "direction": "in"}],
-                "pin_order": ["A", "B"], "footprint": "pushbutton",
+                "pin_order": ["A", "B"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "pushbutton",
                 "body_mm": {"width": 6, "height": 6, "verified": True, "source": "6x6"}}
         if instance:
             part["_instance"] = instance
@@ -353,7 +353,7 @@ class AnyRailCanBeNamedTest(unittest.TestCase):
     @staticmethod
     def part(part_id, power):
         return {"schema": 1, "id": part_id, "name": part_id, "kind": "test",
-                "needs": [], "power": power, "pin_order": [s["pin"] for s in power],
+                "needs": [], "power": power, "pin_order": [s["pin"] for s in power], "pin_order_proof": {"verified": False, "source": "a test fixture"},
                 "footprint": "pinrow%d" % len(power)}
 
     def test_a_rail_nobody_thought_of_becomes_a_net(self):
@@ -913,7 +913,7 @@ class TwoSuppliesOnOneRailTest(unittest.TestCase):
                 "power": [{"pin": "VIN", "rail": "traction", "direction": "in"},
                           {"pin": "VOUT", "rail": rail, "direction": "out"},
                           {"pin": "GND", "rail": "ground", "direction": "in"}],
-                "pin_order": ["VIN", "VOUT", "GND"], "footprint": "pinrow3",
+                "pin_order": ["VIN", "VOUT", "GND"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "pinrow3",
                 "body_mm": {"width": 10, "height": 10, "verified": True, "source": "test"}}
 
     def test_a_supply_onto_the_modules_own_rail_is_named(self):

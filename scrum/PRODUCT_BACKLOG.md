@@ -680,6 +680,15 @@ mistake reverses a supply, is the one fact the validator asks no proof for.
 **Value proven by:** `parts.py --validate` refuses a `pin_order` without a typed source (verified, where
 read, a page when it is a kept document); each of the three live warnings is printed by `--show` or
 by a check with its arithmetic, and the DS3231 record no longer contradicts itself; mutations caught.
+**Increment 1 done 2026-10-03:** `parts.validate` refuses a `pin_order` without `pin_order_proof
+{verified, source[, cites]}`, and `--unverified` lists an unverified pin order with why it matters.
+The 18 records in use migrated in the same change (W16) — each `//pin_order` note became the proof,
+its hazards became `host_requirements` that `--show` and the board file print: the JST inlet's crimp
+order, the amplifier's missing pad-1 marker, the 12 V jack's meter check before wiring, the LED's long
+lead, and the RC car's buck, servo and XT30 reversals. Only the LED's proof is verified — the one that
+cites a page of a kept datasheet; the other 17 say honestly how they were read until their documents
+are kept and cited (B12, P64a). The DS3231's contradictory note is replaced by what the PO's photo
+shows. Mutations `sprint-10-p81.json`: 4, all caught. Open: increment 2, B11's pull-up arithmetic.
 
 ### P83 — The catalog leaves the plugin, slim; candidates' photos and seller listings go — **slice 4; the PO's decision of 2026-10-03 (W21)**
 **Needed by:** everyone who installs spark — the researcher writes catalog records into the plugin's

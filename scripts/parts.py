@@ -208,6 +208,25 @@ def chip_folder(part: dict, path: Path) -> Path:
 HOST_PART_KINDS = ("pulldown", "pullup", "divider", "series")
 
 
+def pin_order_problems(part: dict) -> list:
+    """
+    A pin order says how it was read (P81): it is the field where a mistake reverses a supply, and
+    it was the one fact whose source lived only in a prose note nothing checked.
+    """
+    if not any(pad for pad in part.get("pin_order") or []):
+        return []
+    proof = part.get("pin_order_proof")
+    if not isinstance(proof, dict):
+        return ["pin_order states no pin_order_proof {verified, source}: where the order was read, "
+                "because a pin order read wrong reverses a supply"]
+    problems = []
+    if not isinstance(proof.get("verified"), bool):
+        problems.append("pin_order_proof.verified must be true or false")
+    if not isinstance(proof.get("source"), str) or not proof["source"].strip():
+        problems.append("pin_order_proof names no source: say where the pin order was read")
+    return problems
+
+
 def document_problems(part: dict) -> list:
     """
     A record points at its kept sources from `documents`, which replaced `attachments` (P62a,
@@ -565,6 +584,7 @@ def validate(part: dict, path: Path) -> list:
     problems.extend(host_part_problems(part))
     problems.extend(i2c_pullup_problems(part))
     problems.extend(document_problems(part))
+    problems.extend(pin_order_problems(part))
     problems.extend(simulation_problems(part, path))
     return problems
 
@@ -595,20 +615,23 @@ def signals_for(part_ids, project: Path = None) -> list:
     return signals
 
 
+def open_questions_of(part, part_id=None):
+    """Every fact in one record nobody has checked — its pin order among them (P81)."""
+    part_id = part_id or part.get("id")
+    questions = [{"part": part_id, "fact": name, "assumed": fact.get("value"),
+                  "why_it_matters": fact.get("why_it_matters") or "", "source": fact.get("source", "")}
+                 for name, fact in (part.get("facts") or {}).items() if not fact.get("verified")]
+    proof = part.get("pin_order_proof")
+    if isinstance(proof, dict) and not proof.get("verified"):
+        questions.append({"part": part_id, "fact": "pin_order", "assumed": part.get("pin_order"),
+                          "why_it_matters": "a pin order read wrong reverses a supply or swaps a signal",
+                          "source": proof.get("source", "")})
+    return questions
+
+
 def unverified(part_ids, project: Path = None) -> list:
     """Every fact nobody has checked, across these parts — the design's real open questions."""
-    open_questions = []
-    for part_id in part_ids:
-        part = any_record(part_id, project)
-        for name, fact in (part.get("facts") or {}).items():
-            if fact.get("verified"):
-                continue
-            open_questions.append({
-                "part": part_id, "fact": name,
-                "assumed": fact.get("value"),
-                "why_it_matters": fact.get("why_it_matters") or "",
-                "source": fact.get("source", "")})
-    return open_questions
+    return [question for part_id in part_ids for question in open_questions_of(any_record(part_id, project), part_id)]
 
 
 #: Vendors to research in, in order, when a project's brief does not say. DFRobot first because

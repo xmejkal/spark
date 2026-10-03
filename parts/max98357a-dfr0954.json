@@ -16,7 +16,6 @@
     "source": "DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF",
     "note": "1.6 mm PCB, 7.1 mm total height including the JST socket, R1.0 corners, and NO MOUNTING HOLES — the DXF contains no holes but the 12 pads."
   },
-  "//pin_order": "12 castellated pads, two rows of six at 2.54 mm, rows 15.24 mm apart. THERE IS NO PAD-1 MARKER — no square pad, no dot — so a footprint must key off the silkscreen labels rather than a pad number. DFRobot model it as two 6-way connectors: P1 is the top row numbered right-to-left, P2 the bottom row left-to-right, which concatenated runs counter-clockwise from the top right. Physically, top row left-to-right is VCC GND LRC BCLK DIN SPK+ and bottom row left-to-right is GAIN SD NC GND VCC SPK-. DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF",
   "pin_order": [
     "SPK_P",
     "DIN",
@@ -31,6 +30,10 @@
     "VCC",
     "SPK_N"
   ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "12 castellated pads, two rows of six at 2.54 mm, rows 15.24 mm apart. DFRobot model it as two 6-way connectors: P1 is the top row numbered right-to-left, P2 the bottom row left-to-right, which concatenated runs counter-clockwise from the top right. Physically, top row left-to-right is VCC GND LRC BCLK DIN SPK+ and bottom row left-to-right is GAIN SD NC GND VCC SPK-. DFRobot dimension drawing DFR0954_max98357a-i2s_dimension_1.0.pdf, plus their DXF"
+  },
   "needs": [
     {
       "signal": "I2S_BCLK",
@@ -176,7 +179,8 @@
     "SD must be DRIVEN LOW to shut the amplifier down, not left floating — an on-board resistor holds it high, and floating selects a channel rather than turning it off. Removing the clock only reaches standby at 340 uA.",
     "Holding SD low draws current through that on-board resistor for as long as it is held: 33 uA at 3.3 V if R1 is 100k, 4.9 uA if it is 680k. The host GPIO sinks it, and it is spent precisely while the amplifier is meant to be off.",
     "SPK+ and SPK- are on OPPOSITE rows, diagonally — top row rightmost and bottom row rightmost. They are not an adjacent pair, and a footprint drawn as if they were will wire the speaker across the wrong two pads.",
-    "This module has no mounting holes. Whatever holds it is the host board's problem."
+    "This module has no mounting holes. Whatever holds it is the host board's problem.",
+    "There is NO pad-1 marker — no square pad, no dot: orient the module by its silkscreen labels, never by a pad number, on a breadboard, a perfboard or a footprint."
   ],
   "simulation": {
     "skip": "no Wokwi part for the I2S amplifier; cues are visible in the serial log"

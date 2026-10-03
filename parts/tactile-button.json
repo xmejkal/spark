@@ -24,7 +24,10 @@
     "A",
     "B"
   ],
-  "//pin_order": "A 6x6 tactile switch has four legs in two pairs, and each pair is one terminal — so a 2-pin footprint is the electrical truth and a 4-pad footprint is the mechanical one. `pushbutton` in footprinter gives four pads wired as two nets, which is what a board wants; this record describes the two terminals.",
+  "pin_order_proof": {
+    "verified": false,
+    "source": "A 6x6 tactile switch has four legs in two pairs, and each pair is one terminal — so a 2-pin footprint is the electrical truth and a 4-pad footprint is the mechanical one. `pushbutton` in footprinter gives four pads wired as two nets, which is what a board wants; this record describes the two terminals."
+  },
   "footprint": "pushbutton",
   "body_mm": {
     "width": 6.0,

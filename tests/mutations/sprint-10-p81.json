@@ -1,0 +1,10 @@
+[
+ {"file": "scripts/parts.py", "name": "a pin order needs no proof again",
+  "find": "    problems.extend(pin_order_problems(part))", "replace": ""},
+ {"file": "scripts/parts.py", "name": "a proof whose verified is not true or false passes",
+  "find": "    if not isinstance(proof.get(\"verified\"), bool):", "replace": "    if False:"},
+ {"file": "scripts/parts.py", "name": "a proof that names no source passes",
+  "find": "    if not isinstance(proof.get(\"source\"), str) or not proof[\"source\"].strip():", "replace": "    if False:"},
+ {"file": "scripts/parts.py", "name": "an unverified pin order is not among the open questions",
+  "find": "    if isinstance(proof, dict) and not proof.get(\"verified\"):", "replace": "    if False:"}
+]

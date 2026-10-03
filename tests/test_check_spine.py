@@ -519,7 +519,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             {"schema": 1, "id": "probe", "name": "probe", "kind": "connector", "needs": [],
              "power": [{"pin": "VCC", "rail": "logic", "direction": "in"},
                        {"pin": "GND", "rail": "ground", "direction": "in"}],
-             "pin_order": ["VCC", "GND"], "footprint": "jst_ph_2",
+             "pin_order": ["VCC", "GND"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "jst_ph_2",
              "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}))
         path = root / "car.requirements.json"
         path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["probe"]}))

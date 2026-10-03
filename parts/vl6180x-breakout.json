@@ -90,7 +90,6 @@
       "generic GY-VL6180"
     ]
   },
-  "//pin_order": "Pololu's 7-pin header reads VDD · VIN · GND · SDA · SCL · GPIO0/CE · GPIO1. This file wires five of them; pad 1 (VDD, the 2.8 V rail brought out for reference) and pad 6 (GPIO0/CE, the chip-enable) are real pads this design does not use, so they stay empty. Read off Pololu's own schematic for carrier #2489.",
   "//variant": "WHICH BREAKOUT THIS DESCRIBES, because they are not interchangeable. Four exist and they differ in size, pin count, pin order and what is on the board: Pololu #2489 has 7 pins, the current Adafruit 3316 has 6 and no 2v8 pin, the older Adafruit had 7 in another order, and the generic boards vary between factories. The facts below are read off Pololu's schematic and hold for that carrier ONLY. On another board they are not approximately right, they are unknown.",
   "variant": "Pololu VL6180X Carrier #2489 (PCB revision irs09a)",
   "pin_order": [
@@ -102,6 +101,10 @@
     null,
     "GPIO1"
   ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "Pololu's 7-pin header reads VDD · VIN · GND · SDA · SCL · GPIO0/CE · GPIO1. This file wires five of them; pad 1 (VDD, the 2.8 V rail brought out for reference) and pad 6 (GPIO0/CE, the chip-enable) are real pads this design does not use, so they stay empty. Read off Pololu's own schematic for carrier #2489."
+  },
   "simulation": {
     "wokwi": {
       "chip": "vl6180x",

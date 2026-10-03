@@ -24,7 +24,10 @@
     "VCC",
     "GND"
   ],
-  "//pin_order": "Pad 1 is VCC. JST PH housings are keyed, so the mate cannot be reversed — but the CRIMP order in a hand-made harness can be, and reversing 6 V into a motor driver's ground is not recoverable. Mark pin 1 on the silkscreen.",
+  "pin_order_proof": {
+    "verified": false,
+    "source": "Pad 1 is VCC: this record's own convention for a generic 2-pin inlet, not read from a document."
+  },
   "footprint": "jst_ph_2",
   "body_mm": {
     "width": 7.9,
@@ -35,7 +38,8 @@
   "host_requirements": [
     "Size the inlet for the STALL current, not the running current. A lid motor stalls every time something blocks it, and JST PH is rated 2 A per contact.",
     "This connector and any other 2-pin connector on the board can be cross-plugged unless one of them is keyed or a different series. Swapping a motor supply into an audio output destroys the amplifier.",
-    "Fuse or current-limit upstream. Nothing on the board protects this rail."
+    "Fuse or current-limit upstream. Nothing on the board protects this rail.",
+    "Check the CRIMP order of a hand-made harness before first power: JST PH housings are keyed, so the mate cannot be reversed, but the crimps can — and 6 V into a motor driver's ground is not recoverable. Mark pin 1 on the silkscreen."
   ],
   "facts": {
     "contact_rating_a": {

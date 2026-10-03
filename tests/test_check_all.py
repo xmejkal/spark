@@ -300,7 +300,7 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
                   # was refused — by the rule written for exactly that mistake.
                   "power": [{"pin": "VCC", "rail": "logic", "direction": "in"},
                             {"pin": "GND", "rail": "ground", "direction": "in"}],
-                  "pin_order": ["VCC", "GND"], "footprint": "jst_ph_2",
+                  "pin_order": ["VCC", "GND"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "jst_ph_2",
                   "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}
         if placeholder:
             record.update(footprint_placeholder=True, footprint_note="stands in")
@@ -415,7 +415,7 @@ class TheRecordsReachPhysicsTest(unittest.TestCase):
                  "facts": {"operating_current_ma": {"value": None, "verified": False,
                                                     "source": "nobody states it",
                                                     "why_it_matters": "the rail's sum"}},
-                 "pin_order": ["VCC", "GND"], "footprint": "jst_ph_2",
+                 "pin_order": ["VCC", "GND"], "pin_order_proof": {"verified": False, "source": "a test fixture"}, "footprint": "jst_ph_2",
                  "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}
         (root / "parts" / "probe.json").write_text(json.dumps(probe))
         (root / "garden.requirements.json").write_text(json.dumps(

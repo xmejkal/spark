@@ -33,10 +33,13 @@ import parts  # noqa: E402
 
 
 def part(part_id="thing", **overrides):
-    return dict({
+    definition = dict({
         "schema": 1, "id": part_id, "name": "A Thing", "kind": "test",
         "needs": [{"signal": "SIG", "pin": "P", "direction": "in"}],
     }, **overrides)
+    if definition.get("pin_order") and "pin_order_proof" not in definition:
+        definition["pin_order_proof"] = {"verified": False, "source": "a test fixture"}  # P81
+    return definition
 
 
 def written(definition):
@@ -1176,6 +1179,41 @@ class WhatAPartDemandsOfItsHostTest(unittest.TestCase):
         said = " ".join(self._problems([{"kind": "divider", "pin": "OUT", "top_ohms": 10000, "why": "w"}]))
         self.assertIn("bottom_ohms", said)
         self.assertEqual(self._problems([{"kind": "divider", "pin": "OUT", "top_ohms": 10000, "bottom_ohms": 18000, "why": "w"}]), [])
+
+class APinOrderSaysHowItWasReadTest(unittest.TestCase):
+    """
+    P81. Every fact must say where it came from, except the one where a mistake reverses a supply:
+    `pin_order` carried its proof only in a prose note nothing checked — and the irrigation DS3231's
+    note described the 4-pad edge while its typed order was the 6-pin header, SCL against 32K.
+    """
+
+    def record(self, **extra):
+        definition = {"schema": 1, "id": "x-part", "name": "X", "kind": "sensor",
+                      "needs": [{"signal": "OUT", "pin": "OUT", "needs": []}],
+                      "power": [{"pin": "GND", "rail": "ground", "direction": "in"}],
+                      "pin_order": ["OUT", "GND"], "footprint": "pinrow2",
+                      "body_mm": {"width": 5, "height": 5, "verified": True, "source": "x"}}
+        definition.update(extra)
+        return definition
+
+    def problems(self, definition):
+        import tempfile
+        return [p for p in parts.validate(definition, Path(tempfile.mkdtemp()) / "x-part.json") if "pin_order" in p]
+
+    def test_a_pin_order_without_proof_is_refused(self):
+        self.assertTrue(any("pin_order_proof" in p for p in self.problems(self.record())))
+
+    def test_a_proof_says_whether_it_was_verified_and_where_it_was_read(self):
+        good = self.record(pin_order_proof={"verified": False, "source": "read off the module's silkscreen in a photo"})
+        self.assertEqual(self.problems(good), [])
+        self.assertTrue(self.problems(self.record(pin_order_proof={"verified": False, "source": ""})))
+        self.assertTrue(self.problems(self.record(pin_order_proof={"verified": "yes", "source": "x"})))
+
+    def test_an_unverified_pin_order_is_listed_with_the_unverified_facts(self):
+        definition = self.record(pin_order_proof={"verified": False, "source": "read off a photo"})
+        listed = [q for q in parts.open_questions_of(definition) if q["fact"] == "pin_order"]
+        self.assertEqual(len(listed), 1)
+        self.assertEqual(listed[0]["source"], "read off a photo")
 
 class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
     """

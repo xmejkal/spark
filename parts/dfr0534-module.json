@@ -108,7 +108,6 @@
   "sources": {
     "vendor": "https://wiki.dfrobot.com/Voice_Module_SKU__DFR0534"
   },
-  "//pin_order": "Read off the board's own silkscreen in DFRobot's photograph, not inferred from the dimension drawing: the top row is VCC GND RX TX BUSY and the bottom row is ONE DACR DACL SP- SP+. The drawing does not say whether it is a top or bottom view and the board is nearly mirror-symmetric in its landmarks, so the photo is what settles it. This file wires five of the ten pads; the rest stay empty rather than closing up. DFRobot's own product photography, kept at parts/datasheets/DFR0534_silkscreen_face_DFRobot.jpg and DFR0534_component_face_with_ruler_DFRobot.jpg in the bin",
   "pin_order": [
     "VCC",
     "GND",
@@ -121,6 +120,10 @@
     "SPKN",
     "SPKP"
   ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "Read off the board's own silkscreen in DFRobot's photograph, not inferred from the dimension drawing: the top row is VCC GND RX TX BUSY and the bottom row is ONE DACR DACL SP- SP+. The drawing does not say whether it is a top or bottom view and the board is nearly mirror-symmetric in its landmarks, so the photo is what settles it. This file wires five of the ten pads; the rest stay empty rather than closing up. DFRobot's own product photography, kept at parts/datasheets/DFR0534_silkscreen_face_DFRobot.jpg and DFR0534_component_face_with_ruler_DFRobot.jpg in the bin"
+  },
   "simulation": {
     "skip": "no Wokwi part for the MP3 module; the firmware's log says which cue it played"
   }

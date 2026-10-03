@@ -102,7 +102,6 @@
   "sources": {
     "datasheet": "https://www.elecrow.com/download/datasheet-l9110.pdf"
   },
-  "//pin_order": "Pad 1..N of the footprint, by this file's own pin names. Read directly off the silkscreen in the vendor's board photo — B-IA B-IB GND VCC A-IA A-IB — and corroborated by the Handson guide text, an archived Banana Robotics article and a Fritzing part. One reseller listing gives a different order and the vendor's own schematic symbol numbers VCC and GND the other way round, which is why this says where it came from.",
   "pin_order": [
     "BIA",
     "BIB",
@@ -111,6 +110,10 @@
     "AIA",
     "AIB"
   ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "Pad 1..N of the footprint, by this file's own pin names. Read directly off the silkscreen in the vendor's board photo — B-IA B-IB GND VCC A-IA A-IB — and corroborated by the Handson guide text, an archived Banana Robotics article and a Fritzing part. One reseller listing gives a different order and the vendor's own schematic symbol numbers VCC and GND the other way round, which is why this says where it came from."
+  },
   "simulation": {
     "wokwi": {
       "chip": "l9110s",
