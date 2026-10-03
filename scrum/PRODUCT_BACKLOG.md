@@ -778,6 +778,20 @@ The first cold run found what no earlier step could: `tsci` starts with `#!/usr/
 board engine needs bun — Homebrew had hidden it here; it is on the list now. Not yet exercised: the
 same run through the slash commands in a fresh Claude Code session (the scripts behind them were run).
 Mutation tables `sprint-10-p82-1` … `-7`.
+**The final review** (a fresh reviewer, the whole branch) found what those runs had not: the simulator's
+install line `npm install -g wokwi-cli` is a 404 — npm has no such package — and a broken tools file, a
+project turning a tool off, a pin and a project's own install command each misbehaved at a real entry
+point. All fixed test-first (`sprint-10-p82-review`, 22 of 22 caught): wokwi-cli is Wokwi's release
+binary for the machine, v0.28.0 against GitHub's sha256; a download is a plain file name, lands as
+`.part` and is renamed only after its checksum; `--dry-run` shows every command before the yes and marks
+those a project's file chose; the board engine installs `--save-exact` (npm had written `^0.1.2113`).
+**The third cold run** took both paths the first two missed — a bare directory with no project, and
+the simulator itself: `--install bun tscircuit wokwi-cli` ran `npm install -g bun`, `npm install
+--save-dev --save-exact @tscircuit/cli@0.1.2113 tscircuit@0.0.2600` and the curl of
+`wokwi-cli-macos-arm64` (58282064 bytes, checksum checked, reports `0.28.0`); then `check_spine.py
+requirements.json` from the bare directory: `[ok  ] board … from the plugin's library`, `19 trace(s)`,
+`17 wire(s)`, *the chain runs end to end*. Nine minor findings are deferred, listed in the branch's
+final message to the PO.
 
 ### B13 — "must not float" passes a pin that floats — **slice 4; found 2026-10-03 building the quickstart** — DONE 2026-10-03
 **Needed by:** the quickstart, whose `rules-vs-netlist` read `[ok]` while both buttons' inputs have no
@@ -1370,7 +1384,9 @@ skip is the converter's own development suite. Running the bundle on the quickst
 the tests had not: `Bun.file` in `cli.ts` ("Bun is not defined"), and bun 1.4.2 bundling
 `lib/mapping.ts` twice for Node when `cli.ts` began with `#!/usr/bin/env bun` (the records were
 ignored: 9 wires, resistors as RGB LEDs). Both fixed; the quickstart's diagram is byte-identical to the
-bun run's, and two tests run the shipped file through a real conversion.
+bun run's, and two tests run the shipped file through a real conversion. The final review found the
+documented example still reached the plugin's own `cli.ts` from a directory in no project; the plugin's
+source never runs now, and the third cold run converted from a bare directory through the bundle.
 
 ### B11 — A part demanded of the board that the part's own verified fact defeats is placed silently — **slice 2; found 2026-10-03 by the P80 council** — DONE 2026-10-03, as P81's increment 2
 **Needed by:** the quickstart and the bin, both of which put 10 k pull-downs on the L9110S's inputs
