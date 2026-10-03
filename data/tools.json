@@ -84,7 +84,7 @@
       "tscircuit-board"
     ],
     "install": {
-      "npm": "npm install --save-dev @tscircuit/cli@{version} tscircuit@{core}"
+      "npm": "npm install --save-dev --save-exact @tscircuit/cli@{version} tscircuit@{core}"
     },
     "needs": [
       "bun"

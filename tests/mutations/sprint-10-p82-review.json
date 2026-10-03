@@ -19,5 +19,6 @@
  {"file": "scripts/init_project.py", "name": "I6: what the documents were measured on is the person's pin", "find": "_TSCIRCUIT = tools._read(tools.DEFAULTS)[\"tscircuit\"]", "replace": "_TSCIRCUIT = tools.merged()[\"tools\"][\"tscircuit\"]"},
  {"file": "scripts/check_spine.py", "name": "I1: a missing engine is looked for from the scratch directory, not the project", "find": "            tools.find(\"board-engine\", project or workdir)", "replace": "            tools.find(\"board-engine\", workdir)"},
  {"file": "scripts/sim_project.py", "name": "I1: no wokwi-cli prints a fixed hint, not the list's sentence", "find": "% (chip, simulator_problem() or \"wokwi-cli was not found\"))", "replace": "% (chip, \"wokwi-cli was not found\"))"},
- {"file": "scripts/check_spine.py", "name": "I4: a converter swapped in by the list is run as if it were the bundle", "find": "    if converter.entry.get(\"kind\") == \"bundled\":", "replace": "    if True:"}
+ {"file": "scripts/check_spine.py", "name": "I4: a converter swapped in by the list is run as if it were the bundle", "find": "    if converter.entry.get(\"kind\") == \"bundled\":", "replace": "    if True:"},
+ {"file": "data/tools.json", "name": "a declined item, ruled: the board engine is installed at a caret range that floats", "find": "npm install --save-dev --save-exact @tscircuit", "replace": "npm install --save-dev @tscircuit"}
 ]

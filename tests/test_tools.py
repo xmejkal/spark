@@ -567,6 +567,12 @@ class SparkSDefaultsHoldTogetherTest(unittest.TestCase):
             self.assertTrue(build["url"].startswith("https://github.com/wokwi/wokwi-cli/releases/download/v"), build)
             self.assertRegex(build["sha256"], "^[0-9a-f]{64}$")
 
+    def test_the_board_engine_installs_at_exactly_its_pins(self):
+        # The cold run's package.json read "^0.1.2113": a caret lets the next `npm install` take a newer CLI,
+        # the drift the pins exist to stop (found checking a ruling on the final review, 2026-10-03).
+        line = tools.merged(None, Path(tempfile.mkdtemp()) / "absent.json")["tools"]["tscircuit"]["install"]["npm"]
+        self.assertIn("--save-exact", line)
+
     def test_the_board_engine_says_it_needs_bun(self):
         # tsci's launcher is `#!/usr/bin/env bun` (tscircuit's cli.mjs); the cold run proved it.
         self.assertIn("bun", tools.merged(None, Path(tempfile.mkdtemp()) / "absent.json")["tools"]["tscircuit"].get("needs") or [])
