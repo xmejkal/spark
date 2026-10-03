@@ -107,6 +107,12 @@ class FindingAToolTest(unittest.TestCase):
             tools.find("mystery", None, personal)
         self.assertIn("no way to find it", str(refused.exception))
 
+    def test_a_version_other_than_the_list_s_says_so_in_one_line(self):
+        personal = layer({"pdftotext": {"version": "26.09.0"}})
+        self.assertEqual(tools.version_note("pdftotext", "26.09.0", personal=personal), "")
+        self.assertEqual(tools.version_note("pdftotext", "unknown version", personal=personal), "")
+        self.assertIn("measured on pdftotext version 26.09.0", tools.version_note("pdftotext", "24.0", personal=personal))
+
     def test_an_npm_tool_is_found_in_the_project_before_the_path(self):
         root = Path(tempfile.mkdtemp())
         (root / "node_modules" / ".bin").mkdir(parents=True)

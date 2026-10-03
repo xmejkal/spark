@@ -35,6 +35,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import tools  # noqa: E402
 from design import CIRCUIT_PATHS  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
@@ -345,11 +346,14 @@ def write(path, payload, force, brief=False, merge=False, unstated=None):
 #: To move them: build the documented example in a project with **no global `tsci`**, calling
 #: `./node_modules/.bin/tsci` explicitly, update the output block in `commands/build.md`, and
 #: change both — the suite holds them to each other and to the document.
-PINNED_TSCI = "0.1.2113"
+#: Both now live in the tools list (data/tools.json → "tscircuit": version, core), where a project or a
+#: person can move them in one line (P82); these names stay for the code and the tests that read them.
+_TSCIRCUIT = tools.merged()["tools"]["tscircuit"]
+PINNED_TSCI = _TSCIRCUIT["version"]
 
 #: The `tscircuit` core every number in the documents was measured on. Pinned as a direct
 #: dependency, because the CLI's peer range accepts anything and would take the newest.
-PINNED_CORE = "0.0.2600"
+PINNED_CORE = _TSCIRCUIT["core"]
 
 
 def package_file(project):
@@ -361,8 +365,9 @@ def package_file(project):
     directory, where a global tsci resolves from its own install. Never rewritten: a person may
     add to it. `npm install` once, then `npx tsci build`.
     """
+    pinned = tools.merged(project)["tools"]["tscircuit"]  # a project's own pin wins (P82)
     return {"name": project.name, "private": True,
-            "dependencies": {"@tscircuit/cli": PINNED_TSCI, "tscircuit": PINNED_CORE},
+            "dependencies": {"@tscircuit/cli": pinned["version"], "tscircuit": pinned["core"]},
             "//": "written by /spark:init: `npm install` once, then `npx tsci build board.tsx` works here. "
                   "BOTH are pinned: the cli, and the `tscircuit` core it takes as a `*` peer dependency "
                   "and would otherwise fetch newest. Every number in spark's documents was measured on "

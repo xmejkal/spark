@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "tsci is looked for outside the list again",
+  "find": "        return Path(tools.find(\"board-engine\", start).command[0])",
+  "replace": "        return None"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "a version other than the list's passes in silence",
+  "find": "    return \"; spark was measured on %s %s %s\" % (name, field, stated)",
+  "replace": "    return \"\""
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "the version the list states is reported as a drift",
+  "find": "or str(reported) == str(stated):",
+  "replace": "or False:"
+ },
+ {
+  "file": "scripts/init_project.py",
+  "name": "a project's own pin never reaches the package file",
+  "find": "    pinned = tools.merged(project)[\"tools\"][\"tscircuit\"]  # a project's own pin wins (P82)",
+  "replace": "    pinned = {\"version\": PINNED_TSCI, \"core\": PINNED_CORE}"
+ }
+]

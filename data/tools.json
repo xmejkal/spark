@@ -2,11 +2,13 @@
   "//": "The tools spark depends on (P82, docs/2026-10-03-tools-design.md). A person's ~/.local/share/spark/tools.json and a project's .spark/tools.json override any field of any entry; the project wins. `roles` points a job at a tool; `contracts` says what the job needs, and only this file states them.",
   "roles": {
     "pdf-text": "pdftotext",
-    "simulator": "wokwi-cli"
+    "simulator": "wokwi-cli",
+    "board-engine": "tscircuit"
   },
   "contracts": {
     "pdf-text": "page-text",
-    "simulator": "wokwi-project"
+    "simulator": "wokwi-project",
+    "board-engine": "tscircuit-board"
   },
   "pdftotext": {
     "for": "reading a datasheet page by page (parts.py --read)",
@@ -34,5 +36,18 @@
       "npm": "npm install -g wokwi-cli"
     },
     "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci"
+  },
+  "tscircuit": {
+    "for": "building the board spark writes",
+    "kind": "npm",
+    "exe": "tsci",
+    "version": "0.1.2113",
+    "core": "0.0.2600",
+    "meets": [
+      "tscircuit-board"
+    ],
+    "install": {
+      "npm": "npm install --save-dev @tscircuit/cli@{version} tscircuit@{core}"
+    }
   }
 }

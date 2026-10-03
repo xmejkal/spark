@@ -2,20 +2,20 @@
  {
   "file": "scripts/init_project.py",
   "name": "the core goes unpinned again, so a new project takes whatever npm has newest",
-  "find": "            \"dependencies\": {\"@tscircuit/cli\": PINNED_TSCI, \"tscircuit\": PINNED_CORE},",
-  "replace": "            \"dependencies\": {\"@tscircuit/cli\": PINNED_TSCI},"
+  "find": "            \"dependencies\": {\"@tscircuit/cli\": pinned[\"version\"], \"tscircuit\": pinned[\"core\"]},",
+  "replace": "            \"dependencies\": {\"@tscircuit/cli\": pinned[\"version\"]},"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "data/tools.json",
   "name": "the cli is pinned to a core version again — the exact P33 defect",
-  "find": "PINNED_TSCI = \"0.1.2113\"",
-  "replace": "PINNED_TSCI = \"0.0.2600\""
+  "find": "\"version\": \"0.1.2113\"",
+  "replace": "\"version\": \"0.0.2600\""
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "data/tools.json",
   "name": "the pinned core drifts from the one the documents were measured on",
-  "find": "PINNED_CORE = \"0.0.2600\"",
-  "replace": "PINNED_CORE = \"0.0.2663\""
+  "find": "\"core\": \"0.0.2600\"",
+  "replace": "\"core\": \"0.0.2663\""
  },
  {
   "file": "scripts/check_spine.py",

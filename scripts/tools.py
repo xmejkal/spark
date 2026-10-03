@@ -110,6 +110,14 @@ def locate(entry, project):
     return None
 
 
+def version_note(name, reported, field="version", project=None, personal=None):
+    """'' when the reported version is the one the list states for this field, else the one line to print."""
+    stated = merged(project, personal)["tools"].get(name, {}).get(field)
+    if not stated or reported in (None, "unknown version") or str(reported) == str(stated):
+        return ""
+    return "; spark was measured on %s %s %s" % (name, field, stated)
+
+
 def find(name, project=None, personal=None):
     """A role or a tool's name -> the Tool to run, or a ToolProblem saying why not and what to do."""
     lists = merged(project, personal)

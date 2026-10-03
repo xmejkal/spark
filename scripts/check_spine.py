@@ -63,6 +63,7 @@ import emit_board  # noqa: E402
 import init_project  # noqa: E402
 import netlist  # noqa: E402
 import sim_project  # noqa: E402
+import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
@@ -90,18 +91,14 @@ class Stage:
 
 def find_toolchain(start):
     """
-    `tsci`, or None.
-
-    Looked for beside the requirements file, then upward, then on PATH — the same places a person
-    would look, and in that order because a project's own pinned version beats whatever is
-    installed globally.
+    `tsci`, or None — the board-engine from the tools list (P82): the project's own node_modules,
+    upward from `start`, then the PATH — the same places a person would look, and in that order
+    because a project's own pinned version beats whatever is installed globally.
     """
-    for directory in boards.walk_up(start):
-        candidate = directory / "node_modules" / ".bin" / "tsci"
-        if candidate.is_file():
-            return candidate
-    found = shutil.which("tsci")
-    return Path(found) if found else None
+    try:
+        return Path(tools.find("board-engine", start).command[0])
+    except tools.ToolProblem:
+        return None
 
 
 def modules_for(toolchain):

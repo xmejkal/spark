@@ -36,6 +36,20 @@ def a_project(nets=("V33", "GND", "MOTOR6V", "SDA", "SCL")):
 
 
 class WhatItWritesTest(unittest.TestCase):
+    def test_a_project_s_own_pin_reaches_the_package_file(self):
+        # The spec's "change a version": one line in the project's tools file, and the next init uses it.
+        import json, tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / ".spark" / "tools.json").write_text(json.dumps({"tscircuit": {"version": "0.1.2200", "core": "0.0.2700"}}))
+        dependencies = init_project.package_file(root)["dependencies"]
+        self.assertEqual(dependencies, {"@tscircuit/cli": "0.1.2200", "tscircuit": "0.0.2700"})
+
+    def test_the_pins_are_the_tools_list_s(self):
+        import tools
+        entry = tools.merged()["tools"]["tscircuit"]
+        self.assertEqual((init_project.PINNED_TSCI, init_project.PINNED_CORE), (entry["version"], entry["core"]))
+
     def setUp(self):
         self.root = a_project()
         init_project.main(["--project", str(self.root)])
