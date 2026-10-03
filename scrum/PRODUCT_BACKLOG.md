@@ -642,6 +642,27 @@ fetches, minutes — and its record reviewed against a written professional bar 
 cited by page and table, the exact orderable part number, every unverified fact said so, no candidate
 records nobody will read); `agents/parts-researcher.md` and `commands/research.md` changed where either
 falls short, and the next researched part measured against the first.
+**Council of 2026-10-03 (four lenses: cost, lean design, professional bar, skeptic), and the PO's
+decisions.** Measured from the harness's own transcripts of all 16 research runs: the full protocol's
+median is 78 tool calls, ~5.0 M tokens processed, ~25 min; the lean brief for the L-7113ID took 19
+calls, ~0.55 M, 148 s. Seller listings were half the calls of commodity runs and the design used none;
+47 of the store's 91 documents belong only to candidates nobody chose; whole datasheets entered early
+are paid for on every later turn — the needed pages are 13 % of the LED's and 2 % of the WROOM's text.
+**The PO chose:** (1) **build** `parts.py --read` (stream a kept datasheet page by page, stop when every
+wanted fact has a table row, print page, line and locator) and two small agents — `part-finder`
+(Haiku: maker-site searches only, at most two candidates with the datasheet URL, writes nothing) and
+`datasheet-reader` (Sonnet, no web: fills the record from `--read`, every fact cited) — with
+`parts-researcher` kept for modules and photos under a budget, and `/spark:research` routing between
+them; reuse first (project, library, catalog, the store — including documents no record cites —
+then the network); no seller listings during research. (2) **Shrink** his catalog rule: a candidate
+gets a catalog record only when its datasheet was kept — identity, document, why not, no typed facts;
+one seen only in a search is a line in `alternatives`. (3) **Wire the MCP servers that help** —
+jlcpcb's parametric search to `part-finder`, espressif-docs to `datasheet-reader`, measured with and
+without — revising his "CLI over MCP" rule for these two on measurement; sigrok parked until the
+bench; kicad and wokwi removed (spark drives tscircuit and wokwi-cli itself). The professional bar's
+mechanical checks (M1–M10: identity, a page for every verified fact, conditions and statistic per
+number, a worst-case limit for a series resistor, a host pull its record's own fact defeats) are the
+next increment, with B11.
 
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
