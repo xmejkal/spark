@@ -135,7 +135,7 @@ machine. It archives **the committed tree** and runs the suite and every mutatio
 line quoted in every commit:
 
 ```
-ee928a1 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once
+bec7b88 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once
 ```
 
 `ln -sf ../../tools/pre-push .git/hooks/pre-push`. It exists because "runs at every commit" was,

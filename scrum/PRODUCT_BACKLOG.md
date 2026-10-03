@@ -267,7 +267,7 @@ answers *"4 not asked for"* and the word **checked** is unreachable from the doc
 into the project, not both (W16).
 **Value proven by:** in an empty directory with no global tscircuit on PATH, the two documented
 commands leave a built, checked board in the project.
-**Done** (`7028a08`, `6c1bec5`), and the cause was worse than this item said. `@tscircuit/cli`
+**Done** (`71a244d`, `91bb9ba`), and the cause was worse than this item said. `@tscircuit/cli`
 declares **`tscircuit: "*"` as a peer dependency** and `tscircuit` was never in the package file at
 all — so pinning the CLI could never have constrained the build, and every project spark has ever
 created took whatever core npm had newest. The wrong version number is only what made that break
@@ -370,7 +370,7 @@ records** (`parts.py --sources dfr0534-module` says "cites no URL"; the record h
 the PO's machine backup; on another machine a pointer reads MISSING until re-fetched.
 
 ### P63 — A fact this project wrote down wrongly is corrected where a conversation will read it — DONE 2026-10-01
-**Spark `f5e2c66`, the bin `62a3139`.** Every correction reproduced at source before the edit (W20).
+**Spark `ac2e86f`, the bin `62a3139`.** Every correction reproduced at source before the edit (W20).
 Acceptance, run: in spark `grep -on "[^.]*ALL_LOW[^.]*\." parts boards` → two sentences, both
 "an AND only on the original ESP32"; in the bin, every remaining mention is that or the old claim
 quoted as corrected. The bin's `STATUS.md` row 5 now reads **misdiagnosed, and closed anyway**. The
@@ -413,7 +413,7 @@ against which version, so the next pass reads only what changed.
 **Value proven by:** the mechanical check lists every unsourced claim in spark's records, with a
 count; one isolated pass over the board and library records reports each claim supported,
 unsupported or contradicted with the quoted line; and it finds the `ALL_LOW` claim on its own if
-P63 has not yet removed it (run against `5056703`'s tree if it has).
+P63 has not yet removed it (run against `91e89ff`'s tree if it has).
 
 ## Seeing the board — the PO's request of 2026-10-01, all four chosen and ordered the same day
 
@@ -599,7 +599,7 @@ never read, and exits 1; after P59's fix it exits 0.
 rule that refuses it (the acceptance line's "scripts → nothing" was overspecified: refusing a key
 means naming it); `parts.py --sources dfr0534-module` lists **both** URLs (before: "cites no URL");
 **48 of 48** store files match their recorded sha256. Irrigation's 7 records had the old format too
-and migrated the same sitting (irrigation `894f4a3`, 42 files, chips left in place).
+and migrated the same sitting (irrigation `fa6d198`, 42 files, chips left in place).
 **Needed by:** a published plugin, which cannot ship the 48 vendor files (P61), and every record whose sources `--sources` cannot see today.
 `documents` replaces `attachments` on every kind of record — keyed by a short name: `title` and
 `version` as printed (null when nobody read it), `url`, `sha256`, `file`, `retrieved` — and a fact
@@ -656,7 +656,7 @@ the exact quote; a script greps each quote in the document's text, and a quote n
 checker's error. Non-supported verdicts are `raised` in `docs/observations/INDEX.md` and reproduced
 before any record changes. It ships only if `/spark:research` or `--promote` routes to it (W15).
 **Value proven by:** one pass over the 8 library and board records, every quote found by script, and —
-run against `5056703` — ALL_LOW comes back contradicted or suspect naming the ANY_LOW alias.
+run against `91e89ff` — ALL_LOW comes back contradicted or suspect naming the ANY_LOW alias.
 
 ### P57 — A stand-in's geometry is could-not-run, not a failure — DONE 2026-10-01, as re-cut by the PO
 **Run on the documented example after the last change** (an empty directory, `init`, the one build
@@ -731,7 +731,7 @@ pad sits on `V5V`, which the generated board already reports as undriven — so 
 servo alone. Found by reading `car.tsx` before believing the output.
 Also found while proving it: P63 had missed three copies of the false wake fact — irrigation's
 generated `board.tsx`, and the RC car's own `parts/tactile-button.json` with the `remote.tsx` it
-generates. Corrected the same sitting (irrigation `bbc8271`, rc-car `87443a0`).
+generates. Corrected the same sitting (irrigation `f8c59ad`, rc-car `87443a0`).
 **Needed by:** the irrigation controller and the RC car. The generated board says the gap in its own
 text — *"THE WIDTH OF THE TRACES ABOVE ON net.GND, net.V12V, net.V33, net.V5V IS UNJUSTIFIED…
 Nobody has stated what these rails carry"* — and `check_physics` exits 2 there, three of its four
@@ -906,7 +906,7 @@ the bin's own mapping (D20). About 1,000 lines of TypeScript with bun dependenci
 it but the plugin; one copy of each chip; the bin's `make check` green against the plugin's copy.
 
 ### P36 — The pin map is a file the firmware imports — DONE 2026-10-01
-**Run in irrigation after the last change** (`8117b27`): `assign_pins.py irrigation.requirements.json
+**Run in irrigation after the last change** (`2f0a48d`): `assign_pins.py irrigation.requirements.json
 --emit-pins firmware/pins.py` writes twelve plain constants, each with its silkscreen pad (`STATUS_LED
 = 15  # pad MO` — the board's key is MOSI, its silkscreen MO), why, and the board record's words for
 its roles; `main.py` imports them and types no GPIO. On the `micropython` unix port with a fake
@@ -1053,12 +1053,12 @@ listed open one file down (the shape of audit row D28).
 - **P41** — the safety net: eight tests for the board tool's command line, which the smart bin's Makefile calls eight ways and no test had ever entered, and ten characterisation tests pinning every `--json` payload's top-level keys and status word. 18 tests, 596 → 614. Proven by its own table: renaming one payload key, prefixing the board id, and changing what `--get` and `--resolve` print are all caught (table sprint-6-p41, 4 caught).
 - **P40** — the architecture the refactor should aim at: five lenses read all 3,552 code lines and the answer is that this is not a refactoring project. `docs/2026-09-30-refactoring-architecture.md` names the two live defects reproduced (a check reporting `ok` over its own could-not-run; three netlist walkers giving three answers to one circuit), the duplication ledger, the four things that get one home, the safety net that must come first, the order, what not to touch and why, and the stopping rule. Net about −85 code lines. No code moved.
 - **P33** — `/spark:init` pins tscircuit to the version the documents were measured on, and a test holds the pin and `build.md`'s example output to each other; proven by hand in an empty directory: init, `npm install`, `npx tsci build` → `Circuits 1 passed`, 15 traces, no errors (table sprint-6-p33, 2 caught).
-- **R11** — research parts and modules, vendor by vendor, and keep what was found: `parts.py --need/--skeleton/--sources/--fetch/--catalog/--promote`, `/spark:research`, `/spark:identify`, the `parts-researcher` agent, the catalog (`e50717a`…`d4f6b0f`, `773cd41`, `040a66d`; proven on the irrigation controller: seven records, 18 candidates kept, every cited URL answering).
+- **R11** — research parts and modules, vendor by vendor, and keep what was found: `parts.py --need/--skeleton/--sources/--fetch/--catalog/--promote`, `/spark:research`, `/spark:identify`, the `parts-researcher` agent, the catalog (`e50717a`…`d4f6b0f`, `773cd41`, `a4ad278`; proven on the irrigation controller: seven records, 18 candidates kept, every cited URL answering).
 - **P28** — the tools made true: the mutate lock covers the pre-check and `apply` refuses a missing file (C8); `nets_in`, `rules_for`, `has_answers` named by tests (C9); the stranger test runs build.md's own lines (C10); the example block is a run's output and a test holds its schematic line to the example (C11); the status words come from `outcomes` in the three files that spelled them (C12); `tools/pre-push` is the versioned gate, installed with one `ln -sf` (C14). Table sprint-5-p28 (2): caught.
 - **P10** — a project's own copy of a shipped board is checked against the plugin's cached vendor header instead of switching vendor-truth off: `cached_header` looks beside the board, then in the plugin (table sprint-5-p10, 1 caught; reproduced on the irrigation project first).
 - **P6** — what a record demands of its host as a component is placed and wired: `host_parts` (pulldown, pullup, divider) become 0603 resistors beside the module, a divider ends the host's trace at its midpoint; the L9110S's pull-downs, the VL6180X's I2C pull-ups and the flow meter's divider are the first three; the spine asks a passive whether an end dangles instead of whether it touches ground; the generated resistors map to Wokwi's resistor. Reference: 20 traces, 18 wires, exit 0. Table sprint-5-p6 (9): caught.
 - **P8** — the floating-input rule sees a pin-to-pin trace: the netlist model skipped every trace that named no net, which is how spark's generator wires every signal; a wire's traces share its connectivity key; the finding names its component and pin (I10). Proven on the irrigation board with four declared inputs and on the bin's own (`compare_design.py`, table sprint-5-p8, 3 caught).
-- **P31** — a part record says how it is simulated; the spine builds the Wokwi project from the records, compiles the chips, and one irrigation scenario passes with the probe's and the flow meter's sliders set from the test (`47dbcdc`, `9a8b0e2`, `1710d94`, `dbd3c1c`; irrigation diary, late night; converter `bf9bf09` in the bin repo).
+- **P31** — a part record says how it is simulated; the spine builds the Wokwi project from the records, compiles the chips, and one irrigation scenario passes with the probe's and the flow meter's sliders set from the test (`1e77b88`, `204713d`, `3a9808c`, `64000d5`; irrigation diary, late night; converter `bf9bf09` in the bin repo).
 
 P3 `831f756` · P4 `997b756` · P11 `0c21ef5` · P12 `c4d0582` · P13 `55e7bb8` · P14 `f7674b4` ·
 P15 `f35e7df` · R7 `1f769f8` + P22 `c565778` · R9 `227f5d4` · P20 `c3e2e28` · P21 `7381fed` ·
@@ -1122,7 +1122,7 @@ checkout step; or wait for spark to be public (P61's ruling), then check it out 
 **Value proven by:** `gh run list` shows the bin's next push green, or the workflow says in its own
 log that it skipped the spark-dependent steps and why — never a red run nobody reads.
 
-### B9 — check_all's last line counted checks that could not look as completed — **DONE 2026-10-03** (`a260b01`)
+### B9 — check_all's last line counted checks that could not look as completed — **DONE 2026-10-03** (`3772767`)
 **Needed by:** the RC car, irrigation and the bin, whose `check_all` all exit 2 today — and README:32,
 spark's founding rule: a check that could not look must never read as one that passed. Reproduced
 on the RC car with wokwi-cli off PATH: one `[ok  ]`, three `[????]`, one `[--  ]`, then *"nothing found

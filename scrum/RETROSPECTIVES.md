@@ -221,7 +221,7 @@ documented steps could not be followed from a fresh directory. The stranger test
 | --- | --- | --- | --- |
 | **R4.1** | R3.5 in its mechanical form becomes **W13**: a number or a verdict enters a commit message or a record only in a later call than the command that produced it. | At R5: an audit compares every number in the sprint's commit messages with the runs they cite — zero mismatches | **nearly**: every suite and anchor count at every commit matches its archive (D24, D25); one message counted the parent's tree (`6557c71`, D26) and a diary paragraph counted by eye (D22). Words overclaimed where numbers did not — R5.1 |
 | **R4.2** | An item whose value line says "a user can …" is proven by a test that follows the document from nowhere (`AStrangerCanBuildTest` is the pattern), never by a name check. | At R5: any such item DONE without one | **held**; and the pattern test itself typed the steps instead of running the document's lines (C10) — it runs them now (P28) |
-| **R4.3** | The closing audit is spawned before the retro is written, on the committed HEAD, and the retro cites its report. | At R5: R5 names the Sprint 5 audit's file | **held**: `docs/observations/2026-09-29-v1-close-audit.md`, spawned on `ca997ed` before a word of R5 (the first agent stalled at its start and was relaunched) |
+| **R4.3** | The closing audit is spawned before the retro is written, on the committed HEAD, and the retro cites its report. | At R5: R5 names the Sprint 5 audit's file | **held**: `docs/observations/2026-09-29-v1-close-audit.md`, spawned on `c35a2c3` before a word of R5 (the first agent stalled at its start and was relaunched) |
 | **R4.4** | The PO question is put once more, in the checkpoint summary, as a question that takes one letter; if unanswered by the next sprint's start, the sprint is planned without the cold test and the item stays parked, visibly. | At R5: the item is either answered or parked with the date | **held**: (c) chosen 2026-09-29 and run; P18, P19 deleted in the cut; R8 became R11 and is done; R10 parked with its date |
 | **R4.5** | A refused mutation guards nothing, and three were found refused at this close (R9 by the review, two in P11 by the new `--anchors` mode). `mutate.py --anchors tests/mutations/*.json` runs at every commit (DoD), and the tool refuses a second concurrent run — two overlapped tonight and both verdicts were worthless. | At R5: any table refused at the close; any overlapping runs (the lock says) | **held**: 130 anchors present at the close; three went stale during the night and were re-anchored before their commits; no overlap — and the lock now covers the pre-check window C8 found (P28) |
 
@@ -293,8 +293,8 @@ it. The useful part of this retro is what R6's own actions caught.
 
 | | |
 | --- | --- |
-| **R6.1** (a Done line about another repo's file is proven by regenerating it in the same commit) | **held.** The only cross-repo lines are P53's, and both files were regenerated and committed in their own repos within ten seconds of spark's — `rc-car 1869b64`, `irrigation 2f6631e`. Both rerun read-only at close. Zero lines describing a file nobody regenerated. |
-| **R6.2** (the item's text is committed before its work) | **held.** All four items trace to `af6b766` or earlier. Zero same-commit items. |
+| **R6.1** (a Done line about another repo's file is proven by regenerating it in the same commit) | **held.** The only cross-repo lines are P53's, and both files were regenerated and committed in their own repos within ten seconds of spark's — `rc-car 1869b64`, `irrigation e5e0a31`. Both rerun read-only at close. Zero lines describing a file nobody regenerated. |
+| **R6.2** (the item's text is committed before its work) | **held.** All four items trace to `3c46aa8` or earlier. Zero same-commit items. |
 | **R6.3** (the acceptance command runs in the project the need line names) | **held**, all four rerun there, zero refusals. This is the action that made the sprint honest: it is why P51's npm install was tested in an empty directory with no global CLI, and why P32a's regression in P29 was found at all. |
 | **R6.4 / R5.2** (the simulator's documentation is cited before a second paid run) | **not exercised, a third sprint.** No paid run happened. Rolls forward unchanged — it is neither stuck nor failed. |
 
@@ -339,7 +339,7 @@ they are better evidence than anything the desk could say about itself.
 | --- | --- |
 | **R5.1** (W17 — a summary claims no more than it summarises) | **partly stuck.** The check ran as written: each Done line's verbs against its diff. One **false** claim — P29's message said the two RC boards "gained" the VCC comment; `grep -c` returned 0 on both, because the generator's output was diffed in a temp file and never written. Same shape as Sprint 5's D13. Regenerated and committed at close (`cb11dc7`). Two soft headlines: P46's "read by every script" where 5 of 20 import `fab`, and P42's acceptance line claiming the status expression appears once where `parts.py:918` still builds one inline. Everything else held. |
 | **R5.2** (the simulator's doc is read and cited before a second paid run) | **not exercised — rolls forward.** No paid run happened in Sprint 6. Its second half held: no contract rule was written and withdrawn. |
-| **R5.3** (one mutation table timed) | **done**, `66a2a0d`. |
+| **R5.3** (one mutation table timed) | **done**, `9ed74d0`. |
 | **R5.4** (P32 put to the PO as one letter) | **answered** — (a), move now, and now split into P32a/P32b because the firmware lens counted it at ~1,307 lines moving. |
 
 ### What the council found that the desk had not
@@ -375,7 +375,7 @@ with the measurement attached.
 ## R5 — 2026-09-30, on Sprint 5 and the third cold test
 
 **Present:** facilitator. The v1 close audit — `docs/observations/2026-09-29-v1-close-audit.md`,
-33 rows, spawned on `ca997ed` before this was written (R4.3) — read the whole sprint cold: 20
+33 rows, spawned on `c35a2c3` before this was written (R4.3) — read the whole sprint cold: 20
 rows held, 11 did not, 2 could not be checked. Its rows are in `INDEX.md` as D1–D33.
 
 ### What happened

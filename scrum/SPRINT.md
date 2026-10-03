@@ -420,10 +420,10 @@ under the warning that says not to (P6).
 | ~~P27~~ | A named pin checked against what it was asked to do; a project must exist; a signal well-formed | **done `7459983`** (Sprint 4's close) |
 | ~~R11~~ | Research parts and modules, vendor by vendor, and keep what was found | **done** — `/spark:research`, `/spark:identify`, the catalog; seven records for the irrigation controller, 18 candidates kept |
 | ~~P31~~ | A part record says how it is simulated; chips compiled; values set in the test | **done** — ordered by the PO that night; one irrigation scenario passing on Wokwi |
-| ~~P8~~ | `must_not_float` false-positives on pin-to-pin traces | **done `10a056f`** — the netlist model skipped every trace that named no net |
-| ~~P6~~ | `emit_board` honours the host requirements it can, or says which are the reader's | **done `1c2698d`** — `host_parts` placed and wired; three records carry them |
-| ~~P10~~ | A project's own board file must not switch `vendor-truth` off | **done `9a7479b`** — the plugin's cache is the fallback |
-| ~~P28~~ | What the close audit found in the tools and the records (C8–C12, C14) | **done `ca997ed`** — six rows made true; `tools/pre-push` is the gate |
+| ~~P8~~ | `must_not_float` false-positives on pin-to-pin traces | **done `ba7162a`** — the netlist model skipped every trace that named no net |
+| ~~P6~~ | `emit_board` honours the host requirements it can, or says which are the reader's | **done `c4edb92`** — `host_parts` placed and wired; three records carry them |
+| ~~P10~~ | A project's own board file must not switch `vendor-truth` off | **done `95ef6e3`** — the plugin's cache is the fallback |
+| ~~P28~~ | What the close audit found in the tools and the records (C8–C12, C14) | **done `c35a2c3`** — six rows made true; `tools/pre-push` is the gate |
 | ~~R2.5~~ | Third cold test — **(c), the 12 V irrigation controller**, running in `~/Development/irrigation` | **done** — definition of done met, diary I1–I12, ten gaps pulled the same night |
 | — | P7 deleted with `check_design` (W16); P16, P17 parked — **Needed by:** none yet | |
 | — | **Audit at sprint end, before the retro (R4.3)** — `docs/observations/2026-09-29-v1-close-audit.md`, running | |
@@ -463,7 +463,7 @@ Czech sellers, local first (`sellers` in the brief); modules looked up from a ph
 researched to buy); **everything research reads is kept, chosen or not** (`catalog/`, `--fetch`,
 `--catalog`, `--promote`, `--need` over the catalog — R11's scope, extended by the PO); and one
 meaning of `verified` (diary I6). Seven researcher agents ran at once; six records validated and
-every cited URL answered (`irrigation d0500ae`); the diary holds I1–I6. The `scripts/` budget rose
+every cited URL answered (`irrigation 3e19a10`); the diary holds I1–I6. The `scripts/` budget rose
 6,000 → 6,100 with its reason beside it (`7ae7fe2` gate: 549 OK, 92 anchors present) — **the PO
 may lower it**. Not yet: the catalog mutation table (waits for the last researcher to stop calling
 `parts.py`), the requirements file, the build, the predictions scored.
@@ -481,7 +481,7 @@ rule) and three placeholder footprints, physics could not look because the rules
 rail. Seven of eight predictions scored in the irrigation diary. **The PO asked** what the
 simulation options are when Wokwi lacks a module; answered in the session and proposed as
 **P31** — the PO orders it or not. Spark: 555 tests, 100 mutations in 22 tables, every anchor
-present, `85963af` pushed.
+present, `63074ab` pushed.
 
 **Late night — P31, ordered and done.** The PO: "make the Wokwi simulations work, have the
 WebAssembly made, set the values in the test; you can also increase the limit." Five slices,
