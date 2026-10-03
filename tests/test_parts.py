@@ -904,6 +904,93 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         definition = part(attachments={"https://v.example/x.pdf": "thing/x.pdf"})
         self.assertTrue(any("attachments" in p for p in parts.validate(definition, written(definition))))
 
+    # --- P62b: a source is found before it is fetched again ---
+
+    def test_keep_puts_a_local_file_in_the_store_and_says_what_to_record(self):
+        import datetime
+        import hashlib
+        import tempfile
+        from unittest import mock
+        store = self._store()
+        local = Path(tempfile.mkdtemp()) / "ds_v1.1.pdf"
+        local.write_bytes(b"the v1.1 pdf")
+        with mock.patch.object(parts, "STORE", store):
+            entry = parts.keep_local(local, url="https://v.example/ds.pdf")
+        digest = hashlib.sha256(b"the v1.1 pdf").hexdigest()
+        self.assertEqual(entry, {"url": "https://v.example/ds.pdf", "sha256": digest, "file": "ds_v1.1.pdf",
+                                 "retrieved": datetime.date.today().isoformat(), "title": None, "version": None})
+        self.assertEqual((store / digest / "ds_v1.1.pdf").read_bytes(), b"the v1.1 pdf")
+
+    def test_a_document_with_no_url_is_allowed_a_photo_of_your_own_module_has_none(self):
+        definition = part(documents={"photo": {"url": None, "sha256": "a" * 64, "file": "top.jpg",
+                                               "retrieved": "2026-10-03", "title": None, "version": None}})
+        self.assertEqual([p for p in parts.validate(definition, written(definition)) if "documents" in p], [])
+
+    def _kept_world(self, stored=True):
+        """A catalog record and a project board that both point at one datasheet, the board citing a page."""
+        import tempfile
+        catalog, project, store = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()), self._store()
+        (project / ".spark").mkdir()
+        digest = "b" * 64
+        document = {"url": "https://v.example/wroom.pdf", "sha256": digest, "file": "wroom_v1.1.pdf",
+                    "retrieved": "2026-09-24", "title": "ESP32-S3-WROOM-1 Datasheet", "version": "v1.1"}
+        self._catalog_record(catalog, "x-rtc", documents={"wroom": document},
+                             facts={"idle_ua": {"value": 8, "verified": True, "source": "https://v.example/wroom.pdf"}})
+        # A record with a document of its own and nothing resting on the WROOM: it must not be named.
+        self._catalog_record(catalog, "x-jack", body_mm={"value": [9, 14], "verified": True, "source": "drawing"},
+                             documents={"drawing": dict(document, url="https://v.example/jack.pdf",
+                                                        sha256="c" * 64, file="jack.pdf", title="Jack")},
+                             facts={"rating_a": {"value": 2, "verified": True, "source": "the drawing",
+                                                 "cites": {"document": "drawing", "at": "page 2"}}})
+        (project / "boards").mkdir()
+        (project / "boards" / "x-board.json").write_text(json.dumps({
+            "id": "x-board", "documents": {"wroom": document},
+            "power": {"deep_sleep_ua": {"value": None, "verified": False, "source": "Table 12",
+                                        "cites": {"document": "wroom", "at": "Table 12, page 15"}}}}))
+        if stored:
+            (store / digest).mkdir(parents=True)
+            (store / digest / "wroom_v1.1.pdf").write_bytes(b"pdf")
+        return catalog, project, store
+
+    def _kept(self, words, stored=True):
+        from unittest import mock
+        catalog, project, store = self._kept_world(stored)
+        def no_network(url):
+            raise AssertionError("--kept must never reach the network, asked for %s" % url)
+        import boards
+        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store), \
+                mock.patch.object(boards, "LIBRARY", catalog / "no-library"), \
+                mock.patch.object(parts, "_download", no_network), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            code = parts.main(["--kept"] + words + ["--project", str(project)])
+        return code, out.getvalue(), store
+
+    def test_kept_finds_a_document_by_every_word_and_says_where_it_is(self):
+        code, said, store = self._kept(["wroom", "v1.1"])
+        self.assertEqual(code, 0, said)
+        self.assertIn(str(store / ("b" * 64) / "wroom_v1.1.pdf"), said)
+        self.assertIn("present", said)
+
+    def test_kept_names_every_fact_that_rests_on_it_with_its_page_and_nothing_else(self):
+        _, said, _ = self._kept(["wroom"])
+        cited = sorted(set(line.strip() for line in said.splitlines() if "cited by" in line))
+        self.assertEqual(cited, ["cited by x-board power.deep_sleep_ua — Table 12, page 15",
+                                 "cited by x-rtc facts.idle_ua — cites its URL"])
+
+    def test_kept_says_missing_when_the_store_does_not_hold_it(self):
+        _, said, _ = self._kept(["wroom"], stored=False)
+        self.assertIn("MISSING", said)
+
+    def test_kept_needs_every_word(self):
+        code, said, _ = self._kept(["wroom", "nothing-like-this"])
+        self.assertNotIn("present", said)
+        self.assertNotEqual(code, 0, "finding nothing is said, not passed")
+
+    def test_a_fact_citing_a_document_the_record_does_not_hold_is_refused(self):
+        definition = part(facts={"idle_ua": {"value": 8, "verified": True, "source": "the datasheet",
+                                             "cites": {"document": "ds", "at": "page 3"}}})
+        self.assertTrue(any("facts.idle_ua" in p and "'ds'" in p for p in parts.validate(definition, written(definition))))
+
     def test_a_document_whose_checksum_is_not_one_is_refused(self):
         definition = part(documents={"x": {"url": "https://v.example/x.pdf", "sha256": "abc", "file": "x.pdf",
                                            "retrieved": "2026-10-02", "title": None, "version": None}})

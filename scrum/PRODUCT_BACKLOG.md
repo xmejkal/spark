@@ -556,7 +556,7 @@ with the documents that describe them. `cited_urls` reads dict-shaped `sources` 
 `grep -rl attachments catalog scripts commands agents` → nothing; `parts.py --sources dfr0534-module`
 lists its 2 URLs; each moved file's sha256 in the store equals the one its record states.
 
-### P62b — A source is found before it is fetched again — **Sprint 9, after P62a**
+### P62b — A source is found before it is fetched again — **DONE 2026-10-03**
 **Needed by:** the FireBeetle record, whose deep-sleep figure cites a datasheet page nothing can find, and every researcher (one fetch in five repeated one already made, P61).
 `parts.py --keep FILE` copies a local file into the store and prints the `documents` entry to paste;
 `parts.py --kept WORDS` searches every record's `documents` (library, catalog, boards, a project's own)
@@ -566,6 +566,16 @@ becomes step 1 of `commands/research.md` and of the researcher agent.
 **Value proven by:** with outbound network denied (`sandbox-exec`), `parts.py --kept wroom` prints the
 v1.1's store path as present and `firebeetle2-esp32s3 power.deep_sleep_ua — Table 12, page 15`, and
 `shasum -a 256` of that path equals the recorded sha256.
+**Done 2026-10-03.** Reproduced with outbound network denied: `--kept wroom` printed the store path as
+`present`, `power.module_peak_a — Table 11, page 15` and `power.deep_sleep_ua — Table 12, page 15`, and
+`shasum -a 256` gave the recorded `bc430d66…b76b`. **The first run of that line failed:** it named 15
+catalog DC jacks, RTCs and screw terminals as citing the WROOM. A record that did not hold the file was
+searched with no key, and every object without `cites` compared `None == None`. The fixture had
+every record holding the same datasheet, so the unrelated record never existed (W12: the fixture gained
+one). A citation now counts by the name the OTHER record gives the same file (same sha256). Two holes
+the work exposed are closed with it: a board's `documents` were never validated (P62b put the first
+there), and a `cites` naming a document the record does not hold was accepted. Mutations
+`sprint-9-p62b.json`: 10, all caught. Suite 808 OK.
 
 ### P64a — Nothing is marked verified without a source a reader can open — **Sprint 9, after P62b**
 **Needed by:** the bin, irrigation and the RC car, which read the library records whose 36 `verified: true` fields cite no source.

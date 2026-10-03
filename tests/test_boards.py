@@ -357,5 +357,26 @@ class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
         self.assertEqual([p for p in problems if "wokwi_power_pins" in p], [])
 
 
+class ABoardPointsAtItsDatasheetsLikeAPartTest(unittest.TestCase):
+    """P62b put `documents` on a board record, and nothing read them: a wrong checksum or a
+    citation of a document the board does not hold was a pointer to nothing, under a green suite."""
+
+    def board(self):
+        return json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def problems(self, board):
+        return boards.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
+
+    def test_a_citation_of_a_document_the_board_does_not_hold_is_reported(self):
+        board = self.board()
+        board["power"]["deep_sleep_ua"]["cites"]["document"] = "wroom1-v1-8"
+        self.assertTrue(any("power.deep_sleep_ua" in p and "wroom1-v1-8" in p for p in self.problems(board)))
+
+    def test_a_board_document_whose_checksum_is_not_one_is_reported(self):
+        board = self.board()
+        board["documents"]["wroom1-v1-1"]["sha256"] = "bc430d66"
+        self.assertTrue(any("documents.wroom1-v1-1" in p for p in self.problems(board)))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -392,6 +392,8 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
             problems.append(f"power_pads.{pad} names no rail, so the microcontroller pad would be "
                             f"wired to nothing")
 
+    import parts  # a board points at its datasheets the way a part does (P62b)
+    problems += parts.document_problems(board)
     return problems
 
 

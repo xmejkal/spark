@@ -220,9 +220,23 @@ def document_problems(part: dict) -> list:
     for key, entry in (part.get("documents") or {}).items():
         if not isinstance(entry, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256"))):
             problems.append("documents.%s has no sha256 that is one, so the store cannot find it" % key)
-        elif not entry.get("file") or not entry.get("url"):
-            problems.append("documents.%s names no file or no url" % key)
+        elif not entry.get("file"):
+            problems.append("documents.%s names no file" % key)
+    problems += ["%s cites %r, which documents does not hold — a pointer to nothing" % (where, cited)
+                 for where, cited in _citations(part) if cited not in (part.get("documents") or {})]
     return problems
+
+
+def _citations(value, where=""):
+    """(field, document key) for every `cites` in a record, at any depth."""
+    found = []
+    for name, inner in (value.items() if isinstance(value, dict) else []):
+        here = "%s.%s" % (where, name) if where else name
+        if name == "cites" and isinstance(inner, dict):
+            found.append((where, inner.get("document")))
+        elif isinstance(inner, dict):
+            found += _citations(inner, here)
+    return found
 
 
 def i2c_pullup_problems(part: dict) -> list:
@@ -677,6 +691,78 @@ def keep_in_store(payload, name):
     return digest
 
 
+def keep_local(path, url=None):
+    """
+    Put a file you already have into the store and return the `documents` entry that points at it
+    (P62b). The WROOM-1 v1.1 datasheet exists only as a kept file — its URL now serves v1.8 — so
+    fetching can never bring it in; an import can. `url` is where it came from, if anyone knows.
+    """
+    path = Path(path)
+    return {"url": url, "sha256": keep_in_store(path.read_bytes(), path.name), "file": path.name,
+            "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
+
+
+def records_with_documents(project=None):
+    """(owner id, record) for every record that can point at a document: parts, catalog, boards."""
+    import boards
+    board_dirs = ([Path(project) / "boards"] if project else []) + [boards.LIBRARY]
+    paths = [directory / (part_id + DEFINITION_SUFFIX) for directory in search_path(project) + [CATALOG]
+             if directory.is_dir() for part_id in sorted(p.stem for p in directory.glob("*" + DEFINITION_SUFFIX))]
+    paths += [path for directory in board_dirs if directory.is_dir()
+              for path in sorted(directory.glob("*" + DEFINITION_SUFFIX)) if path.name not in boards.NOT_A_BOARD]
+    for path in paths:
+        record = _parse(path)
+        if isinstance(record, dict) and record.get("documents"):
+            yield path.stem, record
+
+
+def citing(record, keys, url, where=""):
+    """
+    (field, locator) for every object in the record that rests on this document: by one of `keys` —
+    the names THIS record gives the same file — or by its URL. A record that does not hold the file
+    has no key for it, and an object with no `cites` names no document, so neither can match.
+    """
+    found = []
+    for name, value in (record.items() if isinstance(record, dict) else []):
+        here = "%s.%s" % (where, name) if where else name
+        if not isinstance(value, dict):
+            continue
+        cited = (value.get("cites") or {}).get("document")
+        if cited is not None and cited in keys:
+            found.append((here, value["cites"].get("at") or "no page given"))
+        elif url and isinstance(value.get("source"), str) and url in value["source"]:
+            found.append((here, "cites its URL"))
+        else:
+            found += citing(value, keys, url, here)
+    return found
+
+
+def find_kept(words, project=None):
+    """
+    Every kept document matching every word — where it is in the store, present or MISSING, and
+    each fact that rests on it — read from the records alone: no network (P62b). A researcher runs
+    this BEFORE fetching: one fetch in five repeated one already made (P61).
+    """
+    wanted = [word.lower() for word in words]
+    lines = []
+    for owner, record in records_with_documents(project):
+        for key, entry in record["documents"].items():
+            said = " ".join(str(part) for part in (owner, key, entry.get("file"), entry.get("title"),
+                                                   entry.get("url"), entry.get("version"))).lower()
+            if not all(word in said for word in wanted):
+                continue
+            path = STORE / str(entry.get("sha256")) / str(entry.get("file"))
+            lines.append("%s %s: %s %s" % (owner, key, entry.get("title") or entry.get("file"),
+                                           entry.get("version") or "(version not read)"))
+            lines.append("    %s  %s" % (path, "present" if path.is_file() else "MISSING"))
+            for other, other_record in records_with_documents(project):
+                same_file = {name for name, held in other_record["documents"].items()
+                             if isinstance(held, dict) and held.get("sha256") == entry.get("sha256")}
+                for field, locator in citing(other_record, same_file, entry.get("url")):
+                    lines.append("    cited by %s %s — %s" % (other, field, locator))
+    return lines
+
+
 def document_key(name, taken):
     """A short, unique name for a document in a record: its file name's stem, made plain."""
     stem = re.sub(r"[^a-z0-9]+", "-", name.rsplit(".", 1)[0].lower()).strip("-") or "document"
@@ -895,11 +981,15 @@ def main(argv=None):
                       help="what exists for a need, before researching: words matched in id, name, kind, alias")
     what.add_argument("--skeleton", metavar="PART", help="write a record to fill in, to the project's parts/")
     what.add_argument("--sources", metavar="PART", help="fetch every URL a record cites; a source that does not answer is named")
-    what.add_argument("--fetch", metavar="PART", help="download the datasheets and images a record cites, beside it")
+    what.add_argument("--fetch", metavar="PART", help="download the datasheets and images a record cites, into your store")
+    what.add_argument("--keep", metavar="FILE", help="put a file you already have into your store; prints its documents entry")
+    what.add_argument("--kept", nargs="+", metavar="WORD",
+                      help="find a kept document by every word, with no network, and every fact resting on it")
     what.add_argument("--promote", metavar="PART", help="catalog → the project's parts/, or the project's parts/ → the plugin's library")
     what.add_argument("--catalog", action="store_true", help="every record research has kept, chosen or not")
     parser.add_argument("--kind", help="with --skeleton: the part's kind (motor-driver, sensor, regulator, …)")
     parser.add_argument("--vendor", help="with --skeleton: who makes it")
+    parser.add_argument("--url", help="with --keep: where the file came from, if anyone knows")
     parser.add_argument("--project", type=Path,
                         help="a project whose own parts/ beats the shipped library")
     parser.add_argument("--json", action="store_true")
@@ -956,6 +1046,13 @@ def main(argv=None):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2, ensure_ascii=False) + "\n")
             print("  wrote %s — every null is a fact to record; `parts.py --validate --project .` says what is missing" % target)
+        elif args.keep:
+            print(json.dumps(keep_local(args.keep, args.url), indent=2, ensure_ascii=False))
+        elif args.kept:
+            found = find_kept(args.kept, project)
+            print("\n".join(found) if found else "nothing kept matches %s — fetch it, or --keep a file "
+                                                  "you have" % " ".join(args.kept))
+            return EXIT_OK if found else EXIT_INVALID
         elif args.fetch:
             kept = fetch_documents(args.fetch, project)
             for entry in kept.values():

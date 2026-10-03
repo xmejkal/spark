@@ -21,6 +21,18 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need <words> --project .
 Words match a record's id, name, kind or alias. A match is the answer; the record is there to
 use. No match prints the vendors it would research, in order.
 
+Before fetching any datasheet, ask whether it is already kept — one fetch in five repeated one
+already made (P61):
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept <words> --project .
+```
+
+It reads the records alone, with no network: each matching document's place in your store,
+`present` or `MISSING`, and every fact that cites it with its page. A file you already have — an
+old revision the vendor no longer serves — goes in with `parts.py --keep <file> --url <url>`,
+which prints the `documents` entry to put in the record.
+
 ## 2. The order
 
 The project's brief says whom to prefer — `.spark/project.json` → `"prefer": ["dfrobot",

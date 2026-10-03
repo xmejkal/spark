@@ -52,7 +52,10 @@ the chosen record list them: `"alternatives": [{"id": "<catalog id>", "why_not":
 each catalog one: it downloads every cited datasheet and image into the person's store
 (`~/.local/share/spark/sources`) and records each under the record's `documents` — never beside
 the record, because the plugin will be published and cannot carry vendor files. Links rot, and a
-database of links is not a database.
+database of links is not a database. Run `parts.py --kept <words>` first: a document some record
+already keeps is cited, not fetched again. A fact read from a kept document says where, as
+`"cites": {"document": "<key>", "at": "Table 12, page 15"}`; a citation of a key the record does
+not hold is refused.
 
 ## Where to buy — local first
 
