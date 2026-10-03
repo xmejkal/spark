@@ -36,9 +36,16 @@
     "source": "the 6x6 form factor's defining dimension; the variable is CAP HEIGHT, not footprint",
     "note": "Height is 4.3, 5, 8 or 12 mm depending on variant and is the only thing to check against an enclosure."
   },
+  "host_parts": [
+    {
+      "kind": "pullup",
+      "pin": "A",
+      "ohms": 10000,
+      "why": "this record wires B to ground, so A idles high on a pull-up and reads 0 when pressed; the ESP32's internal pull-ups are off for the ~300 ms between reset and firmware and through any reflash, and a wake input floats while the chip sleeps — so the pull is on the board. A design that wakes on HIGH wires the button the other way, with a pull-down (see host_requirements)"
+    }
+  ],
   "host_requirements": [
     "Decide the polarity against deep sleep, not convenience. MicroPython's esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 ('stuck pin', reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.",
-    "Give it an external pull, not just the internal one. Internal pulls are inactive for the ~300 ms between reset and firmware and through any reflash, which for a wake input means a floating pin while the chip is asleep.",
     "Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin's first edge is the one that matters and it is not debounced by anything."
   ],
   "facts": {

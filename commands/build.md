@@ -60,10 +60,10 @@ a board that built perfectly (backlog P51). An existing `.tsx` is left alone and
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 
   [ok  ] board            DFRobot FireBeetle 2 ESP32-S3 — from the plugin's library; no project up from the requirements file, so no rules
-  [ok  ] schematic        18 trace(s) written
+  [ok  ] schematic        22 trace(s) written
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
-  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.2600
-  [ok  ] simulation       13 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
+  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2600
+  [ok  ] simulation       17 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
 
   the chain runs end to end
 ```

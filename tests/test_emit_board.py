@@ -1064,6 +1064,13 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
         self.assertIn("CONFLICT", tsx)
         self.assertIn("idles HIGH, not low, on any supply above 5 V", tsx)
 
+    def test_a_shipped_button_gets_the_pull_up_its_record_asks_for(self):
+        # G7 / B13: the record said "give it an external pull" in prose only; the board had none.
+        button = parts.load("tactile-button")
+        tsx, _ = self._emit(button, parts.signals_for(["tactile-button"]))
+        self.assertIn('<resistor name="TactileButtonPullupA" resistance="10k"', tsx)
+        self.assertIn('<trace from=".TactileButtonPullupA > .pin2" to="net.V33" />', tsx)
+
     def test_the_passives_sit_beside_the_modules_not_on_them(self):
         _, placements = self._emit(self._part())
         positions = list(placements.values())
