@@ -203,6 +203,13 @@ class SetupTest(unittest.TestCase):
         self.assertEqual(rows[0][0], "missing")
         self.assertIn("brew install node", rows[0][1])
 
+    def test_a_role_whose_tool_lacks_a_need_says_which_tool_needs_it(self):
+        # The cold run's row read "bun (bun) is not installed" beside board-engine, without saying why.
+        layer_ = layer({"pdftotext": {"needs": ["sigrok-cli"]}})
+        with mock.patch.object(tools.shutil, "which", side_effect=which_all_but("sigrok-cli")):
+            rows = [text for state, label, text in tools.status(None, layer_) if label == "pdf-text"]
+        self.assertIn("pdftotext needs sigrok-cli", rows[0])
+
     def test_an_mcp_server_with_no_role_is_listed_too(self):
         self.assertIn("sim-mcp", self.states(which_all_but()))
 

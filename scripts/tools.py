@@ -195,9 +195,12 @@ def status(project=None, personal=None):
             rows.append(("off", label, "%s — turn on: /spark:setup add %s" % (name, name)))
             continue
         try:
-            for need in entry.get("needs") or []:
-                find(need, project, personal)
             if entry.get("kind") == "mcp":
+                for need in entry.get("needs") or []:
+                    try:
+                        find(need, project, personal)
+                    except ToolProblem as inner:
+                        raise ToolProblem("%s needs %s: %s" % (name, need, inner))
                 rows.append(("ok", label, "%s (MCP%s)" % (name, ", spark's own" if entry.get("owner") == "spark" else "")))
             else:
                 rows.append(("ok", label, "%s — %s" % (name, " ".join(find(label, project, personal).command))))
