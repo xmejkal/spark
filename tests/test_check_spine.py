@@ -423,20 +423,21 @@ class ReachingSimulationTest(unittest.TestCase):
         self.assertEqual(check_spine.find_converter(deep), converter.resolve())
 
     def test_a_directory_with_nothing_beside_it_gets_the_plugins_own(self):
-        # THE CONTRACT CHANGED WITH P32a, and this is the change. Before, a project with no
-        # converter beside it got None, because the only other candidate was a path inside one
-        # person's checkout — `../smartbin-local/tools/circuit-to-wokwi/cli.ts`. The plugin now
-        # carries the converter, so "nowhere" no longer exists for anyone who installed it.
+        # THE CONTRACT CHANGED WITH P32a, and again with P82: a project with no converter of its own
+        # gets the plugin's — now the bundle the tools list names, run on Node, never the plugin's
+        # TypeScript source (which needs node_modules an installed plugin lacks).
         import tempfile
-        self.assertEqual(check_spine.find_converter(Path(tempfile.mkdtemp())),
-                         check_spine.PLUGIN_CONVERTER)
+        import tools
+        self.assertIsNone(check_spine.find_converter(Path(tempfile.mkdtemp())))
+        with mock.patch.object(tools, "PERSONAL", Path(tempfile.mkdtemp()) / "absent.json"):
+            command = check_spine.converter_command(None, None)
+        self.assertTrue(command[-1].endswith("dist/converter.mjs"), command)
 
     def test_the_plugins_converter_is_really_there(self):
         # The fallback is only worth having if it resolves. If this file ever moves, the stage
         # goes quietly back to could-not-run for every project that has no converter of its own.
-        self.assertTrue(check_spine.PLUGIN_CONVERTER.is_file(),
-                        "%s is gone, so no project without its own converter can simulate"
-                        % check_spine.PLUGIN_CONVERTER)
+        bundle = ROOT / "tools" / "circuit-to-wokwi" / "dist" / "converter.mjs"
+        self.assertTrue(bundle.is_file(), "%s is gone, so no project without its own converter can simulate" % bundle)
 
     def test_a_project_with_its_own_converter_still_wins(self):
         # A project may carry a modified one; the plugin's is the fallback, not an override.
@@ -447,11 +448,14 @@ class ReachingSimulationTest(unittest.TestCase):
         (mine / "cli.ts").write_text("// mine\n")
         self.assertEqual(check_spine.find_converter(root), (mine / "cli.ts").resolve())
 
-    def test_no_converter_at_all_is_still_none_not_a_guess(self):
+    def test_no_converter_at_all_is_could_not_run_not_a_guess(self):
         from unittest import mock
         import tempfile
-        with mock.patch.object(check_spine, "PLUGIN_CONVERTER", Path("/nowhere/cli.ts")):
-            self.assertIsNone(check_spine.find_converter(Path(tempfile.mkdtemp())))
+        import tools
+        with mock.patch.object(tools, "PLUGIN", Path("/nowhere")):
+            stage = check_spine.converter_stage_problem(Path(tempfile.mkdtemp()))
+        self.assertEqual(stage.status, check_spine.COULD_NOT_RUN)
+        self.assertIn("circuit-to-wokwi", stage.detail)
 
     def test_the_stage_appears_in_the_rendering(self):
         # If the banner still stops at `build`, a reader is told the chain is shorter than it is.
@@ -688,6 +692,75 @@ class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
         self.assertIn("npm install -g bun", build.detail)
         self.assertNotIn("npm i -g", build.detail)
 
+class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
+    """The whole-branch review (2026-10-03): the expectations held in tools.find and broke at the real entry points."""
+
+    def broken_home(self):
+        home = Path(tempfile.mkdtemp())
+        (home / ".local" / "share" / "spark").mkdir(parents=True)
+        (home / ".local" / "share" / "spark" / "tools.json").write_text('{"tscircuit": {"core": "0.0.1",}}')
+        return home
+
+    def test_a_broken_personal_file_is_named_by_the_build_stage(self):
+        import tools
+        workdir = Path(tempfile.mkdtemp())
+        requirements = dict(check_spine.REFERENCE)
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        with mock.patch.object(tools, "PERSONAL", self.broken_home() / ".local" / "share" / "spark" / "tools.json"):
+            stages = check_spine.run(requirements, workdir, from_library=True)
+        build = [stage for stage in stages if stage.name == "build"][0]
+        self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
+        self.assertIn("is not JSON", build.detail)
+
+    def test_a_broken_project_file_is_named_not_reported_as_a_missing_engine(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "tools.json").write_text('{"tscircuit": {"core": "0.0.1",}}')
+        workdir = Path(tempfile.mkdtemp())
+        requirements = dict(check_spine.REFERENCE)
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
+            stages = check_spine.run(requirements, workdir, project=project, from_library=True)
+        build = [stage for stage in stages if stage.name == "build"][0]
+        self.assertIn(".spark/tools.json is not JSON", build.detail)
+
+    def test_the_commands_start_with_a_broken_personal_file_and_say_so(self):
+        import subprocess
+        env = dict(os.environ, HOME=str(self.broken_home()))
+        helped = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_spine.py"), "--help"],
+                                capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(helped.returncode, 0, helped.stderr[-600:])
+        project = Path(tempfile.mkdtemp())
+        init = subprocess.run([sys.executable, str(ROOT / "scripts" / "init_project.py"), "--project", str(project),
+                               "--board", "firebeetle2-esp32s3"], capture_output=True, text=True, env=env, timeout=60)
+        self.assertEqual(init.returncode, check_spine.EXIT_COULD_NOT_RUN, init.stderr[-600:])
+        self.assertIn("is not JSON", init.stderr)
+        self.assertNotIn("Traceback", init.stderr)
+
+    def test_the_plugin_s_own_converter_source_is_never_what_runs(self):
+        # A requirements file in no project resolves to the plugin, whose cli.ts needs node_modules an
+        # installed plugin does not have; the bundle is what ships (B10).
+        self.assertIsNone(check_spine.find_converter(ROOT / "scripts"))
+        self.assertIsNone(check_spine.find_converter(ROOT))
+
+    def test_a_project_s_own_converter_runs_with_the_ts_runtime_from_the_list(self):
+        import tools
+        own = Path(tempfile.mkdtemp()) / "cli.ts"
+        bun = tools.Tool("bun", "ts-runtime", {"kind": "path"}, ["/opt/bun"])
+        with mock.patch.object(tools, "find", return_value=bun) as asked:
+            self.assertEqual(check_spine.converter_command(None, own), ["/opt/bun", "run", str(own)])
+        self.assertEqual(asked.call_args[0][0], "ts-runtime")
+
+    def test_the_converter_the_list_names_is_the_one_that_runs(self):
+        import tools
+        swapped = tools.Tool("my-conv", "diagram-converter", {"kind": "path"}, ["/opt/my-conv"])
+        node = tools.Tool("node", "js-runtime", {"kind": "path"}, ["/opt/node"])
+        bundled = tools.Tool("circuit-to-wokwi", "diagram-converter", {"kind": "bundled"}, ["/plugin/converter.mjs"])
+        with mock.patch.object(tools, "find", side_effect=lambda role, *rest: swapped if role == "diagram-converter" else node):
+            self.assertEqual(check_spine.converter_command(None, None), ["/opt/my-conv"])
+        with mock.patch.object(tools, "find", side_effect=lambda role, *rest: bundled if role == "diagram-converter" else node):
+            self.assertEqual(check_spine.converter_command(None, None), ["/opt/node", "/plugin/converter.mjs"])
+
 class TheConverterShipsAsOneFileTest(unittest.TestCase):
     """B10 / P82: an installed spark has no node_modules in tools/circuit-to-wokwi, so the converter ships built."""
 
@@ -723,17 +796,19 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
         import tools
         real = tools.find
 
-        def no_node(name, project=None, personal=None):
+        def no_node(name, *rest):
             if name == "js-runtime":
                 raise tools.ToolProblem("js-runtime (node) is not installed — install: brew install node")
-            return real(name, project, personal)
+            return real(name, *rest)
         with mock.patch.object(tools, "find", side_effect=no_node):
             stage = check_spine.converter_stage_problem(Path(tempfile.mkdtemp()))
         self.assertIsNotNone(stage, "the bundle is here and Node is not: the converter cannot run")
         self.assertIn("brew install node", stage.detail)
 
     def test_the_plugin_s_converter_is_the_bundle(self):
-        self.assertEqual(check_spine.PLUGIN_CONVERTER, self.BUNDLE)
+        import tools
+        self.assertEqual(tools.find("diagram-converter", None, Path(tempfile.mkdtemp()) / "absent.json").command,
+                         [str(self.BUNDLE)])
 
 if __name__ == "__main__":
     unittest.main()

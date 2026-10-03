@@ -39,10 +39,14 @@ BUNDLE = CONVERTER / "dist" / "converter.mjs"
 
 
 def node():
-    """The command that runs the bundle, from the tools list — or None when Node is not here."""
+    """The command that runs the bundle, from spark's own list — or None when Node is not here.
+
+    Not the person's file: a personal `{"node": {"on": false}}` skipped four of these tests, and a skip
+    reads green (the final review of P82)."""
+    import tempfile
     import tools
     try:
-        return tools.find("js-runtime").command
+        return tools.find("js-runtime", None, Path(tempfile.mkdtemp()) / "absent.json").command
     except tools.ToolProblem:
         return None
 

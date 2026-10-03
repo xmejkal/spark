@@ -25,7 +25,9 @@ import argparse
 import importlib.util
 import json
 import os
+import platform
 import shutil
+import string
 import subprocess
 import sys
 from collections import namedtuple
@@ -82,10 +84,20 @@ def merged(project=None, personal=None):
             if not isinstance(value, dict):
                 raise ToolProblem("%s: the entry %r is not an object" % (path, key))
             lists["tools"].setdefault(key, {}).update(value)
+        if not isinstance(data.get("roles") or {}, dict):
+            raise ToolProblem("%s: `roles` is not an object — it maps a job to a tool, e.g. {\"pdf-text\": \"pdftotext\"}" % path)
         lists["roles"].update(data.get("roles") or {})
         if path == DEFAULTS:
             lists["contracts"].update(data.get("contracts") or {})
     return lists
+
+
+def _filled(line, entry):
+    """An install line with {version} and {core} filled from the entry; any other placeholder is the entry's fault."""
+    try:
+        return line.format(version=entry.get("version", ""), core=entry.get("core", ""))
+    except (KeyError, IndexError, ValueError) as unknown:
+        raise ToolProblem("the install line %r names %s; only {version} and {core} are filled" % (line, unknown))
 
 
 def install_line(entry):
@@ -93,7 +105,7 @@ def install_line(entry):
     install = entry.get("install") or {}
     for manager, needs in MANAGERS:
         if manager in install and (needs is None or shutil.which(needs)):
-            return install[manager].format(version=entry.get("version", ""), core=entry.get("core", ""))
+            return _filled(install[manager], entry)
     return None
 
 
@@ -109,9 +121,33 @@ def install_hint(entry):
     install = entry.get("install") or {}
     for manager, _ in MANAGERS:
         if manager in install:
-            return "%s — needs %s first" % (install[manager].format(version=entry.get("version", ""),
-                                                                    core=entry.get("core", "")), FIRST[manager])
+            return "%s — needs %s first" % (_filled(install[manager], entry), FIRST[manager])
     return None
+
+
+def platform_key():
+    """This machine as a build is named in a `fetch` block: macos-arm64, macos-x64, linux-x64, linux-arm64 — or None."""
+    system = {"Darwin": "macos", "Linux": "linux"}.get(platform.system())
+    machine = {"x86_64": "x64", "amd64": "x64", "arm64": "arm64", "aarch64": "arm64"}.get(platform.machine().lower())
+    return "%s-%s" % (system, machine) if system and machine else None
+
+
+def fetch_of(entry):
+    """(file, url, sha256, executable) of what spark downloads for this tool here, or None when it downloads nothing.
+
+    A `download` entry is one file for every machine (the MicroPython build); a `fetch` block names one
+    build per platform (wokwi-cli, whose releases are a binary each). No build for this machine is a ToolProblem.
+    """
+    if entry.get("kind") == "download":
+        return entry["file"], entry["url"], entry["sha256"], bool(entry.get("executable"))
+    fetch = entry.get("fetch")
+    if not fetch:
+        return None
+    build = fetch["platforms"].get(platform_key())
+    if not build:
+        raise ToolProblem("there is no build of it for %s — its list has %s"
+                          % (platform_key() or "this machine", ", ".join(sorted(fetch["platforms"]))))
+    return fetch["file"], build["url"], build["sha256"], bool(fetch.get("executable"))
 
 
 def locate(entry, project):
@@ -140,7 +176,32 @@ def locate(entry, project):
         path = Path(also).expanduser()
         if path.is_file():
             return [str(path)]
+    if entry.get("fetch"):
+        path = DOWNLOADS / entry["fetch"]["file"]
+        if path.is_file() and os.access(str(path), os.X_OK):
+            return [str(path)]
     return None
+
+
+def installed_versions(entry, command):
+    """{field: version} of an npm tool's packages as installed beside the command found ({} when not from node_modules)."""
+    packages = entry.get("packages") or {}
+    bin_dir = Path(command[0]).parent if command else None
+    if not packages or bin_dir is None or bin_dir.name != ".bin" or bin_dir.parent.name != "node_modules":
+        return {}
+    found = {}
+    for field, package in packages.items():
+        try:
+            found[field] = json.loads((bin_dir.parent / package / "package.json").read_text()).get("version")
+        except (OSError, ValueError):
+            found[field] = None
+    return found
+
+
+def pin_differences(entry, command):
+    """[(field, installed, pinned)] for each package whose installed version is not the one the list pins."""
+    return [(field, here, entry.get(field)) for field, here in installed_versions(entry, command).items()
+            if entry.get(field) and here != entry.get(field)]
 
 
 def version_note(name, reported, field="version", project=None, personal=None):
@@ -151,7 +212,28 @@ def version_note(name, reported, field="version", project=None, personal=None):
     return "; spark was measured on %s %s %s" % (name, field, stated)
 
 
-def find(name, project=None, personal=None):
+def setter_of(tool_name, field, project=None, personal=None):
+    """The tools file whose value of this field wins, or None when no file sets it."""
+    paths = [DEFAULTS, Path(personal) if personal else PERSONAL] + ([Path(project) / PROJECT_FILE] if project else [])
+    found = None
+    for path in paths:
+        if field in (_read(path).get(tool_name) or {}):
+            found = path
+    return found
+
+
+def off_sentence(tool_name, project=None, personal=None):
+    """Why a tool is off and how to turn it on in the file that turned it off — a project's file wins over the person's."""
+    setter = setter_of(tool_name, "on", project, personal)
+    if project and setter == Path(project) / PROJECT_FILE:
+        return ("%s is turned off in this project's .spark/tools.json — turn it on there: /spark:setup add %s --project ."
+                % (tool_name, tool_name))
+    if setter == DEFAULTS:
+        return "%s is off unless you turn it on — /spark:setup add %s" % (tool_name, tool_name)
+    return "%s is turned off in %s — turn it on: /spark:setup add %s" % (tool_name, setter, tool_name)
+
+
+def find(name, project=None, personal=None, _seen=()):
     """A role or a tool's name -> the Tool to run, or a ToolProblem saying why not and what to do."""
     lists = merged(project, personal)
     role = name if name in lists["roles"] else None
@@ -163,13 +245,16 @@ def find(name, project=None, personal=None):
     if contract and contract not in (entry.get("meets") or []):
         raise ToolProblem("%s: %s does not say it meets %r, so this step will not use it"
                           % (role, tool_name, contract))
+    problem = entry_problem(entry)
+    if problem:
+        raise ToolProblem("%s: %s" % (tool_name, problem))
     if entry.get("on") is False:
-        raise ToolProblem("%s is turned off — turn it on: /spark:setup add %s" % (tool_name, tool_name))
-    if entry.get("kind", "path") in ("path", "npm") and not entry.get("exe"):
-        raise ToolProblem("%s: no way to find it — the entry names no exe" % tool_name)
+        raise ToolProblem(off_sentence(tool_name, project, personal))
+    if tool_name in _seen:
+        raise ToolProblem("%s: its needs go round in a loop — %s" % (tool_name, " → ".join(_seen + (tool_name,))))
     for need in entry.get("needs") or []:
         try:
-            find(need, project, personal)
+            find(need, project, personal, _seen + (tool_name,))
         except ToolProblem as inner:
             raise ToolProblem("%s needs %s: %s" % (tool_name, need, inner))
     command = locate(entry, project)
@@ -192,7 +277,7 @@ def status(project=None, personal=None):
     for label, name in named:
         entry = lists["tools"].get(name, {})
         if entry.get("on") is False:
-            rows.append(("off", label, "%s — turn on: /spark:setup add %s" % (name, name)))
+            rows.append(("off", label, off_sentence(name, project, personal)))
             continue
         try:
             if entry.get("kind") == "mcp":
@@ -203,7 +288,10 @@ def status(project=None, personal=None):
                         raise ToolProblem("%s needs %s: %s" % (name, need, inner))
                 rows.append(("ok", label, "%s (MCP%s)" % (name, ", spark's own" if entry.get("owner") == "spark" else "")))
             else:
-                rows.append(("ok", label, "%s — %s" % (name, " ".join(find(label, project, personal).command))))
+                found = find(label, project, personal)
+                notes = "".join("; %s %s here, the list pins %s — /spark:setup installs the pinned one"
+                                % (field, here, pinned) for field, here, pinned in pin_differences(found.entry, found.command))
+                rows.append(("ok", label, "%s — %s%s" % (name, " ".join(found.command), notes)))
         except ToolProblem as missing:
             rows.append(("missing", label, str(missing)))
         if entry.get("needs_account") and not os.environ.get(entry.get("account_env") or "", ""):
@@ -222,7 +310,10 @@ def to_install(project=None, personal=None):
         if entry.get("on") is False:
             continue
         for wanted in list(entry.get("needs") or []) + ([] if entry.get("kind") == "mcp" else [name]):
-            if wanted in lists["tools"] and locate(lists["tools"][wanted], project) is None and wanted not in names:
+            want = lists["tools"].get(wanted)
+            if want is None or entry_problem(want) or wanted in names:
+                continue  # a broken entry is a row in the picture, not something to install
+            if locate(want, project) is None:
                 names.append(wanted)
     return names
 
@@ -232,56 +323,92 @@ def run_checked(argv, **kw):
     return subprocess.run(argv, check=True, **kw)
 
 
-def install(names, project=None, personal=None, run=None):
-    """Install each named tool that is not here, its needs first; return the commands run. Never sudo.
+def plan(names, project=None, personal=None):
+    """What installing these names would do, in order, needs first: [{name, argv, problem, fetch, from_project}].
 
-    An MCP entry registers with Claude Code (user scope, or project scope for a project's choice). What
-    cannot be done — a sudo line, a failed command, a wrong checksum — is raised at the end, after the rest.
+    Nothing runs here, so /spark:setup can show every command — and which ones a project's own
+    .spark/tools.json chose — before the person's yes.
     """
     import shlex
-    run = run or run_checked
     lists = merged(project, personal)
-    ran, problems, order = [], [], []
+    project_file = _read(Path(project) / PROJECT_FILE) if project else {}
+    order = []
     for name in names:
         for wanted in list(lists["tools"].get(name, {}).get("needs") or []) + [name]:
             if wanted not in order:
                 order.append(wanted)
+    steps = []
     for name in order:
+        step = {"name": name, "argv": None, "problem": None, "fetch": None, "from_project": name in project_file}
+        steps.append(step)
         entry = lists["tools"].get(name)
-        if entry is None:
-            problems.append("%s: no tool called that in any tools file" % name)
+        problem = "no tool called that in any tools file" if entry is None else entry_problem(entry)
+        if problem:
+            step["problem"] = "%s: %s" % (name, problem)
             continue
-        if entry.get("kind") == "mcp":
-            if not entry.get("mcp"):
-                continue  # spark's own: the plugin declares it
-            command = entry["mcp"]["command"]
-            if command in lists["tools"] and locate(lists["tools"][command], project):
-                command = locate(lists["tools"][command], project)[0]
-            argv = ["claude", "mcp", "add", "--scope", "project" if project else "user", name, "--",
-                    command] + list(entry["mcp"].get("args") or [])
-        elif locate(entry, project) is not None:
-            continue
-        elif entry.get("kind") == "download":
-            DOWNLOADS.mkdir(parents=True, exist_ok=True)
-            argv = ["curl", "-fsSL", "-o", str(DOWNLOADS / entry["file"]), entry["url"]]
-        else:
+        try:
+            if entry.get("kind") == "mcp":
+                if not entry.get("mcp"):
+                    steps.pop()  # spark's own: the plugin declares it
+                    continue
+                command = entry["mcp"]["command"]
+                if command in lists["tools"] and not entry_problem(lists["tools"][command]) \
+                        and locate(lists["tools"][command], project):
+                    command = locate(lists["tools"][command], project)[0]
+                step["argv"] = ["claude", "mcp", "add", "--scope", "project" if project else "user", name, "--",
+                                command] + list(entry["mcp"].get("args") or [])
+                continue
+            here = locate(entry, project)
+            if here is not None and not pin_differences(entry, here):
+                steps.pop()  # already here, at the pinned version
+                continue
+            fetch = fetch_of(entry)
+            if fetch:
+                step["fetch"] = fetch
+                step["argv"] = ["curl", "-fsSL", "-o", str(DOWNLOADS / (fetch[0] + ".part")), fetch[1]]
+                continue
             line = install_line(entry)
             if not line:
-                problems.append("%s: no way to install it here — %s" % (name, install_hint(entry) or "see its entry in %s" % DEFAULTS))
+                step["problem"] = "%s: no way to install it here — %s" % (name, install_hint(entry) or "see its entry in %s" % DEFAULTS)
                 continue
             argv = shlex.split(line)
-        if "sudo" in argv:
-            problems.append("%s needs sudo, which spark never runs — run it yourself: %s" % (name, " ".join(argv)))
+        except ToolProblem as unusable:
+            step["problem"] = "%s: %s" % (name, unusable)
             continue
+        if "sudo" in argv:
+            step["problem"] = "%s needs sudo, which spark never runs — run it yourself: %s" % (name, " ".join(argv))
+            continue
+        step["argv"] = argv
+    return steps
+
+
+def install(names, project=None, personal=None, run=None):
+    """Install each named tool that is not here (or not at its pin), its needs first; return the commands run. Never sudo.
+
+    An MCP entry registers with Claude Code (user scope, or project scope for a project's choice). A download
+    lands as `<file>.part`, is checked against its sha256, and only then takes its name. What cannot be
+    done — a sudo line, a failed command, a wrong checksum — is raised at the end, after the rest.
+    """
+    run = run or run_checked
+    ran, problems = [], []
+    for step in plan(names, project, personal):
+        if step["problem"]:
+            problems.append(step["problem"])
+            continue
+        argv, fetch = step["argv"], step["fetch"]
+        if fetch:
+            DOWNLOADS.mkdir(parents=True, exist_ok=True)
         try:
             run(argv, cwd=str(project) if project else None)
         except (OSError, subprocess.CalledProcessError) as failed:
-            problems.append("%s: `%s` failed (%s)" % (name, " ".join(argv), failed))
+            problems.append("%s: `%s` failed (%s)" % (step["name"], " ".join(argv), failed))
+            if fetch and (DOWNLOADS / (fetch[0] + ".part")).exists():
+                (DOWNLOADS / (fetch[0] + ".part")).unlink()
             continue
         ran.append(argv)
-        if entry.get("kind") == "download":
+        if fetch:
             try:
-                verify_download(entry)
+                settle_download(*fetch)
             except ToolProblem as wrong:
                 problems.append(str(wrong))
     if problems:
@@ -289,15 +416,19 @@ def install(names, project=None, personal=None, run=None):
     return ran
 
 
-def verify_download(entry):
-    """A downloaded file must have the checksum its entry states; otherwise it is deleted and named."""
+def settle_download(file, url, sha256, executable=False):
+    """`<file>.part` becomes `<file>` only when its checksum is the one the entry states; otherwise it is deleted and named."""
     import hashlib
-    path = DOWNLOADS / entry["file"]
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    if digest != entry.get("sha256"):
-        path.unlink()
+    part = DOWNLOADS / (file + ".part")
+    digest = hashlib.sha256(part.read_bytes()).hexdigest() if part.is_file() else "nothing"
+    if digest != sha256:
+        if part.exists():
+            part.unlink()
         raise ToolProblem("%s: the download's checksum %s is not the %s its entry states — deleted"
-                          % (entry["file"], digest[:12], str(entry.get("sha256"))[:12]))
+                          % (file, digest[:12], str(sha256)[:12]))
+    if executable:
+        part.chmod(0o755)
+    part.replace(DOWNLOADS / file)
 
 
 def choose(field_path, value, where):
@@ -328,32 +459,55 @@ KIND_NEEDS = {"path": ("exe",), "npm": ("exe",), "python": ("module",), "downloa
               "bundled": ("file",), "mcp": ()}
 
 
-def new_entry_problem(entry):
-    """None for an entry spark can find; else what it lacks."""
+def entry_problem(entry):
+    """None for an entry spark can find and install from; else what it lacks, as the end of a sentence."""
     if not isinstance(entry, dict):
         return "an entry is a JSON object"
     kind = entry.get("kind", "path")
     if kind not in KIND_NEEDS:
         return "kind %r is not one of %s" % (kind, ", ".join(KIND_NEEDS))
     lacking = [field for field in KIND_NEEDS[kind] if not entry.get(field)]
-    if kind == "mcp" and not (entry.get("mcp") or {}).get("command"):
+    if kind == "mcp" and entry.get("owner") != "spark" and not (entry.get("mcp") or {}).get("command"):
         lacking.append("mcp.command")
-    return "a %s entry needs %s" % (kind, ", ".join(lacking)) if lacking else None
+    if lacking:
+        return "no way to find it — a %s entry needs %s" % (kind, ", ".join(lacking))
+    files = [entry["file"]] if kind == "download" else []
+    fetch = entry.get("fetch")
+    if fetch is not None:
+        if not isinstance(fetch, dict) or not fetch.get("file") or not isinstance(fetch.get("platforms"), dict) \
+                or not all(isinstance(b, dict) and b.get("url") and b.get("sha256") for b in fetch["platforms"].values()):
+            return "its fetch block needs a file and, per platform, a url and a sha256"
+        files.append(fetch["file"])
+    for file in files:
+        if not isinstance(file, str) or Path(file).name != file or file in (".", ".."):
+            return "%r must be a plain file name — spark keeps every download in %s" % (file, DOWNLOADS)
+    for manager, line in (entry.get("install") or {}).items():
+        try:
+            unknown = [field for _, field, _, _ in string.Formatter().parse(str(line)) if field not in (None, "version", "core")]
+        except ValueError:
+            unknown = ["a stray brace"]
+        if unknown:
+            return "its %s install line names {%s}; only {version} and {core} are filled" % (manager, unknown[0])
+    return None
+
+
+new_entry_problem = entry_problem  # what `--new` checks is what every step checks
 
 
 MARKS = {"ok": "[ok  ]", "missing": "[????]", "off": "[off ]", "person": "[!   ]"}
 
 
 def print_status(project, personal):
-    """The picture, one row per line; returns how many tools are missing."""
+    """The picture, one row per line; returns how many rows read missing — a broken entry counts, though nothing installs it."""
     print("  spark's tools — personal: %s · project: %s\n"
           % (personal or PERSONAL, Path(project) / PROJECT_FILE if project else "(none)"))
-    for state, label, text in status(project, personal):
+    rows = status(project, personal)
+    for state, label, text in rows:
         print("  %s %-17s %s" % (MARKS[state], label, text))
     missing = to_install(project, personal)
     if missing:
         print("\n  %d to install: %s" % (len(missing), " ".join(missing)))
-    return len(missing)
+    return sum(1 for state, _, _ in rows if state == "missing")
 
 
 def main(argv=None, run=None):
@@ -365,11 +519,12 @@ def main(argv=None, run=None):
     does.add_argument("--on", metavar="NAME")
     does.add_argument("--off", metavar="NAME")
     does.add_argument("--use", metavar="ROLE=TOOL")
-    does.add_argument("--pin", metavar="NAME=VERSION")
+    does.add_argument("--pin", metavar="NAME[.FIELD]=VERSION", help="e.g. tscircuit.core=0.0.2700 (FIELD defaults to version)")
     does.add_argument("--new", metavar="NAME=JSON", help="describe a tool of your own, e.g. "
                       'my-sim=\'{"kind": "path", "exe": "my-sim", "meets": ["wokwi-project"]}\'')
     parser.add_argument("--project", type=Path, help="the project: read its .spark/tools.json, and write a choice there")
     parser.add_argument("--personal", action="store_true", help="write a choice to the person's file even with --project")
+    parser.add_argument("--dry-run", action="store_true", help="with --install: print each command and run nothing")
     args = parser.parse_args(argv)
     project = args.project
     where = PERSONAL if (args.personal or not project) else Path(project) / PROJECT_FILE
@@ -377,11 +532,22 @@ def main(argv=None, run=None):
     try:
         if args.status:
             return EXIT_COULD_NOT_RUN if print_status(project, None) else EXIT_OK
-        if args.install:
+        if args.install and args.dry_run:
+            for step in plan(args.install, project, None):
+                if step["problem"]:
+                    print("  cannot:    %s" % step["problem"])
+                else:
+                    print("  would run: %s%s" % (" ".join(step["argv"]), "   ← chosen by this project's .spark/tools.json"
+                                                 " — check it before you say yes" if step["from_project"] else ""))
+                    if step["from_project"]:
+                        print("             (from .spark/tools.json)")
+        elif args.install:
             for argv_ran in install(args.install, project, None, run):
                 print("  ran: %s" % " ".join(argv_ran))
         elif args.on:
             choose([args.on, "on"], True, where)
+            if merged(project)["tools"].get(args.on, {}).get("on") is False:
+                raise ToolProblem("%s is still off: %s" % (args.on, off_sentence(args.on, project)))
             for argv_ran in install([args.on], project if scope == "project" else None, None, run):
                 print("  ran: %s" % " ".join(argv_ran))
             print("  %s is on (%s)" % (args.on, where))
@@ -411,8 +577,11 @@ def main(argv=None, run=None):
                 raise ToolProblem("%s: %s — nothing written" % (name, problem))
             print("  %s written (%s); point a job at it: /spark:setup use <role>=%s" % (name, choose([name], entry, where), name))
         elif args.pin:
-            name, _, version = args.pin.partition("=")
-            print("  %s pinned to %s (%s)" % (name, version, choose([name, "version"], version, where)))
+            target, _, value = args.pin.partition("=")
+            name, _, field = target.partition(".")
+            written = choose([name, field or "version"], value, where)
+            print("  %s %s pinned to %s (%s); to install it: tools.py --install %s%s"
+                  % (name, field or "version", value, written, name, " --project %s" % project if project else ""))
     except ToolProblem as problem:
         print("tools.py: %s" % problem, file=sys.stderr)
         return EXIT_COULD_NOT_RUN

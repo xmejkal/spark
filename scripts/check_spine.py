@@ -169,26 +169,39 @@ def tsci_version(toolchain):
 #: repository. v1's last word was true on one machine (backlog P32a).
 CONVERTER_PATHS = ("tools/circuit-to-wokwi/cli.ts",)
 
-#: The plugin's own copy, built into one file that runs on Node with no node_modules (B10, P82) —
-#: the answer when nothing nearer is. A project's own cli.ts, found first, is its developer's.
-PLUGIN_CONVERTER = SCRIPTS.parent / "tools" / "circuit-to-wokwi" / "dist" / "converter.mjs"
 
 
 def find_converter(start):
-    """A project's own converter if it has one, else the plugin's, else None."""
+    """A project's own TypeScript converter, for its developer — or None, and the tools list's converter runs.
+
+    Never the plugin's own source: a requirements file in no project resolves to the plugin, and its
+    cli.ts needs node_modules an installed plugin does not have (the final review of P82). What the
+    plugin ships is the bundle, which the tools list names as the diagram-converter (B10).
+    """
     for directory in boards.walk_up(start):
         for relative in CONVERTER_PATHS:
             candidate = (directory / relative).resolve()
-            if candidate.is_file():
+            # A spark checkout's own source — this plugin, or another found walking up — is never a project's.
+            if candidate.is_file() and not (directory / "scripts" / "check_spine.py").is_file():
                 return candidate
-    return PLUGIN_CONVERTER if PLUGIN_CONVERTER.is_file() else None
+    return None
 
 
-def converter_stage_problem(project):
-    """None when the converter and Node are both here; else the could-not-run Stage saying which and how to install it."""
+def converter_command(project, own):
+    """The command that converts: a project's own cli.ts under the ts-runtime; else the tools list's
+    diagram-converter — the bundle under the js-runtime, or a swapped converter as it is."""
+    if own is not None:
+        return tools.find("ts-runtime", project).command + ["run", str(own)]
+    converter = tools.find("diagram-converter", project)
+    if converter.entry.get("kind") == "bundled":
+        return tools.find("js-runtime", project).command + converter.command
+    return converter.command
+
+
+def converter_stage_problem(project, own=None):
+    """None when the converter and what runs it are here; else the could-not-run Stage saying which and how to install it."""
     try:
-        tools.find("js-runtime", project)
-        tools.find("diagram-converter", project)
+        converter_command(project, own)
     except tools.ToolProblem as missing:
         return Stage("simulation", COULD_NOT_RUN, str(missing))
     return None
@@ -365,10 +378,11 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     stages.append(Stage("footprint", OK, "%s.tsx" % export))
 
     # --- the build, which is the only stage that can prove any of the above ---
-    toolchain = toolchain or find_toolchain(workdir)
+    # The project's tools file, not the scratch directory's: a broken or pinned project file must be read.
+    toolchain = toolchain or find_toolchain(project or workdir)
     if toolchain is None:
         try:
-            tools.find("board-engine", workdir)
+            tools.find("board-engine", project or workdir)
             said = "the board engine was not found"
         except tools.ToolProblem as missing:
             said = str(missing)  # the tools list's own sentence, with what installs it (P82)
@@ -430,10 +444,10 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # --- simulation: the last step of the product goal -------------------------
     # From the project, not from `cwd`: the same defect the project resolution had, one stage
     # later — run from /tmp the converter beside the project was "not found".
-    converter = find_converter(project)
-    missing = converter_stage_problem(project)
-    if converter is None or missing:
-        return stages + [missing or Stage("simulation", COULD_NOT_RUN, "no circuit-to-wokwi converter found")]
+    own = find_converter(project)
+    missing = converter_stage_problem(project, own)
+    if missing:
+        return stages + [missing]
 
     # What stands in for each part comes from the records (P31), not from a table in the
     # converter's repo: a record that says nothing stops here, naming itself.
@@ -451,12 +465,11 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, firmware))
 
     diagram_path = sim_dir / "diagram.json"
-    # A project's own TypeScript converter is its developer's, run with bun; the plugin's is the bundle.
-    runner = ["bun", "run"] if converter.suffix == ".ts" else tools.find("js-runtime", project).command
     made = subprocess.run(
-        runner + [str(converter), "--circuit", str(circuit_path), "--out", str(diagram_path),
-                  "--mapping", str(sim_dir / "wokwi-mapping.json"), "--chips", str(sim_dir / "chips")],
-        cwd=str(converter.parent), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S,
+        converter_command(project, own) + [
+            "--circuit", str(circuit_path), "--out", str(diagram_path),
+            "--mapping", str(sim_dir / "wokwi-mapping.json"), "--chips", str(sim_dir / "chips")],
+        cwd=str(own.parent if own else sim_dir), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S,
         env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
     if not diagram_path.is_file():
         said = (made.stderr or made.stdout)[-800:]

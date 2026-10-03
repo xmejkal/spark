@@ -222,10 +222,15 @@ class WokwiCliComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(asked.call_args[0][0], "simulator")
 
     def test_no_wokwi_cli_is_none_with_the_reason_kept(self):
+        # The final review: the ToolProblem was dropped and a hard-coded hint (a 404 npm line) printed instead.
         import tools
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: npm install -g wokwi-cli")):
+        said = "simulator (wokwi-cli) is not installed — install: SENTENCE FROM THE LIST"
+        root, chip = a_project()
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem(said)):
             self.assertIsNone(sim_project.find_wokwi_cli())
-        self.assertIn("npm install -g wokwi-cli", sim_project.INSTALL_HINT)
+            staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim")
+        self.assertIn("SENTENCE FROM THE LIST", problems[0])
+        self.assertIn("needs no account", problems[0])
 
 if __name__ == "__main__":
     unittest.main()

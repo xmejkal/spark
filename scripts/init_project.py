@@ -348,7 +348,10 @@ def write(path, payload, force, brief=False, merge=False, unstated=None):
 #: change both — the suite holds them to each other and to the document.
 #: Both now live in the tools list (data/tools.json → "tscircuit": version, core), where a project or a
 #: person can move them in one line (P82); these names stay for the code and the tests that read them.
-_TSCIRCUIT = tools.merged()["tools"]["tscircuit"]
+#: spark's own defaults only — a person's or a project's pin is theirs, not what the documents were
+#: measured on, and reading the merged list at import made a broken personal file crash every script
+#: that imports this one (the final review of P82).
+_TSCIRCUIT = tools._read(tools.DEFAULTS)["tscircuit"]
 PINNED_TSCI = _TSCIRCUIT["version"]
 
 #: The `tscircuit` core every number in the documents was measured on. Pinned as a direct
@@ -387,6 +390,11 @@ def main(argv=None):
     project = Path(args.project).resolve()
     if not project.is_dir():
         print("no directory at %s" % project, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    try:
+        tools.merged(project)  # before anything is written: a tools file that cannot be read is named
+    except tools.ToolProblem as broken:
+        print("init_project.py: %s" % broken, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
     circuit, ambiguous = args.circuit, None

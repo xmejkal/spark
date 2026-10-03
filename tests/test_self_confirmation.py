@@ -61,10 +61,9 @@ MAY_READ = {
     "boards.CONSOLE_UART": "a role's NAME, used to build a fixture — vocabulary, not a value",
     "check_all.CHECKS": STRUCTURE, "boards.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
-    "check_spine.PLUGIN_CONVERTER": STRUCTURE, "check_spine.CONVERTER_PATHS": STRUCTURE,
+    "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
     "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
-    "sim_project.INSTALL_HINT": AGREEMENT + " — the hint must carry the tools list's own install line for wokwi-cli",
 }
 
 #: Files no mutation table names, and why that is not a hole.

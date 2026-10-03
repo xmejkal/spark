@@ -16,16 +16,21 @@ import emit_board
 import parts as parts_library
 import tools
 
-#: What to tell a person who has no wokwi-cli: the list's own install line, and that compiling is free.
-INSTALL_HINT = "install: npm install -g wokwi-cli — `chip compile` runs locally and needs no account"
-
-
 def find_wokwi_cli(project=None):
-    """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin), else None."""
+    """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin, spark's downloads), else None."""
     try:
         return tools.find("simulator", project).command[0]
     except tools.ToolProblem:
         return None
+
+
+def simulator_problem(project=None):
+    """Why there is no wokwi-cli, in the tools list's own words with its install line — or None when it is here."""
+    try:
+        tools.find("simulator", project)
+    except tools.ToolProblem as missing:
+        return str(missing)
+    return None
 
 
 def mapping_for(design):
@@ -145,7 +150,8 @@ def stage_chips(chips, sim_dir, compiler=None):
         else:
             cli = compiler or find_wokwi_cli()
             if cli is None:
-                problems.append("chip %s has no compiled binary and wokwi-cli was not found — %s" % (chip, INSTALL_HINT))
+                problems.append("chip %s has no compiled binary — %s; `chip compile` runs locally and needs no account"
+                                % (chip, simulator_problem() or "wokwi-cli was not found"))
                 continue
             made = subprocess.run([cli, "chip", "compile", chip + ".chip.c", "-o", chip + ".chip.wasm"],
                                   cwd=str(target), capture_output=True, text=True)

@@ -18,6 +18,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -501,6 +502,23 @@ class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
         self.assertEqual(len(notes), 1)
         self.assertIn("no rule was seeded from it", notes[0])
 
+
+
+class TheMeasuredPinsAreSparkSTest(unittest.TestCase):
+    def test_a_person_s_pin_does_not_become_what_the_documents_were_measured_on(self):
+        # The final review: PINNED_* read the merged list, so a personal pin leaked into "measured on"
+        # and into the suite. The documents were measured on spark's own defaults.
+        import importlib
+        import tools
+        personal = Path(tempfile.mkdtemp()) / "tools.json"
+        personal.write_text(json.dumps({"tscircuit": {"version": "9.9.9", "core": "8.8.8"}}))
+        defaults = json.loads((ROOT / "data" / "tools.json").read_text())["tscircuit"]
+        try:
+            with mock.patch.object(tools, "PERSONAL", personal):
+                importlib.reload(init_project)
+                self.assertEqual((init_project.PINNED_TSCI, init_project.PINNED_CORE), (defaults["version"], defaults["core"]))
+        finally:
+            importlib.reload(init_project)
 
 if __name__ == "__main__":
     unittest.main()

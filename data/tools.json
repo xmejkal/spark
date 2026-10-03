@@ -10,7 +10,8 @@
     "firmware-image": "micropython-esp32s3",
     "parts-search": "jlcpcb",
     "chip-docs": "espressif-docs",
-    "bench": "sigrok"
+    "bench": "sigrok",
+    "ts-runtime": "bun"
   },
   "contracts": {
     "pdf-text": "page-text",
@@ -37,16 +38,41 @@
     "kind": "path",
     "exe": "wokwi-cli",
     "also": [
-      "~/.local/bin/wokwi-cli"
+      "~/.local/bin/wokwi-cli",
+      "~/.wokwi/bin/wokwi-cli",
+      "~/bin/wokwi-cli"
     ],
     "meets": [
       "wokwi-project"
     ],
     "install": {
-      "npm": "npm install -g wokwi-cli"
+      "download": "/spark:setup — wokwi-cli 0.28.0 from github.com/wokwi/wokwi-cli/releases, its checksum checked"
     },
     "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci",
-    "account_env": "WOKWI_CLI_TOKEN"
+    "account_env": "WOKWI_CLI_TOKEN",
+    "fetch": {
+      "file": "wokwi-cli",
+      "executable": true,
+      "platforms": {
+        "macos-arm64": {
+          "url": "https://github.com/wokwi/wokwi-cli/releases/download/v0.28.0/wokwi-cli-macos-arm64",
+          "sha256": "0251a9868e17c4141eaa64e75f8fbd265c0dc0b296f902723d242b3aa6afae49"
+        },
+        "macos-x64": {
+          "url": "https://github.com/wokwi/wokwi-cli/releases/download/v0.28.0/wokwi-cli-macos-x64",
+          "sha256": "55a1adc391f592433b51c64b46c0af092db12248c9b8a81f981b58a29b5f1db5"
+        },
+        "linux-x64": {
+          "url": "https://github.com/wokwi/wokwi-cli/releases/download/v0.28.0/wokwi-cli-linuxstatic-x64",
+          "sha256": "9ae464374bc0ed5fb20560a4c648406dea79988d1877fc2d9252cb33ed856bb0"
+        },
+        "linux-arm64": {
+          "url": "https://github.com/wokwi/wokwi-cli/releases/download/v0.28.0/wokwi-cli-linuxstatic-arm64",
+          "sha256": "13c3a4ed5b4cf5618a009b4849f9c7ed4850967bb9d44472f20d86c9e00c5a50"
+        }
+      }
+    },
+    "//": "Not an npm package (npm has no wokwi-cli): Wokwi ships a binary per platform; checksums are GitHub's release digests, read 2026-10-03."
   },
   "tscircuit": {
     "for": "building the board spark writes",
@@ -62,7 +88,11 @@
     },
     "needs": [
       "bun"
-    ]
+    ],
+    "packages": {
+      "version": "@tscircuit/cli",
+      "core": "tscircuit"
+    }
   },
   "circuit-to-wokwi": {
     "for": "turning the built board into a Wokwi diagram",

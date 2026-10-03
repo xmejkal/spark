@@ -25,8 +25,10 @@ minutes from your Wokwi plan, so spark itself only runs `wokwi-cli` when you ask
 ```
 /spark:setup add wokwi-mcp
 ```
-Installs `wokwi-cli` if it is missing and registers the server by `wokwi-cli`'s full path — it
-installs to `~/.local/bin`, which is often not on the PATH Claude Code starts. Needs `WOKWI_CLI_TOKEN`
+Installs `wokwi-cli` if it is missing — Wokwi's own release binary for your machine, version 0.28.0,
+its checksum checked, into `~/.local/share/spark/downloads/` (it is not an npm package) — and registers
+the server by `wokwi-cli`'s full path, since wherever it lives is often not on the PATH Claude Code
+starts. Needs `WOKWI_CLI_TOKEN`
 set in your shell — never in a file you commit. Not checked here: the
 check would start the paid simulator's server.
 

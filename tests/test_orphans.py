@@ -123,7 +123,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
         self.assertEqual(missing, [], "open items with no `**Needed by:**` line: %s" % missing)
 
     #: Scripts that still name a tool's executable, until their task moves them to tools.find (P82).
-    NOT_YET_MOVED = {"check_spine.py": {"bun"}}  # a project's own TypeScript converter, for its developer
+    NOT_YET_MOVED = {}  # empty since the final review: a project's own cli.ts runs under the ts-runtime role
 
     def test_no_script_but_tools_names_a_tool_s_executable(self):
         names = {entry.get("exe") for key, entry in json.loads((ROOT / "data" / "tools.json").read_text()).items()
