@@ -32,6 +32,7 @@ import datetime
 import hashlib
 import json
 import re
+import struct
 import sys
 import urllib.parse
 import urllib.request
@@ -683,8 +684,53 @@ def any_record(part_id, project=None):
     return load(part_id, project)
 
 
+#: EXIF's pointer to the GPS block, and the size in bytes of each EXIF value type (TIFF 6.0).
+GPS_BLOCK_TAG = 0x8825
+EXIF_TYPE_BYTES = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8}
+
+
+def without_location(payload):
+    """
+    A JPEG with its GPS block emptied, and whether it had one (P75). A phone writes where a photo
+    was taken into it — all five of irrigation's did — and a person photographing a module at home
+    for /spark:identify must not publish their address by committing the file. Emptied in place:
+    every GPS value zeroed and the block's entry count set to 0, so nothing else in the file moves.
+    """
+    start = payload.find(b"Exif\x00\x00")
+    if not payload.startswith(b"\xff\xd8") or start < 0:
+        return payload, False
+    data, tiff = bytearray(payload), start + 6
+    order = "<" if data[tiff:tiff + 2] == b"II" else ">"
+
+    def read(fmt, at):
+        return struct.unpack_from(order + fmt, data, tiff + at)
+
+    def zero(at, size):
+        if tiff + at + size > len(data):
+            raise struct.error("a value past the end of the file")
+        data[tiff + at:tiff + at + size] = bytes(size)
+
+    try:
+        first = read("I", 4)[0]
+        pointers = [read("I", first + 10 + 12 * i)[0] for i in range(read("H", first)[0])
+                    if read("H", first + 2 + 12 * i)[0] == GPS_BLOCK_TAG]
+        if not pointers:
+            return payload, False
+        block, entries = pointers[0], read("H", pointers[0])[0]
+        for i in range(entries):
+            _, kind, count, offset = read("HHII", block + 2 + 12 * i)
+            if EXIF_TYPE_BYTES.get(kind, 1) * count > 4:
+                zero(offset, EXIF_TYPE_BYTES.get(kind, 1) * count)
+        zero(block, 2 + 12 * entries + 4)
+    except struct.error:
+        return payload, False
+    return bytes(data), True
+
+
 def keep_in_store(payload, name):
-    """Put a file in the store under its checksum and return the checksum (P62a)."""
+    """Put a file in the store under its checksum and return the checksum (P62a) — a photo without its location (P75)."""
+    if name.lower().endswith((".jpg", ".jpeg")):
+        payload = without_location(payload)[0]
     digest = hashlib.sha256(payload).hexdigest()
     (STORE / digest).mkdir(parents=True, exist_ok=True)
     (STORE / digest / name).write_bytes(payload)
@@ -1047,6 +1093,8 @@ def main(argv=None):
             target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2, ensure_ascii=False) + "\n")
             print("  wrote %s — every null is a fact to record; `parts.py --validate --project .` says what is missing" % target)
         elif args.keep:
+            if args.keep.lower().endswith((".jpg", ".jpeg")) and without_location(Path(args.keep).read_bytes())[1]:
+                print("  removed the location (EXIF GPS) from %s before keeping it" % Path(args.keep).name, file=sys.stderr)
             print(json.dumps(keep_local(args.keep, args.url), indent=2, ensure_ascii=False))
         elif args.kept:
             found = find_kept(args.kept, project)

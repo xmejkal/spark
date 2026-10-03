@@ -556,7 +556,7 @@ in commit messages and one commit remapped the 77 cited in the record files. The
 run against an empty `CLAUDE_CONFIG_DIR`: the marketplace added, `spark@petr-local` 0.6.0 installed
 and enabled. Found on the way: B10, and P75 (irrigation's photos carry GPS).
 
-### P75 — A photo spark keeps does not say where it was taken — **slice 1; found 2026-10-03**
+### P75 — A photo spark keeps does not say where it was taken — **slice 1** — DONE 2026-10-03
 **Needed by:** the hobbyist, who photographs modules at home with a phone for `/spark:identify` — and
 irrigation, all five of whose photos (iPhone, 2026-09-29) carry a GPS block with latitude, longitude
 and altitude, found while auditing its history for publication. The bin's five images carry none.
@@ -564,6 +564,12 @@ and altitude, found while auditing its history for publication. The bin's five i
 ever shared, publishes the place.
 **Value proven by:** `parts.py --keep` on a JPEG with a GPS block stores a file with none (EXIF tag
 0x8825 absent) and says so; a test with a fixture photo, and its mutation caught.
+**Done 2026-10-03.** `parts.without_location` empties the GPS block in place — every value zeroed, the
+entry count 0, nothing else in the file moved — and the store applies it to every JPEG; `--keep` says
+so on stderr, keeping its stdout pasteable JSON. On irrigation's five real photos: 15 GPS entries → 0
+each; of the nine multi-byte values per photo, none remains except GPS speed `0/1`, whose eight bytes
+also occur by chance in another EXIF structure in two of them; no XMP GPS text. Mutations
+`sprint-10-p75.json`: 5, all caught. (The tag is emptied, not deleted: a reader shows an empty GPS block.)
 
 ### P76 — From a vague idea to a block-level schematic, by conversation — **slice 1b; the PO's direction of 2026-10-03**
 **Needed by:** the hobbyist, spark's primary persona, who arrives with an idea in words and no list

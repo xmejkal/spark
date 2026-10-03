@@ -991,6 +991,50 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                                              "cites": {"document": "ds", "at": "page 3"}}})
         self.assertTrue(any("facts.idle_ua" in p and "'ds'" in p for p in parts.validate(definition, written(definition))))
 
+    @staticmethod
+    def _photo_with_location():
+        """A minimal JPEG whose EXIF carries a GPS block: latitude N 50° 5' 12.34" — as a phone writes it."""
+        import struct
+        latitude = struct.pack("<6I", 50, 1, 5, 1, 1234, 100)
+        tiff = (b"II*\x00" + struct.pack("<I", 8)
+                + struct.pack("<H", 1) + struct.pack("<HHII", 0x8825, 4, 1, 26) + struct.pack("<I", 0)
+                + struct.pack("<H", 2) + struct.pack("<HHI4s", 1, 2, 2, b"N\x00\x00\x00")
+                + struct.pack("<HHII", 2, 5, 3, 56) + struct.pack("<I", 0) + latitude)
+        exif = b"Exif\x00\x00" + tiff
+        return b"\xff\xd8\xff\xe1" + struct.pack(">H", len(exif) + 2) + exif + b"\xff\xd9", latitude
+
+    def _keep_photo(self, payload, name="module.jpg"):
+        import tempfile
+        from unittest import mock
+        store, local = self._store(), Path(tempfile.mkdtemp()) / name
+        local.write_bytes(payload)
+        with mock.patch.object(parts, "STORE", store), contextlib.redirect_stdout(io.StringIO()) as out, \
+                contextlib.redirect_stderr(io.StringIO()) as err:
+            parts.main(["--keep", str(local)])
+        json.loads(out.getvalue())  # what is pasted into a record stays JSON
+        kept = next(store.rglob(name)).read_bytes()
+        return kept, err.getvalue()
+
+    def test_a_kept_photo_does_not_say_where_it_was_taken(self):
+        """P75: all five of irrigation's phone photos carried latitude, longitude and altitude."""
+        import struct
+        photo, latitude = self._photo_with_location()
+        kept, said = self._keep_photo(photo)
+        self.assertNotIn(latitude, kept, "the coordinates are still in the file")
+        self.assertNotIn(b"N\x00\x00\x00", kept[kept.index(b"Exif"):], "the hemisphere is still in the file")
+        gps_entries = struct.unpack_from("<H", kept, kept.index(b"II*\x00") + 26)[0]
+        self.assertEqual(gps_entries, 0, "the GPS block still lists entries")
+        self.assertEqual(len(kept), len(photo), "nothing else in the file may move")
+        self.assertIn("location", said.lower())
+
+    def test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged(self):
+        photo, _ = self._photo_with_location()
+        plain = photo.replace(b"\x25\x88", b"\x0f\x01", 1)  # the GPS pointer becomes the camera maker's tag
+        for payload, name in ((plain, "plain.jpg"), (b"%PDF-1.4 whatever", "ds.pdf")):
+            kept, said = self._keep_photo(payload, name)
+            self.assertEqual(kept, payload, name)
+            self.assertNotIn("location", said.lower(), name)
+
     def test_a_document_whose_checksum_is_not_one_is_refused(self):
         definition = part(documents={"x": {"url": "https://v.example/x.pdf", "sha256": "abc", "file": "x.pdf",
                                            "retrieved": "2026-10-02", "title": None, "version": None}})

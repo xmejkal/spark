@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "the GPS values stay in the file, only their entries go",
+  "find": "                zero(offset, EXIF_TYPE_BYTES.get(kind, 1) * count)",
+  "replace": "                pass"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the GPS block keeps listing its entries",
+  "find": "        zero(block, 2 + 12 * entries + 4)",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the store keeps a photo as it came",
+  "find": "        payload = without_location(payload)[0]",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a photo with no GPS block is treated as one with",
+  "find": "        if not pointers:\n            return payload, False",
+  "replace": "        if False:\n            return payload, False"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "--keep removes the location and says nothing",
+  "find": "                print(\"  removed the location (EXIF GPS) from %s before keeping it\" % Path(args.keep).name, file=sys.stderr)",
+  "replace": "                pass"
+ }
+]

@@ -30,7 +30,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
-| **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71 (done), P44 (done), **P75**, **B10** |
+| **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71, P44, P75 (done), **B10** |
 | **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | *not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** |
 | **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | **B1**, **P58**, **P73**, **B8**, **B5** |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59**, **P74** |
