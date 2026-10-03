@@ -32,7 +32,7 @@
  {
   "file": "commands/build.md",
   "name": "the documented output stops naming the core it was run on",
-  "find": "  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.2600",
-  "replace": "  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.9999"
+  "find": "  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2600",
+  "replace": "  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.9999"
  }
 ]
