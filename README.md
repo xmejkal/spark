@@ -124,19 +124,10 @@ which is which and why.
 - **kicad-happy** — mature KiCad DRC/EMC/datasheet/BOM skills:
   `/plugin marketplace add aklofas/kicad-happy`
 
-**MCP servers** (declared in `.mcp.json`; install the server, then adjust the command if needed)
-
-- **espressif-docs** — official Espressif documentation with citations, via
-  `npx -y mcp-remote https://mcp.espressif.com/docs`.
-- **jlcpcb** — part lookup, via `npx -y @jlcpcb/mcp`.
-- **sigrok** — a bench scope or logic analyzer. Needs
-  [KenosInc/sigrok-mcp-server](https://github.com/KenosInc/sigrok-mcp-server) plus `sigrok-cli` on
-  the machine the instrument is plugged into.
-- **wokwi** — headless simulation: `npm i -g wokwi-cli`, plus a token in `WOKWI_CLI_TOKEN`.
-- **kicad** — a KiCad MCP for layout/DRC/fab, e.g. `uvx kicad-mcp`.
-
-> These need their binaries present, and sigrok needs the instrument physically plugged in. spark
-> declares the wiring; it cannot ship the servers or the hardware.
+**MCP servers** — spark declares two, because its research agents call them: **jlcpcb** (part
+search, for `part-finder`) and **espressif-docs** (Espressif's own documentation, for
+`datasheet-reader`; needs Node 20 or newer). Wokwi and sigrok are offered as one-line additions, and
+why KiCad's is not: [`docs/mcp.md`](docs/mcp.md).
 
 ## Toolchain the skills call
 

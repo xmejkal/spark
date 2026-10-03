@@ -5,6 +5,35 @@ the authoritative footprint + 3D model + pinout + datasheet from a real source, 
 it `verified`. Never ship a generic placeholder footprint to fabrication. This is the verified-parts
 waterfall (see `verified-parts.md`) made comprehensive.
 
+## Start from a worked record
+
+Researchers spent about one call in eight learning the schema from spark's source (P80). Read this
+one instead — `parts/led-red-5mm.json`, the Kingbright L-7113ID, written from one kept datasheet:
+
+```json
+{
+  "id": "led-red-5mm", "name": "Kingbright L-7113ID 5 mm red LED", "kind": "indicator",
+  "vendor": "kingbright", "sku": "L-7113ID",
+  "needs":  [{"signal": "STATUS_LED", "pin": "A", "direction": "out"}],
+  "power":  [{"pin": "K", "rail": "ground", "direction": "in"}],
+  "pin_order": ["A", "K"],
+  "pin_order_proof": {"verified": true, "source": "Package Dimensions: the cathode lead is drawn shorter ...",
+                      "cites": {"document": "l-7113id-ver29a", "at": "Package Dimensions, page 1"}},
+  "footprint": "pinrow2",
+  "facts": {"forward_voltage_v": {"value": 1.9, "verified": true, "source": "typ at IF = 10 mA ...",
+                                  "cites": {"document": "l-7113id-ver29a", "at": "Electrical / Optical Characteristics, page 2"}}},
+  "host_parts": [{"kind": "series", "pin": "A", "for_current_ma": 5, "why": "limits the current from a 3.3 V GPIO"}],
+  "host_requirements": ["On a breadboard: the LONG lead (anode) goes to the resistor ..."],
+  "documents": {"l-7113id-ver29a": {"url": "https://www.kingbright.com/...", "sha256": "...", "file": "L-7113ID(Ver.29A).pdf",
+                                    "title": "...", "version": "Rev V.29A, 09/04/2020 (Spec No DSAA6645)"}}
+}
+```
+
+What makes it a good record: every fact cites a page of a kept document; the pin order says how it
+was read; the warning a person must see is in `host_requirements`, which spark prints; the series
+resistor is asked for by the current it is for, and spark computes the value. What it leaves out on
+purpose (W21): prices, stock, and facts no decision reads.
+
 ## Source waterfall (try in order; record which source + a link as provenance)
 1. **tscircuit registry** — `tsci add <author>/<part>` (e.g. `seeed/xiao-esp32-c6`). Brings a real
    footprint AND a 3D model AND the pin map, usable directly in the `.tsx`. First choice when a part exists.

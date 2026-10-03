@@ -1,9 +1,9 @@
 [
  {
   "file": "agents/parts-researcher.md",
-  "name": "the researcher is sent to one person's home for the catalog again",
-  "find": "`<plugin>/catalog/<id>.json`",
-  "replace": "`/Users/someone/spark/catalog/<id>.json`"
+  "name": "the researcher is sent to one person's home for the store again",
+  "find": "in the person's store (`~/.local/share/spark/sources`)",
+  "replace": "in the person's store (`/Users/someone/.local/share/spark/sources`)"
  },
  {
   "file": "tests/test_emit_footprint.py",

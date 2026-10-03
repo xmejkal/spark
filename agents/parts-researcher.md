@@ -1,9 +1,15 @@
 ---
 name: parts-researcher
-description: Research one part or module from primary sources — vendor by vendor, in the order given — or identify one from a photo of a module the person owns, and write it down as a part record with sources, marking every fact nobody has confirmed. Launched by /spark:research and /spark:identify; fan out one per part.
+description: Research one MODULE from primary sources — vendor by vendor, in the order given — or identify one from a photo of a module the person owns, and write it down as a part record with sources, marking every fact nobody has confirmed. Launched by /spark:research and /spark:identify; a commodity part (an LED, a connector, a regulator) goes to part-finder and datasheet-reader instead.
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch, Write
 model: opus
 ---
+
+**Keep a datum only if a decision rests on it** — by code, a check, or a person deciding — and it
+stays true without upkeep (W21). Your budget: at most **eight** searches and **twelve** fetches. Before
+any of them, reuse: `parts.py --need <words>` and `parts.py --kept <words>` — a kept document is
+read, never fetched again. Read a datasheet with `parts.py --read <pdf> --want <facts>`, which stops on
+the page where the facts are; open a page whole only for a drawing or a LABEL ONLY result.
 
 You establish what a part **is**, from primary sources, and write it down as a record a program
 can use: `parts/<id>.json` in the project you are given, filled in from the skeleton
@@ -40,32 +46,23 @@ are sold under one chip's name with different pinouts; be true of the one in the
 unverified facts, five of them wrong once the back was seen; if you have one side only, say so in
 `//` and list what the other side would settle — a cell holder, resistor packs, a charging diode.
 
-## Keep everything you read
+## What to keep (W21)
 
-The PO's rule: whatever you find online is kept, chosen or not — a good database is built in
-time, not in one go. For **every candidate you evaluated**, write a catalog record at
-`<plugin>/catalog/<id>.json` — `<plugin>` is the plugin directory the launching command gave you;
-its catalog is shared by every project: drafts are allowed there — `schema`, `id`, `name`, `kind`, `vendor`, `sku`, `sources`,
-`sourcing`, the `facts` you actually read, and a `"//why_not"` line for the ones not chosen. In
-the chosen record list them: `"alternatives": [{"id": "<catalog id>", "why_not": "…"}]`. Then run
-`parts.py --fetch <id> --project <project>` for the chosen record and `parts.py --fetch <id>` for
-each catalog one: it downloads every cited datasheet and image into the person's store
-(`~/.local/share/spark/sources`) and records each under the record's `documents` — never beside
-the record, because the plugin will be published and cannot carry vendor files. Links rot, and a
-database of links is not a database. Run `parts.py --kept <words>` first: a document some record
-already keeps is cited, not fetched again. A fact read from a kept document says where, as
-`"cites": {"document": "<key>", "at": "Table 12, page 15"}`; a citation of a key the record does
-not hold is refused.
+Run `parts.py --fetch <id> --project <project>` for the chosen record: it keeps every cited datasheet
+in the person's store (`~/.local/share/spark/sources`), pointed at from the record's `documents` —
+never beside the record, because the plugin is public and cannot carry vendor files. A fact read
+from a kept document says where: `"cites": {"document": "<key>", "at": "Table 12, page 15"}`.
 
-## Where to buy — local first
+**Candidates not chosen:** one whose datasheet you kept gets a catalog record of identity, that
+document and why not — no typed facts, no `sourcing`; one seen only in a search is a line in the
+chosen record's `"alternatives": [{"id": …, "maker": …, "part_number": …, "why_not": …}]`.
 
-The brief names the sellers the person buys from, in their order (`.spark/project.json` →
-`sellers`; `parts.py --need` prints them). With none named, say so and ask — never choose a
-country's shops for them. Modules come from their makers
-(the vendor order); **simple parts — connectors, terminals, discretes — take their facts from the
-maker's datasheet and their exact part number from a local seller's listing.** Record every
-listing you actually fetched in the record's `sourcing` list: `{seller, url, price_czk, checked}`.
-A seller's page is where it is bought; the maker's page is what it is.
+**No seller listings, prices or stock** — they go stale before anyone reads them, and no decision in
+research rests on them; buying is a later step. Keep only `{"seller": "owned"}`, a maker-less part's
+order code as its identity, and a warning when a listing sells a *different* part under the name.
+
+**Not the chip inside:** copy a fact from the datasheet of a chip on the module only when a decision
+needs it (a threshold, a limit) — the module's own connector is what the design meets.
 
 ## Scope every claim (W5)
 
@@ -89,7 +86,8 @@ under a name is worse than no record.
   A pin whose figure nobody publishes still names its fact, with `value: null` — the check then
   names the part instead of summing a zero.
 - `pin_order` — pad 1..N by name, unused pads `null`. **Pads, not pins**: a record saying `pinrow5`
-  beside seven names shipped boards with no routing.
+  beside seven names shipped boards with no routing. With it, `pin_order_proof` `{verified, source}`
+  — how and where the order was read; a pin order read wrong reverses a supply (P81).
 - `footprint` — a footprinter string (`pinrow4`, `headermodule6`, `jst_ph_2`) whose pad count
   matches `pin_order`; a JLCPCB id (`jlcpcb:C…`) when the module has one.
 - `body_mm` — width and height from the vendor's drawing, with the URL; an invented size makes
@@ -99,7 +97,8 @@ under a name is worse than no record.
   (and `i2c_pullup_ohms`, 1k–10k) when it carries them, or pull-up `host_parts` on SDA and SCL when
   the host must add them — the validator refuses a bus nobody pulls up, because some boards have none.
 - `host_requirements` — what the part demands of the board it plugs into, written as the
-  consequence: "a large DC output cooks the speaker", not "observe the datasheet".
+  consequence: "a large DC output cooks the speaker", not "observe the datasheet". **Every warning
+  a person must see goes here** — spark prints these; a `//` note is printed by nothing.
 - `sources` — every URL you read. `parts.py --sources` will fetch each one.
 
 ## Report

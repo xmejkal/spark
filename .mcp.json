@@ -14,28 +14,6 @@
         "-y",
         "@jlcpcb/mcp"
       ]
-    },
-    "sigrok": {
-      "command": "sigrok-mcp-server",
-      "args": [],
-      "env": {
-        "SIGROK_CLI_PATH": "sigrok-cli"
-      }
-    },
-    "kicad": {
-      "command": "uvx",
-      "args": [
-        "kicad-mcp"
-      ]
-    },
-    "wokwi": {
-      "command": "wokwi-cli",
-      "args": [
-        "mcp"
-      ],
-      "env": {
-        "WOKWI_CLI_TOKEN": "${WOKWI_CLI_TOKEN}"
-      }
     }
   }
 }

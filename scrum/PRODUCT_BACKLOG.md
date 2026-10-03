@@ -667,6 +667,19 @@ next increment, with B11.
 first (P81), then these agents — whose per-kind fact list is now "what a decision reads": no seller
 listings, no sub-chip datasheet unless a listed fact needs it, a worked example record in
 `part-data.md` (schema-learning was 12 % of research calls) — then the clean-up (P83).
+**Built 2026-10-03:** `agents/part-finder.md` (Haiku; maker-site searches only, at most two
+candidates with the datasheet URL, never a distributor fetch or a guessed URL, writes nothing; jlcpcb's
+`component_search`) and `agents/datasheet-reader.md` (Sonnet; no web; `parts.py --read` first, a page
+opened whole only for a drawing or a LABEL ONLY; every fact cited; espressif-docs for ESP32 facts);
+`/spark:research` routes a commodity part to them with a fact list per kind, and modules and photos to
+`parts-researcher`, which now carries W21, reuse first, a budget of 8 searches and 12 fetches, slim
+candidates and no seller listings. The LED is promoted into the library and is `part-data.md`'s worked
+record. `claude plugin details` loads them: part-finder ~640 tokens, datasheet-reader ~790, against the
+researcher's ~2.6k. MCP: `.mcp.json` declares only jlcpcb and espressif-docs, both answering
+`tools/list` today — espressif-docs only on Node 20+ (`mcp-remote` fails on 18 with `File is not
+defined`, which is why it never connected); `docs/mcp.md` offers wokwi and sigrok as one-line additions
+and says why KiCad's PyPI server is not offered. **Open:** use them — after a Claude Code restart, the
+next part researched through finder and reader, measured against the lean run (19 calls, ~0.55 M, 148 s).
 
 ### P81 — A warning that can cause a wrong board is shown where the decision is made — **slice 2, first; the PO's order of 2026-10-03**
 **Needed by:** every design the hobbyist builds on a breadboard, where the person is the check — and
