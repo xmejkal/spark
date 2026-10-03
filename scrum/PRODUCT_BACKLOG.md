@@ -587,7 +587,10 @@ existing chain then accepts once parts are chosen.
 **Needed by:** the hobbyist, who learns spark from its examples — and spark's own claim to work. The
 PO: *"All of the examples are I think to be fully regenerated to make sure it really works, test all
 the scenarios again, and also the old examples are full of old files and we just really want to have
-good up to date example projects"* — *"and to document the steps, to be a good example."* The
+good up to date example projects"* — *"and to document the steps, to be a good example."* — *"All
+example projects should also be examples of different scenarios: the irrigation, going really from
+idea in words; the bin is special because we start with extra debugging, so to say, and then create
+the replacement, etc."* Each example shows a different kind of journey. The
 examples were made by older spark (irrigation and the RC car before Sprints 6–9; the bin's board by
 hand) and keep outputs of their time (irrigation's `check-all*.txt`, `emit-notes.txt`). Irrigation's
 publication (`spark-example-irrigation`, PO-approved with its photos GPS-free) is held for this.
