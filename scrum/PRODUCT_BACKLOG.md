@@ -744,6 +744,28 @@ public history is a separate decision.
 **Value proven by:** `parts.py --kept` finds each of the 16; the four spark records that name them cite
 them by key; `git ls-files parts/datasheets` in the bin is empty.
 
+### P82 — Setting up spark is one step, like installing a package — **slice 1; the PO's request of 2026-10-03**
+**Needed by:** the hobbyist, and the PO building the quickstart: *"we want to make it as easy and
+seamless for users as possible, like packages."* Step 5 of the quickstart stopped at `????` "tsci is not
+installed" while `build.md` says its one command "needs neither"; an `npm install` the person had to
+know to run fixed it. A newcomer meets four more such steps nobody does for them: the converter's
+packages (B10), `littlefs-python` for the flash image, a MicroPython firmware download, and a Node of
+version 20 or more for espressif-docs — and a global tool can vanish under them (switching nvm's
+default to Node 22 hid a global `tsci` installed under 18). Not designed yet: what spark installs by
+itself, what it asks consent for, and what it only names.
+**Value proven by:** from an empty `CLAUDE_CONFIG_DIR` and an empty directory, `/spark:init` then
+`/spark:build` reach "the chain runs end to end" with at most one consent and no install command the
+person types; anything still missing is named with the one command that installs it.
+
+### B13 — "must not float" passes a pin that floats — **slice 4; found 2026-10-03 building the quickstart**
+**Needed by:** the quickstart, whose `rules-vs-netlist` read `[ok]` while both buttons' inputs have no
+resistor — the button record itself says *"give it an external pull, not just the internal one"* — and
+every design whose rules name an input. `compare_design.check_floating_inputs` asks only whether a pin
+connects to *nothing*; a pin wired to a GPIO and nothing else floats all the same.
+**Value proven by:** the check fails a `must_not_float` pin whose net reaches no rail through a resistor
+and is not itself a rail, and names the quickstart's two buttons; the L9110S inputs, which have their
+pull-downs, still pass; mutation caught.
+
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
 touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules
