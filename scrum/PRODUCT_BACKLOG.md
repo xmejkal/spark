@@ -756,6 +756,12 @@ itself, what it asks consent for, and what it only names.
 **Value proven by:** from an empty `CLAUDE_CONFIG_DIR` and an empty directory, `/spark:init` then
 `/spark:build` reach "the chain runs end to end" with at most one consent and no install command the
 person types; anything still missing is named with the one command that installs it.
+**The PO decided, 2026-10-03:** (1) **one setup step, one yes** — `/spark:setup` checks every
+dependency, shows what is missing, and with one consent installs it into the person's user space (npm
+in the project, pip `--user`, poppler via Homebrew where present) — never `sudo`; after it, init and
+build never stop for a missing tool, and every command still names anything missing with its fix.
+(2) **the simulation converter ships bundled** as one self-contained file in spark, so simulation needs
+no install at all — B10 goes with it; a check keeps the bundle in step with its source.
 
 ### B13 — "must not float" passes a pin that floats — **slice 4; found 2026-10-03 building the quickstart** — DONE 2026-10-03
 **Needed by:** the quickstart, whose `rules-vs-netlist` read `[ok]` while both buttons' inputs have no
