@@ -72,7 +72,7 @@ SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN  # noqa: E402
 
 
 class PartError(Exception):
@@ -745,6 +745,98 @@ def keep_in_store(payload, name):
     return digest
 
 
+#: The unit a fact's name ends in, as a datasheet prints it.
+UNIT_PRINTED = {"_v": r"(?<![A-Za-z])V(?![A-Za-z])", "_mv": r"mV", "_a": r"(?<![A-Za-z])A(?![A-Za-z])",
+                "_ma": r"mA", "_ua": r"(µA|uA)", "_nm": r"nm", "_deg": r"(°|deg)", "_mm": r"mm",
+                "_ohms": r"(Ω|ohm|k)", "_hz": r"[kM]?Hz", "_c": r"°C", "_mw": r"mW"}
+#: What a datasheet calls a fact spark names its own way; the name's own words are always tried too.
+DATASHEET_SAYS = {"max_continuous_current": ["dc forward current", "continuous current"],
+                  "forward_voltage": ["forward voltage"], "forward_voltage_max": ["forward voltage"],
+                  "peak_wavelength": ["peak wavelength", "wavelength at peak", "λpeak"], "viewing_angle": ["viewing angle"],
+                  "deep_sleep_current": ["deep-sleep", "deep sleep"], "supply_voltage": ["supply voltage"]}
+TABLE_ROW = re.compile(r"\S\s{3,}\S.*\S\s{3,}\S")
+STANDALONE_NUMBER = re.compile(r"(?<![\w.=])\d+(\.\d+)?(?![\w.])")
+SECTION = re.compile(r"^\s*(Table\s+\d+.*|[A-Z]{2,}[A-Z0-9 /&,\-]{4,}.*|\d+(\.\d+)+\s+[A-Z].{3,60})$")
+
+
+def scan_datasheet(pages, wanted, labels=None):
+    """
+    Each wanted fact's lines in a datasheet, read page by page and STOPPED on the page where every
+    fact is FOUND (P80): a run that printed a whole datasheet paid for it on every later turn, while
+    the facts sat on one page. FOUND is a table row with the label, a standalone number, and the
+    unit on the row or in a column header above; a prose bullet never is — the S3 overview's "7 uA"
+    taken for the table is the P63 misreading. LABEL ONLY shows the next two lines; NOT FOUND names
+    the words tried. `pages` yields (number, text); `labels` adds words per fact.
+    """
+    plan = {}
+    for fact in wanted:
+        suffix = next((end for end in sorted(UNIT_PRINTED, key=len, reverse=True) if fact.endswith(end)), "")
+        stem = fact[:-len(suffix)] if suffix else fact
+        words = list(dict.fromkeys(DATASHEET_SAYS.get(stem, []) + [stem.replace("_", " ")] + list((labels or {}).get(fact, []))))
+        plan[fact] = (words, re.compile(UNIT_PRINTED[suffix]) if suffix else None)
+    found = {fact: {"status": "NOT FOUND", "hits": [], "tried": words} for fact, (words, _) in plan.items()}
+    for number, text in pages:
+        lines, section = text.splitlines(), None
+        for index, line in enumerate(lines, 1):
+            # A heading names a table or a section; a table row that happens to start in capitals does not.
+            section = line.strip() if SECTION.match(line) and not TABLE_ROW.search(line) else section
+            for fact, (words, unit) in plan.items():
+                if not any(word in line.lower() for word in words):
+                    continue
+                above = "\n".join(lines[max(0, index - 21):index - 1])
+                has_unit = unit is None or unit.search(line) or re.search(r"\(\s*" + unit.pattern + r"\s*\)", above)
+                if TABLE_ROW.search(line) and STANDALONE_NUMBER.search(line) and has_unit:
+                    entry = found[fact]
+                    if entry["status"] != "FOUND":
+                        entry["status"], entry["hits"] = "FOUND", []
+                    entry["hits"].append((number, index, section, re.sub(r"\s{3,}", " | ", line.strip())))
+                elif found[fact]["status"] == "NOT FOUND":
+                    # A wrapped cell puts a row's label between its values: show the line above too.
+                    above_line = [previous.strip() for previous in lines[max(0, index - 3):index - 1] if previous.strip()][-1:]
+                    below = [following.strip() for following in lines[index:index + 6] if following.strip()][:2]
+                    found[fact] = dict(found[fact], status="LABEL ONLY",
+                                       hits=[(number, index, section, " // ".join(above_line + [line.strip()] + below))])
+        if all(entry["status"] == "FOUND" for entry in found.values()):
+            break
+    return found
+
+
+def datasheet_pages(path):
+    """(number, text) per page of a PDF, as `pdftotext -layout` lays it out — one page at a time, on demand."""
+    import subprocess
+    number = 1
+    while True:
+        done = subprocess.run(["pdftotext", "-layout", "-f", str(number), "-l", str(number), str(path), "-"],
+                              capture_output=True, text=True)
+        if done.returncode != 0:
+            return
+        yield number, done.stdout
+        number += 1
+
+
+def read_datasheet(path, wanted, labels=None):
+    """Print what `scan_datasheet` found, with the pages read; EXIT_OK only when every fact was FOUND."""
+    import shutil
+    if not shutil.which("pdftotext"):
+        print("parts.py: --read needs pdftotext — brew install poppler (or apt install poppler-utils)", file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    read = []
+    def counted():
+        for page in datasheet_pages(path):
+            read.append(page[0])
+            yield page
+    found = scan_datasheet(counted(), wanted, labels)
+    for fact, entry in found.items():
+        if entry["status"] == "NOT FOUND":
+            print("%-28s NOT FOUND — tried: %s" % (fact, ", ".join(entry["tried"])))
+        for page, line, section, text in entry["hits"][:3]:
+            print("%-28s %-10s p%d:%d  [%s]  %s" % (fact, entry["status"], page, line, section or "no heading", text[:220]))
+    missing = [fact for fact, entry in found.items() if entry["status"] != "FOUND"]
+    print("read %d of the document's pages, %s" % (len(read), "stopping where the last fact was found" if not missing
+                                                    else "%d fact(s) not on a table row: read those pages as images" % len(missing)))
+    return EXIT_OK if not missing else EXIT_INVALID
+
+
 def keep_local(path, url=None):
     """
     Put a file you already have into the store and return the `documents` entry that points at it
@@ -1037,6 +1129,7 @@ def main(argv=None):
     what.add_argument("--sources", metavar="PART", help="fetch every URL a record cites; a source that does not answer is named")
     what.add_argument("--fetch", metavar="PART", help="download the datasheets and images a record cites, into your store")
     what.add_argument("--keep", metavar="FILE", help="put a file you already have into your store; prints its documents entry")
+    what.add_argument("--read", metavar="PDF", help="read a datasheet page by page and stop where every --want fact is on a table row")
     what.add_argument("--kept", nargs="+", metavar="WORD",
                       help="find a kept document by every word, with no network, and every fact resting on it")
     what.add_argument("--promote", metavar="PART", help="catalog → the project's parts/, or the project's parts/ → the plugin's library")
@@ -1044,6 +1137,8 @@ def main(argv=None):
     parser.add_argument("--kind", help="with --skeleton: the part's kind (motor-driver, sensor, regulator, …)")
     parser.add_argument("--vendor", help="with --skeleton: who makes it")
     parser.add_argument("--url", help="with --keep: where the file came from, if anyone knows")
+    parser.add_argument("--want", nargs="+", metavar="FACT", help="with --read: the facts to find, named as records name them (forward_voltage_v …)")
+    parser.add_argument("--label", action="append", metavar="FACT=WORD|WORD", help="with --read: extra words a datasheet uses for a fact")
     parser.add_argument("--project", type=Path,
                         help="a project whose own parts/ beats the shipped library")
     parser.add_argument("--json", action="store_true")
@@ -1104,6 +1199,12 @@ def main(argv=None):
             if args.keep.lower().endswith((".jpg", ".jpeg")) and without_location(Path(args.keep).read_bytes())[1]:
                 print("  removed the location (EXIF GPS) from %s before keeping it" % Path(args.keep).name, file=sys.stderr)
             print(json.dumps(keep_local(args.keep, args.url), indent=2, ensure_ascii=False))
+        elif args.read:
+            labels = {}
+            for given in args.label or []:
+                fact, _, words = given.partition("=")
+                labels[fact] = [word.strip().lower() for word in words.split("|") if word.strip()]
+            return read_datasheet(args.read, args.want or [], labels)
         elif args.kept:
             found = find_kept(args.kept, project)
             print("\n".join(found) if found else "nothing kept matches %s — fetch it, or --keep a file "

@@ -1163,5 +1163,150 @@ class WhatAPartDemandsOfItsHostTest(unittest.TestCase):
         self.assertIn("bottom_ohms", said)
         self.assertEqual(self._problems([{"kind": "divider", "pin": "OUT", "top_ohms": 10000, "bottom_ohms": 18000, "why": "w"}]), [])
 
+class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
+    """
+    P80. A research run printed a whole datasheet early and paid for it on every later turn; the
+    facts a record needs sit on one or two pages (13 % of the LED's text, 2 % of the WROOM's). So
+    `--read` streams page by page and stops on the page where every wanted fact has a table row.
+    The fixture is written in a datasheet's shape; no vendor's text is copied.
+    """
+
+    PAGE_1 = """
+    FEATURES
+      * Low forward voltage, typically 1.9 V
+      * Viewing angle 30 deg
+    """
+    PAGE_2 = """
+    ELECTRICAL / OPTICAL CHARACTERISTICS at TA=25 C
+      Parameter              Symbol      Typ.      Max.      Unit      Test Condition
+      Forward Voltage        VF          1.9       2.3       V         IF=10mA
+      Peak Wavelength        lambda      627                 nm        IF=10mA
+    ABSOLUTE MAXIMUM RATINGS
+      DC Forward Current     IF                    30        mA
+    Viewing angle (2 theta)
+      Lamp
+           30
+    """
+
+    def pages(self, *texts):
+        for number, text in enumerate(texts, 1):
+            yield number, text
+        raise AssertionError("read past the last page the facts are on")
+
+    def test_a_fact_on_a_table_row_is_found_and_the_reading_stops_there(self):
+        found = parts.scan_datasheet(self.pages(self.PAGE_1, self.PAGE_2), ["forward_voltage_v", "max_continuous_current_ma"])
+        self.assertEqual(found["forward_voltage_v"]["status"], "FOUND")
+        self.assertEqual(found["forward_voltage_v"]["hits"][0][:2], (2, 4), "page 2, line 4")
+        self.assertIn("1.9", found["forward_voltage_v"]["hits"][0][3])
+        self.assertEqual(found["max_continuous_current_ma"]["status"], "FOUND")
+
+    def test_a_prose_bullet_is_never_taken_for_the_table(self):
+        # The S3 overview's "7 uA" bullet was taken before the table — the P63 misreading in miniature.
+        found = parts.scan_datasheet(iter([(1, self.PAGE_1)]), ["forward_voltage_v"])
+        self.assertNotEqual(found["forward_voltage_v"]["status"], "FOUND")
+
+    def test_a_unit_stated_in_a_column_header_counts(self):
+        page = """
+        Table 12: Current Consumption
+          Work mode                 Description                     Current (uA)
+          Deep-sleep                RTC memory and peripherals on   8
+        """
+        found = parts.scan_datasheet(iter([(1, page)]), ["deep_sleep_current_ua"])
+        self.assertEqual(found["deep_sleep_current_ua"]["status"], "FOUND")
+        self.assertIn("Table 12", found["deep_sleep_current_ua"]["hits"][0][2], "the locator a citation needs")
+
+    def test_a_label_whose_value_sits_below_shows_the_next_lines(self):
+        found = parts.scan_datasheet(iter([(1, self.PAGE_2)]), ["viewing_angle_deg"])
+        self.assertEqual(found["viewing_angle_deg"]["status"], "LABEL ONLY")
+        self.assertIn("30", found["viewing_angle_deg"]["hits"][0][3])
+
+    def test_a_fact_nowhere_says_so_and_names_the_words_tried(self):
+        found = parts.scan_datasheet(iter([(1, self.PAGE_2)]), ["reverse_current_ua"], labels={"reverse_current_ua": ["leakage"]})
+        self.assertEqual(found["reverse_current_ua"]["status"], "NOT FOUND")
+        self.assertIn("leakage", found["reverse_current_ua"]["tried"])
+
+    def test_a_value_on_the_line_above_its_label_is_shown(self):
+        # The WROOM-1's Table 12: "Deep-sleep" sits between its two rows, 8 uA above and 7 uA below
+        # — showing only what follows the label is how 8 uA could be missed again (P63).
+        page = """
+        Table 12: Current Consumption Depending on Work Modes
+          Work mode      Description                                       Typ      Unit
+                         RTC memory and RTC peripherals are powered on.    8        uA
+          Deep-sleep
+                         RTC memory is powered on. RTC peripherals off.    7        uA
+        """
+        hit = parts.scan_datasheet(iter([(1, page)]), ["deep_sleep_current_ua"])["deep_sleep_current_ua"]["hits"][0][3]
+        self.assertIn("8", hit)
+        self.assertIn("7", hit)
+
+    def test_a_table_row_is_never_taken_for_the_heading_it_sits_under(self):
+        page = """
+        Table 9: Recommended Operating Conditions
+          VDD33        Power supply voltage        3.0     3.3     3.6     V
+        """
+        hit = parts.scan_datasheet(iter([(1, page)]), ["supply_voltage_v"])["supply_voltage_v"]["hits"][0]
+        self.assertEqual(hit[2], "Table 9: Recommended Operating Conditions")
+
+    def test_a_stray_capital_letter_is_not_a_heading(self):
+        # The L-7113ID's ratings table has a line reading "K      Symbol" under its real heading.
+        page = """
+        ABSOLUTE MAXIMUM RATINGS
+        K                           Symbol
+          DC Forward Current        IF        30        mA
+        """
+        hit = parts.scan_datasheet(iter([(1, page)]), ["max_continuous_current_ma"])["max_continuous_current_ma"]["hits"][0]
+        self.assertEqual(hit[2], "ABSOLUTE MAXIMUM RATINGS")
+
+    def test_a_maker_naming_the_fact_its_own_way_is_still_read(self):
+        page = """
+          Parameter                           Symbol     Typ.     Unit
+          Wavelength at Peak Emission         lpeak      627      nm
+        """
+        found = parts.scan_datasheet(iter([(1, page)]), ["peak_wavelength_nm"])["peak_wavelength_nm"]
+        self.assertEqual(found["status"], "FOUND")
+        self.assertEqual(len(found["tried"]), len(set(found["tried"])), "each word tried once")
+
+    def test_the_command_reads_a_real_pdf_and_exits_by_what_it_found(self):
+        import shutil, tempfile
+        if not shutil.which("pdftotext"):
+            self.skipTest("pdftotext is not installed")
+        pdf = Path(tempfile.mkdtemp()) / "ds.pdf"
+        pdf.write_bytes(_tiny_pdf([["FEATURES", "Small and bright"],
+                                   ["Parameter      Symbol      Max.      Unit", "DC Forward Current      IF      30      mA"],
+                                   ["this page must not be read"]]))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = parts.main(["--read", str(pdf), "--want", "max_continuous_current_ma"])
+        self.assertEqual(code, parts.EXIT_OK, out.getvalue())
+        self.assertIn("p2:", out.getvalue())
+        self.assertIn("read 2 of", out.getvalue(), "it stopped at the page with the fact")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = parts.main(["--read", str(pdf), "--want", "peak_wavelength_nm"])
+        self.assertNotEqual(code, parts.EXIT_OK, "a fact not found is not a pass")
+
+
+def _tiny_pdf(pages):
+    """A PDF with one text line per entry, columns kept by spaces — enough for pdftotext -layout."""
+    objects, kids = [], []
+    font = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>"
+    objects.append(font)
+    for lines in pages:
+        stream = "BT /F1 10 Tf 40 760 Td 12 TL " + " ".join("(%s) '" % line for line in lines) + " ET"
+        objects.append("<< /Length %d >>\nstream\n%s\nendstream" % (len(stream), stream))
+        kids.append(len(objects) + 1)
+        objects.append("<< /Type /Page /Parent PAGESREF /MediaBox [0 0 612 792] /Contents %d 0 R "
+                       "/Resources << /Font << /F1 1 0 R >> >> >>" % len(objects))
+    pages_index = len(objects) + 1
+    objects.append("<< /Type /Pages /Kids [%s] /Count %d >>" % (" ".join("%d 0 R" % k for k in kids), len(kids)))
+    objects.append("<< /Type /Catalog /Pages %d 0 R >>" % pages_index)
+    out, offsets = "%PDF-1.4\n", []
+    for number, body in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += "%d 0 obj\n%s\nendobj\n" % (number, body.replace("PAGESREF", "%d 0 R" % pages_index))
+    xref = len(out)
+    out += "xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1) + "".join("%010d 00000 n \n" % o for o in offsets)
+    out += "trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, len(objects), xref)
+    return out.encode("latin-1")
+
+
 if __name__ == "__main__":
     unittest.main()
