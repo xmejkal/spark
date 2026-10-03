@@ -63,6 +63,7 @@ MAY_READ = {
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.PLUGIN_CONVERTER": STRUCTURE, "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
+    "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
     "sim_project.INSTALL_HINT": AGREEMENT + " — the hint must carry the tools list's own install line for wokwi-cli",
 }
 

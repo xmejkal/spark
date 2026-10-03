@@ -133,6 +133,214 @@ class FindingAToolTest(unittest.TestCase):
 
 
 
+def which_all_but(*absent):
+    """A fake shutil.which: every program is in /usr/bin except the ones named."""
+    return lambda exe: None if exe in absent else "/usr/bin/" + exe
+
+
+class SetupTest(unittest.TestCase):
+    """P82 task 6: the picture /spark:setup shows, one yes to install, and choices that write one line."""
+
+    def setUp(self):
+        defaults = dict(DEFAULTS, **{
+            "roles": {"pdf-text": "pdftotext", "bench": "sigrok", "chip-docs": "docs", "simulator": "sim"},
+            "pdftotext": dict(DEFAULTS["pdftotext"], install={"brew": "brew install poppler",
+                                                              "apt": "sudo apt install poppler-utils"}),
+            "sigrok": {"kind": "mcp", "on": False, "mcp": {"command": "sigrok-mcp-server"}, "needs": ["sigrok-cli"],
+                       "needs_hardware": "the instrument plugged in"},
+            "sigrok-cli": {"kind": "path", "exe": "sigrok-cli", "install": {"brew": "brew install sigrok-cli"}},
+            "docs": {"kind": "mcp", "owner": "spark", "needs": ["node"]},
+            "node": {"kind": "path", "exe": "node", "install": {"brew": "brew install node"}},
+            "sim": {"kind": "path", "exe": "sim", "install": {"npm": "npm install -g sim"},
+                    "needs_account": "a token in SIM_TOKEN", "account_env": "SIM_TOKEN"},
+            "sim-mcp": {"kind": "mcp", "on": False, "mcp": {"command": "sim", "args": ["mcp"]}, "needs": ["sim"]},
+            "mp": {"kind": "download", "file": "mp.bin", "url": "https://example.org/mp.bin",
+                   "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",  # sha256 of b"foo"
+                   "install": {"download": "/spark:setup add mp"}},
+        })
+        for name, value in (("DEFAULTS", layer(defaults)), ("DOWNLOADS", Path(tempfile.mkdtemp()) / "downloads")):
+            patcher = mock.patch.object(tools, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.personal = Path(tempfile.mkdtemp()) / "spark" / "tools.json"
+        self.ran = []
+
+    def run_fake(self, argv, **kw):
+        self.ran.append(argv)
+
+    def states(self, which, project=None, env=None):
+        with mock.patch.object(tools.shutil, "which", side_effect=which), mock.patch.dict(tools.os.environ, env or {}, clear=False):
+            return {label: state for state, label, _ in tools.status(project, self.personal) if state != "person"}
+
+    def test_status_says_ok_missing_and_off(self):
+        states = self.states(which_all_but("pdftotext"))
+        self.assertEqual(states["pdf-text"], "missing")
+        self.assertEqual(states["bench"], "off")
+
+    def test_an_mcp_server_whose_need_is_missing_is_missing_not_ok(self):
+        rows = [(state, text) for state, label, text in self.status_rows(which_all_but("node")) if label == "chip-docs"]
+        self.assertEqual(rows[0][0], "missing")
+        self.assertIn("brew install node", rows[0][1])
+
+    def test_an_mcp_server_with_no_role_is_listed_too(self):
+        self.assertIn("sim-mcp", self.states(which_all_but()))
+
+    def status_rows(self, which):
+        with mock.patch.object(tools.shutil, "which", side_effect=which):
+            return tools.status(None, self.personal)
+
+    def test_the_account_row_goes_once_its_variable_is_set(self):
+        with mock.patch.dict(tools.os.environ, {}, clear=True):
+            unset = [label for state, label, _ in self.status_rows(which_all_but()) if state == "person"]
+        with mock.patch.dict(tools.os.environ, {"SIM_TOKEN": "x"}):
+            set_ = [label for state, label, _ in self.status_rows(which_all_but()) if state == "person"]
+        self.assertIn("simulator", unset)
+        self.assertNotIn("simulator", set_)
+
+    def test_install_runs_each_missing_tool_s_line_and_never_sudo(self):
+        with mock.patch.object(tools.shutil, "which", side_effect=which_all_but("pdftotext")):
+            tools.install(["pdftotext"], None, self.personal, run=self.run_fake)
+        self.assertEqual(self.ran, [["brew", "install", "poppler"]])
+        self.assertFalse(any("sudo" in part for argv in self.ran for part in argv))
+
+    def test_a_line_that_needs_sudo_is_named_for_the_person_not_run(self):
+        with mock.patch.object(tools.shutil, "which", side_effect=which_all_but("pdftotext", "brew")):
+            with self.assertRaises(tools.ToolProblem) as told:
+                tools.install(["pdftotext"], None, self.personal, run=self.run_fake)
+        self.assertEqual(self.ran, [])
+        self.assertIn("sudo apt install poppler-utils", str(told.exception))
+
+    def test_a_tool_already_here_is_not_installed_again(self):
+        with mock.patch.object(tools.shutil, "which", side_effect=which_all_but()):
+            tools.install(["pdftotext"], None, self.personal, run=self.run_fake)
+        self.assertEqual(self.ran, [])
+
+    def test_a_download_lands_in_downloads_and_a_wrong_checksum_is_deleted(self):
+        def curl(content):
+            return lambda argv, **kw: (self.ran.append(argv), Path(argv[argv.index("-o") + 1]).write_bytes(content))
+        tools.install(["mp"], None, self.personal, run=curl(b"foo"))
+        self.assertTrue((tools.DOWNLOADS / "mp.bin").is_file())
+        self.assertIn("https://example.org/mp.bin", self.ran[0])
+        (tools.DOWNLOADS / "mp.bin").unlink()
+        with self.assertRaises(tools.ToolProblem) as refused:
+            tools.install(["mp"], None, self.personal, run=curl(b"not foo"))
+        self.assertIn("checksum", str(refused.exception))
+        self.assertFalse((tools.DOWNLOADS / "mp.bin").exists(), "a file with the wrong checksum is not left to be used")
+
+    def test_a_server_s_needs_install_first_and_it_registers_at_user_scope(self):
+        with mock.patch.object(tools.shutil, "which", side_effect=which_all_but("sigrok-cli")):
+            tools.install(["sigrok"], None, self.personal, run=self.run_fake)
+        self.assertEqual(self.ran, [["brew", "install", "sigrok-cli"],
+                                    ["claude", "mcp", "add", "--scope", "user", "sigrok", "--", "sigrok-mcp-server"]])
+
+    def test_a_project_s_server_registers_at_project_scope(self):
+        project = project_with({})
+        with mock.patch.object(tools.shutil, "which", side_effect=which_all_but()):
+            tools.install(["sigrok"], project, self.personal, run=self.run_fake)
+        self.assertEqual(self.ran[-1][:5], ["claude", "mcp", "add", "--scope", "project"])
+
+    def test_a_server_run_by_a_listed_tool_is_registered_by_that_tool_s_path(self):
+        # wokwi-cli installs to ~/.local/bin, often not on the PATH Claude Code starts (docs/mcp.md).
+        with mock.patch.object(tools.shutil, "which", side_effect=lambda exe: "/opt/elsewhere/bin/sim" if exe == "sim" else "/usr/bin/" + exe):
+            tools.install(["sim-mcp"], None, self.personal, run=self.run_fake)
+        self.assertEqual(self.ran[-1][-2:], ["/opt/elsewhere/bin/sim", "mcp"])
+
+    def test_turning_on_writes_one_field_and_creates_the_folder(self):
+        tools.choose(["sigrok", "on"], True, self.personal)
+        self.assertEqual(json.loads(self.personal.read_text()), {"sigrok": {"on": True}})
+
+    def test_a_second_choice_keeps_the_first(self):
+        tools.choose(["sigrok", "on"], True, self.personal)
+        tools.choose(["roles", "simulator"], "sim", self.personal)
+        self.assertEqual(json.loads(self.personal.read_text()), {"sigrok": {"on": True}, "roles": {"simulator": "sim"}})
+
+    def test_use_refuses_a_tool_that_does_not_meet_the_contract(self):
+        with self.assertRaises(tools.ToolProblem):
+            tools.use("pdf-text", "mystery", None, self.personal)
+        self.assertFalse(self.personal.exists(), "nothing written for a refused swap")
+
+    def test_use_writes_the_role_when_the_tool_meets_it(self):
+        layer_ = layer({"my-reader": {"kind": "path", "exe": "my-reader", "meets": ["page-text"]}})
+        written = tools.use("pdf-text", "my-reader", None, layer_)
+        self.assertEqual(json.loads(written.read_text())["roles"], {"pdf-text": "my-reader"})
+
+
+class SetupCommandTest(unittest.TestCase):
+    """tools.py's command line — what /spark:setup runs."""
+
+    def setUp(self):
+        defaults = dict(DEFAULTS, **{"roles": {"pdf-text": "pdftotext", "bench": "sigrok"},
+                                     "sigrok": {"kind": "mcp", "on": False, "mcp": {"command": "sigrok-mcp-server"}}})
+        self.personal = Path(tempfile.mkdtemp()) / "spark" / "tools.json"
+        for name, value in (("DEFAULTS", layer(defaults)), ("PERSONAL", self.personal)):
+            patcher = mock.patch.object(tools, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.ran = []
+
+    def cli(self, *argv, which=which_all_but()):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with mock.patch.object(tools.shutil, "which", side_effect=which), contextlib.redirect_stdout(out), \
+                contextlib.redirect_stderr(out):
+            code = tools.main(list(argv), run=lambda argv, **kw: self.ran.append(argv))
+        return code, out.getvalue()
+
+    def test_status_marks_each_row_and_says_could_not_run_while_something_is_missing(self):
+        code, said = self.cli("--status", which=which_all_but("pdftotext"))
+        self.assertEqual(code, tools.EXIT_COULD_NOT_RUN)
+        self.assertIn("[????] pdf-text", said)
+        self.assertIn("[off ] bench", said)
+        self.assertIn("1 to install: pdftotext", said)
+        self.assertEqual(self.cli("--status")[0], tools.EXIT_OK)
+
+    def test_on_writes_the_choice_and_registers_the_server(self):
+        code, said = self.cli("--on", "sigrok")
+        self.assertEqual(json.loads(self.personal.read_text()), {"sigrok": {"on": True}})
+        self.assertIn(["claude", "mcp", "add", "--scope", "user", "sigrok", "--", "sigrok-mcp-server"], self.ran)
+        self.assertIn("restart", said.lower())
+
+    def test_off_writes_the_choice_and_unregisters_the_server(self):
+        self.cli("--off", "sigrok")
+        self.assertEqual(json.loads(self.personal.read_text()), {"sigrok": {"on": False}})
+        self.assertIn(["claude", "mcp", "remove", "--scope", "user", "sigrok"], self.ran)
+
+    def test_new_writes_a_person_s_own_tool_and_refuses_one_spark_could_not_find(self):
+        code, _ = self.cli("--new", 'my-reader={"kind": "path", "exe": "my-reader", "meets": ["page-text"]}')
+        self.assertEqual(code, tools.EXIT_OK)
+        self.assertEqual(json.loads(self.personal.read_text())["my-reader"]["exe"], "my-reader")
+        code, said = self.cli("--new", 'broken={"kind": "path"}')
+        self.assertEqual(code, tools.EXIT_COULD_NOT_RUN)
+        self.assertIn("exe", said)
+        self.assertNotIn("broken", json.loads(self.personal.read_text()))
+
+    def test_pin_and_use_write_into_the_project_when_one_is_named(self):
+        project = project_with({})
+        self.cli("--pin", "pdftotext=26.09.0", "--project", str(project))
+        self.assertEqual(json.loads((project / ".spark" / "tools.json").read_text()), {"pdftotext": {"version": "26.09.0"}})
+        self.assertFalse(self.personal.exists())
+
+
+class AProjectNamedRelativelyTest(unittest.TestCase):
+    def test_an_npm_tool_s_command_is_absolute_when_the_project_is_given_as_dot(self):
+        # `tools.py --status --project .` printed node_modules/.bin/tsci, a command that only works from
+        # the directory it was found in; check_spine runs the engine from a scratch directory.
+        import os
+        root = Path(tempfile.mkdtemp())
+        (root / "node_modules" / ".bin").mkdir(parents=True)
+        (root / "node_modules" / ".bin" / "tsci").write_text("#!/bin/sh\n")
+        personal = layer({"tscircuit": {"kind": "npm", "exe": "tsci"}})
+        here = os.getcwd()
+        os.chdir(root)
+        try:
+            with mock.patch.object(tools.shutil, "which", return_value=None):
+                found = tools.find("tscircuit", Path("."), personal)
+        finally:
+            os.chdir(here)
+        self.assertTrue(Path(found.command[0]).is_absolute(), found.command)
+
+
 class SparkSDefaultsHoldTogetherTest(unittest.TestCase):
     """The shipped data/tools.json, read as it is: every role names a tool that meets the role's contract."""
 

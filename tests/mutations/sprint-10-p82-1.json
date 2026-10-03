@@ -6,7 +6,7 @@
  {"file": "scripts/tools.py", "name": "a tool that does not meet the contract is used anyway",
   "find": "    if contract and contract not in (entry.get(\"meets\") or []):", "replace": "    if False:"},
  {"file": "scripts/tools.py", "name": "a tool turned off is used anyway",
-  "find": "    if entry.get(\"on\") is False:", "replace": "    if False:"},
+  "find": "    if entry.get(\"on\") is False:\n        raise ToolProblem(\"%s is turned off", "replace": "    if False:\n        raise ToolProblem(\"%s is turned off"},
  {"file": "scripts/tools.py", "name": "the project's node_modules is not looked in first",
   "find": "    if kind == \"npm\" and project:", "replace": "    if False:"},
  {"file": "scripts/tools.py", "name": "a missing tool does not say what installs it",

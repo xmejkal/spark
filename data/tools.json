@@ -7,7 +7,10 @@
     "diagram-converter": "circuit-to-wokwi",
     "js-runtime": "node",
     "littlefs": "littlefs-python",
-    "firmware-image": "micropython-esp32s3"
+    "firmware-image": "micropython-esp32s3",
+    "parts-search": "jlcpcb",
+    "chip-docs": "espressif-docs",
+    "bench": "sigrok"
   },
   "contracts": {
     "pdf-text": "page-text",
@@ -42,7 +45,8 @@
     "install": {
       "npm": "npm install -g wokwi-cli"
     },
-    "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci"
+    "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci",
+    "account_env": "WOKWI_CLI_TOKEN"
   },
   "tscircuit": {
     "for": "building the board spark writes",
@@ -99,6 +103,64 @@
     ],
     "install": {
       "download": "/spark:setup add micropython-esp32s3"
+    }
+  },
+  "jlcpcb": {
+    "for": "finding parts with a datasheet link",
+    "kind": "mcp",
+    "owner": "spark",
+    "needs": [
+      "node"
+    ],
+    "meets": [
+      "candidates-with-datasheet"
+    ]
+  },
+  "espressif-docs": {
+    "for": "searching Espressif's documentation",
+    "kind": "mcp",
+    "owner": "spark",
+    "needs": [
+      "node"
+    ],
+    "meets": [
+      "maker-docs-search"
+    ],
+    "note": "mcp-remote needs Node 20 or newer (docs/mcp.md)"
+  },
+  "wokwi-mcp": {
+    "for": "driving a simulation interactively (paid minutes)",
+    "kind": "mcp",
+    "on": false,
+    "mcp": {
+      "command": "wokwi-cli",
+      "args": [
+        "mcp"
+      ]
+    },
+    "needs": [
+      "wokwi-cli"
+    ]
+  },
+  "sigrok": {
+    "for": "reading a logic analyzer at the bench",
+    "kind": "mcp",
+    "on": false,
+    "mcp": {
+      "command": "sigrok-mcp-server"
+    },
+    "needs": [
+      "sigrok-cli"
+    ],
+    "needs_hardware": "the instrument plugged into this machine, and sigrok-mcp-server from github.com/KenosInc/sigrok-mcp-server"
+  },
+  "sigrok-cli": {
+    "for": "talking to the instrument — what the sigrok server runs",
+    "kind": "path",
+    "exe": "sigrok-cli",
+    "install": {
+      "brew": "brew install sigrok-cli",
+      "apt": "sudo apt install sigrok-cli"
     }
   }
 }

@@ -20,9 +20,10 @@ failure that produced it.
 /plugin install spark
 ```
 
-Then, in a project:
+Then `/spark:setup` — it shows what spark needs and installs what is missing with one yes. In a project:
 
 ```
+/spark:setup             # what spark needs, what is missing; one yes installs it
 /spark:init              # writes what the checks need; guesses nothing
 /spark:build             # a requirements file to a built, simulated board, left in the project
 ```
@@ -43,6 +44,7 @@ generator refuse rather than invent one.
 
 | | |
 | --- | --- |
+| `/spark:setup` | What spark needs on this machine — the board engine, the PDF reader, the simulator, the MicroPython build, the MCP servers — what is missing, and one yes to install it, never with `sudo`. Turns an integration on or off, points a job at another tool, pins a version: each a line in your `~/.local/share/spark/tools.json`, or the project's `.spark/tools.json`, which wins. |
 | `/spark:init` | Writes `.spark/rules.json`, `.spark/project.json` and `boards/active.json`. Names the rails from the built design; leaves **every value null** and lists them. A guessed rail current would poison the one check that does arithmetic. |
 | `/spark:research` | A part the library lacks, researched from the vendor's own pages — DFRobot first, then Seeed, or the order the project's brief prefers — and written as a record with sources, every unconfirmed fact marked. The next project finds it with `parts.py --need`. |
 | `/spark:identify` | A photo of a module from the drawer → what it is, from its markings and the chip's datasheet, written as a record for a part already owned; everything only the photo supports is marked unverified, with how to check it on the bench. |
@@ -126,12 +128,12 @@ which is which and why.
 
 **MCP servers** — spark declares two, because its research agents call them: **jlcpcb** (part
 search, for `part-finder`) and **espressif-docs** (Espressif's own documentation, for
-`datasheet-reader`; needs Node 20 or newer). Wokwi and sigrok are offered as one-line additions, and
-why KiCad's is not: [`docs/mcp.md`](docs/mcp.md).
+`datasheet-reader`; needs Node 20 or newer). Wokwi and sigrok are one choice each —
+`/spark:setup add wokwi-mcp`, `/spark:setup add sigrok` — and why KiCad's is not: [`docs/mcp.md`](docs/mcp.md).
 
 ## Toolchain the skills call
 
-Node and the tscircuit CLI (`npm i -g @tscircuit/cli`, or `npx tsci`). KiCad 9/10 for `kicad-cli`.
+Node and the tscircuit CLI — `/spark:setup` installs tscircuit into the project at the version spark was measured on. KiCad 9/10 for `kicad-cli`.
 Optionally Wokwi CI, and a Raspberry Pi as a bench host.
 
 ## Honest limits

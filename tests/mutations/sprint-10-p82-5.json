@@ -7,5 +7,5 @@
   "find": "    except tools.ToolProblem as missing:\n        print(\"flash_image.py: %s\" % missing, file=sys.stderr)",
   "replace": "    except KeyError as missing:\n        print(\"flash_image.py: %s\" % missing, file=sys.stderr)"},
  {"file": "scripts/tools.py", "name": "a missing download says only 'see its entry'",
-  "find": ", (\"download\", None))", "replace": ")"}
+  "find": ", (\"download\", None), (\"apt\"", "replace": ", (\"apt\""}
 ]

@@ -1,6 +1,6 @@
 ---
 description: Research a part or module the library lacks — reuse first, then find the exact part, then read only the datasheet pages a decision needs — and write it down as a record with every fact cited, so the chain can use it and the next project finds it.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py *)
 ---
 
 # spark:research
@@ -43,6 +43,7 @@ completely. Two small agents, in turn:
    ```
 3. Launch **`datasheet-reader`** with the record's path, the kept datasheet and the facts for its
    kind (below). It reads with `parts.py --read`, page by page, stopping where the facts are.
+   A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then launching the reader again (`/spark:setup` does the same for everything at once).
 
 **A module, or a part identified from a photo** (`/spark:identify`) — variants, a chip inside, a
 schematic to read: launch **`parts-researcher`** with the need, the vendor order (the brief's `prefer`,

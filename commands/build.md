@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds and simulates, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py *)
 ---
 
 # spark:build
@@ -45,6 +45,9 @@ design's own parts, boards and rules live.
 
 ## The one command
 
+It needs the board engine — tscircuit, in the project (`/spark:init` writes the package file) — and
+Node for the simulation. `/spark:setup` shows what is missing and installs it with one yes.
+
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --keep .
 ```
@@ -75,6 +78,8 @@ trivial board, a requirements file that is not JSON, an empty parts list — and
 says so. A chain that could not be exercised has not been proven; the difference is the whole
 point.
 
+A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once).
+
 ## The steps, when one is wanted on its own
 
 ```
@@ -84,7 +89,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per 
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board firebeetle2-esp32s3 -o FireBeetle2Esp32S3.tsx
-npm install && npx tsci build board.tsx                             # the project's own tscircuit (init writes the package file); the one command needs neither
+npm install && npx tsci build board.tsx                             # the project's own tscircuit (init writes the package file)
 ```
 
 The board file imports `./FireBeetle2Esp32S3` — the footprint `emit_footprint.py` writes from
@@ -172,7 +177,8 @@ purpose. Stand-ins are named as such in the records: a pass here is not a bench.
 
 The converter that writes `diagram.json` **ships with the plugin** (`tools/circuit-to-wokwi`). A
 project may carry its own at `tools/circuit-to-wokwi/cli.ts` and that one wins; otherwise the
-plugin's is used, so this stage works wherever the plugin is installed. It needs `bun`.
+plugin's is used, so this stage works wherever the plugin is installed. It is built into one file
+that runs on Node, with nothing else to install; a project's own `cli.ts` runs with `bun`.
 
 ## After it builds
 

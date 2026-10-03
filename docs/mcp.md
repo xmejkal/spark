@@ -17,22 +17,25 @@ nvm, `nvm alias default 22` makes new sessions use Node 22.
 
 ## Offered — add them yourself
 
-Each is one command; it adds the server for you, not for every spark user.
+Each is one choice in `/spark:setup`; it adds the server for you (or, with `--project`, for this
+project), not for every spark user. `/spark:setup remove <name>` takes it away again.
 
 **wokwi** — drive a simulation interactively (start, press, read the serial port). Every run spends
 minutes from your Wokwi plan, so spark itself only runs `wokwi-cli` when you ask.
 ```
-claude mcp add wokwi -- wokwi-cli mcp
+/spark:setup add wokwi-mcp
 ```
-Needs `wokwi-cli` on the PATH that Claude Code starts (it installs to `~/.local/bin`, which is often not
-on it) and `WOKWI_CLI_TOKEN` set in your shell — never in a file you commit. Not checked here: the
+Installs `wokwi-cli` if it is missing and registers the server by `wokwi-cli`'s full path — it
+installs to `~/.local/bin`, which is often not on the PATH Claude Code starts. Needs `WOKWI_CLI_TOKEN`
+set in your shell — never in a file you commit. Not checked here: the
 check would start the paid simulator's server.
 
 **sigrok** — a bench scope or logic analyzer, from the machine the instrument is plugged into.
 ```
-claude mcp add sigrok -- sigrok-mcp-server
+/spark:setup add sigrok
 ```
-Needs [KenosInc/sigrok-mcp-server](https://github.com/KenosInc/sigrok-mcp-server) and `sigrok-cli`.
+Installs `sigrok-cli` (Homebrew) and registers the server. Needs
+[KenosInc/sigrok-mcp-server](https://github.com/KenosInc/sigrok-mcp-server), which you install yourself.
 Not checked here: neither is installed on the machine this was written on. spark's bench steps
 (P73) will want it.
 
