@@ -583,6 +583,19 @@ built (W14: the item exists, the design does not).
 the functions, the kind of module for each, and a block diagram with no part numbers, which the
 existing chain then accepts once parts are chosen.
 
+### P77 — Every example is regenerated with today's spark, its scenarios rerun, its steps written down, its old files gone — **the PO's question of 2026-10-03; a council answers, then acts**
+**Needed by:** the hobbyist, who learns spark from its examples — and spark's own claim to work. The
+PO: *"All of the examples are I think to be fully regenerated to make sure it really works, test all
+the scenarios again, and also the old examples are full of old files and we just really want to have
+good up to date example projects"* — *"and to document the steps, to be a good example."* The
+examples were made by older spark (irrigation and the RC car before Sprints 6–9; the bin's board by
+hand) and keep outputs of their time (irrigation's `check-all*.txt`, `emit-notes.txt`). Irrigation's
+publication (`spark-example-irrigation`, PO-approved with its photos GPS-free) is held for this.
+**Value proven by:** written by the council with the PO — at least: each example regenerated from its
+requirements in an empty directory with the published spark, every scenario rerun with its output
+kept, the steps written down so a reader can repeat them, and no file left that today's spark would
+not write or the steps do not explain.
+
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
 touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules
