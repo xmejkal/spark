@@ -6,9 +6,11 @@ fail when that fails. Without this the move would have taken 1,300 lines of the 
 reach of every guard here — the verification lens's own words about it while it still lived in the
 smart bin: "1,645 TS lines and 50 tests sit outside this repo, so this gate never runs them."
 
-`bun` may reasonably be absent on a contributor's machine, so a missing runtime SKIPS rather than
-fails. That is the one place in this repository where "could not look" is allowed to read as green,
-and it is bounded: `tools/check_commit.py` is where the run is mandatory before a push.
+`bun` and the converter's `node_modules` may reasonably be absent on a contributor's machine — a
+fresh clone has neither — so its own suite SKIPS rather than fails. That is the one place in this
+repository where "could not look" is allowed to read as green, and it is bounded:
+`tools/check_commit.py` lends `node_modules` and runs it before a push. What ships is the bundle
+(B10), and the refusals below run that, on Node.
 """
 
 import re
@@ -33,10 +35,22 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 CONVERTER = ROOT / "tools" / "circuit-to-wokwi"
+BUNDLE = CONVERTER / "dist" / "converter.mjs"
+
+
+def node():
+    """The command that runs the bundle, from the tools list — or None when Node is not here."""
+    import tools
+    try:
+        return tools.find("js-runtime").command
+    except tools.ToolProblem:
+        return None
 
 
 class TheConvertersOwnSuiteTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("bun"), "bun is not installed; check_commit.py insists on it")
+    @unittest.skipUnless((CONVERTER / "node_modules").is_dir(),
+                         "development only: run `bun install` in tools/circuit-to-wokwi")
     def test_it_passes(self):
         result = subprocess.run(["bun", "run", "test"], cwd=str(CONVERTER),
                                 capture_output=True, text=True, timeout=300)
@@ -77,16 +91,16 @@ class ItRefusesToGuessTest(unittest.TestCase):
         env.pop("SPARK_BOARD_JSON", None)
         if env_board:
             env["SPARK_BOARD_JSON"] = str(ROOT / "boards" / "firebeetle2-esp32s3.json")
-        return subprocess.run(["bun", "run", "cli.ts", *args], cwd=str(CONVERTER),
+        return subprocess.run(node() + [str(BUNDLE), *args], cwd=str(CONVERTER),
                               capture_output=True, text=True, timeout=120, env=env)
 
-    @unittest.skipUnless(shutil.which("bun"), "bun is not installed")
+    @unittest.skipUnless(node(), "node is not installed")
     def test_no_board_named_is_refused_with_a_sentence(self):
         said = self.run_cli(["--circuit", "x", "--out", "y", "--chips", "z"], env_board=False)
         self.assertNotEqual(said.returncode, 0, "it converted without knowing which board")
         self.assertIn("SPARK_BOARD_JSON", said.stderr + said.stdout)
 
-    @unittest.skipUnless(shutil.which("bun"), "bun is not installed")
+    @unittest.skipUnless(node(), "node is not installed")
     def test_no_paths_given_is_refused_with_a_sentence(self):
         said = self.run_cli([])
         self.assertNotEqual(said.returncode, 0, "it ran with no design to convert")
