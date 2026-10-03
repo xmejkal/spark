@@ -92,8 +92,18 @@ subprocess.run(simulator.command + ["..."])
 3. compares its version with the entry's — a difference prints one line and goes on (today's
    tscircuit drift check moves here);
 4. when the tool is missing, the step ends **could-not-run** (`????`) — never a traceback, never a
-   failure — with the one command that installs it here:
-   `simulator (wokwi-cli) is not installed — run /spark:setup, or: npm install -g wokwi-cli`.
+   failure — and says exactly what is missing and how it installs here:
+   `simulator (wokwi-cli) is not installed — install: npm install -g wokwi-cli`.
+
+**Installed on the spot, with one yes (the PO, 2026-10-03: "isn't there a way to download or enable
+the tools?").** The command the person is running — `/spark:build`, `/spark:research` — reads that
+line and asks once: *"the simulator (wokwi-cli) is not installed — install it now?"* With a yes it
+installs it the way `/spark:setup` would, or registers an MCP server or plugin with Claude Code, and
+**carries on with the step**. The boundary is deliberate: a script never installs anything silently in
+the middle of a check — it reports, and the conversation asks and installs — so nothing lands on the
+machine without the person's yes. What cannot be automatic is said plainly: anything that needs
+`sudo` (spark never uses it), accounts and keys (a Wokwi token only the person can create), and
+hardware (sigrok needs the analyzer plugged in).
 
 What changes in existing code:
 
