@@ -205,7 +205,7 @@ def chip_folder(part: dict, path: Path) -> Path:
 #: What a record may demand of its host as a COMPONENT (backlog P6): a resistor from a signal
 #: pad to ground or to the part's rail, or a divider that brings a signal down before the host's
 #: pin. The generator places and wires these; every other requirement stays prose, and is said.
-HOST_PART_KINDS = ("pulldown", "pullup", "divider")
+HOST_PART_KINDS = ("pulldown", "pullup", "divider", "series")
 
 
 def document_problems(part: dict) -> list:
@@ -283,10 +283,18 @@ def host_part_problems(part: dict) -> list:
             continue
         if host_part.get("pin") not in signal_pads:
             problems.append("%s names pin %r, which is not a signal pad of this part" % (where, host_part.get("pin")))
-        for key in (("top_ohms", "bottom_ohms") if kind == "divider" else ("ohms",)):
+        def positive(key):
             value = host_part.get(key)
-            if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
-                problems.append("%s needs a positive %s" % (where, key))
+            return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+        if kind == "series":
+            # P78: a series resistor states its value, or the current it is for and the generator
+            # computes the value from the part's forward voltage and the board's I/O voltage.
+            if not positive("ohms") and not positive("for_current_ma"):
+                problems.append("%s needs a positive ohms, or a for_current_ma to compute it from" % where)
+        else:
+            for key in (("top_ohms", "bottom_ohms") if kind == "divider" else ("ohms",)):
+                if not positive(key):
+                    problems.append("%s needs a positive %s" % (where, key))
         if not host_part.get("why"):
             problems.append("%s says no why — a passive nobody can explain is the first one removed" % where)
     return problems

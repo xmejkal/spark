@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import sim_project  # noqa: E402
 
-FakeDesign = namedtuple("FakeDesign", "parts project")
+FakeDesign = namedtuple("FakeDesign", "parts project board", defaults=(None,))
 
 
 def a_project():
@@ -67,6 +67,13 @@ class WhatStandsInTest(unittest.TestCase):
                                                                "pins": {"anode": "1", "cathode": "2", "pin1": "1", "pin2": "2"}},
                          "tscircuit names a resistor's ports anode and cathode; the diagram must not inherit the module's mapping")
         self.assertEqual(mapping["L9110sModuleDividerAIBBottom"]["attrs"], {"value": "18000"})
+
+    def test_a_series_resistor_computed_for_a_current_has_that_value_in_the_diagram(self):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        part = {"id": "led-x", "simulation": {"skip": "x"}, "facts": {"forward_voltage_v": {"value": 2.0}},
+                "host_parts": [{"kind": "series", "pin": "A", "for_current_ma": 5, "why": "w"}]}
+        mapping, _, _ = sim_project.mapping_for(FakeDesign([part], None, board))
+        self.assertEqual(mapping["LedXSeriesA"]["attrs"], {"value": "270"})
 
     def test_a_record_that_says_nothing_is_named_with_its_id(self):
         mapping, chips, unmapped = sim_project.mapping_for(FakeDesign([{"id": "mystery-x", "_instance": "M1"}], None))

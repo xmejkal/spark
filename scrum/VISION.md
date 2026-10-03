@@ -15,6 +15,10 @@ modules, or just a schematic first, without specific parts — just what it does
 module. Then, if the human wants, a PCB he can order, with the firmware already working enough and
 tested and improved agile-style — and later 3D model export, even Fusion 360, 3D-printed parts."*
 
+Later the same day, building the quickstart with Claude: *"we should definitely add a breadboard
+phase, before the user decides to go for a PCB — no SMD parts; only later, when the circuit is tested
+and the firmware good, we offer the PCB."* Also an overview.
+
 What it says about the shape, and no more: the journey starts earlier than spark does today — at a
 conversation, not a requirements file — and can end later, at a board you can order and a printed
 enclosure, both optional. How each step works is not decided.

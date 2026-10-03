@@ -19,8 +19,8 @@ log proves. **An open backlog item sits on one slice below, or it is parked or d
 | 7 | See it | `tsci dev`, Wokwi for VS Code (P65, P67) | — |
 | 8 | Simulate | `check_spine` → Wokwi (paid minutes) | — |
 | 9 | Firmware | `pins.py` only | nothing tests firmware against the board (P59, P74) |
-| 10 | Bench | the bin's `bringup/01..06` | never run; no log of a verdict (P73) |
-| 11 | Fab — order the board | `fab.py`, `check_bom`, the review's fab gate | optional, after the firmware works (slice 8) |
+| 10 | **Breadboard** — through-hole parts, wired from a table, the firmware tested on it | nothing: spark's only output is a PCB, its passives SMD | all of it (P79); the bin's `bringup/01..06` never run, no log of a verdict (P73) |
+| 11 | PCB and fab — offered once the breadboard works | `emit_board` → tscircuit, `fab.py`, `check_bom`, the review's fab gate | optional, and only after the circuit and the firmware are proven (slice 8) |
 | 12 | Enclosure — 3D export, Fusion 360, printed parts | `tsci export -f glb` only | everything past the board's own model (slice 9) |
 
 Two halves: the maker uses spark to *check* a hand-written board; only the cold tests used the
@@ -36,6 +36,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59**, **P74** |
 | **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a**, **P39**, **P38**, **P78**, **P43** (the `fix` half), **P77** (its place is the council's) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6**, then F3 and F4 as they pull |
+| **7** | **A breadboard first** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard before any PCB is offered | **P79** |
 | **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
 | **9** | **An enclosure** | hobbyist | *not designed yet* — the overview: 3D export, Fusion 360, printed parts | pulled by the first design that wants one |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b**, **P64b**, **P64c** |

@@ -581,6 +581,43 @@ def host_part_names(part, host_part):
     return [base]
 
 
+#: The E12 series: the resistor values sold everywhere, one decade.
+E12 = (1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2)
+
+
+def fact_value(record, *keys):
+    """A fact's value from a record, by its path — `power.io_volts`, `facts.forward_voltage_v` — or None."""
+    for key in keys:
+        record = record.get(key) if isinstance(record, dict) else None
+    return record.get("value") if isinstance(record, dict) else record
+
+
+def series_ohms(part, host_part, board):
+    """
+    A series resistor's value, and the arithmetic when it was computed (P78). Given `ohms`, that.
+    Given `for_current_ma`: (the board's I/O voltage - the part's forward voltage) / the current,
+    rounded UP to the next E12 value, so the current never exceeds what was asked.
+    """
+    if host_part.get("ohms"):
+        return host_part["ohms"], None
+    supply, forward = fact_value(board or {}, "power", "io_volts"), fact_value(part, "facts", "forward_voltage_v")
+    if not isinstance(supply, (int, float)) or not isinstance(forward, (int, float)):
+        raise ValueError("%s asks for %g mA through a series resistor, but %s — nothing to compute it from"
+                         % (part.get("id"), host_part["for_current_ma"],
+                            "the record states no facts.forward_voltage_v" if not isinstance(forward, (int, float))
+                            else "the board states no power.io_volts"))
+    if forward >= supply:
+        raise ValueError("%s needs %g V forward, and a %g V pin cannot push current through it — drive it "
+                         "from a higher rail through a transistor" % (part.get("id"), forward, supply))
+    exact = (supply - forward) / (host_part["for_current_ma"] / 1000.0)
+    decade = 10 ** max(0, len(str(int(exact))) - 1)
+    chosen = next((step * decade for step in E12 + (10.0,) if step * decade >= exact - 1e-9), exact)
+    chosen = int(round(chosen)) if abs(chosen - round(chosen)) < 1e-6 else round(chosen, 6)
+    return chosen, ("(%g V - %g V) / %g mA = %g ohm; next E12 value up: %g ohm, about %.1f mA"
+                    % (supply, forward, host_part["for_current_ma"], round(exact, 1), chosen,
+                       (supply - forward) / chosen * 1000))
+
+
 def signal_target(part, need):
     """
     Where the host's trace for a signal ends: the module's pad, or — when the record demands a
@@ -589,6 +626,8 @@ def signal_target(part, need):
     for host_part in part.get("host_parts") or []:
         if host_part["kind"] == "divider" and host_part["pin"] == need["pin"]:
             return (host_part_names(part, host_part)[0], "pin2")
+        if host_part["kind"] == "series" and host_part["pin"] == need["pin"]:
+            return (host_part_names(part, host_part)[0], "pin1")
     return (component_name(part), need["pin"])
 
 
@@ -601,7 +640,7 @@ def supply_net_of(part):
     return "V33"
 
 
-def host_part_lines(part_list, placements):
+def host_part_lines(part_list, placements, board=None):
     """
     The passives the records demand of this board, as components and traces (backlog P6). This
     was prose in a comment block — "10 k pulldowns on both inputs" printed under a board whose
@@ -623,6 +662,14 @@ def host_part_lines(part_list, placements):
                 lines.append('    <trace from=".%s > .pin2" to="net.GND" />' % bottom)
                 continue
             name, = names
+            if kind == "series":
+                ohms, arithmetic = series_ohms(part, host_part, board)
+                lines.append("    {/* in series with %s.%s: %s%s */}" % (module, pad, host_part["why"],
+                                                                     " — %s" % arithmetic if arithmetic else ""))
+                lines.append('    <resistor name="%s" resistance="%s" footprint="0603" pcbX={%g} pcbY={%g} />'
+                             % (name, ohms_label(ohms), *placements[name]))
+                lines.append('    <trace from=".%s > .pin2" to=".%s > .%s" />' % (name, module, pad))
+                continue
             net = "GND" if kind == "pulldown" else supply_net_of(part)
             lines.append("    {/* %s on %s.%s: %s */}" % (kind, module, pad, host_part["why"]))
             lines.append('    <resistor name="%s" resistance="%s" footprint="0603" pcbX={%g} pcbY={%g} />'
@@ -910,7 +957,7 @@ def emit(board, part_list, assignments, placements, width, height, rules=None):
     rules = rules or {}
     lines = (header_lines(board, part_list, placements, width, height)
              + component_lines(part_list, placements)
-             + host_part_lines(part_list, placements)
+             + host_part_lines(part_list, placements, board)
              + signal_lines(part_list, assignments)
              + power_lines(board, part_list, rules)
              + stand_in_lines(part_list)

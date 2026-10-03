@@ -610,6 +610,24 @@ the library or the catalog, and a record can ask the board only for `pulldown`, 
 wired GPIO → resistor → LED → GND, the resistor's value computed from the LED's forward voltage and
 current and the board's logic level and printed with that arithmetic; irrigation's `STATUS_LED`
 becomes that part and its `check_spine` stops ending in `!!`.
+**Generator half done 2026-10-03:** `host_parts` kind `series` — the host's trace ends at the resistor,
+the resistor's far end at the pad — with either `ohms` or `for_current_ma`, from which the value is
+computed: (the board's `power.io_volts` − the record's `facts.forward_voltage_v`) / current, rounded UP
+to E12, the arithmetic printed in the board file (*"(3.3 V - 2 V) / 5 mA = 260 ohm; next E12 value up:
+270 ohm, about 4.8 mA"*); the simulation diagram gets the same value; a missing fact or an LED the pin
+cannot light is refused by name. The FireBeetle states `io_volts` 3.3, cited to the kept WROOM-1 v1.1,
+Table 9, page 14. Mutations `sprint-10-p78.json`: 9, all caught. Open: the LED record (being
+researched — through-hole, after the PO's breadboard direction, P79) and the acceptance line.
+
+### P79 — A breadboard first, the PCB only once the circuit and the firmware work — **slice 7; the PO's direction of 2026-10-03**
+**Needed by:** the hobbyist, and the PO building the quickstart: *"we should definitely add a
+breadboard phase, before the user decides to go for a PCB — first allow using a breadboard, and so no
+SMD parts, right? Only later, when the circuit is tested and the firmware good, we offer the PCB."*
+Today spark's only output is a PCB: every passive it places is an 0603 SMD resistor, and nothing
+tells a person which wire goes from which module pin to which GPIO. An overview, not a process —
+designed with the PO before anything is built (W14).
+**Value proven by:** written with the PO — at least: the quickstart, as a through-hole parts list and a
+wiring table a person can build on a breadboard, its firmware run on it, before any PCB is offered.
 
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half

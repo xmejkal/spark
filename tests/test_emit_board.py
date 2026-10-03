@@ -1026,6 +1026,38 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
                          "the host's own trace ends at the midpoint, not at the module's pad")
         self.assertNotRegex(tsx, r'<trace from="\.Mcu > \.\w+" to="\.L9110sModule > \.AIA"')
 
+    def test_a_series_resistor_sits_between_the_hosts_pin_and_the_pad(self):
+        # P78: an LED's current-limiting resistor is in the signal's path, not to a rail.
+        part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "ohms": 1000, "why": "limits the current"}])
+        tsx, _ = self._emit(part, parts.signals_for(["l9110s-module"]))
+        self.assertIn('<resistor name="L9110sModuleSeriesAIA" resistance="1k" footprint="0603"', tsx)
+        self.assertIn('<trace from=".L9110sModuleSeriesAIA > .pin2" to=".L9110sModule > .AIA" />', tsx)
+        self.assertRegex(tsx, r'<trace from="\.Mcu > \.\w+" to="\.L9110sModuleSeriesAIA > \.pin1" />  \{/\* MOTOR_IA',
+                         "the host's own trace ends at the resistor")
+        self.assertNotRegex(tsx, r'<trace from="\.Mcu > \.\w+" to="\.L9110sModule > \.AIA"')
+
+    def test_a_series_resistor_for_a_current_is_computed_and_the_arithmetic_printed(self):
+        # The PO, building the quickstart: "it can find the parts and calculate, right?"
+        part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "for_current_ma": 5, "why": "an indicator"}])
+        part["facts"] = dict(part.get("facts") or {}, forward_voltage_v={"value": 2.0, "verified": True, "source": "s"})
+        tsx, _ = self._emit(part, parts.signals_for(["l9110s-module"]))
+        self.assertIn('<resistor name="L9110sModuleSeriesAIA" resistance="270"', tsx,
+                      "(3.3 - 2.0) V / 5 mA = 260, rounded UP to E12 so the current never exceeds what was asked")
+        self.assertIn("(3.3 V - 2 V) / 5 mA = 260 ohm; next E12 value up: 270 ohm, about 4.8 mA", tsx)
+
+    def test_an_led_the_pin_cannot_light_is_refused_not_given_a_negative_resistor(self):
+        part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "for_current_ma": 5, "why": "w"}])
+        part["facts"] = dict(part.get("facts") or {}, forward_voltage_v={"value": 3.4, "verified": True, "source": "s"})
+        with self.assertRaises(ValueError) as refused:
+            self._emit(part, parts.signals_for(["l9110s-module"]))
+        self.assertIn("3.4 V", str(refused.exception))
+
+    def test_a_current_without_the_numbers_to_compute_it_is_refused_by_name(self):
+        part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "for_current_ma": 5, "why": "w"}])
+        with self.assertRaises(ValueError) as refused:
+            self._emit(part, parts.signals_for(["l9110s-module"]))
+        self.assertIn("forward_voltage_v", str(refused.exception))
+
     def test_the_passives_sit_beside_the_modules_not_on_them(self):
         _, placements = self._emit(self._part())
         positions = list(placements.values())

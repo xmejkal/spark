@@ -1144,6 +1144,12 @@ class WhatAPartDemandsOfItsHostTest(unittest.TestCase):
         self.assertTrue(any("positive ohms" in p for p in self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 0, "why": "w"}])))
         self.assertTrue(any("no why" in p for p in self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 10000}])))
 
+    def test_a_series_resistor_states_its_ohms_or_the_current_it_is_for(self):
+        self.assertEqual(self._problems([{"kind": "series", "pin": "OUT", "ohms": 1000, "why": "limits the LED"}]), [])
+        self.assertEqual(self._problems([{"kind": "series", "pin": "OUT", "for_current_ma": 5, "why": "an indicator"}]), [])
+        said = " ".join(self._problems([{"kind": "series", "pin": "OUT", "why": "w"}]))
+        self.assertIn("for_current_ma", said, "neither a value nor a current: nothing to place")
+
     def test_the_validator_carries_the_host_parts_problems(self):
         import tempfile
         record = {"schema": 1, "id": "x-part", "name": "X", "kind": "sensor",

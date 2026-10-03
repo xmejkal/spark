@@ -1,0 +1,20 @@
+[
+ {"file": "scripts/parts.py", "name": "a series resistor is a kind the generator cannot place",
+  "find": "HOST_PART_KINDS = (\"pulldown\", \"pullup\", \"divider\", \"series\")", "replace": "HOST_PART_KINDS = (\"pulldown\", \"pullup\", \"divider\")"},
+ {"file": "scripts/parts.py", "name": "a series resistor with neither a value nor a current passes",
+  "find": "            if not positive(\"ohms\") and not positive(\"for_current_ma\"):", "replace": "            if False:"},
+ {"file": "scripts/emit_board.py", "name": "the host's trace goes straight to the pad, past the resistor",
+  "find": "        if host_part[\"kind\"] == \"series\" and host_part[\"pin\"] == need[\"pin\"]:\n            return (host_part_names(part, host_part)[0], \"pin1\")", "replace": ""},
+ {"file": "scripts/emit_board.py", "name": "the resistor's far end reaches nothing",
+  "find": "                lines.append('    <trace from=\".%s > .pin2\" to=\".%s > .%s\" />' % (name, module, pad))\n                continue", "replace": "                continue"},
+ {"file": "scripts/emit_board.py", "name": "the value is rounded down, so the LED gets more current than asked",
+  "find": "if step * decade >= exact - 1e-9", "replace": "if step * decade >= exact / 1.2"},
+ {"file": "scripts/emit_board.py", "name": "the arithmetic is computed and never printed",
+  "find": "                                                                     \" — %s\" % arithmetic if arithmetic else \"\"))", "replace": "                                                                     \"\"))"},
+ {"file": "scripts/emit_board.py", "name": "an LED the pin cannot light gets a resistor anyway",
+  "find": "    if forward >= supply:", "replace": "    if False:"},
+ {"file": "scripts/sim_project.py", "name": "the diagram's resistor has no value when it was computed",
+  "find": "                      else (emit_board.series_ohms(part, host_part, design.board)[0],) if host_part[\"kind\"] == \"series\"\n", "replace": ""},
+ {"file": "boards/firebeetle2-esp32s3.json", "name": "the board's I/O voltage is stated wrong",
+  "find": "\"io_volts\": {\n      \"value\": 3.3,", "replace": "\"io_volts\": {\n      \"value\": 5.0,"}
+]

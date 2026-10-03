@@ -362,6 +362,16 @@
         "document": "wroom1-v1-1",
         "at": "Table 12, page 15"
       }
+    },
+    "io_volts": {
+      "value": 3.3,
+      "verified": true,
+      "source": "ESP32-S3-WROOM-1 datasheet v1.1, Table 9 (page 14): VDD33 power supply voltage 3.0 min, 3.3 typ, 3.6 max V. Table 10: VOH is at least 0.8 x VDD measured into a high-impedance load, and a pin sources 40 mA (typ) at VOH >= 2.64 V with PAD_DRIVER = 3 - so at an indicator's few milliamps a pin sits close to 3.3 V, and a resistor computed from 3.3 V gives at most the current asked for.",
+      "cites": {
+        "document": "wroom1-v1-1",
+        "at": "Table 9, page 14"
+      },
+      "why_it_matters": "the voltage a GPIO drives, from which a series resistor's value is computed (P78)"
     }
   }
 }
