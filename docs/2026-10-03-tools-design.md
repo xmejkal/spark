@@ -1,8 +1,8 @@
 # Tools spark depends on — easy to turn on, change, swap and add
 
-**Status: DRAFT for the PO's review, 2026-10-03 (P82's architecture).** Sections 1–4 were agreed one
-by one in conversation; 5 is new. Nothing is built until the PO has approved this whole spec, and then
-an implementation plan.
+**Status: APPROVED by the PO, 2026-10-03 (P82's architecture).** Sections 1–4 agreed one by one in
+conversation, section 5 and the whole spec approved after review. Next: the implementation plan, for the
+PO's review before anything is built.
 
 ## The brief (agreed)
 
