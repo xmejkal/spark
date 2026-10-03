@@ -744,7 +744,7 @@ public history is a separate decision.
 **Value proven by:** `parts.py --kept` finds each of the 16; the four spark records that name them cite
 them by key; `git ls-files parts/datasheets` in the bin is empty.
 
-### P82 — Setting up spark is one step, like installing a package — **slice 1; the PO's request of 2026-10-03**
+### P82 — Setting up spark is one step, like installing a package — **slice 1; the PO's request of 2026-10-03** — DONE 2026-10-03
 **Needed by:** the hobbyist, and the PO building the quickstart: *"we want to make it as easy and
 seamless for users as possible, like packages."* Step 5 of the quickstart stopped at `????` "tsci is not
 installed" while `build.md` says its one command "needs neither"; an `npm install` the person had to
@@ -762,6 +762,22 @@ in the project, pip `--user`, poppler via Homebrew where present) — never `sud
 build never stop for a missing tool, and every command still names anything missing with its fix.
 (2) **the simulation converter ships bundled** as one self-contained file in spark, so simulation needs
 no install at all — B10 goes with it; a check keeps the bundle in step with its source.
+**Done 2026-10-03** (branch `tools-list`; spec `docs/2026-10-03-tools-design.md`, plan
+`docs/2026-10-03-tools-plan.md`). One list — `data/tools.json`, the person's
+`~/.local/share/spark/tools.json`, the project's `.spark/tools.json`, merged field by field with the
+project winning — and every script asks `tools.find` for a role; a test refuses a script that names a
+tool's executable. `/spark:setup` (`tools.py`) shows `[ok]`/`[????]`/`[off]`/`[!]`, installs with one
+yes and never `sudo`, and turns integrations on and off, swaps a tool behind a role, pins a version and
+takes a person's own entry. The cold run — a fresh clone, empty `CLAUDE_CONFIG_DIR` and `HOME`, `PATH`
+cut to the system, Python and Node — printed `6 to install: pdftotext wokwi-cli bun tscircuit
+littlefs-python micropython-esp32s3`; after `init_project.py`, the one `tools.py --install tscircuit
+--project .` ran `npm install -g bun` and `npm install --save-dev @tscircuit/cli@0.1.2113
+tscircuit@0.0.2600`, and `check_spine.py requirements.json --keep .` ended `[ok  ] build 19 trace(s), 0
+errors, tsci 0.0.2600`, `[ok  ] simulation 17 wire(s) in the diagram`, *the chain runs end to end*.
+The first cold run found what no earlier step could: `tsci` starts with `#!/usr/bin/env bun`, so the
+board engine needs bun — Homebrew had hidden it here; it is on the list now. Not yet exercised: the
+same run through the slash commands in a fresh Claude Code session (the scripts behind them were run).
+Mutation tables `sprint-10-p82-1` … `-7`.
 
 ### B13 — "must not float" passes a pin that floats — **slice 4; found 2026-10-03 building the quickstart** — DONE 2026-10-03
 **Needed by:** the quickstart, whose `rules-vs-netlist` read `[ok]` while both buttons' inputs have no
@@ -1334,7 +1350,7 @@ checkout step; or wait for spark to be public (P61's ruling), then check it out 
 **Value proven by:** `gh run list` shows the bin's next push green, or the workflow says in its own
 log that it skipped the spark-dependent steps and why — never a red run nobody reads.
 
-### B10 — An installed spark may not be able to simulate: the converter's packages are not in git — **slice 1; found 2026-10-03, not yet reproduced end to end**
+### B10 — An installed spark may not be able to simulate: the converter's packages are not in git — **slice 1; found 2026-10-03** — DONE 2026-10-03, as P82's task 4
 **Needed by:** the hobbyist who installs spark from GitHub and runs `/spark:build`, whose last stage
 runs the converter in `tools/circuit-to-wokwi` — and v1's "simulated" for a stranger (P51).
 Seen: in a fresh clone of the public repository, without `tools/circuit-to-wokwi/node_modules` (git
@@ -1346,6 +1362,15 @@ unknown, so this is a hypothesis about P51, not a finding against it.
 **Value proven by:** from an empty `CLAUDE_CONFIG_DIR`, install spark from GitHub, run the documented
 example through `check_spine` to its simulation stage: it either compiles the diagram, or stops with
 one sentence naming the command to run — never a bun stack.
+**Done 2026-10-03** (P82, task 4). The converter ships as `tools/circuit-to-wokwi/dist/converter.mjs`,
+built by `bundle.sh` and held to its sources by a checksum test, and runs on Node found through the
+tools list; a missing Node is could-not-run with its install line. In a fresh clone with no
+`node_modules`: `tests.test_check_spine tests.test_converter` → `Ran 70 tests`, `OK (skipped=1)` — the
+skip is the converter's own development suite. Running the bundle on the quickstart found two defects
+the tests had not: `Bun.file` in `cli.ts` ("Bun is not defined"), and bun 1.4.2 bundling
+`lib/mapping.ts` twice for Node when `cli.ts` began with `#!/usr/bin/env bun` (the records were
+ignored: 9 wires, resistors as RGB LEDs). Both fixed; the quickstart's diagram is byte-identical to the
+bun run's, and two tests run the shipped file through a real conversion.
 
 ### B11 — A part demanded of the board that the part's own verified fact defeats is placed silently — **slice 2; found 2026-10-03 by the P80 council** — DONE 2026-10-03, as P81's increment 2
 **Needed by:** the quickstart and the bin, both of which put 10 k pull-downs on the L9110S's inputs
