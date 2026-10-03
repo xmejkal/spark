@@ -1211,6 +1211,16 @@ unknown, so this is a hypothesis about P51, not a finding against it.
 example through `check_spine` to its simulation stage: it either compiles the diagram, or stops with
 one sentence naming the command to run — never a bun stack.
 
+### B11 — A part demanded of the board that the part's own verified fact defeats is placed silently — **slice 2; found 2026-10-03 by the P80 council**
+**Needed by:** the quickstart and the bin, both of which put 10 k pull-downs on the L9110S's inputs
+while the same record states, verified from the vendor schematic, 10 k pull-ups to VCC on all four —
+a divider near 3 V on a 6 V pack, above the part's 2.5 V input threshold; the record's own note says
+so, and no build output does. The VL6180X record says its carrier has 10 k pull-ups and adds 4.7 k
+"because the module carries none". The bin's STATUS asks for the meter reading that settles the L9110S.
+**Value proven by:** `parts.py --validate` (or the build) names a host pull-down or pull-up on a pin
+whose record states an on-board pull to a rail, with the divider's voltage against the input
+threshold; the VL6180X record stops contradicting itself.
+
 ### B9 — check_all's last line counted checks that could not look as completed — **DONE 2026-10-03** (`3772767`)
 **Needed by:** the RC car, irrigation and the bin, whose `check_all` all exit 2 today — and README:32,
 spark's founding rule: a check that could not look must never read as one that passed. Reproduced
