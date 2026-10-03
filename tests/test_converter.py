@@ -116,5 +116,76 @@ class ItRefusesToGuessTest(unittest.TestCase):
                              "machine: %r" % entry)
 
 
+
+class TheBundleConvertsOnNodeTest(unittest.TestCase):
+    """
+    What ships converts, on Node — not only loads. The first bundle passed every refusal and then
+    said "Bun is not defined" on the quickstart's board: cli.ts read and wrote with Bun.file and
+    Bun.write, which the refusals never reach (2026-10-03, P82 task 4). An empty circuit takes
+    every file path the converter has: read the circuit, read the diagram it would merge, write, check.
+    """
+
+    def convert(self, *extra):
+        import os, tempfile
+        env = dict(os.environ, SPARK_BOARD_JSON=str(ROOT / "boards" / "firebeetle2-esp32s3.json"))
+        return subprocess.run(node() + [str(BUNDLE), "--circuit", str(self.circuit), "--out", str(self.out),
+                                        "--chips", str(self.chips), *extra],
+                              cwd=str(self.chips.parent), capture_output=True, text=True, timeout=120, env=env)
+
+    @unittest.skipUnless(node(), "node is not installed")
+    def test_it_writes_a_diagram_and_then_finds_it_up_to_date(self):
+        import tempfile
+        here = Path(tempfile.mkdtemp())
+        self.circuit, self.out, self.chips = here / "circuit.json", here / "diagram.json", here / "chips"
+        self.chips.mkdir()
+        self.circuit.write_text("[]")
+        wrote = self.convert()
+        self.assertEqual(wrote.returncode, 0, wrote.stderr + wrote.stdout)
+        self.assertTrue(self.out.is_file())
+        again = self.convert()
+        self.assertEqual(again.returncode, 0, "converting over its own diagram: " + again.stderr + again.stdout)
+        checked = self.convert("--check")
+        self.assertIn("up to date", checked.stdout, checked.stderr)
+
+    @unittest.skipUnless(node(), "node is not installed")
+    def test_a_part_record_s_mapping_reaches_the_diagram(self):
+        # The second bundle converted, and ignored the records: bun put two copies of lib/mapping.ts
+        # in it, cli.ts loaded the records into one and the emitter read the other — the quickstart's
+        # resistors came out as RGB LEDs (2026-10-03). The same circuit as the converter's own
+        # mapping-file.test.ts, through the shipped file.
+        import json, tempfile
+        here = Path(tempfile.mkdtemp())
+        self.circuit, self.out, self.chips = here / "circuit.json", here / "diagram.json", here / "chips"
+        self.chips.mkdir()
+        parts = {"Mcu": ["SDA", "GND1"], "Valve1": ["SIGNAL", "GND"], "DcBarrelJack12vInlet": ["VIN", "GND"]}
+        nets = [("VALVE1", ["Mcu:SDA", "Valve1:SIGNAL"]),
+                ("GND", ["Mcu:GND1", "Valve1:GND", "DcBarrelJack12vInlet:GND"])]
+        elements, port_ids = [], {}
+        for index, (name, pins) in enumerate(parts.items()):
+            elements.append({"type": "source_component", "source_component_id": "source_component_%d" % index,
+                             "name": name, "ftype": "simple_chip"})
+            for number, pin in enumerate(pins, 1):
+                port = "source_port_%d_%d" % (index, number)
+                port_ids["%s:%s" % (name, pin)] = port
+                elements.append({"type": "source_port", "source_port_id": port,
+                                 "source_component_id": "source_component_%d" % index, "name": "pin%d" % number,
+                                 "pin_number": number, "port_hints": [pin, "pin%d" % number]})
+        for index, (net_name, members) in enumerate(nets):
+            elements.append({"type": "source_net", "source_net_id": "source_net_%d" % index, "name": net_name})
+            elements.append({"type": "source_trace", "source_trace_id": "source_trace_%d" % index,
+                             "connected_source_port_ids": [port_ids[m] for m in members],
+                             "connected_source_net_ids": ["source_net_%d" % index]})
+        self.circuit.write_text(json.dumps(elements))
+        mapping = here / "wokwi-mapping.json"
+        mapping.write_text(json.dumps({
+            "Valve1": {"wokwiType": "wokwi-led", "pins": {"SIGNAL": "A", "GND": "C", "VCC": None}},
+            "DcBarrelJack12vInlet": {"skip": "a connector is wiring, not a part to simulate"}}))
+        done = self.convert("--mapping", str(mapping))
+        self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
+        diagram = json.loads(self.out.read_text())
+        self.assertIn("wokwi-led", [part["type"] for part in diagram["parts"]])
+        self.assertTrue(any("valve1:A" in "%s-%s" % (wire[0], wire[1]) for wire in diagram["connections"]),
+                        "the record's pin map did not reach the wires")
+
 if __name__ == "__main__":
     unittest.main()

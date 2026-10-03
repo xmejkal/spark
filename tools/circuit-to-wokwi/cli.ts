@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
 /**
  * Generate the Wokwi project from the board design.
  *
@@ -12,6 +11,9 @@
  * hope into something that fails a build.
  */
 
+// node:fs, not Bun.file — the shipped bundle runs on Node (B10, P82). And no `#!/usr/bin/env bun`
+// line: with it, bun 1.4.2 bundled lib/mapping.ts twice for Node, and the records reached neither copy the emitter read.
+import { readFile, writeFile } from "node:fs/promises";
 import { emitWokwiDiagram } from "./lib/emitters/wokwi";
 import { loadMappingFile } from "./lib/mapping";
 import { mergeWithExisting } from "./lib/merge";
@@ -73,7 +75,7 @@ function __doc__() {
 async function main() {
   const options = parseArguments(process.argv.slice(2));
 
-  const circuitJson = await Bun.file(options.circuit).json();
+  const circuitJson = JSON.parse(await readFile(options.circuit, "utf8"));
   if (options.mapping) {
     const spokenFor = loadMappingFile(options.mapping);
     console.log(`mapping from the part records: ${spokenFor} component(s)`);
@@ -92,7 +94,7 @@ async function main() {
   const serialised = JSON.stringify(diagram, null, 2) + "\n";
 
   if (options.check) {
-    const committed = (await Bun.file(options.out).text().catch(() => "")) || "";
+    const committed = (await readFile(options.out, "utf8").catch(() => "")) || "";
     if (committed !== serialised) {
       console.error(
         `\n${options.out} is out of date.\n` +
@@ -105,13 +107,13 @@ async function main() {
     return;
   }
 
-  await Bun.write(options.out, serialised);
+  await writeFile(options.out, serialised);
   console.log(`\nwrote ${options.out}`);
 }
 
 async function readExisting(path: string) {
   try {
-    return await Bun.file(path).json();
+    return JSON.parse(await readFile(path, "utf8"));
   } catch {
     return undefined; // first run
   }

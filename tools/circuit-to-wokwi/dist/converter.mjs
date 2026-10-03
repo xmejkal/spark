@@ -1,5 +1,3 @@
-#!/usr/bin/env bun
-// @bun
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
 var __defProp = Object.defineProperty;
@@ -2276,6 +2274,9 @@ var require_build_commonjs = __commonJS(function(exports) {
     });
   });
 });
+
+// cli.ts
+import { readFile, writeFile } from "node:fs/promises";
 
 // lib/geometry.ts
 import { readdirSync, readFileSync as readFileSync2 } from "node:fs";
@@ -6583,7 +6584,15 @@ class PinOracle {
 }
 
 // lib/mapping.ts
+import { readFileSync as readFileSync3 } from "node:fs";
 var fromRecords = {};
+function loadMappingFile(path) {
+  useMappings(JSON.parse(readFileSync3(path, "utf8")));
+  return Object.keys(fromRecords).length;
+}
+function useMappings(entries) {
+  fromRecords = entries;
+}
 var WOKWI_NAMES_PINS_BY_GPIO = board.wokwi_pin_naming === "gpio";
 var WOKWI_PINS = (() => {
   const byName = {};
@@ -6868,59 +6877,6 @@ function wireColour(netName) {
     return POWER_WIRE;
   return SIGNAL_WIRE;
 }
-
-// lib/mapping.ts
-import { readFileSync as readFileSync3 } from "node:fs";
-var fromRecords2 = {};
-function loadMappingFile(path) {
-  useMappings(JSON.parse(readFileSync3(path, "utf8")));
-  return Object.keys(fromRecords2).length;
-}
-function useMappings(entries) {
-  fromRecords2 = entries;
-}
-var WOKWI_NAMES_PINS_BY_GPIO2 = board.wokwi_pin_naming === "gpio";
-var WOKWI_PINS2 = (() => {
-  const byName = {};
-  const aliases = board.physical?.pad_aliases ?? {};
-  for (const [name, gpio] of Object.entries(board.pins)) {
-    byName[name] = WOKWI_NAMES_PINS_BY_GPIO2 ? String(gpio) : name;
-    const pad = aliases[name];
-    if (pad !== undefined) {
-      byName[pad] = WOKWI_NAMES_PINS_BY_GPIO2 ? String(gpio) : pad;
-    }
-  }
-  return { ...byName, ...board.wokwi_power_pins ?? {} };
-})();
-var BOARD2 = {
-  match: "Mcu",
-  wokwiType: board.wokwi_part_type,
-  pins: WOKWI_PINS2
-};
-var SKIP2 = [
-  {
-    match: /^(Decoup|Motor(Bulk|Brush))|Cap$/,
-    reason: "decoupling and bulk capacitors do nothing in a digital simulation"
-  },
-  {
-    match: /^BinConnector$|PowerInlet|^Jst/i,
-    reason: "a connector is wiring, not a part to simulate. Matched by KIND rather than by one " + "board's name for it, so a generated design naming its inlet after the part is covered " + "too"
-  },
-  { match: /^Speaker$/, reason: "no Wokwi part; the firmware's log says which cue it played" },
-  {
-    match: /^(CurrentShunt|PulldownIa|PulldownIb)$/,
-    reason: "hardware with no behaviour to simulate: a sense shunt, and the pulldowns that hold " + "the motor still while the board boots"
-  },
-  { match: /^AudioAmp$/, reason: "no Wokwi part for the I2S amplifier; cues are visible in the serial log" },
-  {
-    match: /^(TofInt|BtnOpen)Pull(up|down)$/,
-    reason: "these hold a deep-sleep wake input at a defined level while the chip is off. Wokwi " + "does not wake this chip from a GPIO at all and has no floating-input model, so every " + "part it drives is driven — the exact condition these resistors exist for cannot be " + "simulated here, and must be checked on the bench. Matched in BOTH directions because " + "which one they are is the board's decision, not this file's: they became pull-DOWNS " + "when the wake sources moved to 3V3, and a rule naming only one spelling silently " + "stopped covering them"
-  },
-  {
-    match: /^(Sda|Scl)Pullup$/,
-    reason: "Wokwi's I2C is idealised — its bus reads back correctly with no pull-ups at all, " + "so simulating them proves nothing. Which is exactly why their absence on the real " + "board went unnoticed: no simulation could ever have caught it"
-  }
-];
 
 // lib/merge.ts
 var HAND_ADDED_ATTR = "handAdded";
@@ -21860,7 +21816,7 @@ All three paths are required, and SPARK_BOARD_JSON must name the design's board 
 }
 async function main() {
   const options = parseArguments(process.argv.slice(2));
-  const circuitJson = await Bun.file(options.circuit).json();
+  const circuitJson = JSON.parse(await readFile(options.circuit, "utf8"));
   if (options.mapping) {
     const spokenFor = loadMappingFile(options.mapping);
     console.log(`mapping from the part records: ${spokenFor} component(s)`);
@@ -21877,7 +21833,7 @@ async function main() {
   const serialised = JSON.stringify(diagram, null, 2) + `
 `;
   if (options.check) {
-    const committed = await Bun.file(options.out).text().catch(() => "") || "";
+    const committed = await readFile(options.out, "utf8").catch(() => "") || "";
     if (committed !== serialised) {
       console.error(`
 ${options.out} is out of date.
@@ -21890,13 +21846,13 @@ ${options.out} is out of date.
 up to date: the simulation matches the board`);
     return;
   }
-  await Bun.write(options.out, serialised);
+  await writeFile(options.out, serialised);
   console.log(`
 wrote ${options.out}`);
 }
 async function readExisting(path) {
   try {
-    return await Bun.file(path).json();
+    return JSON.parse(await readFile(path, "utf8"));
   } catch {
     return;
   }
