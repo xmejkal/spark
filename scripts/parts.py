@@ -906,6 +906,13 @@ def find_kept(words, project=None):
                              if isinstance(held, dict) and held.get("sha256") == entry.get("sha256")}
                 for field, locator in citing(other_record, same_file, entry.get("url")):
                     lines.append("    cited by %s %s — %s" % (other, field, locator))
+    # The store itself: a file another project kept, or an interrupted run left, is still kept (P80).
+    cited = {str(entry.get("sha256")) for _, record in records_with_documents(project)
+             for entry in record["documents"].values() if isinstance(entry, dict)}
+    for path in sorted(STORE.glob("*/*")) if STORE.is_dir() else []:
+        if path.parent.name not in cited and all(word in path.name.lower() for word in wanted):
+            lines.append("%s: kept; no record here cites it" % path.name)
+            lines.append("    %s  present" % path)
     return lines
 
 

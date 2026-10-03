@@ -981,6 +981,20 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         _, said, _ = self._kept(["wroom"], stored=False)
         self.assertIn("MISSING", said)
 
+    def test_kept_finds_a_stored_file_no_record_here_cites(self):
+        """P80: the L-7113ID kept by the quickstart was invisible to every other project, so the next
+        one would have fetched it again."""
+        from unittest import mock
+        catalog, project, store = self._kept_world()
+        (store / ("d" * 64)).mkdir(parents=True)
+        (store / ("d" * 64) / "L-7113ID(Ver.29A).pdf").write_bytes(b"pdf")
+        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            code = parts.main(["--kept", "l-7113id"])
+        self.assertEqual(code, 0, out.getvalue())
+        self.assertIn(str(store / ("d" * 64) / "L-7113ID(Ver.29A).pdf"), out.getvalue())
+        self.assertIn("no record here cites it", out.getvalue())
+
     def test_kept_needs_every_word(self):
         code, said, _ = self._kept(["wroom", "nothing-like-this"])
         self.assertNotIn("present", said)
