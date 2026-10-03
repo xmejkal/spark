@@ -123,7 +123,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
         self.assertEqual(missing, [], "open items with no `**Needed by:**` line: %s" % missing)
 
     #: Scripts that still name a tool's executable, until their task moves them to tools.find (P82).
-    NOT_YET_MOVED = {"sim_project.py": {"wokwi-cli"}, "check_spine.py": {"tsci", "bun"}}
+    NOT_YET_MOVED = {"check_spine.py": {"tsci", "bun"}}
 
     def test_no_script_but_tools_names_a_tool_s_executable(self):
         names = {entry.get("exe") for key, entry in json.loads((ROOT / "data" / "tools.json").read_text()).items()

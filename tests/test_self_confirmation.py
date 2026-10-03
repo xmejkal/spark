@@ -63,6 +63,7 @@ MAY_READ = {
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.PLUGIN_CONVERTER": STRUCTURE, "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
+    "sim_project.INSTALL_HINT": AGREEMENT + " — the hint must carry the tools list's own install line for wokwi-cli",
 }
 
 #: Files no mutation table names, and why that is not a hole.

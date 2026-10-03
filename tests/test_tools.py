@@ -117,5 +117,16 @@ class FindingAToolTest(unittest.TestCase):
         self.assertEqual(found.command, [str(root / "node_modules" / ".bin" / "tsci")])
 
 
+
+class SparkSDefaultsHoldTogetherTest(unittest.TestCase):
+    """The shipped data/tools.json, read as it is: every role names a tool that meets the role's contract."""
+
+    def test_every_role_s_tool_exists_and_meets_its_contract(self):
+        lists = tools.merged(None, Path(tempfile.mkdtemp()) / "absent.json")
+        broken = [(role, name) for role, name in lists["roles"].items()
+                  if name not in lists["tools"]
+                  or (lists["contracts"].get(role) and lists["contracts"][role] not in (lists["tools"][name].get("meets") or []))]
+        self.assertEqual(broken, [], "a role in spark's own defaults points at a tool that cannot do its job")
+
 if __name__ == "__main__":
     unittest.main()

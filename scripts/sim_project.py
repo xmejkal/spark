@@ -14,19 +14,18 @@ from pathlib import Path
 
 import emit_board
 import parts as parts_library
+import tools
 
-#: Where wokwi-cli is looked for beyond PATH: where its releases page says to put it.
-WOKWI_CLI_HOME = Path.home() / ".local" / "bin" / "wokwi-cli"
-INSTALL_HINT = ("install wokwi-cli from github.com/wokwi/wokwi-cli/releases into ~/.local/bin; "
-                "`chip compile` runs locally and needs no account")
+#: What to tell a person who has no wokwi-cli: the list's own install line, and that compiling is free.
+INSTALL_HINT = "install: npm install -g wokwi-cli — `chip compile` runs locally and needs no account"
 
 
-def find_wokwi_cli():
-    """wokwi-cli on PATH or in ~/.local/bin, else None."""
-    found = shutil.which("wokwi-cli")
-    if found:
-        return found
-    return str(WOKWI_CLI_HOME) if WOKWI_CLI_HOME.is_file() else None
+def find_wokwi_cli(project=None):
+    """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin), else None."""
+    try:
+        return tools.find("simulator", project).command[0]
+    except tools.ToolProblem:
+        return None
 
 
 def mapping_for(design):

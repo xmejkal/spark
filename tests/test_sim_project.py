@@ -212,5 +212,20 @@ class WhatTheSimulationCannotShowTest(unittest.TestCase):
         self.assertIn("cannot show", note.splitlines()[0])
 
 
+
+class WokwiCliComesFromTheToolsListTest(unittest.TestCase):
+    def test_wokwi_cli_is_found_through_the_simulator_role(self):
+        import tools
+        found = tools.Tool("wokwi-cli", "simulator", {}, ["/somewhere/wokwi-cli"])
+        with mock.patch.object(tools, "find", return_value=found) as asked:
+            self.assertEqual(sim_project.find_wokwi_cli(), "/somewhere/wokwi-cli")
+        self.assertEqual(asked.call_args[0][0], "simulator")
+
+    def test_no_wokwi_cli_is_none_with_the_reason_kept(self):
+        import tools
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: npm install -g wokwi-cli")):
+            self.assertIsNone(sim_project.find_wokwi_cli())
+        self.assertIn("npm install -g wokwi-cli", sim_project.INSTALL_HINT)
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,12 +1,38 @@
 {
   "//": "The tools spark depends on (P82, docs/2026-10-03-tools-design.md). A person's ~/.local/share/spark/tools.json and a project's .spark/tools.json override any field of any entry; the project wins. `roles` points a job at a tool; `contracts` says what the job needs, and only this file states them.",
-  "roles": {"pdf-text": "pdftotext"},
-  "contracts": {"pdf-text": "page-text"},
+  "roles": {
+    "pdf-text": "pdftotext",
+    "simulator": "wokwi-cli"
+  },
+  "contracts": {
+    "pdf-text": "page-text",
+    "simulator": "wokwi-project"
+  },
   "pdftotext": {
     "for": "reading a datasheet page by page (parts.py --read)",
     "kind": "path",
     "exe": "pdftotext",
-    "meets": ["page-text"],
-    "install": {"brew": "brew install poppler", "apt": "sudo apt install poppler-utils"}
+    "meets": [
+      "page-text"
+    ],
+    "install": {
+      "brew": "brew install poppler",
+      "apt": "sudo apt install poppler-utils"
+    }
+  },
+  "wokwi-cli": {
+    "for": "compiling custom chips (free, local) and running Wokwi scenarios (paid minutes)",
+    "kind": "path",
+    "exe": "wokwi-cli",
+    "also": [
+      "~/.local/bin/wokwi-cli"
+    ],
+    "meets": [
+      "wokwi-project"
+    ],
+    "install": {
+      "npm": "npm install -g wokwi-cli"
+    },
+    "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci"
   }
 }
