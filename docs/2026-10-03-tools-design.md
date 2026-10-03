@@ -144,6 +144,50 @@ the person adds is used by spark's **commands**, which run in the conversation a
 server; the commands hand what it found to the agents. So "add your own MCP" works through the
 commands, not inside the agents.
 
-## 4. `/spark:setup` (to come)
+## 4. `/spark:setup` (proposed)
+
+**What the person sees.** One command, in the project or anywhere:
+
+```
+/spark:setup
+
+  spark's tools — personal: ~/.local/share/spark/tools.json · project: .spark/tools.json
+
+  [ok  ] board-engine   tscircuit 0.1.2113 (project's node_modules)
+  [ok  ] pdf-text       pdftotext 26.09.0
+  [????] simulator      wokwi-cli — not installed          install: npm install -g wokwi-cli
+  [????] littlefs       littlefs-python — not installed    install: python3 -m pip install --user littlefs-python
+  [ok  ] parts-search   jlcpcb (MCP, spark's own)
+  [ok  ] chip-docs      espressif-docs (MCP, spark's own; Node 22)
+  [off ] bench          sigrok (MCP)                       turn on: /spark:setup add sigrok
+  [!   ] simulator      needs a Wokwi token — create one at wokwi.com/dashboard/ci and set WOKWI_CLI_TOKEN in your shell
+
+  2 to install. Install them now?
+```
+
+**One yes installs everything listed**, each the way its kind installs, always in the person's own
+space and never with `sudo`: an npm tool into the project (`npm install --save-dev`), a Python package
+with `pip install --user`, a system tool with Homebrew where it is there, a downloaded file (the
+MicroPython build) into the person's spark folder with its checksum checked against the entry. What
+cannot be installed for them is listed with what to do — a token, a `sudo` command on Linux, an
+instrument to plug in. Run it again and everything reads `[ok]`.
+
+**Changing a choice is a subcommand that writes the one line** — the person never edits JSON unless they
+want to:
+
+| the person says | spark writes | where |
+| --- | --- | --- |
+| `/spark:setup add sigrok` | `{"sigrok": {"on": true}}`, then installs it and registers the MCP server with Claude Code | personal, or `--project` |
+| `/spark:setup remove sigrok` | `{"sigrok": {"on": false}}`, and unregisters it | the same |
+| `/spark:setup use simulator=my-sim` | `{"roles": {"simulator": "my-sim"}}` — refused if `my-sim` does not meet the contract | the same |
+| `/spark:setup pin tscircuit=0.0.2700` | `{"tscircuit": {"version": "0.0.2700"}}` | project, by default |
+| `/spark:setup new` | asks for name, purpose, role, how to check and install it, and writes the entry | personal |
+
+**MCP servers and plugins go through Claude Code's own commands** — `claude mcp add` / `claude mcp
+remove` at user scope for a personal choice, project scope for a project's — so they show in `/mcp` like
+any other. Claude Code loads servers when a session starts, so setup says when a restart is needed.
+
+**Behind the command** is one script, `tools.py`, with the same subcommands (`--status`, `--install`,
+`--on`, `--off`, `--use`, `--pin`); `/spark:setup` is the conversation around it, asking the one yes.
 
 ## 5. Testing and the order of the change (to come)
