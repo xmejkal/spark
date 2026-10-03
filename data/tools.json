@@ -5,13 +5,17 @@
     "simulator": "wokwi-cli",
     "board-engine": "tscircuit",
     "diagram-converter": "circuit-to-wokwi",
-    "js-runtime": "node"
+    "js-runtime": "node",
+    "littlefs": "littlefs-python",
+    "firmware-image": "micropython-esp32s3"
   },
   "contracts": {
     "pdf-text": "page-text",
     "simulator": "wokwi-project",
     "board-engine": "tscircuit-board",
-    "diagram-converter": "circuit-json-to-wokwi"
+    "diagram-converter": "circuit-json-to-wokwi",
+    "littlefs": "esp32-littlefs",
+    "firmware-image": "micropython-esp32-bin"
   },
   "pdftotext": {
     "for": "reading a datasheet page by page (parts.py --read)",
@@ -71,6 +75,30 @@
     "version": "20",
     "install": {
       "brew": "brew install node"
+    }
+  },
+  "littlefs-python": {
+    "for": "packing the firmware's files into the flash image",
+    "kind": "python",
+    "module": "littlefs",
+    "meets": [
+      "esp32-littlefs"
+    ],
+    "install": {
+      "pip": "python3 -m pip install --user littlefs-python"
+    }
+  },
+  "micropython-esp32s3": {
+    "for": "the interpreter the flash image starts with, for an ESP32-S3",
+    "kind": "download",
+    "file": "ESP32_GENERIC_S3-20260824-v1.29.0.bin",
+    "url": "https://micropython.org/resources/firmware/ESP32_GENERIC_S3-20260824-v1.29.0.bin",
+    "sha256": "1dd9dcd27ba2d6a1cb7f7b49a063f46d3d807d68b0151161233920228285e300",
+    "meets": [
+      "micropython-esp32-bin"
+    ],
+    "install": {
+      "download": "/spark:setup add micropython-esp32s3"
     }
   }
 }

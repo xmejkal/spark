@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -74,6 +75,62 @@ class TheImageTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("micropython.org", err.getvalue())
 
+
+
+class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
+    """P82: littlefs and the MicroPython build are tools on the list, not a traceback and a path to type."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        (self.root / "fw").mkdir()
+        (self.root / "fw" / "main.py").write_text("print('hi')\n")
+        (self.root / "micropython.bin").write_bytes(b"\xe9" + b"\x00" * 999)
+
+    def run_main(self, argv, failing):
+        import contextlib
+        import io
+        import tools
+        real = tools.find
+
+        def find(name, project=None, personal=None):
+            if name == failing:
+                raise tools.ToolProblem({"littlefs": "littlefs (littlefs-python) is not installed — install: python3 -m pip install --user littlefs-python",
+                                         "firmware-image": "firmware-image (micropython-esp32s3) is not installed — install: /spark:setup add micropython-esp32s3"}[name])
+            return real(name, project, personal)
+        err = io.StringIO()
+        with mock.patch.object(tools, "find", side_effect=find), contextlib.redirect_stderr(err), \
+                contextlib.redirect_stdout(io.StringIO()):
+            code = flash_image.main(argv + ["--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
+        return code, err.getvalue()
+
+    def test_without_micropython_the_list_s_download_is_used(self):
+        import tools
+        found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
+        with mock.patch.object(tools, "find", return_value=found) as asked:
+            self.assertEqual(flash_image.interpreter_path(None), Path("/downloads/mp.bin"))
+        self.assertEqual(asked.call_args[0][0], "firmware-image")
+
+    def test_a_given_build_is_used_as_given(self):
+        self.assertEqual(flash_image.interpreter_path(self.root / "micropython.bin"), self.root / "micropython.bin")
+
+    def test_no_littlefs_is_could_not_run_with_its_install(self):
+        code, said = self.run_main(["--micropython", str(self.root / "micropython.bin")], failing="littlefs")
+        self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
+        self.assertIn("pip install --user littlefs-python", said)
+
+    def test_no_build_given_and_none_downloaded_says_how_to_get_it(self):
+        code, said = self.run_main([], failing="firmware-image")
+        self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
+        self.assertIn("/spark:setup add micropython-esp32s3", said)
+
+    def test_with_no_build_given_the_download_goes_into_the_image(self):
+        import tools
+        found = tools.Tool("micropython-esp32s3", "firmware-image", {}, [str(self.root / "micropython.bin")])
+        real = tools.find
+        with mock.patch.object(tools, "find", side_effect=lambda name, *rest: found if name == "firmware-image" else real(name, *rest)):
+            code, said = self.run_main([], failing=None)
+        self.assertEqual(code, flash_image.EXIT_OK, said)
+        self.assertEqual((self.root / "out.bin").read_bytes()[:1000], (self.root / "micropython.bin").read_bytes())
 
 if __name__ == "__main__":
     unittest.main()

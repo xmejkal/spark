@@ -1,0 +1,11 @@
+[
+ {"file": "scripts/flash_image.py", "name": "the list's MicroPython build is not used",
+  "find": "    return Path(tools.find(\"firmware-image\").command[0])", "replace": "    return Path(\"micropython.bin\")"},
+ {"file": "scripts/flash_image.py", "name": "a missing littlefs is a traceback again",
+  "find": "        tools.find(\"littlefs\")\n", "replace": ""},
+ {"file": "scripts/flash_image.py", "name": "a missing build is a traceback again",
+  "find": "    except tools.ToolProblem as missing:\n        print(\"flash_image.py: %s\" % missing, file=sys.stderr)",
+  "replace": "    except KeyError as missing:\n        print(\"flash_image.py: %s\" % missing, file=sys.stderr)"},
+ {"file": "scripts/tools.py", "name": "a missing download says only 'see its entry'",
+  "find": ", (\"download\", None))", "replace": ")"}
+]

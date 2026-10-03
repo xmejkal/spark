@@ -144,13 +144,14 @@ with its reason), so the one command's last stage needs no table anywhere else. 
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --sim-dir sim --firmware flash-with-firmware.bin
-${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --micropython sim/micropython-<chip>.bin --files firmware -o sim/flash-with-firmware.bin
+${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --files firmware -o sim/flash-with-firmware.bin
 cd sim && wokwi-cli . --scenario scenarios/<name>.scenario.yaml --timeout 60000
 ```
 
 The first keeps the simulation project — `diagram.json`, `wokwi.toml`, the chips — in `sim/`;
-the second puts MicroPython and the project's own files into one flash image (the interpreter
-comes from micropython.org for the board's chip, the board file names the port); the third runs
+the second puts MicroPython and the project's own files into one flash image (the interpreter is
+the tools list's `firmware-image` — MicroPython v1.29.0 for the ESP32-S3, fetched and checked by
+`/spark:setup`; for another chip, `--micropython <its .bin from micropython.org>`); the third runs
 a scenario, whose `set-control` lines are the chips' sliders — a probe's `moisturePct`, a flow
 meter's `flowLpm` — and whose `wait-serial` and `expect-pin` lines are what it asserts:
 

@@ -33,7 +33,7 @@ PROJECT_FILE = Path(".spark") / "tools.json"
 #: Keys of a tools file that are not tools.
 RESERVED = ("roles", "contracts")
 #: The install managers tried in order, each with the program that has to be there for it to apply.
-MANAGERS = (("npm", "npm"), ("pip", "python3"), ("brew", "brew"))
+MANAGERS = (("npm", "npm"), ("pip", "python3"), ("brew", "brew"), ("download", None))  # a download needs only spark
 
 Tool = namedtuple("Tool", "name role entry command")
 
@@ -78,7 +78,7 @@ def install_line(entry):
     """The one command that installs this tool here, with its version filled in — or None."""
     install = entry.get("install") or {}
     for manager, needs in MANAGERS:
-        if manager in install and shutil.which(needs):
+        if manager in install and (needs is None or shutil.which(needs)):
             return install[manager].format(version=entry.get("version", ""), core=entry.get("core", ""))
     return None
 

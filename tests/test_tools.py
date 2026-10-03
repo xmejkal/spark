@@ -113,6 +113,15 @@ class FindingAToolTest(unittest.TestCase):
         self.assertEqual(tools.version_note("pdftotext", "unknown version", personal=personal), "")
         self.assertIn("measured on pdftotext version 26.09.0", tools.version_note("pdftotext", "24.0", personal=personal))
 
+    def test_a_missing_download_names_the_command_that_fetches_it(self):
+        personal = layer({"mp": {"kind": "download", "file": "mp.bin", "url": "https://example.org/mp.bin",
+                                 "sha256": "00", "install": {"download": "/spark:setup add mp"}}})
+        with mock.patch.object(tools, "DOWNLOADS", Path(tempfile.mkdtemp())), \
+                mock.patch.object(tools.shutil, "which", return_value=None):
+            with self.assertRaises(tools.ToolProblem) as missing:
+                tools.find("mp", None, personal)
+        self.assertIn("install: /spark:setup add mp", str(missing.exception))
+
     def test_an_npm_tool_is_found_in_the_project_before_the_path(self):
         root = Path(tempfile.mkdtemp())
         (root / "node_modules" / ".bin").mkdir(parents=True)

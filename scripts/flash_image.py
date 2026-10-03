@@ -2,6 +2,7 @@
 """
 A flash image with MicroPython AND the project's files, for a headless simulation.
 
+    flash_image.py --files firmware -o sim/flash-with-firmware.bin    # the tools list's MicroPython build
     flash_image.py --micropython sim/micropython-esp32s3.bin --files firmware -o sim/flash-with-firmware.bin
     flash_image.py ... --config '{"THRESHOLD_PCT": 40}'      # also writes /config.json into the image
 
@@ -22,6 +23,7 @@ import sys
 from pathlib import Path
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
+import tools
 
 FLASH_SIZE = 4 * 1024 * 1024
 FILESYSTEM_OFFSET = 0x200000
@@ -67,29 +69,43 @@ def image(interpreter, files, overrides=None):
     return bytes(flash)
 
 
+def interpreter_path(given):
+    """The MicroPython build: the one given, else the tools list's download (P82)."""
+    if given:
+        return Path(given)
+    return Path(tools.find("firmware-image").command[0])
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
-    parser.add_argument("--micropython", required=True, type=Path, help="the interpreter .bin from micropython.org for the board's chip")
+    parser.add_argument("--micropython", type=Path, help="the interpreter .bin from micropython.org for the board's chip; "
+                        "omitted, the tools list's firmware-image download")
     parser.add_argument("--files", required=True, type=Path, help="the directory whose files go into the image, as they are")
     parser.add_argument("--config", help="JSON written as /config.json into the image")
     parser.add_argument("-o", "--output", required=True, type=Path)
     args = parser.parse_args(argv)
-    if not args.micropython.is_file():
-        print("flash_image.py: no interpreter at %s — download a build from micropython.org/download for the board's chip" % args.micropython, file=sys.stderr)
+    try:
+        tools.find("littlefs")
+        interpreter = interpreter_path(args.micropython)
+    except tools.ToolProblem as missing:
+        print("flash_image.py: %s" % missing, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    if not interpreter.is_file():
+        print("flash_image.py: no interpreter at %s — download a build from micropython.org/download for the board's chip" % interpreter, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     if not args.files.is_dir():
         print("flash_image.py: %s is not a directory" % args.files, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     files = files_under(args.files)
     try:
-        flash = image(args.micropython.read_bytes(), files, json.loads(args.config) if args.config else None)
+        flash = image(interpreter.read_bytes(), files, json.loads(args.config) if args.config else None)
     except ValueError as broken:
         print("flash_image.py: %s" % broken, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     args.output.write_bytes(flash)
     for destination, content in files:
         print("  %-28s %6d bytes" % (destination, len(content)))
-    print("wrote %s: %d KB (MicroPython to %#x, filesystem at %#x)" % (args.output, len(flash) // 1024, len(args.micropython.read_bytes()), FILESYSTEM_OFFSET))
+    print("wrote %s: %d KB (MicroPython to %#x, filesystem at %#x)" % (args.output, len(flash) // 1024, len(interpreter.read_bytes()), FILESYSTEM_OFFSET))
     return EXIT_OK
 
 
