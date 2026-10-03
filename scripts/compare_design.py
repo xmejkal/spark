@@ -174,24 +174,41 @@ def check_i2c_pullups(netlist, buses):
     return failures
 
 
-def check_floating_inputs(netlist, watch):
+def check_floating_inputs(netlist, watch, rails=()):
     """
-    A named pin that nothing connects to, on a part that is powered.
+    A named pin with no defined level: joined to nothing, or joined only to things that do not
+    hold it — a GPIO lets go at reset, a series resistor leads nowhere fixed.
 
-    A floating CMOS input does not sit at a defined level; it drifts, and on a motor driver that
-    means both halves of a bridge can conduct. `watch` names the pins worth caring about, because
-    plenty of pins are deliberately left open and reporting all of them is noise.
+    A floating CMOS input drifts, and on a motor driver both halves of a bridge can conduct. This
+    asked only "is it connected", so the quickstart's two buttons — each wired to a GPIO and to
+    nothing else — read [ok] (B13). A pin holds when its net is a rail, or a resistor on its net
+    reaches one. `rails` are the rule file's rail names; tscircuit flags only some nets as power or
+    ground (it leaves MOTOR6V unflagged). `watch` names the pins worth caring about.
     """
+    rail_ids = {net_id for net_id, net in netlist.nets.items()
+                if net.get("is_power") or net.get("is_ground") or net.get("name") in set(rails)}
     failures = []
     for component_name, port_name in watch:
         if netlist.component(component_name) is None:
             continue
-        if not netlist.nets_of(component_name, port_name):
+        nets = netlist.nets_of(component_name, port_name)
+        if not nets:
             failures.append(Failure(
                 "floating-input", "%s.%s" % (component_name, port_name),
                 "connects to nothing",
                 "an input left floating has no defined level; tie it, or say in the design why "
                 "it is deliberately open"))
+        elif not nets & rail_ids and not any(
+                (netlist.component(member) or {}).get("ftype") == "simple_resistor"
+                and {n for n, members in netlist.members.items() if any(m[0] == member for m in members)} & rail_ids
+                for net_id in nets for member, _ in netlist.members.get(net_id, [])):
+            joined = sorted({"%s.%s" % (owner, netlist.printed_name(owner, pad)) for net_id in nets
+                             for owner, pad in netlist.members.get(net_id, [])} - {"%s.%s" % (component_name, port_name)})
+            failures.append(Failure(
+                "floating-input", "%s.%s" % (component_name, port_name),
+                "joined to %s and no resistor to a rail" % (", ".join(joined) or "nothing else"),
+                "it has no defined level at reset or whenever its driver lets go; add a pull-up or "
+                "pull-down, or remove the rule if the part pulls it itself"))
     return failures
 
 
@@ -202,7 +219,8 @@ def run(circuit, rules):
         failures += check_i2c_pullups(netlist, rules["i2c_buses"])
     if rules.get("must_not_float"):
         failures += check_floating_inputs(
-            netlist, [tuple(pair) for pair in rules["must_not_float"]])
+            netlist, [tuple(pair) for pair in rules["must_not_float"]],
+            rails=((rules.get("physics") or {}).get("rails") or {}).keys())
     return failures
 
 

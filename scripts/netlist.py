@@ -28,6 +28,8 @@ transitive is a change with its own consequences, not a tidy-up to slip into a r
 """
 
 #: The element types this reads, named once so a caller can see what a netlist is made of.
+import re
+
 COMPONENT, PORT, NET, TRACE = "source_component", "source_port", "source_net", "source_trace"
 
 
@@ -105,6 +107,16 @@ class Netlist:
         """
         names = [port.get("name")] + list(port.get("port_hints") or [])
         return {name for name in names if name}
+
+    def printed_name(self, component_name, port_name):
+        """The name a person finds on the board for this pad: a hint that is not a bare pad number."""
+        for port in self.ports.values():
+            owner = self.components.get(port.get("source_component_id"), {})
+            if owner.get("name") == component_name and port.get("name") == port_name:
+                printed = [hint for hint in port.get("port_hints") or []
+                           if not re.fullmatch(r"(pin)?\d+", str(hint))]
+                return printed[0] if printed else port_name
+        return port_name
 
     def nets_of(self, component_name, port_name):
         """Which nets a given pin sits on, by any of its names. Empty means joined to nothing."""

@@ -757,7 +757,7 @@ itself, what it asks consent for, and what it only names.
 `/spark:build` reach "the chain runs end to end" with at most one consent and no install command the
 person types; anything still missing is named with the one command that installs it.
 
-### B13 — "must not float" passes a pin that floats — **slice 4; found 2026-10-03 building the quickstart**
+### B13 — "must not float" passes a pin that floats — **slice 4; found 2026-10-03 building the quickstart** — DONE 2026-10-03
 **Needed by:** the quickstart, whose `rules-vs-netlist` read `[ok]` while both buttons' inputs have no
 resistor — the button record itself says *"give it an external pull, not just the internal one"* — and
 every design whose rules name an input. `compare_design.check_floating_inputs` asks only whether a pin
@@ -765,6 +765,13 @@ connects to *nothing*; a pin wired to a GPIO and nothing else floats all the sam
 **Value proven by:** the check fails a `must_not_float` pin whose net reaches no rail through a resistor
 and is not itself a rail, and names the quickstart's two buttons; the L9110S inputs, which have their
 pull-downs, still pass; mutation caught.
+**Done 2026-10-03.** A watched pin holds when its net is a rail, or a resistor on its net reaches one;
+rails are tscircuit's power and ground flags plus the rails the rules file names (tscircuit leaves
+MOTOR6V unflagged). A series resistor that leads nowhere fixed is not a pull. On the quickstart:
+`[FAIL] rules-vs-netlist — BtnMode.A: joined to Mcu.D11 and no resistor to a rail`, the same for
+BtnOpen.A at D12, while the L9110S inputs pass. Pads are named by their silkscreen now ("Mcu.D11", not
+"Mcu.pin20"). P8's fixture carries the pull-down its own rule needs. Mutations `sprint-10-b13.json`:
+5, all caught.
 
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
