@@ -546,6 +546,15 @@ never held the files; how is the PO's.
 no credentials succeeds in an empty directory; in that clone `git rev-list --objects --all` lists no
 `.pdf`, `.jpg`, `.png` or `.webp`, and `git grep -l /Users/ -- commands skills agents` finds nothing.
 
+### P75 — A photo spark keeps does not say where it was taken — **slice 1; found 2026-10-03**
+**Needed by:** the hobbyist, who photographs modules at home with a phone for `/spark:identify` — and
+irrigation, all five of whose photos (iPhone, 2026-09-29) carry a GPS block with latitude, longitude
+and altitude, found while auditing its history for publication. The bin's five images carry none.
+`parts.py --keep` and `--fetch` store an image as it came; a person who commits it, or a store that is
+ever shared, publishes the place.
+**Value proven by:** `parts.py --keep` on a JPEG with a GPS block stores a file with none (EXIF tag
+0x8825 absent) and says so; a test with a fixture photo, and its mutation caught.
+
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
 touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules

@@ -28,7 +28,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
-| **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | **P71**, P44 (done) |
+| **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | **P71**, **P75**, P44 (done) |
 | **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | **B1**, **P58**, **P73**, **B8**, **B5** |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59**, **P74** |
 | **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a**, **P39**, **P38**, **P43** (the `fix` half) |
