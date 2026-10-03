@@ -1,8 +1,8 @@
 # Tools spark depends on — easy to turn on, change, swap and add
 
-**Status: DRAFT, being designed with the PO (P82's architecture), 2026-10-03.** Sections 1 and 2 are
-agreed; 3–5 are written here for review before they are agreed. Nothing is built until the PO has
-approved the whole spec.
+**Status: DRAFT for the PO's review, 2026-10-03 (P82's architecture).** Sections 1–4 were agreed one
+by one in conversation; 5 is new. Nothing is built until the PO has approved this whole spec, and then
+an implementation plan.
 
 ## The brief (agreed)
 
@@ -64,6 +64,7 @@ An MCP server or a companion plugin is an entry too, with its Claude Code regist
 ```
 
 Roles make swapping one word: `"roles": {"simulator": "wokwi", "board-engine": "tscircuit", "pdf-text": "pdftotext"}`.
+A tool states what it can stand in for with `"meets": ["wokwi-project"]` — the contracts of section 3.
 
 The four examples, as what lands in a file:
 
@@ -87,8 +88,8 @@ subprocess.run(simulator.command + ["..."])
 
 1. merges the three layers and follows a role to a tool ("simulator" → "wokwi" unless changed);
 2. locates it where that kind lives — an npm tool in the project's `node_modules` then on the PATH;
-   wokwi-cli also in `~/.local/bin`; a downloaded file (the MicroPython firmware) in the person's spark
-   folder;
+   wokwi-cli also in `~/.local/bin`; a downloaded file (the MicroPython firmware) in
+   `~/.local/share/spark/downloads/`;
 3. compares its version with the entry's — a difference prints one line and goes on (today's
    tscircuit drift check moves here);
 4. when the tool is missing, the step ends **could-not-run** (`????`) — never a traceback, never a
@@ -168,7 +169,7 @@ commands, not inside the agents.
 **One yes installs everything listed**, each the way its kind installs, always in the person's own
 space and never with `sudo`: an npm tool into the project (`npm install --save-dev`), a Python package
 with `pip install --user`, a system tool with Homebrew where it is there, a downloaded file (the
-MicroPython build) into the person's spark folder with its checksum checked against the entry. What
+MicroPython build) into `~/.local/share/spark/downloads/` with its checksum checked against the entry. What
 cannot be installed for them is listed with what to do — a token, a `sudo` command on Linux, an
 instrument to plug in. Run it again and everything reads `[ok]`.
 
@@ -190,4 +191,43 @@ any other. Claude Code loads servers when a session starts, so setup says when a
 **Behind the command** is one script, `tools.py`, with the same subcommands (`--status`, `--install`,
 `--on`, `--off`, `--use`, `--pin`); `/spark:setup` is the conversation around it, asking the one yes.
 
-## 5. Testing and the order of the change (to come)
+## 5. Testing and the order of the change (proposed)
+
+**Tests, all on the Mac and offline**, the way spark's suite already runs:
+
+- **merging** — three layers, field by field, the project winning; a missing personal or project file is
+  simply absent;
+- **finding** — a role followed to its tool; the project's `node_modules` before the PATH; a missing tool
+  ending could-not-run with its install line; a version that differs printing its one line;
+- **contracts** — a role pointed at a tool that does not declare the contract is refused by name;
+- **installing** — the command each kind builds (npm, pip, Homebrew, a checked download), run against a
+  fake installer so no test installs anything; `sudo` never appears in any command;
+- **writing a choice** — `--on`, `--off`, `--use`, `--pin` change exactly one field and nothing else in
+  the file;
+- **the rule** — no script other than `tools.py` names a tool's executable (`tsci`, `bun`, `wokwi-cli`,
+  `pdftotext`), checked by a test the way `test_orphans` already refuses an orphan script.
+
+Every change ships its mutation table, as all spark work does.
+
+**The order — each step one commit, the suite green after each:**
+
+1. `data/tools.json` and `tools.py` with merging, finding and the rule's test — nothing uses it yet.
+2. `pdftotext` moves to `tools.find("pdf-text")` — the smallest migration, proving the shape.
+3. `wokwi-cli` moves (`sim_project.py`).
+4. `tscircuit` moves, and `init_project.py` reads its pinned versions from the entry.
+5. **The converter is bundled** into one file that runs on Node — no bun and no `node_modules` at run
+   time; a check fails when the bundle is older than its source. B10 is done.
+6. `littlefs` and the MicroPython build move (`flash_image.py`), the build as a checked download.
+7. `/spark:setup` and `tools.py`'s subcommands; spark's `.mcp.json` servers and the optional ones
+   (wokwi, sigrok) become entries; `docs/mcp.md` and the README's install section say only what the
+   entries do not.
+8. **The proof** (P82): from an empty `CLAUDE_CONFIG_DIR` and an empty directory, the public spark,
+   `/spark:setup` → one yes → `/spark:init` → `/spark:build` reaches *"the chain runs end to end"*, with no
+   install command typed by the person.
+
+**Size.** `scripts/` is at 4,227 of its 5,000 code lines. `tools.py` is estimated at about 250, and
+the seven lookups it replaces come out of the scripts that have them — an estimate until it is measured
+(W13). The bundled converter is a built file under `tools/`, not `scripts/`.
+
+**Not in this design (W14):** a second board engine; installing anything with `sudo`; a server
+that Claude Code cannot register itself.
