@@ -663,6 +663,44 @@ bench; kicad and wokwi removed (spark drives tscircuit and wokwi-cli itself). Th
 mechanical checks (M1–M10: identity, a page for every verified fact, conditions and statistic per
 number, a worst-case limit for a series resistor, a host pull its record's own fact defeats) are the
 next increment, with B11.
+**The data council of 2026-10-03 (W21) set the order and narrowed what research gathers:** warnings
+first (P81), then these agents — whose per-kind fact list is now "what a decision reads": no seller
+listings, no sub-chip datasheet unless a listed fact needs it, a worked example record in
+`part-data.md` (schema-learning was 12 % of research calls) — then the clean-up (P83).
+
+### P81 — A warning that can cause a wrong board is shown where the decision is made — **slice 2, first; the PO's order of 2026-10-03**
+**Needed by:** every design the hobbyist builds on a breadboard, where the person is the check — and
+the data council's finding that the warnings which protect a board live in prose no output prints,
+while the generated board file is 90 % copied comments. Live cases: irrigation's 12 V jack — *"Reversed,
+the adapter's 12 V lands on board ground"* — in a `//pin_order` note that `--show`, `--unverified` and
+the board file all omit; the L9110S's own 10 k pull-ups against spark's 10 k pull-downs (B11); the
+irrigation DS3231 record, whose prose pin order describes the 4-pin board and whose typed `pin_order`
+is the 6-pin ZS-042 — following the prose puts SCL on the 32K pad. And `pin_order`, the field where a
+mistake reverses a supply, is the one fact the validator asks no proof for.
+**Value proven by:** `parts.py --validate` refuses a `pin_order` without a typed source (verified, where
+read, a page when it is a kept document); each of the three live warnings is printed by `--show` or
+by a check with its arithmetic, and the DS3231 record no longer contradicts itself; mutations caught.
+
+### P83 — The catalog leaves the plugin, slim; candidates' photos and seller listings go — **slice 4; the PO's decision of 2026-10-03 (W21)**
+**Needed by:** everyone who installs spark — the researcher writes catalog records into the plugin's
+own folder, which is a commit to a public repository for the author and a cache the next update
+abandons for anyone else — and the person's store, where 47 files (10.2 MB) back only candidates
+nobody chose. The catalog moves to the person's store (`~/.local/share/spark/catalog/`) as identity,
+one kept document and why not, with no typed facts and no `sourcing`; the 19 candidate datasheets stay;
+the 28 product photos of unchosen candidates are deleted from a list the PO approves first; seller
+listings leave every record (kept: `owned`, a maker-less part's order code, "this listing is a
+different part"). A shopping list made at buying time replaces them (P79's outputs).
+**Value proven by:** `git ls-files catalog` is empty and `--need rtc` still names the DFR0819 from the
+store; a catalog record with `facts` or `sourcing` is refused; the store holds 63 files.
+
+### B12 — The bin's vendor datasheets are kept, cited, then removed — **slice 6; the PO's decision of 2026-10-03**
+**Needed by:** the bin's public repository, which tracks 16 vendor datasheets (7.5 MB) under licences
+that grant nothing — 12 of them exist nowhere else, and the L9110S guide that proves B11 has no URL
+anywhere. Order, because removing first loses them: `parts.py --keep` each into the store with its URL
+where known, cite each from spark's records by key, then `git rm parts/datasheets`. Rewriting the bin's
+public history is a separate decision.
+**Value proven by:** `parts.py --kept` finds each of the 16; the four spark records that name them cite
+them by key; `git ls-files parts/datasheets` in the bin is empty.
 
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half

@@ -239,3 +239,22 @@ The failure this prevents is the one the PO named on 2026-09-29 — "I don't wan
 bloated, never finishing, too many not even used parts" — which a refinement done alone
 reintroduces, because whoever is doing the work is the worst judge of whether the work is needed.
 Written 2026-09-30, at the PO's word.
+
+## W21 — Keep a datum only if a decision rests on it
+
+**Adopted by the PO on 2026-10-03, after the data council** (five lenses: a senior hardware engineer, a
+data steward, a minimalist economist, the hobbyist's advocate, and a devil's advocate for keeping). It
+**replaces his rule of 2026-09-29** — *"whatever you find online is kept, chosen or not."*
+
+> **Keep a datum only if a decision rests on it — by code, by a check, or by a person at the moment
+> they decide — and it stays true without upkeep (a part number, a printed version, a page). Point at
+> everything else. Never gather what no decision reads, or what changes before anyone reads it again.**
+
+Why: about 38 % of research tokens went to data no decision used — seller listings (19 %), full
+records for candidates nobody chose (13 %), the datasheet of the chip inside a module (5 %), whole
+datasheets (1 %). But "no code reads it" is the wrong test: 79 of 140 facts sampled are what a design
+decision rests on, and the warnings that found today's wrong boards were read by a person. So the
+test is the decision, and a warning that protects a board must be SHOWN where the decision is made —
+a typed fact or a check that prints, never only a prose note (P81).
+**Checked by:** `agents/parts-researcher.md` and `commands/research.md` carry the sentence; the
+validator refuses what the principle forbids as P80, P81 and P83 make it mechanical.
