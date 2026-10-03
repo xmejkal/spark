@@ -532,7 +532,7 @@ the process takes **all three cuts** (P72); bench and firmware-on-a-Mac first, a
 public now (P71). `VISION.md` and `STORY_MAP.md` hold it; `test_orphans` fails on an open item the
 map does not place. Found on the way and fixed the same day: B9.
 
-### P71 — spark is public, and a stranger can install it — **slice 1; the PO's request of 2026-10-03**
+### P71 — spark is public, and a stranger can install it — **slice 1** — DONE 2026-10-03
 **Needed by:** the hobbyist, spark's primary persona, for whom the README's first line —
 `/plugin marketplace add xmejkal/spark` — fails while the repository is private; and slice 5's real
 outsider, who cannot start before it.
@@ -545,6 +545,16 @@ never held the files; how is the PO's.
 **Value proven by:** `gh repo view xmejkal/spark --json visibility` says PUBLIC; `git clone` of it with
 no credentials succeeds in an empty directory; in that clone `git rev-list --objects --all` lists no
 `.pdf`, `.jpg`, `.png` or `.webp`, and `git grep -l /Users/ -- commands skills agents` finds nothing.
+**Done 2026-10-03, the PO's choice of three:** today's repository renamed `xmejkal/spark-archive` and
+kept private (the full record, the 48 files, the old hashes); a copy filtered with `git filter-repo`
+pushed as a new `xmejkal/spark` — never holding the files — checked from a fresh clone of GitHub, then
+made public. Run after the last change: `gh repo view` → `PUBLIC`; a clone with an empty `HOME` and no
+credential helper succeeds; in it, 0 binaries in `git rev-list --objects --all`, 0 secrets in `git log
+-p`, 0 files under `commands/ skills/ agents/` naming `/Users/`, a LICENSE; 227 commits, the tree
+byte-identical to the archive's, 36 MB → 1.4 MB. 90 commits took new hashes; filter-repo rewrote those
+in commit messages and one commit remapped the 77 cited in the record files. The README's install line
+run against an empty `CLAUDE_CONFIG_DIR`: the marketplace added, `spark@petr-local` 0.6.0 installed
+and enabled. Found on the way: B10, and P75 (irrigation's photos carry GPS).
 
 ### P75 — A photo spark keeps does not say where it was taken — **slice 1; found 2026-10-03**
 **Needed by:** the hobbyist, who photographs modules at home with a phone for `/spark:identify` — and
@@ -1121,6 +1131,19 @@ private. Options for the PO: a token with read access to spark as a repository s
 checkout step; or wait for spark to be public (P61's ruling), then check it out plainly.
 **Value proven by:** `gh run list` shows the bin's next push green, or the workflow says in its own
 log that it skipped the spark-dependent steps and why — never a red run nobody reads.
+
+### B10 — An installed spark may not be able to simulate: the converter's packages are not in git — **slice 1; found 2026-10-03, not yet reproduced end to end**
+**Needed by:** the hobbyist who installs spark from GitHub and runs `/spark:build`, whose last stage
+runs the converter in `tools/circuit-to-wokwi` — and v1's "simulated" for a stranger (P51).
+Seen: in a fresh clone of the public repository, without `tools/circuit-to-wokwi/node_modules` (git
+never carries it), three converter tests fail with bun's *"Cannot find package 'circuit-json'"* — not
+a sentence saying what to install; with the folder linked in, all 811 pass. A marketplace install has
+no `node_modules` there, and no command or README line says to create one. P51 proved the documented
+setup on a machine that was not the author's; whether that run's plugin carried the folder is
+unknown, so this is a hypothesis about P51, not a finding against it.
+**Value proven by:** from an empty `CLAUDE_CONFIG_DIR`, install spark from GitHub, run the documented
+example through `check_spine` to its simulation stage: it either compiles the diagram, or stops with
+one sentence naming the command to run — never a bun stack.
 
 ### B9 — check_all's last line counted checks that could not look as completed — **DONE 2026-10-03** (`3772767`)
 **Needed by:** the RC car, irrigation and the bin, whose `check_all` all exit 2 today — and README:32,
