@@ -538,6 +538,30 @@ its real state; milestones with exit criteria a command can prove; and a W14 pas
 needs is parked or deleted.
 **Value proven by:** `scrum/ROADMAP.md` names each milestone, its exit criterion and the items in it;
 every open backlog item is in exactly one milestone, parked, or deleted; and the PO has ordered it.
+**Refined 2026-10-03 by the PO, after the three lenses reported:** the roadmap is not written from the
+backlog but from a **discovery council** — *"so we can be sure we're actually developing prioritized
+and thought-through needs and scenarios … and we don't do bloat just because we can."* It produces a
+vision with non-goals, two or three personas (each marked evidence or hypothesis), and a story map:
+the journey as its backbone, a persona's steps under it, horizontal slices that ARE the milestones,
+and per slice the scenarios that prove it with a command or a bench log. The new rule it brings: an
+item that hangs on no cell of the map is parked or deleted. The lenses' reports are its input.
+**Value proven by (replaces the line above):** `scrum/VISION.md` and `scrum/STORY_MAP.md` exist; every
+open item sits on one cell and one slice, or is parked or deleted with a reason; the PO has confirmed
+the personas and ordered the slices.
+
+### P70 — The backlog lives in GitHub Projects — **the PO's decision of 2026-10-03; after P69**
+**Needed by:** the PO, who plans and reorders the work and wants a roadmap view rather than a
+1,200-line file; and P69's story map, whose slices need a place to be ordered.
+Chosen over Jira: `gh` already works here, and the issues live beside the code they change, so a
+check can read them with GitHub's own credentials and no stored secret (the PO's rule: no tokens on
+GitHub). One user-level project spans spark and the bin; fields carry *Needed by*, *Value proven
+by*, slice and size; iterations are the sprints. Only the revalidated items move, never the raw file.
+After the move the Markdown backlog is frozen as the archive, with a pointer, and holds no order or
+status (W16: the replacement deletes what it replaces). W14's test reads the issues instead.
+Needs the PO once: `gh auth refresh -s project`.
+**Value proven by:** `gh project item-list` lists every open item with *Needed by* filled; the frozen
+file states it is the archive; `test_orphans`' W14 check runs against the issues and fails on one
+without *Needed by*.
 
 ### P62a — The catalog's files move to the store, and a record says which document it kept — **Sprint 9, first** — DONE 2026-10-02
 **Run after the last change:** `git ls-files catalog | grep -ciE '\.(pdf|jpe?g|png|webp|svg)$'` → **0**
