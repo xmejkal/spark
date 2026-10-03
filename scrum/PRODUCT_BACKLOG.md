@@ -1085,6 +1085,15 @@ checkout step; or wait for spark to be public (P61's ruling), then check it out 
 **Value proven by:** `gh run list` shows the bin's next push green, or the workflow says in its own
 log that it skipped the spark-dependent steps and why — never a red run nobody reads.
 
+### B9 — check_all's last line counted checks that could not look as completed — **found 2026-10-03 by the vision lens, fixed the same day**
+**Needed by:** the RC car, irrigation and the bin, whose `check_all` all exit 2 today — and README:32,
+spark's founding rule: a check that could not look must never read as one that passed. Reproduced
+on the RC car with wokwi-cli off PATH: one `[ok  ]`, three `[????]`, one `[--  ]`, then *"nothing found
+by the 4 check(s) that completed, of 5"*. `render` counted a check as completed unless it carried an
+`unchecked` list; a could-not-run with only a `reason` slipped through. The exit code (2) was right.
+**Value proven by:** the RC car's last line names one completed check; a test renders a could-not-run
+that carries only a reason and fails on "completed" counting it; its mutation is caught.
+
 ### B8 — A firmware test failed once and was never caught again — **found 2026-10-01, unordered**
 **Needed by:** the bin's commit gate, which is only trusted while it never fails for nothing. A
 local no-spark `make check` failed at `firmware-tests` once; the same suite then passed 31 of 31

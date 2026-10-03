@@ -396,9 +396,11 @@ def render(results):
             lines.append("           ? %s" % note)
 
     problems = sum(len(r.get("problems", [])) for r in results)
-    unchecked = [r["check"] for r in results if r.get("unchecked")]
+    # A check that could not look is one whatever it carries: a could-not-run with only a reason
+    # was counted as completed, and the RC car's three [????] read "4 completed, of 5" (B9).
+    unchecked = [r["check"] for r in results if r["status"] == COULD_NOT_RUN or r.get("unchecked")]
     skipped = [r["check"] for r in results if r["status"] == SKIPPED]
-    completed = [r for r in results if r["status"] != SKIPPED and not r.get("unchecked")]
+    completed = [r for r in results if r["status"] != SKIPPED and r["check"] not in unchecked]
 
     lines.append("")
     if unchecked:

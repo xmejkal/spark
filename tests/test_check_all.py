@@ -70,6 +70,16 @@ class NothingAskedForTest(unittest.TestCase):
         self.assertIn("nothing completed", rendered)
         self.assertIn("says nothing about the board", rendered)
 
+    def test_a_check_that_could_not_run_is_never_counted_as_completed(self):
+        # B9: the RC car printed three [????] and then "nothing found by the 4 check(s) that
+        # completed, of 5" — a could-not-run carrying only a reason was counted as completed.
+        results = [{"check": "a", "what": "x", "status": check_all.OK, "problems": [], "unchecked": []},
+                   {"check": "b", "what": "x", "status": check_all.COULD_NOT_RUN, "reason": "circuit is ambiguous"},
+                   {"check": "c", "what": "x", "status": check_all.SKIPPED, "reason": "not asked"}]
+        rendered = check_all.render(results)
+        self.assertIn("nothing found by the 1 check(s) that completed, of 3", rendered)
+        self.assertIn("could not look: b", rendered)
+
 
 def a_header_drilled_too_small():
     """A 6-pin 2.54 mm header on a 0.9 mm drill — the defect check_footprints exists for."""
