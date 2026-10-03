@@ -169,8 +169,9 @@ def tsci_version(toolchain):
 #: repository. v1's last word was true on one machine (backlog P32a).
 CONVERTER_PATHS = ("tools/circuit-to-wokwi/cli.ts",)
 
-#: The plugin's own copy, which needs no walking to find and is the answer when nothing nearer is.
-PLUGIN_CONVERTER = SCRIPTS.parent / "tools" / "circuit-to-wokwi" / "cli.ts"
+#: The plugin's own copy, built into one file that runs on Node with no node_modules (B10, P82) —
+#: the answer when nothing nearer is. A project's own cli.ts, found first, is its developer's.
+PLUGIN_CONVERTER = SCRIPTS.parent / "tools" / "circuit-to-wokwi" / "dist" / "converter.mjs"
 
 
 def find_converter(start):
@@ -181,6 +182,16 @@ def find_converter(start):
             if candidate.is_file():
                 return candidate
     return PLUGIN_CONVERTER if PLUGIN_CONVERTER.is_file() else None
+
+
+def converter_stage_problem(project):
+    """None when the converter and Node are both here; else the could-not-run Stage saying which and how to install it."""
+    try:
+        tools.find("js-runtime", project)
+        tools.find("diagram-converter", project)
+    except tools.ToolProblem as missing:
+        return Stage("simulation", COULD_NOT_RUN, str(missing))
+    return None
 
 
 #: What the converter says when it has no Wokwi part for a component. That is a limit of the
@@ -416,14 +427,9 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # From the project, not from `cwd`: the same defect the project resolution had, one stage
     # later — run from /tmp the converter beside the project was "not found".
     converter = find_converter(project)
-    if converter is None:
-        return stages + [Stage("simulation", COULD_NOT_RUN,
-                               "no circuit-to-wokwi converter found. It is not shipped with this "
-                               "plugin yet — it lives in the project that proved it. Looked for: "
-                               + ", ".join(CONVERTER_PATHS))]
-    if shutil.which("bun") is None:
-        return stages + [Stage("simulation", COULD_NOT_RUN,
-                               "the converter is TypeScript and bun is not installed")]
+    missing = converter_stage_problem(project)
+    if converter is None or missing:
+        return stages + [missing or Stage("simulation", COULD_NOT_RUN, "no circuit-to-wokwi converter found")]
 
     # What stands in for each part comes from the records (P31), not from a table in the
     # converter's repo: a record that says nothing stops here, naming itself.
@@ -441,9 +447,11 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, firmware))
 
     diagram_path = sim_dir / "diagram.json"
+    # A project's own TypeScript converter is its developer's, run with bun; the plugin's is the bundle.
+    runner = ["bun", "run"] if converter.suffix == ".ts" else tools.find("js-runtime", project).command
     made = subprocess.run(
-        ["bun", "run", str(converter), "--circuit", str(circuit_path), "--out", str(diagram_path),
-         "--mapping", str(sim_dir / "wokwi-mapping.json"), "--chips", str(sim_dir / "chips")],
+        runner + [str(converter), "--circuit", str(circuit_path), "--out", str(diagram_path),
+                  "--mapping", str(sim_dir / "wokwi-mapping.json"), "--chips", str(sim_dir / "chips")],
         cwd=str(converter.parent), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S,
         env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
     if not diagram_path.is_file():

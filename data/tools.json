@@ -3,12 +3,15 @@
   "roles": {
     "pdf-text": "pdftotext",
     "simulator": "wokwi-cli",
-    "board-engine": "tscircuit"
+    "board-engine": "tscircuit",
+    "diagram-converter": "circuit-to-wokwi",
+    "js-runtime": "node"
   },
   "contracts": {
     "pdf-text": "page-text",
     "simulator": "wokwi-project",
-    "board-engine": "tscircuit-board"
+    "board-engine": "tscircuit-board",
+    "diagram-converter": "circuit-json-to-wokwi"
   },
   "pdftotext": {
     "for": "reading a datasheet page by page (parts.py --read)",
@@ -48,6 +51,26 @@
     ],
     "install": {
       "npm": "npm install --save-dev @tscircuit/cli@{version} tscircuit@{core}"
+    }
+  },
+  "circuit-to-wokwi": {
+    "for": "turning the built board into a Wokwi diagram",
+    "kind": "bundled",
+    "file": "tools/circuit-to-wokwi/dist/converter.mjs",
+    "needs": [
+      "node"
+    ],
+    "meets": [
+      "circuit-json-to-wokwi"
+    ]
+  },
+  "node": {
+    "for": "running the bundled converter and npm tools",
+    "kind": "path",
+    "exe": "node",
+    "version": "20",
+    "install": {
+      "brew": "brew install node"
     }
   }
 }

@@ -669,5 +669,53 @@ class AFileInNoProjectIsSaidToBeTest(unittest.TestCase):
         self.assertEqual(stages[0].status, check_spine.OK)
         self.assertNotIn("schematic-notes", [s.name for s in stages])
 
+
+class TheConverterShipsAsOneFileTest(unittest.TestCase):
+    """B10 / P82: an installed spark has no node_modules in tools/circuit-to-wokwi, so the converter ships built."""
+
+    BUNDLE = ROOT / "tools" / "circuit-to-wokwi" / "dist" / "converter.mjs"
+
+    def test_the_bundle_is_built_from_the_sources_as_they_are(self):
+        import hashlib
+        folder = ROOT / "tools" / "circuit-to-wokwi"
+        sources = [folder / "cli.ts"] + sorted((folder / "lib").rglob("*.ts"))
+        digest = hashlib.sha256(b"".join(path.read_bytes() for path in sources)).hexdigest()
+        self.assertEqual((folder / "dist" / "converter.sources.sha256").read_text().strip(), digest,
+                         "the converter changed and the bundle was not rebuilt: sh tools/circuit-to-wokwi/bundle.sh")
+
+    def test_the_bundle_runs_on_node_with_no_node_modules(self):
+        import shutil, subprocess
+        if not shutil.which("node"):
+            self.skipTest("node is not installed")
+        alone = Path(tempfile.mkdtemp()) / "converter.mjs"
+        shutil.copy(self.BUNDLE, alone)
+        done = subprocess.run(["node", str(alone)], capture_output=True, text=True, timeout=60)
+        said = done.stdout + done.stderr
+        self.assertNotIn("Cannot find package", said)
+        self.assertIn("SPARK_BOARD_JSON is not set", said, "it loaded every module and reached its own first check")
+
+    def test_no_node_means_could_not_run_naming_the_install(self):
+        import tools
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("js-runtime (node) is not installed — install: brew install node")):
+            stage = check_spine.converter_stage_problem(Path(tempfile.mkdtemp()))
+        self.assertEqual(stage.status, check_spine.COULD_NOT_RUN)
+        self.assertIn("brew install node", stage.detail)
+
+    def test_the_converter_present_and_node_missing_is_could_not_run(self):
+        import tools
+        real = tools.find
+
+        def no_node(name, project=None, personal=None):
+            if name == "js-runtime":
+                raise tools.ToolProblem("js-runtime (node) is not installed — install: brew install node")
+            return real(name, project, personal)
+        with mock.patch.object(tools, "find", side_effect=no_node):
+            stage = check_spine.converter_stage_problem(Path(tempfile.mkdtemp()))
+        self.assertIsNotNone(stage, "the bundle is here and Node is not: the converter cannot run")
+        self.assertIn("brew install node", stage.detail)
+
+    def test_the_plugin_s_converter_is_the_bundle(self):
+        self.assertEqual(check_spine.PLUGIN_CONVERTER, self.BUNDLE)
+
 if __name__ == "__main__":
     unittest.main()
