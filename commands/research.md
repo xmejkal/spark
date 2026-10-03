@@ -24,6 +24,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept <part number or words> --project .
 interrupted run left — and a kept document is never fetched again. A file you already have goes in
 with `parts.py --keep <file> --url <url>`.
 
+**Ask before researching: does the person already have one?** — in the thing being rebuilt, in
+the drawer, in the kit. The first run of the finder looked for a 4×AA holder the bin's own lid
+already had (2026-10-03). Add what they have to the brief's `parts_on_hand`.
+
 ## 2. Which kind of part — and who researches it
 
 **A commodity part** — an LED, a diode, a button, a connector, a regulator: one datasheet describes it

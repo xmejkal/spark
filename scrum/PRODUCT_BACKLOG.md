@@ -680,6 +680,15 @@ researcher's ~2.6k. MCP: `.mcp.json` declares only jlcpcb and espressif-docs, bo
 defined`, which is why it never connected); `docs/mcp.md` offers wokwi and sigrok as one-line additions
 and says why KiCad's PyPI server is not offered. **Open:** use them — after a Claude Code restart, the
 next part researched through finder and reader, measured against the lean run (19 calls, ~0.55 M, 148 s).
+**First use, 2026-10-03, after the restart:** the quickstart's 4×AA holder. `part-finder` (Haiku): 14
+calls, 91 s, ~0.17 M tokens processed (`tools/research_cost.py`) — but it broke its budget (6 web
+searches and 7 `component_search` calls against "at most three"), returned the PC-pin variant's
+number (2477) for the wire-lead need (2478), and stated "rated for 0.8 A continuous", the motor
+driver's figure from its own brief; the maker's page states no current. Checking its claims against
+the document before the PO picked caught both. Then the PO: *"the bin lid has already a holder for the
+AA batteries, we don't need that"* — the need was not real. Fixed the same hour: the finder's three
+rules (budget a hard stop, no number not printed, the variant's own part number) and research's first
+question — does the person already have one. The reader is not yet exercised on a real need.
 
 ### P81 — A warning that can cause a wrong board is shown where the decision is made — **slice 2, first; the PO's order of 2026-10-03**
 **Needed by:** every design the hobbyist builds on a breadboard, where the person is the check — and

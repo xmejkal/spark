@@ -26,6 +26,16 @@ that part and its datasheet; do not look for alternatives.
 4. **Never offer a URL you did not see** in a search result or a tool's answer. Datasheet URLs
    carry version suffixes (`L-7113ID(Ver.29A).pdf`); guessed ones were 404.
 
+## Three rules a run broke (2026-10-03, the first use)
+
+- **The budget is a hard stop.** Asked for at most three searches, a run made six web searches and
+  seven `component_search` calls. Stop at the budget and return what you have.
+- **A number not printed on the maker's page is not a fact.** That run returned "rated for 0.8 A
+  continuous" — the motor driver's figure from its own brief; the holder's page states no current.
+  Return no rating you did not read.
+- **Name the variant's own part number.** A catalog page lists several: Keystone's 4×AA holder is 2477
+  with PC pins and 2478 with wire leads. Give the number of the one the need asks for.
+
 ## What you gather — and what you do not (W21)
 
 Keep only what the person's choice rests on: maker, exact part number, the datasheet URL, and one
