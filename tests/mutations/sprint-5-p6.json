@@ -2,7 +2,7 @@
  {
   "file": "scripts/emit_board.py",
   "name": "the demanded passives are printed as prose again, not placed",
-  "find": "             + host_part_lines(part_list, placements)\n",
+  "find": "             + host_part_lines(part_list, placements, board)\n",
   "replace": ""
  },
  {
@@ -50,7 +50,7 @@
  {
   "file": "scripts/sim_project.py",
   "name": "the passives spark placed have no Wokwi part",
-  "find": "        for host_part in part.get(\"host_parts\") or []:\n            values = (host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\" else (host_part.get(\"ohms\"),)",
-  "replace": "        for host_part in []:\n            values = (host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\" else (host_part.get(\"ohms\"),)"
+  "find": "        for host_part in part.get(\"host_parts\") or []:\n            values = ((host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\"",
+  "replace": "        for host_part in []:\n            values = ((host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\""
  }
 ]

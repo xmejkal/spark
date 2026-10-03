@@ -624,10 +624,24 @@ researched — through-hole, after the PO's breadboard direction, P79) and the a
 breadboard phase, before the user decides to go for a PCB — first allow using a breadboard, and so no
 SMD parts, right? Only later, when the circuit is tested and the firmware good, we offer the PCB."*
 Today spark's only output is a PCB: every passive it places is an 0603 SMD resistor, and nothing
-tells a person which wire goes from which module pin to which GPIO. An overview, not a process —
+tells a person which wire goes from which module pin to which GPIO. The PO, a moment later: *"or we
+can also offer a perfboard step"* — a soldered, permanent build of the same through-hole parts,
+between the breadboard and a PCB — and the order, in his words: *"breadboard / only connected by wires
+→ perfboard → PCB"*. An overview, not a process —
 designed with the PO before anything is built (W14).
 **Value proven by:** written with the PO — at least: the quickstart, as a through-hole parts list and a
 wiring table a person can build on a breadboard, its firmware run on it, before any PCB is offered.
+
+### P80 — Parts research is lean and professional — **slice 4; the PO's request of 2026-10-03**
+**Needed by:** every design that researches a part — the hobbyist pays for each agent's tokens and
+time — and the PO: *"Please make sure the parts looking up agent and skills are not wasteful and are
+professionals."* Nothing measures what one researched part costs (tokens, tool calls, pages fetched,
+minutes), nor scores what it produces against how an engineer would source a part.
+**Value proven by:** the LED researched for the quickstart on 2026-10-03 measured — tokens, tool calls,
+fetches, minutes — and its record reviewed against a written professional bar (the maker's datasheet
+cited by page and table, the exact orderable part number, every unverified fact said so, no candidate
+records nobody will read); `agents/parts-researcher.md` and `commands/research.md` changed where either
+falls short, and the next researched part measured against the first.
 
 ### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
