@@ -6,7 +6,8 @@ hypothesis; the PO chose among what they found. `STORY_MAP.md` turns this page i
 
 ## What spark is
 
-**The PO, 2026-10-03, after the council:** *"We first need to make it work, really from just
+**The PO's overview of the direction, 2026-10-03** — in his words *an overview, not a full process*;
+the process is designed with him (P76), and nothing below is read as its specification: *"We first need to make it work, really from just
 talking about some vague idea the human says — the AI guides him through brainstorming the DIY idea,
 what modules are available that do something we'd need, what else it could also do; helps the
 human formulate the idea and walks him through the whole process to an actual circuit of connected
@@ -14,8 +15,9 @@ modules, or just a schematic first, without specific parts — just what it does
 module. Then, if the human wants, a PCB he can order, with the firmware already working enough and
 tested and improved agile-style — and later 3D model export, even Fusion 360, 3D-printed parts."*
 
-So the journey starts one step earlier than spark does today — at a conversation, not a
-requirements file — and ends later: at a board you can order and a printed enclosure, both optional.
+What it says about the shape, and no more: the journey starts earlier than spark does today — at a
+conversation, not a requirements file — and can end later, at a board you can order and a printed
+enclosure, both optional. How each step works is not decided.
 
 spark is a Claude Code plugin for someone building a DIY gadget from an ESP32 dev board and
 off-the-shelf modules. You start from an idea in words; spark helps shape it into what the device

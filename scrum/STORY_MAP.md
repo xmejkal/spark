@@ -31,16 +31,16 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
 | **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | **P71**, **P75**, P44 (done) |
-| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | a conversation turns a one-sentence idea into what it must do, the kinds of module that do it and what else they could do, and a block-level schematic with no part numbers — which then becomes the requirements file the chain already takes | **P76** |
+| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | *not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** |
 | **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | **B1**, **P58**, **P73**, **B8**, **B5** |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59**, **P74** |
 | **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a**, **P39**, **P38**, **P43** (the `fix` half) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6**, then F3 and F4 as they pull |
-| **8** | **A board you can order** | hobbyist | after the firmware works: the review's fab gate passes and the package is one a fab house takes | pulled by the first design that wants one |
-| **9** | **An enclosure** | hobbyist | the board's 3D model in Fusion 360; printed parts that fit it | pulled by the first design that wants one |
+| **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
+| **9** | **An enclosure** | hobbyist | *not designed yet* — the overview: 3D export, Fusion 360, printed parts | pulled by the first design that wants one |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b**, **P64b**, **P64c** |
 
-**The PO, 2026-10-03:** slice 1b comes straight after going public — *"we first need to make it
+**The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
 work, really from just talking about some vague idea"*; slices 8 and 9 make ordering a board and
 printing an enclosure part of the journey, optional and after the firmware works.
 Slices 2 and 3 run side by side: the maker's share of 2 is parts and a bench, the team's is the
