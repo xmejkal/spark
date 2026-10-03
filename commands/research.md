@@ -42,14 +42,14 @@ goes to the next only when the first has nothing fitting, unless asked to compar
 
 That order is for **modules**. A **simple part** — a connector, a terminal block, a discrete —
 takes its facts from the maker's datasheet and its exact part number from a local seller's
-listing: the brief's `sellers`, local first (for Czechia: LaskaKit, GME, Hadex, Botland, TME).
+listing: the brief's `sellers`, in the person's order — none named means asking, not choosing.
 Every listing fetched goes into the record's `sourcing` list, so the next project knows where it
 was bought.
 
 ## 3. Research it
 
 Launch the `parts-researcher` agent with: the need in the user's words, the vendor order, the
-project directory, and the record schema (`skills/spark-design/references/part-data.md`). It
+project directory, the plugin directory (`${CLAUDE_PLUGIN_ROOT}`), and the record schema (`skills/spark-design/references/part-data.md`). It
 writes `parts/<id>.json` from a skeleton:
 
 ```

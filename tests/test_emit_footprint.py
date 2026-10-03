@@ -32,7 +32,7 @@ import emit_footprint  # noqa: E402
 #: published dimension drawing, and checked by hand against the module. It is the only independent
 #: witness to this geometry that exists, which is why the comparison is worth having even though
 #: the file lives outside this repository.
-REFERENCE = Path("/Users/petr/Development/smartbin-local/FireBeetle2Esp32S3.tsx")
+REFERENCE = Path(__file__).resolve().parents[2] / "smartbin-local" / "FireBeetle2Esp32S3.tsx"
 
 PAD = re.compile(
     r'portHints=\{\["([^"]+)"\]\}\s*pcbX="([-\d.]+)mm"\s*pcbY="([-\d.]+)mm"\s*'

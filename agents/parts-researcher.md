@@ -44,8 +44,8 @@ unverified facts, five of them wrong once the back was seen; if you have one sid
 
 The PO's rule: whatever you find online is kept, chosen or not — a good database is built in
 time, not in one go. For **every candidate you evaluated**, write a catalog record at
-`/Users/petr/Development/spark/catalog/<id>.json` (the plugin's catalog, shared by every
-project): drafts are allowed there — `schema`, `id`, `name`, `kind`, `vendor`, `sku`, `sources`,
+`<plugin>/catalog/<id>.json` — `<plugin>` is the plugin directory the launching command gave you;
+its catalog is shared by every project: drafts are allowed there — `schema`, `id`, `name`, `kind`, `vendor`, `sku`, `sources`,
 `sourcing`, the `facts` you actually read, and a `"//why_not"` line for the ones not chosen. In
 the chosen record list them: `"alternatives": [{"id": "<catalog id>", "why_not": "…"}]`. Then run
 `parts.py --fetch <id> --project <project>` for the chosen record and `parts.py --fetch <id>` for
@@ -59,8 +59,9 @@ not hold is refused.
 
 ## Where to buy — local first
 
-The brief names the sellers the person buys from (`.spark/project.json` → `sellers`; for Petr,
-in Czechia: LaskaKit, GME, Hadex, Botland, TME, in that order). Modules come from their makers
+The brief names the sellers the person buys from, in their order (`.spark/project.json` →
+`sellers`; `parts.py --need` prints them). With none named, say so and ask — never choose a
+country's shops for them. Modules come from their makers
 (the vendor order); **simple parts — connectors, terminals, discretes — take their facts from the
 maker's datasheet and their exact part number from a local seller's listing.** Record every
 listing you actually fetched in the record's `sourcing` list: `{seller, url, price_czk, checked}`.

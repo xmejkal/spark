@@ -1,0 +1,14 @@
+[
+ {
+  "file": "agents/parts-researcher.md",
+  "name": "the researcher is sent to one person's home for the catalog again",
+  "find": "`<plugin>/catalog/<id>.json`",
+  "replace": "`/Users/someone/spark/catalog/<id>.json`"
+ },
+ {
+  "file": "tests/test_emit_footprint.py",
+  "name": "the footprint's reference is looked for in one person's home again",
+  "find": "REFERENCE = Path(__file__).resolve().parents[2] / \"smartbin-local\" / \"FireBeetle2Esp32S3.tsx\"",
+  "replace": "REFERENCE = Path(\"/Users/someone/smartbin-local/FireBeetle2Esp32S3.tsx\")"
+ }
+]

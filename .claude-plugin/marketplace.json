@@ -3,12 +3,12 @@
   "owner": {
     "name": "Petr Smejkal"
   },
-  "description": "Petr's local plugins. Currently spark: electronics design where every claim is checked against something outside the design.",
+  "description": "spark: electronics design where every claim is checked against something outside the design.",
   "plugins": [
     {
       "name": "spark",
       "source": "./",
-      "description": "AI electronics design: describe a circuit or hand it a board photo and get a verified tscircuit schematic and PCB, with the design rules, verified-parts library and simulation knowledge in the loop."
+      "description": "Electronics design for ESP32 dev-board-plus-modules builds: from a list of modules to a tscircuit schematic and board that build and simulate, checked against vendor pinouts, footprints, physics and your rules — refusing rather than guessing, and saying when a check could not look. A draft board, not a fabrication-ready one."
     }
   ]
 }

@@ -121,6 +121,17 @@ class NothingShipsUnusedTest(unittest.TestCase):
                 missing.append(head[4:60])
         self.assertEqual(missing, [], "open items with no `**Needed by:**` line: %s" % missing)
 
+    def test_nothing_shipped_names_one_persons_home(self):
+        # P44: an agent file named a path in its author's home for the catalog; on anyone else's machine that
+        # is a path to nothing. docs/ and scrum/ are records of what happened, and may quote one.
+        home = re.compile(r"/Users/[A-Za-z]|/home/[A-Za-z]|[A-Z]:\\\\Users")
+        named = ["%s:%d" % (path.relative_to(ROOT), number)
+                 for folder in ("commands", "skills", "agents", "scripts", "boards", "catalog", "data", "tests")
+                 for path in sorted((ROOT / folder).rglob("*")) if path.is_file() and path.suffix in (".md", ".py", ".json", ".ts")
+                 and "mutations" not in path.parts  # a mutation table plants the defect on purpose
+                 for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1) if home.search(line)]
+        self.assertEqual(named, [], "a shipped file names one person's home directory")
+
     def test_every_open_backlog_item_sits_on_the_story_map(self):
         # P69: an item that hangs on no slice is parked or deleted. W14's line says a design needs
         # it; this says WHEN — five items once passed W14 naming no design at all.

@@ -780,7 +780,7 @@ list dropped from the assigner's payload.
 it reports; `assign_pins --json` is under 4 KB; every `--json` payload has the same top-level
 shape, which P41's tests then hold.
 
-### P44 — Nothing shipped names one person's machine — **slice 1**
+### P44 — Nothing shipped names one person's machine — **slice 1** — DONE 2026-10-03
 **Needed by:** anyone who installs this plugin who is not its author. A shipped agent file names
 an absolute path under one home directory for the catalog, which `parts.py` already knows how to
 find; two shipped files hard-code one country's shops as prose while `.spark/project.json` already
@@ -789,6 +789,11 @@ third instance, the converter looked for in a sibling repository, is P32's.)
 **Value proven by:** a test that fails on an absolute path or a home directory in anything under
 `commands/`, `skills/` or `agents/`; and the researcher agent reading the brief's sellers instead
 of a list.
+**Done 2026-10-03.** `test_orphans` fails on a home directory in any shipped file outside `docs/`
+and `scrum/` (records of what happened) and the mutation tables (planted on purpose); on its first
+run it caught its own comment quoting the path. The researcher gets the plugin directory from the
+launching command, the sellers only from the brief — none named means asking — and `init`'s hint
+shows two countries' shops instead of one. Mutations `sprint-10-p44.json`: 2, both caught.
 
 ### P39 — The library answers a need it has no words for — **slice 4**
 **Needed by:** the irrigation design and the smart bin. `parts.py --need switch 12 V load` finds
