@@ -367,9 +367,13 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # --- the build, which is the only stage that can prove any of the above ---
     toolchain = toolchain or find_toolchain(workdir)
     if toolchain is None:
+        try:
+            tools.find("board-engine", workdir)
+            said = "the board engine was not found"
+        except tools.ToolProblem as missing:
+            said = str(missing)  # the tools list's own sentence, with what installs it (P82)
         return stages + [Stage("build", COULD_NOT_RUN,
-                               "tsci is not installed, so the chain was not exercised. "
-                               "npm i -g @tscircuit/cli, or run from a project that has it")]
+                               "%s — so the chain was not exercised; /spark:setup installs it" % said)]
 
     built = subprocess.run([str(toolchain), "build", "board.tsx"],
                            cwd=str(workdir), capture_output=True, text=True,

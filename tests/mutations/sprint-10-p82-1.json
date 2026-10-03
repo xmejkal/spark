@@ -10,7 +10,7 @@
  {"file": "scripts/tools.py", "name": "the project's node_modules is not looked in first",
   "find": "    if kind == \"npm\" and project:", "replace": "    if False:"},
  {"file": "scripts/tools.py", "name": "a missing tool does not say what installs it",
-  "find": "                          % (role or tool_name, tool_name, line or \"see its entry in %s\" % DEFAULTS))", "replace": "                          % (role or tool_name, tool_name, \"\"))"},
+  "find": "                          % (role or tool_name, tool_name, install_hint(entry) or \"see its entry in %s\" % DEFAULTS))", "replace": "                          % (role or tool_name, tool_name, \"\"))"},
  {"file": "scripts/tools.py", "name": "a file that is not JSON is a traceback",
   "find": "    except ValueError as broken:\n        raise ToolProblem(", "replace": "    except KeyError as broken:\n        raise ToolProblem("},
  {"file": "scripts/parts.py", "name": "--read reads with a tool the list did not give it",

@@ -97,6 +97,23 @@ def install_line(entry):
     return None
 
 
+#: What a person needs before a manager's line can run, said when none is here.
+FIRST = {"npm": "Node (nodejs.org)", "pip": "Python 3", "brew": "Homebrew (brew.sh)", "apt": "a Debian or Ubuntu system"}
+
+
+def install_hint(entry):
+    """The line to tell a person: the one that runs here, else the first one listed with what it needs first."""
+    line = install_line(entry)
+    if line:
+        return line
+    install = entry.get("install") or {}
+    for manager, _ in MANAGERS:
+        if manager in install:
+            return "%s — needs %s first" % (install[manager].format(version=entry.get("version", ""),
+                                                                    core=entry.get("core", "")), FIRST[manager])
+    return None
+
+
 def locate(entry, project):
     """The command that runs this tool, by its kind — or None when it is not here."""
     kind = entry.get("kind", "path")
@@ -150,11 +167,15 @@ def find(name, project=None, personal=None):
         raise ToolProblem("%s is turned off — turn it on: /spark:setup add %s" % (tool_name, tool_name))
     if entry.get("kind", "path") in ("path", "npm") and not entry.get("exe"):
         raise ToolProblem("%s: no way to find it — the entry names no exe" % tool_name)
+    for need in entry.get("needs") or []:
+        try:
+            find(need, project, personal)
+        except ToolProblem as inner:
+            raise ToolProblem("%s needs %s: %s" % (tool_name, need, inner))
     command = locate(entry, project)
     if command is None:
-        line = install_line(entry)
         raise ToolProblem("%s (%s) is not installed — install: %s"
-                          % (role or tool_name, tool_name, line or "see its entry in %s" % DEFAULTS))
+                          % (role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS))
     return Tool(tool_name, role, entry, command)
 
 
@@ -243,7 +264,7 @@ def install(names, project=None, personal=None, run=None):
         else:
             line = install_line(entry)
             if not line:
-                problems.append("%s: no way to install it here — see its entry in %s" % (name, DEFAULTS))
+                problems.append("%s: no way to install it here — %s" % (name, install_hint(entry) or "see its entry in %s" % DEFAULTS))
                 continue
             argv = shlex.split(line)
         if "sudo" in argv:

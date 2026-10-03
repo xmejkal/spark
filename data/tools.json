@@ -59,7 +59,10 @@
     ],
     "install": {
       "npm": "npm install --save-dev @tscircuit/cli@{version} tscircuit@{core}"
-    }
+    },
+    "needs": [
+      "bun"
+    ]
   },
   "circuit-to-wokwi": {
     "for": "turning the built board into a Wokwi diagram",
@@ -161,6 +164,15 @@
     "install": {
       "brew": "brew install sigrok-cli",
       "apt": "sudo apt install sigrok-cli"
+    }
+  },
+  "bun": {
+    "for": "running tscircuit's tsci, whose first line is `#!/usr/bin/env bun` — so bun must be on the PATH",
+    "kind": "path",
+    "exe": "bun",
+    "install": {
+      "npm": "npm install -g bun",
+      "brew": "brew install oven-sh/bun/bun"
     }
   }
 }

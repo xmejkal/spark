@@ -670,6 +670,24 @@ class AFileInNoProjectIsSaidToBeTest(unittest.TestCase):
         self.assertNotIn("schematic-notes", [s.name for s in stages])
 
 
+class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
+    """The cold run (P82 task 7): with bun missing the build said "npm i -g @tscircuit/cli" — a global
+    install the tools list does not ask for, and not the thing that was missing."""
+
+    def test_the_build_stage_carries_the_tools_list_s_sentence(self):
+        import tools
+        workdir = Path(tempfile.mkdtemp())
+        requirements = dict(check_spine.REFERENCE)
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        said = "tscircuit needs bun: bun (bun) is not installed — install: npm install -g bun"
+        with mock.patch.object(check_spine, "find_toolchain", return_value=None), \
+                mock.patch.object(tools, "find", side_effect=tools.ToolProblem(said)):
+            stages = check_spine.run(requirements, workdir, from_library=True)
+        build = [stage for stage in stages if stage.name == "build"][0]
+        self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
+        self.assertIn("npm install -g bun", build.detail)
+        self.assertNotIn("npm i -g", build.detail)
+
 class TheConverterShipsAsOneFileTest(unittest.TestCase):
     """B10 / P82: an installed spark has no node_modules in tools/circuit-to-wokwi, so the converter ships built."""
 

@@ -122,6 +122,27 @@ class FindingAToolTest(unittest.TestCase):
                 tools.find("mp", None, personal)
         self.assertIn("install: /spark:setup add mp", str(missing.exception))
 
+    def test_a_tool_whose_need_is_missing_names_the_need_and_its_install(self):
+        # The cold run: tsci is `#!/usr/bin/env bun`, and on a machine without bun the build said only
+        # "cannot build even a trivial board ... env: bun: No such file or directory" (2026-10-03).
+        personal = layer({"tscircuit": {"kind": "npm", "exe": "tsci", "needs": ["bun"]},
+                          "bun": {"kind": "path", "exe": "bun", "install": {"npm": "npm install -g bun"}}})
+        with mock.patch.object(tools.shutil, "which", side_effect=lambda exe: None if exe == "bun" else "/usr/bin/" + exe):
+            with self.assertRaises(tools.ToolProblem) as missing:
+                tools.find("tscircuit", None, personal)
+        self.assertIn("tscircuit needs bun", str(missing.exception))
+        self.assertIn("npm install -g bun", str(missing.exception))
+
+    def test_with_no_install_manager_here_the_line_still_says_what_to_get(self):
+        # A Mac without Homebrew was told "see its entry in .../tools.json".
+        with mock.patch.object(tools.shutil, "which", return_value=None):
+            with self.assertRaises(tools.ToolProblem) as missing:
+                tools.find("pdf-text", None, self.nobody)
+        said = str(missing.exception)
+        self.assertIn("brew install poppler", said)
+        self.assertIn("Homebrew", said)
+        self.assertNotIn("see its entry", said)
+
     def test_an_npm_tool_is_found_in_the_project_before_the_path(self):
         root = Path(tempfile.mkdtemp())
         (root / "node_modules" / ".bin").mkdir(parents=True)
@@ -330,7 +351,7 @@ class AProjectNamedRelativelyTest(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         (root / "node_modules" / ".bin").mkdir(parents=True)
         (root / "node_modules" / ".bin" / "tsci").write_text("#!/bin/sh\n")
-        personal = layer({"tscircuit": {"kind": "npm", "exe": "tsci"}})
+        personal = layer({"tscircuit": {"kind": "npm", "exe": "tsci", "needs": []}})
         here = os.getcwd()
         os.chdir(root)
         try:
@@ -350,6 +371,16 @@ class SparkSDefaultsHoldTogetherTest(unittest.TestCase):
                   if name not in lists["tools"]
                   or (lists["contracts"].get(role) and lists["contracts"][role] not in (lists["tools"][name].get("meets") or []))]
         self.assertEqual(broken, [], "a role in spark's own defaults points at a tool that cannot do its job")
+
+    def test_every_need_in_the_defaults_is_itself_a_tool_on_the_list(self):
+        lists = tools.merged(None, Path(tempfile.mkdtemp()) / "absent.json")
+        unknown = sorted({(name, need) for name, entry in lists["tools"].items()
+                          for need in entry.get("needs") or [] if need not in lists["tools"]})
+        self.assertEqual(unknown, [], "a need spark cannot find or install")
+
+    def test_the_board_engine_says_it_needs_bun(self):
+        # tsci's launcher is `#!/usr/bin/env bun` (tscircuit's cli.mjs); the cold run proved it.
+        self.assertIn("bun", tools.merged(None, Path(tempfile.mkdtemp()) / "absent.json")["tools"]["tscircuit"].get("needs") or [])
 
 if __name__ == "__main__":
     unittest.main()
