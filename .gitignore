@@ -4,3 +4,5 @@ __pycache__/
 
 # git worktrees for work in progress (superpowers:using-git-worktrees)
 .worktrees/
+# executing-plans workspaces: ledgers and briefs, not the record (git history is)
+.superpowers/
