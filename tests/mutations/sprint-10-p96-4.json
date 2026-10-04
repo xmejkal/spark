@@ -1,0 +1,10 @@
+[
+ {"file": "scripts/needs.py", "name": "a dead part counts as owned",
+  "find": "    live = [entry for entry in holding if not entry.get(\"skip\")]", "replace": "    live = list(holding)"},
+ {"file": "scripts/needs.py", "name": "a reservation is free",
+  "find": "    return owned, max(owned - held, 0), unsure", "replace": "    return owned, owned, unsure"},
+ {"file": "scripts/needs.py", "name": "owned does not come first",
+  "find": "    return sorted(found, key=lambda c: (c[\"owned\"] == 0, not c[\"what_matches\"],", "replace": "    return sorted(found, key=lambda c: (False, not c[\"what_matches\"],"},
+ {"file": "scripts/needs.py", "name": "an owned part without a record is never offered",
+  "find": "        if entry.get(\"is\") or entry.get(\"skip\") or not any(f.get(\"does\") == need[\"does\"] for f in functions):", "replace": "        if True:"}
+]

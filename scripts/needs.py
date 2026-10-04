@@ -90,3 +90,89 @@ def write(project, needs):
     part = path.with_name(path.name + ".part")
     part.write_text(json.dumps({"schema": 1, "needs": needs}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     part.replace(path)
+
+
+#: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
+LAYERS = ("drawer", "project", "shelf", "library", "catalog")
+
+
+def _words(text):
+    return {word for word in re.split(r"[^a-z0-9]+", str(text or "").lower()) if word}
+
+
+def _what_matches(what, functions, names):
+    """The need's `what` exactly, or each of its words in the record's name or an alias (§6.2: exact or alias)."""
+    return (any(str(f.get("what", "")).lower() == what.lower() for f in functions)
+            or bool(_words(what)) and _words(what) <= set().union(*(_words(name) for name in names)))
+
+
+def _counts(holding):
+    """(owned, free, unsure) over drawer entries — `many` stays many; an entry said to be dead (`skip`) does not count."""
+    live = [entry for entry in holding if not entry.get("skip")]
+    unsure = any(entry.get("unsure") for entry in live)
+    if any(entry.get("count") == "many" for entry in live):
+        return "many", "many", unsure
+    owned = sum(entry.get("count", 0) for entry in live)
+    held = sum(sum((entry.get("used_in") or {}).values()) for entry in live)
+    return owned, max(owned - held, 0), unsure
+
+
+def _known(project):
+    """Every record a candidate may be: the project's own, then the drawer's view of spark's layers and the person's projects."""
+    own = [("part", found, "project", path) for found, (layer, path)
+           in store.records("parts", parts.LIBRARY, project).items() if layer == "project"]
+    seen, known = set(), []
+    for row in own + drawer.linkable():
+        if row[:2] not in seen:
+            seen.add(row[:2])
+            known.append(row)
+    return known
+
+
+def candidates(need, known, entries):
+    """
+    The store's candidates for one need (§6.2's code half): every record and every record-less drawer entry whose function
+    has the need's verb, owned first, then those whose `what` is the need's, nearest first. Similar enough is the agent's call.
+    """
+    pointing = {}
+    for entry in entries.values():
+        if isinstance(entry.get("is"), dict) and entry["is"]:
+            pointing.setdefault(next(iter(entry["is"].items())), []).append(entry)
+    found = []
+    for kind, record_id, where, path in known:
+        record = parts._parse(path)
+        holding = pointing.get((kind, record_id), [])
+        if not isinstance(record, dict):
+            continue
+        functions = parts.function_of(record, board=kind == "board") + [f for e in holding for f in e.get("function") or []]
+        if not any(f.get("does") == need["does"] for f in functions):
+            continue
+        owned, free, unsure = _counts(holding)
+        found.append({"id": record_id, "kind": kind, "entry": None, "in": where, "label": record.get("name"),
+                      "what": sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
+                      "what_matches": _what_matches(need["what"], functions, [record.get("name")] + list(record.get("also_known_as") or [])),
+                      "owned": owned, "free": free, "unsure": unsure, "owes": [] if kind == "board" else parts.owes(record),
+                      "broken": kind == "part" and bool(parts.broken_problems(record, path)), "proof": []})
+    for entry_id, entry in entries.items():
+        functions = entry.get("function") or []
+        if entry.get("is") or entry.get("skip") or not any(f.get("does") == need["does"] for f in functions):
+            continue
+        owned, free, unsure = _counts([entry])
+        found.append({"id": None, "kind": None, "entry": entry_id, "in": "drawer", "label": entry.get("label"),
+                      "what": sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
+                      "what_matches": _what_matches(need["what"], functions, [entry.get("label")]),
+                      "owned": owned, "free": free, "unsure": unsure, "owes": [], "broken": False, "proof": []})
+    return sorted(found, key=lambda c: (c["owned"] == 0, not c["what_matches"],
+                                        LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS), c["id"] or c["entry"]))
+
+
+def match(project):
+    """Each need with its candidates (§6.2), and a problem for each need with no verb — it cannot be matched."""
+    known, entries, matched, problems = _known(project), drawer.entries(), [], []
+    for need in read(project):
+        if need.get("does") not in parts.VERBS:
+            problems.append(parts._problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))
+            continue
+        matched.append(dict({key: need.get(key) for key in ("does", "what", "condition", "mark")}, need=need["id"],
+                            candidates=candidates(need, known, entries)))
+    return matched, problems

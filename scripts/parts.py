@@ -1364,6 +1364,8 @@ OPERATIONS = (
     ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
      "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
      ("changes", "written")),
+    ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
+     (), ("needs",)),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1690,6 +1692,27 @@ def _op_needs(args, project):
                                                                "  (%s)" % n["condition"] if n.get("condition") else "",
                                                                "  [%s]" % n["mark"] if n.get("mark") else "") for n in listed]
                   or ["  no needs yet — /spark:idea writes them"])
+
+
+def _op_match(args, project):
+    import needs
+    matched, problems = needs.match(args.match)
+    if not matched and not problems:
+        return Answer(unchecked=[_cannot("%s has no needs yet — /spark:idea writes them" % args.match)])
+    for need in matched:
+        need["more"], need["candidates"] = max(len(need["candidates"]) - 8, 0), need["candidates"][:8]
+    shown, truncated = page(matched, args.start, "match", ["--match", args.match])
+    lines = []
+    for need in matched:
+        lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
+                                            "  [%s]" % need["mark"] if need["mark"] else ""))
+        lines += ["      %-9s %-46s %s%s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
+                                           "free %s" % c["free"] if c["owned"] else "", ("; owes " + ", ".join(c["owes"])) if c["owes"] else "")
+                  + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
+                  for c in need["candidates"]]
+        lines += ["      … %d more" % need["more"]] if need["more"] else []
+        lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
+    return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)
 
 
 def _op_needs_set(args, project):
