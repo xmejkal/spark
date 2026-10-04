@@ -106,5 +106,11 @@
   "name": "a drawer file that is not an object is read",
   "find": "            if not isinstance(found[path.stem], dict):",
   "replace": "            if False:"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a removed key is not a change",
+  "find": "if after.get(key) != (before or {}).get(key)]",
+  "replace": "if key in after and after[key] != (before or {}).get(key)]"
  }
 ]

@@ -228,7 +228,12 @@ class TheDrawerTest(unittest.TestCase):
 
     def test_a_new_part_number_that_nothing_knows_drops_the_old_link(self):
         run(["--drawer-set", a_file([{"label": "probe", "count": 8, "part_number": {"number": "SEN0193"}}])])
-        run(["--drawer-set", a_file([{"entry": "probe", "part_number": {"number": "ZZ999"}}])])
+        change = a_file([{"entry": "probe", "part_number": {"number": "ZZ999"}}])
+        said, _ = run(["--drawer-set", change, "--dry-run"])
+        self.assertEqual((said["data"]["changes"][0]["was"]["is"], said["data"]["changes"][0]["now"]["is"]),
+                         ({"part": "sen0193-soil-moisture"}, None))
+        self.assertIn("is", self.entry("probe"))
+        run(["--drawer-set", change])
         self.assertNotIn("is", self.entry("probe"))
 
     def test_a_word_is_not_a_part_number(self):

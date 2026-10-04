@@ -181,7 +181,8 @@ def _shelve_from(target, where, path):
 def settle(entry_id, before, values, known):
     """
     One entry after a write sets `values` on it (§5.2): (change or None, questions, problems). Every value is checked;
-    an `is` the write names must exist; an entry with a part number and no `is` is linked by that number. A change is
+    an `is` the write names must exist and is set as given (null too). Otherwise a new or changed part number links, and
+    drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
     {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
     """
     values = {key: (clean(value) if key == "label" and isinstance(value, str) else value) for key, value in values.items()}
@@ -209,9 +210,9 @@ def settle(entry_id, before, values, known):
         elif found.question:
             questions.append({"entry": entry_id, "sentence": found.question})
     after = {key: after[key] for key in ("schema",) + FIELDS if key in after}
-    changed = [key for key in FIELDS if key in after and after[key] != (before or {}).get(key)]
+    changed = [key for key in FIELDS if after.get(key) != (before or {}).get(key)]  # a removed key is a change to null
     return ({"entry": entry_id, "new": before is None, "was": {key: before.get(key) for key in changed} if before else {},
-             "now": {key: after[key] for key in changed}, "after": after, "shelve": shelve if changed else None},
+             "now": {key: after.get(key) for key in changed}, "after": after, "shelve": shelve if changed else None},
             questions, [])
 
 
