@@ -24,9 +24,9 @@ VERBS = ("sense", "input", "indicate", "sound", "move", "drive", "power", "keep-
 FIELDS = ("label", "count", "part_number", "revision", "is", "function", "place", "used_in", "from", "bought",
           "unsure", "skip", "photos")
 
-#: A label is shown and matched, never obeyed (§6.4.6): control characters go, and it stops at 160 characters.
+#: A label is shown and matched, never obeyed (§6.4.6): control and bidi characters go, and it stops at 160 characters.
 LABEL_MAX = 160
-CONTROL = re.compile(r"[\x00-\x1f\x7f]+")
+CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]+")
 
 #: The layers spark keeps itself. A record found anywhere else lives in one project, and is shelved when linked.
 SPARKS_OWN = ("shelf", "library", "catalog")
@@ -36,8 +36,19 @@ Link = namedtuple("Link", "target where path question")
 
 
 def clean(text):
-    """Words from a shop or a person, made safe to show: control characters become a space; at most 160 characters."""
+    """Words from a shop or a person, made safe to show: control and bidi characters become a space; at most 160 characters."""
     return CONTROL.sub(" ", str(text)).strip()[:LABEL_MAX]
+
+
+def _scrubbed(value):
+    """A value with every string in it cleaned — but not the fixed words (`does`, a photo's sha256) nor the ids an `is` names."""
+    if isinstance(value, str):
+        return clean(value)
+    if isinstance(value, list):
+        return [_scrubbed(item) for item in value]
+    if isinstance(value, dict):
+        return {key: item if key in ("sha256", "does") else _scrubbed(item) for key, item in value.items()}
+    return value
 
 
 def _words(value):
@@ -78,11 +89,15 @@ def entries():
     found, folder = {}, store.place("drawer")
     for path in sorted(folder.glob("*.json")) if folder.is_dir() else []:
         try:
-            found[path.stem] = json.loads(path.read_text())
+            found[path.stem] = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(found[path.stem], dict):
                 raise ValueError("an entry is a JSON object")
         except ValueError as broken:
             raise store.StoreProblem("%s is not JSON (%s) — fix it by hand; the drawer is read whole or not at all" % (path, broken))
+        for key, value in found[path.stem].items():
+            if key != "schema" and (key not in FIELDS or not CHECKS[key][0](value)):
+                raise store.StoreProblem("%s: %s — fix it by hand; the drawer is read whole or not at all"
+                                         % (path, "`%s` is not a drawer field" % key if key not in FIELDS else "`%s`: %s" % (key, CHECKS[key][1])))
     return found
 
 
@@ -185,7 +200,7 @@ def settle(entry_id, before, values, known):
     drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
     {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
     """
-    values = {key: (clean(value) if key == "label" and isinstance(value, str) else value) for key, value in values.items()}
+    values = {key: (value if key == "is" else _scrubbed(value)) for key, value in values.items()}
     problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (key, ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
     problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]
@@ -237,7 +252,7 @@ def plan_set(items):
         values = {key: value for key, value in item.items() if key != "entry"}
         entry_id = item.get("entry") or (_free_key(clean(values["label"]), current) if _words(values.get("label")) else None)
         if not (isinstance(entry_id, str) and store.PLAIN.fullmatch(entry_id)):
-            problems.append(parts._problem(None, "an entry needs a label, or an `entry` key of letters, digits and '-'"))
+            problems.append(parts._problem(None, "an entry needs a label, or an `entry` key of lower-case letters, digits and '-'"))
             continue
         change, asked, refused = settle(entry_id, current.get(entry_id), values, known)
         questions += asked
@@ -280,6 +295,8 @@ def payload_problems(source, payload):
     if not isinstance(payload, dict) or payload.get("source") != source or not isinstance(payload.get("items"), list):
         return ['a %s payload is {"source": "%s", "lines", "stated", "items": [{"sku", "name", "count"}]}' % (source, source)]
     problems = []
+    if payload.get("lines") == 0 == payload.get("stated"):
+        problems.append("read no order lines — logged out, or the pages changed; nothing imported")
     if not _whole(payload.get("lines")) or payload.get("lines") != payload.get("stated"):
         problems.append("read %s line(s) where the order pages state %s — a line the extractor could not parse is a part left "
                         "out (a `$` in a name did it once): fix the extractor and read again"
@@ -305,7 +322,8 @@ def plan_import(source, payload):
     """
     What applying an importer's payload would do (§5.2): (changes, questions, problems, smaller). A SKU the drawer
     has not seen becomes an entry, counted as owned — the person corrects. One seen before follows the re-import rule:
-    when its total T grew, `count += T − bought` and `bought` becomes T, so a correction stays; an `unsure` entry it
+    when its total T grew, `count += T − bought` and `bought` becomes T — but a count the person corrected away from
+    `bought` is a question, not arithmetic (a pack of 10 is not one more piece); an `unsure` entry it
     confirms takes T and is sure; a smaller T changes nothing and is said. A new SKU whose record an entry said in
     words already is, is a question — not written until the person answers.
     """
@@ -347,6 +365,12 @@ def plan_import(source, payload):
             values = {"bought": dict(before.get("bought") or {}, **{source: total})}
             if before.get("unsure"):
                 values.update(count=total, unsure=False)
+            elif _whole(before.get("count")) and seen is not None and before["count"] != seen:
+                questions.append({"entry": entry_id, "sentence":
+                                  "%s: %d more bought from %s since; this entry's count was corrected (%d for %d) — how many pieces "
+                                  "now? Set it with --drawer-set, with `bought` %s." % (entry_id, total - seen, source, before["count"], seen,
+                                                                                      json.dumps({source: total}))})
+                continue
             elif before.get("count") != "many" and seen is not None:  # no total seen yet: the count is the person's own
                 values["count"] = before.get("count", 0) + total - seen
         change, asked, refused = settle(entry_id, before, values, known)

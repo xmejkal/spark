@@ -67,7 +67,11 @@ The person is logged in to dfrobot.com in their own Chrome, and you drive it. Th
   lines read fewer than lines stated, and spark refuses the import: that is the cue to adapt `parseOrder`. Show the
   person what would be added, ask about packs (a "10 pcs" pack is counted in pieces) and every question it raised, in
   one message; then run it without `--dry-run`, and correct counts with `--drawer-set`. A later re-import adds only
-  what was bought since, and never undoes a correction.
+  what was bought since, and never undoes a correction. When a count was corrected away from what the shop said (a
+  pack of 10 counted as 10) and the shop total grew, the import asks how many pieces there are now and writes
+  nothing: answer with `--drawer-set` of `count` and `bought` (the question names the total). A linked record that
+  does not yet meet the part contract (a draft) is not put on the shelf; the write says so, and the entry still links
+  to it in its project.
 - When the import asks "the same item, or another?" about an entry the person already wrote, there are two answers.
   "The same": set that entry's `from` to `{"seller": "dfrobot", "product": "<SKU>"}` with `--drawer-set`; the
   person's count stays, and later imports add only what was bought since. "Another": write the entry

@@ -726,16 +726,29 @@ def digest(record):
     return hashlib.sha256(json.dumps(facts, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def _shelf_copy(path, project_name):
+    """What the shelf would hold of a project's record: filtered, and saying which project it came from and its digest."""
+    record = json.loads(Path(path).read_text())
+    copy = {key: value for key, value in record.items() if key not in SHELF_DROPS}
+    copy["based_on"] = {"project": project_name, "digest": digest(record)}
+    return copy
+
+
+def shelvable(path, project_name):
+    """Whether a project's record may go onto the shelf: only one whose shelf copy meets the contract, or `--list` breaks in every project."""
+    return not validate(_shelf_copy(path, project_name), Path(path))
+
+
 def shelve(path, project_name):
     """
     Put a record that lives in one project onto the person's shelf, so every project finds it (§5.5): a filtered
     copy that says which project it came from and that record's digest; its folder (a simulation chip) travels
-    with it. Returns whether the shelf changed.
+    with it. Returns whether the shelf changed — or None when the record does not meet the contract (a draft stays in its project).
     """
     path = Path(path)
-    record = json.loads(path.read_text())
-    copy = {key: value for key, value in record.items() if key not in SHELF_DROPS}
-    copy["based_on"] = {"project": project_name, "digest": digest(record)}
+    copy = _shelf_copy(path, project_name)
+    if validate(copy, path):
+        return None
     changed = store.write_json("shelf", path.stem, copy)
     if (path.parent / path.stem).is_dir():
         store.copy_folder("shelf", path.parent / path.stem, path.stem)
@@ -1048,7 +1061,7 @@ def promote(part_id, project, to=None, dry_run=False):
     home = record_home(part_id, project)
     if home is None:
         raise PartError("no record called %r to promote" % part_id)
-    to = Path(to) if to else (Path(project) / "parts" if home == store.place("catalog") else LIBRARY)
+    to = Path(to) if to else (Path(project) / "parts" if home in (store.place("catalog"), store.place("shelf")) else LIBRARY)
     target = to / (part_id + DEFINITION_SUFFIX)
     if target.exists():
         raise PartError("%s exists; a promotion never overwrites" % target)
@@ -1258,6 +1271,13 @@ OPERATIONS = (
      ("operations", "options", "exits")),
 )
 
+def _not_negative(text):
+    """An argparse type: a whole number from 0 up — a listing cannot start before its first item."""
+    if int(text) < 0:
+        raise argparse.ArgumentTypeError("%s is below 0" % text)
+    return int(text)
+
+
 #: The options an operation reads, in the same columns but effects.
 OPTIONS = (
     ("kind", {}, "with --skeleton: the part's kind (motor-driver, sensor, regulator, …)"),
@@ -1266,7 +1286,7 @@ OPTIONS = (
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
-    ("from", {"type": int, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
+    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
     ("json", {"action": "store_true"}, "answer in one envelope (docs/2026-10-04-store-design.md §6.4.1)"),
 )
@@ -1458,10 +1478,16 @@ def _drawer_answer(changes, questions, problems, dry_run):
     if not problems and not dry_run:
         drawer.apply(changes)
     made = [change for change in changes if change["now"]]
-    lines = [_change_line(change, dry_run) for change in made] + ["  ? %s" % q["sentence"] for q in questions]
+    wanted = [change["shelve"] for change in made if change["shelve"]]
+    shelved = [Path(path).stem for path, project in wanted if shelvable(path, project)]
+    left = [Path(path).stem for path, project in wanted if not shelvable(path, project)]
+    lines = [(("  refused, not written: " + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run))
+             for change in made] + ["  ? %s" % q["sentence"] for q in questions]
+    lines += ["  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it" % stem
+              for stem in left]
     lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
     return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],
-                   "questions": questions, "shelved": [Path(change["shelve"][0]).stem for change in made if change["shelve"]]},
+                   "questions": questions, "shelved": shelved, "not_shelved": left, "written": not (problems or dry_run)},
                   lines or ["  nothing to change"], problems=problems)
 
 

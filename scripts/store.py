@@ -22,10 +22,11 @@ from pathlib import Path
 #: The plugin's own folder: spark's library of parts and boards ships here, read-only.
 PLUGIN = Path(__file__).resolve().parent.parent
 
-#: The suite never touches the person's store (P88). A process running unittest that names no store of its
-#: own gets a scratch one here, at import, and every script it starts inherits it through the environment.
+#: The suite never touches the person's store (P88). A process running unittest gets a scratch one here, at
+#: import, whatever SPARK_HOME it inherited (spark's own refusals tell people to set it), and every script it
+#: starts inherits the scratch one. A test needing a store of its own patches the environment after import.
 #: No script imports unittest — tests/test_store.py proves it — so a real run never takes this branch.
-if "unittest" in sys.modules and not os.environ.get("SPARK_HOME"):
+if "unittest" in sys.modules:
     os.environ["SPARK_HOME"] = tempfile.mkdtemp(prefix="spark-suite-")
 
 
@@ -114,12 +115,12 @@ def write_json(name, key, data):
     text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     private = name in PRIVATE
     _make_ready(name, target)
-    if target.is_file() and target.read_text() == text:
+    if target.is_file() and target.read_text(encoding="utf-8") == text:
         if private:
             os.chmod(target, 0o600)
         return False
     part = target.with_name(target.name + ".part")
-    part.write_text(text)
+    part.write_text(text, encoding="utf-8")
     if private:
         os.chmod(part, 0o600)
     part.replace(target)
@@ -163,10 +164,12 @@ def projects():
     if not path.is_file():
         return {}
     try:
-        listed = json.loads(path.read_text())
+        listed = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as broken:
         raise StoreProblem("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project" % (path, broken))
-    return {name: Path(folder) for name, folder in listed.items()} if isinstance(listed, dict) else {}
+    if not isinstance(listed, dict) or not all(isinstance(folder, str) for folder in listed.values()):
+        raise StoreProblem("%s is not an object of project folders — fix it, or delete it and run /spark:init in each project" % path)
+    return {name: Path(folder) for name, folder in listed.items()}
 
 
 def add_project(folder):

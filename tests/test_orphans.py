@@ -34,8 +34,8 @@ LIBRARIES = {"copper", "outcomes", "design", "store", "drawer"}
 #: would have been reached within three items while every one of them was needed (W14) and nothing
 #: was left unused (the orphan tests below, unchanged). A ceiling that stops needed work measures
 #: the ceiling, not bloat. 5,000 is ~25 items of headroom (estimate) — still a number someone sees.
-#: RAISED to 5,189 on 2026-10-04 for P95 (store 1a: the store, the envelope, the drawer, the DFRobot import, the retired owned fields), measured after its refactor (W15b).
-SCRIPTS_CODE_BUDGET = 5_189
+#: RAISED to 5,228 on 2026-10-04 for P95 (store 1a: the store, the envelope, the drawer, the DFRobot import, the retired owned fields, the final review's fixes), measured after its refactor (W15b).
+SCRIPTS_CODE_BUDGET = 5_228
 
 
 def code_lines(path):

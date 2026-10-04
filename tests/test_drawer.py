@@ -311,8 +311,14 @@ class TheDfrobotImportTest(unittest.TestCase):
         run(["--drawer-set", a_file([{"entry": "dfrobot-fit0773", "count": 10}])])
         said, _ = self.bring(orders(("FIT0773", "Dupont cables, pack of 10", 1)))
         self.assertEqual((said["data"]["changes"], self.entry("dfrobot-fit0773")["count"]), ([], 10))
-        self.bring(orders(("FIT0773", "Dupont cables, pack of 10", 2)))
-        self.assertEqual(self.entry("dfrobot-fit0773")["count"], 11, "10 + (2 − 1): one more pack bought since")
+        said, _ = self.bring(orders(("FIT0773", "Dupont cables, pack of 10", 2)))
+        self.assertEqual((len(said["data"]["questions"]), self.entry("dfrobot-fit0773")["count"]), (1, 10),
+                         "a count corrected to pieces cannot take a shop unit: ask, write nothing")
+        self.assertIn("how many pieces now", said["data"]["questions"][0]["sentence"])
+        self.assertEqual(self.entry("dfrobot-fit0773")["bought"], {"dfrobot": 1}, "nothing written, so the next import asks again")
+        run(["--drawer-set", a_file([{"entry": "dfrobot-fit0773", "count": 20, "bought": {"dfrobot": 2}}])])
+        said, _ = self.bring(orders(("FIT0773", "Dupont cables, pack of 10", 2)))
+        self.assertEqual((said["data"]["questions"], said["data"]["changes"]), ([], []), "answered: no more questions")
 
     def test_a_smaller_total_changes_nothing_and_is_said(self):
         self.bring(orders(("DFR0954", "amp", 3)))
@@ -416,6 +422,165 @@ class TheDfrobotExtractorTest(unittest.TestCase):
                               input=page, capture_output=True, text=True, timeout=30)
         said = json.loads(done.stdout)
         self.assertEqual((len(said["lines"]), said["stated"]), (2, 3), done.stderr)
+
+
+def a_drawer_file(home, key, entry):
+    """A drawer entry written by hand, as a person edits one."""
+    (home / "drawer").mkdir(exist_ok=True)
+    (home / "drawer" / (key + ".json")).write_text(json.dumps(entry))
+
+
+class TheHandEditedDrawerTest(unittest.TestCase):
+    """Final review 1: a drawer file of the wrong shape is named, never a traceback."""
+
+    def setUp(self):
+        self.home, self.project = a_store()
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_field_of_the_wrong_shape_makes_every_read_and_write_could_not_run_naming_file_and_field(self):
+        a_drawer_file(self.home, "bad", {"schema": 1, "label": "x", "count": 1, "from": "dfrobot"})
+        for argv in (["--drawer"], ["--drawer-set", a_file([{"label": "y", "count": 1}])],
+                     ["--drawer-import", "dfrobot", a_file(orders(("SEN0193", "probe", 1)))]):
+            said, code = run(argv)
+            self.assertEqual((said["status"], code), ("could-not-run", 2), argv)
+            sentence = said["unchecked"][0]["sentence"]
+            self.assertIn("bad.json", sentence)
+            self.assertIn("from", sentence)
+
+    def test_a_count_that_is_not_a_number_is_named_too(self):
+        a_drawer_file(self.home, "bad", {"schema": 1, "label": "x", "count": "lots"})
+        said, code = run(["--drawer"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("count", said["unchecked"][0]["sentence"])
+
+    def test_a_key_the_drawer_does_not_have_is_named(self):
+        a_drawer_file(self.home, "bad", {"schema": 1, "label": "x", "count": 1, "price": 9.9})
+        said, code = run(["--drawer"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("price", said["unchecked"][0]["sentence"])
+
+    def test_a_projects_list_that_is_not_an_object_of_strings_is_a_store_problem(self):
+        for text in ("[]", '{"a": 3}'):
+            (self.home / "projects.json").write_text(text)
+            with self.assertRaises(parts.store.StoreProblem, msg=text):
+                parts.store.projects()
+
+
+class TheShelfKeepsOnlyWhatMeetsTheContractTest(unittest.TestCase):
+    """Final review 2: a draft linked from the drawer is not shelved, so `--list` stays whole."""
+
+    def test_a_skeleton_is_linked_but_not_shelved(self):
+        home, project = a_store()
+        (project / "parts" / "x-skeleton.json").write_text(json.dumps({"schema": 1, "id": "x-skeleton", "name": "A draft", "kind": "sensor"}))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            said, code = run(["--drawer-set", a_file([{"label": "draft", "count": 1, "is": {"part": "x-skeleton"}}])])
+            self.assertEqual((code, said["data"]["shelved"], said["data"]["not_shelved"]), (0, [], ["x-skeleton"]))
+            self.assertEqual(list((home / "shelf").glob("*.json")) if (home / "shelf").exists() else [], [])
+            self.assertEqual(json.loads((home / "drawer" / "draft.json").read_text())["is"], {"part": "x-skeleton"})
+            listed, listed_code = run(["--list"])
+            self.assertEqual((listed_code, listed["status"]), (0, "ok"))
+            dry, _ = run(["--drawer-set", a_file([{"label": "draft two", "count": 1, "is": {"part": "x-skeleton"}}]), "--dry-run"])
+            self.assertEqual(dry["data"]["not_shelved"], ["x-skeleton"])
+
+
+class TheSuiteGuardTest(unittest.TestCase):
+    """Final review 3: an inherited SPARK_HOME never moves a suite's store."""
+
+    def test_under_unittest_the_store_takes_a_scratch_home_whatever_the_environment_holds(self):
+        inherited = tempfile.mkdtemp()
+        done = subprocess.run([sys.executable, "-c", "import unittest, sys; sys.path.insert(0, %r); import store; print(store.home())"
+                               % str(ROOT / "scripts")], env=dict(os.environ, SPARK_HOME=inherited), capture_output=True, text=True,
+                              timeout=30)
+        self.assertNotEqual(Path(done.stdout.strip()), Path(inherited), done.stderr)
+        self.assertEqual(list(Path(inherited).iterdir()), [])
+
+
+class ThePromoteOfAShelfRecordTest(unittest.TestCase):
+    """Final review 4: a shelf record promotes into the project, never into spark's own library."""
+
+    def test_it_targets_the_projects_parts_folder(self):
+        home, target = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-shelved.json").write_text(json.dumps({"schema": 1, "id": "x-shelved"}))
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            said, code = run(["--promote", "x-shelved", "--project", str(target), "--dry-run"])
+        self.assertEqual((code, said["data"]["path"]), (0, str(target.resolve() / "parts" / "x-shelved.json")))
+
+
+class TheCleanTextTest(unittest.TestCase):
+    """Final review 6: every string field is cleaned of C0, C1 and bidi controls."""
+
+    def setUp(self):
+        self.home, self.project = a_store()
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_every_string_field_is_stored_without_controls(self):
+        dirty = "a\x1bb\x9bc\u202ed\u2066e"
+        run(["--drawer-set", a_file([{"label": "thing", "count": 1, "skip": dirty, "place": dirty, "revision": dirty,
+                                      "part_number": {"number": dirty, "maker": dirty}, "from": {"seller": dirty, "product": dirty},
+                                      "function": [{"does": "sense", "what": dirty}],
+                                      "photos": [{"sha256": "a" * 64, "file": dirty}]}])])
+        entry = json.loads((self.home / "drawer" / "thing.json").read_text())
+        self.assertEqual((entry["skip"], entry["place"], entry["revision"], entry["part_number"],
+                          entry["from"], entry["function"], entry["photos"][0]["file"]),
+                         ("a b c d e", "a b c d e", "a b c d e", {"number": "a b c d e", "maker": "a b c d e"},
+                          {"seller": "a b c d e", "product": "a b c d e"}, [{"does": "sense", "what": "a b c d e"}], "a b c d e"))
+
+
+class TheSmallFixesTest(unittest.TestCase):
+    def setUp(self):
+        self.home, self.project = a_store()
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_negative_from_is_could_not_run(self):
+        said, code = run(["--drawer", "--from", "-3"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+
+    def test_a_read_of_no_lines_is_refused_and_the_kept_payload_stays(self):
+        run(["--drawer-import", "dfrobot", a_file(orders(("SEN0193", "probe", 1)))])
+        kept = (self.home / "drawer-import" / "dfrobot.json").read_text()
+        self.assertTrue(drawer.payload_problems("dfrobot", orders()))
+        said, code = run(["--drawer-import", "dfrobot", a_file(orders())])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("read no order lines", said["problems"][0]["sentence"])
+        self.assertEqual((self.home / "drawer-import" / "dfrobot.json").read_text(), kept)
+
+    def test_the_kept_payload_holds_only_sku_name_and_count(self):
+        payload = orders(("SEN0193", "probe", 1))
+        payload["items"][0]["price"] = 9.9
+        run(["--drawer-import", "dfrobot", a_file(payload)])
+        kept = json.loads((self.home / "drawer-import" / "dfrobot.json").read_text())
+        self.assertEqual(sorted(kept["items"][0]), ["count", "name", "sku"])
+
+    def test_a_refused_write_is_marked_unwritten(self):
+        said, code = run(["--drawer-set", a_file([{"label": "x", "count": 1}, {"label": "y", "count": -1}])])
+        self.assertEqual((code, said["data"]["written"]), (1, False))
+        said, _ = run(["--drawer-set", a_file([{"label": "z", "count": 1}])])
+        self.assertTrue(said["data"]["written"])
+        said, _ = run(["--drawer-set", a_file([{"label": "w", "count": 1}]), "--dry-run"])
+        self.assertFalse(said["data"]["written"])
+
+    def test_a_refused_write_marks_each_change_line(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            parts.main(["--drawer-set", a_file([{"label": "x", "count": 1}, {"label": "y", "count": -1}])])
+        self.assertIn("refused, not written: new x", out.getvalue())
+
+    def test_the_plain_key_sentence_says_lower_case(self):
+        said, _ = run(["--drawer-set", a_file([{"entry": "Bad Key", "count": 1}])])
+        self.assertIn("lower-case letters, digits and '-'", said["problems"][0]["sentence"])
+
+    def test_the_store_writes_and_reads_utf8_whatever_the_locale(self):
+        script = ("import sys; sys.path.insert(0, %r); import store, drawer; store.write_json('drawer', 'k', "
+                  "{'schema': 1, 'label': 'žluťoučký kůň', 'count': 1}); print(drawer.entries()['k']['label'])" % str(ROOT / "scripts"))
+        env = dict(os.environ, SPARK_HOME=str(self.home), LC_ALL="C", PYTHONUTF8="0", PYTHONCOERCECLOCALE="0", PYTHONIOENCODING="utf-8")
+        done = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.stdout.strip(), "žluťoučký kůň", done.stderr)
 
 
 if __name__ == "__main__":
