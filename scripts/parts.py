@@ -36,6 +36,7 @@ import struct
 import sys
 import urllib.parse
 import urllib.request
+from collections import namedtuple
 from pathlib import Path
 
 #: Parts ship with the plugin, and a project may keep its own in `parts/`. A project's own wins,
@@ -72,12 +73,33 @@ SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402
 import store  # noqa: E402
 
 
 class PartError(Exception):
     """A part definition that cannot be used, with the reason."""
+
+
+#: What one operation found (§6.4.1): its `data`, the lines a person reads without --json, and the rest of the
+#: envelope. A handler returns one; `main` prints it either way and exits by its status.
+Answer = namedtuple("Answer", "data lines problems unchecked next truncated", defaults=(None, (), (), (), (), None))
+
+
+class BadArgument(Exception):
+    """An argument parts.py cannot run with: could-not-run, and with --json an envelope like any other answer."""
+
+
+def _problem(subject, sentence, fix=None):
+    return {"subject": subject, "sentence": sentence, "fix": fix}
+
+
+def _cannot(sentence, fix=None):
+    return {"sentence": sentence, "fix": fix}
+
+
+def _with_project(project):
+    return ["--project", str(project)] if project else []
 
 
 def search_path(project: Path = None) -> list:
@@ -752,13 +774,14 @@ def without_location(payload):
     return bytes(data), True
 
 
-def keep_in_store(payload, name):
+def keep_in_store(payload, name, dry_run=False):
     """Put a file in the store under its checksum and return the checksum (P62a) — a photo without its location (P75)."""
     if name.lower().endswith((".jpg", ".jpeg")):
         payload = without_location(payload)[0]
     digest = hashlib.sha256(payload).hexdigest()
-    (store.place("sources") / digest).mkdir(parents=True, exist_ok=True)
-    (store.place("sources") / digest / name).write_bytes(payload)
+    if not dry_run:
+        (store.place("sources") / digest).mkdir(parents=True, exist_ok=True)
+        (store.place("sources") / digest / name).write_bytes(payload)
     return digest
 
 
@@ -832,38 +855,39 @@ def datasheet_pages(path, command):
 
 
 def read_datasheet(path, wanted, labels=None, project=None):
-    """Print what `scan_datasheet` found, with the pages read; EXIT_OK only when every fact was FOUND."""
+    """What `scan_datasheet` found, with the pages read, as an Answer: a fact not on a table row is a problem."""
     import tools
     try:
         reader = tools.find("pdf-text", project)
     except tools.ToolProblem as missing:
-        print("parts.py: --read: %s" % missing, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
+        return Answer(unchecked=[_cannot("--read: %s" % missing)])
     read = []
     def counted():
-        for page in datasheet_pages(path, reader.command):
-            read.append(page[0])
-            yield page
+        for one in datasheet_pages(path, reader.command):
+            read.append(one[0])
+            yield one
     found = scan_datasheet(counted(), wanted, labels)
+    lines = []
     for fact, entry in found.items():
         if entry["status"] == "NOT FOUND":
-            print("%-28s NOT FOUND — tried: %s" % (fact, ", ".join(entry["tried"])))
-        for page, line, section, text in entry["hits"][:3]:
-            print("%-28s %-10s p%d:%d  [%s]  %s" % (fact, entry["status"], page, line, section or "no heading", text[:220]))
+            lines.append("%-28s NOT FOUND — tried: %s" % (fact, ", ".join(entry["tried"])))
+        for number, line, section, text in entry["hits"][:3]:
+            lines.append("%-28s %-10s p%d:%d  [%s]  %s" % (fact, entry["status"], number, line, section or "no heading", text[:220]))
     missing = [fact for fact, entry in found.items() if entry["status"] != "FOUND"]
-    print("read %d of the document's pages, %s" % (len(read), "stopping where the last fact was found" if not missing
-                                                    else "%d fact(s) not on a table row: read those pages as images" % len(missing)))
-    return EXIT_OK if not missing else EXIT_INVALID
+    lines.append("read %d of the document's pages, %s" % (len(read), "stopping where the last fact was found" if not missing
+                 else "%d fact(s) not on a table row: read those pages as images" % len(missing)))
+    return Answer({"facts": found, "pages_read": read}, lines,
+                  problems=[_problem(fact, "not on a table row: read its pages as images") for fact in missing])
 
 
-def keep_local(path, url=None):
+def keep_local(path, url=None, dry_run=False):
     """
     Put a file you already have into the store and return the `documents` entry that points at it
     (P62b). The WROOM-1 v1.1 datasheet exists only as a kept file — its URL now serves v1.8 — so
     fetching can never bring it in; an import can. `url` is where it came from, if anyone knows.
     """
     path = Path(path)
-    return {"url": url, "sha256": keep_in_store(path.read_bytes(), path.name), "file": path.name,
+    return {"url": url, "sha256": keep_in_store(path.read_bytes(), path.name, dry_run), "file": path.name,
             "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
 
 
@@ -945,6 +969,12 @@ def document_key(name, taken):
     return key
 
 
+def to_fetch(record):
+    """The cited datasheet and image URLs a record does not keep yet — what `--fetch` would download."""
+    known = {entry.get("url") for entry in (record.get("documents") or {}).values()}
+    return [url for url in cited_urls(record) if url.split("?")[0].lower().endswith(KEEPABLE) and url not in known]
+
+
 def fetch_documents(part_id, project=None, fetch=None):
     """
     Download every cited datasheet or image into the store and point at each from the record's
@@ -958,11 +988,8 @@ def fetch_documents(part_id, project=None, fetch=None):
     path = home / (part_id + DEFINITION_SUFFIX)
     record = json.loads(path.read_text())
     documents = dict(record.get("documents") or {})
-    known = {entry.get("url") for entry in documents.values()}
-    for url in cited_urls(record):
+    for url in to_fetch(record):
         bare = url.split("?")[0]
-        if not bare.lower().endswith(KEEPABLE) or url in known:
-            continue
         payload = (fetch or _download)(url)
         if payload is not None:
             name = urllib.parse.unquote(bare.rsplit("/", 1)[-1]) or "document"
@@ -988,7 +1015,7 @@ def _download(url):
         return None
 
 
-def promote(part_id, project, to=None):
+def promote(part_id, project, to=None, dry_run=False):
     """
     Move a record one step along its life: catalog -> the project's parts/ (to build with; it must
     then pass the contract), or the project's parts/ -> the plugin's library (for every later
@@ -1003,6 +1030,8 @@ def promote(part_id, project, to=None):
     target = to / (part_id + DEFINITION_SUFFIX)
     if target.exists():
         raise PartError("%s exists; a promotion never overwrites" % target)
+    if dry_run:
+        return target
     to.mkdir(parents=True, exist_ok=True)
     shutil.copy2(home / (part_id + DEFINITION_SUFFIX), target)
     if (home / part_id).is_dir():
@@ -1175,167 +1204,265 @@ def _row(part_id, kind, rest):
     return "  %-28s %-14s %s" % (part_id, kind, rest)
 
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(
-        prog="parts.py", description="What a part needs, and what is known about it.")
-    what = parser.add_mutually_exclusive_group(required=True)
-    what.add_argument("--list", action="store_true")
-    what.add_argument("--show", metavar="PART")
-    what.add_argument("--validate", action="store_true")
-    what.add_argument("--signals", nargs="+", metavar="PART",
-                      help="the signals these parts ask for, as assign_pins.py input")
-    what.add_argument("--unverified", nargs="+", metavar="PART",
-                      help="what nobody has checked about these parts")
-    what.add_argument("--need", nargs="+", metavar="WORD",
-                      help="what exists for a need, before researching: words matched in id, name, kind, alias")
-    what.add_argument("--skeleton", metavar="PART", help="write a record to fill in, to the project's parts/")
-    what.add_argument("--sources", metavar="PART", help="fetch every URL a record cites; a source that does not answer is named")
-    what.add_argument("--fetch", metavar="PART", help="download the datasheets and images a record cites, into your store")
-    what.add_argument("--keep", metavar="FILE", help="put a file you already have into your store; prints its documents entry")
-    what.add_argument("--read", metavar="PDF", help="read a datasheet page by page and stop where every --want fact is on a table row")
-    what.add_argument("--kept", nargs="+", metavar="WORD",
-                      help="find a kept document by every word, with no network, and every fact resting on it")
-    what.add_argument("--promote", metavar="PART", help="catalog → the project's parts/, or the project's parts/ → the plugin's library")
-    what.add_argument("--catalog", action="store_true", help="every record research has kept, chosen or not")
-    parser.add_argument("--kind", help="with --skeleton: the part's kind (motor-driver, sensor, regulator, …)")
-    parser.add_argument("--vendor", help="with --skeleton: who makes it")
-    parser.add_argument("--url", help="with --keep: where the file came from, if anyone knows")
-    parser.add_argument("--want", nargs="+", metavar="FACT", help="with --read: the facts to find, named as records name them (forward_voltage_v …)")
-    parser.add_argument("--label", action="append", metavar="FACT=WORD|WORD", help="with --read: extra words a datasheet uses for a fact")
-    parser.add_argument("--project", type=Path,
-                        help="a project whose own parts/ beats the shipped library")
-    parser.add_argument("--json", action="store_true")
-    args = parser.parse_args(argv)
-    project = args.project.resolve() if args.project else None
+#: Every operation parts.py offers — the ONE table the argument parser and `--describe` are built from, so what an
+#: agent reads about an operation cannot drift from what runs (§6.4.3). A row: the flag, its argparse keywords,
+#: what it answers, its effects (`writes`, `network`, `deletes`), the keys of its `data`. An operation with an
+#: effect takes --dry-run (§6.4.5).
+OPERATIONS = (
+    ("list", {"action": "store_true"}, "every record a project can build with, and where it comes from", (), ("parts",)),
+    ("show", {"metavar": "PART"}, "one record, wherever it lives", (), ("record",)),
+    ("validate", {"action": "store_true"}, "every record a project can build with, against the contract", (), ("checked",)),
+    ("signals", {"nargs": "+", "metavar": "PART"}, "the signals these parts ask for, as assign_pins.py input", (), ("signals",)),
+    ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts", (), ("questions",)),
+    ("need", {"nargs": "+", "metavar": "WORD"}, "what exists for a need, before researching: words matched in id, name, kind, alias",
+     (), ("need", "vendor_order", "found", "drafts", "catalog")),
+    ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/", ("writes",), ("path", "record", "written")),
+    ("sources", {"metavar": "PART"}, "ask every URL a record cites whether it answers", ("network",), ("part", "sources")),
+    ("fetch", {"metavar": "PART"}, "download the datasheets and images a record cites, into your store", ("network", "writes"),
+     ("documents", "would_fetch")),
+    ("keep", {"metavar": "FILE"}, "put a file you already have into your store; answers its documents entry", ("writes",),
+     ("document", "location_removed", "written")),
+    ("read", {"metavar": "PDF"}, "read a datasheet page by page and stop where every --want fact is on a table row", (),
+     ("facts", "pages_read")),
+    ("kept", {"nargs": "+", "metavar": "WORD"}, "find a kept document by every word, with no network, and every fact resting on it",
+     (), ("found",)),
+    ("promote", {"metavar": "PART"}, "catalog → the project's parts/, or the project's parts/ → the plugin's library", ("writes",),
+     ("path", "written")),
+    ("catalog", {"action": "store_true"}, "every record research has kept, chosen or not", (), ("records", "broken")),
+    ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
+     ("operations", "options", "exits")),
+)
 
+#: The options an operation reads, in the same columns but effects.
+OPTIONS = (
+    ("kind", {}, "with --skeleton: the part's kind (motor-driver, sensor, regulator, …)"),
+    ("vendor", {}, "with --skeleton: who makes it"),
+    ("url", {}, "with --keep: where the file came from, if anyone knows"),
+    ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
+    ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
+    ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
+    ("from", {"type": int, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
+    ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
+    ("json", {"action": "store_true"}, "answer in one envelope (docs/2026-10-04-store-design.md §6.4.1)"),
+)
+
+
+class _Parser(argparse.ArgumentParser):
+    """argparse, except that a bad argument is an answer, not an exit — with --json it is an envelope too."""
+
+    def error(self, message):
+        raise BadArgument(message)
+
+
+def _parser():
+    """The argument parser, built from OPERATIONS and OPTIONS so that `--describe` cannot drift from it."""
+    parser = _Parser(prog="parts.py", description="What a part needs, and what is known about it.")
+    what = parser.add_mutually_exclusive_group(required=True)
+    for name, keywords, summary, _, _ in OPERATIONS:
+        what.add_argument("--" + name, help=summary, **keywords)
+    for name, keywords, summary in OPTIONS:
+        parser.add_argument("--" + name, help=summary, **keywords)
+    return parser
+
+
+def _op_list(args, project):
+    listing = []
+    for part_id in available(project):
+        record = load(part_id, project)
+        listing.append({"id": part_id, "kind": record["kind"], "name": record["name"],
+                        "from": str(definition_path(part_id, project).parent)})
+    shown, truncated = page(listing, args.start, "list", ["--list"] + _with_project(project))
+    lines = [_row(p["id"], p["kind"], "%-9s %s" % ("project" if Path(p["from"]) != LIBRARY else "library", p["name"]))
+             for p in listing]
+    return Answer({"parts": shown}, lines, truncated=truncated)
+
+
+def _op_show(args, project):
+    part = any_record(args.show, project)
+    return Answer({"record": part}, [describe(part)])
+
+
+def _op_validate(args, project):
+    checked = []
+    for part_id in available(project):
+        path = definition_path(part_id, project)
+        checked.append({"part": part_id, "path": str(path), "problems": validate(json.loads(path.read_text()), path)})
+    shown, truncated = page(checked, args.start, "validate", ["--validate"] + _with_project(project))
+    lines = []
+    for one in checked:
+        lines.append("  %-28s %s" % (one["part"], "ok" if not one["problems"] else "%d problem(s)" % len(one["problems"])))
+        lines += ["      - %s" % problem for problem in one["problems"]]
+    return Answer({"checked": shown}, lines, truncated=truncated,
+                  problems=[_problem(one["part"], problem) for one in checked for problem in one["problems"]])
+
+
+def _op_signals(args, project):
+    found = {"signals": signals_for(args.signals, project)}
+    return Answer(found, [json.dumps(found, indent=2)])
+
+
+def _op_unverified(args, project):
+    questions = unverified(args.unverified, project)
+    lines = ["  everything these parts claim has been checked."] if not questions else \
+        ["  %d thing(s) nobody has checked:\n" % len(questions)]
+    for question in questions:
+        lines.append("  %s.%s = %s" % (question["part"], question["fact"], question["assumed"]))
+        if question["why_it_matters"]:
+            lines.append("      %s" % question["why_it_matters"])
+    return Answer({"questions": questions}, lines)
+
+
+def _brief(part):
+    return {"id": part["id"], "kind": part["kind"], "name": part["name"]}
+
+
+def _op_need(args, project):
+    found, drafts = need(args.need, project)
+    known = [p for p in catalog_matches(args.need) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
+    data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": [_brief(p) for p in found],
+            "drafts": drafts, "catalog": [_brief(p) for p in known]}
+    lines = [_row(p["id"], p["kind"], p["name"]) for p in found]
+    lines += [_row(part_id, "(draft)", "does not yet meet the contract — being filled in") for part_id in drafts]
+    lines += [_row(p["id"], p["kind"], "%s  [catalog: researched before; `--promote %s --project .` builds with it]"
+                   % (p["name"], p["id"])) for p in known]
+    if not lines:
+        lines = ["  nothing in the library matches %r.\n  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s"
+                 % (" ".join(args.need), " ".join(args.need), ", ".join(vendor_order(project)),
+                    ", ".join(sellers(project)) or "none named in the brief")]
+    return Answer(data, lines)
+
+
+def _op_skeleton(args, project):
+    if not project or not args.kind:
+        return Answer(unchecked=[_cannot("--skeleton needs --project (the record belongs to a project's parts/) and --kind")])
+    target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
+    if target.exists():
+        return Answer(problems=[_problem(args.skeleton, "%s exists; fill it in, do not overwrite it" % target)])
+    record = skeleton(args.skeleton, args.kind, args.vendor)
+    if not args.dry_run:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
+    return Answer({"path": str(target), "record": record, "written": not args.dry_run},
+                  ["  %s %s — every null is a fact to record; `parts.py --validate --project .` says what is missing"
+                   % ("would write" if args.dry_run else "wrote", target)])
+
+
+def _op_sources(args, project):
+    record = any_record(args.sources, project)
+    if args.dry_run:
+        urls = cited_urls(record)
+        return Answer({"part": args.sources, "sources": [{"url": url, "reachable": None} for url in urls]},
+                      ["  would ask %s" % url for url in urls])
+    answers = sources_resolve(record)
+    lines = ["  %s  %s" % ("ok  " if ok else "NO  ", url) for url, ok in answers] or \
+        ["  %s cites no URL — every fact rests on prose sources a person has to find" % args.sources]
+    return Answer({"part": args.sources, "sources": [{"url": url, "reachable": ok} for url, ok in answers]}, lines,
+                  problems=[_problem(url, "does not answer") for url, ok in answers if not ok])
+
+
+def _op_fetch(args, project):
+    if args.dry_run:
+        home = record_home(args.fetch, project)
+        if home is None:
+            raise PartError("no record called %r to fetch for" % args.fetch)
+        wanted = to_fetch(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))
+        return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
+                      or ["  %s cites no datasheet or image URL to keep" % args.fetch])
+    kept = fetch_documents(args.fetch, project)
+    lines = ["  %s/%s  <-  %s" % (entry["sha256"][:12], entry["file"], entry["url"]) for entry in kept.values()]
+    return Answer({"documents": kept, "would_fetch": []}, lines or ["  %s cites no datasheet or image URL to keep" % args.fetch])
+
+
+def _op_keep(args, project):
+    path = Path(args.keep)
+    if not path.is_file():
+        return Answer(unchecked=[_cannot("--keep: no file at %s" % path)])
+    located = path.name.lower().endswith((".jpg", ".jpeg")) and without_location(path.read_bytes())[1]
+    if located and not args.json:
+        print("  removed the location (EXIF GPS) from %s before keeping it" % path.name, file=sys.stderr)
+    entry = keep_local(path, args.url, dry_run=args.dry_run)
+    return Answer({"document": entry, "location_removed": located, "written": not args.dry_run},
+                  [json.dumps(entry, indent=2, ensure_ascii=False)])
+
+
+def _op_read(args, project):
+    labels = {}
+    for given in args.label or []:
+        fact, _, words = given.partition("=")
+        labels[fact] = [word.strip().lower() for word in words.split("|") if word.strip()]
+    return read_datasheet(args.read, args.want or [], labels, project)
+
+
+def _op_kept(args, project):
+    found = find_kept(args.kept, project)
+    return Answer({"found": found}, found or ["nothing kept matches %s — fetch it, or --keep a file you have" % " ".join(args.kept)])
+
+
+def _op_promote(args, project):
+    if not project:
+        return Answer(unchecked=[_cannot("--promote needs --project")])
+    target = promote(args.promote, project, dry_run=args.dry_run)
+    return Answer({"path": str(target), "written": not args.dry_run},
+                  ["  %s %s" % ("would promote to" if args.dry_run else "promoted to", target)])
+
+
+def _op_catalog(args, project):
+    records, broken = catalog_records()
+    listing = [{"id": part_id, "kind": record["kind"], "name": record["name"]} for part_id, record in records.items()]
+    shown, truncated = page(listing, args.start, "catalog", ["--catalog"])
+    lines = [_row(r["id"], r["kind"], r["name"]) for r in listing]
+    lines += [_row(name, "BROKEN", "does not parse, or names no schema/id/name/kind") for name in broken]
+    lines.append("  %d record(s), %d broken" % (len(records), len(broken)))
+    return Answer({"records": shown, "broken": broken}, lines, truncated=truncated,
+                  problems=[_problem(name.split(" — ")[0], "a broken catalog record: %s" % name) for name in broken])
+
+
+def _op_describe(args, project):
+    operations = [{"op": name, "flag": "--" + name, "summary": summary, "effects": list(effects), "dry_run": bool(effects),
+                   "arguments": {key: (list(value) if isinstance(value, tuple) else value)
+                                 for key, value in keywords.items() if key in ("nargs", "metavar")},
+                   "data": list(keys)} for name, keywords, summary, effects, keys in OPERATIONS]
+    options = [{"flag": "--" + name, "summary": summary} for name, _, summary in OPTIONS]
+    exits = {str(code): status for status, code in EXIT_FOR.items()}
+    lines = ["  %-18s %s%s" % (op["flag"], op["summary"], "  [%s]" % ", ".join(op["effects"]) if op["effects"] else "")
+             for op in operations]
+    return Answer({"operations": operations, "options": options, "exits": exits}, lines)
+
+
+def _say(op, answer, as_json):
+    """
+    Print one answer and return its exit code (§6.4.1): with --json the envelope, compact, on stdout; without, the
+    person's lines — and when an answer has no lines, its sentences are the answer, on stderr as before.
+    """
+    said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated)
+    if as_json:
+        print(json.dumps(said, ensure_ascii=False, separators=(",", ":")))
+    else:
+        for line in answer.lines:
+            print(line)
+        if not answer.lines:
+            for item in list(answer.problems) + list(answer.unchecked):
+                print("parts.py: %s%s" % (item["sentence"], " — " + item["fix"] if item.get("fix") else ""), file=sys.stderr)
+    return EXIT_FOR[said["status"]]
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else list(argv)
+    asked = next((name for name, *_ in OPERATIONS if "--" + name in argv), None)
     try:
-        if args.list:
-            listing = [dict(load(part_id, project), id=part_id) for part_id in available(project)]
-            if args.json:
-                print(json.dumps({"tool": "parts", "parts": [
-                    {"id": part["id"], "kind": part["kind"], "name": part["name"],
-                     "from": str(definition_path(part["id"], project).parent)}
-                    for part in listing]}, indent=2))
-            else:
-                for part in listing:
-                    where = "project" if definition_path(part["id"], project).parent != LIBRARY else "library"
-                    print(_row(part["id"], part["kind"], "%-9s %s" % (where, part["name"])))
-        elif args.show:
-            part = any_record(args.show, project)
-            print(json.dumps(part, indent=2) if args.json else describe(part))
-        elif args.signals:
-            print(json.dumps({"signals": signals_for(args.signals, project)}, indent=2))
-        elif args.need:
-            found, drafts = need(args.need, project)
-            known = [p for p in catalog_matches(args.need) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
-            order = ", ".join(vendor_order(project))
-            shops = ", ".join(sellers(project)) or "none named in the brief"
-            if args.json:
-                print(json.dumps({"tool": "parts", "need": args.need, "vendor_order": list(vendor_order(project)),
-                                  "found": [{"id": p["id"], "kind": p["kind"], "name": p["name"]} for p in found],
-                                  "drafts": drafts,
-                                  "catalog": [{"id": p["id"], "kind": p["kind"], "name": p["name"]} for p in known]}, indent=2))
-            elif found or drafts or known:
-                for part in found:
-                    print(_row(part["id"], part["kind"], part["name"]))
-                for part_id in drafts:
-                    print(_row(part_id, "(draft)", "does not yet meet the contract — being filled in"))
-                for part in known:
-                    print(_row(part["id"], part["kind"], "%s  [catalog: researched before; `--promote %s --project .` builds with it]"
-                               % (part["name"], part["id"])))
-            else:
-                print("  nothing in the library matches %r.\n  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s"
-                      % (" ".join(args.need), " ".join(args.need), order, shops))
-        elif args.skeleton:
-            if not project or not args.kind:
-                print("parts.py: --skeleton needs --project (the record belongs to a project's parts/) "
-                      "and --kind", file=sys.stderr)
-                return EXIT_INVALID
-            target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
-            if target.exists():
-                print("parts.py: %s exists; fill it in, do not overwrite it" % target, file=sys.stderr)
-                return EXIT_INVALID
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(skeleton(args.skeleton, args.kind, args.vendor), indent=2, ensure_ascii=False) + "\n")
-            print("  wrote %s — every null is a fact to record; `parts.py --validate --project .` says what is missing" % target)
-        elif args.keep:
-            if args.keep.lower().endswith((".jpg", ".jpeg")) and without_location(Path(args.keep).read_bytes())[1]:
-                print("  removed the location (EXIF GPS) from %s before keeping it" % Path(args.keep).name, file=sys.stderr)
-            print(json.dumps(keep_local(args.keep, args.url), indent=2, ensure_ascii=False))
-        elif args.read:
-            labels = {}
-            for given in args.label or []:
-                fact, _, words = given.partition("=")
-                labels[fact] = [word.strip().lower() for word in words.split("|") if word.strip()]
-            return read_datasheet(args.read, args.want or [], labels, project)
-        elif args.kept:
-            found = find_kept(args.kept, project)
-            print("\n".join(found) if found else "nothing kept matches %s — fetch it, or --keep a file "
-                                                  "you have" % " ".join(args.kept))
-            return EXIT_OK if found else EXIT_INVALID
-        elif args.fetch:
-            kept = fetch_documents(args.fetch, project)
-            for entry in kept.values():
-                print("  %s/%s  <-  %s" % (entry["sha256"][:12], entry["file"], entry["url"]))
-            if not kept:
-                print("  %s cites no datasheet or image URL to keep" % args.fetch)
-        elif args.promote:
-            if not project:
-                print("parts.py: --promote needs --project", file=sys.stderr)
-                return EXIT_INVALID
-            print("  promoted to %s" % promote(args.promote, project))
-        elif args.catalog:
-            records, broken = catalog_records()
-            for part_id, record in records.items():
-                print(_row(part_id, record["kind"], record["name"]))
-            for name in broken:
-                print(_row(name, "BROKEN", "does not parse, or names no schema/id/name/kind"))
-            print("  %d record(s), %d broken" % (len(records), len(broken)))
-        elif args.sources:
-            record = any_record(args.sources, project)
-            answers = sources_resolve(record)
-            if args.json:
-                print(json.dumps({"tool": "parts", "part": args.sources,
-                                  "sources": [{"url": u, "reachable": ok} for u, ok in answers]}, indent=2))
-            else:
-                for url, ok in answers:
-                    print("  %s  %s" % ("ok  " if ok else "NO  ", url))
-                if not answers:
-                    print("  %s cites no URL — every fact rests on prose sources a person has to find" % args.sources)
-            return EXIT_INVALID if any(not ok for _, ok in answers) else EXIT_OK
-        elif args.unverified:
-            questions = unverified(args.unverified, project)
-            if args.json:
-                print(json.dumps(questions, indent=2))
-            elif not questions:
-                print("  everything these parts claim has been checked.")
-            else:
-                print("  %d thing(s) nobody has checked:\n" % len(questions))
-                for question in questions:
-                    print("  %s.%s = %s" % (question["part"], question["fact"], question["assumed"]))
-                    if question["why_it_matters"]:
-                        print("      %s" % question["why_it_matters"])
-        else:
-            checked = []
-            for part_id in available(project):
-                path = definition_path(part_id, project)
-                checked.append({"part": part_id, "path": str(path),
-                                "problems": validate(json.loads(path.read_text()), path)})
-            if args.json:
-                print(json.dumps({"tool": "parts",
-                                  "status": "problems" if any(c["problems"] for c in checked)
-                                            else "ok",
-                                  "checked": checked}, indent=2))
-            else:
-                for one in checked:
-                    print("  %-28s %s" % (one["part"], "ok" if not one["problems"] else "%d problem(s)" % len(one["problems"])))
-                    for problem in one["problems"]:
-                        print("      - %s" % problem)
-            return EXIT_INVALID if any(c["problems"] for c in checked) else EXIT_OK
+        args = _parser().parse_args(argv)
+    except BadArgument as bad:
+        return _say(asked, Answer(unchecked=[_cannot(str(bad), "parts.py --describe --json lists every operation and its arguments")]),
+                    "--json" in argv)
+    op = next(name for name, *_ in OPERATIONS if getattr(args, name.replace("-", "_")) not in (None, False))
+    project = args.project.resolve() if args.project else None
+    try:
+        answer = globals()["_op_" + op.replace("-", "_")](args, project)
     except PartError as broken:
-        print("parts.py: %s" % broken, file=sys.stderr)
-        return EXIT_INVALID
-    return EXIT_OK
+        value = getattr(args, op.replace("-", "_"))
+        answer = Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else
+                                           (value if isinstance(value, str) else None), str(broken))])
+    return _say(op, answer, args.json)
 
 
 if __name__ == "__main__":

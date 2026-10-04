@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
+import outcomes  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
 
@@ -1005,7 +1006,8 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_kept_needs_every_word(self):
         code, said, _ = self._kept(["wroom", "nothing-like-this"])
         self.assertNotIn("present", said)
-        self.assertNotEqual(code, 0, "finding nothing is said, not passed")
+        self.assertIn("nothing kept matches", said)
+        self.assertEqual(code, 0, "finding nothing is an answer, said in words (§6.4.1: a gap is an answer)")
 
     def test_a_fact_citing_a_document_the_record_does_not_hold_is_refused(self):
         definition = part(facts={"idle_ua": {"value": 8, "verified": True, "source": "the datasheet",
@@ -1422,6 +1424,89 @@ class TheCatalogIsThePersonSTest(unittest.TestCase):
         self.assertEqual(len(broken), 1)
         self.assertIn("rtc-a.json", broken[0])
         self.assertIn("seller listings", broken[0])
+
+
+ENVELOPE_KEYS = ["data", "envelope", "next", "op", "problems", "status", "tool", "truncated", "unchecked"]
+
+
+def run_json(argv):
+    """parts.py with --json: (the one envelope it printed, its exit code). Anything else on stdout fails to parse."""
+    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+        code = parts.main(argv + ["--json"])
+    return json.loads(out.getvalue()), code
+
+
+class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
+    """P95, §6.4.1–6.4.5: an agent reads one shape from every parts.py --json run, errors and bad arguments included."""
+
+    def test_every_operation_answers_in_one_envelope_whose_status_is_its_exit(self):
+        project = Path(tempfile.mkdtemp())
+        for argv in (["--list"], ["--show", "no-such-part"], ["--validate"], ["--signals", "tactile-button"],
+                     ["--unverified", "tactile-button"], ["--need", "unobtainium"], ["--skeleton", "x-part"],
+                     ["--kept", "nothing-like-this"], ["--catalog"], ["--describe"], ["--promote", "x-part"],
+                     ["--keep", str(project / "absent.pdf")], ["--bogus"], [], ["--list", "--show", "x"]):
+            with self.subTest(argv=argv):
+                said, code = run_json(argv)
+                self.assertEqual(sorted(said), ENVELOPE_KEYS)
+                self.assertEqual((said["envelope"], said["tool"]), (1, "parts"))
+                self.assertEqual(code, outcomes.EXIT_FOR[said["status"]])
+
+    def test_a_named_id_that_does_not_exist_is_problems(self):
+        said, code = run_json(["--show", "no-such-part"])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertEqual(said["problems"][0]["subject"], "no-such-part")
+
+    def test_a_bad_argument_is_could_not_run_and_says_where_the_operations_are(self):
+        said, code = run_json(["--bogus"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("--describe", said["unchecked"][0]["fix"])
+
+    def test_an_operation_missing_its_project_is_could_not_run(self):
+        said, code = run_json(["--skeleton", "x-part", "--kind", "sensor"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+
+    def test_finding_nothing_is_an_answer(self):
+        said, code = run_json(["--need", "unobtainium"])
+        self.assertEqual((said["status"], code, said["data"]["found"]), ("ok", 0, []))
+
+    def test_describe_lists_exactly_what_the_parser_accepts(self):
+        said, _ = run_json(["--describe"])
+        described = {entry["flag"] for entry in said["data"]["operations"] + said["data"]["options"]}
+        accepted = {action.option_strings[-1] for action in parts._parser()._actions
+                    if action.option_strings and action.dest != "help"}
+        self.assertEqual(described, accepted)
+        self.assertEqual(said["data"]["exits"], {"0": "ok", "1": "problems", "2": "could-not-run"})
+        self.assertEqual([op["op"] for op in said["data"]["operations"] if op["effects"] and not op["dry_run"]], [],
+                         "every operation with an effect takes --dry-run")
+
+    def test_a_dry_run_writes_nothing(self):
+        project = Path(tempfile.mkdtemp())
+        said, code = run_json(["--skeleton", "x-part", "--kind", "sensor", "--project", str(project), "--dry-run"])
+        self.assertEqual((code, said["data"]["written"]), (0, False))
+        self.assertFalse((project / "parts").exists())
+
+    def test_a_dry_run_of_a_network_operation_reaches_nothing(self):
+        # `sources_resolve` binds `reachable` as a default argument, so it is the function patched here.
+        def no_network(*_):
+            raise AssertionError("a dry run asked the network")
+        with mock.patch.object(parts, "sources_resolve", no_network), mock.patch.object(parts, "_download", no_network):
+            said, code = run_json(["--sources", "l9110s-module", "--dry-run"])
+        self.assertEqual((code, bool(said["data"]["sources"])), (0, True))
+
+    def test_a_listing_is_paged_and_says_how_to_get_the_rest(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        for number in range(30):
+            (home / "catalog" / ("x-%02d.json" % number)).write_text(json.dumps(
+                {"schema": 1, "id": "x-%02d" % number, "name": "A candidate", "kind": "sensor"}))
+        with in_store(home):
+            first, _ = run_json(["--catalog"])
+            rest, _ = run_json(first["truncated"]["next"]["argv"])
+        self.assertEqual((first["truncated"]["shown"], first["truncated"]["total"]), (20, 30))
+        self.assertEqual([r["id"] for r in first["data"]["records"] + rest["data"]["records"]],
+                         ["x-%02d" % number for number in range(30)])
+        self.assertIsNone(rest["truncated"]["next"])
+
 
 if __name__ == "__main__":
     unittest.main()

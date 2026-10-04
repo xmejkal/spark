@@ -41,6 +41,9 @@ import parts  # noqa: E402
 
 BOARD = "firebeetle2-esp32s3"
 
+#: P95 (§6.4.1 of docs/2026-10-04-store-design.md): every parts.py --json answer is this one envelope.
+ENVELOPE = ["data", "envelope", "next", "op", "problems", "status", "tool", "truncated", "unchecked"]
+
 #: A netlist small enough to read, real enough to walk: one component, grounded.
 CIRCUIT = [
     {"type": "source_component", "source_component_id": "c1", "name": "U1", "ftype": "simple_chip"},
@@ -140,8 +143,8 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
             ["check", "message", "status"])
 
     def test_parts(self):
-        self._check("parts", lambda: parts.main(["--list", "--json"]), ["parts", "tool"],
-                    status_expected=False)
+        payload = self._check("parts", lambda: parts.main(["--list", "--json"]), ENVELOPE)
+        self.assertEqual(sorted(payload["data"]), ["parts"])
 
     def test_check_spine(self):
         # Says `check`, not `tool`. The toolchain is withheld so the chain stops at `build`
@@ -151,13 +154,9 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
                         ["check", "stages", "status"])
 
     def test_the_flag_is_honoured_wherever_it_is_offered(self):
-        """`parts.py --catalog --json` prints prose and ignores the flag (P43)."""
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-            parts.main(["--catalog", "--json"])
-        said = out.getvalue()
-        with self.assertRaises(ValueError, msg="--catalog --json emits JSON now; update P43's note"):
-            json.loads(said)
+        """`parts.py --catalog --json` printed prose and ignored the flag (P43); since P95 it is the envelope."""
+        _, payload = payload_of(lambda: parts.main(["--catalog", "--json"]))
+        self.assertEqual(sorted(payload), ENVELOPE)
 
 
 if __name__ == "__main__":

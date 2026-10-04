@@ -13,6 +13,8 @@ fourteen places the numbers could drift apart (sprint-4 audit B17). Scripts impo
 here and alias the middle one to their own word.
 """
 
+import json
+
 #: What the shell sees.
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 
@@ -58,3 +60,40 @@ def answer(problems=(), unchecked=(), unmeasured=()):
     if unmeasured:
         result["unmeasured"] = list(unmeasured)
     return result
+
+
+def envelope(tool, op, data=None, problems=(), unchecked=(), next_steps=(), truncated=None):
+    """
+    The one shape every `--json` run prints (§6.4.1 of docs/2026-10-04-store-design.md), so an agent reads
+    `status` and `data` without knowing which command ran. `problems` are {"subject", "sentence", "fix"},
+    `unchecked` {"sentence", "fix"}, `next` are `step()`s, `truncated` is {"shown", "total", "next"} or None.
+    The status is `status_of`'s, never declared: `ok` stays unreachable while anything went unchecked.
+    """
+    problems, unchecked = list(problems), list(unchecked)
+    return {"envelope": 1, "tool": tool, "op": op, "status": status_of(problems, unchecked), "data": data,
+            "problems": problems, "unchecked": unchecked, "next": list(next_steps), "truncated": truncated}
+
+
+def step(op, argv, why, effects=(), needs_yes=False):
+    """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file."""
+    return {"op": op, "argv": list(argv), "why": why, "effects": list(effects), "needs_yes": needs_yes}
+
+
+def page(items, start, op, argv, limit=20, budget=3400):
+    """
+    At most `limit` items and about `budget` bytes of them from `start` (§6.4.4: an agent's answer stays under
+    4 KB by default), and the `truncated` note that says how to ask for the rest — None when all were shown.
+    Measured as ASCII-escaped JSON, which is never shorter than the UTF-8 the envelope prints.
+    """
+    shown, size = [], 0
+    for item in items[start:start + limit]:
+        size += len(json.dumps(item))
+        if shown and size > budget:
+            break
+        shown.append(item)
+    end = start + len(shown)
+    if start == 0 and end == len(items):
+        return shown, None
+    following = (step(op, list(argv) + ["--from", str(end), "--json"], "the next of %d" % len(items))
+                 if end < len(items) else None)
+    return shown, {"shown": len(shown), "total": len(items), "next": following}
