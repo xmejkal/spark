@@ -756,6 +756,9 @@ such a way that the store is also selectable, whether it just saves it in an MD 
 database or NoSQL … a local store but also some online repo."* And: *"for now it's just an idea — we
 would go the whole way through: the vision, the use cases, the user stories, refined and planned, and
 then implement as we want to go."*
+**Builds on:** P83 (the catalog in the person's store — its folder becomes the first, local store)
+and P82 (the layered personal/project list — the same mechanism would choose a store). When P84 is
+built, its work is one branch and one pull request that names all three.
 **Decided so far (the PO, 2026-10-04):** the online store is **a shared part database** that other
 spark users read and contribute to; contributions arrive as **pull requests to a public GitHub repo of
 records**, reviewed before they merge (a clone is the local cache); it sits **beside** spark's shipped
