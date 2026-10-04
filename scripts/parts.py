@@ -1360,6 +1360,10 @@ OPERATIONS = (
      ("part", "was", "now", "written")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling")),
+    ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
+    ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
+     "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
+     ("changes", "written")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1677,6 +1681,31 @@ def _op_audit(args, project):
     return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling}, lines,
                   truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]
                   + [_problem(entry, "points at a record nobody has") for entry in dangling])
+
+
+def _op_needs(args, project):
+    import needs
+    listed = needs.read(args.needs)
+    return Answer({"needs": listed}, ["  %-10s %s / %s%s%s" % (n["id"], n.get("does"), n.get("what"),
+                                                               "  (%s)" % n["condition"] if n.get("condition") else "",
+                                                               "  [%s]" % n["mark"] if n.get("mark") else "") for n in listed]
+                  or ["  no needs yet — /spark:idea writes them"])
+
+
+def _op_needs_set(args, project):
+    import needs
+    target, name = args.needs_set
+    items, unreadable = _read_json_input(name)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    after, changes, problems = needs.plan_set(target, items)
+    written = bool(changes) and not problems and not args.dry_run
+    if written:
+        needs.write(target, after)
+    lines = ["  %s%s %s: %s" % ("refused, not written: " if problems else "", "would set" if args.dry_run else "set",
+                                c["need"], ", ".join("%s → %s" % (k, json.dumps(v, ensure_ascii=False)) for k, v in c["now"].items()))
+             for c in changes] or ["  nothing to change"]
+    return Answer({"changes": changes, "written": written}, lines, problems=problems)
 
 
 def _op_describe(args, project):

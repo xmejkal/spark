@@ -1,0 +1,10 @@
+[
+ {"file": "scripts/needs.py", "name": "a need may carry a reason, a count or a place",
+  "find": "        extra = sorted(set(item) - set(NEED_FIELDS) - {\"id\"})", "replace": "        extra = []"},
+ {"file": "scripts/needs.py", "name": "any word is a mark",
+  "find": "    if need.get(\"mark\") is not None and need[\"mark\"] not in MARKS:", "replace": "    if False:"},
+ {"file": "scripts/needs.py", "name": "a needs file in the wrong shape is read anyway",
+  "find": "            and all(isinstance(need, dict) and isinstance(need.get(\"id\"), str) for need in data[\"needs\"])):", "replace": "            or True):"},
+ {"file": "scripts/parts.py", "name": "a refused needs write is written",
+  "find": "    written = bool(changes) and not problems and not args.dry_run", "replace": "    written = bool(changes) and not args.dry_run"}
+]
