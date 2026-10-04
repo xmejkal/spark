@@ -1,0 +1,8 @@
+[
+ {"file": "scripts/parts.py", "name": "an absent fact the chain reads is not owed",
+  "find": "            [key for key in CHAIN_FACTS if _absent(key, record.get(key))])", "replace": "            [])"},
+ {"file": "scripts/parts.py", "name": "every validate problem counts as broken",
+  "find": "    return [problem for problem in validate(record, path) if not any(key in problem for key in owed)]", "replace": "    return validate(record, path)"},
+ {"file": "scripts/parts.py", "name": "a drawer link to nothing is not named",
+  "find": "if isinstance(said.get(\"is\"), dict) and said[\"is\"] and drawer.resolve(said[\"is\"], known)[0] is None]", "replace": "if False]"}
+]

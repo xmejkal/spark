@@ -85,6 +85,57 @@ def function_problems(record):
         return []
     return ['function is [{"does": one of %s, "what": words}]' % ", ".join(VERBS)]
 
+#: The facts the chain reads from a part record (§5.4): absent, the record owes them, and no build can place it.
+CHAIN_FACTS = ("footprint", "pin_order", "pin_order_proof", "body_mm", "simulation")
+
+
+def _absent(key, value):
+    if key == "body_mm":
+        return not (isinstance(value, dict) and all(isinstance(value.get(side), (int, float)) for side in ("width", "height")))
+    return value is None or value == [] or value == {} or value == ""
+
+
+def owes(record):
+    """What a part record owes (§5.4): each required key missing, and each fact the chain reads that is absent."""
+    return ([key for key in REQUIRED_KEYS if key not in record] +
+            [key for key in CHAIN_FACTS if _absent(key, record.get(key))])
+
+
+def broken_problems(record, path):
+    """What is wrong with a part record beyond what it owes (§5.4): `validate`'s problems that name no owed key."""
+    owed = owes(record)
+    return [problem for problem in validate(record, path) if not any(key in problem for key in owed)]
+
+
+def audit(project=None):
+    """
+    Every record in every layer — the catalog included — and every drawer link, walked once (§5.4, P89): per layer
+    how many are current, owe facts, or are broken; which say nothing of what they do; which entries point at nothing.
+    """
+    import boards
+    import drawer
+    walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
+    walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
+    counts, owed, broken, silent = {}, [], [], []
+    for kind, found, layer, path in walked:
+        row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
+        record = _parse(path)
+        wrong = (["does not parse as a JSON object"] if not isinstance(record, dict) else
+                 boards.validate(record, path) if kind == "board" else broken_problems(record, path))
+        owing = [] if wrong or kind == "board" else owes(record)
+        row["broken" if wrong else "owed" if owing else "current"] += 1
+        if wrong:
+            broken.append({"id": found, "layer": layer, "problems": wrong})
+        elif owing:
+            owed.append({"id": found, "layer": layer, "owes": owing})
+        if isinstance(record, dict) and not function_of(record, board=kind == "board"):
+            silent.append(found)
+    known = drawer.linkable()
+    dangling = [entry for entry, said in drawer.entries().items()
+                if isinstance(said.get("is"), dict) and said["is"] and drawer.resolve(said["is"], known)[0] is None]
+    return counts, owed, broken, silent, dangling
+
+
 #: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
 #: labels showed `IN+`, `OUT-` and `A.B` unresolvable as tscircuit selectors while `V_IN`,
 #: `GND2` and `3V3` resolved. An MP1584 buck's pads are silkscreened IN+ IN- OUT+ OUT-, and a
@@ -1301,6 +1352,8 @@ OPERATIONS = (
     ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home", ("writes",),
      ("part", "was", "now", "written")),
+    ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
+     (), ("layers", "owed", "broken", "no_function", "dangling")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1604,6 +1657,20 @@ def _op_catalog(args, project):
     lines.append("  %d record(s), %d broken" % (len(records), len(broken)))
     return Answer({"records": shown, "broken": broken}, lines, truncated=truncated,
                   problems=[_problem(name.split(" — ")[0], "a broken catalog record: %s" % name) for name in broken])
+
+
+def _op_audit(args, project):
+    counts, owed, broken, silent, dangling = audit(project)
+    shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project))
+    lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
+             for layer, row in counts.items()]
+    lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"][:3])) for b in broken]
+    lines += ["  %s (%s) owes: %s" % (o["id"], o["layer"], ", ".join(o["owes"])) for o in owed]
+    lines += ["  says nothing of what it does — set it once with --function-set: %s" % ", ".join(silent)] if silent else []
+    lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
+    return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling}, lines,
+                  truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]
+                  + [_problem(entry, "points at a record nobody has") for entry in dangling])
 
 
 def _op_describe(args, project):

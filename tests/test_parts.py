@@ -1639,5 +1639,41 @@ class WhatAPartDoesTest(unittest.TestCase):
         self.assertEqual(run_json(["--function-set", "no-such-part", str(given), "--dry-run"])[1], 1)
 
 
+class OwedIsNotBrokenTest(unittest.TestCase):
+    """§5.4: an absent fact is owed — the record waits for it; a present, wrong value is broken."""
+
+    def test_a_record_missing_what_the_chain_reads_owes_it_and_is_not_broken(self):
+        definition = part(body_mm={"width": None, "height": None, "verified": False, "source": None})
+        self.assertEqual(sorted(parts.owes(definition)), ["body_mm", "footprint", "pin_order", "pin_order_proof", "simulation"])
+        self.assertEqual(parts.broken_problems(definition, written(definition)), [])
+
+    def test_a_present_wrong_value_is_broken(self):
+        definition = part(needs=[{"signal": "SIG", "pin": "S", "direction": "sideways"}])
+        self.assertTrue(any("sideways" in p for p in parts.broken_problems(definition, written(definition))))
+
+    def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-draft.json").write_text(json.dumps({"schema": 1, "id": "x-draft", "name": "A probe", "kind": "sensor"}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((said["status"], code), ("ok", 0), "a draft that owes facts is not a problem")
+        self.assertEqual(said["data"]["layers"]["catalog"], {"current": 0, "owed": 1, "broken": 0})
+        self.assertIn("x-draft", said["data"]["no_function"])
+        (home / "catalog" / "x-bad.json").write_text(json.dumps({"schema": 2, "id": "x-bad", "name": "B", "kind": "rtc"}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertEqual([b["id"] for b in said["data"]["broken"]], ["x-bad"])
+
+    def test_audit_names_a_drawer_link_to_a_record_nobody_has(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "drawer").mkdir()
+        (home / "drawer" / "x.json").write_text(json.dumps({"schema": 1, "label": "x", "count": 1, "is": {"part": "gone-part"}}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, said["data"]["dangling"]), (1, ["x"]))
+
+
 if __name__ == "__main__":
     unittest.main()
