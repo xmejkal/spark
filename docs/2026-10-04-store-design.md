@@ -1,6 +1,6 @@
-# The store and its ways in — design (P94), living draft
+# The store and its ways in — design (P94)
 
-**Status:** being designed with the PO, one question at a time (his request, 2026-10-04: *"keep asking me and
+**Status:** the spec, for the PO's review (2026-10-04). Designed with him one question at a time (his request, 2026-10-04: *"keep asking me and
 iterating until we have a well designed system … that we don't produce unnecessary bloat, but it also is a
 good and useful tool"*). Each answer lands here as it is given; nothing is planned until the PO has reviewed
 the whole. Process (his choice): story map + flows + example mapping; a spec and a plan for the first slice
@@ -20,7 +20,7 @@ only. Input: the P85 discovery (`docs/2026-10-04-store-discovery.md`) and a four
 - **No bloat, but useful** — every piece names the journey step it serves, or it is cut.
 - **Later, kept in mind:** a viewer and manager (P86); a shared part database (P84, no selectable backends).
 
-## 2. The journeys — the story map's backbone (draft, from the flows lens)
+## 2. The journeys — the story map's backbone (from the flows lens)
 
 Every way in runs on one spine: **D** note what I own → **M** match a need against the store → **C** choose →
 **G** research the gap (only when nothing similar) → **L** the part list the chain accepts → **T** tally what it
@@ -39,7 +39,7 @@ firmware).
 | Swap | "replace the DFR0641 in irrigation" | the part's role → M (same role) → C + F → G? → L → T |
 | Extend | "add a buzzer to the quickstart" | the project's free pins → S → M → C + F → G? → L → T |
 
-## 3. The drawer — decided so far
+## 3. The drawer — decided
 
 - **Owning is not researching.** A drawer entry is light — what it is, how many — and a part's facts are read
   only when a design considers it.
@@ -50,14 +50,14 @@ firmware).
 
 ## 4. The first slice — decided
 
-**The walking skeleton is goal first, with the PO's real drawer** (the PO, 2026-10-04): he notes about ten
-things he owns (no research, no web) → gives a real goal → the conversation names the functions it needs, no
+**The walking skeleton is goal first, with the PO's real drawer** (the PO, 2026-10-04): his drawer fills from
+his DFRobot order history and his own words (no research) → he gives a real goal → the conversation names the functions it needs, no
 part numbers → each function is marked **have** (in the drawer), **know** (researched before, with what it
 still lacks) or **gap** (nothing similar) → only the gaps go to research, each after his yes → a part list
 the chain accepts → the step prints what it cost (requests made; parts reused out of parts chosen). It
 touches every spine step thinly; module first follows and reuses the same pieces.
 
-## 5. The data — from the domain lens (to be decided piece by piece)
+## 5. The data — from the domain lens, adopted (the PO's choices marked)
 
 - **Drawer item** — *decided (the PO, 2026-10-04):* one small file per item in the store; only `label` and
   `count` required; optional: what it `is` (a record or board id, a maker part number), **where it physically
@@ -93,9 +93,7 @@ drawer, a shared clone) is a row in the table. **Budget:** refactor and delete f
 for every command, one search over every layer), then raise the 5,000-line cap by what the design needs,
 measured per item.
 
-The options weighed:
-
-From the architecture lens (details in the council's report, to be folded in when chosen):
+The options the architecture lens weighed:
 - **A** — one home and one layer table inside `parts.py`; cheapest, but `parts.py` passes 1,000 lines with
   five concerns.
 - **B** *(the lens's recommendation)* — `store.py` owns *where things are and how bytes move* (one home, one
@@ -116,7 +114,7 @@ and **one contract test per interface that every implementation must pass**.
 | --- | --- | --- |
 | record store | folders of JSON (today's layout) | a shared git clone (P84), a database |
 | document store | checksum folders | a private bucket |
-| drawer importer | a typed or dictated list | DFRobot order history, AliExpress orders, photos |
+| drawer importer | DFRobot order history (an agent driving the person's browser) and a typed or dictated list | AliExpress orders, photos |
 | matcher | the function field + the agent's judgement | embeddings, a shared index |
 | researcher | part-finder + datasheet-reader | the JLCPCB MCP alone, manual entry |
 | cost counter | from the session transcripts | spark counting its own calls |
@@ -165,6 +163,14 @@ needs it (decided).
 - **Proposing parts, store first:** drawer → project → shelf → library → catalog → shared → research only for
   the gap.
 
+## 6e. The first importers — decided
+
+**DFRobot order history** (joined slice 1 after a first read-only pass of the PO's account, 2026-10-04) and
+**the typed or dictated list** ("2x DFR0954, a bag of 6x6 buttons, the blue L9110S in box 3" — the agent turns
+it into entries and asks only what is unclear). AliExpress orders and photos follow behind the same interface —
+**not now** (the PO); until then AliExpress parts, such as the blue L9110S motor driver, come in through the
+typed list.
+
 ## 6f. Order-history importers drive the person's own browser — decided
 
 *The PO, 2026-10-04: "you will need to use paging and also click through to get to the details and all, I'd
@@ -174,12 +180,6 @@ tools list, so it is a strategy like the rest). It pages through the order list,
 only what the drawer keeps — SKU, product name, quantity, the listing — writing entries through `parts.py`.
 **spark never sees a password or a cookie**: the session stays in the browser. **Read only**: no buying,
 cancelling, reviewing or account changes. Order numbers, addresses and prices are not kept (W21).
-
-## 6e. The first importer — decided
-
-The **typed or dictated list** ("2x DFR0954, a bag of 6x6 buttons, the blue L9110S in box 3"): the agent
-turns it into entries and asks only what is ambiguous. DFRobot order history, AliExpress orders and photos
-follow as importers behind the same interface.
 
 ## 7. Slice 1 — the walking skeleton's stories (agreed with the PO, 2026-10-04)
 
@@ -199,8 +199,8 @@ Goal first, with the PO's real drawer. One story per spine step, the thinnest th
 store strategies — covers P88); the JSON envelope on the slice's commands; owed records (P89); the function
 field derived from `kind`; P87 (records inert).
 
-**Later slices:** the order-history importers next — DFRobot and AliExpress (the PO: *"that will help a lot to
-fill what we have"*) — then photos; the other six ways in; the shelf beyond reserving; the viewer; MCP;
+**Later slices:** the AliExpress order importer next (the PO: *"that will help a lot to fill what we have"*),
+then photos; the other six ways in; the shelf beyond reserving; the viewer; MCP;
 `simulated` and `ran` proof; the shared database.
 
 ## 8. Example maps
@@ -292,12 +292,13 @@ does the plant live?* — indoors, a pot. The needs:
 6. **Owned first, the simpler option shown** (the PO): when an owned route needs more parts and a simpler part
    is not owned, spark proposes the owned route and shows the simpler one beside it, with what it would cost.
 
-**Example — the real store, 2026-10-04**
+**Example — the real store, 2026-10-04, after the DFRobot import** (before it, the probe was only *know* and
+the amplifier `unsure`: the drawer turned a purchase and a doubt into two *have*s)
 
 | need | mark | from the store |
 | --- | --- | --- |
-| sense / soil-moisture | know | the catalog's SEN0193 (capacitive) — irrigation passed it over for an outdoor bed, which does not apply; owes a few facts; irrigation's waterproof SEN0308 is the alternative. Neither owned: buy, don't research |
-| sound / alarm | have, with a catch | the DFRobot speaker needs a driver: the I2S amplifier or the MP3 module, both `unsure`; a piezo buzzer, simpler, is a gap |
+| sense / soil-moisture | have | SEN0193 (capacitive), **8 owned** (DFRobot orders) — its record is the catalog's: irrigation passed it over for an outdoor bed, which does not apply here; it owes one fact; irrigation's waterproof SEN0308 is the alternative |
+| sound / alarm | have, with a catch | the speaker (FIT0502, 2 owned) needs a driver: the DFR0954 I2S amplifier (2 owned) or the DFPlayer Pro (2 owned); a piezo buzzer, simpler, is a gap — shown beside it (rule 6) |
 | compute | have | the FireBeetle 2 S3 — deep sleep, and its LiPo socket and charger fit the battery need (the XIAO ESP32-C6 is the other) |
 | power / battery | have | the 1S LiPo; the FireBeetle's charger covers charging |
 
@@ -310,10 +311,10 @@ does the plant live?* — indoors, a pot. The needs:
 3. A picked part that **owes facts** has them filled from its kept documents before it builds — the
    datasheet-reader on a local file, no web; only a missing document would cost a fetch, and it would count.
 
-**Example — the PO's picks:** soil: **SEN0193** (to get; owes `pin_order_proof`, filled from its kept schematic,
-`SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf`, present in the store); sound: **the owned route** —
-the DFRobot speaker (reserved) and the **DFR0954** I2S amplifier (`unsure` — check the drawer; if absent, to
-get); compute: the **FireBeetle 2 S3** (reserved); power: the **1S LiPo** (reserved). Passed over: SEN0308
+**Example — the PO's picks:** soil: **SEN0193** (owned, reserved; owes `pin_order_proof`, filled from its kept
+schematic, `SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf`, present in the store); sound: **the
+owned route** — the FIT0502 speaker and the **DFR0954** I2S amplifier (both owned, reserved); compute: the
+**FireBeetle 2 S3** (reserved); power: the **1S LiPo** (reserved). Passed over: SEN0308
 ("waterproof is not needed indoors"), a piezo buzzer ("the owned route was chosen").
 
 ### G — research only the gap (agreed 2026-10-04)
@@ -336,7 +337,7 @@ its counts.
 3. Owned parts used by the project are reserved in the drawer ("1 in plant-alarm").
 
 **Example:** board `firebeetle2-esp32s3`; parts `sen0193-soil-moisture` (from the catalog, its owed fact
-filled) and `max98357a-dfr0954` (library); the speaker and the LiPo plug into the amplifier's and the board's own
+filled; owned) and `max98357a-dfr0954` (library; owned); the speaker and the LiPo plug into the amplifier's and the board's own
 sockets. `check_spine` should end `[ok] … the chain runs end to end`.
 
 ### T — the tally (agreed 2026-10-04)
@@ -346,11 +347,12 @@ sockets. `check_spine` should end `[ok] … the chain runs end to end`.
    each gap, `built` when `check_spine` passes.
 2. Counts only — no URLs, queries or paths.
 
-**Example — expected:** "4 needs: 3 owned, 1 known (to get), 0 researched — 0 requests, 1 document read
+**Example — expected:** "4 needs: 4 owned, 0 researched, nothing to buy — 0 requests, 1 document read
 (SEN0193's schematic)". The skeleton passes when the PO's real goal reaches a building part list with **zero
 web requests**, and the line says so.
 
 ## 9. Next
 
-The design and the slice's example maps are complete. Next: a self-review of this document as the spec, the
-PO's review of it, then the implementation plan for slice 1 (a big item: its own branch and pull request, W8).
+The design and the slice's example maps are complete and self-reviewed. Next: the PO's review of this spec,
+then the implementation plan for slice 1 — a big item: its own branch and pull request (W8), its code budget
+raised by what it measures to need (W15b, refactor first).
