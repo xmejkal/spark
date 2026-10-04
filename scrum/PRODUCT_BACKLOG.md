@@ -759,6 +759,26 @@ record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept doc
 `/spark:research` write candidates to the store. Mutations: `sprint-10-p83` 2 of 2, `sprint-5-catalog`
 10 of 10 (one re-anchored), `sprint-8-p55` 4 of 4 (its two catalog-file rows left with the files).
 
+### P95 — Store 1a: my drawer, filled and seen — **slice 10; P94's first increment (the PO, 2026-10-04)**
+**Needed by:** the PO, who owns 99 DFRobot SKUs and more from AliExpress and wants spark to know them before any
+project. Design: `docs/2026-10-04-store-design.md` §4 (store 1a), §5.1–5.5, §6.1–6.4, §6.6, §7.
+**Value proven by:** `parts.py --drawer --json` lists the PO's real drawer — the DFRobot import's 99 SKUs and his
+typed parts — with SEN0193, DFR0954, DFR0975 and irrigation's DFR0457, DFR0831, SEN0217 and DS3231 linked; the
+suite runs green on an empty and a seeded `SPARK_HOME` and never reads the real store; `parts_on_hand` and a
+record's `owned` are gone (W16).
+
+### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment**
+**Needed by:** the PO's walking skeleton, the plant thirst alarm. Design §4 (store 1b), §5.3, §5.4, §5.6, §6.2.
+**Value proven by:** from "tell me when my plant is thirsty", `parts.py --match <project> --json` lists each
+need's candidates from the store with owned and free counts and what each owes (SEN0193: `pin_order_proof`,
+`footprint`, `simulation`; DFR0954: `footprint`); `--validate` walks every layer and finds no broken record.
+
+### P97 — Store 1c: picks to a building list, tallied — **slice 10; P94's third increment**
+**Needed by:** the same skeleton, to its end. Design §4 (store 1c), §5.7, §6.5, §6.7, §8 C–T.
+**Value proven by:** the bin's FireBeetle S3 refused as already held; owed facts filled in the records' own homes
+(the DFR0954 footprint from DFRobot's drawing, one counted request); `check_spine` ends `[ok]`; the cost line
+"5 picks: 5 from the store (5 owned) — 1 request, 1 document, N min".
+
 ### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04**
 **Needed by:** every way into spark (P76's goal-first, module-first, combination, whole-drawer, revive,
 swap, extend), the drawer (P93), the viewer (P86) and a shared database (P84) — all of which read and
@@ -775,7 +795,8 @@ example-mapped (rules, examples, questions) into readable checks; a spec and a p
 slice only, the rest stays on the map until pulled (W14).
 **Value proven by:** a design spec the PO approves section by section — the architecture, the data model,
 the ways in it serves, what is built first and what waits — and an implementation plan he approves;
-then the items it orders.
+then the items it orders. **2026-10-04:** spec version 2 written after a five-lens review council; it orders
+P95, P96, P97 (store 1a, 1b, 1c).
 
 ### P93 — My drawer: the parts I own — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
 **Needed by:** the maker, who owns *"plenty of existing modules from DFRobot and lots of parts from
@@ -783,10 +804,10 @@ AliExpress that I will want to use at some point"*, and any hobbyist with a draw
 from what is there before anything is bought or researched. As discussed: owning is not researching — an
 entry can be light (a SKU or a listing, a photo, how many), and a part's facts are read only when a
 design considers it; `/spark:identify` is the way in for an unlabelled part.
-**Designed in P94 (2026-10-04):** a drawer entry holds `label` and `count`, optionally where it physically is,
-which projects use how many, where it came from, photos and its function; never price or date. Importers are
-a strategy: the **typed or dictated list** first (slice 1), then **DFRobot and AliExpress order history** (the
-PO: *"that will help a lot to fill what we have"*), then photos.
+**Designed in P94 (2026-10-04):** a drawer entry holds `label` and `count` (pieces), optionally where it
+physically is, which projects use how many, where it came from, photos and its function; never price or date.
+Importers are a strategy: **DFRobot order history and the typed or dictated list first** (store 1a, P95), then
+AliExpress orders (not now — the PO), then photos.
 **Value proven by:** slice 1's D story — `--drawer --json` lists the PO's real parts, "owned, not researched".
 
 ### P86 — A viewer and manager for the store — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
@@ -889,7 +910,8 @@ built, its work is one branch and one pull request that names all three.
 spark users read and contribute to; contributions arrive as **pull requests to a public GitHub repo of
 records**, reviewed before they merge (a clone is the local cache); it sits **beside** spark's shipped
 library, which keeps its few verified parts for spark's own tests and examples.
-**The PO decided after P85, 2026-10-04:** **no selectable backends** — no database, NoSQL or Markdown
+**Superseded in part by P94 (the PO, 2026-10-04):** strategy seams *are* designed in (spec §6.2–6.3) —
+selectable by name — but no second backend is built until one is pulled. **The PO decided after P85, 2026-10-04:** **no selectable backends** — no database, NoSQL or Markdown
 store (the council was unanimous: one implementation behind an interface is indirection, and pull requests
 mean JSON in git). The shared database **starts when the first person outside the project researches a
 part** (slice 5); first as the skeptic's no-code experiment — a public repo of records that pass the
