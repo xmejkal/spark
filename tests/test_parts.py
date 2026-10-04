@@ -1446,7 +1446,9 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         for argv in (["--list"], ["--show", "no-such-part"], ["--validate"], ["--signals", "tactile-button"],
                      ["--unverified", "tactile-button"], ["--need", "unobtainium"], ["--skeleton", "x-part"],
                      ["--kept", "nothing-like-this"], ["--catalog"], ["--describe"], ["--promote", "x-part"],
-                     ["--keep", str(project / "absent.pdf")], ["--bogus"], [], ["--list", "--show", "x"]):
+                     ["--keep", str(project / "absent.pdf")], ["--function-set", "x-part", str(project / "absent.json")],
+                     ["--audit"], ["--needs", str(project)], ["--needs-set", str(project), str(project / "absent.json")],
+                     ["--match", str(project)], ["--bogus"], [], ["--list", "--show", "x"]):
             with self.subTest(argv=argv):
                 said, code = run_json(argv)
                 self.assertEqual(sorted(said), ENVELOPE_KEYS)
@@ -1637,6 +1639,20 @@ class WhatAPartDoesTest(unittest.TestCase):
         self.assertEqual(run_json(["--function-set", "tactile-button", str(given)])[1], 1)
         given.write_text(json.dumps([{"does": "sense", "what": "x"}]))
         self.assertEqual(run_json(["--function-set", "no-such-part", str(given), "--dry-run"])[1], 1)
+
+    def test_function_set_refuses_null_and_an_empty_list_and_writes_nothing(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        record = {"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}
+        (home / "catalog" / "x-soil.json").write_text(json.dumps(record))
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        for text in ("null", "[]"):
+            given.write_text(text)
+            with self.subTest(text=text), in_store(home):
+                said, code = run_json(["--function-set", "x-soil", str(given)])
+                self.assertEqual((said["status"], code), ("problems", 1))
+                self.assertIn("non-empty list", said["problems"][0]["sentence"])
+            self.assertEqual(json.loads((home / "catalog" / "x-soil.json").read_text()), record)
 
 
 class OwedIsNotBrokenTest(unittest.TestCase):

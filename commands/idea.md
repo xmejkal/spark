@@ -15,6 +15,7 @@ spark's records before anything is researched (docs/2026-10-04-store-design.md �
 1. A need is a verb and a few words: `does` one of sense, input, indicate, sound, move, drive, power, keep-time, store,
    compute, communicate, connect, mount (`drive` is the driver, `move` the thing driven), and `what` (soil-moisture,
    alarm, microcontroller). Add a `condition` only when it decides a part ("indoor pot, short probe; low power").
+   Each need has an `id` (lower-case letters, digits and '-', e.g. "soil").
    **No part numbers** — a need says what is wanted, not which part.
 2. Ask **at most three questions, one at a time**, each naming the need it could change ("How should it tell you? —
    that decides the alarm need"). The board is a need too (compute / microcontroller).
@@ -40,7 +41,7 @@ record), `have-unknown` (owned, no record), `know` (a record, not owned) or `gap
 the conversation**: the reason is not written to the project. Write the marks with `--needs-set` (`{"id", "mark"}`).
 
 A record whose kind says nothing (a sensor) is not offered until its function is written once: `parts.py --audit` lists
-them, and `parts.py --function-set <part> <file>` writes one after a dry run.
+them, and `parts.py --function-set <part> <file>` writes one after a dry run; the file is a JSON list `[{"does": …, "what": …}]`.
 
 ## Not yet
 

@@ -34,7 +34,32 @@ def read(project):
     if not (isinstance(data, dict) and isinstance(data.get("needs"), list)
             and all(isinstance(need, dict) and isinstance(need.get("id"), str) for need in data["needs"])):
         raise store.StoreProblem('%s is not {"schema": 1, "needs": [{"id", "does", "what", …}]} — fix it by hand' % path)
+    if data.get("schema", 1) != 1:
+        raise store.StoreProblem("%s is schema %r — this spark reads schema 1" % (path, data["schema"]))
+    ids = [need["id"] for need in data["needs"]]
+    for need in data["needs"]:
+        said = _file_fault(need, ids)
+        if said:
+            raise store.StoreProblem("%s: need %r %s — fix it by hand" % (path, need["id"], said))
     return data["needs"]
+
+
+def _file_fault(need, ids):
+    """What is wrong with one need as found in the file — the fields `read` must trust, or "" (§5.3)."""
+    if not store.PLAIN.fullmatch(need["id"]):
+        return "has an `id` that is not lower-case letters, digits and '-'"
+    if ids.count(need["id"]) > 1:
+        return "is there more than once"
+    extra = sorted(set(need) - set(NEED_FIELDS) - {"id"})
+    if extra:
+        return "holds %s, which is not a need's field" % ", ".join(extra)
+    if "what" in need and not (isinstance(need["what"], str) and need["what"].strip()):
+        return "has a `what` that is not words"
+    if need.get("condition") is not None and not isinstance(need["condition"], str):
+        return "has a `condition` that is not words"
+    if need.get("mark") is not None and need["mark"] not in MARKS:
+        return "has a `mark` that is not one of %s" % ", ".join(MARKS)
+    return ""
 
 
 def _problems(need):
@@ -136,14 +161,15 @@ def candidates(need, known, entries):
     """
     pointing = {}
     for entry in entries.values():
-        if isinstance(entry.get("is"), dict) and entry["is"]:
+        if not entry.get("skip") and isinstance(entry.get("is"), dict) and entry["is"]:
             pointing.setdefault(next(iter(entry["is"].items())), []).append(entry)
-    found = []
+    found, known_keys = [], set()
     for kind, record_id, where, path in known:
         record = parts._parse(path)
         holding = pointing.get((kind, record_id), [])
         if not isinstance(record, dict):
             continue
+        known_keys.add((kind, record_id))
         functions = parts.function_of(record, board=kind == "board") + [f for e in holding for f in e.get("function") or []]
         if not any(f.get("does") == need["does"] for f in functions):
             continue
@@ -153,7 +179,6 @@ def candidates(need, known, entries):
                       "what_matches": _what_matches(need["what"], functions, [record.get("name")] + list(record.get("also_known_as") or [])),
                       "owned": owned, "free": free, "unsure": unsure, "owes": [] if kind == "board" else parts.owes(record),
                       "broken": kind == "part" and bool(parts.broken_problems(record, path)), "proof": []})
-    known_keys = {row[:2] for row in known}
     for entry_id, entry in entries.items():
         functions = entry.get("function") or []
         points_at_a_record = isinstance(entry.get("is"), dict) and bool(entry["is"]) and next(iter(entry["is"].items())) in known_keys
@@ -174,6 +199,9 @@ def match(project):
     for need in read(project):
         if need.get("does") not in parts.VERBS:
             problems.append(parts._problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))
+            continue
+        if not need.get("what"):
+            problems.append(parts._problem(need["id"], "a need with no `what` cannot be matched — set it with --needs-set"))
             continue
         matched.append(dict({key: need.get(key) for key in ("does", "what", "condition", "mark")}, need=need["id"],
                             candidates=candidates(need, known, entries)))

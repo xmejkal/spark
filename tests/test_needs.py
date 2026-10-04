@@ -81,6 +81,46 @@ class TheNeedsFileTest(unittest.TestCase):
         self.assertEqual((said["status"], code), ("could-not-run", 2))
         self.assertIn("needs.json", said["unchecked"][0]["sentence"])
 
+    def a_needs_file(self, text):
+        (self.project / ".spark").mkdir(parents=True, exist_ok=True)
+        (self.project / ".spark" / "needs.json").write_text(text if isinstance(text, str) else json.dumps(text))
+
+    def test_a_need_with_no_what_is_named_by_match_not_a_traceback(self):
+        self.a_needs_file({"schema": 1, "needs": [{"id": "soil", "does": "sense"}]})
+        said, code = run(["--match", str(self.project)])
+        self.assertEqual((said["status"], code, said["problems"][0]["subject"]), ("problems", 1, "soil"))
+        self.assertIn("`what`", said["problems"][0]["sentence"])
+
+    def test_a_file_the_matcher_cannot_trust_is_could_not_run_naming_it(self):
+        good = {"id": "soil", "does": "sense", "what": "x"}
+        for name, text in (("what is 5", {"schema": 1, "needs": [dict(good, what=5)]}),
+                           ("condition is 5", {"schema": 1, "needs": [dict(good, condition=5)]}),
+                           ("mark is maybe", {"schema": 1, "needs": [dict(good, mark="maybe")]}),
+                           ("a stray field", {"schema": 1, "needs": [dict(good, why="owned 8")]}),
+                           ("a duplicate id", {"schema": 1, "needs": [good, dict(good, does="sound")]}),
+                           ("a bad id", {"schema": 1, "needs": [dict(good, id="Soil!")]}),
+                           ("schema 2", {"schema": 2, "needs": [good]})):
+            self.a_needs_file(text)
+            for flag in ("--needs", "--match"):
+                with self.subTest(name=name, flag=flag):
+                    said, code = run([flag, str(self.project)])
+                    self.assertEqual((said["status"], code), ("could-not-run", 2))
+                    self.assertIn("needs.json", said["unchecked"][0]["sentence"])
+
+    def test_a_needs_set_over_a_file_with_a_stray_field_changes_nothing(self):
+        text = json.dumps({"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "x", "why": "owned 8"}]})
+        self.a_needs_file(text)
+        said, code = run(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "have"}])])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertEqual((self.project / ".spark" / "needs.json").read_text(), text)
+
+    def test_text_mode_says_why_a_needs_set_was_refused(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = parts.main(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "x", "why": "owned"}])])
+        self.assertEqual(code, 1)
+        self.assertIn("  refused, so nothing was written: soil — why: not a need's field", out.getvalue())
+
 
 def a_store_with_a_drawer():
     """A scratch store: a soil probe in the catalog (owned ×8), a speaker owned without a record, a dead part, a board."""
@@ -91,7 +131,9 @@ def a_store_with_a_drawer():
                                                               "kind": "sensor", "function": [{"does": "sense", "what": "soil-moisture"}]}))
     (home / "catalog" / "x-other.json").write_text(json.dumps({"schema": 1, "id": "x-other", "name": "A gas sensor", "kind": "sensor",
                                                                "function": [{"does": "sense", "what": "gas"}]}))
-    entries = {"probe": {"label": "soil probe", "count": 8, "is": {"part": "x-soil"}},
+    (home / "catalog" / "x-silent.json").write_text(json.dumps({"schema": 1, "id": "x-silent", "name": "A mystery sensor", "kind": "sensor"}))
+    entries = {"silent": {"label": "a mystery sensor", "count": 2, "is": {"part": "x-silent"}},
+               "probe": {"label": "soil probe", "count": 8, "is": {"part": "x-soil"}},
                "speaker": {"label": "3 W speaker", "count": 2, "function": [{"does": "sound", "what": "speaker"}]},
                "dead": {"label": "an old buzzer", "count": 1, "function": [{"does": "sound", "what": "buzzer"}], "skip": "dead"},
                "mp3": {"label": "MP3 mini module", "count": 1, "function": [{"does": "sound", "what": "mp3-player"}], "unsure": True},
@@ -161,6 +203,48 @@ class TheMatcherTest(unittest.TestCase):
 
     def test_a_verb_nothing_has_is_an_empty_answer(self):
         self.assertEqual((self.code, self.needs["keep"]["candidates"]), (0, []))
+
+    def test_an_owned_part_that_says_nothing_of_what_it_does_is_no_candidate(self):
+        self.assertNotIn("x-silent", [c["id"] for c in self.needs["soil"]["candidates"]])
+
+    def test_a_dead_entry_s_function_does_not_make_its_record_a_candidate(self):
+        (self.home / "drawer" / "dead-silent.json").write_text(json.dumps({"schema": 1, "label": "burnt", "count": 1, "skip": "dead",
+                                                                           "is": {"part": "x-silent"}, "function": [{"does": "sense", "what": "gas"}]}))
+        self.assertNotIn("x-silent", [c["id"] for c in self.smell()])
+
+    def test_an_entry_pointing_at_a_record_that_does_not_parse_is_offered_from_the_drawer(self):
+        (self.home / "catalog" / "x-broken.json").write_text("{")
+        (self.home / "drawer" / "pointing.json").write_text(json.dumps({"schema": 1, "label": "a sensor I own", "count": 1,
+                                                                        "is": {"part": "x-broken"}, "function": [{"does": "sense", "what": "gas"}]}))
+        offered = [c for c in self.smell() if c["entry"] == "pointing"]
+        self.assertEqual([c["in"] for c in offered], ["drawer"])
+
+    def test_an_entry_pointing_at_a_record_that_parses_is_offered_through_the_record_only(self):
+        (self.home / "drawer" / "pointing.json").write_text(json.dumps({"schema": 1, "label": "a probe I own", "count": 1,
+                                                                        "is": {"part": "x-soil"}, "function": [{"does": "sense", "what": "gas"}]}))
+        self.assertEqual([c for c in self.smell() if c["entry"] == "pointing"], [])
+
+    def test_a_record_whose_function_is_malformed_is_matched_by_its_kind(self):
+        for key, function in (("x-nowhat", [{"does": "sense"}]), ("x-string", "sense")):
+            (self.home / "catalog" / (key + ".json")).write_text(json.dumps({"schema": 1, "id": key, "name": key, "kind": "sensor", "function": function}))
+        said, code = run(["--match", str(self.project)])
+        self.assertEqual(code, 0)
+        said, code = run(["--audit"])
+        self.assertEqual(sorted(b["id"] for b in said["data"]["broken"] if b["id"] in ("x-nowhat", "x-string")), ["x-nowhat", "x-string"])
+
+    def test_text_mode_prints_a_need_that_cannot_be_matched(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "x", "what": "y"}]}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        self.assertIn("  x: a need with no `does` cannot be matched", out.getvalue())
+
+    def test_a_candidate_nobody_owns_has_no_stray_semicolon(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        self.assertNotIn(" ; ", out.getvalue())
+        self.assertNotRegex(out.getvalue(), r"; owes")
 
     def test_a_need_with_no_verb_is_named(self):
         (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "x", "what": "y"}]}))

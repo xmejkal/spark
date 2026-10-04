@@ -70,7 +70,7 @@ KIND_FUNCTION = {"rtc": ("keep-time", "rtc"), "regulator": ("power", "regulator"
 
 def function_of(record, board=False):
     """What a record does (§5.6): its own `function`, else what its kind says, else nothing."""
-    if record.get("function"):
+    if record.get("function") and not function_problems(record):
         return record["function"]
     said = KIND_FUNCTION.get("board" if board else record.get("kind"))
     return [{"does": said[0], "what": said[1]}] if said else []
@@ -1647,7 +1647,7 @@ def _op_function_set(args, project):
     path = _record_path(part_id, project)
     if path is None:
         raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
-    wrong = function_problems({"function": function})
+    wrong = function_problems({"function": function}) if function else ["a function is a non-empty list [{does, what}]"]
     if wrong:
         return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
     record = json.loads(path.read_text(encoding="utf-8"))
@@ -1706,12 +1706,13 @@ def _op_match(args, project):
     for need in matched:
         lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
                                             "  [%s]" % need["mark"] if need["mark"] else ""))
-        lines += ["      %-9s %-46s %s%s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
-                                           "free %s" % c["free"] if c["owned"] else "", ("; owes " + ", ".join(c["owes"])) if c["owes"] else "")
+        lines += ["      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
+                                        "  ".join(filter(None, ["free %s" % c["free"] if c["owned"] else "", "owes " + ", ".join(c["owes"]) if c["owes"] else ""])))
                   + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
                   for c in need["candidates"]]
         lines += ["      … %d more" % need["more"]] if need["more"] else []
         lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
+    lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
     return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)
 
 
@@ -1728,6 +1729,7 @@ def _op_needs_set(args, project):
     lines = ["  %s%s %s: %s" % ("refused, not written: " if problems else "", "would set" if args.dry_run else "set",
                                 c["need"], ", ".join("%s → %s" % (k, json.dumps(v, ensure_ascii=False)) for k, v in c["now"].items()))
              for c in changes] or ["  nothing to change"]
+    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
     return Answer({"changes": changes, "written": written}, lines, problems=problems)
 
 
