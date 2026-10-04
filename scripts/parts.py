@@ -723,14 +723,13 @@ def shelve(path, project_name):
     copy that says which project it came from and that record's digest; its folder (a simulation chip) travels
     with it. Returns whether the shelf changed.
     """
-    import shutil
     path = Path(path)
     record = json.loads(path.read_text())
     copy = {key: value for key, value in record.items() if key not in SHELF_DROPS}
     copy["based_on"] = {"project": project_name, "digest": digest(record)}
     changed = store.write_json("shelf", path.stem, copy)
     if (path.parent / path.stem).is_dir():
-        shutil.copytree(path.parent / path.stem, store.place("shelf") / path.stem, dirs_exist_ok=True)
+        store.copy_folder("shelf", path.parent / path.stem, path.stem)
     return changed
 
 

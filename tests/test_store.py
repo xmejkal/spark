@@ -144,6 +144,37 @@ class ContainedWritesTest(unittest.TestCase):
         self.assertIn(str(repo.resolve()), str(refused.exception))
         self.assertFalse((repo / "store").exists())
 
+    def test_an_unchanged_write_still_tightens_a_loosened_private_file(self):
+        store.write_json("drawer", "x", {"a": 1})
+        target = self.home / "drawer" / "x.json"
+        os.chmod(target, 0o644)
+        os.chmod(self.home / "drawer", 0o755)
+        self.assertFalse(store.write_json("drawer", "x", {"a": 1}))
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE((self.home / "drawer").stat().st_mode), 0o700)
+
+    def test_a_copied_folder_is_private_all_the_way_down(self):
+        source = Path(tempfile.mkdtemp()) / "chip"
+        (source / "sub").mkdir(parents=True)
+        (source / "sub" / "f.txt").write_text("x")
+        os.chmod(source / "sub" / "f.txt", 0o644)
+        os.chmod(source / "sub", 0o755)
+        store.copy_folder("shelf", source, "chip")
+        copied = self.home / "shelf" / "chip"
+        self.assertEqual(stat.S_IMODE((copied / "sub" / "f.txt").stat().st_mode), 0o600)
+        for folder in (copied, copied / "sub", self.home / "shelf"):
+            self.assertEqual(stat.S_IMODE(folder.stat().st_mode), 0o700)
+        with self.assertRaises(store.StoreProblem):
+            store.copy_folder("shelf", source, "../x")
+
+    def test_a_copied_folder_inside_git_is_refused(self):
+        repo = Path(tempfile.mkdtemp())
+        (repo / ".git").mkdir()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(repo / "store")}):
+            with self.assertRaises(store.StoreProblem):
+                store.copy_folder("shelf", repo, "chip")
+        self.assertFalse((repo / "store").exists())
+
     def test_a_slug_is_plain_words_never_the_raw_text(self):
         self.assertEqual(store.slug('Gravity: I2S 3W "Class D" $amp'), "gravity-i2s-3w-class-d-amp")
         self.assertEqual(store.slug("dfrobot-MYST01-Raspberry Pi"), "dfrobot-myst01-raspberry-pi")

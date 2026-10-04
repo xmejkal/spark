@@ -14,6 +14,7 @@ standard library.
 import json
 import os
 import re
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -109,12 +110,31 @@ def write_json(name, key, data):
     bytes differ, so a retried write changes nothing. A private place is written 0600 in 0700 folders, never
     inside a git work tree.
     """
+    target = _target(name, key)
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    private = name in PRIVATE
+    _make_ready(name, target)
+    if target.is_file() and target.read_text() == text:
+        if private:
+            os.chmod(target, 0o600)
+        return False
+    part = target.with_name(target.name + ".part")
+    part.write_text(text)
+    if private:
+        os.chmod(part, 0o600)
+    part.replace(target)
+    return True
+
+
+def _target(name, key):
+    """Where a key goes inside a place (§5.1), refusing a key that is not plain."""
     if key is not None and not PLAIN.fullmatch(key):
         raise StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so it could leave %s" % (key, name))
-    target = place(name) / (key + ".json") if key is not None else place(name)
-    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    if target.is_file() and target.read_text() == text:
-        return False
+    return place(name) / (key + ".json") if key is not None else place(name)
+
+
+def _make_ready(name, target):
+    """Refuse a private target inside git, make its parent folder, and tighten the folders to 0700 (§5.8) — before any bytes move."""
     private = name in PRIVATE
     if private and inside_git(target):
         raise StoreProblem("%s would be inside the git work tree at %s — what you own stays out of every repository; "
@@ -123,12 +143,18 @@ def write_json(name, key, data):
     if private:
         for folder in {home(), target.parent}:
             os.chmod(folder, 0o700)
-    part = target.with_name(target.name + ".part")
-    part.write_text(text)
-    if private:
-        os.chmod(part, 0o600)
-    part.replace(target)
-    return True
+
+
+def copy_folder(name, source, key):
+    """Copy a folder into a place under a plain key, as `write_json` writes a file: the same key check and git refusal; in a private place every folder ends 0700 and every file 0600."""
+    _target(name, key)  # the key check
+    target = place(name) / key
+    _make_ready(name, target)
+    shutil.copytree(source, target, dirs_exist_ok=True)
+    if name in PRIVATE:
+        os.chmod(target, 0o700)
+        for found in target.rglob("*"):
+            os.chmod(found, 0o700 if found.is_dir() else 0o600)
 
 
 def projects():

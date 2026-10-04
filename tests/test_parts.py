@@ -22,6 +22,7 @@ import hashlib
 import io
 import json
 import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -1568,6 +1569,22 @@ class TheShelfTest(unittest.TestCase):
         self.assertEqual(shelved["based_on"]["project"], "irrigation")
         self.assertEqual(len(shelved["based_on"]["digest"]), 64)
         self.assertTrue((home / "shelf" / "x-module" / "chip" / "x.chip.json").is_file(), "its folder travels with it")
+
+    def test_a_shelved_folder_is_private_though_its_source_was_not(self):
+        home, source = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "y-module.json"
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record["id"] = "y-module"
+        source.write_text(json.dumps(record))
+        chip = source.parent / "y-module" / "chip"
+        chip.mkdir(parents=True)
+        (chip / "y.chip.json").write_text("{}")
+        os.chmod(chip / "y.chip.json", 0o644)
+        os.chmod(chip, 0o755)
+        with in_store(home):
+            parts.shelve(source, "irrigation")
+        shelved = home / "shelf" / "y-module" / "chip"
+        self.assertEqual(stat.S_IMODE((shelved / "y.chip.json").stat().st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE(shelved.stat().st_mode), 0o700)
 
 
 if __name__ == "__main__":
