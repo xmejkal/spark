@@ -13,7 +13,10 @@ nulls is the output rather than a shortfall.
     python3 -m unittest discover -s tests -t tests
 """
 
+import contextlib
+import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -25,6 +28,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_physics  # noqa: E402
 import init_project  # noqa: E402
+import store  # noqa: E402
 
 
 def a_project(nets=("V33", "GND", "MOTOR6V", "SDA", "SCL")):
@@ -519,6 +523,22 @@ class TheMeasuredPinsAreSparkSTest(unittest.TestCase):
                 self.assertEqual((init_project.PINNED_TSCI, init_project.PINNED_CORE), (defaults["version"], defaults["core"]))
         finally:
             importlib.reload(init_project)
+
+class TheProjectsListTest(unittest.TestCase):
+    """P95 (§5.5): /spark:init puts the project on the person's projects list, so spark finds its records."""
+
+    def test_the_brief_no_longer_asks_what_you_own(self):
+        """P95 (W16): what you own is the drawer's to say — /spark:drawer — not each project's."""
+        self.assertNotIn("parts_on_hand", json.dumps(init_project.PROJECT_TEMPLATE))
+
+    def test_init_puts_the_project_on_the_list(self):
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}), contextlib.redirect_stdout(io.StringIO()) as out:
+            init_project.main(["--project", str(project)])
+            listed = store.projects()
+        self.assertEqual(listed, {project.name: project.resolve()})
+        self.assertIn("on your projects list as %r" % project.name, out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

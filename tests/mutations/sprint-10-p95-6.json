@@ -1,0 +1,68 @@
+[
+ {
+  "file": "scripts/drawer.py",
+  "name": "lines read are never compared with lines stated",
+  "find": "    if not _whole(payload.get(\"lines\")) or payload.get(\"lines\") != payload.get(\"stated\"):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "any text is a SKU",
+  "find": "        if not (isinstance(sku, str) and SKU_SHAPES[source].fullmatch(sku)):",
+  "replace": "        if not isinstance(sku, str):"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a re-import adds the whole total again",
+  "find": "                values[\"count\"] = before.get(\"count\", 0) + total - seen",
+  "replace": "                values[\"count\"] = before.get(\"count\", 0) + total"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a smaller total is applied",
+  "find": "            if seen is not None and total <= seen:\n                continue",
+  "replace": "            if seen is not None and total == seen:\n                continue"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "an unsure entry stays unsure",
+  "find": "                values.update(count=total, unsure=False)",
+  "replace": "                values.update(count=total)"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a SKU said in words is written without asking",
+  "find": "            if said:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "the import keeps everything the payload carried",
+  "find": "    return {\"source\": payload[\"source\"], \"lines\": payload[\"lines\"], \"stated\": payload[\"stated\"],",
+  "replace": "    return dict(payload) or {\"source\": payload[\"source\"], \"lines\": payload[\"lines\"], \"stated\": payload[\"stated\"],"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "an entry with no total seen yet has the whole total added to its own count",
+  "find": "            elif before.get(\"count\") != \"many\" and seen is not None:",
+  "replace": "            elif before.get(\"count\") != \"many\":"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "an entry that names the SKU as its part number is not asked about",
+  "find": "or str((entry.get(\"part_number\") or {}).get(\"number\")).lower() == sku.lower()), None)",
+  "replace": "or False), None)"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a SKU repeated in one payload keeps only its last line",
+  "find": "        first[\"count\"] += item[\"count\"]",
+  "replace": "        first[\"count\"] = item[\"count\"]"
+ },
+ {
+  "file": "data/importers/dfrobot.js",
+  "name": "an unreadable line is kept with count 0",
+  "find": "    if (name && count) lines.push({ sku: row.slice(4).trim(), name, count: Number(count[1]) });",
+  "replace": "    lines.push({ sku: row.slice(4).trim(), name: name || '', count: count ? Number(count[1]) : 0 });"
+ }
+]

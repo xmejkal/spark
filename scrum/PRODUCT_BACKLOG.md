@@ -759,13 +759,19 @@ record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept doc
 `/spark:research` write candidates to the store. Mutations: `sprint-10-p83` 2 of 2, `sprint-5-catalog`
 10 of 10 (one re-anchored), `sprint-8-p55` 4 of 4 (its two catalog-file rows left with the files).
 
-### P95 — Store 1a: my drawer, filled and seen — **slice 10; P94's first increment (the PO, 2026-10-04)**
+### P95 — Store 1a: my drawer, filled and seen — **slice 10; P94's first increment (the PO, 2026-10-04)** — DONE 2026-10-04
 **Needed by:** the PO, who owns 99 DFRobot SKUs and more from AliExpress and wants spark to know them before any
 project. Design: `docs/2026-10-04-store-design.md` §4 (store 1a), §5.1–5.5, §6.1–6.4, §6.6, §7.
 **Value proven by:** `parts.py --drawer --json` lists the PO's real drawer — the DFRobot import's 99 SKUs and his
 typed parts — with SEN0193, DFR0954, DFR0975 and irrigation's DFR0457, DFR0831, SEN0217 and DS3231 linked; the
 suite runs green on an empty and a seeded `SPARK_HOME` and never reads the real store; `parts_on_hand` and a
 record's `owned` are gone (W16).
+**Proven 2026-10-04, from Task 8's output on the PO's real store:** 110 drawer entries, 12 linked — SEN0193 (catalog),
+DFR0954 and DFR0975 (library), and irrigation's DFR0457, DFR0831, SEN0217 and DS3231 onto the shelf, which every
+project's `--list` now shows. A live re-import in the PO's browser read 8 orders, 106 lines = 106 stated, 99 SKUs,
+167 pieces — the first pass exactly — and changed nothing. The suite runs on a scratch `SPARK_HOME` (1,020 tests);
+`parts_on_hand`, `owned`, `photo` and the owned listing are retired in spark and the PO's four projects. The code
+budget was raised to 5,189 for it, measured after its refactor (W15b). Plan and ledger rulings: the PR.
 
 ### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment**
 **Needed by:** the PO's walking skeleton, the plant thirst alarm. Design §4 (store 1b), §5.3, §5.4, §5.6, §6.2.
@@ -778,6 +784,30 @@ need's candidates from the store with owned and free counts and what each owes (
 **Value proven by:** the bin's FireBeetle S3 refused as already held; owed facts filled in the records' own homes
 (the DFR0954 footprint from DFRobot's drawing, one counted request); `check_spine` ends `[ok]`; the cost line
 "5 picks: 5 from the store (5 owned) — 1 request, 1 document, N min".
+
+### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95**
+**Needed by:** the PO — *"I think we should also try to make things faster. How often do we really need to run all
+the mutations? Can we optimize it somehow?"* Measured 2026-10-04: each mutation re-runs the whole suite (11.4 s), and
+`tests/test_mutate.py` alone takes 6.3 s of it while it can catch no mutation in `scripts/`; a task's table of 18 runs
+3–4 minutes. The 438 mutations in 75 tables are never run together — each task runs only its own, and the push gate
+checks anchors only — so an old table can go stale unseen. An idea, to refine with the PO before it is planned.
+**What it could be:** (1) inside a mutation run, leave out `test_mutate` unless the mutation is in `tools/mutate.py`,
+and stop at the first failing test; (2) run the tests that import the mutated file first and the full suite only for a
+survivor, so an escape is never misreported; (3) run mutations in parallel, each in a temporary copy of the tree;
+(4) every table once per sprint, at the close audit — the task's own table and the push gate's anchors unchanged.
+**Value proven by:** one table's run time before and after, on the same table; all 438 run inside a sprint-close audit.
+
+### P99 — The code cap reports growth instead of gating it — **the team's tools; the PO, 2026-10-04: after P98**
+**Needed by:** the PO — *"Do you think capping the code works for us? Does it really protect us from bloat or other
+things? what is it good for and does it actually work?"* Measured on P95, 2026-10-04: `SCRIPTS_CODE_BUDGET` was raised
+six times in one item — 5,086, 5,106, 5,183, 5,188, 5,189, 5,228 — each to the measured total in the same commit, and it
+prompted one refactor of 2 lines. What stopped bloat and defects in P95 was the reviews (two ways to lose drawer
+data, a double count, the suite able to write into the person's store) and the orphan tests. An idea, to refine
+with the PO before it is planned.
+**What it could be:** the cap stops being a failing test and becomes a reported figure — each pull request and each
+sprint review says how many code lines an item added and why; the orphan and unused-code tests stay as they are.
+**Value proven by:** a sprint review that shows each item's growth beside its reason, and no commit that exists only
+to move the number.
 
 ### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04**
 **Needed by:** every way into spark (P76's goal-first, module-first, combination, whole-drawer, revive,
@@ -852,7 +882,7 @@ contained, and no agent is told that record text is data.
 `--validate`; `--fetch` and `--promote` write nothing outside their folders; the emitted board file
 holds every record string as inert text; each agent's instructions carry the sentence; mutations caught.
 
-### P88 — The suite never reads the person's store; one function says where the store is — **slice 10; P85's plan, Now**
+### P88 — The suite never reads the person's store; one function says where the store is — **slice 10; P85's plan, Now** — DONE 2026-10-04 (carried by P95)
 **Needed by:** the maker and any contributor, whose own store decided 4 tests' outcome (a seeded home with
 a pin, a tool turned off and one record failed 4; the suite read the real catalog 37 times), and every
 future store client. The store's root is spelled twice (`parts.py:665`, `tools.py:44`) with no override.

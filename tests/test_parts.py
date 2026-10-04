@@ -18,18 +18,29 @@ without anyone deciding to promote it.
 """
 
 import contextlib
+import hashlib
 import io
 import json
+import os
+import stat
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
+import outcomes  # noqa: E402
 import parts  # noqa: E402
+import store  # noqa: E402
+
+
+def in_store(home):
+    """Point the store at a scratch folder for one block (P88): SPARK_HOME, read on every call."""
+    return mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
 
 
 def part(part_id="thing", **overrides):
@@ -772,12 +783,12 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_the_catalog_is_searched_like_the_library_and_a_broken_record_is_named(self):
         import tempfile
         from unittest import mock
-        catalog = Path(tempfile.mkdtemp())
+        home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "sen0193-soil-moisture", name="Gravity capacitive soil moisture sensor")
         self._catalog_record(catalog, "dfr0831-buck-5v", name="Buck converter", kind="power")
         (catalog / "broken.json").write_text("{not json")
         (catalog / "nameless.json").write_text(json.dumps({"schema": 1, "id": "nameless", "kind": "sensor"}))
-        with mock.patch.object(parts, "CATALOG", catalog):
+        with in_store(home):
             known = parts.catalog_matches(["Soil", "moisture"])
             records, broken = parts.catalog_records()
         self.assertEqual([p["id"] for p in known], ["sen0193-soil-moisture"])
@@ -785,9 +796,11 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                          "a record that parses but does not say what it is, is broken too")
 
     @staticmethod
-    def _store():
-        import tempfile
-        return Path(tempfile.mkdtemp()) / "sources"
+    def _home():
+        """A scratch store for one test (P88): its catalog folder made, its sources folder not yet."""
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        return home
 
     def test_fetch_keeps_datasheets_and_images_in_the_store_under_their_checksum(self):
         """P62a: a published plugin cannot carry vendor files, so nothing lands beside the record."""
@@ -795,14 +808,14 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         import hashlib
         import tempfile
         from unittest import mock
-        catalog, store = Path(tempfile.mkdtemp()), self._store()
+        home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf?v=2", "https://v.example/page.html"],
                              facts={"w": {"value": 1, "verified": True, "source": "https://v.example/photo.jpg"}})
         fetched = []
         def fetch(url):
             fetched.append(url)
             return b"payload" if ".pdf" in url or url.endswith(".jpg") else None
-        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+        with in_store(home):
             kept = parts.fetch_documents("x-part", fetch=fetch)
         self.assertEqual(sorted(fetched), ["https://v.example/photo.jpg", "https://v.example/x.pdf?v=2"],
                          "only datasheets and images are fetched; a page is not")
@@ -818,9 +831,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_a_document_already_kept_is_not_fetched_again(self):
         import tempfile
         from unittest import mock
-        catalog, store = Path(tempfile.mkdtemp()), self._store()
+        home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
-        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+        with in_store(home):
             parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
             again = []
             parts.fetch_documents("x-part", fetch=lambda url: again.append(url))
@@ -829,11 +842,11 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_a_catalog_draft_answers_sources_show_and_unverified_like_any_record(self):
         import tempfile
         from unittest import mock
-        catalog = Path(tempfile.mkdtemp())
+        home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"],
                              facts={"pitch_mm": {"value": 2.0, "verified": False, "why_it_matters": "the socket", "source": None}})
         answered = lambda record: [(url, True) for url in parts.cited_urls(record)]  # noqa: E731 — no network
-        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "sources_resolve", answered):
+        with in_store(home), mock.patch.object(parts, "sources_resolve", answered):
             self.assertEqual(parts.any_record("x-part")["id"], "x-part")
             self.assertEqual([q["fact"] for q in parts.unverified(["x-part"])], ["pitch_mm"])
             with contextlib.redirect_stdout(io.StringIO()) as out:
@@ -843,10 +856,10 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_fetch_keeps_the_text_as_written_and_decodes_the_saved_name(self):
         import tempfile
         from unittest import mock
-        catalog, store = Path(tempfile.mkdtemp()), self._store()
+        home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/DFR%20(1).pdf"],
                              **{"//": "98 Kč — 帝江"})
-        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+        with in_store(home):
             kept = parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
         (key, entry), = kept.items()
         self.assertEqual(entry["file"], "DFR (1).pdf")
@@ -856,9 +869,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_two_sources_with_one_basename_are_both_kept(self):
         import tempfile
         from unittest import mock
-        catalog, store = Path(tempfile.mkdtemp()), self._store()
+        home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
-        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store):
+        with in_store(home):
             kept = parts.fetch_documents("x-part", fetch=lambda url: url.encode())
         self.assertEqual(sorted(entry["url"] for entry in kept.values()),
                          ["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
@@ -869,14 +882,14 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_promote_moves_a_record_with_its_documents_and_its_folder_and_never_overwrites(self):
         import tempfile
         from unittest import mock
-        catalog, project, library = (Path(tempfile.mkdtemp()) for _ in range(3))
+        home = self._home(); catalog = home / "catalog"; project, library = (Path(tempfile.mkdtemp()) for _ in range(2))
         (project / ".spark").mkdir()
         documents = {"x": {"url": "https://v.example/x.pdf", "sha256": "a" * 64, "file": "x.pdf",
                            "retrieved": "2026-10-02", "title": None, "version": None}}
         self._catalog_record(catalog, "x-part", documents=documents)
         (catalog / "x-part" / "chip").mkdir(parents=True)
         (catalog / "x-part" / "chip" / "x.chip.json").write_text("{}")
-        with mock.patch.object(parts, "CATALOG", catalog):
+        with in_store(home):
             self.assertEqual(parts.promote("x-part", project), project / "parts" / "x-part.json")
             self.assertEqual(json.loads((project / "parts" / "x-part.json").read_text())["documents"], documents)
             self.assertTrue((project / "parts" / "x-part" / "chip" / "x.chip.json").is_file(), "a chip travels with it")
@@ -908,10 +921,10 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         import hashlib
         import tempfile
         from unittest import mock
-        store = self._store()
+        home = self._home(); store = home / "sources"
         local = Path(tempfile.mkdtemp()) / "ds_v1.1.pdf"
         local.write_bytes(b"the v1.1 pdf")
-        with mock.patch.object(parts, "STORE", store):
+        with in_store(home):
             entry = parts.keep_local(local, url="https://v.example/ds.pdf")
         digest = hashlib.sha256(b"the v1.1 pdf").hexdigest()
         self.assertEqual(entry, {"url": "https://v.example/ds.pdf", "sha256": digest, "file": "ds_v1.1.pdf",
@@ -926,7 +939,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def _kept_world(self, stored=True):
         """A catalog record and a project board that both point at one datasheet, the board citing a page."""
         import tempfile
-        catalog, project, store = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()), self._store()
+        home = self._home(); catalog, project, store = home / "catalog", Path(tempfile.mkdtemp()), home / "sources"
         (project / ".spark").mkdir()
         digest = "b" * 64
         document = {"url": "https://v.example/wroom.pdf", "sha256": digest, "file": "wroom_v1.1.pdf",
@@ -947,16 +960,16 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         if stored:
             (store / digest).mkdir(parents=True)
             (store / digest / "wroom_v1.1.pdf").write_bytes(b"pdf")
-        return catalog, project, store
+        return home, project, store
 
     def _kept(self, words, stored=True):
         from unittest import mock
-        catalog, project, store = self._kept_world(stored)
+        home, project, store = self._kept_world(stored)
         def no_network(url):
             raise AssertionError("--kept must never reach the network, asked for %s" % url)
         import boards
-        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store), \
-                mock.patch.object(boards, "LIBRARY", catalog / "no-library"), \
+        with in_store(home), \
+                mock.patch.object(boards, "LIBRARY", home / "no-library"), \
                 mock.patch.object(parts, "_download", no_network), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             code = parts.main(["--kept"] + words + ["--project", str(project)])
@@ -982,10 +995,10 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         """P80: the L-7113ID kept by the quickstart was invisible to every other project, so the next
         one would have fetched it again."""
         from unittest import mock
-        catalog, project, store = self._kept_world()
+        home, project, store = self._kept_world()
         (store / ("d" * 64)).mkdir(parents=True)
         (store / ("d" * 64) / "L-7113ID(Ver.29A).pdf").write_bytes(b"pdf")
-        with mock.patch.object(parts, "CATALOG", catalog), mock.patch.object(parts, "STORE", store), \
+        with in_store(home), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             code = parts.main(["--kept", "l-7113id"])
         self.assertEqual(code, 0, out.getvalue())
@@ -995,7 +1008,8 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_kept_needs_every_word(self):
         code, said, _ = self._kept(["wroom", "nothing-like-this"])
         self.assertNotIn("present", said)
-        self.assertNotEqual(code, 0, "finding nothing is said, not passed")
+        self.assertIn("nothing kept matches", said)
+        self.assertEqual(code, 0, "finding nothing is an answer, said in words (§6.4.1: a gap is an answer)")
 
     def test_a_fact_citing_a_document_the_record_does_not_hold_is_refused(self):
         definition = part(facts={"idle_ua": {"value": 8, "verified": True, "source": "the datasheet",
@@ -1017,9 +1031,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def _keep_photo(self, payload, name="module.jpg"):
         import tempfile
         from unittest import mock
-        store, local = self._store(), Path(tempfile.mkdtemp()) / name
+        home = self._home(); store, local = home / "sources", Path(tempfile.mkdtemp()) / name
         local.write_bytes(payload)
-        with mock.patch.object(parts, "STORE", store), contextlib.redirect_stdout(io.StringIO()) as out, \
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out, \
                 contextlib.redirect_stderr(io.StringIO()) as err:
             parts.main(["--keep", str(local)])
         json.loads(out.getvalue())  # what is pasted into a record stays JSON
@@ -1388,27 +1402,203 @@ class TheCatalogIsThePersonSTest(unittest.TestCase):
     """P83: candidates nobody chose live in the person's store, keep their part facts, and no seller listings."""
 
     def test_the_catalog_lives_in_the_person_s_store_not_the_plugin(self):
-        self.assertEqual(parts.CATALOG, Path.home() / ".local" / "share" / "spark" / "catalog")
-        self.assertEqual(parts.CATALOG.parent, parts.STORE.parent, "beside the kept documents")
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "rtc-a.json").write_text(json.dumps({"schema": 1, "id": "rtc-a", "name": "An RTC", "kind": "rtc"}))
+        with in_store(home):
+            self.assertEqual(sorted(parts.catalog_records()[0]), ["rtc-a"], "read from the store's catalog")
         self.assertEqual(sorted((ROOT / "catalog").glob("*.json")), [], "the plugin ships no catalog records")
 
     def test_a_catalog_record_with_seller_listings_is_refused_by_name(self):
         import tempfile
         from unittest import mock
-        catalog = Path(tempfile.mkdtemp())
+        home = Path(tempfile.mkdtemp()); catalog = home / "catalog"; catalog.mkdir()
         record = {"schema": 1, "id": "rtc-a", "name": "An RTC", "kind": "rtc",
                   "pin_order": ["VCC", "GND", "SCL", "SDA"],
                   "sourcing": [{"seller": "a shop", "url": "https://example.org", "price_czk": 99}]}
         (catalog / "rtc-a.json").write_text(json.dumps(record))
         kept = dict(record, id="rtc-b"); kept.pop("sourcing")
         (catalog / "rtc-b.json").write_text(json.dumps(kept))
-        with mock.patch.object(parts, "CATALOG", catalog):
+        with in_store(home):
             records, broken = parts.catalog_records()
         self.assertEqual(sorted(records), ["rtc-b"], "a candidate keeps its part facts — its pinout too")
         self.assertEqual(records["rtc-b"]["pin_order"], ["VCC", "GND", "SCL", "SDA"])
         self.assertEqual(len(broken), 1)
         self.assertIn("rtc-a.json", broken[0])
         self.assertIn("seller listings", broken[0])
+
+
+ENVELOPE_KEYS = ["data", "envelope", "next", "op", "problems", "status", "tool", "truncated", "unchecked"]
+
+
+def run_json(argv):
+    """parts.py with --json: (the one envelope it printed, its exit code). Anything else on stdout fails to parse."""
+    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+        code = parts.main(argv + ["--json"])
+    return json.loads(out.getvalue()), code
+
+
+class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
+    """P95, §6.4.1–6.4.5: an agent reads one shape from every parts.py --json run, errors and bad arguments included."""
+
+    def test_every_operation_answers_in_one_envelope_whose_status_is_its_exit(self):
+        project = Path(tempfile.mkdtemp())
+        for argv in (["--list"], ["--show", "no-such-part"], ["--validate"], ["--signals", "tactile-button"],
+                     ["--unverified", "tactile-button"], ["--need", "unobtainium"], ["--skeleton", "x-part"],
+                     ["--kept", "nothing-like-this"], ["--catalog"], ["--describe"], ["--promote", "x-part"],
+                     ["--keep", str(project / "absent.pdf")], ["--bogus"], [], ["--list", "--show", "x"]):
+            with self.subTest(argv=argv):
+                said, code = run_json(argv)
+                self.assertEqual(sorted(said), ENVELOPE_KEYS)
+                self.assertEqual((said["envelope"], said["tool"]), (1, "parts"))
+                self.assertEqual(code, outcomes.EXIT_FOR[said["status"]])
+
+    def test_a_named_id_that_does_not_exist_is_problems(self):
+        said, code = run_json(["--show", "no-such-part"])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertEqual(said["problems"][0]["subject"], "no-such-part")
+
+    def test_a_bad_argument_is_could_not_run_and_says_where_the_operations_are(self):
+        said, code = run_json(["--bogus"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("--describe", said["unchecked"][0]["fix"])
+
+    def test_an_operation_missing_its_project_is_could_not_run(self):
+        said, code = run_json(["--skeleton", "x-part", "--kind", "sensor"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+
+    def test_finding_nothing_is_an_answer(self):
+        said, code = run_json(["--need", "unobtainium"])
+        self.assertEqual((said["status"], code, said["data"]["found"]), ("ok", 0, []))
+
+    def test_describe_lists_exactly_what_the_parser_accepts(self):
+        said, _ = run_json(["--describe"])
+        described = {entry["flag"] for entry in said["data"]["operations"] + said["data"]["options"]}
+        accepted = {action.option_strings[-1] for action in parts._parser()._actions
+                    if action.option_strings and action.dest != "help"}
+        self.assertEqual(described, accepted)
+        self.assertEqual(said["data"]["exits"], {"0": "ok", "1": "problems", "2": "could-not-run"})
+        self.assertEqual([op["op"] for op in said["data"]["operations"] if op["effects"] and not op["dry_run"]], [],
+                         "every operation with an effect takes --dry-run")
+
+    def test_a_dry_run_writes_nothing(self):
+        project = Path(tempfile.mkdtemp())
+        said, code = run_json(["--skeleton", "x-part", "--kind", "sensor", "--project", str(project), "--dry-run"])
+        self.assertEqual((code, said["data"]["written"]), (0, False))
+        self.assertFalse((project / "parts").exists())
+
+    def test_a_dry_run_of_a_network_operation_reaches_nothing(self):
+        # `sources_resolve` binds `reachable` as a default argument, so it is the function patched here.
+        def no_network(*_):
+            raise AssertionError("a dry run asked the network")
+        with mock.patch.object(parts, "sources_resolve", no_network), mock.patch.object(parts, "_download", no_network):
+            said, code = run_json(["--sources", "l9110s-module", "--dry-run"])
+        self.assertEqual((code, bool(said["data"]["sources"])), (0, True))
+
+    def test_a_record_that_is_not_json_is_could_not_run_not_a_traceback(self):
+        project = Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        (project / "parts" / "broken.json").write_text("{")
+        said, code = run_json(["--validate", "--project", str(project)])
+        self.assertEqual(sorted(said), ENVELOPE_KEYS)
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("broken.json", said["unchecked"][0]["sentence"])
+
+    def test_an_unreadable_store_is_could_not_run_not_a_traceback(self):
+        with mock.patch.object(parts.store, "records", side_effect=PermissionError("the store is unreadable")):
+            said, code = run_json(["--list"])
+        self.assertEqual((sorted(said), said["status"], code), (ENVELOPE_KEYS, "could-not-run", 2))
+        self.assertIn("the store is unreadable", said["unchecked"][0]["sentence"])
+
+    def test_a_listing_is_paged_and_says_how_to_get_the_rest(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        for number in range(30):
+            (home / "catalog" / ("x-%02d.json" % number)).write_text(json.dumps(
+                {"schema": 1, "id": "x-%02d" % number, "name": "A candidate", "kind": "sensor"}))
+        with in_store(home):
+            first, _ = run_json(["--catalog"])
+            rest, _ = run_json(first["truncated"]["next"]["argv"])
+        self.assertEqual((first["truncated"]["shown"], first["truncated"]["total"]), (20, 30))
+        self.assertEqual([r["id"] for r in first["data"]["records"] + rest["data"]["records"]],
+                         ["x-%02d" % number for number in range(30)])
+        self.assertIsNone(rest["truncated"]["next"])
+
+
+class TheShelfIsALayerTest(unittest.TestCase):
+    """P91, §5.5: a record on the shelf is found from every project — no project needed — and says where it is."""
+
+    def test_a_record_on_the_shelf_is_listed_and_loaded_without_a_project(self):
+        home = Path(tempfile.mkdtemp())
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record["id"] = "x-shelved"
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-shelved.json").write_text(json.dumps(record))
+        with in_store(home):
+            self.assertIn("x-shelved", parts.available())
+            self.assertEqual(parts.load("x-shelved")["id"], "x-shelved")
+            said, _ = run_json(["--list"])
+        self.assertIn({"id": "x-shelved", "layer": "shelf"},
+                      [{"id": p["id"], "layer": p["layer"]} for p in said["data"]["parts"]])
+
+
+class TheShelfTest(unittest.TestCase):
+    """P91, §5.5, §5.7: a record from one project goes onto the shelf as the part, not as that project's story of it."""
+
+    def test_a_digest_moves_only_with_the_facts_a_build_reads(self):
+        record = {"id": "x", "name": "X", "needs": [{"signal": "SIG"}], "pin_order": ["SIG", "GND"]}
+        self.assertEqual(parts.digest(record),
+                         hashlib.sha256(b'{"needs":[{"signal":"SIG"}],"pin_order":["SIG","GND"]}').hexdigest())
+        self.assertEqual(parts.digest(dict(record, name="renamed", sources=["https://x.example"])), parts.digest(record))
+        self.assertNotEqual(parts.digest(dict(record, pin_order=["GND", "SIG"])), parts.digest(record))
+
+    def test_a_shelved_record_leaves_the_project_s_story_behind_and_says_where_it_came_from(self):
+        home, source = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "x-module.json"
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record.update(id="x-module", owned=True, photo="photos/x.jpg", photos=["photos/x.jpg"],
+                      sourcing=[{"seller": "a shop"}], alternatives=["y-module"])
+        source.write_text(json.dumps(record))
+        (source.parent / "x-module" / "chip").mkdir(parents=True)
+        (source.parent / "x-module" / "chip" / "x.chip.json").write_text("{}")
+        with in_store(home):
+            self.assertTrue(parts.shelve(source, "irrigation"))
+            self.assertFalse(parts.shelve(source, "irrigation"), "a retried shelving changes nothing")
+            shelved = json.loads((home / "shelf" / "x-module.json").read_text())
+            self.assertEqual(parts.load("x-module")["id"], "x-module", "the shelf copy still meets the contract")
+        self.assertEqual(sorted(set(record) - set(shelved)), ["alternatives", "owned", "photo", "photos", "sourcing"])
+        self.assertEqual(shelved["based_on"]["project"], "irrigation")
+        self.assertEqual(len(shelved["based_on"]["digest"]), 64)
+        self.assertTrue((home / "shelf" / "x-module" / "chip" / "x.chip.json").is_file(), "its folder travels with it")
+
+    def test_a_shelved_folder_is_private_though_its_source_was_not(self):
+        home, source = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "y-module.json"
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record["id"] = "y-module"
+        source.write_text(json.dumps(record))
+        chip = source.parent / "y-module" / "chip"
+        chip.mkdir(parents=True)
+        (chip / "y.chip.json").write_text("{}")
+        os.chmod(chip / "y.chip.json", 0o644)
+        os.chmod(chip, 0o755)
+        with in_store(home):
+            parts.shelve(source, "irrigation")
+        shelved = home / "shelf" / "y-module" / "chip"
+        self.assertEqual(stat.S_IMODE((shelved / "y.chip.json").stat().st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE(shelved.stat().st_mode), 0o700)
+
+
+class OwningIsTheDrawersTest(unittest.TestCase):
+    """P95 (W16): a record no longer says the person owns one — the drawer does."""
+
+    def test_owned_photo_and_an_owned_seller_are_refused_naming_where_they_go(self):
+        for extra, where in (({"owned": True}, "drawer"), ({"photo": "photos/x.jpg"}, "photos"),
+                             ({"sourcing": [{"seller": "owned"}]}, "drawer")):
+            with self.subTest(extra=extra):
+                definition = part(**extra)
+                said = [problem for problem in parts.validate(definition, written(definition)) if "retired" in problem]
+                self.assertEqual(len(said), 1, said)
+                self.assertIn(where, said[0])
+
 
 if __name__ == "__main__":
     unittest.main()

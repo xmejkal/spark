@@ -39,14 +39,15 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | **7** | **Breadboard or wires → perfboard → PCB** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard; a soldered perfboard build as an optional step; a PCB offered only after | **P79** |
 | **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
 | **9** | **An enclosure** | hobbyist | *not designed yet* — the overview: 3D export, Fusion 360, printed parts | pulled by the first design that wants one |
-| **10** | **The store, sound — then shared** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | P85 (done); **P94** (the design); then store 1a **P95** (my drawer — with **P88**, **P91**'s shelf, **P92**, **P93**), 1b **P96** (a goal matched — with **P89**), 1c **P97** (picks to a building list — with **P90**); **P87** before any shared record; then **P84** (pulled by the first outside researcher), **P86** |
+| **10** | **The store, sound — then shared** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | P85 (done); **P94** (the design); then store 1a P95 (done 2026-10-04 — my drawer, with P88 (done), **P91**'s shelf, **P92**'s envelope, **P93**'s first importers), 1b **P96** (a goal matched — with **P89**), 1c **P97** (picks to a building list — with **P90**); **P87** before any shared record; then **P84** (pulled by the first outside researcher), **P86** |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b**, **P64b**, **P64c**, **B12** |
 
 **The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
 work, really from just talking about some vague idea"*; slices 8 and 9 make ordering a board and
 printing an enclosure part of the journey, optional and after the firmware works.
 Slices 2 and 3 run side by side: the maker's share of 2 is parts and a bench, the team's is the
-items. **The desk lane** — the PO's own process decisions, at most two open: **P70**, **P72**.
+items. **The team's tools** — next after P95, the PO's call of 2026-10-04: **P98** (mutation runs in seconds), then **P99** (the code cap reports growth instead of gating it).
+**The desk lane** — the PO's own process decisions, at most two open: **P70**, **P72**.
 
 **Parked** (each with what pulls it back, in the backlog): P66, P68, P49, P50, R10, F1, F2, F5.
 **Merged:** P2 into P59. **Deleted:** P17.

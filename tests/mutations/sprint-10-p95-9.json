@@ -1,0 +1,6 @@
+[
+ {"file": "scripts/parts.py", "name": "a record may say it is owned again",
+  "find": "RETIRED = {\"owned\": \"what you own is a drawer entry — /spark:drawer, `parts.py --drawer-set`\",", "replace": "RETIRED = {"},
+ {"file": "scripts/parts.py", "name": "an owned seller listing passes",
+  "find": "    if any(isinstance(listing, dict) and listing.get(\"seller\") == \"owned\" for listing in part.get(\"sourcing\") or []):", "replace": "    if False:"}
+]

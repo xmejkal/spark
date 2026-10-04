@@ -20,8 +20,8 @@
  {
   "file": "scripts/parts.py",
   "name": "a page is kept as if it were a datasheet",
-  "find": "        if not bare.lower().endswith(KEEPABLE) or url in known:",
-  "replace": "        if url in known:"
+  "find": " if url.split(\"?\")[0].lower().endswith(KEEPABLE) and url not in known]",
+  "replace": " if url not in known]"
  },
  {
   "file": "scripts/parts.py",
@@ -38,7 +38,7 @@
  {
   "file": "scripts/parts.py",
   "name": "a catalog draft is invisible to --sources, --show and --unverified",
-  "find": "    if home == CATALOG:\n        return _parse(home / (part_id + DEFINITION_SUFFIX)) or {}",
+  "find": "    if home == store.place(\"catalog\"):\n        return _parse(home / (part_id + DEFINITION_SUFFIX)) or {}",
   "replace": "    if False:\n        return {}"
  },
  {

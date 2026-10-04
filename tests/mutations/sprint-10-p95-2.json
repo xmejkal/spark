@@ -1,0 +1,18 @@
+[
+ {"file": "scripts/outcomes.py", "name": "the envelope declares ok whatever happened",
+  "find": "\"status\": status_of(problems, unchecked), \"data\": data,", "replace": "\"status\": OK, \"data\": data,"},
+ {"file": "scripts/outcomes.py", "name": "a listing is never cut at 20",
+  "find": "for item in items[start:start + limit]:", "replace": "for item in items[start:]:"},
+ {"file": "scripts/parts.py", "name": "a bad argument exits the way argparse does",
+  "find": "        raise BadArgument(message)", "replace": "        super().error(message)"},
+ {"file": "scripts/parts.py", "name": "every answer exits 0",
+  "find": "    return EXIT_FOR[said[\"status\"]]", "replace": "    return EXIT_OK"},
+ {"file": "scripts/parts.py", "name": "describe says no operation takes a dry run",
+  "find": "\"dry_run\": bool(effects),", "replace": "\"dry_run\": False,"},
+ {"file": "scripts/parts.py", "name": "a skeleton is written on a dry run",
+  "find": "    if not args.dry_run:\n        target.parent.mkdir(parents=True, exist_ok=True)", "replace": "    if True:\n        target.parent.mkdir(parents=True, exist_ok=True)"},
+ {"file": "scripts/parts.py", "name": "a dry run of --sources asks the network",
+  "find": "    if args.dry_run:\n        urls = cited_urls(record)", "replace": "    if False:\n        urls = cited_urls(record)"},
+ {"file": "scripts/parts.py", "name": "an unreadable store is a traceback, not an answer",
+  "find": "except (OSError, json.JSONDecodeError) as unreadable:", "replace": "except ZeroDivisionError as unreadable:"}
+]

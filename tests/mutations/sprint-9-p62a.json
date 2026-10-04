@@ -20,8 +20,8 @@
  {
   "file": "scripts/parts.py",
   "name": "a file is kept under its name, not its checksum",
-  "find": "    (STORE / digest / name).write_bytes(payload)",
-  "replace": "    (STORE / name).write_bytes(payload)"
+  "find": "(store.place(\"sources\") / digest / name).write_bytes(payload)",
+  "replace": "(store.place(\"sources\") / name).write_bytes(payload)"
  },
  {
   "file": "scripts/parts.py",

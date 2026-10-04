@@ -26,8 +26,8 @@
  {
   "file": "scripts/parts.py",
   "name": "a skeleton overwrites an existing record",
-  "find": "            if target.exists():\n                print(\"parts.py: %s exists; fill it in, do not overwrite it\" % target, file=sys.stderr)\n                return EXIT_INVALID",
-  "replace": "            if False:\n                print(\"parts.py: %s exists; fill it in, do not overwrite it\" % target, file=sys.stderr)\n                return EXIT_INVALID"
+  "find": "    if target.exists():\n        return Answer(problems=[_problem(args.skeleton,",
+  "replace": "    if False:\n        return Answer(problems=[_problem(args.skeleton,"
  },
  {
   "file": "scripts/parts.py",

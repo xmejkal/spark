@@ -12,7 +12,7 @@
  {"file": "scripts/parts.py", "name": "a word is tried twice",
   "find": "        words = list(dict.fromkeys(DATASHEET_SAYS.get(stem, [])", "replace": "        words = list((DATASHEET_SAYS.get(stem, [])"},
  {"file": "scripts/parts.py", "name": "a fact not found passes",
-  "find": "    return EXIT_OK if not missing else EXIT_INVALID", "replace": "    return EXIT_OK"},
+  "find": "problems=[_problem(fact, \"not on a table row: read its pages as images\") for fact in missing])", "replace": "problems=[])"},
  {"file": "scripts/parts.py", "name": "the maker's own wording for the peak wavelength is not known",
   "find": "\"peak_wavelength\": [\"peak wavelength\", \"wavelength at peak\", \"λpeak\"]", "replace": "\"peak_wavelength\": [\"peak wavelength\"]"}
 ]

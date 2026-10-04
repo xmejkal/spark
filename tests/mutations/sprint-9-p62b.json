@@ -31,15 +31,15 @@
  },
  {
   "file": "scripts/parts.py",
-  "name": "finding nothing passes",
-  "find": "            return EXIT_OK if found else EXIT_INVALID",
-  "replace": "            return EXIT_OK"
+  "name": "finding nothing says nothing",
+  "find": "found or [\"nothing kept matches %s — fetch it, or --keep a file you have\" % \" \".join(args.kept)])",
+  "replace": "found or [])"
  },
  {
   "file": "scripts/parts.py",
   "name": "an imported file forgets where it came from",
-  "find": "    return {\"url\": url, \"sha256\": keep_in_store(path.read_bytes(), path.name), \"file\": path.name,",
-  "replace": "    return {\"url\": None, \"sha256\": keep_in_store(path.read_bytes(), path.name), \"file\": path.name,"
+  "find": "    return {\"url\": url, \"sha256\": keep_in_store(path.read_bytes(), path.name, dry_run)",
+  "replace": "    return {\"url\": None, \"sha256\": keep_in_store(path.read_bytes(), path.name, dry_run)"
  },
  {
   "file": "boards/firebeetle2-esp32s3.json",

@@ -5,6 +5,9 @@ never held the vendor files, today's repository kept private as the archive, and
 scrubbed. Then **from a vague idea** (P76), designed with the PO in a brainstorming session before
 anything is built. The bench and firmware-on-a-Mac (slices 2, 3) follow.
 
+**Done since, by the PO's order of 2026-10-04:** P95, store 1a — the PO's drawer filled and seen (branch
+`p95-store-1a`, a pull request; P88 carried with it). Next, the PO's call: P98, mutation runs in seconds.
+
 ---
 
 # Sprint 9 — closed 2026-10-03
