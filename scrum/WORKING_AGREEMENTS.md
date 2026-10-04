@@ -89,6 +89,11 @@ The log is the team's memory; observers read it to find what nobody wrote down.
 
 **Origin:** Petr, and `git checkout` is not an undo.
 
+**Big items come through a pull request** (the PO, 2026-10-04). An item with a design or a plan of
+several tasks — P82 was one, P84 will be — is built on its own branch and reaches `main` through a
+GitHub pull request that names the item and the items it builds on, so the review and the link between
+item and code stay on the public repository. Small fixes and scrum updates still go straight to `main`.
+
 ## W9 — An observer's claim is a hypothesis until reproduced
 
 Several have been confidently wrong in ways that would have buried real defects. Reproduce, then
