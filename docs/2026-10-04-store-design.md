@@ -165,6 +165,16 @@ needs it (decided).
 - **Proposing parts, store first:** drawer → project → shelf → library → catalog → shared → research only for
   the gap.
 
+## 6f. Order-history importers drive the person's own browser — decided
+
+*The PO, 2026-10-04: "you will need to use paging and also click through to get to the details and all, I'd
+like ai to be able to do that for me."* The DFRobot (and later AliExpress) importer is an **agent driving the
+person's own, already logged-in browser** through a browser tool (Claude in Chrome — a `browser` role in the
+tools list, so it is a strategy like the rest). It pages through the order list, opens each order, and reads
+only what the drawer keeps — SKU, product name, quantity, the listing — writing entries through `parts.py`.
+**spark never sees a password or a cookie**: the session stays in the browser. **Read only**: no buying,
+cancelling, reviewing or account changes. Order numbers, addresses and prices are not kept (W21).
+
 ## 6e. The first importer — decided
 
 The **typed or dictated list** ("2x DFR0954, a bag of 6x6 buttons, the blue L9110S in box 3"): the agent
