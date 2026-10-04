@@ -274,6 +274,56 @@ does the plant live?* — indoors, a pot. The needs:
 | compute | have | the FireBeetle 2 S3 — deep sleep, and its LiPo socket and charger fit the battery need (the XIAO ESP32-C6 is the other) |
 | power / battery | have | the 1S LiPo; the FireBeetle's charger covers charging |
 
+### C — choose (agreed 2026-10-04)
+
+**Rules**
+1. The picks go into the project; each part passed over is recorded with its reason *in this project's context*.
+2. A picked part that is **known but not owned** goes on a "to get" list; a picked `unsure` part says "check the
+   drawer first".
+3. A picked part that **owes facts** has them filled from its kept documents before it builds — the
+   datasheet-reader on a local file, no web; only a missing document would cost a fetch, and it would count.
+
+**Example — the PO's picks:** soil: **SEN0193** (to get; owes `pin_order_proof`, filled from its kept schematic,
+`SEN0193_capacitive-soil-moisture-sensor_schematics_1.0.pdf`, present in the store); sound: **the owned route** —
+the DFRobot speaker (reserved) and the **DFR0954** I2S amplifier (`unsure` — check the drawer; if absent, to
+get); compute: the **FireBeetle 2 S3** (reserved); power: the **1S LiPo** (reserved). Passed over: SEN0308
+("waterproof is not needed indoors"), a piezo buzzer ("the owned route was chosen").
+
+### G — research only the gap (agreed 2026-10-04)
+
+**Rules**
+1. Research runs only for a need marked **gap**, and only after the person's yes for that need.
+2. Its budget is fixed before it runs (part-finder: at most two candidates, about three searches; the
+   datasheet-reader: one kept document, read page by page), and its cost lands in the history as `researched`.
+3. What it finds goes into the catalog, and the pick into the project — never re-researched.
+
+**Example:** the plant alarm, as chosen, has **no gap — zero research**. G's example is the road not taken: had
+the PO picked the piezo buzzer, one part-finder run, one datasheet kept and read, and a `researched` line with
+its counts.
+
+### L — the part list (agreed 2026-10-04)
+
+**Rules**
+1. The picks become the project's requirements file, which `check_spine` accepts.
+2. A known part is brought into the project through `parts.py` (catalog → project), never copied by hand.
+3. Owned parts used by the project are reserved in the drawer ("1 in plant-alarm").
+
+**Example:** board `firebeetle2-esp32s3`; parts `sen0193-soil-moisture` (from the catalog, its owed fact
+filled) and `max98357a-dfr0954` (library); the speaker and the LiPo plug into the amplifier's and the board's own
+sockets. `check_spine` should end `[ok] … the chain runs end to end`.
+
+### T — the tally (agreed 2026-10-04)
+
+**Rules**
+1. The step ends with one cost line; the history gets `reused` for each part from the store, `researched` for
+   each gap, `built` when `check_spine` passes.
+2. Counts only — no URLs, queries or paths.
+
+**Example — expected:** "4 needs: 3 owned, 1 known (to get), 0 researched — 0 requests, 1 document read
+(SEN0193's schematic)". The skeleton passes when the PO's real goal reaches a building part list with **zero
+web requests**, and the line says so.
+
 ## 9. Next
 
-Example-map C, G, L and T, then the spec and the plan for slice 1.
+The design and the slice's example maps are complete. Next: a self-review of this document as the spec, the
+PO's review of it, then the implementation plan for slice 1 (a big item: its own branch and pull request, W8).
