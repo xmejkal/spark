@@ -2,8 +2,8 @@
  {
   "file": "scripts/parts.py",
   "name": "the catalog is back inside the plugin",
-  "find": "CATALOG = STORE.parent / \"catalog\"",
-  "replace": "CATALOG = Path(__file__).resolve().parent.parent / \"catalog\""
+  "find": "for path in sorted(store.place(\"catalog\").glob(\"*\"",
+  "replace": "for path in sorted((Path(__file__).resolve().parent.parent / \"catalog\").glob(\"*\""
  },
  {
   "file": "scripts/parts.py",
