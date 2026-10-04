@@ -869,7 +869,7 @@ writes to one chosen store; the research agents write through `parts.py`, never 
 finds the DFR0819 from the shared database — its pinout, its datasheet's URL and checksum — without
 anyone researching it again.
 
-### B12 — The bin's vendor datasheets are kept, cited, then removed — **slice 6; the PO's decision of 2026-10-03; widened 2026-10-04**
+### B12 — The bin's vendor datasheets are kept, cited, then removed — **slice 6; the PO's decision of 2026-10-03; widened 2026-10-04** — DONE 2026-10-04
 **Needed by:** the bin's public repository, which tracks 16 vendor datasheets (7.5 MB) under licences
 that grant nothing — 12 of them exist nowhere else, and the L9110S guide that proves B11 has no URL
 anywhere. Order, because removing first loses them: `parts.py --keep` each into the store with its URL
@@ -884,6 +884,18 @@ documents shipped verified facts rest on that nobody else can obtain (the L9110S
 only what stays unfindable is marked as a private source. The citation map is the appendix of
 `docs/2026-10-04-store-discovery.md`. Kept so far: all 16 in the store, checked byte for byte; their URL
 proofs in `~/.local/share/spark/b12-kept-from-the-bin.jsonl`.
+**Done 2026-10-04.** All 23 are in the store, each checked byte for byte against the bin's copy (the two
+footprint copies are one file). spark's four records cite 15 of them by key (`f8b0561`): every `--kept`
+word prints `cited by …`, and AN4545, which no spark fact rests on, is held by `vl6180x-breakout`.
+Public URLs (`2311bca`): byte-identical for the DFR0534 datasheet, drawing and two photos, the JQ8400
+manual, the GME L9110S datasheet, AN4545, both Pololu files, the XIAO footprint (Seeed's library, CC
+BY-SA 4.0) and both FireBeetle schematics (members of DFRobot's V1.3 zip); the same text in another save
+for the Handson guide and the ETA6003; none for the WROOM-1 v1.1, now `private_only`. The DFR0534
+"product photo" was a broken-image placeholder and left the record. In the bin (`0a51689`):
+`git ls-files` of the four paths → 0; the text points at `parts.py --kept`; `make check`: everything in
+step; history kept. **What it cost, and the lesson:** the search for public copies covered 10 documents
+when the decision named 2 — 55 tool calls, about 0.12 M tokens, 11 minutes — against W21's "never gather
+what no decision reads"; a lookup is now scoped to the documents a decision rests on.
 
 ### P82 — Setting up spark is one step, like installing a package — **slice 1; the PO's request of 2026-10-03** — DONE 2026-10-03
 **Needed by:** the hobbyist, and the PO building the quickstart: *"we want to make it as easy and
