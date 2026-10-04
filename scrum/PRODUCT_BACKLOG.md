@@ -775,8 +775,9 @@ littlefs-python micropython-esp32s3`; after `init_project.py`, the one `tools.py
 tscircuit@0.0.2600`, and `check_spine.py requirements.json --keep .` ended `[ok  ] build 19 trace(s), 0
 errors, tsci 0.0.2600`, `[ok  ] simulation 17 wire(s) in the diagram`, *the chain runs end to end*.
 The first cold run found what no earlier step could: `tsci` starts with `#!/usr/bin/env bun`, so the
-board engine needs bun — Homebrew had hidden it here; it is on the list now. Not yet exercised: the
-same run through the slash commands in a fresh Claude Code session (the scripts behind them were run).
+board engine needs bun — Homebrew had hidden it here; it is on the list now. The slash command itself
+ran on 2026-10-04 after a restart, in the quickstart (the PO's own config, not an empty one): one
+`[????]` (the MicroPython build), the dry run's one command, one yes, then every row `[ok]`, exit 0.
 Mutation tables `sprint-10-p82-1` … `-7`.
 **The final review** (a fresh reviewer, the whole branch) found what those runs had not: the simulator's
 install line `npm install -g wokwi-cli` is a 404 — npm has no such package — and a broken tools file, a
