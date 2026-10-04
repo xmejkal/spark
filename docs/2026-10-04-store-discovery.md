@@ -218,6 +218,15 @@ on every search.
 
 ## 6. Decisions for the PO
 
+**Decided by the PO on 2026-10-04:** (1) a part chosen in a project goes to **a shelf in the person's
+store**; writing spark's own library is a maintainer step. (2) **All 23 vendor-derived files leave the
+bin's tree** (B12's 16 and the 7 more); **its history is kept**. (3) For a shipped verified fact whose
+document nobody else can obtain, **find public copies first**; mark only what stays unfindable. (4) P84
+**drops the database/NoSQL/Markdown half**; the plan's Now and Next steps are built; the **shared
+database starts when the first person outside the project researches a part**. Items 5 below wait for
+their own items.
+
+
 1. **Where does a part you chose live for your next project** — a shelf in your store, with the plugin's
    library a maintainer step (the council's choice), or the plugin's library as now?
 2. **The bin's public history** — rewrite it now while it has 0 forks, or accept that the vendor files
@@ -230,3 +239,29 @@ on every search.
 5. Smaller, when their items come up: a fact resting on two documents (a list, or `corroborated_by`);
    irrigation's 13 seller listings (now, or with P77/P79); the shared records' licence (CC0 or CC-BY) and
    whether they may carry code (a Wokwi chip).
+
+## Appendix — B12's citations, by key (the data steward, checked in memory)
+
+One primary `cites` per fact with its `at`; a second document as `"corroborated_by": {"cites": {…}}`,
+which validates today. Each document entry from `~/.local/share/spark/b12-kept-from-the-bin.jsonl`, with
+`retrieved: "2026-09-24"` (when the bin first committed it) and `title`/`version` as printed. Every "kept
+at parts/datasheets/… in the bin" phrase goes.
+
+| record | document key (sha256) | cited by |
+| --- | --- | --- |
+| `dfr0534-module` | `dfr0534-datasheet` (d6636f…) | `has_uart_standby_command`; corroborated by `jq8400-manual-v1-3` (2c44b4…) |
+| | `dfr0534-dimension-v1-0` (a1b7d6…) | `body_mm`, `mounting_holes` |
+| | `dfr0534-silkscreen-photo` (23c7e6…) | `silicon`, `pin_order_proof`; corroborated by `dfr0534-ruler-photo` (271e09…) |
+| | `dfr0534-product-photo` (1a712d…) | `amplifier_output_w` |
+| `l9110s-module` | `handson-l9110s-guide` (2a34d4…) | `onboard_input_pullups_ohms` (p. 3), `schematic_numbers_vcc_and_gnd_opposite_to_the_silkscreen` (pp. 1, 3), `pin_order_proof`, `continuous_current_a`; corroborated by `gme-l9110s-datasheet-2016` (79ea6e…) |
+| `vl6180x-breakout` | `pololu-2489-schematic` (5cac2a…) | the four carrier and pull-up facts, `pin_order_proof` |
+| | `vl6180x-datasheet` (87e1b0…, "DocID026171 Rev 7") | `i2c_address`, `die_supply_v` |
+| | `pololu-2489-dimensions` (c1c6c5…) | corroborates `pin_order_proof` |
+| | `st-an4545` (091291…, "DocID026571 Rev 1") | no spark field; the bin's `calibrate.py` and `SENSOR_OPTIONS.md` name `parts.py --kept an4545` |
+| `boards/firebeetle2-esp32s3` | `firebeetle2-s3-schematic-v1-3` (4062428…, URL the V1.3 zip, member `DFR0975 schematics V1.3.pdf`) | `vcc_is_not_tied_to_vsys`, `charge_current_a`, `hardware_revisions.v1_2_and_later` |
+| | `firebeetle2-s3-schematic-v1-0` (107c54…, the same zip) | `hardware_revisions.v1_1_and_earlier` |
+| | `eta6003-datasheet` (2824d0…) | corroborates `charge_current_a` |
+
+Then in the bin: point `CLAUDE.md`, `SENSOR_OPTIONS.md` (Rev 6 → Rev 7), `calibrate.py` and the `.ino`
+comment at `parts.py --kept <word>`; re-resolve `.spark/board.json`; `git rm` the 23. Done when every
+`--kept <word>` prints `cited by`, never "no record here cites it".

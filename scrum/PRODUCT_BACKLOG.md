@@ -754,10 +754,13 @@ record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept doc
 library, projects and — with P84 — a shared database, and who can see them today only one command at a
 time. The PO: *"Later we will also want to build a standalone viewer and manager of the store, where
 one can see what we have, both the local and online stores, edit, download, research, find, etc."*
-**Builds on:** P85's use cases (it is the store's second client, beside the scripts) and P84.
+**Builds on:** P85's use cases (it is the store's second client, beside the scripts), P90–P92 (what it
+needs from the data: document status, JSON from every read, one validating writing path) and P84. P85's
+trust rules for it: record text shown escaped; origin and review badges; writes only through `parts.py`;
+vendor files opened from the local store only. First as a generated read-only page (the skeptic).
 **Value proven by:** to be set in discovery, after P85.
 
-### P85 — The store, reviewed whole: use cases, gaps, one plan — **slice 10; the PO's request of 2026-10-04**
+### P85 — The store, reviewed whole: use cases, gaps, one plan — **slice 10; the PO's request of 2026-10-04** — DONE 2026-10-04
 **Needed by:** every item that touches where spark keeps what it found — P61, P62a and P62b (the
 store and its documents), P82 (the layered list, its downloads), P83 (the catalog in the store, done),
 B12 (the bin's 16 files: kept in the store and checked byte for byte on 2026-10-04; citing by key and
@@ -769,6 +772,67 @@ use cases and such."*
 cases and user stories for the personas, every gap found with its evidence (a file and line, or a
 command and its output), and one ordered plan for B12's remainder, P84 and whatever the gaps add; the
 PO's decisions recorded on the items it names.
+**Done 2026-10-04.** `docs/2026-10-04-store-discovery.md`: a council of five (the hobbyist's advocate, a
+data steward, a software architect, trust and licensing, a skeptic), read-only — a proposed vision, 21
+user stories each with its check, 19 gaps with evidence, one ordered plan. The PO decided four things,
+recorded there and on B12, P84, P86 and the new items P87–P92: chosen parts go on a shelf in the person's
+store; all 23 vendor-derived files leave the bin's tree, its history kept; public copies are sought before
+a fact is marked as resting on a private document; P84 drops the selectable backends and its shared
+database waits for the first outside researcher.
+
+### P87 — Records are inert: no record text can act, no record path can leave the store — **slice 10; P85's plan, Now**
+**Needed by:** every person whose spark reads a record they did not write — a shared one (P84), a
+project cloned from someone else — and the agent handed a path. P85 found a record's `footprint`, `name`
+and `host_parts.why` reach the generated board file unescaped (`emit_board.py:655-703`; a crafted record
+produced live JavaScript, `validate` returned `[]`), `--fetch` names a kept file from a URL that can climb
+out of the store with `..%2F` (`parts.py:981`), `documents.file`/`sha256` and `photo` are never
+contained, and no agent is told that record text is data.
+**Value proven by:** a hostile-record fixture — each bad field on its own — is refused by name by
+`--validate`; `--fetch` and `--promote` write nothing outside their folders; the emitted board file
+holds every record string as inert text; each agent's instructions carry the sentence; mutations caught.
+
+### P88 — The suite never reads the person's store; one function says where the store is — **slice 10; P85's plan, Now**
+**Needed by:** the maker and any contributor, whose own store decided 4 tests' outcome (a seeded home with
+a pin, a tool turned off and one record failed 4; the suite read the real catalog 37 times), and every
+future store client. The store's root is spelled twice (`parts.py:665`, `tools.py:44`) with no override.
+**Value proven by:** one function gives the root (`SPARK_HOME`, then `XDG_DATA_HOME/spark`, then
+`~/.local/share/spark`); the suite runs green with a seeded home and with an empty one, and an audit
+check finds 0 reads under the real home.
+
+### P89 — `--need` tells the truth about candidates — **slice 10; P85's plan, Now**
+**Needed by:** the agent, told "`--promote X --project .` builds with it" (`parts.py:1257`) of catalog
+records none of which passes the contract since P81; and the hobbyist swapping a part, who cannot see why
+it was passed over (`//why_not`, which nothing prints).
+**Value proven by:** `--need rtc` shows each candidate's contract problems ("draft: 1 to fill —
+pin_order_proof"); the 18 records' `//pin_order` and `//why_not` become fields and `--show` prints
+`why_not`; a check walks the person's catalog again (P55); `--catalog --json` exists.
+
+### P90 — A document comes back, checked — **slice 10; P85's plan, Next**
+**Needed by:** the hobbyist on a new machine and anyone re-checking a fact: `--fetch` skips every URL
+already in `documents` and never compares a checksum (`parts.py:971-977`), writes straight to the final
+file, and says nothing when a fetch fails; the store keeps no record of a document's own URL, date or
+version beside it.
+**Value proven by:** on an empty store `--fetch <id>` restores each document from its own URL through a
+`.part` file and prints "same sha256", "DIFFERS — the URL now serves another file" or could-not-run; a
+manifest beside each kept file holds its URL, archive member, retrieved date and printed version; tools.py
+and parts.py share one checked fetch.
+
+### P91 — A shelf for the parts you chose — **slice 10; P85's plan, Next; the PO's decision of 2026-10-04**
+**Needed by:** the hobbyist starting a second project, to whom the part chosen and verified in the first is
+invisible (`--need rtc` from the quickstart lists 4 rejects, not irrigation's DFR0641); and every non-
+maintainer, whose `--promote` into spark's library writes into an install cache the next update discards.
+**Value proven by:** `--promote <id> --project .` from a project puts the record on the person's shelf in
+the store, without `owned`, `sourcing` or `photo`, and records `based_on`; `--need` reads project → shelf →
+catalog → library and from the quickstart lists irrigation's DFR0641; writing spark's library is an
+explicit maintainer flag.
+
+### P92 — Records written through `parts.py`, read as JSON — **slice 10; P85's plan, Next**
+**Needed by:** the agent, told literal paths to write to (`parts-researcher.md:57`, `research.md:85`,
+`identify.md:55`), so nothing validates what it writes and the store cannot move; and the viewer (P86),
+which needs JSON from every read.
+**Value proven by:** `--skeleton --catalog`, `--keep --into <id>` and `--set-aside <id>` write through the
+contract; `grep '\.local/share' agents commands` prints nothing; `--kept`, `--catalog`, `--fetch` and
+`tools.py --status` take `--json`.
 
 ### P84 — A store you can choose, and a shared part database — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
 **Needed by:** the hobbyist who researches a part someone else already researched, and every spark
@@ -784,6 +848,13 @@ built, its work is one branch and one pull request that names all three.
 spark users read and contribute to; contributions arrive as **pull requests to a public GitHub repo of
 records**, reviewed before they merge (a clone is the local cache); it sits **beside** spark's shipped
 library, which keeps its few verified parts for spark's own tests and examples.
+**The PO decided after P85, 2026-10-04:** **no selectable backends** — no database, NoSQL or Markdown
+store (the council was unanimous: one implementation behind an interface is indirection, and pull requests
+mean JSON in git). The shared database **starts when the first person outside the project researches a
+part** (slice 5); first as the skeptic's no-code experiment — a public repo of records that pass the
+contract, cloned into the folder spark already reads. Its prerequisites are P87–P92; it adds a record's
+identity and provenance (maker part number, `order_codes`, `written`, `review`, `origin`, a fact's
+`source_kind`), `--contribute`, and a reviewer's CI. See `docs/2026-10-04-store-discovery.md`.
 **To confirm in discovery (assumptions, not decisions):** the shared repo holds records only — identity,
 part facts with their citations, the pinout with its proof — and a document as its URL and sha256,
 never the file (vendor licences grant nothing; another user fetches from the maker and the checksum
@@ -798,7 +869,7 @@ writes to one chosen store; the research agents write through `parts.py`, never 
 finds the DFR0819 from the shared database — its pinout, its datasheet's URL and checksum — without
 anyone researching it again.
 
-### B12 — The bin's vendor datasheets are kept, cited, then removed — **slice 6; the PO's decision of 2026-10-03**
+### B12 — The bin's vendor datasheets are kept, cited, then removed — **slice 6; the PO's decision of 2026-10-03; widened 2026-10-04**
 **Needed by:** the bin's public repository, which tracks 16 vendor datasheets (7.5 MB) under licences
 that grant nothing — 12 of them exist nowhere else, and the L9110S guide that proves B11 has no URL
 anywhere. Order, because removing first loses them: `parts.py --keep` each into the store with its URL
@@ -806,6 +877,13 @@ where known, cite each from spark's records by key, then `git rm parts/datasheet
 public history is a separate decision.
 **Value proven by:** `parts.py --kept` finds each of the 16; the four spark records that name them cite
 them by key; `git ls-files parts/datasheets` in the bin is empty.
+**The PO widened it, 2026-10-04 (P85):** all **23** vendor-derived files leave the bin's tree — the 16
+plus `parts/xiao/getting_started.md`, two Seeed pinout PNGs, two JLCPCB `.obj` models and two copies of
+the XIAO `.kicad_mod`; **the history is kept**. Before the `git rm`, **public copies are sought** for the
+documents shipped verified facts rest on that nobody else can obtain (the L9110S guide; the WROOM-1 v1.1);
+only what stays unfindable is marked as a private source. The citation map is the appendix of
+`docs/2026-10-04-store-discovery.md`. Kept so far: all 16 in the store, checked byte for byte; their URL
+proofs in `~/.local/share/spark/b12-kept-from-the-bin.jsonl`.
 
 ### P82 — Setting up spark is one step, like installing a package — **slice 1; the PO's request of 2026-10-03** — DONE 2026-10-03
 **Needed by:** the hobbyist, and the PO building the quickstart: *"we want to make it as easy and
