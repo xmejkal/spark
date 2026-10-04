@@ -582,6 +582,16 @@ built (W14: the item exists, the design does not).
 **Value proven by:** to be written with the PO — at least: a one-sentence idea becomes a file naming
 the functions, the kind of module for each, and a block diagram with no part numbers, which the
 existing chain then accepts once parts are chosen.
+**The PO added, 2026-10-04 — store first, and several ways in:** *"at first when ideating a diy project,
+it would consider general requirements and options, only then propose existing stored parts or modules
+or boards and look for new ones only when we don't have a similarly working thing in the store
+already."* And: *"more scenarios should sooner or later be possible, like I want to use this module I
+already have, let's come up with ideas on projects that would use it, or I want to do a diy project that
+does something, based on that we then decide what parts we use, or I want to combine these 3 modules I
+have, let's come up with ideas, or other useful scenarios."* The ways in, as discussed: **goal first**,
+**module first**, **a combination**, **the whole drawer**, **revive** a dead device, **swap** a part,
+**extend** a project. They share one core — the store (P94) and the drawer (P93) — and differ in where the
+ideas start.
 
 ### P77 — Every example is regenerated with today's spark, its scenarios rerun, its steps written down, its old files gone — **the PO's question of 2026-10-03; a council answers, then acts**
 **Needed by:** the hobbyist, who learns spark from its examples — and spark's own claim to work. The
@@ -748,6 +758,27 @@ record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept doc
 `catalog_records()` names a record with `sourcing` as broken, with why. The researcher and
 `/spark:research` write candidates to the store. Mutations: `sprint-10-p83` 2 of 2, `sprint-5-catalog`
 10 of 10 (one re-anchored), `sprint-8-p55` 4 of 4 (its two catalog-file rows left with the files).
+
+### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04**
+**Needed by:** every way into spark (P76's goal-first, module-first, combination, whole-drawer, revive,
+swap, extend), the drawer (P93), the viewer (P86) and a shared database (P84) — all of which read and
+write one store. The PO: *"let's design it and refine and plan the stores with the council, mostly we
+want to have a well designed extendable reusable architecture."* What "the database gets better" means
+(the PO, 2026-10-04): **more parts known** (researched once, found from every project), **proven by use**
+(a part that built and ran says so), and **fewer requests, measured** (a project shows what it cost and
+what came from reuse) — not "every part complete": a record grows when a stage needs a fact.
+Builds on P85's discovery (`docs/2026-10-04-store-discovery.md`) and its items P87–P92.
+**Value proven by:** a design spec the PO approves section by section — the architecture, the data model,
+the ways in it serves, what is built first and what waits — and an implementation plan he approves;
+then the items it orders.
+
+### P93 — My drawer: the parts I own — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
+**Needed by:** the maker, who owns *"plenty of existing modules from DFRobot and lots of parts from
+AliExpress that I will want to use at some point"*, and any hobbyist with a drawer — so a project starts
+from what is there before anything is bought or researched. As discussed: owning is not researching — an
+entry can be light (a SKU or a listing, a photo, how many), and a part's facts are read only when a
+design considers it; `/spark:identify` is the way in for an unlabelled part.
+**Value proven by:** to be set in P94's design.
 
 ### P86 — A viewer and manager for the store — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
 **Needed by:** the person whose parts, candidates and kept documents are spread over a store, a
