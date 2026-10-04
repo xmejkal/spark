@@ -768,6 +768,11 @@ want to have a well designed extendable reusable architecture."* What "the datab
 (a part that built and ran says so), and **fewer requests, measured** (a project shows what it cost and
 what came from reuse) — not "every part complete": a record grows when a stage needs a fact.
 Builds on P85's discovery (`docs/2026-10-04-store-discovery.md`) and its items P87–P92.
+**How it is designed (the PO's choice, 2026-10-04):** story map + flows + example mapping — the council
+drafts the flow of each way in (the map's backbone), the domain model and architecture options; the PO and
+Claude map the stories under the flow steps and cut a walking-skeleton slice; that slice's stories are
+example-mapped (rules, examples, questions) into readable checks; a spec and a plan are written for that
+slice only, the rest stays on the map until pulled (W14).
 **Value proven by:** a design spec the PO approves section by section — the architecture, the data model,
 the ways in it serves, what is built first and what waits — and an implementation plan he approves;
 then the items it orders.
