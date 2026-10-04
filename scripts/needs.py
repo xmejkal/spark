@@ -153,9 +153,11 @@ def candidates(need, known, entries):
                       "what_matches": _what_matches(need["what"], functions, [record.get("name")] + list(record.get("also_known_as") or [])),
                       "owned": owned, "free": free, "unsure": unsure, "owes": [] if kind == "board" else parts.owes(record),
                       "broken": kind == "part" and bool(parts.broken_problems(record, path)), "proof": []})
+    known_keys = {row[:2] for row in known}
     for entry_id, entry in entries.items():
         functions = entry.get("function") or []
-        if entry.get("is") or entry.get("skip") or not any(f.get("does") == need["does"] for f in functions):
+        points_at_a_record = isinstance(entry.get("is"), dict) and bool(entry["is"]) and next(iter(entry["is"].items())) in known_keys
+        if points_at_a_record or entry.get("skip") or not any(f.get("does") == need["does"] for f in functions):
             continue
         owned, free, unsure = _counts([entry])
         found.append({"id": None, "kind": None, "entry": entry_id, "in": "drawer", "label": entry.get("label"),

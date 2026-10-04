@@ -96,6 +96,7 @@ def a_store_with_a_drawer():
                "dead": {"label": "an old buzzer", "count": 1, "function": [{"does": "sound", "what": "buzzer"}], "skip": "dead"},
                "mp3": {"label": "MP3 mini module", "count": 1, "function": [{"does": "sound", "what": "mp3-player"}], "unsure": True},
                "dead-probe": {"label": "a burnt gas sensor", "count": 3, "is": {"part": "x-other"}, "skip": "dead"},
+               "old-amp": {"label": "an old amp", "count": 1, "is": {"part": "gone-part"}, "function": [{"does": "sound", "what": "amplifier"}]},
                "board": {"label": "FireBeetle", "count": 1, "is": {"board": "firebeetle2-esp32s3"}, "used_in": {"smartbin-local": 1}},
                "buttons": {"label": "a bag of buttons", "count": "many", "is": {"part": "tactile-button"}}}
     for key, entry in entries.items():
@@ -144,6 +145,10 @@ class TheMatcherTest(unittest.TestCase):
         ids = [c["id"] for c in self.smell()]
         self.assertEqual(ids[0], "x-soil", "x-soil is owned and its `what` is not gas; every unowned record, x-other included, comes after")
         self.assertIn("x-other", ids)
+
+    def test_an_entry_whose_record_is_gone_is_still_offered_from_the_drawer(self):
+        amp = {c["entry"]: c for c in self.needs["alarm"]["candidates"] if c["entry"]}["old-amp"]
+        self.assertEqual((amp["in"], amp["owned"], amp["id"]), ("drawer", 1, None))
 
     def test_a_dead_part_is_never_owned_nor_a_candidate(self):
         other = [c for c in self.smell() if c["id"] == "x-other"][0]
