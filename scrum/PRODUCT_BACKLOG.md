@@ -860,7 +860,8 @@ maintainer, whose `--promote` into spark's library writes into an install cache 
 **Value proven by:** `--promote <id> --project .` from a project puts the record on the person's shelf in
 the store, without `owned`, `sourcing` or `photo`, and records `based_on`; `--need` reads project → shelf →
 catalog → library and from the quickstart lists irrigation's DFR0641; writing spark's library is an
-explicit maintainer flag.
+explicit maintainer flag. **Corrected by P94's design (2026-10-04):** resolving an id reads project →
+shelf → library → catalog (a draft never hides a checked part); proposing parts reads the drawer first.
 
 ### P92 — Records written through `parts.py`, read as JSON — **slice 10; P85's plan, Next**
 **Needed by:** the agent, told literal paths to write to (`parts-researcher.md:57`, `research.md:85`,

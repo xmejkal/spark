@@ -143,10 +143,36 @@ source. So:
 JSON; an **MCP server** is a thin second front end over the same operations, pulled when another AI client
 needs it (decided).
 
-## 7. Open questions (asked one at a time)
+## 6c. Cost and proof — decided
 
-- Which drawer route the first slice supports.
-- How cost and proof by use are recorded and shown (section review).
-- The layer order: resolving an id (library before catalog) vs proposing parts (drawer first).
-- How "a similarly working thing" is matched (the capability vocabulary).
-- How cost and proof by use are recorded.
+*The PO, 2026-10-04, as written except the stop rule, which he struck.*
+- **One history log in the store** (`history.jsonl`, append-only, never shared): `built`, `simulated`, `ran`
+  (proof by use, tied to the record's checksum), `researched`, `reused`, `passed_over` (with why). Counts only —
+  no URLs, queries or paths.
+- **The cost counter** (first strategy: the session transcripts) counts network requests (web searches and
+  fetches, network MCP calls, `curl` inside shell commands — today's tool misses the last), research runs,
+  documents read, new tokens (cache reads apart), minutes. After each step spark prints **a cost line**: "3
+  parts: 2 reused, 1 researched — 4 requests, 2 documents, 9 min".
+- **The measures:** requests per chosen part (the headline, falling project to project), reuse share (rising),
+  re-research of a part already known (zero).
+- **Proof sources:** `built` from `check_spine` on a pass, `simulated` from a passing simulation, `ran` from a
+  bench step or the person's confirmation.
+
+## 6d. The layer order — decided (corrects P91)
+
+- **Resolving an id:** project → shelf → **library → catalog** → shared. The nearer layer wins the whole record;
+  a draft never hides a checked part.
+- **Proposing parts, store first:** drawer → project → shelf → library → catalog → shared → research only for
+  the gap.
+
+## 6e. The first importer — decided
+
+The **typed or dictated list** ("2x DFR0954, a bag of 6x6 buttons, the blue L9110S in box 3"): the agent
+turns it into entries and asks only what is ambiguous. DFRobot order history, AliExpress orders and photos
+follow as importers behind the same interface.
+
+## 7. Next
+
+The design's decisions are all in; next, per the PO's process: **map the first slice's stories** under the
+spine steps (drawn from the flows lens's stories), **example-map** each into readable checks, then a **spec and
+a plan for the first slice only**.
