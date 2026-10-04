@@ -42,7 +42,6 @@ from pathlib import Path
 #: Parts ship with the plugin, and a project may keep its own in `parts/`. A project's own wins,
 #: for the same reason a board definition does: what you verified yourself must not be replaced.
 LIBRARY = Path(__file__).resolve().parent.parent / "parts"
-PROJECT_PARTS_DIR = "parts"
 DEFINITION_SUFFIX = ".json"
 
 SUPPORTED_SCHEMA = 1
@@ -102,25 +101,14 @@ def _with_project(project):
     return ["--project", str(project)] if project else []
 
 
-def search_path(project: Path = None) -> list:
-    return [project / PROJECT_PARTS_DIR for project in ([project] if project else [])] + [LIBRARY]
-
-
 def available(project: Path = None) -> list:
-    found = {}
-    for directory in reversed(search_path(project)):
-        if not directory.is_dir():
-            continue
-        for path in directory.glob("*" + DEFINITION_SUFFIX):
-            found[path.stem] = path
-    return sorted(found)
+    return sorted(store.records("parts", LIBRARY, project))
 
 
 def definition_path(part_id: str, project: Path = None) -> Path:
-    for directory in search_path(project):
-        path = directory / (part_id + DEFINITION_SUFFIX)
-        if path.is_file():
-            return path
+    found = store.records("parts", LIBRARY, project).get(part_id)
+    if found:
+        return found[1]
     raise PartError("no part called %r.\n  available: %s"
                     % (part_id, ", ".join(available(project)) or "(none)"))
 
@@ -716,11 +704,9 @@ def catalog_matches(words):
 
 
 def record_home(part_id, project=None):
-    """Where a record lives — a parts/ on the search path, or the catalog — or None."""
-    for directory in search_path(project) + [store.place("catalog")]:
-        if (directory / (part_id + DEFINITION_SUFFIX)).is_file():
-            return directory
-    return None
+    """The folder a record lives in — the nearest layer that has it, the catalog included — or None."""
+    found = store.records("parts", LIBRARY, project, drafts=True).get(part_id)
+    return found[1].parent if found else None
 
 
 def any_record(part_id, project=None):
@@ -894,11 +880,8 @@ def keep_local(path, url=None, dry_run=False):
 def records_with_documents(project=None):
     """(owner id, record) for every record that can point at a document: parts, catalog, boards."""
     import boards
-    board_dirs = ([Path(project) / "boards"] if project else []) + [boards.LIBRARY]
-    paths = [directory / (part_id + DEFINITION_SUFFIX) for directory in search_path(project) + [store.place("catalog")]
-             if directory.is_dir() for part_id in sorted(p.stem for p in directory.glob("*" + DEFINITION_SUFFIX))]
-    paths += [path for directory in board_dirs if directory.is_dir()
-              for path in sorted(directory.glob("*" + DEFINITION_SUFFIX)) if path.name not in boards.NOT_A_BOARD]
+    paths = [path for _, path in store.records("parts", LIBRARY, project, drafts=True).values()]
+    paths += [path for _, path in boards.records(project).values()]
     for path in paths:
         record = _parse(path)
         if isinstance(record, dict) and record.get("documents"):
@@ -1267,13 +1250,11 @@ def _parser():
 
 def _op_list(args, project):
     listing = []
-    for part_id in available(project):
+    for part_id, (layer, path) in store.records("parts", LIBRARY, project).items():
         record = load(part_id, project)
-        listing.append({"id": part_id, "kind": record["kind"], "name": record["name"],
-                        "from": str(definition_path(part_id, project).parent)})
+        listing.append({"id": part_id, "kind": record["kind"], "name": record["name"], "layer": layer, "from": str(path.parent)})
     shown, truncated = page(listing, args.start, "list", ["--list"] + _with_project(project))
-    lines = [_row(p["id"], p["kind"], "%-9s %s" % ("project" if Path(p["from"]) != LIBRARY else "library", p["name"]))
-             for p in listing]
+    lines = [_row(p["id"], p["kind"], "%-9s %s" % (p["layer"], p["name"])) for p in listing]
     return Answer({"parts": shown}, lines, truncated=truncated)
 
 

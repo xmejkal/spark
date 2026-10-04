@@ -1503,7 +1503,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         self.assertIn("broken.json", said["unchecked"][0]["sentence"])
 
     def test_an_unreadable_store_is_could_not_run_not_a_traceback(self):
-        with mock.patch.object(parts, "available", side_effect=PermissionError("the store is unreadable")):
+        with mock.patch.object(parts.store, "records", side_effect=PermissionError("the store is unreadable")):
             said, code = run_json(["--list"])
         self.assertEqual((sorted(said), said["status"], code), (ENVELOPE_KEYS, "could-not-run", 2))
         self.assertIn("the store is unreadable", said["unchecked"][0]["sentence"])
@@ -1521,6 +1521,23 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         self.assertEqual([r["id"] for r in first["data"]["records"] + rest["data"]["records"]],
                          ["x-%02d" % number for number in range(30)])
         self.assertIsNone(rest["truncated"]["next"])
+
+
+class TheShelfIsALayerTest(unittest.TestCase):
+    """P91, §5.5: a record on the shelf is found from every project — no project needed — and says where it is."""
+
+    def test_a_record_on_the_shelf_is_listed_and_loaded_without_a_project(self):
+        home = Path(tempfile.mkdtemp())
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record["id"] = "x-shelved"
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-shelved.json").write_text(json.dumps(record))
+        with in_store(home):
+            self.assertIn("x-shelved", parts.available())
+            self.assertEqual(parts.load("x-shelved")["id"], "x-shelved")
+            said, _ = run_json(["--list"])
+        self.assertIn({"id": "x-shelved", "layer": "shelf"},
+                      [{"id": p["id"], "layer": p["layer"]} for p in said["data"]["parts"]])
 
 
 if __name__ == "__main__":

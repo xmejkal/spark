@@ -28,6 +28,8 @@ import json
 import sys
 from pathlib import Path
 
+import store
+
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
 #: without copying a file it would then have to maintain. A project may still keep its own in
 #: `boards/`, and its own wins — a definition you have verified yourself always beats a shared
@@ -203,32 +205,24 @@ def active_id(project: Path) -> str:
     return board_id
 
 
-def search_path(project: Path) -> list:
-    """Where definitions are looked for, nearest first. A project's own always wins."""
-    return [project / PROJECT_BOARDS_DIR, LIBRARY]
+def records(project=None):
+    """{id: (layer, path)} for every board definition — the project's own winning over spark's library."""
+    return store.records("boards", LIBRARY, project, skip=NOT_A_BOARD)
 
 
 def definition_path(project: Path, board_id: str = None) -> Path:
     """Where a board's definition lives. Defaults to the active board."""
     board_id = board_id or active_id(project)
-    for directory in search_path(project):
-        path = directory / f"{board_id}{DEFINITION_SUFFIX}"
-        if path.is_file():
-            return path
+    found = records(project).get(board_id)
+    if found:
+        return found[1]
     raise BoardError(f"no board definition for {board_id!r}.\n"
                      f"  available: {', '.join(available(project)) or '(none)'}")
 
 
 def available(project: Path) -> list:
     """Every board that could be switched to — the project's own, plus the shipped library."""
-    found = {}
-    for directory in reversed(search_path(project)):      # nearest wins, so fill it in last
-        if not directory.is_dir():
-            continue
-        for path in directory.glob(f"*{DEFINITION_SUFFIX}"):
-            if path.name not in NOT_A_BOARD:
-                found[path.stem] = path
-    return sorted(found)
+    return sorted(records(project))
 
 
 def load(project: Path, board_id: str = None) -> dict:

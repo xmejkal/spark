@@ -48,3 +48,26 @@ PLACES = {"sources": "sources", "catalog": "catalog", "downloads": "downloads", 
 def place(name):
     """The path of one of the store's places, under today's home."""
     return home() / PLACES[name]
+
+
+def layers(kind, library, project=None, drafts=False):
+    """
+    Where records of one kind are read from, nearest first (§5.5): the project's own, the shelf (parts the person
+    chose before, from any project), spark's library, then — only when drafts are asked for — the catalog.
+    `library` is the plugin's folder for the kind, which the module that ships it names.
+    """
+    rows = [("project", Path(project) / kind)] if project else []
+    rows += [("shelf", place("shelf"))] if kind == "parts" else []
+    rows.append(("library", Path(library)))
+    rows += [("catalog", place("catalog"))] if kind == "parts" and drafts else []
+    return rows
+
+
+def records(kind, library, project=None, drafts=False, skip=()):
+    """{id: (layer, path)} for every record in every layer, the nearest winning — the one walk (§6.1)."""
+    found = {}
+    for layer, folder in reversed(layers(kind, library, project, drafts)):
+        for path in sorted(folder.glob("*.json")) if folder.is_dir() else []:
+            if path.name not in skip:
+                found[path.stem] = (layer, path)
+    return dict(sorted(found.items()))
