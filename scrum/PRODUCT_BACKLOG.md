@@ -749,6 +749,14 @@ record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept doc
 `/spark:research` write candidates to the store. Mutations: `sprint-10-p83` 2 of 2, `sprint-5-catalog`
 10 of 10 (one re-anchored), `sprint-8-p55` 4 of 4 (its two catalog-file rows left with the files).
 
+### P86 — A viewer and manager for the store — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
+**Needed by:** the person whose parts, candidates and kept documents are spread over a store, a
+library, projects and — with P84 — a shared database, and who can see them today only one command at a
+time. The PO: *"Later we will also want to build a standalone viewer and manager of the store, where
+one can see what we have, both the local and online stores, edit, download, research, find, etc."*
+**Builds on:** P85's use cases (it is the store's second client, beside the scripts) and P84.
+**Value proven by:** to be set in discovery, after P85.
+
 ### P85 — The store, reviewed whole: use cases, gaps, one plan — **slice 10; the PO's request of 2026-10-04**
 **Needed by:** every item that touches where spark keeps what it found — P61, P62a and P62b (the
 store and its documents), P82 (the layered list, its downloads), P83 (the catalog in the store, done),

@@ -39,7 +39,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | **7** | **Breadboard or wires → perfboard → PCB** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard; a soldered perfboard build as an optional step; a PCB offered only after | **P79** |
 | **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
 | **9** | **An enclosure** | hobbyist | *not designed yet* — the overview: 3D export, Fusion 360, printed parts | pulled by the first design that wants one |
-| **10** | **A shared part database** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | **P85** (the review, first), **P84** |
+| **10** | **A shared part database** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | **P85** (the review, first), **P84**, **P86** (a viewer and manager) |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b**, **P64b**, **P64c**, **B12** |
 
 **The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
