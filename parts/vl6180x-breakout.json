@@ -188,7 +188,7 @@
       "version": "DocID026171 Rev 7"
     },
     "pololu-2489-dimensions": {
-      "url": null,
+      "url": "https://www.pololu.com/file/0J1191/vl6180x-carrier-dimension-diagram.pdf",
       "sha256": "c1c6c56d020d4e7e3cc175d96bbb91c1322027622a31953b9199f277d7de3ad1",
       "file": "VL6180X_carrier_dimensions_Pololu_2489.pdf",
       "retrieved": "2026-09-24",
@@ -196,7 +196,7 @@
       "version": null
     },
     "st-an4545": {
-      "url": null,
+      "url": "https://pololu.com/file/0J962/AN4545.pdf",
       "sha256": "091291adc9812852e4206f4bf33a6a1646a51c1c9d92bf5c4b00d1ee5efabbab",
       "file": "VL6180X_AN4545_cover_glass_ST.pdf",
       "retrieved": "2026-09-24",

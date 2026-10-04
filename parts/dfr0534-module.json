@@ -65,10 +65,7 @@
       "value": null,
       "verified": false,
       "source": "DFRobot publish no figure. The amplifier is an NSIWAY NS8002 (legible in DFRobot's own product photo, so the part identity is primary), LCSC C189960 — its datasheet states output power against supply and load, but neither lcsc.com nor nsiway.com.cn served the PDF when tried; both returned HTML.",
-      "why_it_matters": "Decides how loud the bin can be and what the speaker must survive. It is a published number on the amplifier's own datasheet, not something needing a meter — the document simply has not been obtained. Lower stakes than the two idle currents, which decide battery life.",
-      "cites": {
-        "document": "dfr0534-product-photo"
-      }
+      "why_it_matters": "Decides how loud the bin can be and what the speaker must survive. It is a published number on the amplifier's own datasheet, not something needing a meter — the document simply has not been obtained. Lower stakes than the two idle currents, which decide battery life."
     },
     "mounting_holes": {
       "value": "2 holes, 15.00 mm apart, both 3.50 mm in from the right edge",
@@ -178,7 +175,7 @@
       "version": "V1.0"
     },
     "dfr0534-silkscreen-photo": {
-      "url": null,
+      "url": "https://dfimg.dfrobot.com/enshop/DFR0534_Detail_05.jpg",
       "sha256": "23c7e609962fe06fefeda35cc730e0cab8a8869e1b9e9330c6823eb9294d5017",
       "file": "DFR0534_silkscreen_face_DFRobot.jpg",
       "retrieved": "2026-09-24",
@@ -186,23 +183,15 @@
       "version": null
     },
     "dfr0534-ruler-photo": {
-      "url": null,
+      "url": "https://dfimg.dfrobot.com/enshop/DFR0534_Dim_02.jpg",
       "sha256": "271e09fbd7af3719d4715c1ef31525e1907f65ad71f5a604686ef887f5476681",
       "file": "DFR0534_component_face_with_ruler_DFRobot.jpg",
       "retrieved": "2026-09-24",
       "title": null,
       "version": null
     },
-    "dfr0534-product-photo": {
-      "url": null,
-      "sha256": "1a712dca2f2ba194411349d15ee4e872a4daef3b2ec612928fdf645ba37b7063",
-      "file": "DFR0534_product_photo.png",
-      "retrieved": "2026-09-24",
-      "title": null,
-      "version": null
-    },
     "jq8400-manual-v1-3": {
-      "url": null,
+      "url": "https://sparks.gogo.co.nz/assets/_site_/downloads/JQ8400_English.pdf",
       "sha256": "2c44b4c9dd79a47f9994e3781ac6be6a2e565d3dab84516a2f3b39484666b0f4",
       "file": "JQ8400_decoder_manual_V1.3.pdf",
       "retrieved": "2026-09-24",

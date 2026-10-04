@@ -164,15 +164,16 @@
   ],
   "documents": {
     "handson-l9110s-guide": {
-      "url": null,
+      "url": "https://www.electrokit.com/upload/quick/6c/36/0143_41035908-tds.pdf",
       "sha256": "2a34d4ecceb1c7b046c0dd34ce098e39a644fc2a96ae40673d991361dc4c4c65",
       "file": "L9110S_module_guide_Handson_with_schematic.pdf",
       "retrieved": "2026-09-24",
       "title": null,
-      "version": null
+      "version": null,
+      "//url": "The same document, re-saved by Electrokit: its text is identical to the kept file's, its bytes are not (smaller pictures on pages 2 and 5), so a fetch from this URL will not match the sha256. Handson's own site serves no copy (2026-10-04)."
     },
     "gme-l9110s-datasheet-2016": {
-      "url": null,
+      "url": "https://img.gme.cz/files/eshop_data/eshop_data/9/772-209/dsh.772-209.1.pdf",
       "sha256": "79ea6e0ff7cf94601bc1e7b891ee04d42bb58f841187fd0a2d333820bd9593b0",
       "file": "L9110S_module_datasheet_GME_Eclipsera_2016.pdf",
       "retrieved": "2026-09-24",

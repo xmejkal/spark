@@ -321,7 +321,9 @@
       "file": "ESP32-S3-WROOM-1_datasheet_Espressif_v1.1.pdf",
       "retrieved": "2026-09-24",
       "title": "ESP32-S3-WROOM-1 & WROOM-1U Datasheet",
-      "version": "1.1"
+      "version": "1.1",
+      "private_only": true,
+      "//private_only": "No public copy of v1.1 exists (searched 2026-10-04): Espressif's URL serves a later version, and the Wayback Machine holds v1.0 and v1.2, not v1.1. The facts that cite it were read from this privately kept copy; a stranger can re-check them only against a later version."
     },
     "firebeetle2-s3-schematic-v1-3": {
       "url": "https://dfimg.dfrobot.com/wiki/20529/DFR0975_firebeetle-esp32-s3-ai-acceleration-board_schematics_V1.3.zip",
@@ -342,12 +344,13 @@
       "member": "DFR0975_firebeetle-esp32-s3-ai-acceleration-board_schematics_V1.3/DFR0975 schematics V1.0.pdf"
     },
     "eta6003-datasheet": {
-      "url": null,
+      "url": "https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2304131730_etasolution-ETA6003Q3Q_C5455585.pdf",
       "sha256": "2824d0c1a2d8487a22c2429513c0420b49d49716c24a66c7cfa6fea2aceb8da4",
       "file": "ETA6003_charger_datasheet.pdf",
       "retrieved": "2026-09-24",
       "title": null,
-      "version": null
+      "version": null,
+      "//url": "The same document from LCSC: identical text, 11 pages, a different save of the file, so a fetch from this URL will not match the sha256. ETA's own site serves no copy (2026-10-04)."
     }
   },
   "//power": "What DFRobot document, and what only the component datasheets say. DFRobot publish no current rating for either rail and no quiescent figure at all.",
