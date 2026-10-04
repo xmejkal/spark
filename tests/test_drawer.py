@@ -341,6 +341,26 @@ class TheDfrobotImportTest(unittest.TestCase):
         self.assertEqual(said["data"]["questions"][0]["entry"], "the-firebeetle-2-esp32-s3")
         self.assertFalse((self.home / "drawer" / "dfrobot-dfr0975.json").exists())
 
+    def test_an_earlier_entry_tied_by_from_keeps_its_count_and_learns_what_was_bought(self):
+        run(["--drawer-set", a_file([{"label": "my FireBeetle", "count": 1, "from": {"seller": "dfrobot", "product": "DFR0975"}}])])
+        self.bring(orders(("DFR0975", "FireBeetle 2 ESP32-S3 (N16R8)", 1)))
+        entry = self.entry("my-firebeetle")
+        self.assertEqual((entry["count"], entry["bought"]), (1, {"dfrobot": 1}))
+        self.bring(orders(("DFR0975", "FireBeetle 2 ESP32-S3 (N16R8)", 2)))
+        self.assertEqual(self.entry("my-firebeetle")["count"], 2)
+
+    def test_an_entry_that_names_the_sku_as_its_part_number_is_asked_not_duplicated(self):
+        run(["--drawer-set", a_file([{"label": "a DFRobot speaker", "count": 2, "part_number": {"maker": "dfrobot", "number": "FIT0502"}}])])
+        said, code = self.bring(orders(("FIT0502", "3W speaker", 2)))
+        self.assertEqual((code, len(said["data"]["questions"]), said["data"]["questions"][0]["entry"]), (0, 1, "a-dfrobot-speaker"))
+        self.assertIn("another", said["data"]["questions"][0]["sentence"])
+        self.assertFalse((self.home / "drawer" / "dfrobot-fit0502.json").exists())
+
+    def test_a_sku_repeated_in_one_payload_is_summed(self):
+        self.bring(orders(("DFR0954", "amp", 2), ("DFR0954", "amplifier", 3)))
+        entry = self.entry("dfrobot-dfr0954")
+        self.assertEqual((entry["count"], entry["bought"], entry["label"]), (5, {"dfrobot": 5}, "amp"))
+
     def test_lines_read_that_are_not_the_lines_stated_refuse_the_import(self):
         said, code = self.bring(orders(("SEN0193", "probe", 8), lines=1, stated=2))
         self.assertEqual((said["status"], code), ("problems", 1))
@@ -384,6 +404,18 @@ class TheDfrobotExtractorTest(unittest.TestCase):
             {"sku": "SEN0193", "name": "Gravity: Analog Capacitive Soil Moisture Sensor- Corrosion Resistant", "count": 8},
             {"sku": "MYST01-Raspberry Pi", "name": "$1 Mystery Box", "count": 1},
             {"sku": "DFR0954", "name": "Fermion: I2S 3W Class D Amplifier", "count": 2}], "stated": 3}, done.stderr)
+
+    def test_a_line_whose_count_cannot_be_read_is_not_counted_as_read(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node is not installed")
+        page = ("Order Details\n3 Items\nProbe\n\n$5.90\nSKU: SEN0193\nx 8\nAmp\n\n$4.50\nSKU: DFR0954\nquantity unknown\n"
+                "Speaker\n\n$2.00\nSKU: FIT0502\nx 2\n")
+        done = subprocess.run([node, "-e", "process.stdout.write(JSON.stringify(require(process.argv[1]).parseOrder("
+                               "require('fs').readFileSync(0, 'utf8'))))", str(ROOT / "data" / "importers" / "dfrobot.js")],
+                              input=page, capture_output=True, text=True, timeout=30)
+        said = json.loads(done.stdout)
+        self.assertEqual((len(said["lines"]), said["stated"]), (2, 3), done.stderr)
 
 
 if __name__ == "__main__":

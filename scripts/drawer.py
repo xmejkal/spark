@@ -315,32 +315,39 @@ def plan_import(source, payload):
     current, known = entries(), linkable()
     by_product = {(entry.get("from") or {}).get("product"): entry_id for entry_id, entry in current.items()
                   if (entry.get("from") or {}).get("seller") == source}
-    said = {json.dumps(entry["is"], sort_keys=True): entry_id for entry_id, entry in current.items()
-            if isinstance(entry.get("is"), dict) and (entry.get("from") or {}).get("seller") != source}
+    others = {entry_id: entry for entry_id, entry in current.items() if (entry.get("from") or {}).get("seller") != source}
+    totals = {}
+    for item in payload["items"]:  # a SKU on several lines is one product: its lines add up, the first name stays
+        first = totals.setdefault(item["sku"], dict(item, count=0))
+        first["count"] += item["count"]
     changes, questions, problems, smaller = [], [], [], []
-    for item in payload["items"]:
+    for item in totals.values():
         sku, total = item["sku"], item["count"]
         entry_id = by_product.get(sku) or store.slug("%s-%s" % (source, sku))
         before = current.get(entry_id)
         if before is None:
-            found = link(sku, known, maker=source)
-            if found.target and json.dumps(found.target, sort_keys=True) in said:
-                questions.append({"entry": said[json.dumps(found.target, sort_keys=True)], "sentence":
-                                  "%s from %s is %s %s, which this entry already is — the same item, or another? Not written "
-                                  "until the person says." % ((sku, source) + next(iter(found.target.items())))})
+            target = link(sku, known, maker=source).target
+            said = next((other for other, entry in others.items() if (target and entry.get("is") == target)
+                         or str((entry.get("part_number") or {}).get("number")).lower() == sku.lower()), None)
+            if said:
+                questions.append({"entry": said, "sentence":
+                                  "%s from %s is what entry %s already says it is — the same item, or another? The same: set this "
+                                  "entry's `from` to %s. Another: write the entry %s with --drawer-set. Either way the next import "
+                                  "finds it and asks no more." % (sku, source, said, json.dumps({"seller": source, "product": sku}),
+                                                                  entry_id)})
                 continue
             values = {"label": item["name"], "count": total, "part_number": {"maker": source, "number": sku},
                       "from": {"seller": source, "product": sku}, "bought": {source: total}, "unsure": False}
         else:
-            seen = (before.get("bought") or {}).get(source, 0)
-            if total < seen:
+            seen = (before.get("bought") or {}).get(source)
+            if seen is not None and total < seen:
                 smaller.append("%s: %s now says %d, %d were seen before — the entry keeps what it says" % (entry_id, source, total, seen))
-            if total <= seen:
+            if seen is not None and total <= seen:
                 continue
             values = {"bought": dict(before.get("bought") or {}, **{source: total})}
             if before.get("unsure"):
                 values.update(count=total, unsure=False)
-            elif before.get("count") != "many":
+            elif before.get("count") != "many" and seen is not None:  # no total seen yet: the count is the person's own
                 values["count"] = before.get("count", 0) + total - seen
         change, asked, refused = settle(entry_id, before, values, known)
         questions += asked

@@ -27,7 +27,8 @@ function parseOrder(text) {
     if (!row.startsWith('SKU:')) return;
     const count = /^x\s*(\d+)$/.exec(rows[i + 1] || '');
     const name = rows.slice(Math.max(0, i - 4), i).filter(r => r && !/^\$[\d.,]+$/.test(r)).pop();
-    lines.push({ sku: row.slice(4).trim(), name: name || '', count: count ? Number(count[1]) : 0 });
+    // A line whose name or count did not parse is left out, so lines < stated and spark refuses the import.
+    if (name && count) lines.push({ sku: row.slice(4).trim(), name, count: Number(count[1]) });
   });
   const stated = /(\d+)\s+Items?\b/.exec(text);
   return { lines, stated: stated ? Number(stated[1]) : null };
