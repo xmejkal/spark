@@ -187,7 +187,7 @@ Goal first, with the PO's real drawer. One story per spine step, the thinnest th
 
 | step | story | check |
 | --- | --- | --- |
-| D | As the maker, I tell spark what I own in plain words; it makes light drawer entries and asks only what is unclear | `--drawer --json` lists them, "owned, not researched" |
+| D | As the maker, my drawer fills from my **DFRobot order history** (an agent reads my logged-in account, read only) and from **plain words** for anything else; light entries, linked to known records by SKU, asking only what is unclear | `--drawer --json` lists them, "owned, not researched" |
 | S | As the hobbyist, I say a goal; the conversation turns it into needs — each a `does`/`what`, no part numbers | a needs file lists the functions |
 | M | As the agent, for each need I get what the store has, store first, marked have / know / gap, and what each candidate still lacks | `--match <needs> --json` marks every need |
 | C | As the hobbyist, I see each need's candidates (layer, owned count, proof, what is owed) and pick | the picks are recorded, a passed-over part with why |
@@ -239,8 +239,25 @@ fill what we have"*) — then photos; the other six ways in; the shelf beyond re
 | "the MP3 mini module, I think" | ×1, sound / mp3-player, `unsure` |
 | "the I2S amplifier, I think" | ×1, sound / amplifier (DFR0954?), `unsure` |
 
-**Questions left:** none for D. The DFRobot order history (P93's next importer) will settle the two `unsure`
-audio entries — and with them the bin's B1.
+**The DFRobot importer joins slice 1 (the PO, 2026-10-04)**, after a first read-only pass of his order history
+(8 orders, 106 lines, **99 SKUs, 167 units**, saved in the store as SKU, name and count only). Rules:
+11. **Imported parts count as owned; the person corrects** what is used up or gone (the PO).
+12. **A re-import never undoes a correction:** an entry keeps the count its source says was bought apart from
+    the person's correction; a later import adds only what was bought since.
+13. Product names may contain `$` ("Black Friday $1 Mystery Box") — the first pass's extractor missed one line
+    for that reason; the importer checks its line count against the page's own "N Items".
+
+| from the order history | entry |
+| --- | --- |
+| SEN0193 × 8 | → catalog `sen0193-soil-moisture` — **the plant alarm's probe is owned** |
+| DFR0954 × 2 | → library `max98357a-dfr0954` — settles the `unsure` I2S amplifier: owned |
+| DFR0768 × 2 (DFPlayer Pro) | light entry, sound / mp3-player — the PO's "MP3 mini module"; no record yet |
+| FIT0502 × 2 (3 W speaker) | light entry, sound / speaker |
+| DFR0975 × 1 | → board `firebeetle2-esp32s3` — the FireBeetle is the N16R8 SKU; revision still unread |
+| MYST01 × 1 ("$1 Mystery Box") | light entry, contents unknown |
+
+With the drawer filled, the walking skeleton's goal — the plant thirst alarm — needs **no research and no
+purchase**: probe, amplifier, speaker, board and battery are all owned.
 
 ### S — a goal becomes needs (agreed 2026-10-04)
 

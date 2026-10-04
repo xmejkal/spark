@@ -1510,6 +1510,10 @@ DFPlayer Mini; micro-USB and "Voice Module V1.0" means DFR0534; pads marked BCLK
 I²S amp the board now assumes.
 **Value proven by:** the bin's `make check` against the module that is actually there.
 
+**Partly answered 2026-10-04** from the PO's DFRobot order history (read only, saved in his store): he bought
+**DFR0954 MAX98357 I2S amplifiers ×2**, **DFR0768 DFPlayer Pro ×2** and **FIT0502 3 W speakers ×2**; no DFR0534
+from DFRobot (one may come from elsewhere). Bought is not the same as in the drawer — a look settles it. His
+FireBeetle is DFR0975 (N16R8); its hardware revision is still unread (the bin's STATUS item 8).
 ### B4 — The viewer is made by `make`, not kept by hand — **PO, 2026-10-01: regenerate it via make** — DONE 2026-10-01, bin `ee2c638`
 **Run after the last change:** `make board-viewer.html` → 25 parts, 60 traces, 0 routing errors,
 4.3 MB; `AudioAmp` 14 times, `Mp3` and `XIAO` 0; `make -q` 0 when current, 1 after touching
