@@ -45,26 +45,38 @@
     "i2c_address": {
       "value": "0x29",
       "verified": true,
-      "source": "ST VL6180X datasheet, default"
+      "source": "ST VL6180X datasheet, default",
+      "cites": {
+        "document": "vl6180x-datasheet"
+      }
     },
     "die_supply_v": {
       "value": 2.8,
       "verified": true,
       "source": "ST VL6180X datasheet",
       "why_it_matters": "The DIE is a 2.8 V part. A bus pulled to 3.3 V meets a pad powered from 2.8 V, and whether that is safe depends entirely on whether the carrier level-shifts.",
-      "note": "A 2.8 V LDO on the carrier feeds it from VIN, so the die never sees the host's 3.3 V."
+      "note": "A 2.8 V LDO on the carrier feeds it from VIN, so the die never sees the host's 3.3 V.",
+      "cites": {
+        "document": "vl6180x-datasheet"
+      }
     },
     "carrier_has_level_shifters": {
       "value": true,
       "verified": true,
-      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
-      "note": "Q1A and Q1B, the usual two-MOSFET bidirectional shifter, with 10k to VIN on the host side and 10k to the 2.8 V VDD on the die side. So SDA and SCL are safe to drive at 3.3 V, and the bus already has 10k pull-ups without the host adding any."
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (document pololu-2489-schematic)",
+      "note": "Q1A and Q1B, the usual two-MOSFET bidirectional shifter, with 10k to VIN on the host side and 10k to the 2.8 V VDD on the die side. So SDA and SCL are safe to drive at 3.3 V, and the bus already has 10k pull-ups without the host adding any.",
+      "cites": {
+        "document": "pololu-2489-schematic"
+      }
     },
     "carrier_pulls_up_the_interrupt": {
       "value": 47000,
       "verified": true,
-      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
-      "note": "R6, 47k to VDD — which is 2.8 V, not the host's 3.3 V — with R8 1k in series out to the header. So the interrupt idles near 2.8 V. That clears an ESP32-S3's input high threshold, but a host adding its own pull-up to 3.3 V is fighting a divider rather than helping, and the level it settles at is what an ext1 wake reads."
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (document pololu-2489-schematic)",
+      "note": "R6, 47k to VDD — which is 2.8 V, not the host's 3.3 V — with R8 1k in series out to the header. So the interrupt idles near 2.8 V. That clears an ESP32-S3's input high threshold, but a host adding its own pull-up to 3.3 V is fighting a divider rather than helping, and the level it settles at is what an ext1 wake reads.",
+      "cites": {
+        "document": "pololu-2489-schematic"
+      }
     },
     "idle_current_ma": {
       "value": null,
@@ -75,14 +87,20 @@
     "module_has_i2c_pullups": {
       "value": true,
       "verified": true,
-      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
-      "note": "10 k to VIN on the host side of the Q1A/Q1B shifter, on SDA and SCL (the carrier_has_level_shifters fact). Corrected 2026-10-03 (P81): the host_parts reasons used to say the module carries none."
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (document pololu-2489-schematic)",
+      "note": "10 k to VIN on the host side of the Q1A/Q1B shifter, on SDA and SCL (the carrier_has_level_shifters fact). Corrected 2026-10-03 (P81): the host_parts reasons used to say the module carries none.",
+      "cites": {
+        "document": "pololu-2489-schematic"
+      }
     },
     "i2c_pullup_ohms": {
       "value": 10000,
       "verified": true,
-      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (kept at parts/datasheets/VL6180X_carrier_schematic_Pololu_2489.pdf in the bin)",
-      "note": "to VIN, the host's supply, on the host side of the level shifter"
+      "source": "Pololu's own schematic for carrier #2489, PCB revision irs09a: https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf (document pololu-2489-schematic)",
+      "note": "to VIN, the host's supply, on the host side of the level shifter",
+      "cites": {
+        "document": "pololu-2489-schematic"
+      }
     }
   },
   "host_requirements": [
@@ -115,7 +133,15 @@
   ],
   "pin_order_proof": {
     "verified": false,
-    "source": "Pololu's 7-pin header reads VDD · VIN · GND · SDA · SCL · GPIO0/CE · GPIO1. This file wires five of them; pad 1 (VDD, the 2.8 V rail brought out for reference) and pad 6 (GPIO0/CE, the chip-enable) are real pads this design does not use, so they stay empty. Read off Pololu's own schematic for carrier #2489."
+    "source": "Pololu's 7-pin header reads VDD · VIN · GND · SDA · SCL · GPIO0/CE · GPIO1. This file wires five of them; pad 1 (VDD, the 2.8 V rail brought out for reference) and pad 6 (GPIO0/CE, the chip-enable) are real pads this design does not use, so they stay empty. Read off Pololu's own schematic for carrier #2489.",
+    "cites": {
+      "document": "pololu-2489-schematic"
+    },
+    "corroborated_by": {
+      "cites": {
+        "document": "pololu-2489-dimensions"
+      }
+    }
   },
   "simulation": {
     "wokwi": {
@@ -143,5 +169,39 @@
       "ohms": 4700,
       "why": "the same, for the clock line"
     }
-  ]
+  ],
+  "documents": {
+    "pololu-2489-schematic": {
+      "url": "https://www.pololu.com/file/0J960/vl6180x-time-of-flight-distance-sensor-carrier-schematic.pdf",
+      "sha256": "5cac2a7c8134d20721b5e008387485b842eb0059a15397b3e8df31ecbe76801f",
+      "file": "VL6180X_carrier_schematic_Pololu_2489.pdf",
+      "retrieved": "2026-09-24",
+      "title": null,
+      "version": null
+    },
+    "vl6180x-datasheet": {
+      "url": "https://www.st.com/resource/en/datasheet/vl6180x.pdf",
+      "sha256": "87e1b09668160d714276cdb093a41e7bf18120c81c25888a309e8fcfdc6a6724",
+      "file": "VL6180X_datasheet_ST_Rev7.pdf",
+      "retrieved": "2026-09-24",
+      "title": null,
+      "version": "DocID026171 Rev 7"
+    },
+    "pololu-2489-dimensions": {
+      "url": null,
+      "sha256": "c1c6c56d020d4e7e3cc175d96bbb91c1322027622a31953b9199f277d7de3ad1",
+      "file": "VL6180X_carrier_dimensions_Pololu_2489.pdf",
+      "retrieved": "2026-09-24",
+      "title": null,
+      "version": null
+    },
+    "st-an4545": {
+      "url": null,
+      "sha256": "091291adc9812852e4206f4bf33a6a1646a51c1c9d92bf5c4b00d1ee5efabbab",
+      "file": "VL6180X_AN4545_cover_glass_ST.pdf",
+      "retrieved": "2026-09-24",
+      "title": null,
+      "version": "DocID026571 Rev 1"
+    }
+  }
 }
