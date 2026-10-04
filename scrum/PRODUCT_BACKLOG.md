@@ -773,11 +773,17 @@ project's `--list` now shows. A live re-import in the PO's browser read 8 orders
 `parts_on_hand`, `owned`, `photo` and the owned listing are retired in spark and the PO's four projects. The code
 budget was raised to 5,189 for it, measured after its refactor (W15b). Plan and ledger rulings: the PR.
 
-### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment**
+### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment** — DONE 2026-10-04
 **Needed by:** the PO's walking skeleton, the plant thirst alarm. Design §4 (store 1b), §5.3, §5.4, §5.6, §6.2.
 **Value proven by:** from "tell me when my plant is thirsty", `parts.py --match <project> --json` lists each
 need's candidates from the store with owned and free counts and what each owes (SEN0193: `pin_order_proof`,
 `footprint`, `simulation`; DFR0954: `footprint`); `--validate` walks every layer and finds no broken record.
+**Proven 2026-10-04, on the PO's real store:** `--match ~/Development/plant-alarm` gave soil — SEN0193, 8 owned, 8 free,
+owes footprint, pin_order_proof, simulation; alarm — the DFR0954 amp (2 owned, owes footprint), the FIT0502 speaker,
+the DFPlayer Pro, the MP3 mini module (maybe owned); board — the FireBeetle S3 (1 owned, 0 free: the bin holds it)
+and the XIAO C6 (1 free); battery — the 1S LiPo (0 free). The PO marked all four `have`. The walk is `--audit`
+(ruling: `--validate` keeps its meaning) — catalog 18 owe facts, 0 broken. Size: +278 code lines (the needs file,
+the matcher, owed vs broken and the walk).
 
 ### P97 — Store 1c: picks to a building list, tallied — **slice 10; P94's third increment**
 **Needed by:** the same skeleton, to its end. Design §4 (store 1c), §5.7, §6.5, §6.7, §8 C–T.
@@ -903,6 +909,9 @@ it was passed over (`//why_not`, which nothing prints).
 **Value proven by:** `--need rtc` shows each candidate's contract problems ("draft: 1 to fill —
 pin_order_proof"); the 18 records' `//pin_order` and `//why_not` become fields and `--show` prints
 `why_not`; a check walks the person's catalog again (P55); `--catalog --json` exists.
+**Partly carried, 2026-10-04:** the walk is P96's `--audit` (owed vs broken, every layer), and `--catalog --json`
+came with P95. Still open: `--need` showing what each candidate owes, the notes as fields, `--show` printing
+`why_not` — pulled by 1c's step that fills owed facts.
 
 ### P90 — A document comes back, checked — **slice 10; P85's plan, Next**
 **Needed by:** the hobbyist on a new machine and anyone re-checking a fact: `--fetch` skips every URL
