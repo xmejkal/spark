@@ -749,6 +749,19 @@ record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept doc
 `/spark:research` write candidates to the store. Mutations: `sprint-10-p83` 2 of 2, `sprint-5-catalog`
 10 of 10 (one re-anchored), `sprint-8-p55` 4 of 4 (its two catalog-file rows left with the files).
 
+### P85 — The store, reviewed whole: use cases, gaps, one plan — **slice 10; the PO's request of 2026-10-04**
+**Needed by:** every item that touches where spark keeps what it found — P61, P62a and P62b (the
+store and its documents), P82 (the layered list, its downloads), P83 (the catalog in the store, done),
+B12 (the bin's 16 files: kept in the store and checked byte for byte on 2026-10-04; citing by key and
+the removal from the bin paused here) and P84 (a store you can choose, a shared part database — an
+idea). The PO: *"let's review and replan all the store related changes together, find gaps and make sure
+it's all making sense together and works, let's have the council review it, already specifying the
+use cases and such."*
+**Value proven by:** a discovery document the PO reads and decides on — the store's vision, its use
+cases and user stories for the personas, every gap found with its evidence (a file and line, or a
+command and its output), and one ordered plan for B12's remainder, P84 and whatever the gaps add; the
+PO's decisions recorded on the items it names.
+
 ### P84 — A store you can choose, and a shared part database — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
 **Needed by:** the hobbyist who researches a part someone else already researched, and every spark
 user whose kept records live in one folder on one machine. The PO: *"implement and architect it in
