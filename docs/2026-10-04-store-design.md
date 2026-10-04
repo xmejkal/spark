@@ -193,7 +193,45 @@ field derived from `kind`; P87 (records inert).
 fill what we have"*) — then photos; the other six ways in; the shelf beyond reserving; the viewer; MCP;
 `simulated` and `ran` proof; the shared database.
 
-## 8. Next
+## 8. Example maps
 
-Example-map each slice-1 story with the PO (rules, examples from the real drawer, questions), then the spec
-and the plan for slice 1.
+### D — the drawer, from words (agreed 2026-10-04)
+
+**Rules**
+1. An entry needs only a label and a count; everything else is optional.
+2. Owning never triggers research or a web request.
+3. Words that name a part spark knows (a library record, a board, a maker part number) link the entry to it.
+4. Something unclear is asked once, and only that.
+5. The same item said twice adds to its count, never a duplicate.
+6. The drawer lives in the store, never in a repository.
+7. A part whose only record sits in another project is linked to it, and that record goes onto the shelf so
+   every project finds it — never researched again (proposed by Claude; the PO may veto).
+8. **A part said to be dead stays, in the person's words**; ideas and matching skip it unless asked (the PO).
+9. **A part the person is unsure of is added marked `unsure`**; matching shows it as "maybe owned — check the
+   drawer"; an import or a look confirms it (the PO).
+10. **"Many" is a valid count** for plentiful cheap parts; a number only where it matters (the PO).
+
+**Examples — the PO's real drawer** (each becomes a test of the typed-list importer)
+
+| said | entry |
+| --- | --- |
+| "the FireBeetle 2 ESP32-S3" | ×1 → board `firebeetle2-esp32s3`, revision unknown |
+| "a Seeed XIAO ESP32-C6" | ×1 → board `xiao-esp32-c6` |
+| "the blue L9110S motor driver" | "blue L9110S" ×1 → library `l9110s-module` |
+| "an L298N board, HW-095" | ×1, part number HW-095, drive / motor-dc, not researched |
+| "an A4988 stepper driver HW-134 — I think it's dead" | ×1, part number HW-134, drive / motor-stepper, words "I think it's dead" — skipped by ideas |
+| "a DS3231 clock module from AliExpress, the one with the AT24C32" | ×1 → irrigation's `ds3231-at24c32-rtc-module`, onto the shelf (rule 7) |
+| "a CJMCU-111" | ×1, part number CJMCU-111; asks once what it does |
+| "an IP2312 charger board" | ×1, power / lipo-charging |
+| "a DFRobot speaker" | ×1, sound / speaker, part number unknown |
+| "a 1S LiPo battery" | ×1, power / battery |
+| "a bag of 6×6 tactile buttons" | "many" → library `tactile-button` |
+| "the MP3 mini module, I think" | ×1, sound / mp3-player, `unsure` |
+| "the I2S amplifier, I think" | ×1, sound / amplifier (DFR0954?), `unsure` |
+
+**Questions left:** none for D. The DFRobot order history (P93's next importer) will settle the two `unsure`
+audio entries — and with them the bin's B1.
+
+## 9. Next
+
+Example-map S, M, C, G, L and T, then the spec and the plan for slice 1.
