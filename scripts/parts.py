@@ -1242,6 +1242,10 @@ OPERATIONS = (
     ("promote", {"metavar": "PART"}, "catalog → the project's parts/, or the project's parts/ → the plugin's library", ("writes",),
      ("path", "written")),
     ("catalog", {"action": "store_true"}, "every record research has kept, chosen or not", (), ("records", "broken")),
+    ("drawer", {"action": "store_true"}, "what you own: label, count, the record it is, unsure, skip — 20 at a time", (),
+     ("entries",)),
+    ("drawer-set", {"metavar": "FILE"}, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds",
+     ("writes",), ("changes", "questions", "shelved")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1421,6 +1425,57 @@ def _op_promote(args, project):
                   ["  %s %s" % ("would promote to" if args.dry_run else "promoted to", target)])
 
 
+def _read_json_input(name):
+    """A payload from a file, or from stdin for '-' — the way labels and names travel, never argv (§6.4.2): (data, None) or (None, why not)."""
+    try:
+        return json.loads(sys.stdin.read() if name == "-" else Path(name).read_text()), None
+    except (OSError, ValueError) as broken:
+        return None, "%s is not readable JSON: %s" % ("stdin" if name == "-" else name, broken)
+
+
+def _change_line(change, dry_run):
+    """'  new soil-probe: soil probe × 8 — is part sen0193-soil-moisture', or '  set dfrobot-dfr0954: count 2 → 4'."""
+    if change["new"]:
+        now, linked = change["now"], change["now"].get("is")
+        return "  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count"),
+                                         " — is %s %s" % next(iter(linked.items())) if linked else "")
+    return "  %s %s: %s" % ("would set" if dry_run else "set", change["entry"], "; ".join(
+        "%s %s → %s" % (key, json.dumps(change["was"].get(key), ensure_ascii=False), json.dumps(value, ensure_ascii=False))
+        for key, value in change["now"].items()))
+
+
+def _drawer_answer(changes, questions, problems, dry_run):
+    """What a drawer write did or would do (§5.2): all of it, or — when anything is refused — none of it."""
+    import drawer
+    if not problems and not dry_run:
+        drawer.apply(changes)
+    made = [change for change in changes if change["now"]]
+    lines = [_change_line(change, dry_run) for change in made] + ["  ? %s" % q["sentence"] for q in questions]
+    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
+    return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],
+                   "questions": questions, "shelved": [Path(change["shelve"][0]).stem for change in made if change["shelve"]]},
+                  lines or ["  nothing to change"], problems=problems)
+
+
+def _op_drawer(args, project):
+    import drawer
+    entries = drawer.listing()
+    shown, truncated = page(entries, args.start, "drawer", ["--drawer"])
+    lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], e["count"], "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
+                                         "maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""))
+             for e in entries]
+    lines.append("  %d entr%s" % (len(entries), "y" if len(entries) == 1 else "ies"))
+    return Answer({"entries": shown}, lines, truncated=truncated)
+
+
+def _op_drawer_set(args, project):
+    import drawer
+    items, unreadable = _read_json_input(args.drawer_set)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    return _drawer_answer(*drawer.plan_set(items), args.dry_run)
+
+
 def _op_catalog(args, project):
     records, broken = catalog_records()
     listing = [{"id": part_id, "kind": record["kind"], "name": record["name"]} for part_id, record in records.items()]
@@ -1479,6 +1534,8 @@ def main(argv=None):
         value = getattr(args, op.replace("-", "_"))
         answer = Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else
                                            (value if isinstance(value, str) else None), str(broken))])
+    except store.StoreProblem as broken:
+        answer = Answer(unchecked=[_cannot(str(broken))])
     return _say(op, answer, args.json)
 
 
