@@ -73,6 +73,7 @@ SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
 CAPABILITIES = ("wake", "adc", "pwm")
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN  # noqa: E402
+import store  # noqa: E402
 
 
 class PartError(Exception):
@@ -658,21 +659,6 @@ CATALOG_KEYS = ("schema", "id", "name", "kind")
 #: What `--fetch` keeps: the sources worth having when the link rots.
 KEEPABLE = (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".svg")
 
-#: Where a person's kept sources live (P61, P62a): ONE store outside the plugin — a published plugin
-#: cannot carry vendor documents — shared by every project, each file under its own checksum so a
-#: record finds it without searching. The PO chose the place on 2026-10-02; its backup is the
-#: machine's. A record holds the pointer (`documents`), never the file.
-STORE = Path.home() / ".local" / "share" / "spark" / "sources"
-
-#: Everything research has read and not chosen (PO, 2026-09-29: "even if we end up not using that
-#: part, keep it — we want a good database in time"), in the person's store beside its documents —
-#: not in the plugin, where a record was a commit to a public repository for its author and a cache
-#: the next update abandons for anyone else (P83). A candidate keeps its part facts — pinout, power,
-#: body, the cited facts — because a swap decision rests on them and they stay true (the PO, 2026-10-04);
-#: it keeps no seller listings, which go stale before anyone reads them (W21). A `parts/` record must
-#: pass the contract; a catalog record has to say what it is, and `--promote` asks the rest.
-CATALOG = STORE.parent / "catalog"
-
 #: An http(s) URL inside prose: "Table 3 of https://x/ds.pdf (rev 7)" cites https://x/ds.pdf. A
 #: parenthesis belongs to the URL when it is balanced — DFRobot names files "DFR (1).pdf" — and
 #: to the prose when it closes one the URL never opened.
@@ -689,7 +675,7 @@ def _url_in_prose(url):
 def catalog_records():
     """Every catalog record that parses, says what it is and keeps no seller listings, by id; the rest are named as broken."""
     records, broken = {}, []
-    for path in sorted(CATALOG.glob("*" + DEFINITION_SUFFIX)):
+    for path in sorted(store.place("catalog").glob("*" + DEFINITION_SUFFIX)):
         record = _parse(path)
         if not (isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS)):
             broken.append(path.name)
@@ -709,7 +695,7 @@ def catalog_matches(words):
 
 def record_home(part_id, project=None):
     """Where a record lives — a parts/ on the search path, or the catalog — or None."""
-    for directory in search_path(project) + [CATALOG]:
+    for directory in search_path(project) + [store.place("catalog")]:
         if (directory / (part_id + DEFINITION_SUFFIX)).is_file():
             return directory
     return None
@@ -718,7 +704,7 @@ def record_home(part_id, project=None):
 def any_record(part_id, project=None):
     """The record wherever it lives: validated from a parts/, raw from the catalog (a draft is allowed)."""
     home = record_home(part_id, project)
-    if home == CATALOG:
+    if home == store.place("catalog"):
         return _parse(home / (part_id + DEFINITION_SUFFIX)) or {}
     return load(part_id, project)
 
@@ -771,8 +757,8 @@ def keep_in_store(payload, name):
     if name.lower().endswith((".jpg", ".jpeg")):
         payload = without_location(payload)[0]
     digest = hashlib.sha256(payload).hexdigest()
-    (STORE / digest).mkdir(parents=True, exist_ok=True)
-    (STORE / digest / name).write_bytes(payload)
+    (store.place("sources") / digest).mkdir(parents=True, exist_ok=True)
+    (store.place("sources") / digest / name).write_bytes(payload)
     return digest
 
 
@@ -885,7 +871,7 @@ def records_with_documents(project=None):
     """(owner id, record) for every record that can point at a document: parts, catalog, boards."""
     import boards
     board_dirs = ([Path(project) / "boards"] if project else []) + [boards.LIBRARY]
-    paths = [directory / (part_id + DEFINITION_SUFFIX) for directory in search_path(project) + [CATALOG]
+    paths = [directory / (part_id + DEFINITION_SUFFIX) for directory in search_path(project) + [store.place("catalog")]
              if directory.is_dir() for part_id in sorted(p.stem for p in directory.glob("*" + DEFINITION_SUFFIX))]
     paths += [path for directory in board_dirs if directory.is_dir()
               for path in sorted(directory.glob("*" + DEFINITION_SUFFIX)) if path.name not in boards.NOT_A_BOARD]
@@ -922,6 +908,7 @@ def find_kept(words, project=None):
     each fact that rests on it — read from the records alone: no network (P62b). A researcher runs
     this BEFORE fetching: one fetch in five repeated one already made (P61).
     """
+    kept = store.place("sources")
     wanted = [word.lower() for word in words]
     lines = []
     for owner, record in records_with_documents(project):
@@ -930,7 +917,7 @@ def find_kept(words, project=None):
                                                    entry.get("url"), entry.get("version"))).lower()
             if not all(word in said for word in wanted):
                 continue
-            path = STORE / str(entry.get("sha256")) / str(entry.get("file"))
+            path = kept / str(entry.get("sha256")) / str(entry.get("file"))
             lines.append("%s %s: %s %s" % (owner, key, entry.get("title") or entry.get("file"),
                                            entry.get("version") or "(version not read)"))
             lines.append("    %s  %s" % (path, "present" if path.is_file() else "MISSING"))
@@ -942,7 +929,7 @@ def find_kept(words, project=None):
     # The store itself: a file another project kept, or an interrupted run left, is still kept (P80).
     cited = {str(entry.get("sha256")) for _, record in records_with_documents(project)
              for entry in record["documents"].values() if isinstance(entry, dict)}
-    for path in sorted(STORE.glob("*/*")) if STORE.is_dir() else []:
+    for path in sorted(kept.glob("*/*")) if kept.is_dir() else []:
         if path.parent.name not in cited and all(word in path.name.lower() for word in wanted):
             lines.append("%s: kept; no record here cites it" % path.name)
             lines.append("    %s  present" % path)
@@ -1012,7 +999,7 @@ def promote(part_id, project, to=None):
     home = record_home(part_id, project)
     if home is None:
         raise PartError("no record called %r to promote" % part_id)
-    to = Path(to) if to else (Path(project) / "parts" if home == CATALOG else LIBRARY)
+    to = Path(to) if to else (Path(project) / "parts" if home == store.place("catalog") else LIBRARY)
     target = to / (part_id + DEFINITION_SUFFIX)
     if target.exists():
         raise PartError("%s exists; a promotion never overwrites" % target)

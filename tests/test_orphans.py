@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 #: Modules that are imported, never run: they earn their place by being imported.
-LIBRARIES = {"copper", "outcomes", "design"}
+LIBRARIES = {"copper", "outcomes", "design", "store"}
 
 #: The budget for the product's scripts, in CODE lines: docstrings, comments and blank lines do
 #: not count. It counted every line until 2026-09-30, which charged the most valuable thing in

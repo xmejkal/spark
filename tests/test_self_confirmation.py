@@ -63,8 +63,6 @@ MAY_READ = {
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
-    "parts.CATALOG": STRUCTURE + " — compared with the literal place P83 names: the person's store, not the plugin",
-    "parts.STORE": STRUCTURE + " — the catalog sits beside the kept documents",
     "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
 }
 

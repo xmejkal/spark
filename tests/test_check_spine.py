@@ -726,7 +726,8 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
 
     def test_the_commands_start_with_a_broken_personal_file_and_say_so(self):
         import subprocess
-        env = dict(os.environ, HOME=str(self.broken_home()))
+        env = {key: value for key, value in os.environ.items() if key not in ("SPARK_HOME", "XDG_DATA_HOME")}
+        env["HOME"] = str(self.broken_home())
         helped = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_spine.py"), "--help"],
                                 capture_output=True, text=True, env=env, timeout=60)
         self.assertEqual(helped.returncode, 0, helped.stderr[-600:])

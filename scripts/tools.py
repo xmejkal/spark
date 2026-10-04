@@ -37,13 +37,15 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import store  # noqa: E402
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
 PLUGIN = SCRIPTS.parent
 DEFAULTS = PLUGIN / "data" / "tools.json"
-SPARK_HOME = Path.home() / ".local" / "share" / "spark"
-PERSONAL = SPARK_HOME / "tools.json"
-DOWNLOADS = SPARK_HOME / "downloads"
+#: The person's tools list and downloads, in their store. Read once, when the process starts — which for a
+#: command is the moment it is asked — and a module constant, so a test can point them elsewhere.
+PERSONAL = store.place("tools")
+DOWNLOADS = store.place("downloads")
 PROJECT_FILE = Path(".spark") / "tools.json"
 #: Keys of a tools file that are not tools.
 RESERVED = ("roles", "contracts")
