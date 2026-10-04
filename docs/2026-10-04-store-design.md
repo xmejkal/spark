@@ -232,6 +232,48 @@ fill what we have"*) — then photos; the other six ways in; the shelf beyond re
 **Questions left:** none for D. The DFRobot order history (P93's next importer) will settle the two `unsure`
 audio entries — and with them the bin's B1.
 
+### S — a goal becomes needs (agreed 2026-10-04)
+
+**Rules**
+1. A need is a function — `does` / `what` — with a condition only when it decides a part.
+2. No part numbers yet.
+3. At most about three questions, each able to change a need.
+4. The board is a need like any other.
+5. The output is a short needs file in the project.
+
+**Example — the walking skeleton's goal, run for real with the PO:** "Tell me when my plant is thirsty." The
+three questions and his answers: *how should it tell you?* — a sound; *how is it powered?* — battery; *where
+does the plant live?* — indoors, a pot. The needs:
+
+| need | does / what | condition |
+| --- | --- | --- |
+| 1 | sense / soil-moisture | indoor pot, short probe; low power (battery) |
+| 2 | sound / alarm | a beep is enough |
+| 3 | compute / microcontroller | deep sleep between readings (battery) |
+| 4 | power / battery | rechargeable |
+
+### M — match each need against the store (agreed 2026-10-04)
+
+**Rules**
+1. Store first, in the proposing order (drawer → project → shelf → library → catalog → shared); research only
+   for a gap.
+2. Each need is marked **have** (owned), **know** (researched, not owned — buy, don't research) or **gap**
+   (nothing similar).
+3. A candidate shows what it still owes (P89's owed facts), its proof, and how many are owned.
+4. A part passed over elsewhere is offered with that project's reason — the reason belongs to that context.
+5. A `unsure` owned part shows as "maybe owned — check the drawer".
+6. **Owned first, the simpler option shown** (the PO): when an owned route needs more parts and a simpler part
+   is not owned, spark proposes the owned route and shows the simpler one beside it, with what it would cost.
+
+**Example — the real store, 2026-10-04**
+
+| need | mark | from the store |
+| --- | --- | --- |
+| sense / soil-moisture | know | the catalog's SEN0193 (capacitive) — irrigation passed it over for an outdoor bed, which does not apply; owes a few facts; irrigation's waterproof SEN0308 is the alternative. Neither owned: buy, don't research |
+| sound / alarm | have, with a catch | the DFRobot speaker needs a driver: the I2S amplifier or the MP3 module, both `unsure`; a piezo buzzer, simpler, is a gap |
+| compute | have | the FireBeetle 2 S3 — deep sleep, and its LiPo socket and charger fit the battery need (the XIAO ESP32-C6 is the other) |
+| power / battery | have | the 1S LiPo; the FireBeetle's charger covers charging |
+
 ## 9. Next
 
-Example-map S, M, C, G, L and T, then the spec and the plan for slice 1.
+Example-map C, G, L and T, then the spec and the plan for slice 1.
