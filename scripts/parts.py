@@ -703,6 +703,37 @@ def catalog_matches(words):
             if _matches(words, part_id, record)]
 
 
+#: What a record leaves behind when it goes onto the shelf (§5.5): who owns one, their photos, where to buy it,
+#: the options one project weighed. The shelf keeps the part, not one project's story of it.
+SHELF_DROPS = ("owned", "photo", "photos", "sourcing", "alternatives")
+
+#: The facts a build reads from a part record (§5.7): a digest of these vouches for a record until one changes.
+BUILD_FACTS = ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts")
+
+
+def digest(record):
+    """The sha256 of the facts a build reads from a part record — rewriting anything else keeps it (§5.7)."""
+    facts = {key: record[key] for key in BUILD_FACTS if key in record}
+    return hashlib.sha256(json.dumps(facts, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def shelve(path, project_name):
+    """
+    Put a record that lives in one project onto the person's shelf, so every project finds it (§5.5): a filtered
+    copy that says which project it came from and that record's digest; its folder (a simulation chip) travels
+    with it. Returns whether the shelf changed.
+    """
+    import shutil
+    path = Path(path)
+    record = json.loads(path.read_text())
+    copy = {key: value for key, value in record.items() if key not in SHELF_DROPS}
+    copy["based_on"] = {"project": project_name, "digest": digest(record)}
+    changed = store.write_json("shelf", path.stem, copy)
+    if (path.parent / path.stem).is_dir():
+        shutil.copytree(path.parent / path.stem, store.place("shelf") / path.stem, dirs_exist_ok=True)
+    return changed
+
+
 def record_home(part_id, project=None):
     """The folder a record lives in — the nearest layer that has it, the catalog included — or None."""
     found = store.records("parts", LIBRARY, project, drafts=True).get(part_id)

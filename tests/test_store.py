@@ -1,7 +1,9 @@
 """P88: where the store is — read on every call, and never the person's while the suite runs (docs/2026-10-04-store-design.md §6.1)."""
 
+import json
 import os
 import re
+import stat
 import subprocess
 import sys
 import tempfile
@@ -104,6 +106,78 @@ class TheLayersTest(unittest.TestCase):
         import boards
         self.put(self.project / "boards", "active.json")
         self.assertNotIn("active", boards.available(self.project))
+
+
+class ContainedWritesTest(unittest.TestCase):
+    """§5.1, §5.8: a write lands inside its place, whole or not at all, private, and never in a git work tree."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_write_is_whole_and_a_retried_one_changes_nothing(self):
+        self.assertTrue(store.write_json("drawer", "x", {"a": "Kč"}))
+        self.assertFalse(store.write_json("drawer", "x", {"a": "Kč"}))
+        self.assertEqual(json.loads((self.home / "drawer" / "x.json").read_text()), {"a": "Kč"})
+        self.assertEqual(list((self.home / "drawer").glob("*.part")), [])
+
+    def test_a_private_place_is_0600_in_0700(self):
+        store.write_json("drawer", "x", {})
+        self.assertEqual(stat.S_IMODE((self.home / "drawer" / "x.json").stat().st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE((self.home / "drawer").stat().st_mode), 0o700)
+        self.assertEqual(stat.S_IMODE(self.home.stat().st_mode), 0o700)
+
+    def test_a_key_that_is_not_plain_is_refused(self):
+        for key in ("../x", "a/b", "X", "", ".hidden", "a.json"):
+            with self.subTest(key=key), self.assertRaises(store.StoreProblem):
+                store.write_json("drawer", key, {})
+        self.assertFalse((self.home / "drawer").exists())
+
+    def test_a_private_place_inside_git_is_refused(self):
+        repo = Path(tempfile.mkdtemp())
+        (repo / ".git").mkdir()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(repo / "store")}):
+            with self.assertRaises(store.StoreProblem) as refused:
+                store.write_json("drawer", "x", {})
+        self.assertIn(str(repo.resolve()), str(refused.exception))
+        self.assertFalse((repo / "store").exists())
+
+    def test_a_slug_is_plain_words_never_the_raw_text(self):
+        self.assertEqual(store.slug('Gravity: I2S 3W "Class D" $amp'), "gravity-i2s-3w-class-d-amp")
+        self.assertEqual(store.slug("dfrobot-MYST01-Raspberry Pi"), "dfrobot-myst01-raspberry-pi")
+        self.assertEqual(len(store.slug("x" * 100)), 60)
+        self.assertEqual(store.slug("!!!"), "entry")
+
+
+class TheProjectsListTest(unittest.TestCase):
+    """§5.5: the projects list tells spark where the person's projects are."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_project_is_listed_once_under_its_folder_s_name(self):
+        folder = Path(tempfile.mkdtemp()) / "plant-alarm"
+        folder.mkdir()
+        self.assertEqual(store.add_project(folder), "plant-alarm")
+        self.assertEqual(store.add_project(folder), "plant-alarm")
+        self.assertEqual(store.projects(), {"plant-alarm": folder.resolve()})
+
+    def test_a_second_live_folder_with_the_same_name_gets_a_number(self):
+        first, second = (Path(tempfile.mkdtemp()) / "bin" for _ in range(2))
+        first.mkdir()
+        second.mkdir()
+        self.assertEqual((store.add_project(first), store.add_project(second)), ("bin", "bin-2"))
+
+    def test_a_list_that_is_not_json_is_named(self):
+        (self.home / "projects.json").write_text("{")
+        with self.assertRaises(store.StoreProblem) as broken:
+            store.projects()
+        self.assertIn("projects.json", str(broken.exception))
 
 
 if __name__ == "__main__":

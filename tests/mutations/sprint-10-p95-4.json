@@ -1,0 +1,18 @@
+[
+ {"file": "scripts/store.py", "name": "a write is made even when nothing changed",
+  "find": "    if target.is_file() and target.read_text() == text:\n        return False", "replace": "    if False:\n        return False"},
+ {"file": "scripts/store.py", "name": "the drawer may be written inside a git work tree",
+  "find": "    if private and inside_git(target):", "replace": "    if False:"},
+ {"file": "scripts/store.py", "name": "a private file is left readable by others",
+  "find": "        os.chmod(part, 0o600)", "replace": "        os.chmod(part, 0o644)"},
+ {"file": "scripts/store.py", "name": "any key is accepted",
+  "find": "    if key is not None and not PLAIN.fullmatch(key):", "replace": "    if False:"},
+ {"file": "scripts/store.py", "name": "a second folder with the same name replaces the first",
+  "find": "    while name in listed and Path(listed[name]).is_dir():", "replace": "    while False:"},
+ {"file": "scripts/parts.py", "name": "the shelf keeps who owns it",
+  "find": "SHELF_DROPS = (\"owned\", \"photo\", \"photos\", \"sourcing\", \"alternatives\")", "replace": "SHELF_DROPS = (\"photo\", \"photos\", \"sourcing\", \"alternatives\")"},
+ {"file": "scripts/parts.py", "name": "the digest reads the record's name too",
+  "find": "BUILD_FACTS = (\"needs\", \"power\", \"unused_pins\", \"pin_order\", \"footprint\", \"host_parts\")", "replace": "BUILD_FACTS = (\"needs\", \"power\", \"unused_pins\", \"pin_order\", \"footprint\", \"host_parts\", \"name\")"},
+ {"file": "scripts/init_project.py", "name": "init never says whether the project is on the list",
+  "find": "    notes.append(listed)", "replace": "    pass"}
+]

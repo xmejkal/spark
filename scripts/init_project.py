@@ -35,6 +35,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import store  # noqa: E402
 import tools  # noqa: E402
 from design import CIRCUIT_PATHS  # noqa: E402
 
@@ -396,6 +397,10 @@ def main(argv=None):
     except tools.ToolProblem as broken:
         print("init_project.py: %s" % broken, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
+    try:
+        listed = "on your projects list as %r" % store.add_project(project)
+    except store.StoreProblem as refused:
+        listed = "not on your projects list: %s" % refused
 
     circuit, ambiguous = args.circuit, None
     if not circuit:
@@ -429,6 +434,7 @@ def main(argv=None):
 
     nets = nets_in(circuit)
     part_list, notes = design_in(project)
+    notes.append(listed)
     unstated = []
     if ambiguous:
         notes.append(ambiguous)

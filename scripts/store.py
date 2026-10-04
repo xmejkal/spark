@@ -11,7 +11,9 @@ This module owns *where* and *how bytes move*; `parts.py` owns what a record mus
 standard library.
 """
 
+import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -71,3 +73,86 @@ def records(kind, library, project=None, drafts=False, skip=()):
             if path.name not in skip:
                 found[path.stem] = (layer, path)
     return dict(sorted(found.items()))
+
+
+#: The places only the person should see (§5.8): files 0600 in folders 0700, and never inside a git work tree,
+#: where one `git add .` would publish them.
+PRIVATE = ("drawer", "drawer-import", "shelf", "projects")
+
+#: A key names one file inside a place, and only that: lower-case letters, digits and '-'.
+PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")
+
+
+class StoreProblem(Exception):
+    """A store spark cannot read, or a write it will not make. The message is the whole sentence."""
+
+
+def slug(text):
+    """A key made from words (§5.1): lower case, letters and digits joined by '-', at most 60 — never a raw label or SKU."""
+    made = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")[:60].rstrip("-")
+    return made or "entry"
+
+
+def inside_git(path):
+    """The git work tree a path is or would be inside, or None — walked up from the path, which need not exist yet."""
+    resolved = Path(path).resolve()
+    for folder in [resolved, *resolved.parents]:
+        if (folder / ".git").exists():
+            return folder
+    return None
+
+
+def write_json(name, key, data):
+    """
+    Put one JSON file into a place (§5.1) and say whether it changed. `key` names the file inside the place (None
+    for a place that is itself a file). The write is whole — to `.part`, then renamed — and made only when the
+    bytes differ, so a retried write changes nothing. A private place is written 0600 in 0700 folders, never
+    inside a git work tree.
+    """
+    if key is not None and not PLAIN.fullmatch(key):
+        raise StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so it could leave %s" % (key, name))
+    target = place(name) / (key + ".json") if key is not None else place(name)
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if target.is_file() and target.read_text() == text:
+        return False
+    private = name in PRIVATE
+    if private and inside_git(target):
+        raise StoreProblem("%s would be inside the git work tree at %s — what you own stays out of every repository; "
+                           "point SPARK_HOME at a folder outside it" % (target, inside_git(target)))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if private:
+        for folder in {home(), target.parent}:
+            os.chmod(folder, 0o700)
+    part = target.with_name(target.name + ".part")
+    part.write_text(text)
+    if private:
+        os.chmod(part, 0o600)
+    part.replace(target)
+    return True
+
+
+def projects():
+    """{name: folder} of the person's projects (§5.5), as /spark:init listed them."""
+    path = place("projects")
+    if not path.is_file():
+        return {}
+    try:
+        listed = json.loads(path.read_text())
+    except ValueError as broken:
+        raise StoreProblem("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project" % (path, broken))
+    return {name: Path(folder) for name, folder in listed.items()} if isinstance(listed, dict) else {}
+
+
+def add_project(folder):
+    """Put a project on the list under its folder's name — `name-2` when another folder that still exists has it. Returns the name."""
+    folder = Path(folder).resolve()
+    listed = {name: str(where) for name, where in projects().items()}
+    for name, where in listed.items():
+        if where == str(folder):
+            return name
+    name, number = folder.name, 2
+    while name in listed and Path(listed[name]).is_dir():
+        name, number = "%s-%d" % (folder.name, number), number + 1
+    listed[name] = str(folder)
+    write_json("projects", None, listed)
+    return name

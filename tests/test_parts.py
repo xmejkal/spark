@@ -18,6 +18,7 @@ without anyone deciding to promote it.
 """
 
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -1538,6 +1539,35 @@ class TheShelfIsALayerTest(unittest.TestCase):
             said, _ = run_json(["--list"])
         self.assertIn({"id": "x-shelved", "layer": "shelf"},
                       [{"id": p["id"], "layer": p["layer"]} for p in said["data"]["parts"]])
+
+
+class TheShelfTest(unittest.TestCase):
+    """P91, §5.5, §5.7: a record from one project goes onto the shelf as the part, not as that project's story of it."""
+
+    def test_a_digest_moves_only_with_the_facts_a_build_reads(self):
+        record = {"id": "x", "name": "X", "needs": [{"signal": "SIG"}], "pin_order": ["SIG", "GND"]}
+        self.assertEqual(parts.digest(record),
+                         hashlib.sha256(b'{"needs":[{"signal":"SIG"}],"pin_order":["SIG","GND"]}').hexdigest())
+        self.assertEqual(parts.digest(dict(record, name="renamed", sources=["https://x.example"])), parts.digest(record))
+        self.assertNotEqual(parts.digest(dict(record, pin_order=["GND", "SIG"])), parts.digest(record))
+
+    def test_a_shelved_record_leaves_the_project_s_story_behind_and_says_where_it_came_from(self):
+        home, source = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "x-module.json"
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record.update(id="x-module", owned=True, photo="photos/x.jpg", photos=["photos/x.jpg"],
+                      sourcing=[{"seller": "a shop"}], alternatives=["y-module"])
+        source.write_text(json.dumps(record))
+        (source.parent / "x-module" / "chip").mkdir(parents=True)
+        (source.parent / "x-module" / "chip" / "x.chip.json").write_text("{}")
+        with in_store(home):
+            self.assertTrue(parts.shelve(source, "irrigation"))
+            self.assertFalse(parts.shelve(source, "irrigation"), "a retried shelving changes nothing")
+            shelved = json.loads((home / "shelf" / "x-module.json").read_text())
+            self.assertEqual(parts.load("x-module")["id"], "x-module", "the shelf copy still meets the contract")
+        self.assertEqual(sorted(set(record) - set(shelved)), ["alternatives", "owned", "photo", "photos", "sourcing"])
+        self.assertEqual(shelved["based_on"]["project"], "irrigation")
+        self.assertEqual(len(shelved["based_on"]["digest"]), 64)
+        self.assertTrue((home / "shelf" / "x-module" / "chip" / "x.chip.json").is_file(), "its folder travels with it")
 
 
 if __name__ == "__main__":
