@@ -101,10 +101,15 @@ def owes(record):
             [key for key in CHAIN_FACTS if _absent(key, record.get(key))])
 
 
+def _about(problem, key):
+    """Whether a validate problem is about this key — it starts with it — rather than merely naming it."""
+    return problem.startswith((key + " ", key + ".", key + "[")) or problem == "missing required key %r" % key
+
+
 def broken_problems(record, path):
     """What is wrong with a part record beyond what it owes (§5.4): `validate`'s problems that name no owed key."""
     owed = owes(record)
-    return [problem for problem in validate(record, path) if not any(key in problem for key in owed)]
+    return [problem for problem in validate(record, path) if not any(_about(problem, key) for key in owed)]
 
 
 def audit(project=None):

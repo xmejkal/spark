@@ -1651,6 +1651,15 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         definition = part(needs=[{"signal": "SIG", "pin": "S", "direction": "sideways"}])
         self.assertTrue(any("sideways" in p for p in parts.broken_problems(definition, written(definition))))
 
+    def test_a_problem_that_merely_names_an_owed_key_is_still_broken(self):
+        placeholder = part(footprint=None, footprint_placeholder=True)
+        self.assertIn("footprint", parts.owes(placeholder))
+        self.assertTrue(any(p.startswith("footprint_placeholder is set") for p in parts.broken_problems(placeholder, written(placeholder))))
+        no_needs = part(simulation={"wokwi": "x"})
+        del no_needs["needs"]
+        self.assertIn("needs", parts.owes(no_needs))
+        self.assertTrue(any(p.startswith("simulation needs wokwi") for p in parts.broken_problems(no_needs, written(no_needs))))
+
     def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):
         home = Path(tempfile.mkdtemp())
         (home / "catalog").mkdir()
