@@ -797,6 +797,18 @@ survivor, so an escape is never misreported; (3) run mutations in parallel, each
 (4) every table once per sprint, at the close audit — the task's own table and the push gate's anchors unchanged.
 **Value proven by:** one table's run time before and after, on the same table; all 438 run inside a sprint-close audit.
 
+### P99 — The code cap reports growth instead of gating it — **the team's tools; the PO, 2026-10-04: after P98**
+**Needed by:** the PO — *"Do you think capping the code works for us? Does it really protect us from bloat or other
+things? what is it good for and does it actually work?"* Measured on P95, 2026-10-04: `SCRIPTS_CODE_BUDGET` was raised
+six times in one item — 5,086, 5,106, 5,183, 5,188, 5,189, 5,228 — each to the measured total in the same commit, and it
+prompted one refactor of 2 lines. What stopped bloat and defects in P95 was the reviews (two ways to lose drawer
+data, a double count, the suite able to write into the person's store) and the orphan tests. An idea, to refine
+with the PO before it is planned.
+**What it could be:** the cap stops being a failing test and becomes a reported figure — each pull request and each
+sprint review says how many code lines an item added and why; the orphan and unused-code tests stay as they are.
+**Value proven by:** a sprint review that shows each item's growth beside its reason, and no commit that exists only
+to move the number.
+
 ### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04**
 **Needed by:** every way into spark (P76's goal-first, module-first, combination, whole-drawer, revive,
 swap, extend), the drawer (P93), the viewer (P86) and a shared database (P84) — all of which read and
