@@ -28,7 +28,7 @@ with `parts.py --keep <file> --url <url>`.
 
 **Ask before researching: does the person already have one?** — in the thing being rebuilt, in
 the drawer, in the kit. The first run of the finder looked for a 4×AA holder the bin's own lid
-already had (2026-10-03). Add what they have to the brief's `parts_on_hand`.
+already had (2026-10-03). Put what they have in the drawer (`/spark:drawer`).
 
 ## 2. Which kind of part — and who researches it
 

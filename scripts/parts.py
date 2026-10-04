@@ -50,6 +50,10 @@ REQUIRED_KEYS = ("schema", "id", "name", "kind", "needs")
 
 #: Each entry in `facts` must answer all three, or it is an opinion with a number attached.
 REQUIRED_FACT_KEYS = ("value", "verified", "source")
+#: Fields a record no longer holds, each with where that fact lives now (P95, W16). Owning one is the person's
+#: fact, not the part's: it is a drawer entry, and a photo of the one they own goes on that entry.
+RETIRED = {"owned": "what you own is a drawer entry — /spark:drawer, `parts.py --drawer-set`",
+           "photo": "a photo of the one you own goes on its drawer entry's `photos`, kept with `parts.py --keep`"}
 
 #: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
 #: labels showed `IN+`, `OUT-` and `A.B` unresolvable as tscircuit selectors while `V_IN`,
@@ -411,6 +415,11 @@ def validate(part: dict, path: Path) -> list:
     if part.get("id") != path.stem:
         problems.append("id is %r but the file is named %r; they must match"
                         % (part.get("id"), path.stem))
+    for key, now in RETIRED.items():
+        if key in part:
+            problems.append("%r is retired: %s — delete the key (W16)" % (key, now))
+    if any(isinstance(listing, dict) and listing.get("seller") == "owned" for listing in part.get("sourcing") or []):
+        problems.append('a `sourcing` entry {"seller": "owned"} is retired: %s — delete it (W16)' % RETIRED["owned"])
 
     for index, need in enumerate(part.get("needs") or []):
         where = "needs[%d]" % index
@@ -1032,7 +1041,7 @@ def promote(part_id, project, to=None, dry_run=False):
     """
     Move a record one step along its life: catalog -> the project's parts/ (to build with; it must
     then pass the contract), or the project's parts/ -> the plugin's library (for every later
-    project). Its folder (a simulation chip) and its photo travel with it; its documents are
+    project). Its folder (a simulation chip) travels with it; its documents are
     pointers into the store and need nothing moved. Nothing is ever overwritten. Returns the path.
     """
     import shutil
@@ -1049,10 +1058,6 @@ def promote(part_id, project, to=None, dry_run=False):
     shutil.copy2(home / (part_id + DEFINITION_SUFFIX), target)
     if (home / part_id).is_dir():
         shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)
-    photo = json.loads(target.read_text()).get("photo")
-    if isinstance(photo, str) and project and (Path(project) / photo).is_file() and not (to / photo).exists():
-        (to / photo).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(Path(project) / photo, to / photo)
     return target
 
 

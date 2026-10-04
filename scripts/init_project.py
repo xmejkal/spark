@@ -205,8 +205,6 @@ PROJECT_TEMPLATE = {
     "must": [],
     "//must": ('What the design has to do, in terms that can be violated. "Runs a year on one '
                'charge" can be checked against a current budget; "low power" cannot.'),
-    "parts_on_hand": [],
-    "//parts_on_hand": "What you already own, so nothing recommends buying it again.",
     "prefer": None,
     "//prefer": "Whose modules to research first, in order: [\"dfrobot\", \"seeed\"].",
     "sellers": None,

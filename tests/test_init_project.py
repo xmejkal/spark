@@ -527,6 +527,10 @@ class TheMeasuredPinsAreSparkSTest(unittest.TestCase):
 class TheProjectsListTest(unittest.TestCase):
     """P95 (§5.5): /spark:init puts the project on the person's projects list, so spark finds its records."""
 
+    def test_the_brief_no_longer_asks_what_you_own(self):
+        """P95 (W16): what you own is the drawer's to say — /spark:drawer — not each project's."""
+        self.assertNotIn("parts_on_hand", json.dumps(init_project.PROJECT_TEMPLATE))
+
     def test_init_puts_the_project_on_the_list(self):
         home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
         with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}), contextlib.redirect_stdout(io.StringIO()) as out:

@@ -1587,5 +1587,18 @@ class TheShelfTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(shelved.stat().st_mode), 0o700)
 
 
+class OwningIsTheDrawersTest(unittest.TestCase):
+    """P95 (W16): a record no longer says the person owns one — the drawer does."""
+
+    def test_owned_photo_and_an_owned_seller_are_refused_naming_where_they_go(self):
+        for extra, where in (({"owned": True}, "drawer"), ({"photo": "photos/x.jpg"}, "photos"),
+                             ({"sourcing": [{"seller": "owned"}]}, "drawer")):
+            with self.subTest(extra=extra):
+                definition = part(**extra)
+                said = [problem for problem in parts.validate(definition, written(definition)) if "retired" in problem]
+                self.assertEqual(len(said), 1, said)
+                self.assertIn(where, said[0])
+
+
 if __name__ == "__main__":
     unittest.main()
