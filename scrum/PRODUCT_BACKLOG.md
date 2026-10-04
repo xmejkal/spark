@@ -759,13 +759,19 @@ record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept doc
 `/spark:research` write candidates to the store. Mutations: `sprint-10-p83` 2 of 2, `sprint-5-catalog`
 10 of 10 (one re-anchored), `sprint-8-p55` 4 of 4 (its two catalog-file rows left with the files).
 
-### P95 — Store 1a: my drawer, filled and seen — **slice 10; P94's first increment (the PO, 2026-10-04)**
+### P95 — Store 1a: my drawer, filled and seen — **slice 10; P94's first increment (the PO, 2026-10-04)** — DONE 2026-10-04
 **Needed by:** the PO, who owns 99 DFRobot SKUs and more from AliExpress and wants spark to know them before any
 project. Design: `docs/2026-10-04-store-design.md` §4 (store 1a), §5.1–5.5, §6.1–6.4, §6.6, §7.
 **Value proven by:** `parts.py --drawer --json` lists the PO's real drawer — the DFRobot import's 99 SKUs and his
 typed parts — with SEN0193, DFR0954, DFR0975 and irrigation's DFR0457, DFR0831, SEN0217 and DS3231 linked; the
 suite runs green on an empty and a seeded `SPARK_HOME` and never reads the real store; `parts_on_hand` and a
 record's `owned` are gone (W16).
+**Proven 2026-10-04, from Task 8's output on the PO's real store:** 110 drawer entries, 12 linked — SEN0193 (catalog),
+DFR0954 and DFR0975 (library), and irrigation's DFR0457, DFR0831, SEN0217 and DS3231 onto the shelf, which every
+project's `--list` now shows. A live re-import in the PO's browser read 8 orders, 106 lines = 106 stated, 99 SKUs,
+167 pieces — the first pass exactly — and changed nothing. The suite runs on a scratch `SPARK_HOME` (1,020 tests);
+`parts_on_hand`, `owned`, `photo` and the owned listing are retired in spark and the PO's four projects. The code
+budget was raised to 5,189 for it, measured after its refactor (W15b). Plan and ledger rulings: the PR.
 
 ### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment**
 **Needed by:** the PO's walking skeleton, the plant thirst alarm. Design §4 (store 1b), §5.3, §5.4, §5.6, §6.2.
@@ -864,7 +870,7 @@ contained, and no agent is told that record text is data.
 `--validate`; `--fetch` and `--promote` write nothing outside their folders; the emitted board file
 holds every record string as inert text; each agent's instructions carry the sentence; mutations caught.
 
-### P88 — The suite never reads the person's store; one function says where the store is — **slice 10; P85's plan, Now**
+### P88 — The suite never reads the person's store; one function says where the store is — **slice 10; P85's plan, Now** — DONE 2026-10-04 (carried by P95)
 **Needed by:** the maker and any contributor, whose own store decided 4 tests' outcome (a seeded home with
 a pin, a tool turned off and one record failed 4; the suite read the real catalog 37 times), and every
 future store client. The store's root is spelled twice (`parts.py:665`, `tools.py:44`) with no override.
