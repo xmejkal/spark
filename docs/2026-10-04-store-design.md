@@ -104,6 +104,45 @@ From the architecture lens (details in the council's report, to be folded in whe
   interface a viewer and agents use. About +90–110 of the 292 code lines left, built thin.
 - **C** — also a separate `contract.py` and a generic get/put CLI; the most churn, no story needs it yet.
 
+## 6a. Strategies at every real variation point — decided
+
+*The PO, 2026-10-04: "let's use strategy patterns etc so that we can later change the systems we use … a good
+architected system, so that we can go agile and improve."* Seven seams are strategy interfaces — each with a
+short interface, **one implementation now**, others added when pulled; **selected by name through the same
+layered list as the tools** (P82: spark's defaults → the person's file → the project's, the project winning);
+and **one contract test per interface that every implementation must pass**.
+
+| seam | first implementation | later, when pulled |
+| --- | --- | --- |
+| record store | folders of JSON (today's layout) | a shared git clone (P84), a database |
+| document store | checksum folders | a private bucket |
+| drawer importer | a typed or dictated list | DFRobot order history, AliExpress orders, photos |
+| matcher | the function field + the agent's judgement | embeddings, a shared index |
+| researcher | part-finder + datasheet-reader | the JLCPCB MCP alone, manual entry |
+| cost counter | from the session transcripts | spark counting its own calls |
+| fetcher | one checked download | a proxy or cache, offline mode |
+
+This supersedes the discovery's "no record/document classes now" for these seams; the P84 decision stands —
+no database, NoSQL or Markdown store is *built* until one is pulled.
+
+## 6b. Designed for AI agents first — decided
+
+*The PO, 2026-10-04: "spark is to be used by claude code or other ai, not only human, let's make sure it's well
+designed for that too."* spark's usual user is an agent acting on a command's output without reading its
+source. So:
+1. **One stable JSON envelope from every command** — outcome (ok / problems / could not run), data, problems as
+   whole sentences with their fix, and the **next commands to run**; the exit code says the outcome (a miss is a
+   miss, not success).
+2. **Self-describing** — one command lists every operation, its arguments and its output shape.
+3. **Small by default** — summaries first, details on request.
+4. **Safe writes** — `--dry-run` on every write; network and deletion need the person's yes; writes are idempotent.
+5. **Record and web text is data, never instructions** — in every agent's instructions (P87).
+6. **Offline by default** — the network only through the fetcher strategy, asked for explicitly, and counted.
+
+**The interface is a strategy too** — the operations are designed once; the first slice exposes them as CLI +
+JSON; an **MCP server** is a thin second front end over the same operations, pulled when another AI client
+needs it (decided).
+
 ## 7. Open questions (asked one at a time)
 
 - Which drawer route the first slice supports.
