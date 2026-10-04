@@ -1246,6 +1246,9 @@ OPERATIONS = (
      ("entries",)),
     ("drawer-set", {"metavar": "FILE"}, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds",
      ("writes",), ("changes", "questions", "shelved")),
+    ("drawer-import", {"nargs": 2, "metavar": ("SOURCE", "FILE")},
+     "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
+     ("writes",), ("changes", "questions", "shelved", "smaller")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1474,6 +1477,19 @@ def _op_drawer_set(args, project):
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
     return _drawer_answer(*drawer.plan_set(items), args.dry_run)
+
+
+def _op_drawer_import(args, project):
+    import drawer
+    source, name = args.drawer_import
+    payload, unreadable = _read_json_input(name)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    changes, questions, problems, smaller = drawer.plan_import(source, payload)
+    answer = _drawer_answer(changes, questions, problems, args.dry_run)
+    if not problems and not args.dry_run:
+        store.write_json("drawer-import", store.slug(source), drawer.kept_payload(payload))
+    return answer._replace(data=dict(answer.data, smaller=smaller), lines=list(answer.lines) + ["  %s" % s for s in smaller])
 
 
 def _op_catalog(args, project):

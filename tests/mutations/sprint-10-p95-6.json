@@ -1,0 +1,16 @@
+[
+ {"file": "scripts/drawer.py", "name": "lines read are never compared with lines stated",
+  "find": "    if not _whole(payload.get(\"lines\")) or payload.get(\"lines\") != payload.get(\"stated\"):", "replace": "    if False:"},
+ {"file": "scripts/drawer.py", "name": "any text is a SKU",
+  "find": "        if not (isinstance(sku, str) and SKU_SHAPES[source].fullmatch(sku)):", "replace": "        if not isinstance(sku, str):"},
+ {"file": "scripts/drawer.py", "name": "a re-import adds the whole total again",
+  "find": "                values[\"count\"] = before.get(\"count\", 0) + total - seen", "replace": "                values[\"count\"] = before.get(\"count\", 0) + total"},
+ {"file": "scripts/drawer.py", "name": "a smaller total is applied",
+  "find": "            if total <= seen:\n                continue", "replace": "            if total == seen:\n                continue"},
+ {"file": "scripts/drawer.py", "name": "an unsure entry stays unsure",
+  "find": "                values.update(count=total, unsure=False)", "replace": "                values.update(count=total)"},
+ {"file": "scripts/drawer.py", "name": "a SKU said in words is written without asking",
+  "find": "            if found.target and json.dumps(found.target, sort_keys=True) in said:", "replace": "            if False:"},
+ {"file": "scripts/drawer.py", "name": "the import keeps everything the payload carried",
+  "find": "    return {\"source\": payload[\"source\"], \"lines\": payload[\"lines\"], \"stated\": payload[\"stated\"],", "replace": "    return dict(payload) or {\"source\": payload[\"source\"], \"lines\": payload[\"lines\"], \"stated\": payload[\"stated\"],"}
+]

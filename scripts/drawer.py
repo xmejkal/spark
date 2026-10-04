@@ -266,3 +266,86 @@ def listing():
                       "in": resolve(target, known)[0] if target else None, "unsure": bool(entry.get("unsure")),
                       "skip": entry.get("skip")})
     return shown
+
+
+#: An importer's SKU, by source (§6.6): capitals, digits, and the suffixes the shop really prints (DFR0675-EN,
+#: FIT0654-1, SEN0161-V2, MYST01-Raspberry Pi). Importers are a set keyed by source, and this is that set.
+SKU_SHAPES = {"dfrobot": re.compile(r"[A-Z]{2,6}\d{2,5}(?:-[A-Za-z0-9][A-Za-z0-9 ]{0,30})?")}
+
+
+def payload_problems(source, payload):
+    """Why an importer's payload cannot be applied (§6.6): its shape, a SKU that is not one, lines read ≠ lines stated."""
+    if source not in SKU_SHAPES:
+        return ["no importer called %r — there is: %s" % (source, ", ".join(sorted(SKU_SHAPES)))]
+    if not isinstance(payload, dict) or payload.get("source") != source or not isinstance(payload.get("items"), list):
+        return ['a %s payload is {"source": "%s", "lines", "stated", "items": [{"sku", "name", "count"}]}' % (source, source)]
+    problems = []
+    if not _whole(payload.get("lines")) or payload.get("lines") != payload.get("stated"):
+        problems.append("read %s line(s) where the order pages state %s — a line the extractor could not parse is a part left "
+                        "out (a `$` in a name did it once): fix the extractor and read again"
+                        % (payload.get("lines"), payload.get("stated")))
+    for index, item in enumerate(payload["items"]):
+        sku = item.get("sku") if isinstance(item, dict) else None
+        if not (isinstance(sku, str) and SKU_SHAPES[source].fullmatch(sku)):
+            problems.append("items[%d]: %s is not a %s SKU" % (index, json.dumps(sku, ensure_ascii=False)[:40], source))
+        elif not _whole(item.get("count"), 1):
+            problems.append("items[%d] %s: a count is a whole number, 1 or more" % (index, sku))
+        elif not _words(item.get("name")):
+            problems.append("items[%d] %s: it has no name" % (index, sku))
+    return problems
+
+
+def kept_payload(payload):
+    """What the store keeps of an import (§5.1): SKU, name and count per line, and the two line counts — nothing else."""
+    return {"source": payload["source"], "lines": payload["lines"], "stated": payload["stated"],
+            "items": [{"sku": item["sku"], "name": clean(item["name"]), "count": item["count"]} for item in payload["items"]]}
+
+
+def plan_import(source, payload):
+    """
+    What applying an importer's payload would do (§5.2): (changes, questions, problems, smaller). A SKU the drawer
+    has not seen becomes an entry, counted as owned — the person corrects. One seen before follows the re-import rule:
+    when its total T grew, `count += T − bought` and `bought` becomes T, so a correction stays; an `unsure` entry it
+    confirms takes T and is sure; a smaller T changes nothing and is said. A new SKU whose record an entry said in
+    words already is, is a question — not written until the person answers.
+    """
+    refused = payload_problems(source, payload)
+    if refused:
+        return [], [], [parts._problem(source, sentence) for sentence in refused], []
+    current, known = entries(), linkable()
+    by_product = {(entry.get("from") or {}).get("product"): entry_id for entry_id, entry in current.items()
+                  if (entry.get("from") or {}).get("seller") == source}
+    said = {json.dumps(entry["is"], sort_keys=True): entry_id for entry_id, entry in current.items()
+            if isinstance(entry.get("is"), dict) and (entry.get("from") or {}).get("seller") != source}
+    changes, questions, problems, smaller = [], [], [], []
+    for item in payload["items"]:
+        sku, total = item["sku"], item["count"]
+        entry_id = by_product.get(sku) or store.slug("%s-%s" % (source, sku))
+        before = current.get(entry_id)
+        if before is None:
+            found = link(sku, known, maker=source)
+            if found.target and json.dumps(found.target, sort_keys=True) in said:
+                questions.append({"entry": said[json.dumps(found.target, sort_keys=True)], "sentence":
+                                  "%s from %s is %s %s, which this entry already is — the same item, or another? Not written "
+                                  "until the person says." % ((sku, source) + next(iter(found.target.items())))})
+                continue
+            values = {"label": item["name"], "count": total, "part_number": {"maker": source, "number": sku},
+                      "from": {"seller": source, "product": sku}, "bought": {source: total}, "unsure": False}
+        else:
+            seen = (before.get("bought") or {}).get(source, 0)
+            if total < seen:
+                smaller.append("%s: %s now says %d, %d were seen before — the entry keeps what it says" % (entry_id, source, total, seen))
+            if total <= seen:
+                continue
+            values = {"bought": dict(before.get("bought") or {}, **{source: total})}
+            if before.get("unsure"):
+                values.update(count=total, unsure=False)
+            elif before.get("count") != "many":
+                values["count"] = before.get("count", 0) + total - seen
+        change, asked, refused = settle(entry_id, before, values, known)
+        questions += asked
+        problems += refused
+        if change:
+            changes.append(change)
+            current[entry_id], by_product[sku] = change["after"], entry_id
+    return changes, questions, problems, smaller
