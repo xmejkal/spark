@@ -779,6 +779,18 @@ need's candidates from the store with owned and free counts and what each owes (
 (the DFR0954 footprint from DFRobot's drawing, one counted request); `check_spine` ends `[ok]`; the cost line
 "5 picks: 5 from the store (5 owned) — 1 request, 1 document, N min".
 
+### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95**
+**Needed by:** the PO — *"I think we should also try to make things faster. How often do we really need to run all
+the mutations? Can we optimize it somehow?"* Measured 2026-10-04: each mutation re-runs the whole suite (11.4 s), and
+`tests/test_mutate.py` alone takes 6.3 s of it while it can catch no mutation in `scripts/`; a task's table of 18 runs
+3–4 minutes. The 438 mutations in 75 tables are never run together — each task runs only its own, and the push gate
+checks anchors only — so an old table can go stale unseen. An idea, to refine with the PO before it is planned.
+**What it could be:** (1) inside a mutation run, leave out `test_mutate` unless the mutation is in `tools/mutate.py`,
+and stop at the first failing test; (2) run the tests that import the mutated file first and the full suite only for a
+survivor, so an escape is never misreported; (3) run mutations in parallel, each in a temporary copy of the tree;
+(4) every table once per sprint, at the close audit — the task's own table and the push gate's anchors unchanged.
+**Value proven by:** one table's run time before and after, on the same table; all 438 run inside a sprint-close audit.
+
 ### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04**
 **Needed by:** every way into spark (P76's goal-first, module-first, combination, whole-drawer, revive,
 swap, extend), the drawer (P93), the viewer (P86) and a shared database (P84) — all of which read and
