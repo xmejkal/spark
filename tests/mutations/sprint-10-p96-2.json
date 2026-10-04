@@ -20,7 +20,13 @@
  {
   "file": "scripts/parts.py",
   "name": "a problem that merely names an owed key counts as owed",
-  "find": "    return problem.startswith((key + \" \", key + \".\", key + \"[\")) or problem == \"missing required key %r\" % key",
+  "find": "    return (problem.startswith((key + \" \", key + \".\", key + \"[\")) or problem == \"missing required key %r\" % key\n            or re.search(r\"\\bno %s\\b\" % re.escape(key), problem) is not None)",
   "replace": "    return key in problem"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a problem saying no <key> is not about that key",
+  "find": "            or re.search(r\"\\bno %s\\b\" % re.escape(key), problem) is not None)",
+  "replace": "            or False)"
  }
 ]

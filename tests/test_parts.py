@@ -1660,6 +1660,12 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertIn("needs", parts.owes(no_needs))
         self.assertTrue(any(p.startswith("simulation needs wokwi") for p in parts.broken_problems(no_needs, written(no_needs))))
 
+    def test_a_pin_order_with_no_proof_owes_the_proof_and_is_not_broken(self):
+        unproven = part(pin_order=["P"])
+        del unproven["pin_order_proof"]
+        self.assertIn("pin_order_proof", parts.owes(unproven))
+        self.assertEqual(parts.broken_problems(unproven, written(unproven)), [])
+
     def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):
         home = Path(tempfile.mkdtemp())
         (home / "catalog").mkdir()

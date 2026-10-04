@@ -102,8 +102,9 @@ def owes(record):
 
 
 def _about(problem, key):
-    """Whether a validate problem is about this key — it starts with it — rather than merely naming it."""
-    return problem.startswith((key + " ", key + ".", key + "[")) or problem == "missing required key %r" % key
+    """Whether a validate problem is about this key — it starts with it, or says "no <key>" — rather than merely naming it."""
+    return (problem.startswith((key + " ", key + ".", key + "[")) or problem == "missing required key %r" % key
+            or re.search(r"\bno %s\b" % re.escape(key), problem) is not None)
 
 
 def broken_problems(record, path):
