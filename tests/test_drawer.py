@@ -201,6 +201,53 @@ class TheDrawerTest(unittest.TestCase):
         self.assertEqual(run(["--drawer-set", str(broken)])[1], 2)
         self.assertEqual(run(["--drawer-set", a_file({"label": "x", "count": 1})])[1], 1)
 
+    def test_labels_without_ascii_get_their_own_entries_and_a_retry_changes_nothing(self):
+        write = a_file([{"label": "电阻", "count": 100}, {"label": "电容", "count": 50}])
+        run(["--drawer-set", write])
+        said, _ = run(["--drawer-set", write])
+        self.assertEqual(sorted((e["label"], e["count"]) for e in run(["--drawer"])[0]["data"]["entries"]), [("电容", 50), ("电阻", 100)])
+        self.assertEqual(said["data"]["changes"], [])
+
+    def test_labels_equal_in_their_first_60_slug_characters_get_their_own_entries(self):
+        run(["--drawer-set", a_file([{"label": "a" * 70 + "1", "count": 1}, {"label": "a" * 70 + "2", "count": 2}])])
+        self.assertEqual(len(run(["--drawer"])[0]["data"]["entries"]), 2)
+
+    def test_a_suffixed_record_is_a_question_even_through_an_id_token(self):
+        (self.home / "catalog" / "sen0161-v2-ph-meter.json").write_text(json.dumps(
+            {"schema": 1, "id": "sen0161-v2-ph-meter", "name": "pH meter", "kind": "sensor", "sku": "SEN0161-V2"}))
+        said, _ = run(["--drawer-set", a_file([{"label": "ph", "count": 1, "part_number": {"number": "SEN0161"}}])])
+        self.assertNotIn("is", self.entry("ph"))
+        self.assertIn("sen0161-v2-ph-meter", said["data"]["questions"][0]["sentence"])
+
+    def test_a_link_can_be_removed_and_stays_removed(self):
+        run(["--drawer-set", a_file([{"label": "probe", "count": 8, "part_number": {"number": "SEN0193"}}])])
+        said, _ = run(["--drawer-set", a_file([{"entry": "probe", "is": None}])])
+        self.assertEqual(said["data"]["changes"], [{"entry": "probe", "new": False, "was": {"is": {"part": "sen0193-soil-moisture"}}, "now": {"is": None}}])
+        run(["--drawer-set", a_file([{"entry": "probe", "count": 2}])])
+        self.assertIsNone(self.entry("probe")["is"])
+
+    def test_a_new_part_number_that_nothing_knows_drops_the_old_link(self):
+        run(["--drawer-set", a_file([{"label": "probe", "count": 8, "part_number": {"number": "SEN0193"}}])])
+        run(["--drawer-set", a_file([{"entry": "probe", "part_number": {"number": "ZZ999"}}])])
+        self.assertNotIn("is", self.entry("probe"))
+
+    def test_a_word_is_not_a_part_number(self):
+        said, _ = run(["--drawer-set", a_file([{"label": "b", "count": 1, "part_number": {"number": "button"}}])])
+        self.assertNotIn("is", self.entry("b"))
+        self.assertEqual(said["data"]["questions"], [])
+
+    def test_a_different_maker_makes_an_exact_number_a_question(self):
+        said, _ = run(["--drawer-set", a_file([{"label": "p", "count": 1, "part_number": {"maker": "adafruit", "number": "SEN0193"}}])])
+        self.assertNotIn("is", self.entry("p"))
+        self.assertIn("sen0193-soil-moisture", said["data"]["questions"][0]["sentence"])
+
+    def test_a_drawer_file_that_is_not_an_object_is_named(self):
+        (self.home / "drawer").mkdir()
+        (self.home / "drawer" / "x.json").write_text("[]")
+        said, code = run(["--drawer"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("x.json", said["unchecked"][0]["sentence"])
+
 
 if __name__ == "__main__":
     unittest.main()

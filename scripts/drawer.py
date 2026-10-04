@@ -79,6 +79,8 @@ def entries():
     for path in sorted(folder.glob("*.json")) if folder.is_dir() else []:
         try:
             found[path.stem] = json.loads(path.read_text())
+            if not isinstance(found[path.stem], dict):
+                raise ValueError("an entry is a JSON object")
         except ValueError as broken:
             raise store.StoreProblem("%s is not JSON (%s) — fix it by hand; the drawer is read whole or not at all" % (path, broken))
     return found
@@ -103,12 +105,16 @@ def linkable():
 
 
 def numbers(record, record_id):
-    """A record's exact part numbers, lower case (§5.5): its `sku` (a board keeps a list), each whole alias, and every whole token of its id and aliases."""
+    """
+    A record's exact part numbers, lower case (§5.5): (stated, tokens). Stated are its `sku` (a board keeps a list)
+    and each whole alias; tokens are the whole tokens of its id and aliases that hold a letter and a digit, so a
+    word like "button" is never a number.
+    """
     sku = record.get("sku")
     aliases = [alias for alias in record.get("also_known_as") or [] if isinstance(alias, str)]
-    said = [s for s in (sku if isinstance(sku, list) else [sku]) + aliases if isinstance(s, str)]
-    tokens = [token for word in [record_id] + aliases for token in re.split(r"[^a-z0-9]+", word.lower()) if token]
-    return {s.lower() for s in said} | set(tokens)
+    stated = {s.lower() for s in (sku if isinstance(sku, list) else [sku]) + aliases if isinstance(s, str)}
+    words = (token for word in [record_id] + aliases for token in re.split(r"[^a-z0-9]+", word.lower()))
+    return stated, {w for w in words if re.search(r"[a-z]", w) and re.search(r"\d", w)}
 
 
 def _differs_by_a_suffix(number, other):
@@ -118,25 +124,38 @@ def _differs_by_a_suffix(number, other):
             and any(c.isdigit() for c in shorter) and any(c.isalpha() for c in shorter))
 
 
+def _match(wanted, record, record_id):
+    """'exact', 'near' or None: a stated number outranks an id token, and a stated near miss outranks a token hit."""
+    stated, tokens = numbers(record, record_id)
+    for these in (stated, tokens):
+        if wanted in these:
+            return "exact"
+        if any(_differs_by_a_suffix(wanted, other) for other in these):
+            return "near"
+    return None
+
+
 def _named(rows):
     return ", ".join("%s %s (%s)" % (kind, record_id, where) for kind, record_id, where, _ in rows)
 
 
-def link(number, known=None):
+def link(number, known=None, maker=None):
     """
     What a part number links to (§5.5): exactly one exact match, ignoring case, is a link; two, or numbers that
-    differ only by a suffix, are a question; a number nothing knows is neither — owned, with no record.
+    differ only by a suffix, or a maker that is not the record's vendor, are a question; a number nothing knows is
+    neither — owned, with no record.
     """
     wanted, exact, near = number.lower(), [], []
     for kind, record_id, where, path in (linkable() if known is None else known):
         record = parts._parse(path)
         if not isinstance(record, dict):
             continue
-        its = numbers(record, record_id)
-        if wanted in its:
-            exact.append((kind, record_id, where, path))
-        elif any(_differs_by_a_suffix(wanted, other) for other in its):
-            near.append((kind, record_id, where, path))
+        found = _match(wanted, record, record_id)
+        vendor = record.get("vendor")
+        if found == "exact" and isinstance(maker, str) and isinstance(vendor, str) and maker.lower() != vendor.lower():
+            found = "near"
+        if found:
+            (exact if found == "exact" else near).append((kind, record_id, where, path))
     if len(exact) == 1:
         kind, record_id, where, path = exact[0]
         return Link({kind: record_id}, where, path, None)
@@ -180,8 +199,11 @@ def settle(entry_id, before, values, known):
             return None, [], [parts._problem(entry_id, "no record called %s — `parts.py --need` finds what exists"
                                              % json.dumps(values["is"]))]
         shelve = _shelve_from(values["is"], where, path)
-    elif not after.get("is") and _words((after.get("part_number") or {}).get("number")):
-        found = link(after["part_number"]["number"], known)
+    elif "is" not in values and _words((after.get("part_number") or {}).get("number")) and (
+            "is" not in after or before is None or after["part_number"] != before.get("part_number")):
+        number = after["part_number"]
+        found = link(number["number"], known, number.get("maker"))
+        after.pop("is", None)
         if found.target:
             after["is"], shelve = found.target, _shelve_from(found.target, found.where, found.path)
         elif found.question:
@@ -191,6 +213,15 @@ def settle(entry_id, before, values, known):
     return ({"entry": entry_id, "new": before is None, "was": {key: before.get(key) for key in changed} if before else {},
              "now": {key: after[key] for key in changed}, "after": after, "shelve": shelve if changed else None},
             questions, [])
+
+
+def _free_key(label, current):
+    """The key a new label is filed under: its slug, or the next `<slug>-2`, `-3` … whose entry has another label."""
+    base, key, n = store.slug(label), store.slug(label), 1
+    while key in current and current[key].get("label") != label:
+        n += 1
+        key = "%s-%d" % (base, n)
+    return key
 
 
 def plan_set(items):
@@ -203,7 +234,7 @@ def plan_set(items):
     current, known, changes, questions, problems = entries(), linkable(), [], [], []
     for item in items:
         values = {key: value for key, value in item.items() if key != "entry"}
-        entry_id = item.get("entry") or (store.slug(clean(values["label"])) if _words(values.get("label")) else None)
+        entry_id = item.get("entry") or (_free_key(clean(values["label"]), current) if _words(values.get("label")) else None)
         if not (isinstance(entry_id, str) and store.PLAIN.fullmatch(entry_id)):
             problems.append(parts._problem(None, "an entry needs a label, or an `entry` key of letters, digits and '-'"))
             continue
