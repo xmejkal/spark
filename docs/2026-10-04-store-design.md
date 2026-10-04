@@ -171,8 +171,29 @@ The **typed or dictated list** ("2x DFR0954, a bag of 6x6 buttons, the blue L911
 turns it into entries and asks only what is ambiguous. DFRobot order history, AliExpress orders and photos
 follow as importers behind the same interface.
 
-## 7. Next
+## 7. Slice 1 — the walking skeleton's stories (agreed with the PO, 2026-10-04)
 
-The design's decisions are all in; next, per the PO's process: **map the first slice's stories** under the
-spine steps (drawn from the flows lens's stories), **example-map** each into readable checks, then a **spec and
-a plan for the first slice only**.
+Goal first, with the PO's real drawer. One story per spine step, the thinnest that works end to end:
+
+| step | story | check |
+| --- | --- | --- |
+| D | As the maker, I tell spark what I own in plain words; it makes light drawer entries and asks only what is unclear | `--drawer --json` lists them, "owned, not researched" |
+| S | As the hobbyist, I say a goal; the conversation turns it into needs — each a `does`/`what`, no part numbers | a needs file lists the functions |
+| M | As the agent, for each need I get what the store has, store first, marked have / know / gap, and what each candidate still lacks | `--match <needs> --json` marks every need |
+| C | As the hobbyist, I see each need's candidates (layer, owned count, proof, what is owed) and pick | the picks are recorded, a passed-over part with why |
+| G | As the PO, research runs only for the gaps, after my yes, and records what it cost | a `researched` history line with counts |
+| L | My picks become a requirements file the chain accepts; owned parts are reserved for the project | `check_spine` `[ok]`; the drawer shows "2 in this project" |
+| T | The step ends with the cost line; the history records `built` and `reused` | "5 parts: 4 reused, 1 researched — 3 requests, 1 document, 12 min" |
+
+**Foundations (enablers):** `store.py` (one home, the layer table, contained writes, the record and document
+store strategies — covers P88); the JSON envelope on the slice's commands; owed records (P89); the function
+field derived from `kind`; P87 (records inert).
+
+**Later slices:** the order-history importers next — DFRobot and AliExpress (the PO: *"that will help a lot to
+fill what we have"*) — then photos; the other six ways in; the shelf beyond reserving; the viewer; MCP;
+`simulated` and `ran` proof; the shared database.
+
+## 8. Next
+
+Example-map each slice-1 story with the PO (rules, examples from the real drawer, questions), then the spec
+and the plan for slice 1.

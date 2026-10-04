@@ -783,7 +783,11 @@ AliExpress that I will want to use at some point"*, and any hobbyist with a draw
 from what is there before anything is bought or researched. As discussed: owning is not researching — an
 entry can be light (a SKU or a listing, a photo, how many), and a part's facts are read only when a
 design considers it; `/spark:identify` is the way in for an unlabelled part.
-**Value proven by:** to be set in P94's design.
+**Designed in P94 (2026-10-04):** a drawer entry holds `label` and `count`, optionally where it physically is,
+which projects use how many, where it came from, photos and its function; never price or date. Importers are
+a strategy: the **typed or dictated list** first (slice 1), then **DFRobot and AliExpress order history** (the
+PO: *"that will help a lot to fill what we have"*), then photos.
+**Value proven by:** slice 1's D story — `--drawer --json` lists the PO's real parts, "owned, not researched".
 
 ### P86 — A viewer and manager for the store — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
 **Needed by:** the person whose parts, candidates and kept documents are spread over a store, a
