@@ -59,9 +59,11 @@ touches every spine step thinly; module first follows and reuses the same pieces
 
 ## 5. The data — from the domain lens (to be decided piece by piece)
 
-- **Drawer item** — one small file per item in the store; only `label` and `count` required; optional: what
-  it `is` (a record or board id, a maker part number), where it came `from` (seller, listing, code), `photos`
-  (by checksum), and, for an unidentified part, `function` in the person's words. Never price or date.
+- **Drawer item** — *decided (the PO, 2026-10-04):* one small file per item in the store; only `label` and
+  `count` required; optional: what it `is` (a record or board id, a maker part number), **where it physically
+  is** ("box 3, blue tray"), **which projects use how many** (a project reserves what it uses), **where it came
+  from** (seller, listing or order code — to buy it again, and the only identity an unlabelled part has),
+  `photos` (by checksum), and its `function`. Never price, date, or a condition field.
 - **History** — one append-only log in the store: `built`, `simulated`, `ran` (proof by use, tied to the
   record's checksum so a proof of an old pin order does not vouch for a corrected one), `researched` (with its
   request counts), `reused`, `passed_over` (with why). It gives the three measures from data, and keeps
@@ -70,13 +72,28 @@ touches every spine step thinly; module first follows and reuses the same pieces
   **current**, **owed** (fails only newer rules: listed as "to fill", grown when a stage pulls it) or **broken**
   (refused). Mechanical upgrades happen on read, saved on the next write — no big-bang migration. One
   `--validate` walks every layer.
+- **Matching a similarly working thing** — *decided (the PO, 2026-10-04): both from the start.* Every record
+  and drawer entry carries `function: [{does, what}]` — `does` from a closed list of about ten verbs (sense,
+  drive, power, keep-time, store, indicate, sound, input, connect, compute), `what` in open words (distance,
+  soil-moisture …), derived from today's `kind` where it can be, from the person's words for a drawer item —
+  and the agent also reads the whole index to judge what is similar and say what would change.
 - **Identity** — a natural key, maker/part-number[@revision]; a generic part by its printed board name.
 - **Layers** — resolving an id: project → shelf → library → catalog → (shared later); the nearer layer wins the
   whole record, and a draft never hides a verified one. Proposing parts, store first: drawer → project →
   shelf → library → catalog → research.
 - **Never leaves the machine:** the drawer, the history, document bytes, photos, project choices.
 
-## 6. Architecture — options under review
+## 6. Architecture — decided: Option B, refactor first, then raise the budget
+
+*The PO, 2026-10-04.* `store.py` owns where things are and how bytes move — one home (`SPARK_HOME`, else
+`XDG_DATA_HOME/spark`, else `~/.local/share/spark`), one table of layers nearest-first, every write contained
+and checked, the one checked keep/fetch. `parts.py` owns what a record must be, and the commands; every
+command answers in JSON, which is the stable interface for agents and a later viewer. A new layer (shelf,
+drawer, a shared clone) is a row in the table. **Budget:** refactor and delete first (W15b — one JSON printer
+for every command, one search over every layer), then raise the 5,000-line cap by what the design needs,
+measured per item.
+
+The options weighed:
 
 From the architecture lens (details in the council's report, to be folded in when chosen):
 - **A** — one home and one layer table inside `parts.py`; cheapest, but `parts.py` passes 1,000 lines with
@@ -89,8 +106,8 @@ From the architecture lens (details in the council's report, to be folded in whe
 
 ## 7. Open questions (asked one at a time)
 
-- How "a similarly working thing" is matched: a small function vocabulary, or the agent reading the whole index.
-- The architecture option (B now, or no new module until the viewer).
-- What a drawer entry holds beyond "what and how many".
+- Which drawer route the first slice supports.
+- How cost and proof by use are recorded and shown (section review).
+- The layer order: resolving an id (library before catalog) vs proposing parts (drawer first).
 - How "a similarly working thing" is matched (the capability vocabulary).
 - How cost and proof by use are recorded.
