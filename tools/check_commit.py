@@ -47,6 +47,51 @@ def lend_node_modules(tree):
         (borrower / "node_modules").symlink_to(installed)
 
 
+def code_lines(source):
+    """A file's lines that are neither docstring, comment nor blank — the size W15b talks about."""
+    import ast
+    import io
+    import tokenize
+    total = len(source.splitlines())
+    blank = sum(1 for line in source.splitlines() if not line.strip())
+    comments = sum(token.string.count("\n") + 1 for token in tokenize.generate_tokens(io.StringIO(source).readline)
+                   if token.type == tokenize.COMMENT)
+    docs = 0
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            written = ast.get_docstring(node, clean=False)
+            if written:
+                docs += written.count("\n") + 1
+    return total - blank - comments - docs
+
+
+def scripts_size(root, rev):
+    """The code lines of `scripts/*.py` at a commit, read from git with no checkout; None for an unknown commit."""
+    listed = subprocess.run(["git", "-C", str(root), "ls-tree", "--name-only", rev, "scripts/"],
+                            capture_output=True, text=True)
+    if listed.returncode != 0:
+        return None
+    return sum(code_lines(subprocess.run(["git", "-C", str(root), "show", "%s:%s" % (rev, name)],
+                                         capture_output=True, text=True).stdout)
+               for name in listed.stdout.split() if name.endswith(".py"))
+
+
+def size_line(root, commit, base="origin/main"):
+    """
+    "scripts/: 5,228 code lines (+40 since origin/main)" — the product's size and what this push adds to it
+    (P99). It replaced a cap that failed the suite: P95 raised that cap six times, each time to whatever was
+    measured, and it prompted one refactor of two lines. A number said at every push, with its reason on
+    the item's Done line, is what the PO asked the cap to be.
+    """
+    now = scripts_size(root, commit)
+    if now is None:
+        return "scripts/: size not measured (no commit %s)" % commit
+    merge_base = subprocess.run(["git", "-C", str(root), "merge-base", commit, base], capture_output=True, text=True)
+    then = scripts_size(root, merge_base.stdout.strip()) if merge_base.returncode == 0 else None
+    growth = "" if then is None else " (%+d since %s)" % (now - then, base)
+    return "scripts/: {:,} code lines{}".format(now, growth)
+
+
 def measure(tree):
     """(suite verdict line, anchors verdict line, ok) for the tree at `tree`."""
     lend_node_modules(tree)
@@ -76,6 +121,7 @@ def main(argv=None):
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
     print("%s as committed: %s; %s" % (short, suite, anchors))
+    print("  " + size_line(root, commit))
     return EXIT_OK if ok else EXIT_PROBLEMS
 
 

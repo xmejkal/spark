@@ -67,5 +67,22 @@ class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
         self.assertEqual(check_commit.main(["no-such-commit-xyz"]), check_commit.EXIT_COULD_NOT_RUN)
 
 
+class TheSizeIsSaidTest(unittest.TestCase):
+    """P99: the gate says how big scripts/ is and what a push adds to it — a number at every push, not a cap."""
+
+    def test_code_lines_counts_code_not_prose(self):
+        source = '"""A module."""\n\n# a comment\ndef f():\n    """What f does,\n    on two lines."""\n    return 1\n'
+        self.assertEqual(check_commit.code_lines(source), 2)
+
+    def test_the_size_line_says_the_growth_since_a_base(self):
+        root = repo_with({"scripts/a.py": "x = 1\n", "scripts/README.md": "not code, not counted\n"})
+        (root / "scripts" / "a.py").write_text("x = 1\ny = 2\n# free\n")
+        (root / "scripts" / "b.py").write_text('"""free"""\nz = 3\n')
+        for command in (["git", "add", "-A"], ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
+            subprocess.run(command, cwd=str(root), check=True, capture_output=True)
+        self.assertEqual(check_commit.size_line(root, "HEAD", "HEAD~1"), "scripts/: 3 code lines (+2 since HEAD~1)")
+        self.assertEqual(check_commit.size_line(root, "HEAD", "no-such-base"), "scripts/: 3 code lines")
+
+
 if __name__ == "__main__":
     unittest.main()

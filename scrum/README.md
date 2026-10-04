@@ -76,6 +76,8 @@ Every one of these, for every PBI. No exceptions, no "mostly".
 4. The PBI's own `Value proven by:` command runs and shows what it claims.
 5. Committed, with a message saying what was wrong and why the fix is right.
 6. Any claim it makes in a docstring or README is **true when run**, not when written.
+7. Its Done line says how many code lines it added to `scripts/` and why — the pre-push gate prints the
+   figure (W15b, P99).
 
 **At each sprint's close** (P98): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
 prints its time. An escape is a missing test, opened as a backlog item the same day.

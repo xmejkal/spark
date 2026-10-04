@@ -785,7 +785,7 @@ need's candidates from the store with owned and free counts and what each owes (
 (the DFR0954 footprint from DFRobot's drawing, one counted request); `check_spine` ends `[ok]`; the cost line
 "5 picks: 5 from the store (5 owned) — 1 request, 1 document, N min".
 
-### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95**
+### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95** — DONE 2026-10-04
 **Needed by:** the PO — *"I think we should also try to make things faster. How often do we really need to run all
 the mutations? Can we optimize it somehow?"* Measured 2026-10-04: each mutation re-runs the whole suite (11.4 s), and
 `tests/test_mutate.py` alone takes 6.3 s of it while it can catch no mutation in `scripts/`; a task's table of 18 runs
@@ -796,8 +796,11 @@ and stop at the first failing test; (2) run the tests that import the mutated fi
 survivor, so an escape is never misreported; (3) run mutations in parallel, each in a temporary copy of the tree;
 (4) every table once per sprint, at the close audit — the task's own table and the push gate's anchors unchanged.
 **Value proven by:** one table's run time before and after, on the same table; all 438 run inside a sprint-close audit.
+**Proven 2026-10-04 (82155c3):** P95's drawer table, 19 mutations, in clean worktrees — 337 s with the old tool,
+69 s with the new; 18 caught by the near tests, 1 by the whole suite. The sweep of every table is in the Definition
+of Done for each sprint's close; its first run is Sprint 10's close.
 
-### P99 — The code cap reports growth instead of gating it — **the team's tools; the PO, 2026-10-04: after P98**
+### P99 — The code cap reports growth instead of gating it — **the team's tools; the PO, 2026-10-04: after P98** — DONE 2026-10-04
 **Needed by:** the PO — *"Do you think capping the code works for us? Does it really protect us from bloat or other
 things? what is it good for and does it actually work?"* Measured on P95, 2026-10-04: `SCRIPTS_CODE_BUDGET` was raised
 six times in one item — 5,086, 5,106, 5,183, 5,188, 5,189, 5,228 — each to the measured total in the same commit, and it
@@ -808,6 +811,9 @@ with the PO before it is planned.
 sprint review says how many code lines an item added and why; the orphan and unused-code tests stay as they are.
 **Value proven by:** a sprint review that shows each item's growth beside its reason, and no commit that exists only
 to move the number.
+**Proven 2026-10-04:** the cap test is gone; the pre-push gate prints `scripts/: 5,228 code lines (+0 since
+origin/main)` (P98 added no product code); W15b and the Definition of Done ask each Done line for its growth
+and reason. P99 itself added none to `scripts/`. The sprint review half is Sprint 10's close.
 
 ### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04**
 **Needed by:** every way into spark (P76's goal-first, module-first, combination, whole-drawer, revive,

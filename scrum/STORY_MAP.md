@@ -46,7 +46,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 work, really from just talking about some vague idea"*; slices 8 and 9 make ordering a board and
 printing an enclosure part of the journey, optional and after the firmware works.
 Slices 2 and 3 run side by side: the maker's share of 2 is parts and a bench, the team's is the
-items. **The team's tools** — next after P95, the PO's call of 2026-10-04: **P98** (mutation runs in seconds), then **P99** (the code cap reports growth instead of gating it).
+items. **The team's tools** — next after P95, the PO's call of 2026-10-04: P98 (done — mutation runs in seconds), P99 (done — the size reported, not capped).
 **The desk lane** — the PO's own process decisions, at most two open: **P70**, **P72**.
 
 **Parked** (each with what pulls it back, in the backlog): P66, P68, P49, P50, R10, F1, F2, F5.

@@ -1,5 +1,5 @@
 """
-Proof that nothing ships unused, and that the product stays the size a person can hold.
+Proof that nothing ships unused. (How big the product is, the pre-push gate says at every push — P99.)
 
 On 2026-09-29 a third of this repository was deleted: a findings store that never resolved a
 finding, an eval harness nobody re-ran, a second file format for a design, a check neither
@@ -20,42 +20,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 #: Modules that are imported, never run: they earn their place by being imported.
 LIBRARIES = {"copper", "outcomes", "design", "store", "drawer"}
-
-#: The budget for the product's scripts, in CODE lines: docstrings, comments and blank lines do
-#: not count. It counted every line until 2026-09-30, which charged the most valuable thing in
-#: this repository — 1,973 lines of prose recording why each defect's fix is shaped as it is —
-#: against the same ceiling as complexity, so a well-explained function cost more budget than a
-#: cryptic one. The PO asked the right question: "if it's code, could it be refactored?" So the
-#: ceiling is on the code, and the order when it pinches is **refactor, delete, raise** — each
-#: written down. 3,550 code lines on the day it changed (6,536 total); 4,000 leaves room for the
-#: sprint's five items, which are about 250.
-#: RAISED to 5,000 on 2026-10-01 by the PO, at 3,879: "the limit is too low ... lets keep checking
-#: that we dont produce bloat or leave unused code". Sprint 8 grew ~40 code lines an item, so 4,000
-#: would have been reached within three items while every one of them was needed (W14) and nothing
-#: was left unused (the orphan tests below, unchanged). A ceiling that stops needed work measures
-#: the ceiling, not bloat. 5,000 is ~25 items of headroom (estimate) — still a number someone sees.
-#: RAISED to 5,228 on 2026-10-04 for P95 (store 1a: the store, the envelope, the drawer, the DFRobot import, the retired owned fields, the final review's fixes), measured after its refactor (W15b).
-SCRIPTS_CODE_BUDGET = 5_228
-
-
-def code_lines(path):
-    """A file's lines that are neither docstring, comment nor blank."""
-    import ast
-    import io
-    import tokenize
-    source = path.read_text()
-    total = len(source.splitlines())
-    blank = sum(1 for line in source.splitlines() if not line.strip())
-    comments = sum(token.string.count("\n") + 1 for token in tokenize.generate_tokens(io.StringIO(source).readline)
-                   if token.type == tokenize.COMMENT)
-    docs = 0
-    for node in ast.walk(ast.parse(source)):
-        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            written = ast.get_docstring(node, clean=False)
-            if written:
-                docs += written.count("\n") + 1
-    return total - blank - comments - docs
-
 
 def routes():
     """Every document a user or a project is routed by: commands, skills, agents, README, Makefiles."""
@@ -102,15 +66,6 @@ class NothingShipsUnusedTest(unittest.TestCase):
         agents = [p.stem for p in (ROOT / "agents").glob("*.md")]
         unnamed = [name for name in skills + agents if name not in text]
         self.assertEqual(unnamed, [], "skills or agents nothing routes to: %s" % unnamed)
-
-    def test_the_scripts_stay_within_their_code_budget(self):
-        counted = {path.name: code_lines(path) for path in sorted((ROOT / "scripts").glob("*.py"))}
-        total = sum(counted.values())
-        biggest = sorted(counted.items(), key=lambda pair: -pair[1])[:3]
-        self.assertLessEqual(total, SCRIPTS_CODE_BUDGET,
-                             "scripts/ is %d code lines against a budget of %d: refactor, delete, or raise the "
-                             "number here with a reason. Biggest: %s"
-                             % (total, SCRIPTS_CODE_BUDGET, ", ".join("%s %d" % pair for pair in biggest)))
 
     def test_every_open_backlog_item_names_the_design_that_needs_it(self):
         # W14: pull, never push. An item without a design behind it is not built.

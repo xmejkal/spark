@@ -163,19 +163,17 @@ within a line budget that a change may not exceed without deleting something. `t
 holds all of it, so dead code cannot accumulate silently again — every piece cut on 09-29 had
 tests, and looked alive.
 
-## W15b — The budget is on code, and it pinches in this order: refactor, delete, raise
+## W15b — The size is said at every push, with its reason; refactor before growing
 
-The `scripts/` ceiling counts code lines only: docstrings, comments and blanks are free, because
-the prose recording why a fix is shaped as it is, is the most valuable thing in this repository
-and charging it against complexity taught the wrong lesson. When the ceiling pinches, the first
-question is whether the same behaviour fits in less code — the three-outcome verdict was written
-out in three places and one of the three was wrong, which is how a check came to report `ok` over
-its own `could-not-run` (P34). Deleting comes second, raising the number third, and each is
-written down with its reason. Changed 2026-09-30, at the PO's question: "if it's code, it could
-be refactored?" **Raised 4,000 → 5,000 on 2026-10-01 by the PO** at 3,879 code lines: the ceiling
-was about to stop work every item of which a design needed, while W15's orphan tests — the checks
-that catch unused code — stay exactly as they are. The reason is beside the number in
-`tests/test_orphans.py`.
+The `scripts/` size counts code lines only: docstrings, comments and blanks are free, because the prose
+recording why a fix is shaped as it is, is the most valuable thing in this repository. **It is a number,
+not a cap (P99, the PO, 2026-10-04).** The pre-push gate prints it with the growth since `origin/main`
+(`scripts/: N code lines (+M since origin/main)`); an item's Done line says how many lines it added and
+why, and the sprint review lists them. The cap it replaced failed the suite: P95 raised it six times,
+each time to whatever had been measured, and it prompted one refactor of two lines — what caught bloat
+there was the reviews and W15's orphan tests, which stay exactly as they are. When an item grows a lot,
+the first question is still whether the same behaviour fits in less code — the three-outcome verdict
+was written out in three places and one of the three was wrong (P34).
 
 ## W16 — A replacement deletes what it replaces, in the same commit
 
