@@ -43,8 +43,10 @@ the whole product: not "the tests pass" but "the tests would notice".
 
 import argparse
 import json
+import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 #: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
@@ -54,11 +56,14 @@ sys.path.insert(0, str(SCRIPTS))
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
 
 CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
+#: Which run caught a mutation (P98): the tests near the mutated file, or the whole suite.
+NEAR, FULL = "near", "full"
 
 
-def suite_is_green(root, tests):
+def suite_is_green(root, tests, only=(), failfast=False):
     """
-    Run the suite once, from source alone; the verdict is on stderr, which is why it is captured.
+    Run the suite once — or `only` those test modules — from source alone; the verdict is on stderr,
+    which is why it is captured. `failfast` stops at the first failure: one is all a catch needs.
 
     `-B` writes no bytecode and a fresh `PYTHONPYCACHEPREFIX` means none pre-existing is read.
     Without both, a same-size mutation restored within a second is scored against stale `.pyc`.
@@ -67,11 +72,38 @@ def suite_is_green(root, tests):
     import tempfile
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
                        PYTHONPYCACHEPREFIX=tempfile.mkdtemp(prefix="mutate-pycache-"))
-    result = subprocess.run(
-        [sys.executable, "-B", "-m", "unittest", "discover", "-s", tests],
-        cwd=str(root), capture_output=True, text=True, env=environment)
+    stop = ["-f"] if failfast else []
+    command, where = (([sys.executable, "-B", "-m", "unittest"] + stop + list(only), Path(root) / tests) if only else
+                      ([sys.executable, "-B", "-m", "unittest", "discover", "-s", tests] + stop, Path(root)))
+    result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
     verdict = (result.stderr or "") + (result.stdout or "")
     return result.returncode == 0 and "\nOK" in verdict
+
+
+def near_tests(root, tests, mutated_file):
+    """
+    The test modules near a mutated file (P98): for a `.py` file the ones that import its module, for any
+    other file the ones that name it. Each mutation meets these first — a defect a nearby test catches
+    costs a second, not the whole suite — and only what they miss goes to the whole suite, so an escape is
+    never reported on their word. Empty: the whole suite decides alone.
+    """
+    target = Path(mutated_file)
+    said = (re.compile(r"^\s*(?:import|from)\s+%s\b" % re.escape(target.stem), re.M) if target.suffix == ".py"
+            else re.compile(re.escape(target.name)))
+    return sorted(path.stem for path in sorted((Path(root) / tests).glob("test_*.py"))
+                  if said.search(path.read_text(errors="replace")))
+
+
+def near_sets(root, tests, mutations):
+    """
+    Each mutated file's near tests, kept only where they pass on the clean tree on their own: a set that
+    fails alone (a test leaning on another module's import) would make every mutation near it look caught.
+    """
+    found = {}
+    for file in sorted({mutation["file"] for mutation in mutations}):
+        near = tuple(near_tests(root, tests, file))
+        found[file] = near if near and suite_is_green(root, tests, only=near) else ()
+    return found
 
 
 def apply(root, mutation):
@@ -142,26 +174,29 @@ def run(root, tests, mutations):
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
         if not suite_is_green(root, tests):
             raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing")
-        return _run(root, tests, mutations)
+        return _run(root, tests, mutations, near_sets(root, tests, mutations))
     finally:
         lock.unlink(missing_ok=True)
 
 
-def _run(root, tests, mutations):
+def _run(root, tests, mutations, near_by_file):
     results = []
     for mutation in mutations:
         path = root / mutation["file"]
         original, refusal = apply(root, mutation)
         if refusal:
             results.append({"name": mutation.get("name", mutation["find"]),
-                            "status": REFUSED, "detail": refusal})
+                            "status": REFUSED, "by": None, "detail": refusal})
             continue
         try:
-            green = suite_is_green(root, tests)
+            near = near_by_file.get(mutation["file"], ())
+            caught_near = bool(near) and not suite_is_green(root, tests, only=near, failfast=True)
+            green = False if caught_near else suite_is_green(root, tests, failfast=True)
         finally:
             path.write_text(original)
         results.append({"name": mutation.get("name", mutation["find"]),
                         "status": ESCAPED if green else CAUGHT,
+                        "by": None if green else (NEAR if caught_near else FULL),
                         "detail": "" if not green else
                         "the suite stayed green — no test notices this defect"})
 
@@ -180,7 +215,7 @@ def verdict(results, restored):
 def render(results, restored, code):
     lines = [""]
     for r in results:
-        mark = {CAUGHT: "caught ", ESCAPED: "ESCAPED", REFUSED: "refused"}[r["status"]]
+        mark = {CAUGHT: "caught %s" % r.get("by", FULL), ESCAPED: "ESCAPED", REFUSED: "refused"}[r["status"]]
         lines.append("  [%s] %s%s" % (mark, r["name"], ("  — " + r["detail"]) if r["detail"] else ""))
     lines.append("")
     if not restored:
@@ -224,6 +259,7 @@ def main(argv=None):
             "every anchor present, once" if not wrong else "%d would be refused" % len(wrong)))
         return EXIT_ESCAPED if wrong else EXIT_OK
 
+    started = time.monotonic()
     try:
         results, restored = run(root, args.tests, mutations)
     except (AnotherRunIsActive, RedBeforeMutation) as stopped:
@@ -234,9 +270,10 @@ def main(argv=None):
         print(json.dumps({"tool": "mutate", "restored": restored,
                           "status": {EXIT_OK: OK, EXIT_ESCAPED: "escaped",
                                      EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code],
-                          "mutations": results}, indent=2))
+                          "seconds": round(time.monotonic() - started), "mutations": results}, indent=2))
     else:
         sys.stdout.write(render(results, restored, code))
+        print("  %d mutation(s) in %.0f s" % (len(results), time.monotonic() - started))
     return code
 
 

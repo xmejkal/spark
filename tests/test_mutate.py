@@ -236,5 +236,88 @@ class OneRunAtATimeTest(unittest.TestCase):
             mutate.run(root, "tests", [{"file": "m.py"}])      # a malformed row raises mid-run
         self.assertFalse((root / mutate.LOCK_NAME).exists(), "the lock outlived a failed run")
 
+def counting(case):
+    """Record every suite run as the near set it ran, or None for the whole suite — and still run it."""
+    from unittest import mock
+    calls, real = [], mutate.suite_is_green
+
+    def counted(root, tests, only=(), failfast=False):
+        calls.append(tuple(only) or None)
+        return real(root, tests, only=only, failfast=failfast)
+    patcher = mock.patch.object(mutate, "suite_is_green", counted)
+    patcher.start()
+    case.addCleanup(patcher.stop)
+    return calls
+
+
+def write_test(root, name, *lines):
+    (root / "tests" / name).write_text("\n".join(["import sys, unittest", "sys.path.insert(0, %r)" % str(root)] + list(lines)) + "\n")
+
+
+class NearTestsFirstTest(unittest.TestCase):
+    """P98: a mutation meets the tests near its file first; the whole suite decides only what they miss."""
+
+    def test_a_python_file_is_near_the_tests_that_import_it_and_any_other_file_near_those_naming_it(self):
+        root = tiny_project()
+        write_test(root, "test_alias.py", "import m as other")
+        write_test(root, "test_words.py", "SAID = 'm is mentioned, not imported'")
+        write_test(root, "test_data.py", "NAME = 'd.json'")
+        self.assertEqual(mutate.near_tests(root, "tests", "m.py"), ["test_alias", "test_m"])
+        self.assertEqual(mutate.near_tests(root, "tests", "data/d.json"), ["test_data"])
+        self.assertEqual(mutate.near_tests(root, "tests", "x.md"), [])
+
+    def test_a_defect_a_near_test_notices_is_caught_without_the_whole_suite(self):
+        root = tiny_project()
+        calls = counting(self)
+        results, restored = mutate.run(root, "tests", [BREAK_ADD])
+        self.assertEqual((results[0]["status"], results[0]["by"], restored), (mutate.CAUGHT, "near", True))
+        self.assertEqual(calls.count(None), 2, "the whole suite runs only before and after: %s" % calls)
+
+    def test_a_defect_the_near_tests_miss_is_caught_by_the_whole_suite(self):
+        root = tiny_project(tested=False)
+        write_test(root, "test_other.py", "import importlib", "class T(unittest.TestCase):",
+                   "    def test_sub(self): self.assertEqual(importlib.import_module('m').sub(5, 3), 2)")
+        results, _ = mutate.run(root, "tests", [BREAK_SUB])
+        self.assertEqual((results[0]["status"], results[0]["by"]), (mutate.CAUGHT, "full"))
+
+    def test_an_escape_is_reported_only_after_the_whole_suite(self):
+        root = tiny_project(tested=False)
+        calls = counting(self)
+        results, _ = mutate.run(root, "tests", [BREAK_SUB])
+        self.assertEqual(results[0]["status"], mutate.ESCAPED)
+        self.assertEqual(calls.count(None), 3, "before, for the mutation, after: %s" % calls)
+
+    def test_a_file_nothing_names_goes_straight_to_the_whole_suite(self):
+        root = tiny_project()
+        (root / "d.txt").write_text("5\n")
+        write_test(root, "test_d.py", "from pathlib import Path", "class T(unittest.TestCase):",
+                   "    def test_d(self): self.assertEqual(Path(%r, 'd' + '.txt').read_text(), '5\\n')" % str(root))
+        calls = counting(self)
+        results, _ = mutate.run(root, "tests", [{"file": "d.txt", "name": "five is six", "find": "5", "replace": "6"}])
+        self.assertEqual((results[0]["status"], results[0]["by"]), (mutate.CAUGHT, "full"))
+        self.assertEqual([call for call in calls if call], [], "nothing near d.txt was run: %s" % calls)
+
+    def test_near_tests_that_fail_alone_on_clean_code_fall_back_to_the_whole_suite(self):
+        root = tiny_project()
+        write_test(root, "test_a.py", "import os", "os.environ['SET_BY_TEST_A'] = '1'")
+        write_test(root, "test_m.py", "import os", "import m", "class T(unittest.TestCase):",
+                   "    def test_add(self): self.assertEqual(m.add(2, 3), 5)",
+                   "    def test_needs_a(self): self.assertEqual(os.environ.get('SET_BY_TEST_A'), '1')")
+        self.assertEqual(mutate.near_tests(root, "tests", "m.py"), ["test_m"], "test_m is near m.py, so the fallback is what is tested")
+        results, restored = mutate.run(root, "tests", [BREAK_ADD])
+        self.assertEqual((results[0]["status"], results[0]["by"], restored), (mutate.CAUGHT, "full", True))
+
+    def test_the_rendering_says_which_run_caught_it_and_the_command_line_how_long_it_took(self):
+        text = mutate.render([{"name": "add subtracts", "status": mutate.CAUGHT, "by": "near", "detail": ""}],
+                             True, mutate.EXIT_OK)
+        self.assertIn("[caught near] add subtracts", text)
+        import contextlib
+        import io
+        root = tiny_project()
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main([str(table(root, BREAK_ADD)), "--root", str(root)])
+        self.assertRegex(out.getvalue(), r"1 mutation\(s\) in \d+ s")
+
+
 if __name__ == "__main__":
     unittest.main()

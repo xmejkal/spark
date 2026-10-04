@@ -77,5 +77,8 @@ Every one of these, for every PBI. No exceptions, no "mostly".
 5. Committed, with a message saying what was wrong and why the fix is right.
 6. Any claim it makes in a docstring or README is **true when run**, not when written.
 
+**At each sprint's close** (P98): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
+prints its time. An escape is a missing test, opened as a backlog item the same day.
+
 A stage that could not be exercised is `could-not-run`, never `ok`. That rule outranks every other
 sentence in this folder.
