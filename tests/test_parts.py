@@ -1600,5 +1600,44 @@ class OwningIsTheDrawersTest(unittest.TestCase):
                 self.assertIn(where, said[0])
 
 
+class WhatAPartDoesTest(unittest.TestCase):
+    """P96, §5.6: a record says what it does, or its kind says it; a sensor's is written once, through parts.py."""
+
+    def test_a_kind_that_says_it_and_a_function_that_says_it(self):
+        self.assertEqual(parts.function_of({"kind": "rtc"}), [{"does": "keep-time", "what": "rtc"}])
+        self.assertEqual(parts.function_of({"kind": "rtc", "function": [{"does": "store", "what": "eeprom"}]}),
+                         [{"does": "store", "what": "eeprom"}], "a record's own function wins")
+        self.assertEqual(parts.function_of({"kind": "sensor"}), [], "a sensor says nothing until it is written")
+        self.assertEqual(parts.function_of({"pins": {}}, board=True), [{"does": "compute", "what": "microcontroller"}])
+
+    def test_a_function_outside_the_thirteen_verbs_is_refused(self):
+        definition = part(function=[{"does": "measure", "what": "soil-moisture"}])
+        self.assertTrue(any("function" in p and "keep-time" in p for p in parts.validate(definition, written(definition))))
+        definition = part(function=[{"does": "sense", "what": "soil-moisture"}])
+        self.assertEqual([p for p in parts.validate(definition, written(definition)) if "function" in p], [])
+
+    def test_function_set_writes_into_the_record_s_own_home_after_a_dry_run(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}))
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        given.write_text(json.dumps([{"does": "sense", "what": "soil-moisture"}]))
+        with in_store(home):
+            dry, code = run_json(["--function-set", "x-soil", str(given), "--dry-run"])
+            self.assertEqual((code, dry["data"]["written"]), (0, False))
+            self.assertNotIn("function", json.loads((home / "catalog" / "x-soil.json").read_text()))
+            done, code = run_json(["--function-set", "x-soil", str(given)])
+        self.assertEqual((code, done["data"]["now"]), (0, [{"does": "sense", "what": "soil-moisture"}]))
+        self.assertEqual(json.loads((home / "catalog" / "x-soil.json").read_text())["function"],
+                         [{"does": "sense", "what": "soil-moisture"}])
+
+    def test_function_set_refuses_a_wrong_function_and_a_part_nobody_has(self):
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        given.write_text(json.dumps([{"does": "measure", "what": "x"}]))
+        self.assertEqual(run_json(["--function-set", "tactile-button", str(given)])[1], 1)
+        given.write_text(json.dumps([{"does": "sense", "what": "x"}]))
+        self.assertEqual(run_json(["--function-set", "no-such-part", str(given), "--dry-run"])[1], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

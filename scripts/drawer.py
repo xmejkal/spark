@@ -16,9 +16,8 @@ import boards
 import parts
 import store
 
-#: What a part does (§5.6): the PO's 13 verbs. `drive` is the driver (an L9110S), `move` the thing driven (a motor).
-VERBS = ("sense", "input", "indicate", "sound", "move", "drive", "power", "keep-time", "store", "compute",
-         "communicate", "connect", "mount")
+#: What a part does (§5.6) — one list, in parts.py.
+VERBS = parts.VERBS
 
 #: An entry's fields, in the order its file shows them (§5.2). No price, no date, no condition grade (W21).
 FIELDS = ("label", "count", "part_number", "revision", "is", "function", "place", "used_in", "from", "bought",

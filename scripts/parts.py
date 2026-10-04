@@ -55,6 +55,36 @@ REQUIRED_FACT_KEYS = ("value", "verified", "source")
 RETIRED = {"owned": "what you own is a drawer entry — /spark:drawer, `parts.py --drawer-set`",
            "photo": "a photo of the one you own goes on its drawer entry's `photos`, kept with `parts.py --keep`"}
 
+#: What a part does (§5.6): the PO's 13 verbs. `drive` is the driver (an L9110S), `move` the thing driven (a motor).
+VERBS = ("sense", "input", "indicate", "sound", "move", "drive", "power", "keep-time", "store", "compute",
+         "communicate", "connect", "mount")
+
+#: A kind that says by itself what a part does (§5.6). A `sensor` or a `connector` does not: theirs is written
+#: once, through `--function-set`, with a dry run.
+KIND_FUNCTION = {"rtc": ("keep-time", "rtc"), "regulator": ("power", "regulator"), "button": ("input", "button"),
+                 "indicator": ("indicate", "light"), "mosfet-driver": ("drive", "load-switch"),
+                 "motor-driver": ("drive", "motor-dc"), "audio-amplifier": ("sound", "amplifier"),
+                 "audio": ("sound", "audio-player"), "rangefinder": ("sense", "distance"), "servo": ("move", "servo"),
+                 "board": ("compute", "microcontroller")}
+
+
+def function_of(record, board=False):
+    """What a record does (§5.6): its own `function`, else what its kind says, else nothing."""
+    if record.get("function"):
+        return record["function"]
+    said = KIND_FUNCTION.get("board" if board else record.get("kind"))
+    return [{"does": said[0], "what": said[1]}] if said else []
+
+
+def function_problems(record):
+    """A `function` that is not [{"does": one of the 13 verbs, "what": words}] — absent is fine: the kind may say it."""
+    function = record.get("function")
+    if function is None or (isinstance(function, list) and function and all(
+            isinstance(f, dict) and set(f) <= {"does", "what"} and f.get("does") in VERBS
+            and isinstance(f.get("what"), str) and f["what"].strip() for f in function)):
+        return []
+    return ['function is [{"does": one of %s, "what": words}]' % ", ".join(VERBS)]
+
 #: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
 #: labels showed `IN+`, `OUT-` and `A.B` unresolvable as tscircuit selectors while `V_IN`,
 #: `GND2` and `3V3` resolved. An MP1584 buck's pads are silkscreened IN+ IN- OUT+ OUT-, and a
@@ -606,6 +636,7 @@ def validate(part: dict, path: Path) -> list:
     problems.extend(document_problems(part))
     problems.extend(pin_order_problems(part))
     problems.extend(simulation_problems(part, path))
+    problems.extend(function_problems(part))
     return problems
 
 
@@ -1267,6 +1298,9 @@ OPERATIONS = (
     ("drawer-import", {"nargs": 2, "metavar": ("SOURCE", "FILE")},
      "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
      ("writes",), ("changes", "questions", "shelved", "smaller")),
+    ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
+     "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home", ("writes",),
+     ("part", "was", "now", "written")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1521,6 +1555,44 @@ def _op_drawer_import(args, project):
     if not problems and not args.dry_run:
         store.write_json("drawer-import", store.slug(source), drawer.kept_payload(payload))
     return answer._replace(data=dict(answer.data, smaller=smaller), lines=list(answer.lines) + ["  %s" % s for s in smaller])
+
+
+def _record_path(part_id, project):
+    """A part record's own file: the nearest layer that has it, the catalog included, else a project on the person's list."""
+    import drawer
+    home = record_home(part_id, project)
+    if home is not None:
+        return home / (part_id + DEFINITION_SUFFIX)
+    return next((path for kind, found, _, path in drawer.linkable() if (kind, found) == ("part", part_id)), None)
+
+
+def _write_record(path, record):
+    """A record back to its own home: through the store when it lives there (contained, atomic), else to its file."""
+    for name in ("shelf", "catalog"):
+        if path.parent == store.place(name):
+            return store.write_json(name, path.stem, record)
+    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _op_function_set(args, project):
+    part_id, name = args.function_set
+    function, unreadable = _read_json_input(name)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    path = _record_path(part_id, project)
+    if path is None:
+        raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
+    wrong = function_problems({"function": function})
+    if wrong:
+        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
+    record = json.loads(path.read_text(encoding="utf-8"))
+    was, changes = record.get("function"), record.get("function") != function
+    if changes and not args.dry_run:
+        record["function"] = function
+        _write_record(path, record)
+    return Answer({"part": part_id, "was": was, "now": function, "written": changes and not args.dry_run},
+                  ["  %s %s: function %s → %s" % ("would set" if args.dry_run else "set", part_id,
+                                                   json.dumps(was, ensure_ascii=False), json.dumps(function, ensure_ascii=False))])
 
 
 def _op_catalog(args, project):
