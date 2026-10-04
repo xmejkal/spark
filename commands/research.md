@@ -81,9 +81,12 @@ library, and the next project finds it with `--need`.
 
 ## Candidates not chosen
 
-A candidate whose datasheet was kept gets a catalog record of its identity, that document and why it
-was not chosen — no typed facts. One seen only in a search is a line in the chosen record's
-`alternatives`. (W21; P83 moves the catalog out of the plugin into the person's store.)
+A candidate whose datasheet was kept gets a catalog record in the person's store,
+`~/.local/share/spark/catalog/<id>.json`: what it is, its part facts with their sources (the pinout and
+its proof, power, body, warnings — a swap decision rests on them, and they stay true), its kept
+documents and `why_not`. No seller listings — `parts.py --catalog` refuses a record that has them; a
+maker-less part keeps its shop's order code as its `sku`, with `order_code_at`. One seen only in a
+search is a line in the chosen record's `alternatives`. (W21, P83.)
 
 ## What this does not do
 

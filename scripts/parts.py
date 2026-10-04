@@ -654,10 +654,6 @@ def vendor_order(project=None):
     return DEFAULT_VENDOR_ORDER
 
 
-#: Everything research has ever read, chosen or not, datasheet and photo saved beside it (PO,
-#: 2026-09-29: "even if we end up not using that part, keep it — we want a good database in
-#: time"). A `parts/` record must pass the contract; a catalog record only has to say what it is.
-CATALOG = Path(__file__).resolve().parent.parent / "catalog"
 CATALOG_KEYS = ("schema", "id", "name", "kind")
 #: What `--fetch` keeps: the sources worth having when the link rots.
 KEEPABLE = (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".svg")
@@ -667,6 +663,15 @@ KEEPABLE = (".pdf", ".jpg", ".jpeg", ".png", ".webp", ".svg")
 #: record finds it without searching. The PO chose the place on 2026-10-02; its backup is the
 #: machine's. A record holds the pointer (`documents`), never the file.
 STORE = Path.home() / ".local" / "share" / "spark" / "sources"
+
+#: Everything research has read and not chosen (PO, 2026-09-29: "even if we end up not using that
+#: part, keep it — we want a good database in time"), in the person's store beside its documents —
+#: not in the plugin, where a record was a commit to a public repository for its author and a cache
+#: the next update abandons for anyone else (P83). A candidate keeps its part facts — pinout, power,
+#: body, the cited facts — because a swap decision rests on them and they stay true (the PO, 2026-10-04);
+#: it keeps no seller listings, which go stale before anyone reads them (W21). A `parts/` record must
+#: pass the contract; a catalog record has to say what it is, and `--promote` asks the rest.
+CATALOG = STORE.parent / "catalog"
 
 #: An http(s) URL inside prose: "Table 3 of https://x/ds.pdf (rev 7)" cites https://x/ds.pdf. A
 #: parenthesis belongs to the URL when it is balanced — DFRobot names files "DFR (1).pdf" — and
@@ -682,14 +687,17 @@ def _url_in_prose(url):
 
 
 def catalog_records():
-    """Every catalog record that parses and says what it is, by id; the rest are named as broken."""
+    """Every catalog record that parses, says what it is and keeps no seller listings, by id; the rest are named as broken."""
     records, broken = {}, []
     for path in sorted(CATALOG.glob("*" + DEFINITION_SUFFIX)):
         record = _parse(path)
-        if isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS):
-            records[path.stem] = record
-        else:
+        if not (isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS)):
             broken.append(path.name)
+        elif record.get("sourcing"):
+            broken.append("%s — keeps seller listings (`sourcing`): prices and stock go stale before anyone "
+                          "reads them; a catalog record keeps the part, not where to buy it (P83)" % path.name)
+        else:
+            records[path.stem] = record
     return records, broken
 
 

@@ -63,13 +63,13 @@ MAY_READ = {
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
+    "parts.CATALOG": STRUCTURE + " — compared with the literal place P83 names: the person's store, not the plugin",
+    "parts.STORE": STRUCTURE + " — the catalog sits beside the kept documents",
     "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
 }
 
 #: Files no mutation table names, and why that is not a hole.
 UNMUTATED = {
-    "catalog/*": "records nobody chose: every one is read by test_parts' walk over the real catalog (P55), "
-                 "and two carry mutations of the facts that rule acts on; the rest are drafts' knowledge",
     "agents/*.md": "instructions to a model, judged by reading; W15 checks each is named where a user looks",
     "skills/*/SKILL.md": "instructions to a model, judged by reading; W15 checks each is named where a user looks",
     "skills/*/references/*.md": "reference prose a skill loads; judged by reading, not by a test",

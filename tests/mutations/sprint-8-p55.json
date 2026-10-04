@@ -1,17 +1,5 @@
 [
  {
-  "file": "catalog/dfr0819-ds3231sn-rtc.json",
-  "name": "a shipped catalog record says its module has no pull-ups (P55's own acceptance line)",
-  "find": "\"module_has_i2c_pullups\": {\n      \"value\": true,",
-  "replace": "\"module_has_i2c_pullups\": {\n      \"value\": false,"
- },
- {
-  "file": "catalog/dfr0821-ds3232-rtc.json",
-  "name": "a shipped catalog record's pull-up is 1 MOhm, which holds no bus",
-  "find": "\"i2c_pullup_ohms\": {\n      \"value\": 10000,",
-  "replace": "\"i2c_pullup_ohms\": {\n      \"value\": 1000000,"
- },
- {
   "file": "scripts/parts.py",
   "name": "a bus nobody pulls up passes",
   "find": "    if not on_module and not set(lines) <= by_host:",

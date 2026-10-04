@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "the catalog is back inside the plugin",
+  "find": "CATALOG = STORE.parent / \"catalog\"",
+  "replace": "CATALOG = Path(__file__).resolve().parent.parent / \"catalog\""
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a catalog record with seller listings is read as a record",
+  "find": "        elif record.get(\"sourcing\"):",
+  "replace": "        elif False:"
+ }
+]

@@ -8,8 +8,8 @@
  {
   "file": "scripts/parts.py",
   "name": "a broken catalog record is passed off as a record",
-  "find": "        if isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS):",
-  "replace": "        if isinstance(record, dict):"
+  "find": "        if not (isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS)):",
+  "replace": "        if not isinstance(record, dict):"
  },
  {
   "file": "scripts/parts.py",

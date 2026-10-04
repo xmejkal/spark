@@ -723,17 +723,56 @@ longer says it carries none — 4.7 k in parallel makes about 3.2 k; the circuit
 about the L9110S is a design decision, after the meter reading the bin's STATUS asks for and the
 input-low threshold the record lacks. Mutations `sprint-10-p81-pulls.json`: 5, all caught.
 
-### P83 — The catalog leaves the plugin, slim; candidates' photos and seller listings go — **slice 4; the PO's decision of 2026-10-03 (W21)**
+### P83 — The catalog leaves the plugin, slim; candidates' photos and seller listings go — **slice 4; the PO's decision of 2026-10-03 (W21)** — DONE 2026-10-04
 **Needed by:** everyone who installs spark — the researcher writes catalog records into the plugin's
 own folder, which is a commit to a public repository for the author and a cache the next update
 abandons for anyone else — and the person's store, where 47 files (10.2 MB) back only candidates
-nobody chose. The catalog moves to the person's store (`~/.local/share/spark/catalog/`) as identity,
-one kept document and why not, with no typed facts and no `sourcing`; the 19 candidate datasheets stay;
-the 28 product photos of unchosen candidates are deleted from a list the PO approves first; seller
-listings leave every record (kept: `owned`, a maker-less part's order code, "this listing is a
-different part"). A shopping list made at buying time replaces them (P79's outputs).
+nobody chose. The catalog moves to the person's store (`~/.local/share/spark/catalog/`); the 19
+candidate datasheets and drawings stay; the 28 product photos of unchosen candidates are deleted (the
+PO approved the list, 2026-10-04); seller listings leave every record (kept: `owned`, a maker-less
+part's order code, "this listing is a different part"). A shopping list made at buying time replaces
+them (P79's outputs).
+**The PO revised the cut, 2026-10-04:** *"shouldn't we store at least some basic info like the pinout
+and docs?"* — a candidate keeps **all its part facts** (pinout and its proof, power, body, footprint,
+warnings, the cited facts): they describe the part, stay true without upkeep, and a swap decision rests
+on them (the DFR0819 is recorded as "the swap if the DFR0641 cannot be bought"). Only what goes stale
+leaves: seller listings and the product photos.
 **Value proven by:** `git ls-files catalog` is empty and `--need rtc` still names the DFR0819 from the
-store; a catalog record with `facts` or `sourcing` is refused; the store holds 63 files.
+store, with its pinout; a catalog record with `sourcing` is refused by name; the store holds 63 files.
+**Done 2026-10-04.** `parts.CATALOG` is `~/.local/share/spark/catalog/`, beside the kept documents; the
+18 records moved there with their part facts and without their seller listings — the three maker-less
+parts keep their shop order codes (Hadex D228A, LaskaKit LA217012, LaskaKit LA131042 with Botland's EAN
+as an alias). The 28 approved photos were deleted: the store went from 91 files to 63. `git ls-files
+catalog` → 0; `parts.py --need rtc` names `dfr0819-ds3231sn-rtc … [catalog: researched before]`, whose
+record holds `pin_order` VCC GND SCL SDA INT RST 32K, 18 facts and both kept documents.
+`catalog_records()` names a record with `sourcing` as broken, with why. The researcher and
+`/spark:research` write candidates to the store. Mutations: `sprint-10-p83` 2 of 2, `sprint-5-catalog`
+10 of 10 (one re-anchored), `sprint-8-p55` 4 of 4 (its two catalog-file rows left with the files).
+
+### P84 — A store you can choose, and a shared part database — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
+**Needed by:** the hobbyist who researches a part someone else already researched, and every spark
+user whose kept records live in one folder on one machine. The PO: *"implement and architect it in
+such a way that the store is also selectable, whether it just saves it in an MD file or uses some
+database or NoSQL … a local store but also some online repo."* And: *"for now it's just an idea — we
+would go the whole way through: the vision, the use cases, the user stories, refined and planned, and
+then implement as we want to go."*
+**Decided so far (the PO, 2026-10-04):** the online store is **a shared part database** that other
+spark users read and contribute to; contributions arrive as **pull requests to a public GitHub repo of
+records**, reviewed before they merge (a clone is the local cache); it sits **beside** spark's shipped
+library, which keeps its few verified parts for spark's own tests and examples.
+**To confirm in discovery (assumptions, not decisions):** the shared repo holds records only — identity,
+part facts with their citations, the pinout with its proof — and a document as its URL and sha256,
+never the file (vendor licences grant nothing; another user fetches from the maker and the checksum
+proves it is the same file); a record from someone else is untrusted until reviewed, shows where it
+came from, and `--promote` still demands the contract; the local store stays the default and works
+offline. A first architecture to weigh then: two ports — a record store (get, put, delete, search by
+id) and a content-addressed document store (put and get by sha256) — with adapters chosen in the same
+layered personal/project list as the tools (P82), each passing one shared contract test; JSON stays
+the record format whatever holds it, Markdown a rendered view; reads go project → local → shared,
+writes to one chosen store; the research agents write through `parts.py`, never to a path.
+**Value proven by:** to be set in discovery; the PO's success, as understood: a new user's `--need rtc`
+finds the DFR0819 from the shared database — its pinout, its datasheet's URL and checksum — without
+anyone researching it again.
 
 ### B12 — The bin's vendor datasheets are kept, cited, then removed — **slice 6; the PO's decision of 2026-10-03**
 **Needed by:** the bin's public repository, which tracks 16 vendor datasheets (7.5 MB) under licences

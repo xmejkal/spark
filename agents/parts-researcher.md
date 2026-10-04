@@ -53,9 +53,11 @@ in the person's store (`~/.local/share/spark/sources`), pointed at from the reco
 never beside the record, because the plugin is public and cannot carry vendor files. A fact read
 from a kept document says where: `"cites": {"document": "<key>", "at": "Table 12, page 15"}`.
 
-**Candidates not chosen:** one whose datasheet you kept gets a catalog record of identity, that
-document and why not — no typed facts, no `sourcing`; one seen only in a search is a line in the
-chosen record's `"alternatives": [{"id": …, "maker": …, "part_number": …, "why_not": …}]`.
+**Candidates not chosen:** one whose datasheet you kept gets a catalog record, written to the person's
+store at `~/.local/share/spark/catalog/<id>.json` (never into the plugin): what it is, the part facts you
+read with their sources — the pinout and its proof, power, body, warnings — its kept documents and
+`why_not`; no `sourcing`. One seen only in a search is a line in the chosen record's
+`"alternatives": [{"id": …, "maker": …, "part_number": …, "why_not": …}]`.
 
 **No seller listings, prices or stock** — they go stale before anyone reads them, and no decision in
 research rests on them; buying is a later step. Keep only `{"seller": "owned"}`, a maker-less part's

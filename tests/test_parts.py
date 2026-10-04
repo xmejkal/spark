@@ -667,21 +667,15 @@ class AnI2cBusIsPulledUpBySomebodyTest(unittest.TestCase):
                                   "i2c_pullup_ohms": self.fact(1_000_000)})
         self.assertTrue(any("i2c_pullup_ohms" in p for p in refused), refused)
 
-    def test_every_shipped_record_library_and_catalog_holds_the_contract(self):
-        # The real files — not a temporary directory standing in for them. Nothing read the
-        # catalog before this; all six catalog tests mock it away.
-        # A catalog record may be a DRAFT — a candidate passed over, read raw (parts.record_home) —
-        # so it may lack what only placing it needs; `--promote` demands those. What it may not
-        # lack is the knowledge: its facts, their sources, and where its bus is pulled up.
-        placing_only = ("pin_order", "body_mm")
-        paths = sorted((ROOT / "parts").glob("*.json")) + sorted((ROOT / "catalog").glob("*.json"))
-        self.assertGreaterEqual(len([p for p in paths if p.parent.name == "catalog"]), 18)
+    def test_every_shipped_record_holds_the_contract(self):
+        # The real files — not a temporary directory standing in for them. The catalog was walked
+        # here too until P83 moved it into the person's store, where `--promote` demands the
+        # contract of a record before anything builds with it.
+        paths = sorted((ROOT / "parts").glob("*.json"))
+        self.assertGreaterEqual(len(paths), 7)
         for path in paths:
-            problems = parts.validate(json.loads(path.read_text()), path)
-            if path.parent.name == "catalog":
-                problems = [p for p in problems if not p.startswith(placing_only)]
             with self.subTest(record=path.name):
-                self.assertEqual(problems, [])
+                self.assertEqual(parts.validate(json.loads(path.read_text()), path), [])
 
 
 class ResearchStartsFromWhatExistsTest(unittest.TestCase):
@@ -1388,6 +1382,33 @@ def _tiny_pdf(pages):
     out += "trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, len(objects), xref)
     return out.encode("latin-1")
 
+
+
+class TheCatalogIsThePersonSTest(unittest.TestCase):
+    """P83: candidates nobody chose live in the person's store, keep their part facts, and no seller listings."""
+
+    def test_the_catalog_lives_in_the_person_s_store_not_the_plugin(self):
+        self.assertEqual(parts.CATALOG, Path.home() / ".local" / "share" / "spark" / "catalog")
+        self.assertEqual(parts.CATALOG.parent, parts.STORE.parent, "beside the kept documents")
+        self.assertEqual(sorted((ROOT / "catalog").glob("*.json")), [], "the plugin ships no catalog records")
+
+    def test_a_catalog_record_with_seller_listings_is_refused_by_name(self):
+        import tempfile
+        from unittest import mock
+        catalog = Path(tempfile.mkdtemp())
+        record = {"schema": 1, "id": "rtc-a", "name": "An RTC", "kind": "rtc",
+                  "pin_order": ["VCC", "GND", "SCL", "SDA"],
+                  "sourcing": [{"seller": "a shop", "url": "https://example.org", "price_czk": 99}]}
+        (catalog / "rtc-a.json").write_text(json.dumps(record))
+        kept = dict(record, id="rtc-b"); kept.pop("sourcing")
+        (catalog / "rtc-b.json").write_text(json.dumps(kept))
+        with mock.patch.object(parts, "CATALOG", catalog):
+            records, broken = parts.catalog_records()
+        self.assertEqual(sorted(records), ["rtc-b"], "a candidate keeps its part facts — its pinout too")
+        self.assertEqual(records["rtc-b"]["pin_order"], ["VCC", "GND", "SCL", "SDA"])
+        self.assertEqual(len(broken), 1)
+        self.assertIn("rtc-a.json", broken[0])
+        self.assertIn("seller listings", broken[0])
 
 if __name__ == "__main__":
     unittest.main()
