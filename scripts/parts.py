@@ -1286,7 +1286,11 @@ def _op_validate(args, project):
     checked = []
     for part_id in available(project):
         path = definition_path(part_id, project)
-        checked.append({"part": part_id, "path": str(path), "problems": validate(json.loads(path.read_text()), path)})
+        try:
+            record = json.loads(path.read_text())
+        except json.JSONDecodeError as bad:
+            return Answer(unchecked=[_cannot("--validate: %s is not JSON: %s" % (path, bad))])
+        checked.append({"part": part_id, "path": str(path), "problems": validate(record, path)})
     shown, truncated = page(checked, args.start, "validate", ["--validate"] + _with_project(project))
     lines = []
     for one in checked:
@@ -1458,6 +1462,8 @@ def main(argv=None):
     project = args.project.resolve() if args.project else None
     try:
         answer = globals()["_op_" + op.replace("-", "_")](args, project)
+    except (OSError, json.JSONDecodeError) as unreadable:
+        answer = Answer(unchecked=[_cannot("--%s: %s" % (op, unreadable))])
     except PartError as broken:
         value = getattr(args, op.replace("-", "_"))
         answer = Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else

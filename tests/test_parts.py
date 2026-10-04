@@ -1493,6 +1493,21 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
             said, code = run_json(["--sources", "l9110s-module", "--dry-run"])
         self.assertEqual((code, bool(said["data"]["sources"])), (0, True))
 
+    def test_a_record_that_is_not_json_is_could_not_run_not_a_traceback(self):
+        project = Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        (project / "parts" / "broken.json").write_text("{")
+        said, code = run_json(["--validate", "--project", str(project)])
+        self.assertEqual(sorted(said), ENVELOPE_KEYS)
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("broken.json", said["unchecked"][0]["sentence"])
+
+    def test_an_unreadable_store_is_could_not_run_not_a_traceback(self):
+        with mock.patch.object(parts, "available", side_effect=PermissionError("the store is unreadable")):
+            said, code = run_json(["--list"])
+        self.assertEqual((sorted(said), said["status"], code), (ENVELOPE_KEYS, "could-not-run", 2))
+        self.assertIn("the store is unreadable", said["unchecked"][0]["sentence"])
+
     def test_a_listing_is_paged_and_says_how_to_get_the_rest(self):
         home = Path(tempfile.mkdtemp())
         (home / "catalog").mkdir()

@@ -12,5 +12,7 @@
  {"file": "scripts/parts.py", "name": "a skeleton is written on a dry run",
   "find": "    if not args.dry_run:\n        target.parent.mkdir(parents=True, exist_ok=True)", "replace": "    if True:\n        target.parent.mkdir(parents=True, exist_ok=True)"},
  {"file": "scripts/parts.py", "name": "a dry run of --sources asks the network",
-  "find": "    if args.dry_run:\n        urls = cited_urls(record)", "replace": "    if False:\n        urls = cited_urls(record)"}
+  "find": "    if args.dry_run:\n        urls = cited_urls(record)", "replace": "    if False:\n        urls = cited_urls(record)"},
+ {"file": "scripts/parts.py", "name": "an unreadable store is a traceback, not an answer",
+  "find": "except (OSError, json.JSONDecodeError) as unreadable:", "replace": "except ZeroDivisionError as unreadable:"}
 ]
