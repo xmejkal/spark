@@ -48,7 +48,35 @@ firmware).
   dictated list**, and **adding as I go** (a part joins when a project or idea mentions it). Every route makes
   the same entry; none of them researches.
 
-## 4. Architecture — options under review
+## 4. The first slice — decided
+
+**The walking skeleton is goal first, with the PO's real drawer** (the PO, 2026-10-04): he notes about ten
+things he owns (no research, no web) → gives a real goal → the conversation names the functions it needs, no
+part numbers → each function is marked **have** (in the drawer), **know** (researched before, with what it
+still lacks) or **gap** (nothing similar) → only the gaps go to research, each after his yes → a part list
+the chain accepts → the step prints what it cost (requests made; parts reused out of parts chosen). It
+touches every spine step thinly; module first follows and reuses the same pieces.
+
+## 5. The data — from the domain lens (to be decided piece by piece)
+
+- **Drawer item** — one small file per item in the store; only `label` and `count` required; optional: what
+  it `is` (a record or board id, a maker part number), where it came `from` (seller, listing, code), `photos`
+  (by checksum), and, for an unidentified part, `function` in the person's words. Never price or date.
+- **History** — one append-only log in the store: `built`, `simulated`, `ran` (proof by use, tied to the
+  record's checksum so a proof of an old pin order does not vouch for a corrected one), `researched` (with its
+  request counts), `reused`, `passed_over` (with why). It gives the three measures from data, and keeps
+  personal events out of shared records.
+- **Records keep up with the contract** — every rule says the contract version it arrived in; a record is
+  **current**, **owed** (fails only newer rules: listed as "to fill", grown when a stage pulls it) or **broken**
+  (refused). Mechanical upgrades happen on read, saved on the next write — no big-bang migration. One
+  `--validate` walks every layer.
+- **Identity** — a natural key, maker/part-number[@revision]; a generic part by its printed board name.
+- **Layers** — resolving an id: project → shelf → library → catalog → (shared later); the nearer layer wins the
+  whole record, and a draft never hides a verified one. Proposing parts, store first: drawer → project →
+  shelf → library → catalog → research.
+- **Never leaves the machine:** the drawer, the history, document bytes, photos, project choices.
+
+## 6. Architecture — options under review
 
 From the architecture lens (details in the council's report, to be folded in when chosen):
 - **A** — one home and one layer table inside `parts.py`; cheapest, but `parts.py` passes 1,000 lines with
@@ -59,10 +87,10 @@ From the architecture lens (details in the council's report, to be folded in whe
   interface a viewer and agents use. About +90–110 of the 292 code lines left, built thin.
 - **C** — also a separate `contract.py` and a generic get/put CLI; the most churn, no story needs it yet.
 
-## 5. Open questions (asked one at a time)
+## 7. Open questions (asked one at a time)
 
-- Which walking skeleton comes first.
+- How "a similarly working thing" is matched: a small function vocabulary, or the agent reading the whole index.
+- The architecture option (B now, or no new module until the viewer).
 - What a drawer entry holds beyond "what and how many".
-- The architecture option.
 - How "a similarly working thing" is matched (the capability vocabulary).
 - How cost and proof by use are recorded.
