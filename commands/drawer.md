@@ -54,7 +54,9 @@ The person is logged in to dfrobot.com in their own Chrome, and you drive it. Th
   text in that tab followed by `await sparkReadDfrobotOrders()`. It returns `{sku, name, count}` per product, the lines
   read and the lines the pages state — nothing else. Never read an account page any other way — no page text, no
   accessibility tree, no screenshot: they hold the person's address, phone and payment details. If DFRobot changed its
-  pages you may adapt `parseOrder` in what you run; the payload's shape stays.
+  pages you may adapt `parseOrder` in what you run; the payload's shape stays. On 2026-10-04 the site drew each order a
+  second after it loaded and paged its list with buttons; the extractor waits for both, so a read of 0 lines means the
+  pages changed again.
 - Write the result to a file outside any repository, then:
 
   ```

@@ -4,13 +4,13 @@
 //
 // It runs inside the person's own logged-in tab on https://www.dfrobot.com/account/order and returns ONLY
 // {sku, name, count} per product, the lines it read and the lines the order pages state — never page text, an
-// order number, a price or an address. It loads the order list's pages and each order's page in a hidden frame of
-// that tab, one at a time, at least 2 s apart, at most 60 per run. It clicks nothing, so it cannot buy, cancel,
-// review or change the account.
+// order number, a price or an address. It clicks the order list's page buttons and loads each order's page in a
+// hidden frame of that tab, one at a time, at least 2 s apart, at most 60 per run. The only thing it clicks is the
+// order list's page buttons, so it cannot buy, cancel, review or change the account.
 //
 // The agent runs this file's text in the tab followed by `await sparkReadDfrobotOrders()`, writes the result to a
 // file outside any repository, and gives it to `parts.py --drawer-import dfrobot <file> --dry-run`. When DFRobot
-// changes its pages the agent may adapt `parseOrder` or the two link tests below: the payload's shape is the
+// changes its pages the agent may adapt `parseOrder`, the page buttons or the waits below: the payload's shape is the
 // contract, and spark's code checks it.
 
 const SPARK_PAUSE_MS = 2000;
@@ -36,37 +36,42 @@ function parseOrder(text) {
 
 async function sparkReadDfrobotOrders() {
   if (!location.hostname.endsWith('dfrobot.com') || !location.pathname.startsWith('/account/order')) return SPARK_LOGGED_OUT;
+  const pause = ms => new Promise(done => setTimeout(done, ms));
+  const ordersShown = () => [...document.querySelectorAll('a')].filter(a => /view more/i.test(a.textContent.trim())).map(a => a.href);
+  const pageButtons = () => [...document.querySelectorAll('ul.page li')].filter(li => /^\d+$/.test(li.textContent.trim()));
   let loads = 0;
-  const linksOf = doc => [...doc.querySelectorAll('a')].map(a => ({ href: a.href, text: a.textContent.trim() }));
-  async function load(href) {
-    if (++loads > SPARK_MAX_LOADS) throw new Error('stopped after ' + SPARK_MAX_LOADS + ' page loads');
-    await new Promise(done => setTimeout(done, SPARK_PAUSE_MS));
-    const frame = document.createElement('iframe');
-    frame.style.cssText = 'position:fixed;left:-3000px;top:0;width:1200px;height:3000px;';
-    document.body.appendChild(frame);
-    await new Promise(done => { frame.onload = done; frame.src = href; });
-    const page = { path: frame.contentWindow.location.pathname, text: frame.contentDocument.body.innerText,
-                   links: linksOf(frame.contentDocument) };
-    frame.remove();
-    return page;
-  }
-  const pages = [location.href], orders = new Set();
-  const take = links => {
-    links.filter(a => /^\d+$/.test(a.text) && a.href.includes('/account/order') && !pages.includes(a.href)).forEach(a => pages.push(a.href));
-    links.filter(a => /view more/i.test(a.text)).forEach(a => orders.add(a.href));
-  };
-  take(linksOf(document));
-  for (let i = 1; i < pages.length; i++) {
-    const page = await load(pages[i]);
-    if (!page.path.startsWith('/account/order')) return SPARK_LOGGED_OUT;
-    take(page.links);
+  const counted = () => { if (++loads > SPARK_MAX_LOADS) throw new Error('stopped after ' + SPARK_MAX_LOADS + ' page loads'); };
+  // The order list pages by buttons, not links: click each other page and wait (up to 20 s) for its list to be drawn.
+  const orders = new Set(ordersShown());
+  for (const label of pageButtons().map(li => li.textContent.trim())) {
+    const button = pageButtons().find(li => li.textContent.trim() === label);
+    if (!button || button.classList.contains('active')) continue;
+    counted();
+    const before = ordersShown().join('|');
+    await pause(SPARK_PAUSE_MS);
+    button.click();
+    for (let waited = 0; waited < 20000 && ordersShown().join('|') === before; waited += 500) await pause(500);
+    ordersShown().forEach(href => orders.add(href));
   }
   const bySku = new Map();
   let read = 0, stated = 0;
   for (const href of orders) {
-    const page = await load(href);
-    if (!page.path.startsWith('/account/order')) return SPARK_LOGGED_OUT;
-    const order = parseOrder(page.text);
+    counted();
+    await pause(SPARK_PAUSE_MS);
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position:fixed;left:-3000px;top:0;width:1200px;height:3000px;';
+    document.body.appendChild(frame);
+    await new Promise(done => { frame.onload = done; frame.src = href; });
+    // The site's script draws an order after the page loads: wait (up to 15 s) for its lines and its "N Items".
+    let text = frame.contentDocument.body.innerText;
+    for (let waited = 0; waited < 15000 && !(/SKU:/.test(text) && /\d+\s+Items?\b/.test(text)); waited += 500) {
+      await pause(500);
+      text = frame.contentDocument.body.innerText;
+    }
+    const path = frame.contentWindow.location.pathname;
+    frame.remove();
+    if (!path.startsWith('/account/order')) return SPARK_LOGGED_OUT;
+    const order = parseOrder(text);
     read += order.lines.length;
     stated = order.stated === null || stated === null ? null : stated + order.stated;
     for (const line of order.lines) {
