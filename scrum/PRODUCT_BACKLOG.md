@@ -782,8 +782,8 @@ need's candidates from the store with owned and free counts and what each owes (
 owes footprint, pin_order_proof, simulation; alarm — the DFR0954 amp (2 owned, owes footprint), the FIT0502 speaker,
 the DFPlayer Pro, the MP3 mini module (maybe owned); board — the FireBeetle S3 (1 owned, 0 free: the bin holds it)
 and the XIAO C6 (1 free); battery — the 1S LiPo (0 free). The PO marked all four `have`. The walk is `--audit`
-(ruling: `--validate` keeps its meaning) — catalog 18 owe facts, 0 broken. Size: +278 code lines (the needs file,
-the matcher, owed vs broken and the walk).
+(ruling: `--validate` keeps its meaning) — catalog 18 owe facts, 0 broken. Size: +305 code lines (the needs file,
+the matcher, owed vs broken and the walk, and the final review's eight fixes).
 
 ### P97 — Store 1c: picks to a building list, tallied — **slice 10; P94's third increment**
 **Needed by:** the same skeleton, to its end. Design §4 (store 1c), §5.7, §6.5, §6.7, §8 C–T.
