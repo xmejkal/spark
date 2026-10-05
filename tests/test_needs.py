@@ -237,6 +237,13 @@ class TheMatcherTest(unittest.TestCase):
         said, _ = run(["--match", str(self.project)])
         return said["data"]["needs"][0]
 
+    def test_a_project_s_own_board_is_a_candidate(self):
+        (self.project / "boards").mkdir(parents=True)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        (self.project / "boards" / "my-own-board.json").write_text(json.dumps(dict(board, id="my-own-board")))
+        found = [c["in"] for c in self.alone({"id": "mcu", "does": "compute", "what": "microcontroller"})["candidates"] if c["id"] == "my-own-board"]
+        self.assertEqual(found, ["project"])
+
     def test_what_matches_only_through_a_function_with_the_need_s_verb(self):
         self.catalog({"id": "a-combo", "name": "A combo board", "function": [{"does": "sense", "what": "temperature"},
                                                                             {"does": "indicate", "what": "light"}]},
@@ -290,6 +297,14 @@ class TheMatcherTest(unittest.TestCase):
         (self.project / "parts").mkdir(parents=True)
         (self.project / "parts" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "Our probe", "kind": "sensor",
                                                                          "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        found = [c["in"] for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"] == "x-soil"]
+        self.assertEqual(found, ["project"])
+
+    def test_a_project_on_the_person_s_list_still_offers_its_records_as_the_project(self):
+        (self.project / "parts").mkdir(parents=True)
+        (self.project / "parts" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "Our probe", "kind": "sensor",
+                                                                         "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project)}))
         found = [c["in"] for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"] == "x-soil"]
         self.assertEqual(found, ["project"])
 

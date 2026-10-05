@@ -129,7 +129,7 @@ def audit(project=None):
     import drawer
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
     walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
-    known, mine, seen = drawer.linkable(), store.projects(), {row[3].resolve() for row in walked}
+    known, mine, seen = drawer.linkable(project), store.projects(), {row[3].resolve() for row in walked}
     dangling, linked = [], []
     for entry, said in drawer.entries().items():
         if not (isinstance(said.get("is"), dict) and said["is"]):
@@ -1640,10 +1640,7 @@ def _op_drawer_import(args, project):
 def _record_path(part_id, project):
     """A part record's own file: the nearest layer that has it, the catalog included, else a project on the person's list."""
     import drawer
-    home = record_home(part_id, project)
-    if home is not None:
-        return home / (part_id + DEFINITION_SUFFIX)
-    return next((path for kind, found, _, path in drawer.linkable() if (kind, found) == ("part", part_id)), None)
+    return next((path for kind, found, _, path in drawer.linkable(project) if (kind, found) == ("part", part_id)), None)
 
 
 def _write_record(path, record):

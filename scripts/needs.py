@@ -123,18 +123,6 @@ def _counts(holding):
     return owned, max(owned - held, 0), unsure
 
 
-def _known(project):
-    """Every record a candidate may be: the project's own, then the drawer's view of spark's layers and the person's projects."""
-    own = [("part", found, "project", path) for found, (layer, path)
-           in store.records("parts", parts.LIBRARY, project).items() if layer == "project"]
-    seen, known = set(), []
-    for row in own + drawer.linkable():
-        if row[:2] not in seen:
-            seen.add(row[:2])
-            known.append(row)
-    return known
-
-
 def candidates(need, known, entries):
     """
     The store's candidates for one need (§6.2's code half): every record and every record-less drawer entry whose function
@@ -178,7 +166,7 @@ def candidates(need, known, entries):
 
 def match(project):
     """Each need with its candidates (§6.2), and a problem for each need with no verb — it cannot be matched."""
-    known, entries, matched, problems = _known(project), drawer.entries(), [], []
+    known, entries, matched, problems = drawer.linkable(project), drawer.entries(), [], []
     for need in read(project):
         if need.get("does") not in parts.VERBS:
             problems.append(parts._problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))

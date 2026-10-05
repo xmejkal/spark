@@ -12,7 +12,7 @@
   "find": "    if any(entry.get(\"count\") == \"many\" for entry in holding):\n", "replace": "    if False:\n"},
  {"file": "scripts/needs.py", "name": "a board owes facts",
   "find": "\"owes\": [] if kind == \"board\" else parts.owes(record)", "replace": "\"owes\": parts.owes(record)"},
- {"file": "scripts/needs.py", "name": "a record is offered twice", "find": "        if row[:2] not in seen:\n", "replace": "        if True:\n"},
+ {"file": "scripts/drawer.py", "name": "a record is offered twice", "find": "        unique.setdefault(row[:2], row)\n", "replace": "        unique[row[:2]] = row\n"},
  {"file": "scripts/parts.py", "name": "the cap cuts a candidate that fits",
   "find": "if rank < 8 or c[\"what_matches\"]", "replace": "if rank < 8"},
  {"file": "scripts/parts.py", "name": "the text hides other words",
