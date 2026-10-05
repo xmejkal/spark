@@ -3,6 +3,7 @@
   "id": "jst-ph-2-power-inlet",
   "name": "JST PH 2-pin power inlet",
   "kind": "connector",
+  "function": [{"does": "connect", "what": "power-inlet"}],
   "//": "The thing nobody lists among their modules, which is why generated boards kept coming out with a power rail that had exactly one member. A module list is a list of CONSUMERS; something still has to bring the supply onto the board, and physically that something is a connector. It is in the library so it can be named in a requirements file like any other part, rather than hand-added to the generated design afterwards.",
   "//rail": "This inlet is declared to supply the MOTOR rail because that is the rail a module list cannot source for itself — logic and ground come from the microcontroller module. An inlet for a different rail is a different file, not a flag: which rail arrives on a connector is a fact about the harness, and a part that could be silently repointed at any rail would wire a 6 V pack to 3.3 V logic without anything noticing.",
   "needs": [],

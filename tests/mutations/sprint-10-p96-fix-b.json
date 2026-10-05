@@ -1,0 +1,13 @@
+[
+ {"file": "scripts/parts.py", "name": "the library is written",
+  "find": "    if path.parent.resolve() == LIBRARY.resolve():\n", "replace": "    if False:\n"},
+ {"file": "scripts/parts.py", "name": "the answer hides the file",
+  "find": "{\"part\": part_id, \"path\": str(path), \"was\"", "replace": "{\"part\": part_id, \"path\": None, \"was\""},
+ {"file": "scripts/parts.py", "name": "function-set: written means bytes changed",
+  "find": "\"now\": function, \"written\": not args.dry_run}", "replace": "\"now\": function, \"written\": changes and not args.dry_run}"},
+ {"file": "scripts/parts.py", "name": "a retry says it set something",
+  "find": "            if changes else \"  nothing to change", "replace": "            if True else \"  nothing to change"},
+ {"file": "scripts/parts.py", "name": "the audit's hint drops the project",
+  "find": "(\" --project %s\" % shlex.quote(str(project)) if project else \"\", \", \".join(silent))",
+  "replace": "(\"\", \", \".join(silent))"}
+]

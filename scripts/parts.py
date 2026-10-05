@@ -32,6 +32,7 @@ import datetime
 import hashlib
 import json
 import re
+import shlex
 import struct
 import sys
 import urllib.parse
@@ -1356,8 +1357,8 @@ OPERATIONS = (
      "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
      ("writes",), ("changes", "questions", "shelved", "smaller")),
     ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home", ("writes",),
-     ("part", "was", "now", "written")),
+     "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     ("writes",), ("part", "path", "was", "now", "written")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling")),
     ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
@@ -1647,6 +1648,9 @@ def _op_function_set(args, project):
     path = _record_path(part_id, project)
     if path is None:
         raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
+    if path.parent.resolve() == LIBRARY.resolve():
+        return Answer(problems=[_problem(part_id, "is in spark's own library, which is changed in spark's repository, "
+                                                  "not by --function-set")])
     wrong = function_problems({"function": function}) if function else ["a function is a non-empty list [{does, what}]"]
     if wrong:
         return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
@@ -1655,9 +1659,10 @@ def _op_function_set(args, project):
     if changes and not args.dry_run:
         record["function"] = function
         _write_record(path, record)
-    return Answer({"part": part_id, "was": was, "now": function, "written": changes and not args.dry_run},
-                  ["  %s %s: function %s → %s" % ("would set" if args.dry_run else "set", part_id,
-                                                   json.dumps(was, ensure_ascii=False), json.dumps(function, ensure_ascii=False))])
+    said = ("  %s %s (%s): function %s → %s" % ("would set" if args.dry_run else "set", part_id, path,
+                                                json.dumps(was, ensure_ascii=False), json.dumps(function, ensure_ascii=False))
+            if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
+    return Answer({"part": part_id, "path": str(path), "was": was, "now": function, "written": not args.dry_run}, [said])
 
 
 def _op_catalog(args, project):
@@ -1678,7 +1683,8 @@ def _op_audit(args, project):
              for layer, row in counts.items()]
     lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"][:3])) for b in broken]
     lines += ["  %s (%s) owes: %s" % (o["id"], o["layer"], ", ".join(o["owes"])) for o in owed]
-    lines += ["  says nothing of what it does — set it once with --function-set: %s" % ", ".join(silent)] if silent else []
+    lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
+              % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
     lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
     return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling}, lines,
                   truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]

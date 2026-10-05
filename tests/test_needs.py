@@ -318,5 +318,19 @@ class TheMatcherTest(unittest.TestCase):
         self.assertEqual((said["status"], code), ("problems", 1))
 
 
+class TheIdeaCommandTest(unittest.TestCase):
+    """commands/idea.md is followed as written (R4.2): the project is named where a command takes it as a flag, and only there."""
+
+    def test_it_names_the_project_where_a_command_takes_it_and_only_there(self):
+        lines = (ROOT / "commands" / "idea.md").read_text().splitlines()
+        flagged = [line for line in lines if "--audit" in line or "--function-set" in line]
+        self.assertTrue(flagged)
+        for line in flagged:
+            self.assertIn("--project <project>", line, line)
+        for line in lines:
+            if "--needs-set" in line or "--match" in line:
+                self.assertNotIn("--project", line, "--needs-set and --match take the project as their argument: " + line)
+
+
 if __name__ == "__main__":
     unittest.main()

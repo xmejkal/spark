@@ -84,8 +84,8 @@ candidate still owes before it can build.
 | story | check |
 | --- | --- |
 | S1 As the hobbyist, I say a goal; at most three questions, one at a time, turn it into needs | `<project>/.spark/needs.json` lists them (§5.3); S makes the project folder |
-| M1 As the agent, for each need I get the store's candidates, store first | `parts.py --match <project> --json` lists candidates by `does`/`what` (exact or alias), with layer, owned and free counts, `unsure`, proof and what each owes |
-| M2 As the agent, I mark each need have / have-unknown / know / gap and say why | the marks and reasons are written into `needs.json` through `parts.py --needs-set` |
+| M1 As the agent, for each need I get the store's candidates, store first | `parts.py --match <project> --json` lists candidates by `does`, and says whether every word of the need's `what` is in a same-verb function, the name or an alias (`what_matches`), with layer, owned and free counts, `unsure`, proof and what each owes |
+| M2 As the agent, I mark each need have / have-unknown / know / gap and say why | the marks are written into `needs.json` through `parts.py --needs-set`; the reason is said to the person, not stored (amended 2026-10-05: a project file holds no reasons, §5.3; 1c keeps only a passed-over part's, §5.7) |
 
 **Foundations it brings:** the `function` field (§5.6); owed / broken (§5.4) and a walk that checks every layer,
 the catalog included (P55 restored, P89); the matcher's code half (§6.2); `/spark:idea`, the command that holds
@@ -218,8 +218,8 @@ indicate, sound, move, drive, power, keep-time, store, compute, communicate, con
 driver (an L9110S), **move** the thing driven (a motor). `what` is open words (soil-moisture, distance, speaker).
 An entry may have none ("function unknown", asked once). `does` is derived from `kind` where the mapping is
 mechanical; the records that do not map (the five `sensor`s, the power-inlet `connector`s, boards) are written
-once, through `parts.py`, with a dry run. `kind` stays. Matching: the code lists candidates by `does` and `what`
-(exact or alias); the agent judges similarity and marks the need, saying why and what would change.
+once, through `parts.py`, with a dry run. `kind` stays. Matching: the code lists candidates by `does`, and marks those whose function, name or alias holds every word of the need's `what`;
+the agent judges similarity and marks the need, saying why and what would change.
 
 ### 5.7 The history — `history.jsonl`
 
@@ -269,7 +269,7 @@ hand-written ones).
 | record store | `get(id)`, `put(id, record, check)` (validated, contained, atomic, idempotent; a read-only layer refuses), `ids()`, `delete(id)` (needs yes) | not found; refused (check failed, read-only, outside) | 1a — folders of JSON | a shared git clone (P84), a database |
 | document store | `put(bytes, name) → sha256` (to `.part`, checked, renamed), `get(sha256) → path`, `status(entry)` → present / missing / outside | wrong checksum (deleted, named) | 1c — checksum folders | a private bucket |
 | drawer importer | `read(source) → payload` (agent half); `apply(payload, dry_run) → [entry changes]` (code half) | payload shape; line counts disagree | 1a — DFRobot orders, typed list | AliExpress orders, photos |
-| matcher | `match(needs) → [{need, candidates:[{id, layer, owned, free, unsure, proof, owes}]}]` (code); the mark and its reason (agent) | a need with no `does` | 1b — function field + the agent | embeddings, a shared index |
+| matcher | `match(needs) → [{need, candidates:[{id, layer, owned, free, unsure, proof, owes}]}]` (code); the mark (agent; its reason is said to the person, §5.3) | a need with no `does` | 1b — function field + the agent | embeddings, a shared index |
 | researcher | `research(need, budget) → records + a researched event` (agent) | over budget (stops, says so) | the first real gap | the JLCPCB MCP alone, manual |
 | cost counter | `count(window) → {requests, runs, documents, tokens, minutes}` | no transcript → could-not-run, never 0 | 1c — session transcripts | spark logging its own calls |
 | fetcher | `fetch(url, sha256?) → bytes` (counted; one at a time) | unreachable; wrong checksum | 1c — one checked download | a cache, offline mode |
