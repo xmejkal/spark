@@ -773,7 +773,7 @@ project's `--list` now shows. A live re-import in the PO's browser read 8 orders
 `parts_on_hand`, `owned`, `photo` and the owned listing are retired in spark and the PO's four projects. The code
 budget was raised to 5,189 for it, measured after its refactor (W15b). Plan and ledger rulings: the PR.
 
-### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment** — DONE 2026-10-04
+### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment** — in PR #2: the council's fix round, 2026-10-05
 **Needed by:** the PO's walking skeleton, the plant thirst alarm. Design §4 (store 1b), §5.3, §5.4, §5.6, §6.2.
 **Value proven by:** from "tell me when my plant is thirsty", `parts.py --match <project> --json` lists each
 need's candidates from the store with owned and free counts and what each owes (SEN0193: `pin_order_proof`,
@@ -784,6 +784,9 @@ the DFPlayer Pro, the MP3 mini module (maybe owned); board — the FireBeetle S3
 and the XIAO C6 (1 free); battery — the 1S LiPo (0 free). The PO marked all four `have`. The walk is `--audit`
 (ruling: `--validate` keeps its meaning) — catalog 18 owe facts, 0 broken. Size: +305 code lines (the needs file,
 the matcher, owed vs broken and the walk, and the final review's eight fixes).
+**Council review, 2026-10-05 (PR #2):** four lenses labelled 13 findings Important, 10 of them distinct; none
+Critical. They are fixed before merge by `docs/2026-10-05-store-1b-fixes-plan.md`, functionality first and refactoring
+last (the PO's order). A plan council reviewed that plan the same day.
 
 ### P97 — Store 1c: picks to a building list, tallied — **slice 10; P94's third increment**
 **Needed by:** the same skeleton, to its end. Design §4 (store 1c), §5.7, §6.5, §6.7, §8 C–T.

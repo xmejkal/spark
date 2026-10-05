@@ -42,7 +42,7 @@ last point is left: `--match` on an unknown folder exits 2, while `--needs` exit
 | 4 | a refused item is named `None`, and a refusal also says "nothing to change" (contract 4, 5) | the agent cannot tell which item to fix | D |
 | 4 | an unknown top-level key in `needs.json` is dropped on the next write (bugs 9) | a line he wrote by hand vanishes without a word | D |
 | 5 | `_known` and `_record_path` resolve records differently from `drawer.linkable`; a project's own boards are never candidates (design 2) | `--match` and `--function-set` can see different records | E |
-| last | one candidate builder; shared write lines (design 4, 3) | about 7 fewer code lines (design lens); only P97 needs them | F, **the PO's call** |
+| — | one candidate builder; shared write lines (design 4, 3) | about 7 fewer code lines (design lens); only P97 needs them | F → **P97's first task** (the PO, 2026-10-05) |
 
 **Deferred, with the reason.** Each goes on P97's entry in the backlog in Task G.
 - **The lock and the atomic writes** (bugs 7, design 5): a lock around plan-and-write, and one atomic `store.write_file`
@@ -61,8 +61,8 @@ last point is left: `--match` on an unknown folder exits 2, while `--needs` exit
 
 - **Branch `p96-store-1b`, PR #2** (W8); the PO merges. Nothing of P100 goes on this branch (the PO, 2026-10-05: a new
   PR for every bigger feature).
-- **The order is the PO's:** Tasks A–E are functional, by rank. F is the refactors only P97 needs, and runs only if
-  the PO says so. G closes.
+- **The order is the PO's** (confirmed 2026-10-05): Tasks A–E are functional, by rank; G closes. F, the refactors only
+  P97 needs, goes to P97's first task (the PO's call, 2026-10-05) and is not run here. Execution: subagent-driven.
 - **Everything in the P96 plan's Global Constraints still holds:**
   - the 13 verbs, in `parts.VERBS`;
   - the four marks;
@@ -973,7 +973,7 @@ def faults(need, held_only=False):
 
 ---
 
-### Task F: The two refactors only P97 needs — **only if the PO says now**; otherwise P97's first task
+### Task F: The two refactors only P97 needs — **P97's first task (the PO, 2026-10-05); not run in this PR**
 
 The plan council (scope lens) recommends moving both to P97, which will touch the same lines for `pick` and `proof`
 (W14: pull, never push). If the PO says now, each is one commit, run with the anchors rule:
@@ -1011,7 +1011,7 @@ The plan council (scope lens) recommends moving both to P97, which will touch th
   - `scrum/PRODUCT_BACKLOG.md`, P96's entry: the fix round's size line (W15b), and its heading `— DONE <date>` (the
     last fix commit's date, R7);
   - `scrum/STORY_MAP.md`: `**P96**` gets its `done <date>` back;
-  - P97's entry: the deferred list from the top of this plan, plus Task F if the PO deferred it;
+  - P97's entry: the deferred list from the top of this plan, plus Task F as its first task;
   - `test_orphans.py` is `OK`.
 - [ ] One fresh reviewer, on the most capable model, reads this plan's range once: Task 0's commit to HEAD. Critical
   and Important findings get one fix pass. Then the PO merges PR #2.
