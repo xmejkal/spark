@@ -147,3 +147,26 @@ Their findings go to the PO with the proposed fixes. The PO reads the README bef
    flag missing from `--help`, an undated output, or a failing runnable example.
 4. **A short README with five guides** in `docs/guide/`.
 5. Sections 1–3 of the design as presented: the document set, the test and council, and the order and scope.
+
+### The council round (the PO, 2026-10-05)
+
+The council (fact-check in two halves, a stranger, an AI agent, an editor; every finding put to an adversarial
+verifier) returned 110 findings: 93 confirmed, 17 partly, none refuted, collated into 61 fixes. The PO decided:
+
+6. **Simulation gets its own row,** marked partly: the build generates a Wokwi diagram; a run needs firmware, a
+   scenario and Wokwi minutes. §3.1's "builds and simulates" now reads "builds, with a Wokwi diagram generated".
+7. **Drawer is partly** (the plain-words entries and the DFRobot import were not run for these pages). **Checks is
+   scoped to `check_all.py`** and stays works; `spark-review` is named as the next step, not run here.
+8. **The headline says what works today,** a list of modules to a checked board; the idea is where it is going.
+9. **Drawer comes before Idea** in the journey, the README's table and both diagrams — the order the runs were made in.
+10. **Uncarded "not yet"s become facts:** scripts that do not take `--json` are said not to (P92 for `tools.py`), and
+    research from `/spark:idea` is dropped until it has a story.
+11. **The Bench row links P79** (spark#16), naming the bin's P73 and B14 as the first bench, with a sentence on what
+    the bin is.
+12. **A change to a journey step updates the journey guide and the README's table** — a Definition-of-Done item.
+13. **Cards, not docs, for what spark does wrong** (§4): check_physics's silent skip on a null rail voltage and its
+    crash on a null bus capacitance; a null `max_current_a` stays a `?` line and `check_all` says how many unmeasured
+    values its answer rests on; `check_all` reports the generator's CONFLICT lines — a problem on verified facts, a
+    `?` line otherwise; `--keep .` builds the kept `board.tsx` into `dist/`; an explicit not-applicable value for
+    fields a design does not need; both MCP packages pinned and their rows labelled "declared, not checked" (the
+    README names `@jlcpcb/mcp` as a community package now).
