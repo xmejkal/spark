@@ -59,7 +59,7 @@ MAY_READ = {
     "assign_pins.CONFLICTING_ROLES": RELATION + "; and every priced role must be a role boards may declare",
     "boards.PIN_ROLES": "the vocabulary of roles a board may declare, checked against what assign_pins prices",
     "boards.CONSOLE_UART": "a role's NAME, used to build a fixture — vocabulary, not a value",
-    "check_all.CHECKS": STRUCTURE, "boards.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,
+    "check_all.CHECKS": STRUCTURE, "boards.LIBRARY": STRUCTURE, "parts.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,

@@ -16,9 +16,8 @@ import boards
 import parts
 import store
 
-#: What a part does (§5.6): the PO's 13 verbs. `drive` is the driver (an L9110S), `move` the thing driven (a motor).
-VERBS = ("sense", "input", "indicate", "sound", "move", "drive", "power", "keep-time", "store", "compute",
-         "communicate", "connect", "mount")
+#: What a part does (§5.6) — one list, in parts.py.
+VERBS = parts.VERBS
 
 #: An entry's fields, in the order its file shows them (§5.2). No price, no date, no condition grade (W21).
 FIELDS = ("label", "count", "part_number", "revision", "is", "function", "place", "used_in", "from", "bought",
@@ -101,14 +100,15 @@ def entries():
     return found
 
 
-def linkable():
+def linkable(project=None):
     """
-    Every record an entry may point at, nearest first, as (kind, id, where, path): spark's own layers (the shelf, the
+    Every record an entry may point at, nearest first, as (kind, id, where, path): the project's own (layer "project",
+    when a project is given), spark's own layers (the shelf, the
     library, the catalog), then each project on the person's list, by its name (§5.5). The first of an id wins. A
     project whose folder is gone has nothing to offer and is passed over.
     """
-    found = [("part", part_id, layer, path) for part_id, (layer, path) in store.records("parts", parts.LIBRARY, drafts=True).items()]
-    found += [("board", board_id, layer, path) for board_id, (layer, path) in boards.records().items()]
+    found = [("part", part_id, layer, path) for part_id, (layer, path) in store.records("parts", parts.LIBRARY, project, drafts=True).items()]
+    found += [("board", board_id, layer, path) for board_id, (layer, path) in boards.records(project).items()]
     for name, folder in store.projects().items():
         found += [("part", path.stem, name, path) for path in sorted((folder / "parts").glob("*.json"))]
         found += [("board", path.stem, name, path) for path in sorted((folder / "boards").glob("*.json"))

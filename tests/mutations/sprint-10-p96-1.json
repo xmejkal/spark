@@ -1,0 +1,8 @@
+[
+ {"file": "scripts/parts.py", "name": "a record's own function loses to its kind",
+  "find": "    if record.get(\"function\") and not function_problems(record):\n        return record[\"function\"]", "replace": "    if False:\n        return record[\"function\"]"},
+ {"file": "scripts/parts.py", "name": "any verb is a function",
+  "find": "and f.get(\"does\") in VERBS", "replace": "and f.get(\"does\")"},
+ {"file": "scripts/parts.py", "name": "a dry run of --function-set writes",
+  "find": "    if changes and not args.dry_run:\n        record[\"function\"] = function", "replace": "    if changes:\n        record[\"function\"] = function"}
+]

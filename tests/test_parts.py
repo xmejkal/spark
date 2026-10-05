@@ -1446,7 +1446,9 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         for argv in (["--list"], ["--show", "no-such-part"], ["--validate"], ["--signals", "tactile-button"],
                      ["--unverified", "tactile-button"], ["--need", "unobtainium"], ["--skeleton", "x-part"],
                      ["--kept", "nothing-like-this"], ["--catalog"], ["--describe"], ["--promote", "x-part"],
-                     ["--keep", str(project / "absent.pdf")], ["--bogus"], [], ["--list", "--show", "x"]):
+                     ["--keep", str(project / "absent.pdf")], ["--function-set", "x-part", str(project / "absent.json")],
+                     ["--audit"], ["--needs", str(project)], ["--needs-set", str(project), str(project / "absent.json")],
+                     ["--match", str(project)], ["--bogus"], [], ["--list", "--show", "x"]):
             with self.subTest(argv=argv):
                 said, code = run_json(argv)
                 self.assertEqual(sorted(said), ENVELOPE_KEYS)
@@ -1598,6 +1600,220 @@ class OwningIsTheDrawersTest(unittest.TestCase):
                 said = [problem for problem in parts.validate(definition, written(definition)) if "retired" in problem]
                 self.assertEqual(len(said), 1, said)
                 self.assertIn(where, said[0])
+
+
+class WhatAPartDoesTest(unittest.TestCase):
+    """P96, §5.6: a record says what it does, or its kind says it; a sensor's is written once, through parts.py."""
+
+    def test_a_kind_that_says_it_and_a_function_that_says_it(self):
+        self.assertEqual(parts.function_of({"kind": "rtc"}), [{"does": "keep-time", "what": "rtc"}])
+        self.assertEqual(parts.function_of({"kind": "rtc", "function": [{"does": "store", "what": "eeprom"}]}),
+                         [{"does": "store", "what": "eeprom"}], "a record's own function wins")
+        self.assertEqual(parts.function_of({"kind": "sensor"}), [], "a sensor says nothing until it is written")
+        self.assertEqual(parts.function_of({"pins": {}}, board=True), [{"does": "compute", "what": "microcontroller"}])
+
+    def test_a_function_outside_the_thirteen_verbs_is_refused(self):
+        definition = part(function=[{"does": "measure", "what": "soil-moisture"}])
+        self.assertTrue(any("function" in p and "keep-time" in p for p in parts.validate(definition, written(definition))))
+        definition = part(function=[{"does": "sense", "what": "soil-moisture"}])
+        self.assertEqual([p for p in parts.validate(definition, written(definition)) if "function" in p], [])
+
+    def test_function_set_writes_into_the_record_s_own_home_after_a_dry_run(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}))
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        given.write_text(json.dumps([{"does": "sense", "what": "soil-moisture"}]))
+        with in_store(home):
+            dry, code = run_json(["--function-set", "x-soil", str(given), "--dry-run"])
+            self.assertEqual((code, dry["data"]["written"]), (0, False))
+            self.assertNotIn("function", json.loads((home / "catalog" / "x-soil.json").read_text()))
+            done, code = run_json(["--function-set", "x-soil", str(given)])
+        self.assertEqual((code, done["data"]["now"]), (0, [{"does": "sense", "what": "soil-moisture"}]))
+        self.assertEqual(json.loads((home / "catalog" / "x-soil.json").read_text())["function"],
+                         [{"does": "sense", "what": "soil-moisture"}])
+
+    def a_probe_in_the_catalog(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}))
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        given.write_text(json.dumps([{"does": "sense", "what": "soil-moisture"}]))
+        return home, given
+
+    def test_function_set_refuses_spark_s_own_library_and_writes_nothing(self):
+        library = Path(tempfile.mkdtemp()) / "parts"
+        library.mkdir()
+        record = {"schema": 1, "id": "x-inlet", "name": "An inlet", "kind": "connector"}
+        (library / "x-inlet.json").write_text(json.dumps(record))
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        given.write_text(json.dumps([{"does": "connect", "what": "power-inlet"}]))
+        with in_store(Path(tempfile.mkdtemp())), mock.patch.object(parts, "LIBRARY", library):
+            said, code = run_json(["--function-set", "x-inlet", str(given)])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("spark's own library", said["problems"][0]["sentence"])
+        self.assertEqual(json.loads((library / "x-inlet.json").read_text()), record)
+
+    def test_function_set_says_which_file_it_changes(self):
+        home, given = self.a_probe_in_the_catalog()
+        out = io.StringIO()
+        with in_store(home):
+            said, _ = run_json(["--function-set", "x-soil", str(given), "--dry-run"])
+            with contextlib.redirect_stdout(out):
+                parts.main(["--function-set", "x-soil", str(given), "--dry-run"])
+        self.assertEqual(Path(said["data"]["path"]).resolve(), (home / "catalog" / "x-soil.json").resolve())
+        self.assertIn("x-soil.json", out.getvalue())
+
+    def test_a_retried_function_set_is_carried_out_with_nothing_to_change(self):
+        home, given = self.a_probe_in_the_catalog()
+        out = io.StringIO()
+        with in_store(home):
+            run_json(["--function-set", "x-soil", str(given)])
+            said, code = run_json(["--function-set", "x-soil", str(given)])
+            with contextlib.redirect_stdout(out):
+                parts.main(["--function-set", "x-soil", str(given)])
+        self.assertEqual((code, said["data"]["written"]), (0, True))
+        self.assertIn("nothing to change", out.getvalue())
+
+    def test_function_set_with_the_project_writes_the_copy_match_reads(self):
+        home, given = self.a_probe_in_the_catalog()
+        project = Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        (project / "parts" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}))
+        with in_store(home):
+            _, code = run_json(["--function-set", "x-soil", str(given), "--project", str(project)])
+        self.assertEqual(code, 0)
+        self.assertIn("function", json.loads((project / "parts" / "x-soil.json").read_text()))
+        self.assertNotIn("function", json.loads((home / "catalog" / "x-soil.json").read_text()))
+
+    def test_function_set_on_a_shelf_copy_says_it_writes_the_shelf(self):
+        home, given = self.a_probe_in_the_catalog()
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-shelved.json").write_text(json.dumps({"schema": 1, "id": "x-shelved", "name": "A probe", "kind": "sensor",
+                                                                     "needs": [], "based_on": {"project": "other", "digest": "0"}}))
+        with in_store(home):
+            said, code = run_json(["--function-set", "x-shelved", str(given), "--dry-run"])
+            shelf = store.place("shelf").resolve()
+        self.assertEqual((code, Path(said["data"]["path"]).parent.resolve()), (0, shelf))
+
+    def test_every_record_in_spark_s_library_says_what_it_does(self):
+        with in_store(Path(tempfile.mkdtemp())):
+            library = {part_id: path for part_id, (layer, path) in store.records("parts", parts.LIBRARY).items() if layer == "library"}
+        self.assertTrue(library)
+        self.assertEqual([part_id for part_id, path in sorted(library.items()) if not parts.function_of(parts._parse(path))], [])
+
+    def test_function_set_refuses_a_wrong_function_and_a_part_nobody_has(self):
+        home, given = self.a_probe_in_the_catalog()
+        given.write_text(json.dumps([{"does": "measure", "what": "x"}]))
+        with in_store(home):
+            self.assertEqual(run_json(["--function-set", "x-soil", str(given), "--dry-run"])[1], 1)
+            given.write_text(json.dumps([{"does": "sense", "what": "x"}]))
+            self.assertEqual(run_json(["--function-set", "no-such-part", str(given), "--dry-run"])[1], 1)
+
+    def test_function_set_refuses_null_and_an_empty_list_and_writes_nothing(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        record = {"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}
+        (home / "catalog" / "x-soil.json").write_text(json.dumps(record))
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        for text in ("null", "[]"):
+            given.write_text(text)
+            with self.subTest(text=text), in_store(home):
+                said, code = run_json(["--function-set", "x-soil", str(given)])
+                self.assertEqual((said["status"], code), ("problems", 1))
+                self.assertIn("non-empty list", said["problems"][0]["sentence"])
+            self.assertEqual(json.loads((home / "catalog" / "x-soil.json").read_text()), record)
+
+
+class OwedIsNotBrokenTest(unittest.TestCase):
+    """§5.4: an absent fact is owed — the record waits for it; a present, wrong value is broken."""
+
+    def test_a_record_missing_what_the_chain_reads_owes_it_and_is_not_broken(self):
+        definition = part(body_mm={"width": None, "height": None, "verified": False, "source": None})
+        self.assertEqual(sorted(parts.owes(definition)), ["body_mm", "footprint", "pin_order", "pin_order_proof", "simulation"])
+        self.assertEqual(parts.broken_problems(definition, written(definition)), [])
+
+    def test_a_present_wrong_value_is_broken(self):
+        definition = part(needs=[{"signal": "SIG", "pin": "S", "direction": "sideways"}])
+        self.assertTrue(any("sideways" in p for p in parts.broken_problems(definition, written(definition))))
+
+    def test_a_problem_that_merely_names_an_owed_key_is_still_broken(self):
+        placeholder = part(footprint=None, footprint_placeholder=True)
+        self.assertIn("footprint", parts.owes(placeholder))
+        self.assertTrue(any(p.startswith("footprint_placeholder is set") for p in parts.broken_problems(placeholder, written(placeholder))))
+        no_needs = part(simulation={"wokwi": "x"})
+        del no_needs["needs"]
+        self.assertIn("needs", parts.owes(no_needs))
+        self.assertTrue(any(p.startswith("simulation needs wokwi") for p in parts.broken_problems(no_needs, written(no_needs))))
+
+    def test_a_malformed_board_is_named_broken_never_a_traceback(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "other7"
+        (other / "boards").mkdir(parents=True)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        (other / "boards" / "bad-board.json").write_text(json.dumps(dict(board, id="bad-board", pins=1)))
+        (home / "drawer").mkdir()
+        (home / "drawer" / "bad.json").write_text(json.dumps({"schema": 1, "label": "a board", "count": 1, "is": {"board": "bad-board"}}))
+        (home / "projects.json").write_text(json.dumps({"other7": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((said["envelope"], code), (1, 1))
+        self.assertEqual([(b["id"], b["layer"]) for b in said["data"]["broken"]], [("bad-board", "other7")])
+        self.assertIn("board definition", said["data"]["broken"][0]["problems"][0])
+
+    def test_audit_walks_a_record_the_drawer_links_to_in_another_project(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "other7"
+        (other / "parts").mkdir(parents=True)
+        (other / "parts" / "y-soil.json").write_text(json.dumps({"schema": 1, "id": "y-soil", "name": "Soil probe Y", "kind": "sensor",
+                                                                  "needs": [], "function": [{"does": "sense", "what": "soil-moisture"}],
+                                                                  "facts": {"range": {"value": 3}}}))
+        (other / "parts" / "z-silent.json").write_text(json.dumps({"schema": 1, "id": "z-silent", "name": "Mystery Z", "kind": "sensor", "needs": []}))
+        (home / "drawer").mkdir()
+        for entry, record_id in (("soil-probe-y", "y-soil"), ("mystery-z", "z-silent")):
+            (home / "drawer" / (entry + ".json")).write_text(json.dumps({"schema": 1, "label": entry, "count": 3, "is": {"part": record_id}}))
+        (home / "projects.json").write_text(json.dumps({"other7": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual(code, 1)
+        self.assertEqual([(b["id"], b["layer"]) for b in said["data"]["broken"]], [("y-soil", "other7")])
+        self.assertNotIn("z-silent", said["data"]["no_function"], "another project's silent record is that project's to set")
+
+    def test_a_pin_order_with_no_proof_owes_the_proof_and_is_not_broken(self):
+        unproven = part(pin_order=["P"])
+        del unproven["pin_order_proof"]
+        self.assertIn("pin_order_proof", parts.owes(unproven))
+        self.assertEqual(parts.broken_problems(unproven, written(unproven)), [])
+
+    def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-draft.json").write_text(json.dumps({"schema": 1, "id": "x-draft", "name": "A probe", "kind": "sensor"}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((said["status"], code), ("ok", 0), "a draft that owes facts is not a problem")
+        self.assertEqual(said["data"]["layers"]["catalog"], {"current": 0, "owed": 1, "broken": 0})
+        self.assertIn("x-draft", said["data"]["no_function"])
+        (home / "catalog" / "x-bad.json").write_text(json.dumps({"schema": 2, "id": "x-bad", "name": "B", "kind": "rtc"}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertEqual([b["id"] for b in said["data"]["broken"]], ["x-bad"])
+
+    def test_audit_s_hint_names_the_project_it_walked(self):
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        (project / "parts" / "x-local.json").write_text(json.dumps({"schema": 1, "id": "x-local", "name": "A probe", "kind": "sensor"}))
+        out = io.StringIO()
+        with in_store(home), contextlib.redirect_stdout(out):
+            parts.main(["--audit", "--project", str(project)])
+        self.assertIn("--function-set <part> <file> --project %s: x-local" % project.resolve(), out.getvalue())
+
+    def test_audit_names_a_drawer_link_to_a_record_nobody_has(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "drawer").mkdir()
+        (home / "drawer" / "x.json").write_text(json.dumps({"schema": 1, "label": "x", "count": 1, "is": {"part": "gone-part"}}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, said["data"]["dangling"]), (1, ["x"]))
 
 
 if __name__ == "__main__":

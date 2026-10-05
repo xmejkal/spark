@@ -6,7 +6,8 @@ scrubbed. Then **from a vague idea** (P76), designed with the PO in a brainstorm
 anything is built. The bench and firmware-on-a-Mac (slices 2, 3) follow.
 
 **Done since, by the PO's order of 2026-10-04:** P95, store 1a — the PO's drawer filled and seen (branch
-`p95-store-1a`, a pull request; P88 carried with it). Next, the PO's call: P98, mutation runs in seconds.
+`p95-store-1a`, a pull request; P88 carried with it). Then P98 (mutation runs 337 s → 69 s), P99 (the size reported, not capped) and P96, store 1b — a goal matched
+against the PO's drawer (branch `p96-store-1b`, a pull request).
 
 ---
 

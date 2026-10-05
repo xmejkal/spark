@@ -1,0 +1,14 @@
+[
+ {"file": "scripts/parts.py", "name": "a kind that is a list is looked up",
+  "find": "KIND_FUNCTION.get(kind) if isinstance(kind, str) else None", "replace": "KIND_FUNCTION.get(kind)"},
+ {"file": "scripts/parts.py", "name": "a malformed record raises",
+  "find": "except (AttributeError, TypeError, KeyError, ValueError) as wrong:", "replace": "except ZeroDivisionError as wrong:"},
+ {"file": "scripts/parts.py", "name": "a malformed function is trusted",
+  "find": "    if record.get(\"function\") and not function_problems(record):\n", "replace": "    if record.get(\"function\"):\n"},
+ {"file": "scripts/parts.py", "name": "the walk stops at spark's layers",
+  "find": "    for kind, found, layer, path in walked + linked:\n", "replace": "    for kind, found, layer, path in walked:\n"},
+ {"file": "scripts/parts.py", "name": "another project's silent record is listed",
+  "find": " and (kind, found, layer, path) not in linked:", "replace": ":"},
+ {"file": "scripts/parts.py", "name": "a malformed board raises",
+  "find": "_shape_problems(boards.validate, record, path, \"board definition\")", "replace": "boards.validate(record, path)"}
+]

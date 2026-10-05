@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "an absent fact the chain reads is not owed",
+  "find": "            [key for key in CHAIN_FACTS if _absent(key, record.get(key))])",
+  "replace": "            [])"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "every validate problem counts as broken",
+  "find": "            if not any(_about(problem, key) for key in owed)]",
+  "replace": "            if True]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a drawer link to nothing is not named",
+  "find": "if where is None:\n            dangling.append(entry)",
+  "replace": "if False:\n            dangling.append(entry)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a problem that merely names an owed key counts as owed",
+  "find": "    return (problem.startswith((key + \" \", key + \".\", key + \"[\")) or problem == \"missing required key %r\" % key\n            or re.search(r\"\\bno %s\\b\" % re.escape(key), problem) is not None)",
+  "replace": "    return key in problem"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a problem saying no <key> is not about that key",
+  "find": "            or re.search(r\"\\bno %s\\b\" % re.escape(key), problem) is not None)",
+  "replace": "            or False)"
+ }
+]

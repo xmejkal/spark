@@ -32,6 +32,7 @@ import datetime
 import hashlib
 import json
 import re
+import shlex
 import struct
 import sys
 import urllib.parse
@@ -54,6 +55,112 @@ REQUIRED_FACT_KEYS = ("value", "verified", "source")
 #: fact, not the part's: it is a drawer entry, and a photo of the one they own goes on that entry.
 RETIRED = {"owned": "what you own is a drawer entry — /spark:drawer, `parts.py --drawer-set`",
            "photo": "a photo of the one you own goes on its drawer entry's `photos`, kept with `parts.py --keep`"}
+
+#: What a part does (§5.6): the PO's 13 verbs. `drive` is the driver (an L9110S), `move` the thing driven (a motor).
+VERBS = ("sense", "input", "indicate", "sound", "move", "drive", "power", "keep-time", "store", "compute",
+         "communicate", "connect", "mount")
+
+#: A kind that says by itself what a part does (§5.6). A `sensor` or a `connector` does not: theirs is written
+#: once, through `--function-set`, with a dry run.
+KIND_FUNCTION = {"rtc": ("keep-time", "rtc"), "regulator": ("power", "regulator"), "button": ("input", "button"),
+                 "indicator": ("indicate", "light"), "mosfet-driver": ("drive", "load-switch"),
+                 "motor-driver": ("drive", "motor-dc"), "audio-amplifier": ("sound", "amplifier"),
+                 "audio": ("sound", "audio-player"), "rangefinder": ("sense", "distance"), "servo": ("move", "servo"),
+                 "board": ("compute", "microcontroller")}
+
+
+def function_of(record, board=False):
+    """What a record does (§5.6): its own `function`, else what its kind says, else nothing."""
+    if record.get("function") and not function_problems(record):
+        return record["function"]
+    kind = "board" if board else record.get("kind")
+    said = KIND_FUNCTION.get(kind) if isinstance(kind, str) else None
+    return [{"does": said[0], "what": said[1]}] if said else []
+
+
+def function_problems(record):
+    """A `function` that is not [{"does": one of the 13 verbs, "what": words}] — absent is fine: the kind may say it."""
+    function = record.get("function")
+    if function is None or (isinstance(function, list) and function and all(
+            isinstance(f, dict) and set(f) <= {"does", "what"} and f.get("does") in VERBS
+            and isinstance(f.get("what"), str) and f["what"].strip() for f in function)):
+        return []
+    return ['function is [{"does": one of %s, "what": words}]' % ", ".join(VERBS)]
+
+#: The facts the chain reads from a part record (§5.4): absent, the record owes them, and no build can place it.
+CHAIN_FACTS = ("footprint", "pin_order", "pin_order_proof", "body_mm", "simulation")
+
+
+def _absent(key, value):
+    if key == "body_mm":
+        return not (isinstance(value, dict) and all(isinstance(value.get(side), (int, float)) for side in ("width", "height")))
+    return value is None or value == [] or value == {} or value == ""
+
+
+def owes(record):
+    """What a part record owes (§5.4): each required key missing, and each fact the chain reads that is absent."""
+    return ([key for key in REQUIRED_KEYS if key not in record] +
+            [key for key in CHAIN_FACTS if _absent(key, record.get(key))])
+
+
+def _about(problem, key):
+    """Whether a validate problem is about this key — it starts with it, or says "no <key>" — rather than merely naming it."""
+    return (problem.startswith((key + " ", key + ".", key + "[")) or problem == "missing required key %r" % key
+            or re.search(r"\bno %s\b" % re.escape(key), problem) is not None)
+
+
+def _shape_problems(check, record, path, what):
+    """A check's problems — or, when the record is too malformed for the check to read, one saying so (§5.4: never a traceback)."""
+    try:
+        return check(record, path)
+    except (AttributeError, TypeError, KeyError, ValueError) as wrong:
+        return ["does not meet the %s's shape (%s)" % (what, wrong)]
+
+
+def broken_problems(record, path):
+    """What is wrong with a part record beyond what it owes (§5.4): `validate`'s problems that name no owed key."""
+    owed = owes(record)
+    return [problem for problem in _shape_problems(validate, record, path, "part record")
+            if not any(_about(problem, key) for key in owed)]
+
+
+def audit(project=None):
+    """
+    Every record in every layer — the catalog included — every drawer link, and each record a link reaches in the person's
+    other projects, walked once (§5.4, P89): per layer how many are current, owe facts, or are broken; which say nothing
+    of what they do (spark's layers and this project only); which entries point at nothing.
+    """
+    import boards
+    import drawer
+    walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
+    walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
+    known, mine, seen = drawer.linkable(project), store.projects(), {row[3].resolve() for row in walked}
+    dangling, linked = [], []
+    for entry, said in drawer.entries().items():
+        if not (isinstance(said.get("is"), dict) and said["is"]):
+            continue
+        where, path = drawer.resolve(said["is"], known)
+        if where is None:
+            dangling.append(entry)
+        elif where in mine and path.resolve() not in seen:
+            seen.add(path.resolve())
+            linked.append((next(iter(said["is"])), path.stem, where, path))
+    counts, owed, broken, silent = {}, [], [], []
+    for kind, found, layer, path in walked + linked:
+        row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
+        record = _parse(path)
+        wrong = (["does not parse as a JSON object"] if not isinstance(record, dict) else
+                 _shape_problems(boards.validate, record, path, "board definition") if kind == "board" else broken_problems(record, path))
+        owing = [] if wrong or kind == "board" else owes(record)
+        row["broken" if wrong else "owed" if owing else "current"] += 1
+        if wrong:
+            broken.append({"id": found, "layer": layer, "problems": wrong})
+        elif owing:
+            owed.append({"id": found, "layer": layer, "owes": owing})
+        if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
+            silent.append(found)
+    return counts, owed, broken, silent, dangling
+
 
 #: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
 #: labels showed `IN+`, `OUT-` and `A.B` unresolvable as tscircuit selectors while `V_IN`,
@@ -606,6 +713,7 @@ def validate(part: dict, path: Path) -> list:
     problems.extend(document_problems(part))
     problems.extend(pin_order_problems(part))
     problems.extend(simulation_problems(part, path))
+    problems.extend(function_problems(part))
     return problems
 
 
@@ -1267,6 +1375,17 @@ OPERATIONS = (
     ("drawer-import", {"nargs": 2, "metavar": ("SOURCE", "FILE")},
      "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
      ("writes",), ("changes", "questions", "shelved", "smaller")),
+    ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
+     "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     ("writes",), ("part", "path", "was", "now", "written")),
+    ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
+     (), ("layers", "owed", "broken", "no_function", "dangling")),
+    ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
+    ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
+     "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
+     ("changes", "written")),
+    ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
+     (), ("needs",)),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1523,6 +1642,45 @@ def _op_drawer_import(args, project):
     return answer._replace(data=dict(answer.data, smaller=smaller), lines=list(answer.lines) + ["  %s" % s for s in smaller])
 
 
+def _record_path(part_id, project):
+    """A part record's own file: the nearest layer that has it, the catalog included, else a project on the person's list."""
+    import drawer
+    return next((path for kind, found, _, path in drawer.linkable(project) if (kind, found) == ("part", part_id)), None)
+
+
+def _write_record(path, record):
+    """A record back to its own home: through the store when it lives there (contained, atomic), else to its file."""
+    for name in ("shelf", "catalog"):
+        if path.parent == store.place(name):
+            return store.write_json(name, path.stem, record)
+    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _op_function_set(args, project):
+    part_id, name = args.function_set
+    function, unreadable = _read_json_input(name)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    path = _record_path(part_id, project)
+    if path is None:
+        raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
+    if path.parent.resolve() == LIBRARY.resolve():
+        return Answer(problems=[_problem(part_id, "is in spark's own library, which is changed in spark's repository, "
+                                                  "not by --function-set")])
+    wrong = function_problems({"function": function}) if function else ["a function is a non-empty list [{does, what}]"]
+    if wrong:
+        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
+    record = json.loads(path.read_text(encoding="utf-8"))
+    was, changes = record.get("function"), record.get("function") != function
+    if changes and not args.dry_run:
+        record["function"] = function
+        _write_record(path, record)
+    said = ("  %s %s (%s): function %s → %s" % ("would set" if args.dry_run else "set", part_id, path,
+                                                json.dumps(was, ensure_ascii=False), json.dumps(function, ensure_ascii=False))
+            if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
+    return Answer({"part": part_id, "path": str(path), "was": was, "now": function, "written": not args.dry_run}, [said])
+
+
 def _op_catalog(args, project):
     records, broken = catalog_records()
     listing = [{"id": part_id, "kind": record["kind"], "name": record["name"]} for part_id, record in records.items()]
@@ -1532,6 +1690,72 @@ def _op_catalog(args, project):
     lines.append("  %d record(s), %d broken" % (len(records), len(broken)))
     return Answer({"records": shown, "broken": broken}, lines, truncated=truncated,
                   problems=[_problem(name.split(" — ")[0], "a broken catalog record: %s" % name) for name in broken])
+
+
+def _op_audit(args, project):
+    counts, owed, broken, silent, dangling = audit(project)
+    shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project))
+    lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
+             for layer, row in counts.items()]
+    lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"][:3])) for b in broken]
+    lines += ["  %s (%s) owes: %s" % (o["id"], o["layer"], ", ".join(o["owes"])) for o in owed]
+    lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
+              % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
+    lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
+    return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling}, lines,
+                  truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]
+                  + [_problem(entry, "points at a record nobody has") for entry in dangling])
+
+
+def _op_needs(args, project):
+    import needs
+    listed = needs.read(args.needs)
+    return Answer({"needs": listed}, ["  %-10s %s / %s%s%s" % (n["id"], n.get("does"), n.get("what"),
+                                                               "  (%s)" % n["condition"] if n.get("condition") else "",
+                                                               "  [%s]" % n["mark"] if n.get("mark") else "") for n in listed]
+                  or ["  no needs yet — /spark:idea writes them"])
+
+
+def _op_match(args, project):
+    import needs
+    matched, problems = needs.match(args.match)
+    if not matched and not problems:
+        return Answer(unchecked=[_cannot("%s has no needs yet — /spark:idea writes them" % args.match)])
+    for need in matched:
+        kept = [c for rank, c in enumerate(need["candidates"]) if rank < 8 or c["what_matches"]]
+        need["more"], need["candidates"] = len(need["candidates"]) - len(kept), kept
+    shown, truncated = page(matched, args.start, "match", ["--match", args.match])
+    lines = []
+    for need in matched:
+        lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
+                                            "  [%s]" % need["mark"] if need["mark"] else ""))
+        lines += ["      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
+                                        "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
+                                                                "free %s" % c["free"] if c["owned"] else "",
+                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else ""])))
+                  + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
+                  for c in need["candidates"]]
+        lines += ["      … %d more, none with the need's words" % need["more"]] if need["more"] else []
+        lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
+    lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
+    return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)
+
+
+def _op_needs_set(args, project):
+    import needs
+    target, name = args.needs_set
+    items, unreadable = _read_json_input(name)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    after, changes, problems = needs.plan_set(target, items)
+    written = not (problems or args.dry_run)
+    if written and changes:
+        needs.write(target, after)
+    lines = ["  %s%s %s: %s" % ("refused, not written: " if problems else "", "would set" if args.dry_run else "set",
+                                c["need"], ", ".join("%s → %s" % (k, json.dumps(v, ensure_ascii=False)) for k, v in c["now"].items()))
+             for c in changes] or ([] if problems else ["  nothing to change"])
+    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
+    return Answer({"changes": changes, "written": written}, lines, problems=problems)
 
 
 def _op_describe(args, project):
