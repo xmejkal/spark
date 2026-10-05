@@ -8,14 +8,14 @@
  {
   "file": "scripts/parts.py",
   "name": "every validate problem counts as broken",
-  "find": "    return [problem for problem in validate(record, path) if not any(_about(problem, key) for key in owed)]",
-  "replace": "    return validate(record, path)"
+  "find": "    return [problem for problem in said if not any(_about(problem, key) for key in owed)]",
+  "replace": "    return said"
  },
  {
   "file": "scripts/parts.py",
   "name": "a drawer link to nothing is not named",
-  "find": "if isinstance(said.get(\"is\"), dict) and said[\"is\"] and drawer.resolve(said[\"is\"], known)[0] is None]",
-  "replace": "if False]"
+  "find": "if where is None:\n            dangling.append(entry)",
+  "replace": "if False:\n            dangling.append(entry)"
  },
  {
   "file": "scripts/parts.py",

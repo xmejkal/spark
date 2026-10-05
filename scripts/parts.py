@@ -73,7 +73,8 @@ def function_of(record, board=False):
     """What a record does (§5.6): its own `function`, else what its kind says, else nothing."""
     if record.get("function") and not function_problems(record):
         return record["function"]
-    said = KIND_FUNCTION.get("board" if board else record.get("kind"))
+    kind = "board" if board else record.get("kind")
+    said = KIND_FUNCTION.get(kind) if isinstance(kind, str) else None
     return [{"does": said[0], "what": said[1]}] if said else []
 
 
@@ -111,20 +112,36 @@ def _about(problem, key):
 def broken_problems(record, path):
     """What is wrong with a part record beyond what it owes (§5.4): `validate`'s problems that name no owed key."""
     owed = owes(record)
-    return [problem for problem in validate(record, path) if not any(_about(problem, key) for key in owed)]
+    try:
+        said = validate(record, path)
+    except (AttributeError, TypeError, KeyError, ValueError) as wrong:
+        return ["does not meet the part record's shape (%s)" % wrong]
+    return [problem for problem in said if not any(_about(problem, key) for key in owed)]
 
 
 def audit(project=None):
     """
-    Every record in every layer — the catalog included — and every drawer link, walked once (§5.4, P89): per layer
-    how many are current, owe facts, or are broken; which say nothing of what they do; which entries point at nothing.
+    Every record in every layer — the catalog included — every drawer link, and each record a link reaches in the person's
+    other projects, walked once (§5.4, P89): per layer how many are current, owe facts, or are broken; which say nothing
+    of what they do (spark's layers and this project only); which entries point at nothing.
     """
     import boards
     import drawer
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
     walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
+    known, mine, seen = drawer.linkable(), store.projects(), {row[3].resolve() for row in walked}
+    dangling, linked = [], []
+    for entry, said in drawer.entries().items():
+        if not (isinstance(said.get("is"), dict) and said["is"]):
+            continue
+        where, path = drawer.resolve(said["is"], known)
+        if where is None:
+            dangling.append(entry)
+        elif where in mine and path.resolve() not in seen:
+            seen.add(path.resolve())
+            linked.append((next(iter(said["is"])), path.stem, where, path))
     counts, owed, broken, silent = {}, [], [], []
-    for kind, found, layer, path in walked:
+    for kind, found, layer, path in walked + linked:
         row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
         record = _parse(path)
         wrong = (["does not parse as a JSON object"] if not isinstance(record, dict) else
@@ -135,11 +152,8 @@ def audit(project=None):
             broken.append({"id": found, "layer": layer, "problems": wrong})
         elif owing:
             owed.append({"id": found, "layer": layer, "owes": owing})
-        if isinstance(record, dict) and not function_of(record, board=kind == "board"):
+        if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
             silent.append(found)
-    known = drawer.linkable()
-    dangling = [entry for entry, said in drawer.entries().items()
-                if isinstance(said.get("is"), dict) and said["is"] and drawer.resolve(said["is"], known)[0] is None]
     return counts, owed, broken, silent, dangling
 
 

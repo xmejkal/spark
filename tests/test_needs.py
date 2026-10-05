@@ -295,8 +295,22 @@ class TheMatcherTest(unittest.TestCase):
             (self.home / "catalog" / (key + ".json")).write_text(json.dumps({"schema": 1, "id": key, "name": key, "kind": "sensor", "function": function}))
         said, code = run(["--match", str(self.project)])
         self.assertEqual(code, 0)
+        soil = [c["id"] for c in next(n for n in said["data"]["needs"] if n["need"] == "soil")["candidates"]]
+        self.assertNotIn("x-nowhat", soil, "a sensor's kind says nothing, and a function with no `what` is not one")
         said, code = run(["--audit"])
         self.assertEqual(sorted(b["id"] for b in said["data"]["broken"] if b["id"] in ("x-nowhat", "x-string")), ["x-nowhat", "x-string"])
+
+    def test_a_malformed_record_is_named_broken_never_a_traceback(self):
+        soil = [{"does": "sense", "what": "soil-moisture"}]
+        self.catalog({"id": "m-kind", "name": "m", "kind": ["sensor", "rtc"]},
+                     {"id": "m-needs", "name": "m", "needs": ["SIG"], "function": soil},
+                     {"id": "m-facts", "name": "m", "facts": [1, 2], "function": soil})
+        found = {c["id"]: c for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"]}
+        self.assertEqual((found["m-needs"]["broken"], found["m-facts"]["broken"]), (True, True))
+        said, code = run(["--audit"])
+        self.assertEqual(code, 1)
+        self.assertLessEqual({"m-needs", "m-facts"}, {b["id"] for b in said["data"]["broken"]})
+        self.assertIn("m-kind", said["data"]["no_function"], "a kind that is a list says nothing, and crashes nothing")
 
     def test_text_mode_prints_a_need_that_cannot_be_matched(self):
         (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "x", "what": "y"}]}))

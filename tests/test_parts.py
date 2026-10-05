@@ -1746,6 +1746,23 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertIn("needs", parts.owes(no_needs))
         self.assertTrue(any(p.startswith("simulation needs wokwi") for p in parts.broken_problems(no_needs, written(no_needs))))
 
+    def test_audit_walks_a_record_the_drawer_links_to_in_another_project(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "other7"
+        (other / "parts").mkdir(parents=True)
+        (other / "parts" / "y-soil.json").write_text(json.dumps({"schema": 1, "id": "y-soil", "name": "Soil probe Y", "kind": "sensor",
+                                                                  "needs": [], "function": [{"does": "sense", "what": "soil-moisture"}],
+                                                                  "facts": {"range": {"value": 3}}}))
+        (other / "parts" / "z-silent.json").write_text(json.dumps({"schema": 1, "id": "z-silent", "name": "Mystery Z", "kind": "sensor", "needs": []}))
+        (home / "drawer").mkdir()
+        for entry, record_id in (("soil-probe-y", "y-soil"), ("mystery-z", "z-silent")):
+            (home / "drawer" / (entry + ".json")).write_text(json.dumps({"schema": 1, "label": entry, "count": 3, "is": {"part": record_id}}))
+        (home / "projects.json").write_text(json.dumps({"other7": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual(code, 1)
+        self.assertEqual([(b["id"], b["layer"]) for b in said["data"]["broken"]], [("y-soil", "other7")])
+        self.assertNotIn("z-silent", said["data"]["no_function"], "another project's silent record is that project's to set")
+
     def test_a_pin_order_with_no_proof_owes_the_proof_and_is_not_broken(self):
         unproven = part(pin_order=["P"])
         del unproven["pin_order_proof"]
