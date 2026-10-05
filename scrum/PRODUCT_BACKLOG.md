@@ -511,7 +511,7 @@ item that hangs on no cell of the map is parked or deleted. The lenses' reports 
 open item sits on one cell and one slice, or is parked or deleted with a reason; the PO has confirmed
 the personas and ordered the slices.
 
-### P70 — The backlog lives in GitHub Projects — **the PO's decision of 2026-10-03; after P69**
+### P70 — The backlog lives in GitHub Projects — **the PO's decision of 2026-10-03; after P69** — taken into P102, 2026-10-05
 **Needed by:** the PO, who plans and reorders the work and wants a roadmap view rather than a
 1,200-line file; and P69's story map, whose slices need a place to be ordered.
 Chosen over Jira: `gh` already works here, and the issues live beside the code they change, so a
@@ -838,6 +838,30 @@ read whole before anything is installed, and installed only with the PO's yes.
 records the steps that worked, not steps planned ahead (W14).
 **Value proven by:** P100's journeys and story map were produced by following the skill, and a second discovery
 (the irrigation review) follows the same file.
+
+### P102 — The tools chore: the backlog in GitHub, journeys and maps drawn, the state always in view — **first, before P100; the PO, 2026-10-05**
+**Needed by:** P100's discovery and every design after it. The PO — *"before we start the next epic, when we're done
+with this PR, please lets do a maintenance of our tools and process, I'd like to switch to github projects, for every
+epic and user story if appropriate, anytime we design some functionality, I'd like us to use Miro or Canva for user
+journeys, story mapping, etc. And to use the discovery plugin with all these discovery methods like user journeys or
+story mapping and then, once we have it, we can always draw it in Miro and keep it up to date, so the products
+features are well understandable."* Then: *"reorder the backlog so that we switch to these new tools first, before we
+go on. It's a chore in our PB … so that the new functionality can already be having good discovery and the PB and the
+epic and also planning tasks for user stories is already in gh."* And, asked which tools would keep us aware of what
+we are doing, what works and what remains, and whether epics finish: all four helpers below.
+**The PO's choices, 2026-10-05:** open items move to GitHub Projects only revalidated (P70's rule; the Markdown backlog
+is frozen as the archive); journeys and maps in **both Miro and Canva** (Canva once its connector is authorised); and
+these four: an epic is a parent issue with its stories as sub-issues and planning tasks under them, an iteration field
+and a WIP limit; a session-start status (iteration, in progress, open PRs, WIP over the limit); diagrams kept as text
+in the repository first, Miro and Canva drawn from them; each story's *Value proven by* run as a command, so the map
+says proven or not. Takes in **P70** (its design stands) and P101's first half (read one or two discovery skills whole,
+install only with the PO's yes).
+**Found 2026-10-05, before refinement:** `gh` already holds the `project` scope; Miro's connector answers as the PO;
+Canva's needs authorising in claude.ai's connector settings; the PO's rule *no tokens on GitHub* means CI cannot write
+a user-level project, so where proofs report is a design question.
+**Value proven by:** P70's line; the story map exists as text in the repository and as a Miro board drawn from it; a
+Claude Code session in spark opens with the iteration, what is in progress and the open PRs; one open story's proof
+runs from its issue and the map shows it proven or not.
 
 ### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95** — DONE 2026-10-04
 **Needed by:** the PO — *"I think we should also try to make things faster. How often do we really need to run all

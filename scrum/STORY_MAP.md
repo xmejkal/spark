@@ -46,9 +46,9 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 work, really from just talking about some vague idea"*; slices 8 and 9 make ordering a board and
 printing an enclosure part of the journey, optional and after the firmware works.
 Slices 2 and 3 run side by side: the maker's share of 2 is parts and a bench, the team's is the
-items. **The epic in refinement** — the PO, 2026-10-05: **P100** (spark in real use: a new idea and irrigation improved, walked through with the person), discovery first, with **P101** (a discovery skill, written as that discovery is done). Both wait on PR #2.
+items. **First, the PO's call of 2026-10-05: the tools chore** — **P102** (the backlog in GitHub Projects, taking in **P70**; journeys and maps in Miro and Canva drawn from text; the state in view at every session; proofs run). **The epic in refinement** — the PO, 2026-10-05: **P100** (spark in real use: a new idea and irrigation improved, walked through with the person), discovery first, with **P101** (a discovery skill, written as that discovery is done). Both wait on **P102**.
 **The team's tools** — next after P95, the PO's call of 2026-10-04: P98 (done — mutation runs in seconds), P99 (done — the size reported, not capped).
-**The desk lane** — the PO's own process decisions, at most two open: **P70**, **P72**.
+**The desk lane** — the PO's own process decisions, at most two open: **P72** (P70 went into P102).
 
 **Parked** (each with what pulls it back, in the backlog): P66, P68, P49, P50, R10, F1, F2, F5.
 **Merged:** P2 into P59. **Deleted:** P17.
