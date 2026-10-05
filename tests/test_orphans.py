@@ -24,7 +24,8 @@ LIBRARIES = {"copper", "outcomes", "design", "store", "drawer", "needs"}
 def routes():
     """Every document a user or a project is routed by: commands, skills, agents, README, Makefiles."""
     files = list((ROOT / "commands").glob("*.md")) + list((ROOT / "skills").glob("*/SKILL.md")) \
-        + list((ROOT / "agents").glob("*.md")) + [ROOT / "README.md"]
+        + list((ROOT / "agents").glob("*.md")) + [ROOT / "README.md"] \
+        + sorted((ROOT / "docs" / "guide").glob("*.md")) + [path for path in [ROOT / "AGENTS.md"] if path.is_file()]
     for project in ("smartbin-local", "rc-car"):
         makefile = ROOT.parent / project / "Makefile"
         if makefile.is_file():
@@ -60,6 +61,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
 
     def test_every_skill_and_agent_is_named_somewhere_a_user_looks(self):
         text = "\n".join((ROOT / name).read_text() for name in ("README.md",)) \
+            + "\n".join(path.read_text() for path in sorted((ROOT / "docs" / "guide").glob("*.md")) + [path for path in [ROOT / "AGENTS.md"] if path.is_file()]) \
             + "\n".join(p.read_text() for p in (ROOT / "commands").glob("*.md")) \
             + "\n".join(p.read_text() for p in (ROOT / "skills").glob("*/SKILL.md"))
         skills = [p.parent.name for p in (ROOT / "skills").glob("*/SKILL.md")]
@@ -147,6 +149,7 @@ class TheGlossaryDefinesWordsThisRepositoryActuallyUsesTest(unittest.TestCase):
             if path.is_file() and path.suffix in (".py", ".md", ".json")
             and "mutations" not in path.parts)
         haystack += (ROOT / "README.md").read_text()
+        haystack += "\n".join(path.read_text() for path in sorted((ROOT / "docs" / "guide").glob("*.md")) + [path for path in [ROOT / "AGENTS.md"] if path.is_file()])
         stale = [term for term in self.terms()
                  if term not in self.NOT_VOCABULARY and term.lower() not in haystack.lower()]
         self.assertEqual(stale, [], "the glossary defines words this repository no longer uses: %s"

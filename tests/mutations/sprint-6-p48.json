@@ -14,7 +14,7 @@
  {
   "file": "README.md",
   "name": "nothing sends a newcomer to the glossary any more",
-  "find": "**New to the repository?** `GLOSSARY.md` defines the words this one uses differently from",
-  "replace": "**New to the repository?** The words this one uses differently from"
+  "find": "- [The glossary](GLOSSARY.md): the words this repository uses its own way",
+  "replace": "- The glossary: the words this repository uses its own way"
  }
 ]

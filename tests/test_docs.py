@@ -100,5 +100,11 @@ class TheChecksTest(unittest.TestCase):
                          ["README.md line 2 names a personal path or checkout: /private/"])
 
 
+
+class TheDocsTest(unittest.TestCase):
+    def test_the_docs_name_only_what_is_there(self):
+        self.assertEqual(check_docs.problems(), [])
+
+
 if __name__ == "__main__":
     unittest.main()

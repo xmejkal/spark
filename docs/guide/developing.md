@@ -31,11 +31,12 @@ python3 tools/mutate.py tests/mutations/p104-docs.json
 caught. A mutation the suite does not notice is a missing test. A fixture too weak to see one is fixed, rather than the
 mutation dropped. The [glossary](../../GLOSSARY.md#mutation-and-the-mutation-table) has the words.
 
-## The gate before every push
+## The commit gate, before every push
 
 [`tools/pre-push`](../../tools/pre-push) runs [`tools/check_commit.py`](../../tools/check_commit.py) on the tree as
 committed, not the working tree. It measures `HEAD` even when another branch is pushed; that is
-[P106](https://github.com/xmejkal/spark/issues/39). Install it once per clone:
+[P106](https://github.com/xmejkal/spark/issues/39). The [glossary](../../GLOSSARY.md#the-commit-gate--toolspre-push)
+has its story. Install it once per clone:
 
 ```sh
 ln -sf ../../tools/pre-push .git/hooks/pre-push

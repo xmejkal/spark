@@ -239,6 +239,9 @@ class NoDocumentPointsAtSomebodysMachineTest(unittest.TestCase):
                 texts[str(path.relative_to(ROOT))] = path.read_text()
         for name in ("README.md", "GLOSSARY.md"):
             texts[name] = (ROOT / name).read_text()
+        for path in sorted((ROOT / "docs" / "guide").glob("*.md")) + [ROOT / "AGENTS.md"]:
+            if path.is_file():
+                texts[str(path.relative_to(ROOT))] = path.read_text()
         return texts
 
     def test_nothing_a_user_reads_names_another_repository(self):
