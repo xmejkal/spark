@@ -114,13 +114,12 @@ def _what_matches(need, functions, names):
 
 
 def _counts(holding):
-    """(owned, free, unsure) over drawer entries — `many` stays many; an entry said to be dead (`skip`) does not count."""
-    live = [entry for entry in holding if not entry.get("skip")]
-    unsure = any(entry.get("unsure") for entry in live)
-    if any(entry.get("count") == "many" for entry in live):
+    """(owned, free, unsure) over the live drawer entries (callers pass none said to be dead) — `many` stays many."""
+    unsure = any(entry.get("unsure") for entry in holding)
+    if any(entry.get("count") == "many" for entry in holding):
         return "many", "many", unsure
-    owned = sum(entry.get("count", 0) for entry in live)
-    held = sum(sum((entry.get("used_in") or {}).values()) for entry in live)
+    owned = sum(entry.get("count", 0) for entry in holding)
+    held = sum(sum((entry.get("used_in") or {}).values()) for entry in holding)
     return owned, max(owned - held, 0), unsure
 
 

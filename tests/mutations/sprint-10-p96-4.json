@@ -1,6 +1,6 @@
 [
  {"file": "scripts/needs.py", "name": "a dead part counts as owned",
-  "find": "    live = [entry for entry in holding if not entry.get(\"skip\")]", "replace": "    live = list(holding)"},
+  "find": "        if not entry.get(\"skip\") and isinstance(entry.get(\"is\"), dict) and entry[\"is\"]:", "replace": "        if isinstance(entry.get(\"is\"), dict) and entry[\"is\"]:"},
  {"file": "scripts/needs.py", "name": "a reservation is free",
   "find": "    return owned, max(owned - held, 0), unsure", "replace": "    return owned, owned, unsure"},
  {"file": "scripts/needs.py", "name": "owned does not come first",
