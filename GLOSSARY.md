@@ -73,7 +73,7 @@ The ordinary question a suite answers is *does the code work*. A mutation asks t
 **would these tests notice if it stopped working?**
 
 After a fix, you write down how to put that exact defect **back**, and the tool checks the suite
-goes **red**. A table is JSON, one entry per defect, in `tests/mutations/<sprint>-<item>.json`:
+goes **red**. A table is JSON, one entry per defect, in `tests/mutations/<item>.json` (tables written before 2026-10-05 carry their sprint: `sprint-10-p96-…`):
 
 ```json
 {"file":    "scripts/emit_board.py",
@@ -160,8 +160,8 @@ repository was cut in one night when this rule arrived.
 
 ### Needed by
 
-Every open backlog item names the **design that needs it** — "pull, never push" (W14). No item is
-built because it would be nice. The test for this is real and it fails often enough to matter.
+Every open item on the board names the **design that needs it** — "pull, never push" (W14). No item is
+built because it would be nice. `tools/check_backlog.py` fails a push on an open item whose *Needed by* is empty.
 
 ---
 
@@ -210,6 +210,29 @@ module already handles itself.
 Not principles adopted in advance. Each one is a **failure that happened here**, written down with
 its evidence so it cannot recur quietly. `scrum/WORKING_AGREEMENTS.md`. When one is inconvenient,
 read its evidence before deciding it is bureaucracy.
+
+### The board
+
+The backlog is two GitHub Projects — spark's (https://github.com/users/xmejkal/projects/2) and the bin's
+(/projects/1) — since 2026-10-05 (P102a). Each item is an issue; its card moves **Idea → Discovery → Design → Ready
+→ Build → Review → Done**, one item per working stage, at most two in flight, three in Ready. **The failure behind
+it:** the PO added items mid-sprint in 3 of the 6 sprints read closely, and Sprint 10 stayed open from 10-03 after
+work came in that it never planned — so "what are we doing now" had no answer a command could read (the design's §9).
+`tools/check_backlog.py` fails a push that breaks a limit on spark's board (when online); the Markdown backlog is the
+frozen archive.
+
+### Epic, story, task
+
+An **epic** is an issue whose stories are its sub-issues; its progress bar is how an unfinished epic shows. A
+**story** is what a person can do afterwards, proven by its *Value proven by*. A **task** is one step of a story's
+plan — a sub-issue that rides on its story, with no slice or limit of its own.
+
+### Day-close
+
+One dated line at the end of each working day — what moved, what was proven, what is aging, the next card —
+posted as a status update on the spark board (`tools/board.py close`, P102c). **The failure behind it:** sessions
+that were compacted or interrupted restarted from memory; the close is the restart point, and a session that opens
+with a working day unclosed writes it first.
 
 ### Cold test
 

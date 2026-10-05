@@ -149,10 +149,11 @@ about sequence, which is the form that held for the rest of the day.
 
 ## W14 — Pull, never push
 
-Nothing enters the plugin unless a real design is blocked without it that week, and the backlog
-item names that design in a `**Needed by:**` line. A capability designed on paper — a review
+Nothing enters the plugin unless a real design is blocked without it that week, and the item's
+issue names that design in its *Needed by* section. A capability designed on paper — a review
 loop, an eval harness, a research agent — is not built until a project reaches for it. An item
-without a design behind it is not pulled; the suite refuses a backlog with one in it.
+without a design behind it is not pulled; the push gate refuses a board with one on it
+(`tools/check_backlog.py`, for spark's board, when online).
 
 **Origin:** 2026-09-29, when a third of the repository was deleted as unused. Every piece of it
 had been built because it was designed, not because a design needed it.
@@ -171,7 +172,7 @@ The `scripts/` size counts code lines only: docstrings, comments and blanks are 
 recording why a fix is shaped as it is, is the most valuable thing in this repository. **It is a number,
 not a cap (P99, the PO, 2026-10-04).** The pre-push gate prints it with the growth since `origin/main`
 (`scripts/: N code lines (+M since origin/main)`); an item's Done line says how many lines it added and
-why, and the sprint review lists them. The cap it replaced failed the suite: P95 raised it six times,
+why, and the epic's review lists them. The cap it replaced failed the suite: P95 raised it six times,
 each time to whatever had been measured, and it prompted one refactor of two lines — what caught bloat
 there was the reviews and W15's orphan tests, which stay exactly as they are. When an item grows a lot,
 the first question is still whether the same behaviour fits in less code — the three-outcome verdict
