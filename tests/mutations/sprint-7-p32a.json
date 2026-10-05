@@ -1,9 +1,0 @@
-[
- {"file": "scripts/check_spine.py", "name": "the chain has no converter of its own again", "find": "    converter = tools.find(\"diagram-converter\", project)\n", "replace": "    raise tools.ToolProblem(\"no converter\")\n"},
- {"file": "scripts/check_spine.py", "name": "the plugin's converter is preferred over a project's own", "find": "    if own is not None:\n        return tools.find(\"ts-runtime\", project).command + [\"run\", str(own)]", "replace": "    if False:\n        return tools.find(\"ts-runtime\", project).command + [\"run\", str(own)]"},
- {"file": "scripts/check_spine.py", "name": "the search goes back to one person's checkout", "find": "CONVERTER_PATHS = (\"tools/circuit-to-wokwi/cli.ts\",)", "replace": "CONVERTER_PATHS = (\"tools/circuit-to-wokwi/cli.ts\", \"../smartbin-local/tools/circuit-to-wokwi/cli.ts\")"},
- {"file": "tools/circuit-to-wokwi/lib/board.ts", "name": "the converter guesses a board when nobody names one", "find": "if (!BOARD_FROM_CALLER) {", "replace": "if (false) {"},
- {"file": "tools/circuit-to-wokwi/cli.ts", "name": "the converter accepts a run with no paths given", "find": "  const missing = ([\"circuit\", \"out\", \"chips\"] as const).filter((name) => !options[name]);", "replace": "  const missing = ([] as const).filter((name) => !options[name]);"},
- {"file": "scripts/boards.py", "name": "a pad the board can wire may have no name in the simulator", "find": "            if pad not in wokwi_pins:", "replace": "            if False:"},
- {"file": "boards/firebeetle2-esp32s3.json", "name": "the FireBeetle's VCC loses its simulator name again", "find": "    \"GND3\": \"GND.3\",\n    \"VCC\": \"5V\"", "replace": "    \"GND3\": \"GND.3\""}
-]

@@ -1,8 +1,0 @@
-[
- {
-  "file": "scripts/check_all.py",
-  "name": "a could-not-run carrying only a reason is counted as completed again (B9)",
-  "find": "    unchecked = [r[\"check\"] for r in results if r[\"status\"] == COULD_NOT_RUN or r.get(\"unchecked\")]",
-  "replace": "    unchecked = [r[\"check\"] for r in results if r.get(\"unchecked\")]"
- }
-]

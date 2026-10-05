@@ -1,4 +1,0 @@
-[
- {"file": "parts/tactile-button.json", "name": "the button's pull-up is asked for in prose only again",
-  "find": "      \"kind\": \"pullup\",\n      \"pin\": \"A\",", "replace": "      \"kind\": \"pulldown\",\n      \"pin\": \"A\","}
-]

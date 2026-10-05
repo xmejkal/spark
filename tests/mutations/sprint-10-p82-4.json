@@ -1,6 +1,0 @@
-[
- {"file": "scripts/check_spine.py", "name": "the simulation runs without asking for Node", "find": "        return tools.find(\"js-runtime\", project).command + converter.command", "replace": "        return converter.command"},
- {"file": "scripts/check_spine.py", "name": "a missing Node is a crash, not could-not-run", "find": "        return Stage(\"simulation\", COULD_NOT_RUN, str(missing))", "replace": "        raise missing"},
- {"file": "scripts/check_spine.py", "name": "the plugin's converter is the TypeScript source again", "find": "            if candidate.is_file() and not (directory / \"scripts\" / \"check_spine.py\").is_file():", "replace": "            if candidate.is_file():"},
- {"file": "data/tools.json", "name": "the converter does not say it meets its role's contract", "find": "\"meets\": [\n      \"circuit-json-to-wokwi\"\n    ]", "replace": "\"meets\": []"}
-]

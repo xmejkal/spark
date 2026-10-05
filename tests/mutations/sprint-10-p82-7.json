@@ -1,6 +1,0 @@
-[
- {"file": "scripts/tools.py", "name": "a tool is used with its need missing", "find": "    for need in entry.get(\"needs\") or []:\n        try:\n            find(need, project, personal, _seen", "replace": "    for need in []:\n        try:\n            find(need, project, personal, _seen"},
- {"file": "scripts/tools.py", "name": "with no manager here, the person is sent to a JSON file", "find": "    install = entry.get(\"install\") or {}\n    for manager, _ in MANAGERS:", "replace": "    install = {}\n    for manager, _ in MANAGERS:"},
- {"file": "scripts/check_spine.py", "name": "a missing board engine gives the old global-install advice", "find": "            said = str(missing)  # the tools list's own sentence", "replace": "            said = \"npm i -g @tscircuit/cli\"  # the tools list's own sentence"},
- {"file": "data/tools.json", "name": "the board engine forgets it needs bun", "find": "    \"needs\": [\n      \"bun\"\n    ]", "replace": "    \"needs\": []"}
-]

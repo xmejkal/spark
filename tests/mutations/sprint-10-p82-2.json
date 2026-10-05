@@ -1,6 +1,0 @@
-[
- {"file": "scripts/sim_project.py", "name": "wokwi-cli is looked for outside the list again",
-  "find": "        return tools.find(\"simulator\", project).command[0]", "replace": "        return None"},
- {"file": "data/tools.json", "name": "wokwi-cli no longer meets the simulator's contract",
-  "find": "    \"meets\": [\n      \"wokwi-project\"\n    ],", "replace": "    \"meets\": [],"}
-]

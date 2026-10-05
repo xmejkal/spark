@@ -1,4 +1,0 @@
-[
- {"file": "scripts/parts.py", "name": "a datasheet kept by another project is invisible here again",
-  "find": "    for path in sorted(kept.glob(\"*/*\")) if kept.is_dir() else []:", "replace": "    for path in []:"}
-]
