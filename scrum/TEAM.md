@@ -1,6 +1,6 @@
 # The team
 
-Cross-functional means one test: **can this team take a PBI from idea to Done without waiting on
+Cross-functional means one test: **can this team take an item from idea to Done without waiting on
 anyone outside it?** For the two things this project builds — a design tool and the board it is
 proven on — that needs parts research, schematic work, firmware, verification, and somebody whose
 job is to ask why.
@@ -29,7 +29,7 @@ Two agent files ship with the plugin, because two pass the test above; `hardware
 with the cut too — the design skill carries its route, and nothing spawned it. The process roles —
 scrum master, verification, firmware — were agent files too until 2026-09-29 and were cut: nothing
 routed to them, and a plugin user has no use for the way its author works. Those roles are played
-by the main session and by the audit agent spawned at each sprint's end (R3.3), whose report is a
+by the main session and by the audit agent spawned at each epic's end (R3.3; moved from the sprint's end by P102a), whose report is a
 file in `docs/observations/`.
 
 **Petr** is Product Owner: value and order. **The main session** facilitates, integrates, and is
@@ -48,8 +48,9 @@ itself is contamination, not context.
 
 ## How work reaches a member
 
-The facilitator pulls a PBI from `PRODUCT_BACKLOG.md` — one that names the design that needs it (W14) — and either does it on the main thread or
-hands it to the member whose discipline it sits in — with the PBI's `Value proven by:` line, so
+The facilitator pulls the top card of the board's Ready column (https://github.com/users/xmejkal/projects/2) — an issue
+that names the design that needs it (W14) — moves it to its stage, and either does it on the main thread or
+hands it to the member whose discipline it sits in — with the issue's *Value proven by*, so
 the member knows what finishing looks like. Members report; the facilitator integrates, runs the
 Definition of Done, and commits.
 

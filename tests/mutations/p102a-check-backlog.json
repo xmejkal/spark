@@ -76,5 +76,11 @@
   "name": "the gate ignores the board",
   "find": "return EXIT_OK if ok and backlog == 0 else EXIT_PROBLEMS",
   "replace": "return EXIT_OK if ok else EXIT_PROBLEMS"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "Ready is told to finish one",
+  "find": "\"the PO moves one back to Idea\" if stage == \"Ready\" else ",
+  "replace": ""
  }
 ]

@@ -135,7 +135,7 @@ def anchors(root, mutations):
     nothing noticed until an audit ran the table (B8); the R9 table was refused three commits
     after it was written, when P20 re-indented the loop it anchored to. A refused mutation
     guards nothing. Anchors take a second to check; the suite takes minutes per table, so this is
-    what runs at every commit and the full run is what runs per item and at the sprint's close.
+    what runs at every commit and the full run is what runs per item and when an epic is done.
     """
     wrong = []
     for mutation in mutations:

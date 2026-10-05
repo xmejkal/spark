@@ -36,6 +36,10 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build")]),
                          ["Build holds 2 (#1, #2) — its limit is 1: finish one before starting another"])
 
+    def test_a_full_ready_column_says_the_po_moves_one_back(self):
+        self.assertEqual(check_backlog.problems([item(n) for n in (1, 2, 3, 4)]),
+                         ["Ready holds 4 (#1, #2, #3, #4) — its limit is 3: the PO moves one back to Idea"])
+
     def test_three_in_flight_is_too_many_even_one_per_stage(self):
         self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Build"), item(3, "Review")]),
                          ["3 in flight (#1, #2, #3) — at most 2: one being worked, one waiting"])

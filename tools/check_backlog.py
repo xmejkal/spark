@@ -47,8 +47,9 @@ def problems(items):
     for stage, limit in LIMITS.items():
         held = by_stage.get(stage, [])
         if len(held) > limit:
-            said.append("%s holds %d (%s) — its limit is %d: finish one before starting another"
-                        % (stage, len(held), ", ".join("#%s" % e["content"].get("number") for e in held), limit))
+            said.append("%s holds %d (%s) — its limit is %d: %s"
+                        % (stage, len(held), ", ".join("#%s" % e["content"].get("number") for e in held), limit,
+                           "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
     flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
     if len(flying) > MOST_IN_FLIGHT:
         said.append("%d in flight (%s) — at most %d: one being worked, one waiting"
