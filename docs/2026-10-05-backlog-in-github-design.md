@@ -38,19 +38,36 @@ A demo that becomes a real product moves out to its own repository, as the bin d
 
 The same shape for spark and the bin.
 
-- **Status:** Backlog → Ready → In progress → In review → Done.
-- **Iteration:** one week each, starting Monday 2026-10-05. An iteration is a sprint; the sprint's review and retro
-  stay in `scrum/`.
+The team works **Kanban, with a day-close** (the PO, 2026-10-05, after a three-lens council; §9). There are no
+sprints and no iterations.
+
+- **Status: the stages of our flow.**
+
+  | stage | true when an item is here | WIP limit |
+  | --- | --- | --- |
+  | **Idea** | the PO's words are recorded, nothing more (ideas stay ideas) | — |
+  | **Discovery** | journeys, story map, the PO's answers: what it is and who it is for | 1 |
+  | **Design** | a spec is written and reviewed by the council, and waits for the PO's yes | 1 |
+  | **Ready** | the spec is approved and *Value proven by* is set; this column's order is the PO's | 3 |
+  | **Build** | plan, plan council, the PO's yes, then the tasks with their reviews | 1 |
+  | **Review** | final review, fix pass, PR open, waiting for the PO's merge | 1 |
+  | **Done** | merged **and** its *Value proven by* has run | — |
+
+  - **At most 2 items are in flight** across Discovery, Design, Build and Review: one being worked, one waiting.
+  - Chores and bugs skip Discovery and Design and enter at Ready.
+- **Waiting on:** a single select (the PO / hardware / outside), with **Waiting since**, a date. Waiting is a flag
+  that stays on the card in its stage, not a column. Anything waiting more than 3 days is named at the weekly look.
 - **Slice:** a single select. Its options are the story map's slices 1–10, *team tools* and *desk lane*. It places an
   item on the map, as `STORY_MAP.md` does today.
-- **Order:** the Backlog column's row order, set by the PO by dragging (W11: the PO orders).
+- **Order:** the Ready column's row order, set by the PO by dragging (W11: the PO orders). Refilling Ready is when he
+  chooses what comes next.
 - **Views:**
+  - Board by Status, with the column limits above;
   - Table (all fields);
-  - Board by Status, with a WIP limit of 2 on In progress;
-  - Roadmap by Iteration.
+  - Roadmap by Slice.
 
   GitHub's API cannot create views or set a column limit. They are made by hand in the browser, a few clicks, by the
-  PO or by Claude with his go.
+  PO or by Claude with his go. A column limit on GitHub only warns, so §8's check is what enforces it.
 - **Proven** (proven / not proven / not run) is added by P102d, not here.
 
 ## 4. Issues
@@ -97,7 +114,7 @@ dead code after one run (W16). It goes in this order:
 4. Link the sub-issues.
 5. Create the projects and their fields.
 6. Add the items to the projects.
-7. Set Status, Slice and Iteration.
+7. Set Status and Slice. Waiting on and Waiting since are set where the revalidation table says so.
 
 It is **idempotent**: an issue is found by its title's id before one is created, so a second run changes nothing. It
 runs **as a dry run first**, printing every issue it would create. It runs for real **only with the PO's yes**,
@@ -117,8 +134,12 @@ because it publishes around 30 public issues. It works through `gh` with the PO'
 ## 8. The checks
 
 - **`tools/check_backlog.py`,** in the pre-push gate (`tools/check_commit.py` calls it). It reads the spark project's
-  open items with `gh project item-list --format json` and fails the push on any open item with an empty *Needed by*
-  section or no Slice.
+  open items with `gh project item-list --format json`. It fails the push when:
+  - an open item has an empty *Needed by* section or no Slice;
+  - **a WIP limit is broken**: more than one item in Build, or more than two in flight.
+
+  This makes *finish before switching* a command, not a memory (the retros' own finding: what a command enforces
+  holds).
   - With no network or no `gh`, it prints that it was skipped and does not fail. The gate must work offline.
   - Its test feeds it a recorded `gh` answer, so the suite stays offline.
 - **`tests/test_orphans.py`:** its two backlog checks become one. The archive is frozen when no open heading lacks a
@@ -133,15 +154,39 @@ because it publishes around 30 public issues. It works through `gh` with the PO'
 | **W19:** the item exists before the work | a Markdown entry | an issue on the project |
 | **W8:** big items go through a PR | unchanged | the PR body says `Closes #N` |
 | a plan's tasks | checkboxes in the plan only | also sub-issues of the story (the plan stays the source of each task's text) |
-| **W11:** the PO orders | `STORY_MAP.md`'s order lines | the Backlog column's row order |
-| a sprint | `scrum/SPRINT.md` | an iteration; `SPRINT.md` keeps the review and the retro |
+| **W11:** the PO orders | `STORY_MAP.md`'s order lines | the Ready column's row order |
+| the unit of work and review | a sprint (`scrum/SPRINT.md`) | **an epic.** When an epic is done: its review, the outside audit, then the retro. `SPRINT.md` stays as the history |
+| finish before switching (W6, W18) | prose, held by memory | the WIP limits, enforced by §8's check |
+| the day | — | **the day-close**: at the end of each working day Claude writes one dated line — what moved, what was proven, what is aging, the next card. It is also the restart point after an interrupted or compacted session. Where it is written is P102c's design |
+| the week | — | **the PO's weekly look** at the board: what is waiting more than 3 days, which epics started and finished |
 
 `scrum/WORKING_AGREEMENTS.md` gets these lines in the same commit as the freeze (R7: a document changes with the thing
-it describes).
+it describes). The sprint-planning wording in W18, and "the audit closes each sprint" (R3.3, R4.3), are rewritten to
+the epic.
+
+**Why Kanban (the council of 2026-10-05).** Three lenses argued the case: flow, one-day sprints, and the evidence from
+the history.
+- Sprints 3–9 each lasted hours to a day. Sprint 10 has stayed open since 10-03, after work came in that it never
+  planned.
+- The PO added items mid-sprint in 3 of the 6 sprints read closely, so the sprint commitment rarely held.
+- Retro actions held when a command enforced them and broke when they relied on memory.
+- The load-bearing ceremony was the outside audit at the close, which is why it moves to each epic's end.
+
+All three lenses converged on a Kanban board with enforced limits and one daily line, rather than a daily plan and
+retro.
+
+**The trial — four weeks, checked on 2026-11-02.** Three tests at the weekly look:
+- whether the Build limit was broken without being caught;
+- whether a weekly look was skipped twice;
+- whether epics start and finish.
+
+If they fail, the team moves to one-day sprints: a short plan each morning and a close each evening, on the same
+board.
 
 ## 10. Not in this spec
 
-- P102c, the session-start status;
+- P102c, the session-start status and where the day-close is written;
+- the epic-done audit as a command (with P102d, since it checks that each story's proof ran);
 - P102b, maps in Miro and Canva;
 - P102e, the discovery skill;
 - P102d, proofs and the *Proven* field;
@@ -153,9 +198,19 @@ it describes).
 1. The tools chore comes first, before P100.
 2. P102 is split into a, then c, b, e and d, each designed on its own. f was added for the demos.
 3. Open items move only after revalidation: the lens proposes and the PO confirms.
-4. Item facts live in the issue body; project fields hold only Status, Iteration, Slice and later Proven.
+4. Item facts live in the issue body. Project fields hold only Status, Waiting on and Waiting since, Slice, and later
+   Proven.
 5. The projects are public.
-6. Iterations are one week long.
+6. **Kanban with a day-close, not sprints.** This replaces the one-week iterations decided earlier the same day. The
+   PO: *"it might be better to go more in a Kanban style process instead of sprints, to concentrate on WIP and flow
+   and to design the stages well to capture our flow"*. He then asked the council about one-day sprints and chose its
+   recommendation:
+   - the stages and limits of §3;
+   - a total of 2 in flight;
+   - the day-close;
+   - an epic-done review, audit and retro;
+   - his weekly look;
+   - a four-week trial.
 7. Each repository has its own project: spark, the bin, and one `spark-demos` for the demo projects.
 8. Diagrams go in both Miro and Canva (P102b).
 9. All four helpers are in: epics with sub-issues, the session-start status, diagrams as text first, and proofs run.

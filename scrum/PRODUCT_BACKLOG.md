@@ -851,8 +851,8 @@ epic and also planning tasks for user stories is already in gh."* And, asked whi
 we are doing, what works and what remains, and whether epics finish: all four helpers below.
 **The PO's choices, 2026-10-05:** open items move to GitHub Projects only revalidated (P70's rule; the Markdown backlog
 is frozen as the archive); journeys and maps in **both Miro and Canva** (Canva once its connector is authorised); and
-these four: an epic is a parent issue with its stories as sub-issues and planning tasks under them, an iteration field
-and a WIP limit; a session-start status (iteration, in progress, open PRs, WIP over the limit); diagrams kept as text
+these four: an epic is a parent issue with its stories as sub-issues and planning tasks under them, Kanban stages
+with WIP limits (no sprints: the PO, after a council, 2026-10-05); a session-start status (iteration, in progress, open PRs, WIP over the limit); diagrams kept as text
 in the repository first, Miro and Canva drawn from them; each story's *Value proven by* run as a command, so the map
 says proven or not. Takes in **P70** (its design stands) and P101's first half (read one or two discovery skills whole,
 install only with the PO's yes).
@@ -1151,7 +1151,7 @@ BtnOpen.A at D12, while the L9110S inputs pass. Pads are named by their silkscre
 "Mcu.pin20"). P8's fixture carries the pull-down its own rule needs. Mutations `sprint-10-b13.json`:
 5, all caught.
 
-### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03**
+### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03** — answered further by P102a: Kanban with a day-close, 2026-10-05
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
 touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules
 that held are the ones that fail a command.
