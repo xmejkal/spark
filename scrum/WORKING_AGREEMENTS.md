@@ -66,8 +66,9 @@ carrier and was applied to another.
 
 ## W6 — Finish before starting
 
-One PBI in progress at a time, per person. A second is pulled only when the first is Done or
-explicitly blocked and written up as blocked.
+The board's limits are the rule: one item in each working stage, at most two in flight (one being worked, one
+waiting), three in Ready. `tools/check_backlog.py` fails the push when a limit is broken, so this holds by command,
+not by memory (P102a, 2026-10-05).
 
 **Origin:** Petr, twice: *"make sure you often prioritize your work, finish before moving on to
 too many things at the same time"* and *"go by priority and concentrate on the goal in mind"*.
@@ -112,7 +113,8 @@ free"*.
 
 ## W11 — Nobody but the Product Owner reorders the backlog
 
-Agents and the facilitator propose, ranked, with reasons and costs. Petr decides. An agent that
+Agents and the facilitator propose, ranked, with reasons and costs. Petr decides, by the row order of the Ready
+column on the board; refilling Ready is when he chooses what comes next. An agent that
 reports something is "high priority" is reporting its own opinion and must label it as such.
 
 **Origin:** this is what Product Owner means, and it was worth writing down because for two days
@@ -220,10 +222,10 @@ measured one replaces it in the same table. `docs/2026-09-30-refactoring-archite
 
 ## W19 — The item exists before the work starts
 
-The backlog's first line says "if work is not here, it is not happening"; W19 says when. An item
-is written and ordered **before** the first command of the work is run, including for work that
-only produces a document — an audit, an architecture, a piece of research. The item may be a
-single paragraph, and it may be refined once the work reveals its shape, but it exists first, so
+If work is not on the board, it is not happening; W19 says when. An issue is created on the project, with its
+*Needed by* and *Value proven by*, **before** the first command of the work is run, including for work that only
+produces a document — an audit, an architecture, a piece of research — and a feature's PR says `Closes #N` (since
+2026-10-05, P102a). The item may be a single paragraph, and it may be refined once the work reveals its shape, but it exists first, so
 the work can be tracked, sized, and stopped.
 
 Written 2026-09-30, at the PO's word — "whenever we want to do something, let's first make sure
@@ -234,7 +236,7 @@ was set going with no item behind it.
 
 An item is refined **with the team** — the expert lenses and the scrum master, never by the person
 who will implement it alone — and the refined text goes to the Product Owner with a concrete
-question before a sprint is planned around it. Each item must be small enough to finish in one
+question before it enters Ready. Each item must be small enough to finish in one
 sitting, testable by a command whose output the PO can read, sensible on its face, free of
 anything no design needs (W14), and **started things finish before new ones start**.
 

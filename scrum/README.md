@@ -27,15 +27,16 @@ something is valuable — it can only report what something costs and what it wo
 
 | file | what it is for |
 | --- | --- |
-| [`PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) | **the single ordered list.** Every PBI, with its value and how we will know it worked. |
-| [`SPRINT.md`](SPRINT.md) | the current goal, what was pulled, the daily log, and what is blocking |
+| **the spark project** (https://github.com/users/xmejkal/projects/2) | **the board, since 2026-10-05 (P102a).** Every item is an issue, with its *Needed by* and *Value proven by*; Kanban stages and limits (`docs/2026-10-05-backlog-in-github-design.md` §3); the Ready column's order is the PO's. The bin's own board: https://github.com/users/xmejkal/projects/1 |
+| [`PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) | **the archive, frozen 2026-10-05.** Every heading says where its item went (MOVED to an issue) or how it ended |
+| [`SPRINT.md`](SPRINT.md) | the history of Sprints 1–10 |
 | [`RETROSPECTIVES.md`](RETROSPECTIVES.md) | every retro, the change it produced, and **whether that change stuck** |
 | [`WORKING_AGREEMENTS.md`](WORKING_AGREEMENTS.md) | the rules, and where each one came from |
 | [`TEAM.md`](TEAM.md) | the roster and the test each member has to pass to exist |
 
-There is exactly one backlog. `BACKLOG.md` at the repo root is now **narrative** — how the product
+There is exactly one backlog: the spark project's board. `BACKLOG.md` at the repo root is **narrative** — how the product
 got here and what was learned — and `docs/observations/INDEX.md` is **raw observation intake**.
-Neither is a queue of work. Anything in either that should be built is a PBI here or it is not
+Neither is a queue of work. Anything in either that should be built is an issue on the board or it is not
 happening. That consolidation is deliberate: three parallel lists is how 37 observations and 20
 findings reached zero resolved between them.
 
@@ -44,12 +45,18 @@ findings reached zero resolved between them.
 A ceremony that produces nothing is a status meeting. Each of these has an output that changes a
 file, or it did not happen.
 
-| ceremony | when | must produce |
+Since 2026-10-05 the team works **Kanban with a day-close** (P102a; the PO's choice after a three-lens council). There
+are no sprints; the cadences are these.
+
+| cadence | when | must produce |
 | --- | --- | --- |
-| **Planning** | start of a sprint | a **one-sentence sprint goal** and the PBIs pulled to serve it, in `SPRINT.md`. A goal naming two things is two sprints. |
-| **Daily** | each working session | a line in `SPRINT.md`'s log: what moved, what is blocked, what is next. Impediments named, not endured. |
-| **Review** | end of a sprint | **validated value** — see below. Petr sees the thing working, or hears plainly why he cannot. |
-| **Retro** | end of a sprint, after review | one change to how we work, written into `WORKING_AGREEMENTS.md`, **with a check that tells us later whether it stuck**. |
+| **Replenish** | Ready runs low | the PO orders the Ready column (at most three); refilling it is when he chooses what comes next |
+| **Day-close** | the end of each working day | one dated line: what moved, what was proven, what is aging, the next card (where it is written: P102c) |
+| **Weekly look** | once a week | the PO's look at the board: anything waiting more than three days, epics started and finished |
+| **Epic done** | an epic's last story is Done | its **review** (validated value — see below), the **outside audit**, then the **retro**: one change to how we work, written into `WORKING_AGREEMENTS.md`, **with a check that tells us later whether it stuck** |
+
+The trial is checked on 2026-11-02: was the Build limit broken without being caught, was a weekly look skipped twice,
+do epics start and finish? If not, one-day sprints replace it (the design's §9).
 
 ## Validating value, which is not the same as finishing
 
@@ -62,8 +69,8 @@ tested and committed — Done by any reasonable bar. The chain it was meant to u
 a board with zero traces, so the *value* was zero until four further defects were found. The
 review that matters asks **"can Petr now do the thing?"**, not "did the work complete?".
 
-So every PBI carries a `Value proven by:` line naming a command whose output Petr can read, and
-review runs those commands. If a PBI cannot name one, it is not ready to be pulled.
+So every issue carries a *Value proven by* section naming a command whose output Petr can read, and
+review runs those commands. If an item cannot name one, it does not enter Ready.
 
 ## Definition of Done
 
@@ -79,7 +86,7 @@ Every one of these, for every PBI. No exceptions, no "mostly".
 7. Its Done line says how many code lines it added to `scripts/` and why — the pre-push gate prints the
    figure (W15b, P99).
 
-**At each sprint's close** (P98): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
+**When an epic is done** (P98; P102a moved it from the sprint's close): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
 prints its time. An escape is a missing test, opened as a backlog item the same day.
 
 A stage that could not be exercised is `could-not-run`, never `ok`. That rule outranks every other
