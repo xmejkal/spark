@@ -773,7 +773,7 @@ project's `--list` now shows. A live re-import in the PO's browser read 8 orders
 `parts_on_hand`, `owned`, `photo` and the owned listing are retired in spark and the PO's four projects. The code
 budget was raised to 5,189 for it, measured after its refactor (W15b). Plan and ledger rulings: the PR.
 
-### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment** — in PR #2: the council's fix round, 2026-10-05
+### P96 — Store 1b: a goal, matched — **slice 10; P94's second increment** — DONE 2026-10-05
 **Needed by:** the PO's walking skeleton, the plant thirst alarm. Design §4 (store 1b), §5.3, §5.4, §5.6, §6.2.
 **Value proven by:** from "tell me when my plant is thirsty", `parts.py --match <project> --json` lists each
 need's candidates from the store with owned and free counts and what each owes (SEN0193: `pin_order_proof`,
@@ -787,12 +787,23 @@ the matcher, owed vs broken and the walk, and the final review's eight fixes).
 **Council review, 2026-10-05 (PR #2):** four lenses labelled 13 findings Important, 10 of them distinct; none
 Critical. They are fixed before merge by `docs/2026-10-05-store-1b-fixes-plan.md`, functionality first and refactoring
 last (the PO's order). A plan council reviewed that plan the same day.
+**Fix round done 2026-10-05:** five fixes (the matcher's verb and words, `--function-set` and `/spark:idea` on the
+project's copy with spark's library refused, malformed records and boards named broken, one check table for a need,
+one resolver) and a final review's three. Size: P96 is +301 code lines in all — +305 before the round, so the fixes
+removed 4 net (`_known`, `_file_fault` and `_problems` deleted against the new walk and guards). Re-run on the PO's
+real store: `--match ~/Development/plant-alarm` as above, `--audit` 0 broken in every layer.
 
 ### P97 — Store 1c: picks to a building list, tallied — **slice 10; P94's third increment**
 **Needed by:** the same skeleton, to its end. Design §4 (store 1c), §5.7, §6.5, §6.7, §8 C–T.
 **Value proven by:** the bin's FireBeetle S3 refused as already held; owed facts filled in the records' own homes
 (the DFR0954 footprint from DFRobot's drawing, one counted request); `check_spine` ends `[ok]`; the cost line
 "5 picks: 5 from the store (5 owned) — 1 request, 1 document, N min".
+**Carried from P96's fix round (2026-10-05):** first, the two refactors only 1c needs — one candidate builder and
+shared write lines (the PO's call; `docs/2026-10-05-store-1b-fixes-plan.md` Task F); a lock around plan-and-write and
+one atomic `store.write_file` (reservations write `needs.json` and the drawer together); a project's own reservations
+counted as free in its own match; `--function-set` on a shelf copy resolved through `based_on`; `--match` marking a
+broken board; the bug `drawer.numbers` raises on an `also_known_as` that is not a list (on main since P95); and the
+PO's question — does a drawer entry with no `count` mean used up, or unknown?
 
 ### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95** — DONE 2026-10-04
 **Needed by:** the PO — *"I think we should also try to make things faster. How often do we really need to run all
