@@ -1,3 +1,6 @@
+> **Sprint 10 closed 2026-10-05 with the move to Kanban (P102a):** the board is the spark project
+> (https://github.com/users/xmejkal/projects/2); this file is the history of Sprints 1–10.
+
 # Sprint 10 — slice 1, then 1b
 
 **Ordered by the PO 2026-10-03.** First **public** (P71, P75): a fresh public repository whose history

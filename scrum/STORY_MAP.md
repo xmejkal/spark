@@ -30,28 +30,29 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
-| **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71, P44, P75, B10, P82 (all done) |
-| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | *not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** |
-| **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | **P81**, **B1**, **P58**, **P73**, **B8**, **B5**, **B11** |
-| **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59**, **P74** |
-| **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a**, **P39**, **P38**, **P78**, **P80**, P83 (done), **B13**, **P43** (the `fix` half), **P77** (its place is the council's) |
-| **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6**, then F3 and F4 as they pull |
-| **7** | **Breadboard or wires → perfboard → PCB** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard; a soldered perfboard build as an optional step; a PCB offered only after | **P79** |
+| **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71, P44, P75, B10, P82 (done); **P104** (#33), the README |
+| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | *not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5), **P100** (#6) |
+| **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | P81 (done), **B1** (bin #1), **P58** (bin #5), **P73** (bin #2), **B8** (bin #3), **B5** (bin #4), B11 (done) |
+| **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59** (#7), **P74** (#8) |
+| **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
+| **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6** (#15), then F3 and F4 as they pull |
+| **7** | **Breadboard or wires → perfboard → PCB** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard; a soldered perfboard build as an optional step; a PCB offered only after | **P79** (#16) |
 | **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
 | **9** | **An enclosure** | hobbyist | *not designed yet* — the overview: 3D export, Fusion 360, printed parts | pulled by the first design that wants one |
-| **10** | **The store, sound — then shared** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | P85 (done); **P94** (the design); then store 1a P95 (done 2026-10-04 — my drawer, with P88 (done), **P91**'s shelf, **P92**'s envelope, **P93**'s first importers), 1b P96 (done 2026-10-05 — a goal matched — with **P89**), 1c **P97** (picks to a building list — with **P90**); **P87** before any shared record; then **P84** (pulled by the first outside researcher), **P86** |
-| **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b**, **P64b**, **P64c**, **B12** |
+| **10** | **The store, sound — then shared** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | P85 (done); **P94** (#17) (the design); then store 1a P95 (done 2026-10-04 — my drawer, with P88 (done), **P91** (#22)'s shelf, **P92** (#23)'s envelope, P93 (done)'s first importers), 1b P96 (done 2026-10-05 — a goal matched — with **P89** (#20)), 1c **P97** (#18) (picks to a building list — with **P90** (#21)); **P87** (#19) before any shared record; then P84 (parked) (pulled by the first outside researcher), P86 (parked) |
+| **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b** (bin #6), P64b (parked), P64c (parked), B12 (done) |
 
 **The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
 work, really from just talking about some vague idea"*; slices 8 and 9 make ordering a board and
 printing an enclosure part of the journey, optional and after the firmware works.
 Slices 2 and 3 run side by side: the maker's share of 2 is parts and a bench, the team's is the
-items. **The epic in refinement** — the PO, 2026-10-05: **P100** (spark in real use: a new idea and irrigation improved, walked through with the person), discovery first, with **P101** (a discovery skill, written as that discovery is done). Both wait on PR #2.
-**The team's tools** — next after P95, the PO's call of 2026-10-04: P98 (done — mutation runs in seconds), P99 (done — the size reported, not capped).
-**The desk lane** — the PO's own process decisions, at most two open: **P70**, **P72**.
-
-**Parked** (each with what pulls it back, in the backlog): P66, P68, P49, P50, R10, F1, F2, F5.
-**Merged:** P2 into P59. **Deleted:** P17.
+items. **Order and status live in the projects:** spark (https://github.com/users/xmejkal/projects/2) and the bin
+(https://github.com/users/xmejkal/projects/1), since 2026-10-05 (P102a; Kanban, the stages and limits in
+`docs/2026-10-05-backlog-in-github-design.md`). This map keeps the slices and which items sit in each, as text for
+P102b to draw.
+**Team tools:** **P102** (#24), the tools chore, with its stories P102a–f and **P103** (#32). **Desk lane:** **P72** (#31).
+**Parked** (each with what pulls it back, in the archive): P66, P68, P49, P50, R10, F1, F2, F5, P64b, P64c, P84, P86.
+**Merged:** P2 into P59, P70 into P102, P101 into P102e. **Deleted:** P17.
 
 ## Scenarios — and whether each runs today
 

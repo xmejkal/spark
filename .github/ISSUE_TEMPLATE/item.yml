@@ -1,0 +1,28 @@
+name: Backlog item
+description: An epic, story, task, chore or bug — with the design that needs it and the command that proves it.
+body:
+  - type: textarea
+    id: needed-by
+    attributes:
+      label: Needed by
+      description: The design, project or person that needs this, in their words where possible (W14 — pull, never push).
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Value proven by
+      description: What will be true when it is done, readable by the Product Owner.
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Proof
+      description: The command that proves it (from P102d on). Leave empty until there is one.
+      render: shell
+  - type: input
+    id: archive
+    attributes:
+      label: Archive
+      description: For an item moved from scrum/PRODUCT_BACKLOG.md — its id there.

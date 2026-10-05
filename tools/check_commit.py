@@ -122,7 +122,10 @@ def main(argv=None):
                            capture_output=True, text=True).stdout.strip()
     print("%s as committed: %s; %s" % (short, suite, anchors))
     print("  " + size_line(root, commit))
-    return EXIT_OK if ok else EXIT_PROBLEMS
+    sys.path.insert(0, str(ROOT / "tools"))
+    import check_backlog
+    backlog = check_backlog.main()
+    return EXIT_OK if ok and backlog == 0 else EXIT_PROBLEMS
 
 
 if __name__ == "__main__":

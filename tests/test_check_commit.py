@@ -7,11 +7,14 @@ tree, and the file it imported was staged one commit later (sprint-4 close audit
     python3 -m unittest discover -s tests
 """
 
+import contextlib
+import io
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -82,6 +85,20 @@ class TheSizeIsSaidTest(unittest.TestCase):
             subprocess.run(command, cwd=str(root), check=True, capture_output=True)
         self.assertEqual(check_commit.size_line(root, "HEAD", "HEAD~1"), "scripts/: 3 code lines (+2 since HEAD~1)")
         self.assertEqual(check_commit.size_line(root, "HEAD", "no-such-base"), "scripts/: 3 code lines")
+
+
+
+class TheGateEnforcesTheBoardTest(unittest.TestCase):
+    """P102a: a board that breaks its limits fails the gate even when the suite and the anchors are green."""
+
+    def test_a_board_problem_fails_the_gate(self):
+        board = mock.Mock(main=mock.Mock(return_value=1))
+        with mock.patch.object(check_commit, "archive"), \
+                mock.patch.object(check_commit, "measure", return_value=("OK", "anchors ok", True)), \
+                mock.patch.object(check_commit, "size_line", return_value="size"), \
+                mock.patch.dict(sys.modules, {"check_backlog": board}), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(check_commit.main(["HEAD"]), check_commit.EXIT_PROBLEMS)
 
 
 if __name__ == "__main__":

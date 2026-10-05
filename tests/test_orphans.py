@@ -67,17 +67,6 @@ class NothingShipsUnusedTest(unittest.TestCase):
         unnamed = [name for name in skills + agents if name not in text]
         self.assertEqual(unnamed, [], "skills or agents nothing routes to: %s" % unnamed)
 
-    def test_every_open_backlog_item_names_the_design_that_needs_it(self):
-        # W14: pull, never push. An item without a design behind it is not built.
-        text = (ROOT / "scrum" / "PRODUCT_BACKLOG.md").read_text()
-        sections = re.split(r"\n(?=### )", text)
-        missing = []
-        for section in sections:
-            head = section.splitlines()[0] if section else ""
-            if head.startswith("### ") and "~~" not in head and "**Needed by:**" not in section:
-                missing.append(head[4:60])
-        self.assertEqual(missing, [], "open items with no `**Needed by:**` line: %s" % missing)
-
     #: Scripts that still name a tool's executable, until their task moves them to tools.find (P82).
     NOT_YET_MOVED = {}  # empty since the final review: a project's own cli.ts runs under the ts-runtime role
 
@@ -110,18 +99,14 @@ class NothingShipsUnusedTest(unittest.TestCase):
                  for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1) if home.search(line)]
         self.assertEqual(named, [], "a shipped file names one person's home directory")
 
-    def test_every_open_backlog_item_sits_on_the_story_map(self):
-        # P69: an item that hangs on no slice is parked or deleted. W14's line says a design needs
-        # it; this says WHEN — five items once passed W14 naming no design at all.
-        closed = re.compile(r"DONE|ANSWERED|CLOSED|PARKED|MERGED|DELETED|SPLIT|~~")
+    def test_the_archive_holds_no_open_item(self):
+        # P102a: the backlog lives in GitHub Projects; the Markdown file is the frozen archive, and every heading in it
+        # says where its item went (MOVED to an issue) or how it ended.
+        closed = re.compile(r"MOVED|DONE|ANSWERED|CLOSED|PARKED|MERGED|DELETED|SPLIT|~~")
         text = (ROOT / "scrum" / "PRODUCT_BACKLOG.md").read_text()
-        story_map = (ROOT / "scrum" / "STORY_MAP.md").read_text()
-        open_items = [line.split()[1] for line in text.splitlines()
-                      if line.startswith("### ") and not closed.search(line)]
-        unplaced = [item for item in open_items if not re.search(r"\*\*%s\*\*" % re.escape(item), story_map)]
-        self.assertTrue(open_items, "the backlog's open items were not found at all")
-        self.assertEqual(unplaced, [], "open items on no slice of STORY_MAP.md: %s" % unplaced)
-
+        self.assertIn("This is the archive", text.split("\n### ")[0])
+        unmarked = [line[4:60] for line in text.splitlines() if line.startswith("### ") and not closed.search(line)]
+        self.assertEqual(unmarked, [], "archive headings with no MOVED/closed marker: %s" % unmarked)
 
 class TheGlossaryDefinesWordsThisRepositoryActuallyUsesTest(unittest.TestCase):
     """
