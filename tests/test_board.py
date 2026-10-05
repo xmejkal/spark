@@ -3,6 +3,8 @@
 import contextlib
 import datetime as dt
 import io
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -31,7 +33,7 @@ def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",
 
 
 def project(*nodes):
-    return {"id": "P", "items": {"nodes": list(nodes)}, "statusUpdates": {"nodes": []}}
+    return {"id": "P", "items": {"totalCount": len(nodes), "nodes": list(nodes)}, "statusUpdates": {"nodes": []}}
 
 
 SPARK = board.to_items(project(
@@ -124,11 +126,65 @@ class TheCoreTest(unittest.TestCase):
 
     def test_close_dry_run_posts_nothing(self):
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], set(), "P")), \
+        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", [])), \
                 mock.patch.object(board, "_gh") as gh, contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["close", "P102c built", "--dry-run"]), 0)
         self.assertFalse(gh.called)
         self.assertIn("dry run", out.getvalue())
+
+
+class TheFinalReviewTest(unittest.TestCase):
+    """The P102c final review: the newest closes, a short read said, offline in seconds, any branch, never a traceback."""
+
+    def test_the_query_reads_the_newest_status_updates(self):
+        # GitHub lists status updates newest first, so last:N would read the oldest N (C1).
+        self.assertIn("statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC})", board.QUERY)
+
+    def test_a_board_read_short_says_how_many_it_holds(self):
+        held = project(node(1, "P1 — x", "Ready"))
+        held["items"]["totalCount"] = 130
+        self.assertEqual(board.unread("spark", held), "the spark board holds 130 items; status read the first 1")
+        self.assertIsNone(board.unread("spark", project(node(1, "P1 — x", "Ready"))))
+
+    def test_the_status_names_what_it_could_not_read(self):
+        lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY, ["the spark board holds 130 items"])
+        self.assertIn("  ! the spark board holds 130 items", lines)
+
+    def test_a_silent_network_skips_the_status_in_seconds(self):
+        out = io.StringIO()
+        stalled = subprocess.TimeoutExpired(["gh"], board.STATUS_TIMEOUT)
+        with mock.patch.object(board.subprocess, "run", side_effect=stalled) as run, contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(run.call_args.kwargs["timeout"], board.STATUS_TIMEOUT)
+        self.assertLessEqual(board.STATUS_TIMEOUT, 10)
+        self.assertEqual(out.getvalue(), "board: skipped — gh did not answer in %d s\n" % board.STATUS_TIMEOUT)
+
+    def test_working_days_are_commits_on_any_branch_in_the_named_folders(self):
+        root = Path(tempfile.mkdtemp())
+        own = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+        def git(*args, when=None):
+            dated = {"GIT_AUTHOR_DATE": when, "GIT_COMMITTER_DATE": when} if when else {}
+            subprocess.run(["git", "-C", str(root), "-c", "user.email=t@t", "-c", "user.name=t", *args],
+                           check=True, capture_output=True, env=dict(own, **dated))
+        git("init", "-q")
+        git("commit", "-q", "--allow-empty", "-m", "before", when="2026-09-20T12:00:00")
+        git("commit", "-q", "--allow-empty", "-m", "on main", when="2026-10-03T12:00:00")
+        git("checkout", "-q", "-b", "work")
+        git("commit", "-q", "--allow-empty", "-m", "on a branch only", when="2026-10-05T12:00:00")
+        git("checkout", "-q", "-")
+        # A hook's GIT_DIR must not steer the read to another repository (the P105 leak).
+        with mock.patch.dict(os.environ, {"GIT_DIR": tempfile.mkdtemp()}):
+            days = board.work_days([str(root), tempfile.mkdtemp()], dt.date(2026, 10, 1))
+        self.assertEqual(days, {dt.date(2026, 10, 3), dt.date(2026, 10, 5)})
+
+    def test_status_says_skipped_whatever_breaks(self):
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", [])), \
+                mock.patch.object(board, "status_lines", side_effect=AttributeError("'NoneType' object has no attribute 'get'")), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), "board: skipped — 'NoneType' object has no attribute 'get'\n")
 
 
 if __name__ == "__main__":

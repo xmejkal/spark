@@ -57,11 +57,12 @@ spark — 28 open, the limits hold · trial check 2026-11-02
   rule.
 - **The last close** is the newest status update on the spark board: its date and its first line.
 - **A missing close.** If the last working day before today has no close, `status` prints one line saying so. A
-  working day is a day with a commit on `main` in spark or the bin.
+  working day is a day with a commit on any branch in the folders `--when-in` names, read from local git: it costs no
+  network call and works offline (decision 5).
 - **`--when-in DIR ...`:** status prints nothing unless the current directory lies inside one of the named
   directories. The folders are named in the PO's settings, not in the repository, so no personal path ships.
 - **Offline,** or when `gh` is logged out, it prints one line: `board: skipped — <why>`. A session start must never
-  fail.
+  fail. Each `gh` call at a session start gives up after 8 seconds, so a stalled network costs seconds, not minutes.
 
 ### `board.py close [--date D] [--dry-run] LINE|-`
 
@@ -124,3 +125,5 @@ spark — 28 open, the limits hold · trial check 2026-11-02
 2. The day-close is a status update on the spark board.
 3. A day is closed when he stops, or at the next session's start if it was missed.
 4. The design is one tool, `tools/board.py`, with two verbs, `status` and `close`, reusing `check_backlog`.
+5. A working day is a day with a commit on any branch, read from local git. The final review found that `main` moves
+   only by merges, so a day of branch work went unflagged; the PO: *"it should be ok to be offline when working on it."*

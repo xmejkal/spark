@@ -6,7 +6,8 @@ The state of the work at every session start, and the day-close (P102c; docs/202
     board.py close [--date D] [--dry-run] LINE|- # the day-close, as a status update on the spark board
 
 It reads the boards through the PO's own gh login and stores nothing: one GraphQL query per board (GitHub allows 5,000
-GraphQL points an hour, shared with everything else), REST for pull requests and commits.
+GraphQL points an hour, shared with everything else), REST for pull requests. The working days come from local git, so
+being offline costs the status, never the session: every call gives up after STATUS_TIMEOUT seconds.
 """
 
 import argparse
@@ -26,6 +27,9 @@ BOARDS = (("spark", 2, "spark"), ("bin", 1, "sisuo-brain-transplant"))
 #: More days than this waiting on the PO is named (the weekly look, P102a's spec §3).
 WAIT_TOO_LONG = 3
 TRIAL_CHECK = "2026-11-02"
+#: Seconds each gh call may take at a session start before the status is skipped; a close may wait longer.
+STATUS_TIMEOUT = 8
+CLOSE_TIMEOUT = 60
 
 
 def to_items(project):
@@ -91,6 +95,28 @@ def missing_close(work_days, close_days, today):
     return None
 
 
+def unread(name, project):
+    """A line when the board holds more cards than its one page read (GraphQL pages stop at 100), or None."""
+    held, read = project["items"]["totalCount"], len(project["items"]["nodes"])
+    return "the %s board holds %d items; status read the first %d" % (name, held, read) if held > read else None
+
+
+def work_days(dirs, since):
+    """
+    The days since `since` with a commit on any branch in the git folders among dirs — a branch-only day is a working
+    day too, and local git answers offline (the PO, 2026-10-05). A hook's GIT_* variables would point git at another
+    repository, so they are left out.
+    """
+    own, days = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}, set()
+    for folder in dirs:
+        listed = subprocess.run(["git", "-C", str(Path(folder).expanduser()), "log", "--all", "--since=%s" % since.isoformat(),
+                                 "--format=%cd", "--date=format-local:%Y-%m-%d"],
+                                capture_output=True, text=True, timeout=STATUS_TIMEOUT, env=own)
+        if not listed.returncode:
+            days |= {dt.date.fromisoformat(line) for line in listed.stdout.split()}
+    return days
+
+
 def inside(cwd, dirs):
     """Whether cwd lies within one of dirs."""
     here = Path(cwd).resolve()
@@ -101,17 +127,17 @@ def _boards_join(boards, each, today):
     return [("" if name == "spark" else name + " ") + said for name, items in boards for said in each(items, today)]
 
 
-def status_lines(boards, prs, closes, work_days, today):
+def status_lines(boards, prs, closes, worked, today, notes=()):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
-    work_days {date}.
+    worked {date}, notes [what could not be read].
     """
     spark = dict(boards)["spark"]
     verdict = check_backlog.problems(spark)
     lines = ["spark — %d open, %s · trial check %s" % (sum(1 for i in spark if i.get("status") != "Done"),
                                                         "the limits hold" if not verdict else "%d problem(s)" % len(verdict),
                                                         TRIAL_CHECK)]
-    lines += ["  ! " + sentence for sentence in verdict]
+    lines += ["  ! " + sentence for sentence in [*verdict, *notes]]
     lines.append("  in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"))
     lines.append("  waits on the PO: " + (", ".join(_boards_join(boards, waiting, today)) or "nothing"))
     lines.append("  Ready: " + (", ".join(ready(spark)) or "empty — the PO refills it"))
@@ -120,18 +146,18 @@ def status_lines(boards, prs, closes, work_days, today):
     if closes:
         day, line = max(closes)
         lines.append("  last close %s: %s" % (day.isoformat(), line))
-    gap = missing_close(work_days, {day for day, _ in closes}, today)
+    gap = missing_close(worked, {day for day, _ in closes}, today)
     if gap:
         lines.append("  ! the day of %s has no close — write it first" % gap.isoformat())
     return lines
 
 
 QUERY = """query($login:String!,$number:Int!){user(login:$login){projectV2(number:$number){id
- items(first:100){nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}}}}
+ items(first:100){totalCount nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}}}}
   fieldValues(first:20){nodes{
    ... on ProjectV2ItemFieldSingleSelectValue{name updatedAt field{... on ProjectV2FieldCommon{name}}}
    ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}}}}}
- statusUpdates(last:20){nodes{startDate status body}}}}}"""
+ statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC}){nodes{startDate status body}}}}}"""
 POST = ("mutation($p:ID!,$d:Date!,$s:ProjectV2StatusUpdateStatus!,$b:String!){createProjectV2StatusUpdate("
         "input:{projectId:$p,startDate:$d,status:$s,body:$b}){statusUpdate{id}}}")
 
@@ -158,36 +184,37 @@ def close_update(line, boards, close_days, day, today):
     return ("AT_RISK" if risky else "ON_TRACK"), body
 
 
-def _gh(*args):
-    done = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60)
+def _gh(*args, timeout=CLOSE_TIMEOUT):
+    try:
+        done = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("gh did not answer in %d s" % timeout) from None
     if done.returncode:
         raise RuntimeError((done.stderr.strip().splitlines() or ["gh failed"])[0])
     return json.loads(done.stdout) if done.stdout.strip() else None
 
 
-def gather(today):
-    """Both boards, their open PRs, the spark board's closes, and the working days since the last close."""
-    boards, closes, project_id = [], [], None
+def gather(timeout=CLOSE_TIMEOUT):
+    """Both boards, their open PRs, the spark board's closes and id, and what could not be read."""
+    boards, prs, closes, project_id, notes = [], [], [], None, []
     for name, number, repo in BOARDS:
-        project = _gh("api", "graphql", "-f", "query=" + QUERY, "-F", "login=" + OWNER, "-F", "number=%d" % number)
-        project = project["data"]["user"]["projectV2"]
+        project = _gh("api", "graphql", "-f", "query=" + QUERY, "-F", "login=" + OWNER, "-F", "number=%d" % number,
+                      timeout=timeout)["data"]["user"]["projectV2"]
         boards.append((name, to_items(project)))
+        notes += [note for note in [unread(name, project)] if note]
         if name == "spark":
             project_id, closes = project["id"], closes_from(project)
-    since = max((day for day, _ in closes), default=today - dt.timedelta(days=14)).isoformat()
-    work_days, prs = set(), []
-    for name, _, repo in BOARDS:
-        for commit in _gh("api", "repos/%s/%s/commits?sha=main&per_page=100&since=%sT00:00:00Z" % (OWNER, repo, since)):
-            when = dt.datetime.fromisoformat(commit["commit"]["author"]["date"].replace("Z", "+00:00"))
-            work_days.add(when.astimezone().date())
-        prs += [(name, pr["number"], pr["title"], pr["draft"]) for pr in _gh("api", "repos/%s/%s/pulls?state=open" % (OWNER, repo))]
-    return boards, prs, closes, work_days, project_id
+        prs += [(name, pr["number"], pr["title"], pr["draft"])
+                for pr in _gh("api", "repos/%s/%s/pulls?state=open" % (OWNER, repo), timeout=timeout)]
+    return boards, prs, closes, project_id, notes
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="The state of the work, and the day-close (P102c).")
     verbs = parser.add_subparsers(dest="verb", required=True)
-    verbs.add_parser("status").add_argument("--when-in", nargs="+", metavar="DIR")
+    verbs.add_parser("status").add_argument("--when-in", nargs="+", metavar="DIR",
+                                            help="the PO's project folders: nothing shows outside them, and their git "
+                                                 "history gives the working days (default: the current folder's)")
     close = verbs.add_parser("close")
     close.add_argument("line", help="the day's one line, or - to read it from stdin")
     close.add_argument("--date", help="the day to close, YYYY-MM-DD (default: today)")
@@ -196,14 +223,19 @@ def main(argv=None):
     if args.verb == "status" and args.when_in and not inside(os.getcwd(), args.when_in):
         return 0
     today = dt.date.today()
+    if args.verb == "status":
+        try:
+            boards, prs, closes, _, notes = gather(STATUS_TIMEOUT)
+            since = max((day for day, _ in closes), default=today - dt.timedelta(days=14))
+            print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today, notes)))
+        except Exception as broken:  # a session start must never fail (the spec, §2)
+            print("board: skipped — %s" % (broken or type(broken).__name__))
+        return 0
     try:
-        boards, prs, closes, work_days, project_id = gather(today)
+        boards, prs, closes, project_id, _ = gather()
     except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
         print("board: skipped — %s" % unreachable)
-        return 0 if args.verb == "status" else 1
-    if args.verb == "status":
-        print("\n".join(status_lines(boards, prs, closes, work_days, today)))
-        return 0
+        return 1
     day = dt.date.fromisoformat(args.date) if args.date else today
     try:
         state, body = close_update(sys.stdin.read() if args.line == "-" else args.line, boards,
