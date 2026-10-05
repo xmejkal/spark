@@ -216,9 +216,10 @@ read its evidence before deciding it is bureaucracy.
 The backlog is two GitHub Projects — spark's (https://github.com/users/xmejkal/projects/2) and the bin's
 (/projects/1) — since 2026-10-05 (P102a). Each item is an issue; its card moves **Idea → Discovery → Design → Ready
 → Build → Review → Done**, one item per working stage, at most two in flight, three in Ready. **The failure behind
-it:** ten sprints, each re-planned around the items the PO added mid-sprint, and a sprint (10) that never closed
-while other items were built in it — so "what are we doing now" had no answer a command could read.
-`tools/check_backlog.py` fails a push that breaks a limit; the Markdown backlog is the frozen archive.
+it:** the PO added items mid-sprint in 3 of the 6 sprints read closely, and Sprint 10 stayed open from 10-03 after
+work came in that it never planned — so "what are we doing now" had no answer a command could read (the design's §9).
+`tools/check_backlog.py` fails a push that breaks a limit on spark's board (when online); the Markdown backlog is the
+frozen archive.
 
 ### Epic, story, task
 

@@ -149,10 +149,11 @@ about sequence, which is the form that held for the rest of the day.
 
 ## W14 — Pull, never push
 
-Nothing enters the plugin unless a real design is blocked without it that week, and the backlog
-item names that design in a `**Needed by:**` line. A capability designed on paper — a review
+Nothing enters the plugin unless a real design is blocked without it that week, and the item's
+issue names that design in its *Needed by* section. A capability designed on paper — a review
 loop, an eval harness, a research agent — is not built until a project reaches for it. An item
-without a design behind it is not pulled; the suite refuses a backlog with one in it.
+without a design behind it is not pulled; the push gate refuses a board with one on it
+(`tools/check_backlog.py`, for spark's board, when online).
 
 **Origin:** 2026-09-29, when a third of the repository was deleted as unused. Every piece of it
 had been built because it was designed, not because a design needed it.

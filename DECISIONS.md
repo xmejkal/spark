@@ -1,7 +1,8 @@
 # Decisions that are settled
 
 Read this after a context clear. It is the short list: what was decided, and why, so none of it
-gets re-litigated. Everything still open lives in `BACKLOG.md` and `docs/observations/INDEX.md`.
+gets re-litigated. Everything still open is a card on a board — spark's
+(https://github.com/users/xmejkal/projects/2) or the bin's (/projects/1); `docs/observations/INDEX.md` is raw intake.
 
 Last condensed: 2026-09-25.
 
