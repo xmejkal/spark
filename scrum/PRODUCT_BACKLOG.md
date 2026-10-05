@@ -805,6 +805,40 @@ counted as free in its own match; `--function-set` on a shelf copy resolved thro
 broken board; the bug `drawer.numbers` raises on an `also_known_as` that is not a list (on main since P95); and the
 PO's question — does a drawer entry with no `count` mean used up, or unknown?
 
+### P100 — Spark in real use: a new idea and an existing project, each walked through with the person — **the epic; the PO, 2026-10-05**
+**Needed by:** the PO — *"As the next big test - so actual usage of spark I'd like to have it look at a new project
+idea and also in another test round an existing project, for example the plants project and actually test the whole
+functionality of actually looking at the modules and parts we have and offering improvements. And with the new
+project, but also the update, it should walk the user through interactively discuss the options and make a plan of
+an improvement, adding a feature. Let's create it as the next big epic, let's start by really defining the flows, the
+use cases, scenarios, workflows, user journey and go through refining it and then making a plan."* The ways in it
+exercises are the spec's goal first and extend/swap (docs/2026-10-04-store-design.md §2); irrigation is the existing
+project. An epic: refined with the PO into flows, use cases and journeys before any item under it is planned.
+**Discovery first** — the PO, 2026-10-05: *"lets first really make sure we have a good ideation part done, the discovery
+process, so we know what the user journeys are, we have them prioritized, selected the important ones and we have the
+user journeys or story maps or whatever we use captured in a diagram and/or text."* So the epic's first output is
+the journeys, ranked, the chosen ones marked, as a story map in a diagram and text; items under it come after.
+**The PO's answers so far (2026-10-05), inputs to that discovery, not a design:** the walk ends in *a plan he
+approves*; the new idea comes from *spark proposing from his drawer*; *both journeys, in that order* — the new idea
+first, then irrigation; research happens *after his yes*; the plan is kept *in the project, public-safe*. Ideas
+favour: mostly from his drawer, modules never used yet, small enough to finish, useful at home or in the garden. The
+review of an existing project looks for: musts not met, risks, a part he owns that fits better, new features from
+his drawer, firmware gaps.
+**Waits on:** PR #2 (P96) merged — the PO's rule of 2026-10-05: finish what is open before starting what is new.
+**Value proven by:** to be set in refinement.
+
+### P101 — A discovery skill: journeys, ranked and mapped — **P100's tool; the PO's question of 2026-10-05**
+**Needed by:** P100's discovery. The PO — *"Is there maybe even an existing skill or plugin for claude code to help
+with the discovery process? And if not, can we make ours as we go?"* None is installed. Community skills exist
+(found 2026-10-05, one search, none read in full yet): deanpeters' user-story-mapping and customer-journey-map
+(product-manager-skills), owl-listener's journey-map and experience-map (designer-skills), shipkit's
+product-discovery, alinaqi's user-journeys (claude-bootstrap). A skill is instructions an agent follows, so one is
+read whole before anything is installed, and installed only with the PO's yes.
+**The way:** read one or two of them, take what fits, and write spark's own as P100's discovery is done — the skill
+records the steps that worked, not steps planned ahead (W14).
+**Value proven by:** P100's journeys and story map were produced by following the skill, and a second discovery
+(the irrigation review) follows the same file.
+
 ### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95** — DONE 2026-10-04
 **Needed by:** the PO — *"I think we should also try to make things faster. How often do we really need to run all
 the mutations? Can we optimize it somehow?"* Measured 2026-10-04: each mutation re-runs the whole suite (11.4 s), and
