@@ -37,7 +37,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match <project>
 
 Owned candidates come first, each with how many are owned and **free** (a part another project holds is not free),
 "maybe owned" when the person was not sure, what it does, and what it **owes** before it can build. `[other words]`
-means the candidate has the need's verb in other words: whether it is similar enough is your call, said to the person.
+means the candidate has the need's verb but not its `what`: whether it is similar enough is your call, said to the person.
 With `--json`, `truncated.next` is the command for the rest of a long answer. Show the person, for each need, the
 owned option and the simpler one beside it, with what each would cost — in 1b, what it still owes before it can
 build; spark knows no prices. Then mark each need — `have` (owned, with a record), `have-unknown` (owned, no record),
@@ -64,4 +64,6 @@ later re-shelve from its project overwrites it, so say so. spark's own library i
 
 ## Not yet
 
-Choosing a part per need, reserving owned parts and researching a gap are store 1c: say so, and stop at the marks.
+Choosing a part per need and reserving owned parts are store 1c ([P97](https://github.com/xmejkal/spark/issues/18));
+turning needs into a requirements file is [P76](https://github.com/xmejkal/spark/issues/5). Say so, and stop at the
+marks.

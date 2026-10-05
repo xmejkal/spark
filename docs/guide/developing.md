@@ -8,18 +8,30 @@ How spark's own code is tested and gated, and where the work is planned.
 python3 -m unittest discover -s tests -t tests
 ```
 
-The count is whatever that prints. A number written into the README rotted three times in four days, so none is
-written here.
+The count is whatever that prints. A count written into the README rotted three times in four days, so a count
+appears only inside a dated output, like the push below.
 
 **The rule the tests follow: a test must run the thing, not read it.**
 
-- No assertion on source text.
-- None that is an arithmetic identity of the function under test.
-- Every check is exercised through the runner, with an input that makes it fail.
+- A test that finds a string in source proves the thing was named, not that it ran, so behaviour is proven by running
+  it. `tests/test_check_all.py` forbids source-text assertions outright.
+- None is an arithmetic identity of the function under test.
+- Every check is run through the runner with an input whose answer is known, and each check's own suite gives it an
+  input that makes it find a problem.
 
 The rule exists because of one test, written to catch "a check nobody invokes". It asserted that a string appeared
 in the runner's source. That verified the check was named, not that it ran, and it stayed green for the whole life of
 the bug it was written to prevent.
+
+The suite still reads source for rules about the code itself:
+
+- no script imports unittest;
+- only `store.py` spells the store's path;
+- only `tools.py` names a tool's executable;
+- no script restates a number that `data/fabrication.json` holds;
+- every script a command runs starts with its shebang.
+
+`test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
 **The second rule: every fix is mutation-tested.**
 
@@ -46,7 +58,8 @@ It reports:
 
 - the suite and every mutation anchor, as committed;
 - the size of `scripts/`;
-- the board's limits ([`tools/check_backlog.py`](../../tools/check_backlog.py)).
+- the work board's limits: one item per working stage, at most two in flight, three in Ready
+  ([the board](../../GLOSSARY.md#the-board)).
 
 From a push on 2026-10-05:
 
@@ -57,24 +70,27 @@ From a push on 2026-10-05:
   backlog: 28 open, the limits hold
 ```
 
-## The docs say only what is there
+## The docs name only what is there
 
 [`tools/check_docs.py`](../../tools/check_docs.py) reads `README.md`, `AGENTS.md` and these guides. The suite runs it
 as `tests/test_docs.py`. It fails when the docs:
 
-- name a command, script, skill or agent that does not exist;
-- leave one that exists unlisted;
-- show a flag its script's `--help` lacks;
-- link a file or heading that is not there;
+- name a `/spark:` command or a `.py` script that does not exist;
+- have a row in the commands guide's Skills or Agents table that names none;
+- leave a command, skill or agent out of README.md or the commands guide;
+- show a flag that its script's `--help` lacks;
+- link a relative file or heading that is not there;
 - paste an output without the date and version it ran on;
 - carry a personal path;
-- give a version other than the one `.claude-plugin/plugin.json` ships.
+- leave out of README.md the version that `.claude-plugin/plugin.json` ships.
 
 A ` ```sh ` block marked `<!-- runs: exit N -->` is run in an empty project, with a store of its own, and must exit
 `N`.
 
-When a step of the [journey](journey.md) changes what it does, the change that does it also updates the journey guide
-and the README's *What works today*.
+Nothing mechanical checks a skill or agent named in prose, an absolute link, or a second, wrong version; the council
+reads those. Nor can it tell whether a step's status is still current. So when a step of the [journey](journey.md)
+changes what it does, the change updates the journey guide and the README's *What works today*: item 8 of the
+[Definition of Done](../../scrum/README.md#definition-of-done).
 
 ## Where the work is planned
 

@@ -31,14 +31,18 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id>
 It writes `.spark/rules.json`, `.spark/project.json`, `boards/active.json` and a `package.json`
 naming tscircuit's cli (so `npm install && npx tsci build` works in the project; without the file
 tsci climbs to your home folder looking for a root — never rewritten once you add to it), and names the
-rails from the built design if there is one. Existing files are left alone unless `--force`.
+rails from the built design if there is one. Existing files are left alone unless `--force`, which merges what
+init derives into rules.json and keeps your answers; it rewrites project.json only if that file has no answers, and
+never rewrites package.json ([P114](https://github.com/xmejkal/spark/issues/48)).
 
 ## 3. Read what it could not answer
 
 It ends with every field left `null`. **That list is the output, not a shortfall.** Nothing here
 is guessed, because a guessed rail current would poison the one check that does arithmetic — and
-a check reading a null reports it as unverifiable rather than passing it, which is the correct
-answer until somebody measures it.
+a check should report a null as unverifiable rather than pass it, which is the correct
+answer until somebody measures it. Not every check does yet: a null rail voltage skips the capacitor check without a
+word, and a null bus capacitance stops check_physics ([P107](https://github.com/xmejkal/spark/issues/41));
+[what never to assume](../docs/guide/agents.md#what-never-to-assume) lists each field.
 
 Go through the list with the user. Two kinds of field:
 

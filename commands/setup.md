@@ -19,7 +19,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --status --project .
 
 `[ok  ]` is found, `[????]` is missing (with the line that installs it), `[off ]` is an integration that
 is off, `[!   ]` is something only the person can do — an account, a token, an instrument to plug in.
-The last line names what is missing: `N to install: <names>`.
+The last line names what is missing: `N to install: <names>`. `[ok  ]` on an MCP row (chip-docs, parts-search)
+means only that spark declares the server and Node is on the PATH. Nothing checks that Claude Code has the server
+registered, that it answers, or the Node version; espressif-docs needs 20 or newer
+([P112](https://github.com/xmejkal/spark/issues/46)).
 
 ## 2. One yes installs everything missing
 
@@ -37,7 +40,8 @@ can put any command there — so say so plainly before the yes. With a yes, the 
 ${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <names from the last line> --project .
 ```
 
-Each installs the way its kind does, in the person's own space: an npm tool into the project, a
+Each installs the way its kind does, in the person's own space: an npm tool into the project (bun, which runs
+tscircuit's `tsci`, globally with `npm install -g bun`), a
 Python package with `pip install --user`, a system tool with Homebrew, the MicroPython build into
 `~/.local/share/spark/downloads/` and wokwi-cli as Wokwi's release binary beside it, each checked
 against its checksum before it is used. **Never `sudo`**: a line that needs it is printed for the person

@@ -40,7 +40,7 @@ Readable by both means:
 
 1. **What spark is: the journey.** In a few sentences: a gadget described in words becomes the needs and the kinds
    of module that meet them; spark researches each part from the vendor's documents, assigns every pin with a reason,
-   generates a board that builds and simulates, and checks it, refusing rather than guessing and saying when a check
+   generates a board that builds, with a Wokwi diagram generated, and checks it, refusing rather than guessing and saying when a check
    could not look. A Mermaid diagram of the journey.
 2. **What works today.** One row per step: idea, drawer, research, build, checks, firmware, bench.
    - Each row is marked **works**, **partly** or **not yet**, with the command that does it.
