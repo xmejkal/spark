@@ -1,0 +1,14 @@
+[
+ {"file": "tools/board.py", "name": "every past day counts as missing", "find": "    if last is not None and (not close_days or max(close_days) < last):\n", "replace": "    if last is not None:\n"},
+ {"file": "tools/board.py", "name": "today counts as a working day to close", "find": "for day in work_days if day < today", "replace": "for day in work_days if day <= today"},
+ {"file": "tools/board.py", "name": "a day can be closed twice", "find": "    if day in close_days:\n", "replace": "    if False:\n"},
+ {"file": "tools/board.py", "name": "waiting too long is not at risk", "find": "or any(w.endswith(\"!\") for w in waits)", "replace": "or False"},
+ {"file": "tools/board.py", "name": "a broken limit is not at risk", "find": "risky = bool(check_backlog.problems(spark)) or", "replace": "risky = False or"},
+ {"file": "tools/board.py", "name": "status shows outside the named folders", "find": "and not inside(os.getcwd(), args.when_in):", "replace": "and False:"},
+ {"file": "tools/board.py", "name": "the oldest closes are read", "find": "statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC})", "replace": "statusUpdates(last:20)"},
+ {"file": "tools/board.py", "name": "a short read is silent", "find": "if held > read else None", "replace": "if False else None"},
+ {"file": "tools/board.py", "name": "a stalled network holds the session start", "find": "gather(STATUS_TIMEOUT)", "replace": "gather()"},
+ {"file": "tools/board.py", "name": "only the checked-out branch is a working day", "find": "\"log\", \"--all\", ", "replace": "\"log\", "},
+ {"file": "tools/board.py", "name": "a hook's GIT_DIR steers the read", "find": "timeout=STATUS_TIMEOUT, env=own)", "replace": "timeout=STATUS_TIMEOUT)"},
+ {"file": "tools/board.py", "name": "a broken status shows a traceback", "find": "except Exception as broken:", "replace": "except ZeroDivisionError as broken:"}
+]
