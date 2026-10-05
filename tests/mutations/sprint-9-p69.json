@@ -1,9 +1,9 @@
 [
  {
-  "file": "scrum/STORY_MAP.md",
-  "name": "an open item falls off the story map",
-  "find": "**P58**, **P73**, **B8**",
-  "replace": "**P58**, P73, **B8**"
+  "file": "scrum/PRODUCT_BACKLOG.md",
+  "name": "an archive heading loses its marker",
+  "find": " — MOVED to xmejkal/spark#18",
+  "replace": ""
  },
  {
   "file": "scrum/PRODUCT_BACKLOG.md",

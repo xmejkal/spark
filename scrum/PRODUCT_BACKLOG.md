@@ -1,5 +1,9 @@
 # Product backlog
 
+> **This is the archive, frozen 2026-10-05.** The backlog lives in GitHub Projects: **spark**
+> (https://github.com/users/xmejkal/projects/2) and **the bin** (https://github.com/users/xmejkal/projects/1).
+> Every heading below says where its item went (MOVED to an issue) or how it ended. Nothing is added here.
+
 The single ordered list. If work is not here, it is not happening. **Order is the Product Owner's**
 (W11). Every open item names the design that needs it (`**Needed by:**`, W14) and a
 `**Value proven by:**` command whose output Petr can read; an item that cannot name both is not
@@ -511,7 +515,7 @@ item that hangs on no cell of the map is parked or deleted. The lenses' reports 
 open item sits on one cell and one slice, or is parked or deleted with a reason; the PO has confirmed
 the personas and ordered the slices.
 
-### P70 — The backlog lives in GitHub Projects — **the PO's decision of 2026-10-03; after P69** — taken into P102, 2026-10-05
+### P70 — The backlog lives in GitHub Projects — **the PO's decision of 2026-10-03; after P69** — taken into P102, 2026-10-05 — MERGED into P102
 **Needed by:** the PO, who plans and reorders the work and wants a roadmap view rather than a
 1,200-line file; and P69's story map, whose slices need a place to be ordered.
 Chosen over Jira: `gh` already works here, and the issues live beside the code they change, so a
@@ -571,7 +575,7 @@ each; of the nine multi-byte values per photo, none remains except GPS speed `0/
 also occur by chance in another EXIF structure in two of them; no XMP GPS text. Mutations
 `sprint-10-p75.json`: 5, all caught. (The tag is emptied, not deleted: a reader shows an empty GPS block.)
 
-### P76 — From a vague idea to a block-level schematic, by conversation — **slice 1b; the PO's direction of 2026-10-03**
+### P76 — From a vague idea to a block-level schematic, by conversation — **slice 1b; the PO's direction of 2026-10-03** — MOVED to xmejkal/spark#5
 **Needed by:** the hobbyist, spark's primary persona, who arrives with an idea in words and no list
 of modules — while every spark command today starts from a requirements file or a module someone
 already chose. The PO: *"really from just talking about some vague idea … without specific parts,
@@ -593,7 +597,7 @@ have, let's come up with ideas, or other useful scenarios."* The ways in, as dis
 **extend** a project. They share one core — the store (P94) and the drawer (P93) — and differ in where the
 ideas start.
 
-### P77 — Every example is regenerated with today's spark, its scenarios rerun, its steps written down, its old files gone — **the PO's question of 2026-10-03; a council answers, then acts**
+### P77 — Every example is regenerated with today's spark, its scenarios rerun, its steps written down, its old files gone — **the PO's question of 2026-10-03; a council answers, then acts** — MOVED to xmejkal/spark#13
 **Needed by:** the hobbyist, who learns spark from its examples — and spark's own claim to work. The
 PO: *"All of the examples are I think to be fully regenerated to make sure it really works, test all
 the scenarios again, and also the old examples are full of old files and we just really want to have
@@ -609,7 +613,7 @@ requirements in an empty directory with the published spark, every scenario reru
 kept, the steps written down so a reader can repeat them, and no file left that today's spark would
 not write or the steps do not explain.
 
-### P78 — An LED is a part, and its series resistor is placed with it — **slice 4; found by the PO 2026-10-03, building the quickstart**
+### P78 — An LED is a part, and its series resistor is placed with it — **slice 4; found by the PO 2026-10-03, building the quickstart** — MOVED to xmejkal/spark#14
 **Needed by:** the quickstart the PO built step by step — offered a status LED as a bare `signals`
 entry, he asked: *"Why would the LED hang in the air? Shouldn't there just be some LED and maybe some
 pull-up or something?"* — and irrigation, whose `STATUS_LED` ends `check_spine` in `!!`, and the bin,
@@ -629,7 +633,7 @@ cannot light is refused by name. The FireBeetle states `io_volts` 3.3, cited to 
 Table 9, page 14. Mutations `sprint-10-p78.json`: 9, all caught. Open: the LED record (being
 researched — through-hole, after the PO's breadboard direction, P79) and the acceptance line.
 
-### P79 — A breadboard first, the PCB only once the circuit and the firmware work — **slice 7; the PO's direction of 2026-10-03**
+### P79 — A breadboard first, the PCB only once the circuit and the firmware work — **slice 7; the PO's direction of 2026-10-03** — MOVED to xmejkal/spark#16
 **Needed by:** the hobbyist, and the PO building the quickstart: *"we should definitely add a
 breadboard phase, before the user decides to go for a PCB — first allow using a breadboard, and so no
 SMD parts, right? Only later, when the circuit is tested and the firmware good, we offer the PCB."*
@@ -642,7 +646,7 @@ designed with the PO before anything is built (W14).
 **Value proven by:** written with the PO — at least: the quickstart, as a through-hole parts list and a
 wiring table a person can build on a breadboard, its firmware run on it, before any PCB is offered.
 
-### P80 — Parts research is lean and professional — **slice 4; the PO's request of 2026-10-03**
+### P80 — Parts research is lean and professional — **slice 4; the PO's request of 2026-10-03** — DONE 2026-10-03 (581fa8a)
 **Needed by:** every design that researches a part — the hobbyist pays for each agent's tokens and
 time — and the PO: *"Please make sure the parts looking up agent and skills are not wasteful and are
 professionals."* Nothing measures what one researched part costs (tokens, tool calls, pages fetched,
@@ -700,7 +704,7 @@ AA batteries, we don't need that"* — the need was not real. Fixed the same hou
 rules (budget a hard stop, no number not printed, the variant's own part number) and research's first
 question — does the person already have one. The reader is not yet exercised on a real need.
 
-### P81 — A warning that can cause a wrong board is shown where the decision is made — **slice 2, first; the PO's order of 2026-10-03**
+### P81 — A warning that can cause a wrong board is shown where the decision is made — **slice 2, first; the PO's order of 2026-10-03** — DONE 2026-10-03 (ecf822a)
 **Needed by:** every design the hobbyist builds on a breadboard, where the person is the check — and
 the data council's finding that the warnings which protect a board live in prose no output prints,
 while the generated board file is 90 % copied comments. Live cases: irrigation's 12 V jack — *"Reversed,
@@ -793,7 +797,7 @@ one resolver) and a final review's three. Size: P96 is +301 code lines in all �
 removed 4 net (`_known`, `_file_fault` and `_problems` deleted against the new walk and guards). Re-run on the PO's
 real store: `--match ~/Development/plant-alarm` as above, `--audit` 0 broken in every layer.
 
-### P97 — Store 1c: picks to a building list, tallied — **slice 10; P94's third increment**
+### P97 — Store 1c: picks to a building list, tallied — **slice 10; P94's third increment** — MOVED to xmejkal/spark#18
 **Needed by:** the same skeleton, to its end. Design §4 (store 1c), §5.7, §6.5, §6.7, §8 C–T.
 **Value proven by:** the bin's FireBeetle S3 refused as already held; owed facts filled in the records' own homes
 (the DFR0954 footprint from DFRobot's drawing, one counted request); `check_spine` ends `[ok]`; the cost line
@@ -805,7 +809,7 @@ counted as free in its own match; `--function-set` on a shelf copy resolved thro
 broken board; the bug `drawer.numbers` raises on an `also_known_as` that is not a list (on main since P95); and the
 PO's question — does a drawer entry with no `count` mean used up, or unknown?
 
-### P100 — Spark in real use: a new idea and an existing project, each walked through with the person — **the epic; the PO, 2026-10-05**
+### P100 — Spark in real use: a new idea and an existing project, each walked through with the person — **the epic; the PO, 2026-10-05** — MOVED to xmejkal/spark#6
 **Needed by:** the PO — *"As the next big test - so actual usage of spark I'd like to have it look at a new project
 idea and also in another test round an existing project, for example the plants project and actually test the whole
 functionality of actually looking at the modules and parts we have and offering improvements. And with the new
@@ -827,7 +831,7 @@ his drawer, firmware gaps.
 **Waits on:** PR #2 (P96) merged — the PO's rule of 2026-10-05: finish what is open before starting what is new.
 **Value proven by:** to be set in refinement.
 
-### P101 — A discovery skill: journeys, ranked and mapped — **P100's tool; the PO's question of 2026-10-05**
+### P101 — A discovery skill: journeys, ranked and mapped — **P100's tool; the PO's question of 2026-10-05** — MERGED into P102e
 **Needed by:** P100's discovery. The PO — *"Is there maybe even an existing skill or plugin for claude code to help
 with the discovery process? And if not, can we make ours as we go?"* None is installed. Community skills exist
 (found 2026-10-05, one search, none read in full yet): deanpeters' user-story-mapping and customer-journey-map
@@ -839,7 +843,7 @@ records the steps that worked, not steps planned ahead (W14).
 **Value proven by:** P100's journeys and story map were produced by following the skill, and a second discovery
 (the irrigation review) follows the same file.
 
-### P102 — The tools chore: the backlog in GitHub, journeys and maps drawn, the state always in view — **first, before P100; the PO, 2026-10-05**
+### P102 — The tools chore: the backlog in GitHub, journeys and maps drawn, the state always in view — **first, before P100; the PO, 2026-10-05** — MOVED to xmejkal/spark#24
 **Needed by:** P100's discovery and every design after it. The PO — *"before we start the next epic, when we're done
 with this PR, please lets do a maintenance of our tools and process, I'd like to switch to github projects, for every
 epic and user story if appropriate, anytime we design some functionality, I'd like us to use Miro or Canva for user
@@ -901,7 +905,7 @@ to move the number.
 origin/main)` (P98 added no product code); W15b and the Definition of Done ask each Done line for its growth
 and reason. P99 itself added none to `scripts/`. The sprint review half is Sprint 10's close.
 
-### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04**
+### P94 — The store and its ways in, designed: an extendable, reusable architecture — **slice 10; the PO's request of 2026-10-04** — MOVED to xmejkal/spark#17
 **Needed by:** every way into spark (P76's goal-first, module-first, combination, whole-drawer, revive,
 swap, extend), the drawer (P93), the viewer (P86) and a shared database (P84) — all of which read and
 write one store. The PO: *"let's design it and refine and plan the stores with the council, mostly we
@@ -920,7 +924,7 @@ the ways in it serves, what is built first and what waits — and an implementat
 then the items it orders. **2026-10-04:** spec version 2 written after a five-lens review council; it orders
 P95, P96, P97 (store 1a, 1b, 1c).
 
-### P93 — My drawer: the parts I own — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
+### P93 — My drawer: the parts I own — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet** — DONE 2026-10-04 (afde5c8)
 **Needed by:** the maker, who owns *"plenty of existing modules from DFRobot and lots of parts from
 AliExpress that I will want to use at some point"*, and any hobbyist with a drawer — so a project starts
 from what is there before anything is bought or researched. As discussed: owning is not researching — an
@@ -932,7 +936,7 @@ Importers are a strategy: **DFRobot order history and the typed or dictated list
 AliExpress orders (not now — the PO), then photos.
 **Value proven by:** slice 1's D story — `--drawer --json` lists the PO's real parts, "owned, not researched".
 
-### P86 — A viewer and manager for the store — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
+### P86 — A viewer and manager for the store — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet** — PARKED 2026-10-05: pulled back by the first design that needs more than `--json` reads (the viewer waits on P90–P92 and P84)
 **Needed by:** the person whose parts, candidates and kept documents are spread over a store, a
 library, projects and — with P84 — a shared database, and who can see them today only one command at a
 time. The PO: *"Later we will also want to build a standalone viewer and manager of the store, where
@@ -963,7 +967,7 @@ store; all 23 vendor-derived files leave the bin's tree, its history kept; publi
 a fact is marked as resting on a private document; P84 drops the selectable backends and its shared
 database waits for the first outside researcher.
 
-### P87 — Records are inert: no record text can act, no record path can leave the store — **slice 10; P85's plan, Now**
+### P87 — Records are inert: no record text can act, no record path can leave the store — **slice 10; P85's plan, Now** — MOVED to xmejkal/spark#19
 **Needed by:** every person whose spark reads a record they did not write — a shared one (P84), a
 project cloned from someone else — and the agent handed a path. P85 found a record's `footprint`, `name`
 and `host_parts.why` reach the generated board file unescaped (`emit_board.py:655-703`; a crafted record
@@ -982,7 +986,7 @@ future store client. The store's root is spelled twice (`parts.py:665`, `tools.p
 `~/.local/share/spark`); the suite runs green with a seeded home and with an empty one, and an audit
 check finds 0 reads under the real home.
 
-### P89 — `--need` tells the truth about candidates — **slice 10; P85's plan, Now**
+### P89 — `--need` tells the truth about candidates — **slice 10; P85's plan, Now** — MOVED to xmejkal/spark#20
 **Needed by:** the agent, told "`--promote X --project .` builds with it" (`parts.py:1257`) of catalog
 records none of which passes the contract since P81; and the hobbyist swapping a part, who cannot see why
 it was passed over (`//why_not`, which nothing prints).
@@ -993,7 +997,7 @@ pin_order_proof"); the 18 records' `//pin_order` and `//why_not` become fields a
 came with P95. Still open: `--need` showing what each candidate owes, the notes as fields, `--show` printing
 `why_not` — pulled by 1c's step that fills owed facts.
 
-### P90 — A document comes back, checked — **slice 10; P85's plan, Next**
+### P90 — A document comes back, checked — **slice 10; P85's plan, Next** — MOVED to xmejkal/spark#21
 **Needed by:** the hobbyist on a new machine and anyone re-checking a fact: `--fetch` skips every URL
 already in `documents` and never compares a checksum (`parts.py:971-977`), writes straight to the final
 file, and says nothing when a fetch fails; the store keeps no record of a document's own URL, date or
@@ -1003,7 +1007,7 @@ version beside it.
 manifest beside each kept file holds its URL, archive member, retrieved date and printed version; tools.py
 and parts.py share one checked fetch.
 
-### P91 — A shelf for the parts you chose — **slice 10; P85's plan, Next; the PO's decision of 2026-10-04**
+### P91 — A shelf for the parts you chose — **slice 10; P85's plan, Next; the PO's decision of 2026-10-04** — MOVED to xmejkal/spark#22
 **Needed by:** the hobbyist starting a second project, to whom the part chosen and verified in the first is
 invisible (`--need rtc` from the quickstart lists 4 rejects, not irrigation's DFR0641); and every non-
 maintainer, whose `--promote` into spark's library writes into an install cache the next update discards.
@@ -1013,7 +1017,7 @@ catalog → library and from the quickstart lists irrigation's DFR0641; writing 
 explicit maintainer flag. **Corrected by P94's design (2026-10-04):** resolving an id reads project →
 shelf → library → catalog (a draft never hides a checked part); proposing parts reads the drawer first.
 
-### P92 — Records written through `parts.py`, read as JSON — **slice 10; P85's plan, Next**
+### P92 — Records written through `parts.py`, read as JSON — **slice 10; P85's plan, Next** — MOVED to xmejkal/spark#23
 **Needed by:** the agent, told literal paths to write to (`parts-researcher.md:57`, `research.md:85`,
 `identify.md:55`), so nothing validates what it writes and the store cannot move; and the viewer (P86),
 which needs JSON from every read.
@@ -1021,7 +1025,7 @@ which needs JSON from every read.
 contract; `grep '\.local/share' agents commands` prints nothing; `--kept`, `--catalog`, `--fetch` and
 `tools.py --status` take `--json`.
 
-### P84 — A store you can choose, and a shared part database — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet**
+### P84 — A store you can choose, and a shared part database — **slice 10; the PO's idea of 2026-10-04 — an idea, not designed yet** — PARKED 2026-10-05: pulled back when the first person outside the project researches a part (slice 5, R2.6)
 **Needed by:** the hobbyist who researches a part someone else already researched, and every spark
 user whose kept records live in one folder on one machine. The PO: *"implement and architect it in
 such a way that the store is also selectable, whether it just saves it in an MD file or uses some
@@ -1151,7 +1155,7 @@ BtnOpen.A at D12, while the L9110S inputs pass. Pads are named by their silkscre
 "Mcu.pin20"). P8's fixture carries the pull-down its own rule needs. Mutations `sprint-10-b13.json`:
 5, all caught.
 
-### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03** — answered further by P102a: Kanban with a day-close, 2026-10-05
+### P72 — The process fits a team of one person and Claude — **desk lane; the PO's decision of 2026-10-03** — answered further by P102a: Kanban with a day-close, 2026-10-05 — MOVED to xmejkal/spark#31
 **Needed by:** every slice, whose work competes with the process: of the last 80 commits about half
 touched only scrum, docs or mutation tables (the skeptic lens, an estimate by path), and the rules
 that held are the ones that fail a command.
@@ -1163,14 +1167,14 @@ when P70 moves the open items.
 **Value proven by:** `WORKING_AGREEMENTS.md` lists only agreements that each name their enforcing
 command; the next retro has at most two actions; `UNMUTATED` names the non-verdict files.
 
-### P73 — A bench session leaves a verdict a command can read — **slice 2**
+### P73 — A bench session leaves a verdict a command can read — **slice 2** — MOVED to xmejkal/sisuo-brain-transplant#2
 **Needed by:** the bin's bring-up: `bringup/01..06` each end "PASS if …", judged by the person at
 the bench, with nowhere to keep the judgement — and F4, which starts from it.
 One log per step, kept in the bin: the script's output and the person's PASS or FAIL; the motor's
 measured current and a `wake_reason()` after a wave as named lines.
 **Value proven by:** a command lists every step with its verdict and exits 1 on a step without one.
 
-### P74 — Firmware is checked against the pin map it imports — **slice 3**
+### P74 — Firmware is checked against the pin map it imports — **slice 3** — MOVED to xmejkal/spark#8
 **Needed by:** irrigation, whose requirements ask for four valves and a mode button while its
 firmware never drives Valve4 and never reads the button — the sixth `check_all` entry P56's
 increment I named and P36 did not build.
@@ -1215,7 +1219,7 @@ the work exposed are closed with it: a board's `documents` were never validated 
 there), and a `cites` naming a document the record does not hold was accepted. Mutations
 `sprint-9-p62b.json`: 10, all caught. Suite 808 OK.
 
-### P64a — Nothing is marked verified without a source a reader can open — **slice 4**
+### P64a — Nothing is marked verified without a source a reader can open — **slice 4** — MOVED to xmejkal/spark#12
 **Needed by:** the bin, irrigation and the RC car, which read the library records whose 36 `verified: true` fields cite no source.
 `parts.py --validate` and `boards.py --validate` refuse a `verified: true` fact-shaped object (facts,
 `body_mm`, a board's `power.*`) whose source holds no URL and cites no kept document. The 36 fields
@@ -1225,13 +1229,13 @@ that fail today go to 0 in the same commit — each cited, or downgraded to `ver
 **Value proven by:** the validators refuse a fixture with `verified: true` and a prose source (a
 mutation caught); the real library, catalog and boards pass; the prose listing prints its count.
 
-### P64b — A prose claim can point at the fact it rests on — **slice 6; whether is the PO's**
+### P64b — A prose claim can point at the fact it rests on — **slice 6; whether is the PO's** — PARKED 2026-10-05: pulled back when the PO decides that `host_requirements` need a pointer, or a prose claim reaches a board and is wrong again (the ALL_LOW case)
 **Needed by:** every generated board, into which `emit_board` copies `host_requirements` verbatim — the path ALL_LOW took into irrigation and the remote.
 `host_requirements` and world-claims in `//` notes carry no pointer, and no schema lets them; the false
 ALL_LOW sentence was one of them. A contract change (e.g. `{text, rests_on: [fact]}`) that
 `emit_board` and `parts.py --show` both read. The PO decides whether, and when.
 
-### P64c — An isolated reader checks every claim against its kept source — **slice 6, after P64b**
+### P64c — An isolated reader checks every claim against its kept source — **slice 6, after P64b** — PARKED 2026-10-05: pulled back by P64b
 **Needed by:** the same three designs as P64a — a claim with a source can still misread it, which only a reader of the source finds.
 A new read-only agent (`claim-checker`, Read and Grep only — TEAM.md's four tests all pass) reads one
 record and its kept documents, denied the project's own notes; returns per claim a verdict
@@ -1272,7 +1276,7 @@ capabilities page says for 2-layer 1 oz PTH *"Recommended 0.25 mm or above; abso
 inlet's 0.225 mm ring is under JLCPCB's recommended 0.25 mm and over its 0.18 mm minimum; a ring
 under 0.18 mm still FAILs; both numbers carry their source in `data/fabrication.json`.
 
-### P58 — The bench instructions name the board you are holding — **slice 2**
+### P58 — The bench instructions name the board you are holding — **slice 2** — MOVED to xmejkal/sisuo-brain-transplant#5
 **Needed by:** the PO, this week — bench bring-up is item 2 on the smart bin's own NEXT list.
 `smartbin-local/firmware/micropython/README.md` steps 2–4 still give the **XIAO's** pins: *"OPEN btn
 D1, MODE btn D6, LED D7/D10"*, *"VL6180X on D4/D5 (+ INT to D0)"*, *"DFR0534 on D9"* — against
@@ -1285,7 +1289,7 @@ bring-up steps take their pins from the pin map rather than from prose).
 **Value proven by:** every pin named in that README appears in `config.py` for the active board, and
 every `bringup/*.py` it names exists. A check in the bin's `make check`, so it cannot rot again.
 
-### P59 — A generated project's firmware can be imported without running — **slice 3** (P2 merged in)
+### P59 — A generated project's firmware can be imported without running — **slice 3** (P2 merged in) — MOVED to xmejkal/spark#7
 **Needed by:** every test tier after the first. `irrigation/firmware/main.py` ends with `main()` at
 module scope and `main()` is `while True`, so **the file cannot be imported** — no test can ever
 exist for it, by anyone, whoever writes it. 95 lines is not the problem; one line is. The bin shows
@@ -1371,7 +1375,7 @@ Measured: RC car **0 → 8 rules**, both boards `every rule holds`, its 4 rails 
 **0 → 4 rails**, `check_physics` runs where it refused, its 4 hand-written rules kept and the 2 the
 records add named.
 
-### P43 — What an agent reads back — **slice 4: the `fix` half only**; the rest parked, as it blocks no design
+### P43 — What an agent reads back — **slice 4: the `fix` half only**; the rest parked, as it blocks no design — MOVED to xmejkal/spark#11
 **Needed by:** every skill and command that reads a script's output, and `/spark:build` most of
 all. Measured: five different top-level JSON shapes; `check_vendor_pins` returns a fourth status
 word, `"mismatch"`; `parts.py --catalog --json` ignores the flag and prints prose; `check_all`
@@ -1400,7 +1404,7 @@ run it caught its own comment quoting the path. The researcher gets the plugin d
 launching command, the sellers only from the brief — none named means asking — and `init`'s hint
 shows two countries' shops instead of one. Mutations `sprint-10-p44.json`: 2, both caught.
 
-### P39 — The library answers a need it has no words for — **slice 4**
+### P39 — The library answers a need it has no words for — **slice 4** — MOVED to xmejkal/spark#10
 **Needed by:** the irrigation design and the smart bin. `parts.py --need switch 12 V load` finds
 nothing, though `dfr0457-mosfet-power-controller` is the part that design already switches its
 valves with; `--need measure distance` finds nothing, though `vl6180x-breakout` is the bin's
@@ -1536,7 +1540,7 @@ stayed invisible. And both the detail and the file write were **extracted out of
 simulation stage first** — no test on this machine reaches it, so two of this item's own mutations
 were about to escape through that hole.
 
-### P38 — The capacitors P6 promised — **slice 4**
+### P38 — The capacitors P6 promised — **slice 4** — MOVED to xmejkal/spark#9
 **Needed by:** the irrigation controller's 12 V rail, which switches four solenoids off an unfused
 barrel jack with no bulk capacitor, and every module on the 3.3 V rail with no decoupling. P6's own
 backlog text promised "a pulldown, a decoupling capacitor, a bulk capacitor on a rail"; the kinds
@@ -1556,7 +1560,7 @@ MicroPython runtime, 113 and 14 checks, free.
 **Value proven by:** the irrigation firmware's logic is tested on this Mac with no Wokwi run, and
 the scenario is kept for what only a simulator can show.
 
-### R2.6 — A fourth cold test — **slice 5: run by a real person outside the project; the PO picks the domain**
+### R2.6 — A fourth cold test — **slice 5: run by a real person outside the project; the PO picks the domain** — MOVED to xmejkal/spark#15
 **Needed by:** the product itself: the third cold test found twelve gaps in one evening and ten of
 them were invisible to every test in this repository. Two domains from the earlier menu are
 unchosen — a battery sensor node, a USB MIDI foot controller — and the PO may name another.
@@ -1651,7 +1655,7 @@ the cut `066c4af` · the cold test's G-items in `~/Development/rc-car/DIARY.md` 
 
 ## The bin
 
-### B1 — Identify the audio module — **slice 2 [PO — blocked on Petr]**
+### B1 — Identify the audio module — **slice 2 [PO — blocked on Petr]** — MOVED to xmejkal/sisuo-brain-transplant#1
 **Needed by:** the bin's audio path — four things wait on a look in a drawer. microSD slot means
 DFPlayer Mini; micro-USB and "Voice Module V1.0" means DFR0534; pads marked BCLK/LRC/DIN means the
 I²S amp the board now assumes.
@@ -1753,7 +1757,7 @@ by the 4 check(s) that completed, of 5"*. `render` counted a check as completed 
 **Value proven by:** the RC car's last line names one completed check; a test renders a could-not-run
 that carries only a reason and fails on "completed" counting it; its mutation is caught.
 
-### B8 — A firmware test failed once and was never caught again — **slice 2**
+### B8 — A firmware test failed once and was never caught again — **slice 2** — MOVED to xmejkal/sisuo-brain-transplant#3
 **Needed by:** the bin's commit gate, which is only trusted while it never fails for nothing. A
 local no-spark `make check` failed at `firmware-tests` once; the same suite then passed 31 of 31
 times alone and the rehearsal 4 of 4 — one failure in 36 runs, and the failing test's name was not
@@ -1762,7 +1766,7 @@ racing the scheduler under load is the likely shape; unproven.
 **Value proven by:** the failure reproduced and named — e.g. the suite run 200 times under CPU load
 with every failure kept — and the test fixed so it cannot race; or 200 clean runs recorded.
 
-### B5 — A derived file in git is checked current, or not kept in git — **slice 2**
+### B5 — A derived file in git is checked current, or not kept in git — **slice 2** — MOVED to xmejkal/sisuo-brain-transplant#4
 **Needed by:** anyone reading the bin's repository: its `board-sch.svg` and `board-pcb-routed.svg`
 showed the MP3 board for a week after the board changed (remade in bin `2367fa1`), and nothing
 noticed. Tracked and derived today: `board-sch.svg`, `board-pcb-routed.svg`, `board.glb`,
