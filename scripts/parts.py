@@ -1746,12 +1746,12 @@ def _op_needs_set(args, project):
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
     after, changes, problems = needs.plan_set(target, items)
-    written = bool(changes) and not problems and not args.dry_run
-    if written:
+    written = not (problems or args.dry_run)
+    if written and changes:
         needs.write(target, after)
     lines = ["  %s%s %s: %s" % ("refused, not written: " if problems else "", "would set" if args.dry_run else "set",
                                 c["need"], ", ".join("%s → %s" % (k, json.dumps(v, ensure_ascii=False)) for k, v in c["now"].items()))
-             for c in changes] or ["  nothing to change"]
+             for c in changes] or ([] if problems else ["  nothing to change"])
     lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
     return Answer({"changes": changes, "written": written}, lines, problems=problems)
 

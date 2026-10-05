@@ -2,38 +2,38 @@
  {
   "file": "scripts/needs.py",
   "name": "needs.read accepts a stray field",
-  "find": "    extra = sorted(set(need) - set(NEED_FIELDS) - {\"id\"})\n    if extra:\n        return \"holds",
-  "replace": "    extra = sorted(set(need) - set(NEED_FIELDS) - {\"id\"})\n    if False:\n        return \"holds"
+  "find": "    extra = sorted(set(need) - set(NEED_FIELDS) - {\"id\"})\n    return ([\"%s",
+  "replace": "    extra = []\n    return ([\"%s"
  },
  {
   "file": "scripts/needs.py",
   "name": "needs.read accepts a bad id",
-  "find": "    if not store.PLAIN.fullmatch(need[\"id\"]):\n        return \"has an",
-  "replace": "    if False:\n        return \"has an"
+  "find": "if not store.PLAIN.fullmatch(need[\"id\"]) else [])",
+  "replace": "if False else [])"
  },
  {
   "file": "scripts/needs.py",
   "name": "needs.read accepts a duplicate id",
-  "find": "    if ids.count(need[\"id\"]) > 1:",
-  "replace": "    if False:"
+  "find": "if ids.count(need[\"id\"]) > 1 else []",
+  "replace": "if False else []"
  },
  {
   "file": "scripts/needs.py",
   "name": "needs.read accepts a what that is not words",
-  "find": "    if \"what\" in need and not (",
-  "replace": "    if False and not ("
+  "find": "\"what\": (drawer._words,",
+  "replace": "\"what\": (lambda v: True,"
  },
  {
   "file": "scripts/needs.py",
   "name": "needs.read accepts a condition that is not words",
-  "find": "    if need.get(\"condition\") is not None and not isinstance(need[\"condition\"], str):",
-  "replace": "    if False:"
+  "find": "\"condition\": (lambda v: v is None or drawer._words(v),",
+  "replace": "\"condition\": (lambda v: True,"
  },
  {
   "file": "scripts/needs.py",
   "name": "needs.read accepts a mark outside the four",
-  "find": "    if need.get(\"mark\") is not None and need[\"mark\"] not in MARKS:\n        return \"has a",
-  "replace": "    if False:\n        return \"has a"
+  "find": "\"mark\": (lambda v: v is None or v in MARKS,",
+  "replace": "\"mark\": (lambda v: True,"
  },
  {
   "file": "scripts/needs.py",

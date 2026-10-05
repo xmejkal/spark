@@ -38,6 +38,50 @@ class TheNeedsFileTest(unittest.TestCase):
     def saved(self):
         return json.loads((self.project / ".spark" / "needs.json").read_text())
 
+    def test_a_retried_needs_set_is_carried_out_with_nothing_to_change(self):
+        given = a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"}])
+        run(["--needs-set", str(self.project), given])
+        said, code = run(["--needs-set", str(self.project), given])
+        self.assertEqual((code, said["data"]["written"], said["data"]["changes"]), (0, True, []))
+
+    def test_the_file_is_refused_on_read_for_what_a_write_refuses(self):
+        (self.project / ".spark").mkdir(parents=True)
+        for need in ({"id": "soil", "does": "fly", "what": "x"}, {"id": "soil", "does": None, "what": "x"},
+                     {"id": "soil", "does": "sense", "what": "x", "condition": ""}):
+            with self.subTest(need=need):
+                (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [need]}))
+                said, code = run(["--needs", str(self.project)])
+                self.assertEqual(code, 2)
+                self.assertIn("needs.json", said["unchecked"][0]["sentence"])
+
+    def test_a_key_the_needs_file_does_not_hold_is_refused_not_dropped(self):
+        (self.project / ".spark").mkdir(parents=True)
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [], "goal": "a thirsty plant"}))
+        said, code = run(["--needs", str(self.project)])
+        self.assertEqual(code, 2)
+        self.assertIn("goal", said["unchecked"][0]["sentence"])
+
+    def test_a_refused_item_is_named_by_its_place_and_its_value(self):
+        said, code = run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "x"},
+                                                                    {"id": "Soil2", "does": "sense", "what": "x"}])])
+        self.assertEqual((code, said["problems"][0]["subject"]), (1, "item 2"))
+        self.assertIn('"Soil2"', said["problems"][0]["sentence"])
+
+    def test_a_refused_write_does_not_also_say_nothing_to_change(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--needs-set", str(self.project), a_file([{"id": "Soil2"}])])
+        self.assertNotIn("nothing to change", out.getvalue())
+
+    def test_a_later_item_sees_what_an_earlier_one_set(self):
+        said, code = run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"},
+                                                                    {"id": "soil", "mark": "have"}])])
+        self.assertEqual(code, 0)
+        self.assertEqual(self.saved()["needs"], [{"id": "soil", "does": "sense", "what": "soil-moisture", "mark": "have"}])
+
+    def test_a_new_need_with_no_what_is_refused(self):
+        self.assertEqual(run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense"}])])[1], 1)
+
     def test_a_goal_s_needs_are_written_and_the_folder_made(self):
         said, code = run(["--needs-set", str(self.project), a_file([
             {"id": "soil", "does": "sense", "what": "soil-moisture", "condition": "indoor pot, short probe; low power"},

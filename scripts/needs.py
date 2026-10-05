@@ -17,8 +17,13 @@ import store
 
 #: How a need stands against the store (§3).
 MARKS = ("have", "have-unknown", "know", "gap")
-#: A need's fields besides its `id` (§5.3). A pick is 1c's.
-NEED_FIELDS = ("does", "what", "condition", "mark")
+#: Each field of a need besides its `id` (§5.3): its test, and what is said when a value fails it — read and write alike.
+#: A pick is 1c's, and will be one more row.
+CHECKS = {"does": (lambda v: v in parts.VERBS, "`does` is one of %s" % ", ".join(parts.VERBS)),
+          "what": (drawer._words, "`what` is a few words: soil-moisture, alarm, microcontroller"),
+          "condition": (lambda v: v is None or drawer._words(v), "`condition` is words, or null"),
+          "mark": (lambda v: v is None or v in MARKS, "`mark` is one of %s, or null" % ", ".join(MARKS))}
+NEED_FIELDS = tuple(CHECKS)
 FILE = Path(".spark") / "needs.json"
 
 
@@ -34,45 +39,26 @@ def read(project):
     if not (isinstance(data, dict) and isinstance(data.get("needs"), list)
             and all(isinstance(need, dict) and isinstance(need.get("id"), str) for need in data["needs"])):
         raise store.StoreProblem('%s is not {"schema": 1, "needs": [{"id", "does", "what", …}]} — fix it by hand' % path)
+    stray = sorted(set(data) - {"schema", "needs"})
+    if stray:
+        raise store.StoreProblem("%s holds %s, which a needs file does not — fix it by hand" % (path, ", ".join(stray)))
     if data.get("schema", 1) != 1:
         raise store.StoreProblem("%s is schema %r — this spark reads schema 1" % (path, data["schema"]))
     ids = [need["id"] for need in data["needs"]]
     for need in data["needs"]:
-        said = _file_fault(need, ids)
+        said = ((["`id` is not lower-case letters, digits and '-'"] if not store.PLAIN.fullmatch(need["id"]) else [])
+                + (["is there more than once"] if ids.count(need["id"]) > 1 else []) + faults(need, held_only=True))
         if said:
-            raise store.StoreProblem("%s: need %r %s — fix it by hand" % (path, need["id"], said))
+            raise store.StoreProblem("%s: need %r: %s — fix it by hand" % (path, need["id"], said[0]))
     return data["needs"]
 
 
-def _file_fault(need, ids):
-    """What is wrong with one need as found in the file — the fields `read` must trust, or "" (§5.3)."""
-    if not store.PLAIN.fullmatch(need["id"]):
-        return "has an `id` that is not lower-case letters, digits and '-'"
-    if ids.count(need["id"]) > 1:
-        return "is there more than once"
+def faults(need, held_only=False):
+    """What is wrong with one need's fields (§5.3) — on read only the values the file holds: an absent one is --needs-set's to fill."""
     extra = sorted(set(need) - set(NEED_FIELDS) - {"id"})
-    if extra:
-        return "holds %s, which is not a need's field" % ", ".join(extra)
-    if "what" in need and not (isinstance(need["what"], str) and need["what"].strip()):
-        return "has a `what` that is not words"
-    if need.get("condition") is not None and not isinstance(need["condition"], str):
-        return "has a `condition` that is not words"
-    if need.get("mark") is not None and need["mark"] not in MARKS:
-        return "has a `mark` that is not one of %s" % ", ".join(MARKS)
-    return ""
-
-
-def _problems(need):
-    said = []
-    if need.get("does") not in parts.VERBS:
-        said.append("`does` is one of %s" % ", ".join(parts.VERBS))
-    if not (isinstance(need.get("what"), str) and need["what"].strip()):
-        said.append("`what` is a few words: soil-moisture, alarm, microcontroller")
-    if need.get("condition") is not None and not (isinstance(need["condition"], str) and need["condition"].strip()):
-        said.append("`condition` is words, or null")
-    if need.get("mark") is not None and need["mark"] not in MARKS:
-        said.append("`mark` is one of %s, or null" % ", ".join(MARKS))
-    return said
+    return (["%s: not a need's field — a need holds %s, and no part number, count, place or reason (§5.3)"
+             % (", ".join(extra), ", ".join(NEED_FIELDS))] if extra else []) + [
+        sentence for key, (test, sentence) in CHECKS.items() if (key in need or not held_only) and not test(need.get(key))]
 
 
 def plan_set(project, items):
@@ -81,23 +67,18 @@ def plan_set(project, items):
     need, by `id`; a new need needs `does` and `what`. A later item sees what an earlier one set. Nothing is written here.
     """
     if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
-        return None, [], [parts._problem(None, "a needs write is a JSON list of needs, each an object with an `id`")]
+        return None, [], [parts._problem("the file", "a needs write is a JSON list of needs, each an object with an `id`")]
     current = {need["id"]: dict(need) for need in read(project)}
     order, changes, problems = list(current), [], []
-    for item in items:
+    for number, item in enumerate(items, 1):
         need_id = item.get("id")
         if not (isinstance(need_id, str) and store.PLAIN.fullmatch(need_id)):
-            problems.append(parts._problem(None, "a need's `id` is lower-case letters, digits and '-'"))
-            continue
-        extra = sorted(set(item) - set(NEED_FIELDS) - {"id"})
-        if extra:
-            problems.append(parts._problem(need_id, "%s: not a need's field — a need holds %s, and no part number, count, "
-                                                    "place or reason (§5.3)" % (", ".join(extra), ", ".join(NEED_FIELDS))))
+            problems.append(parts._problem("item %d" % number, "a need's `id` is lower-case letters, digits and '-', not %s"
+                                           % json.dumps(need_id, ensure_ascii=False)))
             continue
         before = current.get(need_id)
-        after = dict(before or {"id": need_id})
-        after.update({key: (drawer.clean(value) if isinstance(value, str) else value) for key, value in item.items() if key != "id"})
-        problems += [parts._problem(need_id, sentence) for sentence in _problems(after)]
+        after = dict(before or {}, **{key: (drawer.clean(value) if isinstance(value, str) else value) for key, value in item.items()})
+        problems += [parts._problem(need_id, sentence) for sentence in faults(after)]
         changed = [key for key in NEED_FIELDS if after.get(key) != (before or {}).get(key)]
         if changed:
             changes.append({"need": need_id, "new": before is None,
@@ -206,6 +187,6 @@ def match(project):
         if not need.get("what"):
             problems.append(parts._problem(need["id"], "a need with no `what` cannot be matched — set it with --needs-set"))
             continue
-        matched.append(dict({key: need.get(key) for key in ("does", "what", "condition", "mark")}, need=need["id"],
+        matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"],
                             candidates=candidates(need, known, entries)))
     return matched, problems
