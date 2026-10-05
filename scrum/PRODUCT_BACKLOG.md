@@ -3,6 +3,9 @@
 > **This is the archive, frozen 2026-10-05.** The backlog lives in GitHub Projects: **spark**
 > (https://github.com/users/xmejkal/projects/2) and **the bin** (https://github.com/users/xmejkal/projects/1).
 > Every heading below says where its item went (MOVED to an issue) or how it ended. Nothing is added here.
+>
+> *The paragraphs below describe the backlog as it was run before 2026-10-05; the rules now live in
+> `scrum/README.md` and the board.*
 
 The single ordered list. If work is not here, it is not happening. **Order is the Product Owner's**
 (W11). Every open item names the design that needs it (`**Needed by:**`, W14) and a

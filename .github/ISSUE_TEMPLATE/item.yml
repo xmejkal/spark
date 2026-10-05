@@ -1,5 +1,6 @@
 name: Backlog item
 description: An epic, story, task, chore or bug — with the design that needs it and the command that proves it.
+projects: ["xmejkal/2"]
 body:
   - type: textarea
     id: needed-by
