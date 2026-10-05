@@ -9,6 +9,7 @@ tree, and the file it imported was staged one commit later (sprint-4 close audit
 
 import contextlib
 import io
+import os
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,11 @@ sys.path.insert(0, str(ROOT / "tools"))
 import check_commit  # noqa: E402
 
 
+def own_env():
+    """The environment with no GIT_* variable, so a throwaway repository's git never reaches another (P105)."""
+    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+
 def repo_with(files):
     """A throwaway git repository holding `files`, committed once."""
     root = Path(tempfile.mkdtemp())
@@ -30,7 +36,7 @@ def repo_with(files):
         (root / name).write_text(text)
     for command in (["git", "init", "-q"], ["git", "add", "-A"],
                     ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "one"]):
-        subprocess.run(command, cwd=str(root), check=True, capture_output=True)
+        subprocess.run(command, cwd=str(root), check=True, capture_output=True, env=own_env())
     return root
 
 
@@ -82,10 +88,47 @@ class TheSizeIsSaidTest(unittest.TestCase):
         (root / "scripts" / "a.py").write_text("x = 1\ny = 2\n# free\n")
         (root / "scripts" / "b.py").write_text('"""free"""\nz = 3\n')
         for command in (["git", "add", "-A"], ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
-            subprocess.run(command, cwd=str(root), check=True, capture_output=True)
+            subprocess.run(command, cwd=str(root), check=True, capture_output=True, env=own_env())
         self.assertEqual(check_commit.size_line(root, "HEAD", "HEAD~1"), "scripts/: 3 code lines (+2 since HEAD~1)")
         self.assertEqual(check_commit.size_line(root, "HEAD", "no-such-base"), "scripts/: 3 code lines")
 
+
+
+def head_and_config(root):
+    """A repository's HEAD commit and its config, read with no GIT_* variable steering git elsewhere."""
+    head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True, env=own_env()).stdout
+    return head, (root / ".git" / "config").read_text()
+
+
+class TheHooksGitIsNotTheSuitesTest(unittest.TestCase):
+    """
+    P105: git hands its hooks GIT_DIR, and in a worktree it is absolute. A suite that inherits it runs every throwaway
+    repository's git against the repository being pushed: on 2026-10-05 four test commits landed on the real branch, the
+    first deleting every file, and `core.bare = true` was written into its config.
+    """
+
+    def test_the_measured_suite_never_sees_the_hook_s_git_variables(self):
+        root = repo_with({"tools/mutate.py": TheCommittedTreeIsMeasuredTest.MUTATE,
+                          "scripts/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
+                          "m.py": "def add(a, b):\n    return a + b\n",
+                          "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
+                                             "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
+                          "tests/test_env.py": "import os, unittest\nclass E(unittest.TestCase):\n"
+                                               "    def test_no_git_variable(self):\n"
+                                               "        self.assertEqual([k for k in os.environ if k.startswith('GIT_')], [])\n",
+                          "tests/mutations/t.json": '[{"file": "m.py", "find": "a + b", "replace": "a - b"}]'})
+        scratch = Path(tempfile.mkdtemp())
+        check_commit.archive(root, "HEAD", scratch)
+        with mock.patch.dict(os.environ, {"GIT_DIR": str(root / ".git"), "GIT_INDEX_FILE": str(root / ".git" / "index")}):
+            suite, anchors, ok = check_commit.measure(scratch)
+        self.assertTrue(ok, (suite, anchors))
+
+    def test_a_throwaway_repository_leaves_the_hook_s_repository_alone(self):
+        victim = repo_with({"kept.txt": "the branch being pushed\n"})
+        before = head_and_config(victim)
+        with mock.patch.dict(os.environ, {"GIT_DIR": str(victim / ".git")}):
+            repo_with({"junk.txt": "a test's file\n"})
+        self.assertEqual(head_and_config(victim), before)
 
 
 class TheGateEnforcesTheBoardTest(unittest.TestCase):

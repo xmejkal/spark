@@ -11,6 +11,7 @@ audit, C3). A number a message carries must be measured on what the message desc
 archives the commit into a scratch directory and measures there. Run before every push.
 """
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -92,11 +93,19 @@ def size_line(root, commit, base="origin/main"):
     return "scripts/: {:,} code lines{}".format(now, growth)
 
 
+def without_git_variables():
+    """
+    The environment minus every GIT_* variable. Git hands its hooks GIT_DIR — absolute in a worktree — and a suite that
+    inherits it runs its throwaway repositories' git against the repository being pushed (P105).
+    """
+    return {name: value for name, value in os.environ.items() if not name.startswith("GIT_")}
+
+
 def measure(tree):
     """(suite verdict line, anchors verdict line, ok) for the tree at `tree`."""
     lend_node_modules(tree)
     suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"],
-                           cwd=str(tree), capture_output=True, text=True)
+                           cwd=str(tree), capture_output=True, text=True, env=without_git_variables())
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines()
                   if line.startswith(("Ran ", "OK", "FAILED"))]
     tables = sorted((tree / "tests" / "mutations").glob("*.json"))
