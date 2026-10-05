@@ -124,3 +124,102 @@ def status_lines(boards, prs, closes, work_days, today):
     if gap:
         lines.append("  ! the day of %s has no close — write it first" % gap.isoformat())
     return lines
+
+
+QUERY = """query($login:String!,$number:Int!){user(login:$login){projectV2(number:$number){id
+ items(first:100){nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}}}}
+  fieldValues(first:20){nodes{
+   ... on ProjectV2ItemFieldSingleSelectValue{name updatedAt field{... on ProjectV2FieldCommon{name}}}
+   ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}}}}}
+ statusUpdates(last:20){nodes{startDate status body}}}}}"""
+POST = ("mutation($p:ID!,$d:Date!,$s:ProjectV2StatusUpdateStatus!,$b:String!){createProjectV2StatusUpdate("
+        "input:{projectId:$p,startDate:$d,status:$s,body:$b}){statusUpdate{id}}}")
+
+
+def closes_from(project):
+    """The board's day-closes: (start date, first line), skipping updates made by hand with no start date."""
+    said = []
+    for update in project["statusUpdates"]["nodes"]:
+        if update.get("startDate"):
+            lines = (update.get("body") or "").strip().splitlines()
+            said.append((dt.date.fromisoformat(update["startDate"]), lines[0] if lines else ""))
+    return said
+
+
+def close_update(line, boards, close_days, day, today):
+    """(status, body) of a day's close: at risk when a limit breaks or the PO has been waited on too long; one a day."""
+    if day in close_days:
+        raise ValueError("%s is closed already — one close a day" % day.isoformat())
+    spark = dict(boards)["spark"]
+    waits = _boards_join(boards, waiting, today)
+    risky = bool(check_backlog.problems(spark)) or any(w.endswith("!") for w in waits)
+    body = "\n\n".join([line.strip(), "in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"),
+                        "waits on the PO: " + (", ".join(waits) or "nothing")])
+    return ("AT_RISK" if risky else "ON_TRACK"), body
+
+
+def _gh(*args):
+    done = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60)
+    if done.returncode:
+        raise RuntimeError((done.stderr.strip().splitlines() or ["gh failed"])[0])
+    return json.loads(done.stdout) if done.stdout.strip() else None
+
+
+def gather(today):
+    """Both boards, their open PRs, the spark board's closes, and the working days since the last close."""
+    boards, closes, project_id = [], [], None
+    for name, number, repo in BOARDS:
+        project = _gh("api", "graphql", "-f", "query=" + QUERY, "-F", "login=" + OWNER, "-F", "number=%d" % number)
+        project = project["data"]["user"]["projectV2"]
+        boards.append((name, to_items(project)))
+        if name == "spark":
+            project_id, closes = project["id"], closes_from(project)
+    since = max((day for day, _ in closes), default=today - dt.timedelta(days=14)).isoformat()
+    work_days, prs = set(), []
+    for name, _, repo in BOARDS:
+        for commit in _gh("api", "repos/%s/%s/commits?sha=main&per_page=100&since=%sT00:00:00Z" % (OWNER, repo, since)):
+            when = dt.datetime.fromisoformat(commit["commit"]["author"]["date"].replace("Z", "+00:00"))
+            work_days.add(when.astimezone().date())
+        prs += [(name, pr["number"], pr["title"], pr["draft"]) for pr in _gh("api", "repos/%s/%s/pulls?state=open" % (OWNER, repo))]
+    return boards, prs, closes, work_days, project_id
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="The state of the work, and the day-close (P102c).")
+    verbs = parser.add_subparsers(dest="verb", required=True)
+    verbs.add_parser("status").add_argument("--when-in", nargs="+", metavar="DIR")
+    close = verbs.add_parser("close")
+    close.add_argument("line", help="the day's one line, or - to read it from stdin")
+    close.add_argument("--date", help="the day to close, YYYY-MM-DD (default: today)")
+    close.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args(argv)
+    if args.verb == "status" and args.when_in and not inside(os.getcwd(), args.when_in):
+        return 0
+    today = dt.date.today()
+    try:
+        boards, prs, closes, work_days, project_id = gather(today)
+    except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
+        print("board: skipped — %s" % unreachable)
+        return 0 if args.verb == "status" else 1
+    if args.verb == "status":
+        print("\n".join(status_lines(boards, prs, closes, work_days, today)))
+        return 0
+    day = dt.date.fromisoformat(args.date) if args.date else today
+    try:
+        state, body = close_update(sys.stdin.read() if args.line == "-" else args.line, boards,
+                                   {d for d, _ in closes}, day, today)
+    except ValueError as refused:
+        print("close: refused — %s" % refused)
+        return 1
+    print("close %s (%s):\n%s" % (day.isoformat(), state, body))
+    if args.dry_run:
+        print("(dry run — nothing posted)")
+        return 0
+    _gh("api", "graphql", "-f", "query=" + POST, "-f", "p=" + project_id, "-f", "d=" + day.isoformat(),
+        "-f", "s=" + state, "-f", "b=" + body)
+    print("posted on the spark board")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,10 +1,13 @@
 """P102c: the state of both boards in a dozen lines, and the day-close (docs/2026-10-05-session-status-design.md)."""
 
+import contextlib
 import datetime as dt
+import io
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -85,6 +88,47 @@ class TheCoreTest(unittest.TestCase):
             "  open PRs: spark #34 P102c: the state in view (draft)",
             "  last close 2026-10-05: P102a merged; P102c designed",
             "  ! the day of 2026-10-06 has no close — write it first"])
+
+    def test_closes_skip_an_update_made_by_hand_with_no_start_date(self):
+        made = {"statusUpdates": {"nodes": [{"startDate": "2026-10-05", "status": "ON_TRACK", "body": "P102a merged\n\nin flight: …"},
+                                           {"startDate": None, "status": "AT_RISK", "body": "by hand"}]}}
+        self.assertEqual(board.closes_from(made), [(dt.date(2026, 10, 5), "P102a merged")])
+
+    def test_a_day_closed_already_is_refused_with_its_date(self):
+        with self.assertRaisesRegex(ValueError, "2026-10-06 is closed already"):
+            board.close_update("x", [("spark", SPARK), ("bin", BIN)], {dt.date(2026, 10, 6)}, dt.date(2026, 10, 6), TODAY)
+
+    def test_a_close_is_at_risk_when_the_po_is_waited_on_too_long_or_a_limit_breaks(self):
+        state, body = board.close_update("P102c built", [("spark", SPARK), ("bin", BIN)], set(), TODAY, TODAY)
+        self.assertEqual(state, "AT_RISK", "B1 has waited 12 days")
+        self.assertEqual(body.split("\n\n")[0], "P102c built")
+        state, _ = board.close_update("P102c built", [("spark", SPARK)], set(), TODAY, TODAY)
+        self.assertEqual(state, "ON_TRACK")
+
+    def test_a_close_is_at_risk_when_a_limit_breaks_even_with_no_one_waiting(self):
+        crowded = SPARK + board.to_items(project(node(27, "P102d — Proofs", "Build")))
+        state, _ = board.close_update("two in Build", [("spark", crowded)], set(), TODAY, TODAY)
+        self.assertEqual(state, "AT_RISK")
+
+    def test_status_offline_says_why_and_exits_zero(self):
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", side_effect=RuntimeError("could not resolve host")), contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), "board: skipped — could not resolve host\n")
+
+    def test_status_outside_the_named_folders_prints_nothing(self):
+        out = io.StringIO()
+        with mock.patch.object(board, "gather") as gather, contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status", "--when-in", tempfile.mkdtemp()]), 0)
+        self.assertEqual((out.getvalue(), gather.called), ("", False))
+
+    def test_close_dry_run_posts_nothing(self):
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], set(), "P")), \
+                mock.patch.object(board, "_gh") as gh, contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["close", "P102c built", "--dry-run"]), 0)
+        self.assertFalse(gh.called)
+        self.assertIn("dry run", out.getvalue())
 
 
 if __name__ == "__main__":
