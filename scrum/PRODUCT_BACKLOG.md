@@ -862,6 +862,14 @@ a user-level project, so where proofs report is a design question.
 **Value proven by:** P70's line; the story map exists as text in the repository and as a Miro board drawn from it; a
 Claude Code session in spark opens with the iteration, what is in progress and the open PRs; one open story's proof
 runs from its issue and the map shows it proven or not.
+**Split and decided with the PO, 2026-10-05,** each part designed and planned on its own, in this order:
+**a** the backlog in GitHub Projects (spec `docs/2026-10-05-backlog-in-github-design.md`); **c** the session-start
+status; **b** maps and journeys as text, drawn in Miro and Canva; **e** a discovery skill; **d** proofs run.
+**f** — the demo projects get a home: one public `spark-demos` repository and project, a folder per demo (irrigation,
+rc-car, plant-alarm, the quickstart, P100's new idea), each history checked before it is published; a demo that becomes
+a real product moves to its own repository, as the bin did. **Each repository has its own project** (the PO: *"I'd
+like spark to have a separate gh project and repo and also the demo projects should"*), replacing P70's one project
+for spark and the bin: spark's items to spark's, B1/B5/B8 to the bin's.
 
 ### P98 — Mutation runs that take seconds, not minutes — **the team's tools; the PO, 2026-10-04: next after P95** — DONE 2026-10-04
 **Needed by:** the PO — *"I think we should also try to make things faster. How often do we really need to run all
