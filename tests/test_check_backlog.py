@@ -54,10 +54,35 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertTrue(items)
         self.assertEqual(check_backlog.problems(items), [], "the board as migrated keeps every limit")
 
-    def test_offline_the_gate_says_it_could_not_look_and_passes(self):
-        with mock.patch.object(check_backlog, "fetch", return_value=None), mock.patch("sys.stdout") as out:
-            self.assertEqual(check_backlog.main(), 0)
-        self.assertIn("skipped", "".join(call.args[0] for call in out.write.call_args_list))
+    def test_a_body_with_windows_line_endings_reads_as_filled(self):
+        crlf = item(1)
+        crlf["content"]["body"] = crlf["content"]["body"].replace("\n", "\r\n")
+        self.assertEqual(check_backlog.problems([crlf]), [])
+
+    def test_a_task_rides_on_its_story(self):
+        task = item(2, "Build", needed="", slice_=None, labels=("task",))
+        self.assertEqual(check_backlog.problems([item(1, "Build"), task]), [])
+
+    def said(self, run):
+        """main()'s exit code and what it printed, with gh answered by `run`."""
+        with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
+            code = check_backlog.main()
+        return code, "".join(call.args[0] for call in out.write.call_args_list)
+
+    def test_offline_the_gate_says_why_and_passes(self):
+        def run(*args, **kwargs):
+            raise FileNotFoundError("gh")
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("skipped", printed)
+        self.assertIn("FileNotFoundError", printed)
+
+    def test_a_missing_project_fails_the_gate_and_says_so(self):
+        def run(*args, **kwargs):
+            return mock.Mock(stdout=json.dumps({"projects": [{"number": 1, "title": "the bin"}]}))
+        code, printed = self.said(run)
+        self.assertEqual(code, 1)
+        self.assertIn("no project titled 'spark'", printed)
 
 
 if __name__ == "__main__":

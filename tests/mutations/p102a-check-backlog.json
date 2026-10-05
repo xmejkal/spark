@@ -1,10 +1,80 @@
 [
- {"file": "tools/check_backlog.py", "name": "Done items are checked", "find": "        if status == \"Done\":\n            continue\n", "replace": ""},
- {"file": "tools/check_backlog.py", "name": "_No response_ counts as an answer", "find": "return \"\" if text == \"_No response_\" else text", "replace": "return text"},
- {"file": "tools/check_backlog.py", "name": "the slice is not checked", "find": "        if not entry.get(\"slice\"):\n", "replace": "        if False:\n"},
- {"file": "tools/check_backlog.py", "name": "a stage's limit is ignored", "find": "        if len(held) > limit:\n", "replace": "        if False:\n"},
- {"file": "tools/check_backlog.py", "name": "in flight has no cap", "find": "    if len(flying) > MOST_IN_FLIGHT:\n", "replace": "    if False:\n"},
- {"file": "tools/check_backlog.py", "name": "an epic counts against the limits", "find": "        if \"epic\" not in (entry.get(\"labels\") or []):\n            by_stage", "replace": "        if True:\n            by_stage"},
- {"file": "tools/check_backlog.py", "name": "an empty section reads the next one", "find": "r\"^### %s[ \\t]*\\n(.*?)(?=^### |\\Z)\"", "replace": "r\"### %s\\s*\\n(.*?)(?=\\n### |\\Z)\""},
- {"file": "tools/check_backlog.py", "name": "offline fails the gate", "find": "        print(\"  backlog: skipped — gh or the network could not be reached\")\n        return 0\n", "replace": "        return 1\n"}
+ {
+  "file": "tools/check_backlog.py",
+  "name": "Done items are checked",
+  "find": "if status == \"Done\" or \"task\" in",
+  "replace": "if \"task\" in"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "a task is judged on its own",
+  "find": "if status == \"Done\" or \"task\" in (entry.get(\"labels\") or []):",
+  "replace": "if status == \"Done\":"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "a CRLF body reads as empty",
+  "find": "    body = (body or \"\").replace(\"\\r\\n\", \"\\n\")",
+  "replace": "    body = body or \"\""
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "_No response_ counts as an answer",
+  "find": "return \"\" if text == \"_No response_\" else text",
+  "replace": "return text"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "the slice is not checked",
+  "find": "        if not entry.get(\"slice\"):\n",
+  "replace": "        if False:\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "a stage's limit is ignored",
+  "find": "        if len(held) > limit:\n",
+  "replace": "        if False:\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "in flight has no cap",
+  "find": "    if len(flying) > MOST_IN_FLIGHT:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "an epic counts against the limits",
+  "find": "        if \"epic\" not in (entry.get(\"labels\") or []):\n            by_stage",
+  "replace": "        if True:\n            by_stage"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "an empty section reads the next one",
+  "find": "r\"^### %s[ \\t]*\\n(.*?)(?=^### |\\Z)\"",
+  "replace": "r\"### %s\\s*\\n(.*?)(?=\\n### |\\Z)\""
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "a missing project quietly stops the check",
+  "find": "raise LookupError(\"no project titled %r under %s — the board cannot be checked\" % (TITLE, OWNER))",
+  "replace": "return None, \"gone\""
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "offline hides why",
+  "find": "could not be reached (%s)\" % why)",
+  "replace": "could not be reached\")"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "offline fails the gate",
+  "find": "        print(\"  backlog: skipped — gh or the network could not be reached (%s)\" % why)\n        return 0\n",
+  "replace": "        return 1\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the gate ignores the board",
+  "find": "return EXIT_OK if ok and backlog == 0 else EXIT_PROBLEMS",
+  "replace": "return EXIT_OK if ok else EXIT_PROBLEMS"
+ }
 ]

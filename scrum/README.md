@@ -55,6 +55,9 @@ are no sprints; the cadences are these.
 | **Weekly look** | once a week | the PO's look at the board: anything waiting more than three days, epics started and finished |
 | **Epic done** | an epic's last story is Done | its **review** (validated value — see below), the **outside audit**, then the **retro**: one change to how we work, written into `WORKING_AGREEMENTS.md`, **with a check that tells us later whether it stuck** |
 
+**A plan's tasks are sub-issues of their story** (labelled `task`): they show the story's progress on the board and
+ride on it — no slice, *Needed by* or WIP of their own (`tools/check_backlog.py` skips them, as epics carry no limit).
+
 The trial is checked on 2026-11-02: was the Build limit broken without being caught, was a weekly look skipped twice,
 do epics start and finish? If not, one-day sprints replace it (the design's §9).
 

@@ -1419,7 +1419,7 @@ prints the index rather than sending anyone to research, and says that is what i
 `vl6180x-breakout` in front of the reader, and `--need switch 12 V load` does the same for
 `dfr0457-mosfet-power-controller`; a test asserts a miss never prints only the research command.
 
-### P32 — One home for the converter and the chips — **PO: (a), move now** — SPLIT into P32a/P32b
+### P32 — One home for the converter and the chips — **PO: (a), move now** — SPLIT into P32a/P32b — P32b MOVED to xmejkal/sisuo-brain-transplant#6 (2026-10-05)
 **Needed by:** v1's last word. `check_spine.py:166-168` looks for the converter in the project and
 then at `../smartbin-local/…`, so the chain reaches `[ok] simulation` only on a machine where the
 bin's repo sits beside the project. The first-hour lens reproduced the sharper form: the same

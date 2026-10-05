@@ -18,7 +18,8 @@ MOST_IN_FLIGHT = 2
 
 
 def _section(body, name):
-    match = re.search(r"^### %s[ \t]*\n(.*?)(?=^### |\Z)" % re.escape(name), body or "", re.S | re.M)
+    body = (body or "").replace("\r\n", "\n")  # GitHub keeps a body's line endings as they were typed
+    match = re.search(r"^### %s[ \t]*\n(.*?)(?=^### |\Z)" % re.escape(name), body, re.S | re.M)
     text = match.group(1).strip() if match else ""
     return "" if text == "_No response_" else text
 
@@ -28,11 +29,14 @@ def _name(entry):
 
 
 def problems(items):
-    """Every sentence the gate fails on: an item with no Needed by or no slice, and a broken WIP limit (epics carry none)."""
+    """
+    Every sentence the gate fails on: an item with no Needed by or no slice, and a broken WIP limit. Epics carry no limit;
+    a task (a plan's step, a sub-issue of its story) rides on its story and is not judged on its own.
+    """
     said, by_stage = [], {}
     for entry in items:
         status = entry.get("status")
-        if status == "Done":
+        if status == "Done" or "task" in (entry.get("labels") or []):
             continue
         if "epic" not in (entry.get("labels") or []):
             by_stage.setdefault(status, []).append(entry)
@@ -52,22 +56,36 @@ def problems(items):
     return said
 
 
+def _gh(*args):
+    return json.loads(subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60, check=True).stdout)
+
+
 def fetch():
-    """The spark project's items, or None when gh or the network cannot be reached."""
+    """
+    (the spark project's items, None), or (None, why) when gh or the network could not be reached. A project that gh
+    can list but cannot find is a LookupError: the check must never quietly stop looking.
+    """
     try:
-        projects = json.loads(subprocess.run(["gh", "project", "list", "--owner", OWNER, "--format", "json"],
-                                             capture_output=True, text=True, timeout=30, check=True).stdout)["projects"]
-        number = next(p["number"] for p in projects if p["title"] == TITLE)
-        return json.loads(subprocess.run(["gh", "project", "item-list", str(number), "--owner", OWNER, "--format", "json",
-                                          "--limit", "500"], capture_output=True, text=True, timeout=60, check=True).stdout)["items"]
-    except (OSError, subprocess.SubprocessError, ValueError, KeyError, StopIteration):
-        return None
+        projects = _gh("project", "list", "--owner", OWNER, "--format", "json")["projects"]
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
+        return None, type(unreachable).__name__
+    number = next((p["number"] for p in projects if p["title"] == TITLE), None)
+    if number is None:
+        raise LookupError("no project titled %r under %s — the board cannot be checked" % (TITLE, OWNER))
+    try:
+        return _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", "500")["items"], None
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
+        return None, type(unreachable).__name__
 
 
 def main():
-    items = fetch()
+    try:
+        items, why = fetch()
+    except LookupError as gone:
+        print("  backlog: %s" % gone)
+        return 1
     if items is None:
-        print("  backlog: skipped — gh or the network could not be reached")
+        print("  backlog: skipped — gh or the network could not be reached (%s)" % why)
         return 0
     said = problems(items)
     print("  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
