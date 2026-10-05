@@ -183,6 +183,72 @@ class TheMatcherTest(unittest.TestCase):
         said, _ = run(["--match", str(self.project)])
         return [n for n in said["data"]["needs"] if n["need"] == "smell"][0]["candidates"]
 
+    def catalog(self, *records):
+        for record in records:
+            (self.home / "catalog" / (record["id"] + ".json")).write_text(json.dumps(dict({"schema": 1, "kind": "sensor"}, **record)))
+
+    def alone(self, need):
+        """One need, matched alone (a full page holds few needs): the need's answer, with its candidates and `more`."""
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [need]}))
+        said, _ = run(["--match", str(self.project)])
+        return said["data"]["needs"][0]
+
+    def test_what_matches_only_through_a_function_with_the_need_s_verb(self):
+        self.catalog({"id": "a-combo", "name": "A combo board", "function": [{"does": "sense", "what": "temperature"},
+                                                                            {"does": "indicate", "what": "light"}]},
+                     {"id": "b-light", "name": "B ambient sensor", "function": [{"does": "sense", "what": "light"}]})
+        found = {c["id"]: c for c in self.alone({"id": "lux", "does": "sense", "what": "light"})["candidates"] if c["id"]}
+        self.assertEqual((found["a-combo"]["what_matches"], found["b-light"]["what_matches"]), (False, True))
+
+    def test_the_need_s_words_match_a_function_however_they_are_written(self):
+        self.catalog({"id": "y-probe", "name": "SEN0193", "function": [{"does": "sense", "what": "soil-moisture"}]})
+        for what in ("soil moisture", "Soil Moisture ", "soil-moisture"):
+            with self.subTest(what=what):
+                found = {c["id"]: c for c in self.alone({"id": "wet", "does": "sense", "what": what})["candidates"] if c["id"]}
+                self.assertTrue(found["y-probe"]["what_matches"])
+
+    def test_an_alias_matches_other_words_do_not_and_an_alias_that_is_no_list_is_ignored(self):
+        self.catalog({"id": "z-dist", "name": "VL53L0X", "also_known_as": ["time of flight distance sensor"],
+                      "function": [{"does": "sense", "what": "tof"}]},
+                     {"id": "z-seven", "name": "Z", "also_known_as": 7, "function": [{"does": "sense", "what": "distance"}]})
+        found = {c["id"]: c for c in self.alone({"id": "far", "does": "sense", "what": "distance"})["candidates"] if c["id"]}
+        self.assertTrue(found["z-dist"]["what_matches"])
+        self.assertTrue(found["z-seven"]["what_matches"], "matched by its function; the stray alias is passed over")
+        self.assertFalse(found["x-other"]["what_matches"], "a gas sensor is not a distance sensor")
+
+    def test_a_used_up_part_without_a_record_is_not_offered(self):
+        (self.home / "drawer" / "used-up.json").write_text(json.dumps({"schema": 1, "label": "an old buzzer", "count": 0,
+                                                                       "function": [{"does": "sound", "what": "buzzer"}]}))
+        self.assertNotIn("used-up", [c["entry"] for c in self.alone({"id": "alarm", "does": "sound", "what": "alarm"})["candidates"]])
+
+    def test_a_candidate_with_the_need_s_words_is_never_cut_by_the_cap(self):
+        for number in range(9):
+            (self.home / "drawer" / ("t%d.json" % number)).write_text(json.dumps(
+                {"schema": 1, "label": "thermometer %d" % number, "count": 1, "function": [{"does": "sense", "what": "temperature"}]}))
+        self.catalog({"id": "y-probe", "name": "SEN0193", "function": [{"does": "sense", "what": "soil-moisture"}]})
+        self.assertIn("y-probe", [c["id"] for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"]],
+                      "ten owned thermometers and probes come first; the unowned record that fits still shows")
+
+    def test_text_mode_shows_what_each_candidate_does(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "soil-moisture"}]}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        lines = out.getvalue().splitlines()
+        self.assertIn("soil-moisture", next(line for line in lines if "x-soil (catalog)" in line))
+        self.assertIn("gas [other words]", next(line for line in lines if "x-other (catalog)" in line))
+
+    def test_a_board_owes_nothing_and_is_never_broken_here(self):
+        board = [c for c in self.needs["board"]["candidates"] if c["id"] == "firebeetle2-esp32s3"][0]
+        self.assertEqual((board["owes"], board["broken"]), ([], False))
+
+    def test_a_project_s_own_record_shadows_the_same_id_elsewhere(self):
+        (self.project / "parts").mkdir(parents=True)
+        (self.project / "parts" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "Our probe", "kind": "sensor",
+                                                                         "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        found = [c["in"] for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"] == "x-soil"]
+        self.assertEqual(found, ["project"])
+
     def test_an_owned_candidate_beats_a_better_worded_one_that_is_not_owned(self):
         ids = [c["id"] for c in self.smell()]
         self.assertEqual(ids[0], "x-soil", "x-soil is owned and its `what` is not gas; every unowned record, x-other included, comes after")

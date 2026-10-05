@@ -1,0 +1,20 @@
+[
+ {"file": "scripts/needs.py", "name": "what matches through a function of any verb",
+  "find": "any(wanted <= _words(f.get(\"what\")) for f in functions if f.get(\"does\") == need[\"does\"])",
+  "replace": "any(wanted <= _words(f.get(\"what\")) for f in functions)"},
+ {"file": "scripts/needs.py", "name": "what matches only when written exactly alike",
+  "find": "any(wanted <= _words(f.get(\"what\")) for f in functions",
+  "replace": "any(str(f.get(\"what\")) == need[\"what\"] for f in functions"},
+ {"file": "scripts/needs.py", "name": "aliases are trusted",
+  "find": "([a for a in aliases if isinstance(a, str)] if isinstance(aliases, list) else [])", "replace": "list(aliases or [])"},
+ {"file": "scripts/needs.py", "name": "a used-up entry is offered", "find": " or entry.get(\"count\") == 0", "replace": ""},
+ {"file": "scripts/needs.py", "name": "many is summed",
+  "find": "    if any(entry.get(\"count\") == \"many\" for entry in live):\n", "replace": "    if False:\n"},
+ {"file": "scripts/needs.py", "name": "a board owes facts",
+  "find": "\"owes\": [] if kind == \"board\" else parts.owes(record)", "replace": "\"owes\": parts.owes(record)"},
+ {"file": "scripts/needs.py", "name": "a record is offered twice", "find": "        if row[:2] not in seen:\n", "replace": "        if True:\n"},
+ {"file": "scripts/parts.py", "name": "the cap cuts a candidate that fits",
+  "find": "if rank < 8 or c[\"what_matches\"]", "replace": "if rank < 8"},
+ {"file": "scripts/parts.py", "name": "the text hides other words",
+  "find": "(\"\" if c[\"what_matches\"] else \" [other words]\")", "replace": "\"\""}
+]

@@ -6,7 +6,7 @@
  {"file": "scripts/needs.py", "name": "owned does not come first",
   "find": "    return sorted(found, key=lambda c: (c[\"owned\"] == 0, not c[\"what_matches\"],", "replace": "    return sorted(found, key=lambda c: (False, not c[\"what_matches\"],"},
  {"file": "scripts/needs.py", "name": "an owned part without a record is never offered",
-  "find": "        if points_at_a_record or entry.get(\"skip\") or not any(f.get(\"does\") == need[\"does\"] for f in functions):", "replace": "        if True:"},
+  "find": "        if points_at_a_record or entry.get(\"skip\") or entry.get(\"count\") == 0 or not any(f.get(\"does\") == need[\"does\"] for f in functions):", "replace": "        if True:"},
  {"file": "scripts/needs.py", "name": "an entry whose record is gone vanishes",
   "find": "        points_at_a_record = isinstance(entry.get(\"is\"), dict) and bool(entry[\"is\"]) and next(iter(entry[\"is\"].items())) in known_keys", "replace": "        points_at_a_record = bool(entry.get(\"is\"))"}
 ]

@@ -1700,17 +1700,20 @@ def _op_match(args, project):
     if not matched and not problems:
         return Answer(unchecked=[_cannot("%s has no needs yet — /spark:idea writes them" % args.match)])
     for need in matched:
-        need["more"], need["candidates"] = max(len(need["candidates"]) - 8, 0), need["candidates"][:8]
+        kept = [c for rank, c in enumerate(need["candidates"]) if rank < 8 or c["what_matches"]]
+        need["more"], need["candidates"] = len(need["candidates"]) - len(kept), kept
     shown, truncated = page(matched, args.start, "match", ["--match", args.match])
     lines = []
     for need in matched:
         lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
                                             "  [%s]" % need["mark"] if need["mark"] else ""))
         lines += ["      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
-                                        "  ".join(filter(None, ["free %s" % c["free"] if c["owned"] else "", "owes " + ", ".join(c["owes"]) if c["owes"] else ""])))
+                                        "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
+                                                                "free %s" % c["free"] if c["owned"] else "",
+                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else ""])))
                   + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
                   for c in need["candidates"]]
-        lines += ["      … %d more" % need["more"]] if need["more"] else []
+        lines += ["      … %d more, none with the need's words" % need["more"]] if need["more"] else []
         lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
     lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
     return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)

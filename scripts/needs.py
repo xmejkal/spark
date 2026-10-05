@@ -125,10 +125,11 @@ def _words(text):
     return {word for word in re.split(r"[^a-z0-9]+", str(text or "").lower()) if word}
 
 
-def _what_matches(what, functions, names):
-    """The need's `what` exactly, or each of its words in the record's name or an alias (§6.2: exact or alias)."""
-    return (any(str(f.get("what", "")).lower() == what.lower() for f in functions)
-            or bool(_words(what)) and _words(what) <= set().union(*(_words(name) for name in names)))
+def _what_matches(need, functions, names):
+    """Every word of the need's `what` in a function with the need's verb, or in the record's name or an alias (§6.2)."""
+    wanted = _words(need["what"])
+    return bool(wanted) and (any(wanted <= _words(f.get("what")) for f in functions if f.get("does") == need["does"])
+                             or wanted <= set().union(*(_words(name) for name in names)))
 
 
 def _counts(holding):
@@ -173,21 +174,23 @@ def candidates(need, known, entries):
         functions = parts.function_of(record, board=kind == "board") + [f for e in holding for f in e.get("function") or []]
         if not any(f.get("does") == need["does"] for f in functions):
             continue
+        aliases = record.get("also_known_as")
+        names = [record.get("name")] + ([a for a in aliases if isinstance(a, str)] if isinstance(aliases, list) else [])
         owned, free, unsure = _counts(holding)
         found.append({"id": record_id, "kind": kind, "entry": None, "in": where, "label": record.get("name"),
                       "what": sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
-                      "what_matches": _what_matches(need["what"], functions, [record.get("name")] + list(record.get("also_known_as") or [])),
+                      "what_matches": _what_matches(need, functions, names),
                       "owned": owned, "free": free, "unsure": unsure, "owes": [] if kind == "board" else parts.owes(record),
                       "broken": kind == "part" and bool(parts.broken_problems(record, path)), "proof": []})
     for entry_id, entry in entries.items():
         functions = entry.get("function") or []
         points_at_a_record = isinstance(entry.get("is"), dict) and bool(entry["is"]) and next(iter(entry["is"].items())) in known_keys
-        if points_at_a_record or entry.get("skip") or not any(f.get("does") == need["does"] for f in functions):
+        if points_at_a_record or entry.get("skip") or entry.get("count") == 0 or not any(f.get("does") == need["does"] for f in functions):
             continue
         owned, free, unsure = _counts([entry])
         found.append({"id": None, "kind": None, "entry": entry_id, "in": "drawer", "label": entry.get("label"),
                       "what": sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
-                      "what_matches": _what_matches(need["what"], functions, [entry.get("label")]),
+                      "what_matches": _what_matches(need, functions, [entry.get("label")]),
                       "owned": owned, "free": free, "unsure": unsure, "owes": [], "broken": False, "proof": []})
     return sorted(found, key=lambda c: (c["owned"] == 0, not c["what_matches"],
                                         LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS), c["id"] or c["entry"]))
