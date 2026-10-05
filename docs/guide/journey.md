@@ -30,7 +30,7 @@ stops.
   existing install.
 - Where: in fresh project folders, with a store of their own.
 - How: each command typed as shown. In Claude Code you type the `/spark:` command, and Claude runs these scripts for
-  you. You, or another AI, can run them directly.
+  you. You, or another AI, can run them directly; the [guide for agents](agents.md) says how.
 - Paths: `$CLAUDE_PLUGIN_ROOT` is where spark is installed. In outputs, `~/` is the home folder and `<temp>` a
   temporary one.
 

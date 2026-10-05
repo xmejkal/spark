@@ -45,6 +45,7 @@ It refuses to point a job at a tool that does not meet that job's contract. Page
 ### `/spark:init`
 
 Sets up a project for spark. It writes:
+
 - `.spark/rules.json`
 - `.spark/project.json`
 - `boards/active.json`
@@ -62,6 +63,7 @@ against your drawer and spark's records, owned parts first ([journey: Idea](jour
 the project's `.spark/needs.json`.
 
 It stops at the matches. Not yet built:
+
 - choosing a part per need;
 - reserving the parts you own;
 - researching a gap from here.
@@ -71,6 +73,7 @@ Page: [`commands/idea.md`](../../commands/idea.md).
 ### `/spark:drawer`
 
 What you own, in your own store, never in a repository:
+
 - **See it:** `parts.py --drawer`.
 - **Add to it:** say more in plain words, through `--drawer-set` with `--dry-run` first.
 - **Import your DFRobot order history** from your logged-in browser.
@@ -84,6 +87,7 @@ number, and refuses an import whose lines read differ from the lines the shop st
 ### `/spark:research`
 
 Researches a part the library lacks:
+
 1. **Reuse first,** with no network.
 2. **Find the exact part.** For a commodity part, `part-finder` offers at most two candidates and you pick.
    `datasheet-reader` then fills the record from the kept datasheet. A whole module goes to `parts-researcher`.
@@ -98,6 +102,7 @@ The contract refuses a pin order without its proof, and a citation of a document
 go to the catalog in your store, with no seller listings.
 
 It does not:
+
 - pick for you between two fitting parts;
 - verify a pinout;
 - track prices.
@@ -121,6 +126,7 @@ With `--keep .` it writes `board.tsx`, its footprint and `dist/` into the projec
 never overwritten.
 
 It refuses, by name:
+
 - the same part twice without names: five unnamed buttons would be one component with five pins shorted to it;
 - a pin a part does not have;
 - a bus line the bus does not have.
