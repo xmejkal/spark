@@ -1746,6 +1746,20 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertIn("needs", parts.owes(no_needs))
         self.assertTrue(any(p.startswith("simulation needs wokwi") for p in parts.broken_problems(no_needs, written(no_needs))))
 
+    def test_a_malformed_board_is_named_broken_never_a_traceback(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "other7"
+        (other / "boards").mkdir(parents=True)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        (other / "boards" / "bad-board.json").write_text(json.dumps(dict(board, id="bad-board", pins=1)))
+        (home / "drawer").mkdir()
+        (home / "drawer" / "bad.json").write_text(json.dumps({"schema": 1, "label": "a board", "count": 1, "is": {"board": "bad-board"}}))
+        (home / "projects.json").write_text(json.dumps({"other7": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((said["envelope"], code), (1, 1))
+        self.assertEqual([(b["id"], b["layer"]) for b in said["data"]["broken"]], [("bad-board", "other7")])
+        self.assertIn("board definition", said["data"]["broken"][0]["problems"][0])
+
     def test_audit_walks_a_record_the_drawer_links_to_in_another_project(self):
         home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "other7"
         (other / "parts").mkdir(parents=True)

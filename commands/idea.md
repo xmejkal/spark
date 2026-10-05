@@ -51,7 +51,7 @@ is never offered. Look:
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit --project <project>
 ```
 
-Only its `no_function` list is yours here; a BROKEN row, or exit 1, is for the person to know — say it, do not fix
+Only its "says nothing of what it does" line (`no_function` with `--json`) is yours here; a BROKEN row, or exit 1, is for the person to know — say it, do not fix
 it. For a record that plausibly fits, write its function as a JSON list `[{"does": …, "what": …}]` to a file outside
 any repository with the Write tool, then:
 

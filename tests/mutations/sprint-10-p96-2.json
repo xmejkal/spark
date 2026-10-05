@@ -8,8 +8,8 @@
  {
   "file": "scripts/parts.py",
   "name": "every validate problem counts as broken",
-  "find": "    return [problem for problem in said if not any(_about(problem, key) for key in owed)]",
-  "replace": "    return said"
+  "find": "            if not any(_about(problem, key) for key in owed)]",
+  "replace": "            if True]"
  },
  {
   "file": "scripts/parts.py",

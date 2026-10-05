@@ -109,14 +109,19 @@ def _about(problem, key):
             or re.search(r"\bno %s\b" % re.escape(key), problem) is not None)
 
 
+def _shape_problems(check, record, path, what):
+    """A check's problems — or, when the record is too malformed for the check to read, one saying so (§5.4: never a traceback)."""
+    try:
+        return check(record, path)
+    except (AttributeError, TypeError, KeyError, ValueError) as wrong:
+        return ["does not meet the %s's shape (%s)" % (what, wrong)]
+
+
 def broken_problems(record, path):
     """What is wrong with a part record beyond what it owes (§5.4): `validate`'s problems that name no owed key."""
     owed = owes(record)
-    try:
-        said = validate(record, path)
-    except (AttributeError, TypeError, KeyError, ValueError) as wrong:
-        return ["does not meet the part record's shape (%s)" % wrong]
-    return [problem for problem in said if not any(_about(problem, key) for key in owed)]
+    return [problem for problem in _shape_problems(validate, record, path, "part record")
+            if not any(_about(problem, key) for key in owed)]
 
 
 def audit(project=None):
@@ -145,7 +150,7 @@ def audit(project=None):
         row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
         record = _parse(path)
         wrong = (["does not parse as a JSON object"] if not isinstance(record, dict) else
-                 boards.validate(record, path) if kind == "board" else broken_problems(record, path))
+                 _shape_problems(boards.validate, record, path, "board definition") if kind == "board" else broken_problems(record, path))
         owing = [] if wrong or kind == "board" else owes(record)
         row["broken" if wrong else "owed" if owing else "current"] += 1
         if wrong:

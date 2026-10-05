@@ -218,7 +218,7 @@ indicate, sound, move, drive, power, keep-time, store, compute, communicate, con
 driver (an L9110S), **move** the thing driven (a motor). `what` is open words (soil-moisture, distance, speaker).
 An entry may have none ("function unknown", asked once). `does` is derived from `kind` where the mapping is
 mechanical; the records that do not map (the five `sensor`s, the power-inlet `connector`s, boards) are written
-once, through `parts.py`, with a dry run. `kind` stays. Matching: the code lists candidates by `does`, and marks those whose function, name or alias holds every word of the need's `what`;
+once, through `parts.py`, with a dry run. `kind` stays. Matching: the code lists candidates by `does`, and marks those whose same-verb function, name or alias holds every word of the need's `what`;
 the agent judges similarity and marks the need, saying why and what would change.
 
 ### 5.7 The history — `history.jsonl`
