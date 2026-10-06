@@ -58,7 +58,7 @@ It reports:
 
 - the suite and every mutation anchor, as committed;
 - the size of `scripts/`;
-- the work board's limits: one item per working stage, at most two in flight, three in Ready
+- the work board's limits, which [the flow's table](../../scrum/README.md#the-flow--an-items-stages) holds
   ([the board](../../GLOSSARY.md#the-board)), and that every open item has a Needed by and a slice. With no `gh` or
   network, the board part says skipped and passes.
 

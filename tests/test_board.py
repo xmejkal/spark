@@ -56,8 +56,18 @@ class TheCoreTest(unittest.TestCase):
     def test_a_board_item_that_is_not_an_issue_is_skipped(self):
         self.assertEqual(len(SPARK), 5)
 
-    def test_in_flight_names_stage_item_and_age_and_leaves_epics_out(self):
+    def test_in_flight_names_stage_item_and_age_and_leaves_an_epic_in_build_out(self):
         self.assertEqual(board.in_flight(SPARK, TODAY), ["Build P102c (#26) 2 d"])
+
+    def test_in_flight_shows_an_epic_in_discovery_or_design_but_not_in_build_and_never_a_task(self):
+        # P146: the status counts as the check does (check_backlog.counts), so it cannot hide what the gate counts.
+        crowded = board.to_items(project(node(70, "P136 — Full circuit checks", "Discovery", labels=("epic",)),
+                                         node(71, "P100 — The flows", "Design", labels=("epic",)),
+                                         node(24, "P102 — The tools chore", "Build", labels=("epic",)),
+                                         node(29, "P102e — A discovery skill", "Build"),
+                                         node(31, "P102e step one", "Build", labels=("task",))))
+        self.assertEqual(board.in_flight(crowded, TODAY),
+                         ["Discovery P136 (#70) 2 d", "Design P100 (#71) 2 d", "Build P102e (#29) 2 d"])
 
     def test_waiting_on_the_po_says_since_when_and_marks_more_than_three_days(self):
         self.assertEqual(board.waiting(BIN, TODAY), ["B1 (#1) since 2026-09-25, 12 d !"])

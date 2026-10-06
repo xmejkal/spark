@@ -46,14 +46,21 @@ sprints and no iterations.
   | stage | true when an item is here | WIP limit |
   | --- | --- | --- |
   | **Idea** | the PO's words are recorded, nothing more (ideas stay ideas) | — |
-  | **Discovery** | journeys, story map, the PO's answers: what it is and who it is for | 1 |
-  | **Design** | a spec is written and reviewed by the council, and waits for the PO's yes | 1 |
-  | **Ready** | the spec is approved and *Value proven by* is set; this column's order is the PO's | 3 |
+  | **Discovery** | journeys, story map, the PO's answers: what it is and who it is for | 1, epics count |
+  | **Design** | a spec is written and reviewed by the council, and waits for the PO's yes | 1, epics count |
+  | **Ready** | the spec is approved and *Value proven by* is set; this column's order is the PO's | 5 |
   | **Build** | plan, plan council, the PO's yes, then the tasks with their reviews | 1 |
   | **Review** | final review, fix pass, PR open, waiting for the PO's merge | 1 |
   | **Done** | merged **and** its *Value proven by* has run | — |
 
-  - **At most 2 items are in flight** across Discovery, Design, Build and Review: one being worked, one waiting.
+  - **At most 3 items are in flight** across Discovery, Design, Build and Review: one worked in the session, one by
+    agents in the background, one waiting.
+  - **What counts** (raised on 2026-10-06, §11):
+    - an epic counts in Discovery and Design, where it is the work itself; from Build on its stories carry the limit;
+    - a card is in its working stage while any work runs on it, a background read included; a read that only answers a
+      question puts its card back in Idea when the answer is posted;
+    - every card counts: a card that one PR closes together with another still counts on its own, so Build takes one
+      card at a time.
   - Chores and bugs skip Discovery and Design and enter at Ready.
 - **Waiting on:** a single select (the PO / hardware / outside), with **Waiting since**, a date. Waiting is a flag
   that stays on the card in its stage, not a column. Anything waiting more than 3 days is named at the weekly look.
@@ -136,7 +143,8 @@ because it publishes around 30 public issues. It works through `gh` with the PO'
 - **`tools/check_backlog.py`,** in the pre-push gate (`tools/check_commit.py` calls it). It reads the spark project's
   open items with `gh project item-list --format json`. It fails the push when:
   - an open item has an empty *Needed by* section or no Slice;
-  - **a WIP limit is broken**: more than one item in Build, or more than two in flight.
+  - **a WIP limit is broken**: a stage holds more than its limit in §3, counted as §3 says, or more than three are in
+    flight.
 
   This makes *finish before switching* a command, not a memory (the retros' own finding: what a command enforces
   holds).
@@ -175,10 +183,13 @@ the history.
 All three lenses converged on a Kanban board with enforced limits and one daily line, rather than a daily plan and
 retro.
 
-**The trial — four weeks, checked on 2026-11-02.** Three tests at the weekly look:
-- whether the Build limit was broken without being caught;
+**The trial — four weeks, checked on 2026-11-02.** The limits were raised on 2026-10-06, the trial's second day (§11),
+and the date stays. Three tests at the weekly look:
+- whether any limit was broken without being caught, counting work on a card the board showed in Idea;
 - whether a weekly look was skipped twice;
 - whether epics start and finish.
+
+The check also compares how many days cards waited on the PO before the raise and after it.
 
 If they fail, the team moves to one-day sprints: a short plan each morning and a close each evening, on the same
 board.
@@ -214,3 +225,15 @@ board.
 7. Each repository has its own project: spark, the bin, and one `spark-demos` for the demo projects.
 8. Diagrams go in both Miro and Canva (P102b).
 9. All four helpers are in: epics with sub-issues, the session-start status, diagrams as text first, and proofs run.
+
+**Amended on 2026-10-06, the trial's second day (the PO, P146):**
+
+10. **The limits are raised, and what counts is written down.** The PO decided it on the board proposal for P146.
+    - Ready goes from 3 to 5, and in flight from 2 to 3: one worked in the session, one by agents in the background, one
+      waiting. This replaces the total of 2 in flight in decision 6. Discovery, Design, Build and Review stay at 1.
+    - Two counting rules (§3): an epic counts where it is the work itself, in Discovery and Design, and from Build on its
+      stories carry the limit; a card is in its working stage while any work runs on it, a background read included.
+    - Every card counts. A card that one PR closes together with another still counts on its own, so Build takes one
+      card at a time.
+    - The trial keeps 2026-11-02. Its first test widens to count work on a card the board showed in Idea, and it
+      compares how many days cards waited on the PO before and after the raise (§9).

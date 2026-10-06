@@ -62,9 +62,9 @@ def _short(item):
 
 
 def in_flight(items, today):
-    """The cards in a working stage, with their stage and days there — epics and tasks ride on their stories."""
+    """The cards in a working stage, with their stage and days there, counted as the check counts them (one rule)."""
     return ["%s %s %d d" % (i["status"], _short(i), age(i["status_changed"], today)) for i in items
-            if i.get("status") in check_backlog.IN_FLIGHT and not {"epic", "task"} & set(i["labels"])]
+            if i.get("status") in check_backlog.IN_FLIGHT and check_backlog.counts(i)]
 
 
 def waiting(items, today):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §8).
+W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §3 and
+§8; raised on 2026-10-06 at the PO's word, P146).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline.
 """
@@ -12,9 +13,12 @@ import sys
 
 OWNER, TITLE = "xmejkal", "spark"
 #: The stages that carry a limit (§3); Idea and Done carry none.
-LIMITS = {"Discovery": 1, "Design": 1, "Ready": 3, "Build": 1, "Review": 1}
+LIMITS = {"Discovery": 1, "Design": 1, "Ready": 5, "Build": 1, "Review": 1}
 IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
-MOST_IN_FLIGHT = 2
+#: Where an epic is the work itself; from Build on, its stories carry the limit.
+UPSTREAM = ("Discovery", "Design")
+#: One worked in the session, one by agents in the background, one waiting.
+MOST_IN_FLIGHT = 3
 
 
 def _section(body, name):
@@ -28,17 +32,27 @@ def _name(entry):
     return "#%s %s" % (entry["content"].get("number"), entry["content"].get("title", ""))
 
 
+def counts(entry):
+    """
+    Whether an open card counts against the limits: a task rides on its story, and an epic counts only in Discovery
+    and Design, where it is the work itself — from Build on, its stories carry the limit. board.py reads the same rule.
+    """
+    labels = entry.get("labels") or []
+    return "task" not in labels and ("epic" not in labels or entry.get("status") in UPSTREAM)
+
+
 def problems(items):
     """
-    Every sentence the gate fails on: an item with no Needed by or no slice, and a broken WIP limit. Epics carry no limit;
-    a task (a plan's step, a sub-issue of its story) rides on its story and is not judged on its own.
+    Every sentence the gate fails on: an item with no Needed by or no slice, and a broken WIP limit. An epic counts only
+    in Discovery and Design; a task (a plan's step, a sub-issue of its story) rides on its story and is not judged on
+    its own (counts()).
     """
     said, by_stage = [], {}
     for entry in items:
         status = entry.get("status")
         if status == "Done" or "task" in (entry.get("labels") or []):
             continue
-        if "epic" not in (entry.get("labels") or []):
+        if counts(entry):
             by_stage.setdefault(status, []).append(entry)
         if not _section(entry["content"].get("body"), "Needed by"):
             said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
@@ -52,7 +66,7 @@ def problems(items):
                            "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
     flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
     if len(flying) > MOST_IN_FLIGHT:
-        said.append("%d in flight (%s) — at most %d: one being worked, one waiting"
+        said.append("%d in flight (%s) — at most %d: one in the session, one with agents in the background, one waiting"
                     % (len(flying), ", ".join("#%s" % e["content"].get("number") for e in flying), MOST_IN_FLIGHT))
     return said
 
