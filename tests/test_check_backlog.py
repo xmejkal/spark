@@ -31,8 +31,9 @@ class TheBacklogCheckTest(unittest.TestCase):
     def test_a_well_formed_board_has_no_problems(self):
         self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Review"), item(3), item(4, "Done")]), [])
 
-    def test_a_board_at_every_limit_passes(self):
-        # One each in Discovery, Design and Build — 3 in flight, the cap — and Ready at 5: each limit reached, none broken.
+    def test_a_board_at_the_flight_cap_with_a_full_ready_passes(self):
+        # One each in Discovery, Design and Build — 3 in flight, the cap — and Ready at 5: as many limits reached as a
+        # board can reach at once (Review's would make a fourth in flight), none broken.
         board = [item(1, "Discovery"), item(2, "Design"), item(3, "Build")] + [item(n) for n in (4, 5, 6, 7, 8)]
         self.assertEqual(check_backlog.problems(board), [])
 
@@ -71,6 +72,16 @@ class TheBacklogCheckTest(unittest.TestCase):
                          ["Discovery holds 2 (#1, #2) — its limit is 1: finish one before starting another"])
         self.assertEqual(check_backlog.problems([item(3, "Design", labels=("epic",)), item(4, "Design")]),
                          ["Design holds 2 (#3, #4) — its limit is 1: finish one before starting another"])
+
+    def test_an_epic_in_discovery_counts_toward_the_flight_cap(self):
+        # The case the limits were raised for: P136 and P94, epics in Discovery, were the uncounted third and fourth.
+        self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Design"),
+                                                 item(3, "Build"), item(4, "Review")]),
+                         ["4 in flight (#1, #2, #3, #4) — " + IN_FLIGHT_SAYS])
+
+    def test_an_epic_in_ready_is_not_counted_there(self):
+        # The PO's words taken literally: an epic counts in Discovery and Design; Ready is a queue, not work.
+        self.assertEqual(check_backlog.problems([item(n) for n in (1, 2, 3, 4, 5)] + [item(6, labels=("epic",))]), [])
 
     def test_an_epic_in_build_or_review_rides_on_its_stories(self):
         self.assertEqual(check_backlog.problems([item(1, "Build", labels=("epic",)), item(2, "Build")]), [])

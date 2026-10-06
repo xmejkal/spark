@@ -9,5 +9,7 @@
  {"file": "tools/check_backlog.py", "name": "an epic in Discovery or Design rides free", "find": "(\"epic\" not in labels or entry.get(\"status\") in UPSTREAM)", "replace": "\"epic\" not in labels"},
  {"file": "tools/check_backlog.py", "name": "an epic counts in every stage", "find": "return \"task\" not in labels and (\"epic\" not in labels or entry.get(\"status\") in UPSTREAM)", "replace": "return \"task\" not in labels"},
  {"file": "tools/check_backlog.py", "name": "a task counts against the limits", "find": "return \"task\" not in labels and (\"epic\"", "replace": "return (\"epic\""},
- {"file": "tools/board.py", "name": "the status keeps a second rule for epics", "find": "check_backlog.IN_FLIGHT and check_backlog.counts(i)]", "replace": "check_backlog.IN_FLIGHT and not {\"epic\", \"task\"} & set(i[\"labels\"])]"}
+ {"file": "tools/board.py", "name": "the status keeps a second rule for epics", "find": "check_backlog.IN_FLIGHT and check_backlog.counts(i)]", "replace": "check_backlog.IN_FLIGHT and not {\"epic\", \"task\"} & set(i[\"labels\"])]"},
+ {"file": "tools/check_backlog.py", "name": "an epic in flight is not counted toward the cap", "find": "    flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]\n", "replace": "    flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, []) if \"epic\" not in (e.get(\"labels\") or [])]\n"},
+ {"file": "tools/check_backlog.py", "name": "an epic counts in Ready too", "find": "UPSTREAM = (\"Discovery\", \"Design\")\n", "replace": "UPSTREAM = (\"Discovery\", \"Design\", \"Ready\")\n"}
 ]
