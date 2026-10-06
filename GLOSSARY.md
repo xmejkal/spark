@@ -14,8 +14,9 @@ worse, it is not persuasive — you will delete the rule the first time it is in
 
 ### The three outcomes — `ok`, `problems`, `could-not-run`
 
-What every command exits with: **0**, **1**, **2**. They live in `scripts/outcomes.py`, which is
-the only place a verdict is decided, so no command can invent its own.
+What every command exits with: **0**, **1**, **2**. They live in `scripts/outcomes.py`, which the
+command-line scripts import, so no command spells its own. Not every script keeps to them yet: a crash exits 1, and
+one script says `mismatch` for `problems` ([the guide for AI agents](docs/guide/agents.md#the-outcomes-and-their-exit-codes), P43).
 
 The third one is most of this product's reason for existing. **A check that could not look must
 never read as a check that passed.** Before this was one rule in one file, `check_physics` would
@@ -184,7 +185,8 @@ the record stays and names itself as an alternative.
 
 `true` means **the vendor's own words at a cited URL**. Anything read off a photo, inferred, or
 computed is `false`, with `where` saying how it was arrived at. A null is not a gap in the output;
-it *is* the output, and a check reading one reports it as unverifiable rather than passing it.
+it *is* the output, and a check reading one should report it as unverifiable rather than pass it. Not
+every check does yet ([what never to assume](docs/guide/agents.md#what-never-to-assume), P107).
 
 ### Stand-in, placeholder
 

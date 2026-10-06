@@ -97,7 +97,7 @@ review runs those commands. If an item cannot name one, it does not enter Ready.
 
 ## Definition of Done
 
-Every one of these, for every PBI. No exceptions, no "mostly".
+Every one of these, for every item. No exceptions, no "mostly".
 
 1. `python3 -m unittest discover -s tests` — green.
 2. **Mutation tested.** Re-introduce the defect the change prevents; the suite must go red. A fix
@@ -108,6 +108,9 @@ Every one of these, for every PBI. No exceptions, no "mostly".
 6. Any claim it makes in a docstring or README is **true when run**, not when written.
 7. Its Done line says how many code lines it added to `scripts/` and why — the pre-push gate prints the
    figure (W15b, P99).
+8. A change to what a step of the journey does updates [the journey guide](../docs/guide/journey.md) and the README's
+   *What works today* in the same change (P104, the PO 2026-10-05). Nothing mechanical checks it: `tools/check_docs.py`
+   cannot tell whether a status is still current, so the council reads it.
 
 **When an epic is done** (P98; P102a moved it from the sprint's close): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
 prints its time. An escape is a missing test, opened as a backlog item the same day.

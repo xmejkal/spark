@@ -1,175 +1,191 @@
-# spark — checks for a board made of modules
+# spark
 
-Point it at a design, or at a board you have already built, and it tells you — in a second, item
-by item — where the fab package disagrees with the schematic, which capacitors have no voltage
-rating, where a drill is too small for the pin that goes in it, and where your board file
-disagrees with the vendor's own header.
+**From a list of modules to a checked board, for gadgets built from an ESP32 dev board.**
 
-That is narrower than "AI electronics design", and it is the part that works. The reasoning half
-is here too, and it is useful, but the measured value is in the arithmetic: a script runs in a
-second, costs nothing, cannot change its mind, and does it identically on the seventieth hole.
+spark is a Claude Code plugin, meant for a hobbyist building a gadget from an ESP32 *dev board* (a module such as the
+DFRobot FireBeetle 2 ESP32-S3) and off-the-shelf modules, not for chip-down boards made in volume
+([the vision](scrum/VISION.md)). You describe the gadget, and spark helps turn it into needs, which it matches against
+the parts you own and the ones it knows. It researches a missing part from the vendor's own documents and writes it as
+a [record](GLOSSARY.md#record--and-the-three-places-one-lives): its facts, each with a source and whether anyone
+checked it.
 
-**New to the repository?** `GLOSSARY.md` defines the words this one uses differently from
-everyone else — mutation, anchor, the gate, `could-not-run`, stand-in, cold test — each with the
-failure that produced it.
+From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark generates the
+*board*: a printed circuit board your dev board and modules plug into.
 
-## Install
+- Every pin gets a reason, and the connections come from the parts' records.
+- The board builds, with a Wokwi diagram generated from it (kept only with `--sim-dir sim`,
+  [P116](https://github.com/xmejkal/spark/issues/50)).
+- spark's checks read it.
+
+Its placement is a first draft, which you lay out before ordering. Today
+[the chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from that requirements file; nothing yet
+writes one from a vague idea with no parts named ([P76](https://github.com/xmejkal/spark/issues/5)). `--board`, and a
+requirements file's `board`, name the dev board.
+
+On 2026-10-06 the library defined two dev boards and held 7 parts (`boards.py --list`, `parts.py --list`). Only the
+FireBeetle 2 ESP32-S3 builds: the Seeed XIAO ESP32-C6 is defined for the pin map only, and its file records no header
+geometry, so `/spark:build` stops at the footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)).
+
+Where a fact is missing, spark refuses, or it goes on with a [stand-in](GLOSSARY.md#stand-in-placeholder) that it
+names in `board.tsx`: a placeholder outline in its header, the router's default trace width under the power traces it
+could not size. Its checks are built so that one that
+[**could not look**](docs/guide/agents.md#the-outcomes-and-their-exit-codes) never reads as one that passed. Where that
+does not hold yet, [what never to assume](docs/guide/agents.md#what-never-to-assume) says so.
+
+## What it shows on the example
+
+On the documented example (a FireBeetle 2 ESP32-S3, an L9110S motor driver, a power inlet and two buttons), from the
+runs in [the journey guide](docs/guide/journey.md):
+
+- **A conflict between two parts.** The board's 10 kΩ pull-downs, against the L9110S module's own 10 kΩ pull-ups, hold
+  both motor inputs HIGH at idle on a supply above 5 V. `parts.py --show` reports it; `check_all` does not yet
+  ([P109](https://github.com/xmejkal/spark/issues/43)).
+- **An [advisory](GLOSSARY.md#needs-measurement-and-advisory--findings-that-do-not-change-the-outcome):** the power
+  inlet's 0.225 mm annular ring is over the 0.18 mm the default process can make, but under the 0.25 mm it recommends.
+- **A figure nobody verified:** the 3.3 V rail draws 355 mA of the dev board's 1.50 A, a rating nobody has checked.
+- **What a check could not look at:** physics, because the motor driver's and the inlet's records state no current
+  ([P120](https://github.com/xmejkal/spark/issues/54)) and four resistors' currents are unstated.
+- **A reason for every pin:** `MOTOR_IA` goes on pad D3, GPIO38, because it *"needs nothing special; the cheapest pin
+  left could still pwm, which is spent here"*.
+
+## What works today
+
+```mermaid
+flowchart LR
+    drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
+    research --> build["Build — works"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
+    firmware --> simulate["Simulate — partly"] --> bench["Bench — not yet"]
+```
+
+The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
+`docs/guide/`, on 2026-10-05 and 2026-10-06; [the journey guide](docs/guide/journey.md) shows the output of each step
+it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops before its goal,
+or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**: nothing does it yet;
+the linked issue plans it.
+
+| step | today | with |
+| --- | --- | --- |
+| [Drawer](docs/guide/journey.md#drawer) | **partly**: what you own, kept in your own store; the scripts that list and write entries ran. Turning your words into entries, and the DFRobot import, were not run here | `/spark:drawer` |
+| [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; the conversation was not run here. Not built yet: choosing and reserving parts ([P97](https://github.com/xmejkal/spark/issues/18)), and turning needs into a requirements file ([P76](https://github.com/xmejkal/spark/issues/5)) | `/spark:idea` |
+| [Research](docs/guide/journey.md#research) | **partly**: the library search runs. Research of a new part is done by agents, not run here | `/spark:research`, `/spark:identify` |
+| [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it, or the stage that stopped it | `/spark:build` |
+| [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |
+| [Firmware](docs/guide/journey.md#firmware) | **partly**: the pin map is exported for the firmware to import. Not built yet: checking the firmware on a Mac against it ([P59](https://github.com/xmejkal/spark/issues/7), [P74](https://github.com/xmejkal/spark/issues/8)) | `assign_pins.py --emit-pins` |
+| [Simulate](docs/guide/journey.md#simulate) | **partly**: the build generates the Wokwi diagram and stages the chips, kept only with `--sim-dir sim` ([P116](https://github.com/xmejkal/spark/issues/50)). A run needs a flash image, a scenario you write, `wokwi-cli` and a Wokwi account's CI token, and it spends Wokwi CI minutes; none was run here | `/spark:build`, then `wokwi-cli` |
+| [Bench](docs/guide/journey.md#bench) | **not yet**: spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16). The first bench will be a separate project's, a sensor trash can given a new ESP32 brain ([P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2), its bring-up [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8)) | — |
+
+A board you wrote by hand in tscircuit is read the same way: `npx --no tsci build board.tsx`, then `/spark:init` so it
+names the rails, then `check_all.py --project .` (not run here; a project's own
+[`make check`](GLOSSARY.md#make-check--a-projects-own-gate) can run the checks one by one).
+
+## Before you start
+
+Claude Code for the commands, Python 3.9 or newer, and Node 20 or newer: on macOS, spark's install lines get Node and
+pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest with one yes: bun, tscircuit (into
+the project), `wokwi-cli`, MicroPython and `littlefs-python`. The runs here were on macOS. On Linux, `data/tools.json`
+has apt lines only for pdftotext and `sigrok-cli` (not run here), so Node and bun are yours to install; it has none
+for Windows.
+
+## Install, and a first run
+
+In Claude Code:
 
 ```
 /plugin marketplace add xmejkal/spark
 /plugin install spark
 ```
 
-Then `/spark:setup` — it shows what spark needs and installs what is missing with one yes. In a project:
+The marketplace is named `petr-local`, so Claude Code may show the plugin as `spark@petr-local`. This install path was
+not run for these docs.
 
-```
-/spark:setup             # what spark needs, what is missing; one yes installs it
-/spark:init              # writes what the checks need; guesses nothing
-/spark:build             # a requirements file to a built, simulated board, left in the project
-```
+Then, in a project folder:
 
-## The one rule everything here is built around
+1. `/spark:init` writes the project's files without guessing, including the `package.json` that tscircuit, the engine
+   that builds the board, installs into.
+2. `/spark:setup` shows the tools spark needs, and installs what is missing with one yes.
+3. Put a `requirements.json` in the folder: the dev board and a list of parts, by the ids `parts.py --list` prints.
+   Copy the example on [`/spark:build`'s page](commands/build.md#the-requirements-file), or ask Claude to design the
+   board; the `spark-design` skill writes the file with you (not run here).
+4. `/spark:build` turns it into a board.
+5. `/spark:init` again. After a build its page runs init with `--force`, which names the rails from the built board and
+   keeps your answers; its last step runs `check_all.py --project .`.
 
-**A check that could not look must never read as a check that passed.** Every tool reports four
-outcomes, not two: `ok`, `problems`, `could-not-run` (it was given what it needs and still could
-not look) and `skipped` (it was never asked). The last two are routinely conflated, and the
-conflation is dangerous in one direction only — a board nobody examined looks exactly like a
-clean one.
+On the documented example every stage of the build reads `[ok  ]` and it ends "the chain runs end to end": 19 routed
+traces carry the 22 written connections ([the full output](docs/guide/journey.md#build), with tscircuit linked in from
+an existing install, not installed by `/spark:setup`). All green, yet the conflict above shows only in `parts.py --show`
+and in `board.tsx`'s closing comment. To look at the board, [see it](commands/build.md#see-it) in tscircuit's viewer.
 
-The same rule runs through the data: a fact carries a source and whether anyone checked it, an
-unverified number must say what depends on it, and a dimension nobody measured makes the board
-generator refuse rather than invent one.
+An update replaces the plugin, not your files. Your store and a project's own `boards/`, `parts/` and `.spark/` are
+outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record copied into the plugin's own library with
+`parts.py --promote` lives inside the plugin.
 
-## Commands
+## Commands, skills and agents
 
-| | |
-| --- | --- |
-| `/spark:setup` | What spark needs on this machine — the board engine, the PDF reader, the simulator, the MicroPython build, the MCP servers — what is missing, and one yes to install it, never with `sudo`. Turns an integration on or off, points a job at another tool, pins a version: each a line in your `~/.local/share/spark/tools.json`, or the project's `.spark/tools.json`, which wins. |
-| `/spark:init` | Writes `.spark/rules.json`, `.spark/project.json` and `boards/active.json`. Names the rails from the built design; leaves **every value null** and lists them. A guessed rail current would poison the one check that does arithmetic. |
-| `/spark:research` | A part the library lacks, researched from the vendor's own pages — DFRobot first, then Seeed, or the order the project's brief prefers — and written as a record with sources, every unconfirmed fact marked. The next project finds it with `parts.py --need`. |
-| `/spark:identify` | A photo of a module from the drawer → what it is, from its markings and the chip's datasheet, written as a record for a part already owned; everything only the photo supports is marked unverified, with how to check it on the bench. |
-| `/spark:drawer` | What you own, in your own store and never in a repository: your DFRobot order history brought in from your logged-in browser (SKU, name and count only), and anything else said in plain words. Every part spark knows is linked to its record — one from another of your projects goes onto your shelf, so every project finds it. Owning never starts research. |
-| `/spark:idea` | A goal in your words — "tell me when my plant is thirsty" — becomes needs (at most three questions, one at a time), and each need is matched against your drawer and spark's records, owned parts first, with what each still owes before it can build. Nothing is researched until a need is a real gap; for now it stops at the marks. |
-| the catalog | Everything research has ever read and not chosen, in your own store (`~/.local/share/spark/catalog/`) — never in the plugin (P83): a record per candidate with its part facts and why it was not chosen, its datasheets and drawings kept in `~/.local/share/spark/sources` and pointed at from `documents`, no seller listings; `parts.py --catalog` lists it, `--need` searches it, `--promote` moves a record into a project or the library. A database grown by use, not designed up front. |
-| `/spark:build` | A requirements file — a board and a list of parts — to a board that builds and simulates, or the stage that stopped it: `parts → pin map → board file → build → simulation`. Seconds, no agents, refuses rather than guesses. |
+**Commands**, typed in Claude Code:
 
-## Skills
+- `/spark:init`: a project;
+- `/spark:setup`: the tools;
+- `/spark:drawer`: what you own;
+- `/spark:idea`: a goal to needs;
+- `/spark:research`: a missing part;
+- `/spark:identify`: a module from a photo;
+- `/spark:build`: a requirements file to a board.
 
-| | |
-| --- | --- |
-| **spark-review** | Find what is wrong and gate it before fab: the five deterministic checks, then one reviewer per dimension (power, signals, thermal-mechanical, manufacturability, firmware-hardware) reading the primary artefacts only, then the fabrication gate. |
-| **spark-design** | Describe → `requirements.json` → parts → pin map → generated board file → build → checks → render. tscircuit by hand only where the generator stops. |
-| **spark-reverse-engineer** | Board photo → copper reading + datasheet pinouts + functional wiring → netlist hypothesis and a bench protocol to confirm it. |
+**Skills**, which Claude picks up from your words: `spark-design` designs a board; `spark-review` reviews it and gates
+it before ordering; `spark-reverse-engineer` reads a board from its photo (not run here; its bench-protocol template
+was written for the smart bin's original board).
 
-## Scripts
+**Agents**, launched by the commands and skills: `part-finder` and `datasheet-reader` for a commodity part (an LED, a
+button, a connector: one datasheet describes it), `parts-researcher` for a module, and `design-reviewer`, one per
+review dimension (power, signals, thermal-mechanical, manufacturability, firmware-hardware).
 
-Every one runs standalone and is what the commands and skills above actually call. The checks
-take `--json`; `boards`, `check_bom`, `emit_board` and `init_project` do not yet, and `copper`,
-`outcomes` and `design` are libraries, not commands.
+Each one, with when to use it and what it writes and refuses: [the commands guide](docs/guide/commands.md).
 
-**The one command**
+## Without Claude Code
 
-- `check_all.py --project .` — runs every check below and answers once. Prints the path it
-  resolved for each input before reporting anything, because silently picking up a stale artifact
-  is the one way discovery is worse than typing the paths.
+spark's scripts run in any terminal, for you or another AI: plain Python. They exit 0 ok, 1 problems, 2 could-not-run,
+and most answer in JSON with `--json`. Read [the guide for AI agents](docs/guide/agents.md) before trusting an exit
+code: `check_all.py` exits 0 even when most checks were never asked, and a crash exits 1. The conversations need
+Claude Code: the idea, research, identify, the review's agents and the drawer import. [`AGENTS.md`](AGENTS.md) points
+to the same guide.
 
-**The checks**
+## What it uses underneath
 
-- `check_vendor_pins.py` — re-derives the pin map from the vendor's own `pins_arduino.h`. The only
-  tool here that consults something outside both the design and the model.
-- `check_footprints.py` — drill vs the pin that goes in it, annular ring, via class, package vs
-  value, cross-pluggable connectors. Counts the holes it could not read rather than skipping them.
-- `check_physics.py` — trace current, capacitor derating, resistor dissipation, I²C rise time.
-- `check_bom.py` — the fab package against the schematic it came from.
+[tscircuit](https://tscircuit.com) builds the board and [Wokwi](https://wokwi.com) simulates it: a run boots a flash
+image of [MicroPython](https://micropython.org) and the project's files, needs a Wokwi account's token and spends its
+CI minutes. Node and bun run the tools. For the research agents spark declares two MCP servers, both started unpinned
+with `npx -y` ([P112](https://github.com/xmejkal/spark/issues/46)): `@jlcpcb/mcp`, an unofficial community package
+([l3wi/jlc-cli](https://github.com/l3wi/jlc-cli)), and `mcp-remote` to Espressif's hosted documentation. The DFRobot
+order import uses Claude in Chrome. Your store, `~/.local/share/spark`, sits outside every repository.
+[KiCad](https://www.kicad.org)'s `kicad-cli` is optional, for the skills' electrical-rule and design-rule checks. Each,
+with what it needs: [how spark works underneath](docs/guide/how-it-works.md#the-tools-spark-calls).
 
-- `compare_design.py` — written rules against the design that was built.
+## Before ordering
 
-**The libraries and the generators**
-
-- `boards.py` — the board library. A project's own `boards/<id>.json` beats the shipped one.
-  Board files carry facts, never decisions, and `--validate` enforces the difference.
-- `parts.py` — the parts library, same override rule. Every fact carries a value, a source and
-  whether anyone checked; `--unverified` lists what nobody has.
-- `assign_pins.py` — a pin map with a reason per pin, spending scarce pins last.
-- `emit_board.py` — a module list and a pin map, as tscircuit you can build.
-- `init_project.py` — what `/spark:init` runs.
-- `design.py` — a design loaded once, from its requirements file: the project it belongs to
-  (found up from the file, or `--project`), the board, the parts as instances, the rules.
-  Everything wrong with the input is a sentence, never a traceback.
-- `check_spine.py` — the one gate that runs the whole chain, `idea → parts → pin map →
-  schematic → footprint → build → simulation`, and counts what came out. A build with no
-  copper is not a pass; a toolchain that cannot build a trivial board is could-not-run, named.
-- `tools/mutate.py` — re-introduces each defect in a table and proves the suite goes red. The
-  acceptance bar for every fix (`tests/mutations/`).
-
-## Libraries
-
-`boards/` holds board definitions (Seeed XIAO ESP32-C6, DFRobot FireBeetle 2 ESP32-S3) and
-`parts/` holds module definitions. Both are small and both are extensible: a project's own file
-of the same name wins, so what you verified yourself is never replaced by an update. See
-`boards/README.md` for the schema and for the fact-versus-decision rule that keeps a board file
-swappable.
-
-`data/fabrication.json` is the third: what a board house can make (minimum annular ring, via and
-drill sizes, copper thickness, board thickness) and what a physical part is (chip package power
-ratings, the square header pin). Every script reads it rather than restating it — the package
-table used to be a second copy in two checkers, and the annular ring was 0.25 mm in the checker
-and 0.35 in the generator, related by a sentence in a comment. **Your board house is not this
-one:** state yours in `.spark/rules.json` under `fabrication`, by the same names, and both the
-check and the generator that draws for it move together. A law or a published standard stays in
-code beside the arithmetic that uses it, with its source; the file's own `//boundary` note says
-which is which and why.
-
-## What you install alongside (declared, not bundled)
-
-**Companion skills**
-
-- **tscircuit skill** — the engine's own syntax and CLI knowledge: `npx skills add tscircuit/skill`
-- **kicad-happy** — mature KiCad DRC/EMC/datasheet/BOM skills:
-  `/plugin marketplace add aklofas/kicad-happy`
-
-**MCP servers** — spark declares two, because its research agents call them: **jlcpcb** (part
-search, for `part-finder`) and **espressif-docs** (Espressif's own documentation, for
-`datasheet-reader`; needs Node 20 or newer). Wokwi and sigrok are one choice each —
-`/spark:setup add wokwi-mcp`, `/spark:setup add sigrok` — and why KiCad's is not: [`docs/mcp.md`](docs/mcp.md).
-
-## Toolchain the skills call
-
-Node and the tscircuit CLI — `/spark:setup` installs tscircuit into the project at the version spark was measured on. KiCad 9/10 for `kicad-cli`.
-Optionally Wokwi CI, and a Raspberry Pi as a bench host.
+The generated board is a draft, and the header of `board.tsx` says so: its modules sit in a column that does not
+overlap, it has no mounting holes or connector keying, and its traces are not sized for current until each rail's
+current is stated. No check here is a design-rule check, and tscircuit's autorouter can emit shorts
+([the layout notes](skills/spark-design/references/pcb-layout.md)). [From draft to order](docs/guide/journey.md#from-draft-to-order)
+gives the steps, each sourced and the exports run on the example: state the currents and generate the board again, lay
+it out, run the `spark-review` skill and its fabrication gate, a KiCad design-rule check, and a person's look.
 
 ## Honest limits
 
-The deterministic checks and the libraries do what they say. Auto-routing does not: tscircuit's
-autorouter can emit shorts and unmanufacturable vias, so the fab gate and human review before
-ordering are not optional.
+- **The reviewer agents in `spark-review` are less proven than the checks.** The only measurements were a few eval
+  runs, one to three per arm, against a no-plugin baseline
+  ([tabled in the 2026-09-24 audit](docs/audit-2026-09-24/autonomous-agent-readiness.md#on-the-eval-and-the-reprioritisation-it-drove)),
+  each graded on what the agent found, not by a script; the cases were removed in commit 066c4af. Treat "the reviewers
+  help" as plausible, not measured.
+- **Nothing here has been validated on hardware by its author.** Ground truth is the bench.
 
-The reviewer half is less established than the checks. The evidence for it is a handful of eval
-runs at n=1–3 whose arms differ by context alone, and none of them exercises a script — so treat
-"the reviewers help" as plausible and unproven rather than measured. What is measured is that
-every defect found by a script this year was found identically, every time, for free.
+## More
 
-Nothing here has been validated on hardware by its author. Ground truth is the bench.
-
-## Tests
-
-```
-python3 -m unittest discover -s tests -t tests
-```
-
-The count is whatever that prints — a number written here rotted three times in four days. The rule
-they follow: a test must **run** the thing, not read it. No assertion on
-source text, none that is an arithmetic identity of the function under test, and every check
-exercised through the runner with an input that makes it fail. That rule exists because the test
-written to catch "a check nobody invokes" asserted that a string appeared in the runner's source
-— it verified the check was named, not that it ran, and it stayed green for the whole life of the
-bug it was written to prevent.
-
-The second rule: every fix is mutation-tested. `python3 tools/mutate.py tests/mutations/<table>.json`
-re-introduces each defect and must report every one caught; a mutation the suite does not
-notice is a missing test, and a fixture too weak to see it is fixed rather than the mutation
-dropped.
+- [The glossary](GLOSSARY.md): the words this repository uses its own way, each with the failure that produced it.
+- [Developing spark](docs/guide/developing.md): the tests, the commit gate, and where the work is planned.
+- **Found a problem?** [Open an issue](https://github.com/xmejkal/spark/issues/new) with the command you ran, its
+  output and spark's version (in `.claude-plugin/plugin.json`). A form for this is
+  [P128](https://github.com/xmejkal/spark/issues/62).
 
 ---
-v0.6.0 · MIT · built with the tscircuit engine.
-\n\nThe commit gate (`tools/check_commit.py`) runs itself before every push once the hook is installed: `ln -sf ../../tools/pre-push .git/hooks/pre-push`.
+
+v0.6.0 · [MIT](LICENSE) · built with the tscircuit engine.

@@ -19,9 +19,15 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --status --project .
 
 `[ok  ]` is found, `[????]` is missing (with the line that installs it), `[off ]` is an integration that
 is off, `[!   ]` is something only the person can do — an account, a token, an instrument to plug in.
-The last line names what is missing: `N to install: <names>`.
+The last line names what is missing: `N to install: <names>`. `[ok  ]` on an MCP row (chip-docs, parts-search)
+means only that spark declares the server and Node is on the PATH. Nothing checks that Claude Code has the server
+registered or that it answers ([P112](https://github.com/xmejkal/spark/issues/46)), or the Node version;
+espressif-docs needs Node 20 or newer ([docs/mcp.md](../docs/mcp.md)).
 
 ## 2. One yes installs everything missing
+
+If the project has no `package.json`, stop and run `/spark:init` first: without one, npm installs into the nearest
+parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
 
 If anything reads `[????]`, first see exactly what installing them would run:
 
@@ -37,7 +43,10 @@ can put any command there — so say so plainly before the yes. With a yes, the 
 ${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <names from the last line> --project .
 ```
 
-Each installs the way its kind does, in the person's own space: an npm tool into the project, a
+Each installs the way its kind does, in the person's own space: an npm tool into the project, which needs its
+`package.json` (bun, which runs tscircuit's `tsci`, globally with `npm install -g bun`, which needs a Node whose global
+folder is yours, as with nvm or Homebrew; otherwise install bun yourself, and if it fails `tools.py` says so and exits
+2), a
 Python package with `pip install --user`, a system tool with Homebrew, the MicroPython build into
 `~/.local/share/spark/downloads/` and wokwi-cli as Wokwi's release binary beside it, each checked
 against its checksum before it is used. **Never `sudo`**: a line that needs it is printed for the person
@@ -66,4 +75,5 @@ with the plugin; turning one off is done in Claude Code's `/mcp`.
 ## From any other command
 
 A spark command that reports a missing tool — `… is not installed — install: …` — is answered the same
-way: ask the person once, run `tools.py --install <name> --project .`, and carry on with the step.
+way: ask the person once, run `tools.py --install <name> --project .`, and carry on with the step. The same
+`package.json` rule holds: no `package.json`, `/spark:init` first.

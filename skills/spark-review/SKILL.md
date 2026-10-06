@@ -11,7 +11,7 @@ load-bearing is unverified.
 
 ## 1. Build first
 
-Every check reads the built netlist. Build it (`/spark:build`, or `tsci build board.tsx`) before
+Every check reads the built netlist. Build it (`/spark:build`, or `npx --no tsci build board.tsx`) before
 reviewing anything.
 
 ## 2. Run the checks

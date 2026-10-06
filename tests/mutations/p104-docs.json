@@ -1,0 +1,16 @@
+[
+ {"file": "tools/check_docs.py", "name": "a command that does not exist passes", "find": "if not (root / \"commands\" / (\"%s.md\" % name)).is_file()]", "replace": "if False]"},
+ {"file": "tools/check_docs.py", "name": "a script that does not exist passes", "find": "and not any((root / folder / name).is_file() for folder in (\"scripts\", \"tools\", \"tests\"))]", "replace": "and False]"},
+ {"file": "tools/check_docs.py", "name": "an unlisted name passes", "find": "for name in names if name not in text]", "replace": "for name in names if False]"},
+ {"file": "tools/check_docs.py", "name": "an unknown skill passes", "find": "if name not in skills]", "replace": "if False]"},
+ {"file": "tools/check_docs.py", "name": "an unknown flag passes", "find": "for flag in flags if flag not in known]", "replace": "for flag in flags if False]"},
+ {"file": "tools/check_docs.py", "name": "a failing --help reads as checked", "find": "            if code:\n", "replace": "            if False:\n"},
+ {"file": "tools/check_docs.py", "name": "a broken link passes", "find": "if not dest.exists():", "replace": "if False:"},
+ {"file": "tools/check_docs.py", "name": "a missing anchor passes", "find": "if anchor not in {slug(h)", "replace": "if False and anchor not in {slug(h)"},
+ {"file": "tools/check_docs.py", "name": "an undated output passes", "find": "if not OUTPUT_NOTE.match(above)]", "replace": "if False]"},
+ {"file": "tools/check_docs.py", "name": "a failing example passes", "find": "if done.returncode != int(mark.group(1)):", "replace": "if False:"},
+ {"file": "tools/check_docs.py", "name": "an example runs in the person's store", "find": "env.update(CLAUDE_PLUGIN_ROOT=str(root), SPARK_HOME=store)", "replace": "env.update(CLAUDE_PLUGIN_ROOT=str(root))"},
+ {"file": "tools/check_docs.py", "name": "a hanging example stops the check", "find": "except subprocess.TimeoutExpired:", "replace": "except ZeroDivisionError:"},
+ {"file": "tools/check_docs.py", "name": "a wrong version passes", "find": "return [] if \"v%s\" % version in readme else", "replace": "return [] if True else"},
+ {"file": "tools/check_docs.py", "name": "a personal path passes", "find": "PERSONAL = re.compile(r\"/Users/|/home/|/private/|smartbin-local\")", "replace": "PERSONAL = re.compile(r\"(?!)\")"}
+]
