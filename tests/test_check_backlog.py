@@ -1,10 +1,11 @@
 """
 P102a: the spark project's open items name what needs them, sit on a slice, and respect the WIP limits.
 
-P146 (the PO, 2026-10-06): the limits are Discovery 1, Design 1, Ready 5, Build 1 and Review 1, with at most 3 in
-flight; an epic counts in Discovery and Design, where it is the work itself, and from Build on its stories carry the
-limit; a task never counts. Each limit is pinned from both sides: a board at the limit passes, and one card over it is
-named. The numbers are written out here, never read from the module (W2, test_self_confirmation).
+P146 (the PO, 2026-10-06 evening, after the first day at the cap of 3): every working stage takes 2 — Discovery 2,
+Design 2, Build 2 and Review 2 — Ready stays at 5, and at most 4 cards are in flight; an epic counts in Discovery and
+Design, where it is the work itself, and from Build on its stories carry the limit; a task never counts. Each limit is
+pinned from both sides: a board at the limit passes, and one card over it is named. The numbers are written out here,
+never read from the module (W2, test_self_confirmation).
 """
 
 import json
@@ -19,7 +20,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import check_backlog  # noqa: E402
 
 BODY = "### Needed by\n\n%s\n\n### Value proven by\n\nx\n\n### Proof\n\n_No response_\n"
-IN_FLIGHT_SAYS = "at most 3: one in the session, one with agents in the background, one waiting"
+IN_FLIGHT_SAYS = "at most 4: finish one before starting another"
 
 
 def item(number, status="Ready", slice_="10 The store", needed="the PO's walking skeleton", labels=("story",)):
@@ -32,10 +33,11 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Review"), item(3), item(4, "Done")]), [])
 
     def test_a_board_at_the_flight_cap_with_a_full_ready_passes(self):
-        # One each in Discovery, Design and Build — 3 in flight, the cap — and Ready at 5: as many limits reached as a
-        # board can reach at once (Review's would make a fourth in flight), none broken.
-        board = [item(1, "Discovery"), item(2, "Design"), item(3, "Build")] + [item(n) for n in (4, 5, 6, 7, 8)]
-        self.assertEqual(check_backlog.problems(board), [])
+        # Two in Discovery (its limit) and one each in Design and Build — 4 in flight, the cap — and Ready at 5: three
+        # limits reached at once, none broken. One more card in any working stage would be a fifth in flight.
+        in_flight = [item(1, "Discovery"), item(2, "Discovery"), item(3, "Design"), item(4, "Build")]
+        ready = [item(n) for n in (5, 6, 7, 8, 9)]
+        self.assertEqual(check_backlog.problems(in_flight + ready), [])
 
     def test_an_item_with_no_needed_by_is_named(self):
         for empty in ("", "_No response_", "   "):
@@ -46,46 +48,65 @@ class TheBacklogCheckTest(unittest.TestCase):
     def test_an_item_on_no_slice_is_named(self):
         self.assertEqual(check_backlog.problems([item(8, slice_=None)]), ["#8 P8 — x: on no slice of the story map"])
 
-    def test_a_second_item_in_build_is_named_with_both(self):
-        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build")]),
-                         ["Build holds 2 (#1, #2) — its limit is 1: finish one before starting another"])
+    def test_a_second_item_in_build_passes_and_a_third_is_named_with_all_three(self):
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build")]), [])
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build")]),
+                         ["Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
 
-    def test_a_second_item_in_review_is_named(self):
-        self.assertEqual(check_backlog.problems([item(1, "Review"), item(2, "Review")]),
-                         ["Review holds 2 (#1, #2) — its limit is 1: finish one before starting another"])
+    def test_a_second_item_in_review_passes_and_a_third_is_named(self):
+        self.assertEqual(check_backlog.problems([item(1, "Review"), item(2, "Review")]), [])
+        self.assertEqual(check_backlog.problems([item(1, "Review"), item(2, "Review"), item(3, "Review")]),
+                         ["Review holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
 
-    def test_a_second_item_in_discovery_is_named(self):
-        self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Discovery")]),
-                         ["Discovery holds 2 (#1, #2) — its limit is 1: finish one before starting another"])
+    def test_a_second_item_in_discovery_passes_and_a_third_is_named(self):
+        self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Discovery")]), [])
+        self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Discovery"), item(3, "Discovery")]),
+                         ["Discovery holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+
+    def test_a_second_item_in_design_passes_and_a_third_is_named(self):
+        self.assertEqual(check_backlog.problems([item(1, "Design"), item(2, "Design")]), [])
+        self.assertEqual(check_backlog.problems([item(1, "Design"), item(2, "Design"), item(3, "Design")]),
+                         ["Design holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
 
     def test_a_full_ready_column_says_the_po_moves_one_back(self):
         self.assertEqual(check_backlog.problems([item(n) for n in (1, 2, 3, 4, 5, 6)]),
                          ["Ready holds 6 (#1, #2, #3, #4, #5, #6) — its limit is 5: the PO moves one back to Idea"])
 
-    def test_four_in_flight_is_too_many_even_one_per_stage(self):
+    def test_a_card_in_each_working_stage_is_four_in_flight_the_cap_and_passes(self):
         self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Design"), item(3, "Build"),
-                                                 item(4, "Review")]),
-                         ["4 in flight (#1, #2, #3, #4) — " + IN_FLIGHT_SAYS])
+                                                 item(4, "Review")]), [])
+
+    def test_five_in_flight_is_too_many_even_with_no_stage_over_its_limit(self):
+        self.assertEqual(check_backlog.problems([item(1, "Discovery"), item(2, "Discovery"), item(3, "Design"),
+                                                 item(4, "Build"), item(5, "Review")]),
+                         ["5 in flight (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
 
     def test_an_epic_in_discovery_or_design_is_the_work_and_counts(self):
-        self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery")]),
-                         ["Discovery holds 2 (#1, #2) — its limit is 1: finish one before starting another"])
-        self.assertEqual(check_backlog.problems([item(3, "Design", labels=("epic",)), item(4, "Design")]),
-                         ["Design holds 2 (#3, #4) — its limit is 1: finish one before starting another"])
+        # An epic and two stories: the epic's place is what puts the stage over its limit of 2.
+        self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
+                                                 item(3, "Discovery")]),
+                         ["Discovery holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+        self.assertEqual(check_backlog.problems([item(4, "Design", labels=("epic",)), item(5, "Design"),
+                                                 item(6, "Design")]),
+                         ["Design holds 3 (#4, #5, #6) — its limit is 2: finish one before starting another"])
 
     def test_an_epic_in_discovery_counts_toward_the_flight_cap(self):
-        # The case the limits were raised for: P136 and P94, epics in Discovery, were the uncounted third and fourth.
-        self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Design"),
-                                                 item(3, "Build"), item(4, "Review")]),
-                         ["4 in flight (#1, #2, #3, #4) — " + IN_FLIGHT_SAYS])
+        # The case the counting rule was made for: P136 and P94, epics in Discovery, were the uncounted third and
+        # fourth. The epic here is the fifth card; left uncounted, the board would read as four in flight and pass.
+        self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
+                                                 item(3, "Design"), item(4, "Build"), item(5, "Review")]),
+                         ["5 in flight (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
 
     def test_an_epic_in_ready_is_not_counted_there(self):
         # The PO's words taken literally: an epic counts in Discovery and Design; Ready is a queue, not work.
         self.assertEqual(check_backlog.problems([item(n) for n in (1, 2, 3, 4, 5)] + [item(6, labels=("epic",))]), [])
 
     def test_an_epic_in_build_or_review_rides_on_its_stories(self):
-        self.assertEqual(check_backlog.problems([item(1, "Build", labels=("epic",)), item(2, "Build")]), [])
-        self.assertEqual(check_backlog.problems([item(3, "Review", labels=("epic",)), item(4, "Review")]), [])
+        # An epic and two stories: counted, the epic would be a third card and break the limit of 2.
+        self.assertEqual(check_backlog.problems([item(1, "Build", labels=("epic",)), item(2, "Build"),
+                                                 item(3, "Build")]), [])
+        self.assertEqual(check_backlog.problems([item(4, "Review", labels=("epic",)), item(5, "Review"),
+                                                 item(6, "Review")]), [])
 
     def test_counts_is_the_one_rule_the_status_shares(self):
         self.assertEqual([check_backlog.counts(e) for e in (item(1, "Discovery", labels=("epic",)),

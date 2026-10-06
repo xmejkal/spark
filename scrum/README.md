@@ -62,21 +62,21 @@ Every item is an issue on the board, and its card moves through the stages as th
 | stage | limit | what happens there | how |
 | --- | --- | --- | --- |
 | **Idea** | — | the PO's words are recorded as an issue — nothing more (ideas stay ideas) | the issue form: *Needed by*, *Value proven by* |
-| **Discovery** | 1, epics count | who it is for and what it is: the journeys, the story map, the PO's answers | with the PO, one question at a time; the journeys and map kept as text in the repo — drawn in Miro and Canva, and run with a discovery skill, once P102b and P102e are built (both planned) |
-| **Design** | 1, epics count | a spec, reviewed by a council, approved by the PO | superpowers' brainstorming, then the spec in `docs/` |
+| **Discovery** | 2, epics count | who it is for and what it is: the journeys, the story map, the PO's answers | with the PO, one question at a time; the journeys and map kept as text in the repo — drawn in Miro and Canva, and run with a discovery skill, once P102b and P102e are built (both planned) |
+| **Design** | 2, epics count | a spec, reviewed by a council, approved by the PO | superpowers' brainstorming, then the spec in `docs/` |
 | **Ready** | 5 | approved and ordered by the PO | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
-| **Build** | 1 | a plan, its council, the PO's choice of execution, then the tasks test-first | superpowers' writing-plans, then executing-plans or subagent-driven-development; the plan's tasks become sub-issues |
-| **Review** | 1 | the final review on the most capable model, one fix pass, the PR open | the PR says `Closes #N` |
+| **Build** | 2 | a plan, its council, the PO's choice of execution, then the tasks test-first | superpowers' writing-plans, then executing-plans or subagent-driven-development; the plan's tasks become sub-issues |
+| **Review** | 2 | the final review on the most capable model, one fix pass, the PR open | the PR says `Closes #N` |
 | **Done** | — | merged **and** its *Value proven by* has run | the proof is posted on the issue |
 
-At most three cards are in flight — Discovery to Review — at once: one worked in the session, one by agents in the
-background, one waiting. What counts (P146, the PO, 2026-10-06):
+Each working stage takes two cards, and at most four cards are in flight — Discovery to Review — at once (the PO's
+call of 2026-10-06 evening, after the first day at the cap of three). What counts (P146, the PO, 2026-10-06):
 
 - an epic counts where it is the work itself, in Discovery and Design; from Build on its stories carry the limit;
 - a card is in its working stage while any work runs on it, a background read included; a read that only answers a
   question puts its card back in Idea when the answer is posted;
-- every card counts: a card that one PR closes together with another still counts on its own, so Build takes one card
-  at a time.
+- every card counts: a card that one PR closes together with another still counts on its own, so a pair that one PR
+  closes fills Build.
 
 Chores and bugs skip Discovery and Design. At every session start, in the PO's project folders, `tools/board.py
 status` prints the board — what is in flight and for how long, what waits on the PO, Ready, the open PRs, the last
@@ -86,10 +86,10 @@ close (P102c's hook, in the PO's own settings).
 ride on it — no slice, *Needed by* or WIP of their own (`tools/check_backlog.py` skips them, and counts an epic only in
 Discovery and Design).
 
-The trial is checked on 2026-11-02 (the limits were raised on 2026-10-06, the trial's second day, and the check compares
-how many days cards waited on the PO before and after): was any limit broken without being caught, counting work on a
-card the board showed in Idea, was a weekly look skipped twice, do epics start and finish? If not, one-day sprints
-replace it (the design's §9).
+The trial is checked on 2026-11-02 (the limits were raised on 2026-10-06, the trial's second day, then raised to 2 per
+stage and 4 in flight the same evening; the check compares how many days cards waited on the PO before and after):
+was any limit broken without being caught, counting work on a card the board showed in Idea, was a weekly look
+skipped twice, do epics start and finish? If not, one-day sprints replace it (the design's §9).
 
 ## Validating value, which is not the same as finishing
 
