@@ -118,8 +118,12 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(state, "ON_TRACK")
 
     def test_a_close_is_at_risk_when_a_limit_breaks_even_with_no_one_waiting(self):
-        crowded = SPARK + board.to_items(project(node(27, "P102d — Proofs", "Build")))
-        state, _ = board.close_update("two in Build", [("spark", crowded)], set(), TODAY, TODAY)
+        # Build's limit is 2 (P146): SPARK holds one card in Build, so a second is the limit and a third breaks it.
+        at_the_limit = SPARK + board.to_items(project(node(27, "P102d — Proofs", "Build")))
+        state, _ = board.close_update("two in Build", [("spark", at_the_limit)], set(), TODAY, TODAY)
+        self.assertEqual(state, "ON_TRACK")
+        crowded = at_the_limit + board.to_items(project(node(28, "P102e — A discovery skill", "Build")))
+        state, _ = board.close_update("three in Build", [("spark", crowded)], set(), TODAY, TODAY)
         self.assertEqual(state, "AT_RISK")
 
     def test_status_offline_says_why_and_exits_zero(self):

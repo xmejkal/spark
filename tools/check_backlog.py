@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §3 and
-§8; raised on 2026-10-06 at the PO's word, P146).
+§8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline.
 """
@@ -12,13 +12,15 @@ import subprocess
 import sys
 
 OWNER, TITLE = "xmejkal", "spark"
-#: The stages that carry a limit (§3); Idea and Done carry none.
-LIMITS = {"Discovery": 1, "Design": 1, "Ready": 5, "Build": 1, "Review": 1}
+#: The stages that carry a limit (§3); Idea and Done carry none. Every working stage takes 2, the PO's call of
+#: 2026-10-06 evening (P146); Ready is a queue, not work, and stays at 5.
+LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 2, "Review": 2}
 IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
 #: Where an epic is the work itself; from Build on, its stories carry the limit.
 UPSTREAM = ("Discovery", "Design")
-#: One worked in the session, one by agents in the background, one waiting.
-MOST_IN_FLIGHT = 3
+#: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
+#: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
+MOST_IN_FLIGHT = 4
 
 
 def _section(body, name):
@@ -66,7 +68,7 @@ def problems(items):
                            "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
     flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
     if len(flying) > MOST_IN_FLIGHT:
-        said.append("%d in flight (%s) — at most %d: one in the session, one with agents in the background, one waiting"
+        said.append("%d in flight (%s) — at most %d: finish one before starting another"
                     % (len(flying), ", ".join("#%s" % e["content"].get("number") for e in flying), MOST_IN_FLIGHT))
     return said
 
