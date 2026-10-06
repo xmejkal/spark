@@ -28,6 +28,14 @@ own `boards/<id>.json` beats the library.
 ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id>
 ```
 
+**After a build, run it again with `--force`:** it names the rails from the built board and keeps every answer
+already in rules.json. Without `--force` it leaves an existing rules.json alone, names no rail, and still prints
+`named N rail(s)` ([P137](https://github.com/xmejkal/spark/issues/71)).
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id> --force
+```
+
 It writes `.spark/rules.json`, `.spark/project.json`, `boards/active.json` and a `package.json`
 naming tscircuit's cli (so `npm install && npx --no tsci build` works in the project; without the file
 tsci climbs to your home folder looking for a root — never rewritten once you add to it), and names the

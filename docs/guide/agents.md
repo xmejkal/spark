@@ -29,6 +29,7 @@ page outside Claude Code was not tried for these docs.
 ```sh
 git clone https://github.com/xmejkal/spark
 export CLAUDE_PLUGIN_ROOT="$PWD/spark"
+cd <the gadget's project folder>        # not the clone's folder, and not your home
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board <id>
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/tools.py" --status --project .
 ```
@@ -396,8 +397,9 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project . --json
    `requirements.json`. To check `board.tsx` as it stands, build it with the project's own tscircuit:
    `npx --no tsci build board.tsx` ([commands/build.md](../../commands/build.md#the-steps-when-one-is-wanted-on-its-own)).
    `--no` refuses to fetch anything. Without it, a project with no `node_modules` makes npx look up `tsci` in the npm
-   registry, where that name belongs to an unrelated package, and run it. Otherwise, tell the person the answer is about
-   the last build.
+   registry, where that name belongs to an unrelated package, and run it. The note init writes into a project's
+   `package.json` still says a bare `npx tsci` ([P138](https://github.com/xmejkal/spark/issues/72)); do not follow it.
+   Otherwise, tell the person the answer is about the last build.
 6. **check_all is not the whole answer.** It runs five checks on the last build. It does not run the generator's
    CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)). It does not read the notes in `board.tsx` or
    report tscircuit's warnings. So also:
@@ -436,7 +438,7 @@ skill: its design-reviewer agents, then its last step, the fabrication gate.
   - Neither lists the dev board's own unverified figures: `boards.py --get power --project .` shows them, such as the
     FireBeetle's `regulator_3v3_a` and `deep_sleep_ua` ([P126](https://github.com/xmejkal/spark/issues/60)).
 - **The design-reviewer agents run only in Claude Code.** Outside it, say they were not run.
-- **The rest of the README's [before ordering](../../README.md#before-ordering):**
+- **The rest of the journey's [from draft to order](journey.md#from-draft-to-order):**
   - regenerate after the currents are stated;
   - build the person's own `board.tsx`;
   - a design-rule check, then a person's look at the layout. The check:

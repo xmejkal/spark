@@ -271,7 +271,10 @@ What this status shows:
 
 - **tscircuit was linked in, not installed.** It was linked into the project from an existing install, so
   board-engine reads `[ok  ]`. In a fresh folder it reads `[????]` until `/spark:setup` installs it. On this Mac,
-  before the link, the last line read `2 to install: tscircuit micropython-esp32s3`.
+  before the link, the last line read `2 to install: tscircuit micropython-esp32s3`. Setup's install of tscircuit
+  (`tools.py --install`) last ran on 2026-10-03, in P82's third cold run; the slash command's one yes last ran on
+  2026-10-04, for the MicroPython build only
+  ([P82 in the backlog's archive](../../scrum/PRODUCT_BACKLOG.md#p82--setting-up-spark-is-one-step-like-installing-a-package--slice-1-the-pos-request-of-2026-10-03--done-2026-10-03)).
 - **Exit 2.** The status exits 2 while any tool is missing. Here only the MicroPython image is missing, and only a
   simulation run needs it ([Simulate](#simulate)).
 - **An MCP row's `[ok  ]`** (chip-docs, parts-search) means only that spark declares the server and Node is on the
@@ -575,16 +578,32 @@ nothing touched hardware.
 ## From draft to order
 
 Ordering a board of modules is an optional step of the journey, after the firmware works: slice 8 of
-[the story map](../../scrum/STORY_MAP.md), not designed yet. What exists today, in order:
+[the story map](../../scrum/STORY_MAP.md), not designed yet. The generated board is a draft, and the header of
+`board.tsx` says so: its modules sit in a column that does not overlap, it has no mounting holes or connector keying,
+and its traces are not sized for current until each rail's current is stated. What exists today, in order:
 
 1. **Look at it** in tscircuit's viewer: [see it](../../commands/build.md#see-it).
-2. **Lay it out.** The `spark-design` skill's
+2. **State each rail's current,** as `max_current_a` in `.spark/rules.json` or as figures in the part records. The
+   generator sizes a rail's traces from it.
+3. **Generate the board again.** Delete `board.tsx` and run `/spark:build`, because an existing `board.tsx` is never
+   overwritten. If you have already laid it out, move it aside first and carry the new trace widths over by hand.
+4. **Lay it out, then build your own `board.tsx`:** `npx --no tsci build board.tsx`. The `spark-design` skill's
    [layout notes](../../skills/spark-design/references/pcb-layout.md) name the routes; they were not run for these docs.
-3. **State the currents, generate again, and build your own `board.tsx`:** the README's
-   [before ordering](../../README.md#before-ordering) gives the order.
-4. **Run the `spark-review` skill:** its reviewer agents, then the fabrication gate
+   Until [P110](https://github.com/xmejkal/spark/issues/44) lands, `/spark:build` rebuilds `dist/`, which every check
+   reads, from the requirements file, not from your `board.tsx`.
+5. **Run the `spark-review` skill:** its reviewer agents, then the fabrication gate
    ([is it ready?](agents.md#is-it-ready)).
-5. **A design-rule check, if you have KiCad.** The export ran here; `kicad-cli` was not installed, so the check did not:
+   - The gate's `boards.py --validate --for-fab` refuses a dev-board definition that breaks its contract or names no
+     footprint.
+   - `parts.py --unverified` lists the unverified facts and pin orders of the parts you name
+     ([its output on this example](commands.md#skills)).
+   - Neither reads the generated board, or lists the dev board's own unverified figures
+     ([P126](https://github.com/xmejkal/spark/issues/60)).
+6. **A design-rule check, if you have KiCad.** No check here is one, and tscircuit's autorouter can emit shorts (the
+   layout notes say so). The build stage stops on any error tscircuit writes into `circuit.json`, on a component that
+   shares no net with the supplies, and on a board with no traces; buildability checks each hole against the process.
+   Nothing here measures the spacing between nets. Export the board, then run `kicad-cli pcb drc board.kicad_pcb`. The
+   export ran here; `kicad-cli` was not installed, so the check did not:
 
 ```sh
 npx --no tsci export board.tsx -f kicad_pcb -o board.kicad_pcb
@@ -595,7 +614,8 @@ npx --no tsci export board.tsx -f kicad_pcb -o board.kicad_pcb
 Exported to board.kicad_pcb!
 ```
 
-6. **The fab package:**
+7. **Have a person look at the layout.**
+8. **The fab package:**
 
 ```sh
 npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip
@@ -611,8 +631,9 @@ BtnMode: cannot verify jlcpcb pick-and-place rotation (missing_supplier_pin1_loc
 Exported to board-gerbers.zip!
 ```
 
-This export was made for these docs, on the draft, with five facts about its parts still unverified (the pin step in
-[Firmware](#firmware) lists them): the skill would not have made it, and nothing in code stopped it. The five "cannot verify jlcpcb
+This export was made for these docs, on the draft, with five facts about its parts still unverified (the gate's
+`parts.py --unverified` lists them: [its output](commands.md#skills)): the skill would not have made it, and nothing in
+code stopped it. The five "cannot verify jlcpcb
 pick-and-place rotation" lines are the five parts with no JLCPCB part number.
 
 The bill of materials inside gives no part number for the dev board, the motor driver, the inlet or the buttons, and

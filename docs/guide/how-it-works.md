@@ -53,7 +53,7 @@ The files that join the steps:
 | `board.tsx`, and the dev board's footprint beside it | the schematic and footprint stages, kept with `--keep .` | tscircuit |
 | `dist/board/circuit.json`, the built netlist | tscircuit's build | every check, `init_project.py` (to name the rails), and the Wokwi converter |
 | `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--sim-dir sim` | `wokwi-cli`, and Wokwi for VS Code |
-| `.spark/rules.json` | `init_project.py`, then you | the checks |
+| `.spark/rules.json` | `init_project.py`, then you | the checks, and the generator, which sizes a rail's traces from its `max_current_a` |
 | `.spark/needs.json` | `parts.py --needs-set` | `parts.py --match` |
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
 | `firmware/pins.py` | `assign_pins.py --emit-pins` | your firmware |
@@ -148,7 +148,7 @@ Your board house's numbers go in `.spark/rules.json` under `fabrication`.
 
 ### Your own dev board
 
-spark defines two dev boards. Another one needs its own definition, a JSON file in the project's `boards/`; this was
+spark's library defines the FireBeetle 2 ESP32-S3 and the Seeed XIAO ESP32-C6. Another board needs its own definition, a JSON file in the project's `boards/`; this was
 not run for these docs. [`boards/README.md`](../../boards/README.md) explains the format, but its steps are the smart
 bin's, and name a Makefile and files spark does not have ([P127](https://github.com/xmejkal/spark/issues/61)). With
 spark's own scripts:
