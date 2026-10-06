@@ -41,7 +41,8 @@ If there is a built design, it names the rails from it, so it runs again after t
 ([journey: Checks](journey.md#checks)). `--force` merges what init derives into rules.json and keeps your answers. It
 rewrites project.json only if that file has no answers, and it never rewrites package.json.
 
-It leaves every value it cannot know as `null` and lists them. Not every check reports a null yet; see
+It leaves every value it cannot know as `null` and lists them. After `--force` the list still names fields you
+answered ([P114](https://github.com/xmejkal/spark/issues/48)). Not every check reports a null yet; see
 [what never to assume](agents.md#what-never-to-assume). Page: [`commands/init.md`](../../commands/init.md).
 
 ### `/spark:setup`
@@ -57,10 +58,19 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/tools.py" --install micropython-esp32s3 --p
 It never runs `sudo`: a line that needs it is printed for you instead.
 
 Each choice writes one line to your `~/.local/share/spark/tools.json` or to the project's `.spark/tools.json`, and the
-project's file wins. A choice is turning an integration on or off, pointing a job at another tool, or pinning a
-version.
+project's file wins. You say it in a few words:
 
-It refuses to point a job at a tool that cannot do that job. Page: [`commands/setup.md`](../../commands/setup.md).
+| you say | it runs |
+| --- | --- |
+| `add sigrok` | `tools.py --on sigrok`: on, installed, and its MCP server registered |
+| `remove sigrok` | `tools.py --off sigrok` |
+| `use simulator=my-sim` | `tools.py --use simulator=my-sim`: another tool for a job |
+| `pin tscircuit core=0.0.2700` | `tools.py --pin tscircuit.core=0.0.2700 --project .`: a version |
+| `new` | `tools.py --new 'NAME={…}'`: a tool of your own |
+
+An MCP server added or removed takes effect after Claude Code restarts. It refuses a tool that is not in its lists, or
+whose entry does not say it meets the job's contract; a job without a contract takes any listed tool. Page:
+[`commands/setup.md`](../../commands/setup.md).
 
 ### `/spark:drawer`
 
@@ -75,8 +85,8 @@ An entry needs only a label and a count, and adding a part to the drawer never s
 How the import works:
 
 - Claude drives your logged-in Chrome, and spark's extractor returns only each order's lines.
-- Reading the pages no other way, and never typing credentials or solving a challenge, are rules Claude follows from
-  the command page.
+- Claude follows two rules from the command page, which no code enforces: it reads the order pages no other way (no
+  page text, no accessibility tree, no screenshot), and it never types credentials or solves a challenge.
 - The import never stores an order number.
 - It refuses an import when the number of order lines it read differs from the number the shop's pages state.
 
@@ -122,7 +132,16 @@ It does not:
 - verify a pinout;
 - track prices.
 
-Page: [`commands/research.md`](../../commands/research.md).
+**What research has cost.** The agents run on your account, so you pay for their tokens and time. Measured from their
+transcripts on 2026-10-03 with `tools/research_cost.py`
+([P80 in the backlog's archive](../../scrum/PRODUCT_BACKLOG.md#p80--parts-research-is-lean-and-professional--slice-4-the-pos-request-of-2026-10-03--done-2026-10-03-581fa8a)):
+
+- the full research protocol P80 replaced: a median of 78 tool calls, about 5.0 M tokens processed and about 25 minutes;
+- one LED, the Kingbright L-7113ID, on a lean brief: 19 calls, about 0.55 M tokens, 148 s;
+- `part-finder`'s first use: 14 calls, 91 s, about 0.17 M tokens.
+
+Nobody has measured today's route end to end: `datasheet-reader` has not yet run on a real need. Page:
+[`commands/research.md`](../../commands/research.md).
 
 ### `/spark:identify`
 
@@ -130,7 +149,9 @@ A photo of a module you own becomes a part record. The chip markings, the silksc
 before anything is searched. Every fact the photo alone supports is marked unverified.
 
 It does not measure. What the photo cannot show is named in `--unverified`, with how a person checks it: a meter,
-the other face, or the chip's datasheet against a pin number. Page: [`commands/identify.md`](../../commands/identify.md).
+the other face, or the chip's datasheet against a pin number. On 2026-09-29 one photo through an anti-static bag gave a
+record with seven facts marked unverified; when the back was photographed, five were wrong. So it asks for both sides,
+out of the bag. Page: [`commands/identify.md`](../../commands/identify.md).
 
 ### `/spark:build`
 
@@ -140,14 +161,23 @@ stopped it. It runs no simulation. It runs in seconds, with no agents ([journey:
 With `--keep .` it writes `board.tsx`, its footprint and `dist/` into the project. An existing `board.tsx` is left
 alone, edited or not, and `dist/` is then built from the requirements file, not from your `board.tsx`
 ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with
-`npx tsci build board.tsx`; to regenerate it, delete it.
+`npx --no tsci build board.tsx`; to regenerate it, delete it. The Wokwi diagram is written to a temporary folder and
+deleted unless `--sim-dir DIR` keeps it ([P116](https://github.com/xmejkal/spark/issues/50)).
 
-It stops and names the problem when the requirements file:
+It refuses rather than guess, and says what to record
+([what it refuses](../../commands/build.md#what-it-refuses-and-why)):
 
-- lists one part twice without a `name` for each (five unnamed buttons would become one button with five of the dev
+- a part with no footprint or no `pin_order` recorded, or one not in the library;
+- one part listed twice without a `name` for each (five unnamed buttons would become one button with five of the dev
   board's pins wired to it);
-- uses a pin the part does not have;
-- uses a bus line the bus does not have.
+- a pin the part does not have, or a bus line the bus does not have.
+
+A part with no outline is not refused: it is drawn at a declared placeholder size
+([P115](https://github.com/xmejkal/spark/issues/49)). A rail nothing sources is not refused either: the generator notes
+it, and the board does not route.
+
+Each stage reads `[ok  ]`, `[!!  ]` for a defect in the design, named, or `[????]` for a stage that could not run,
+which is not a pass.
 
 Page: [`commands/build.md`](../../commands/build.md).
 
@@ -155,9 +185,35 @@ Page: [`commands/build.md`](../../commands/build.md).
 
 | skill | use it when | what it does |
 | --- | --- | --- |
-| **spark-design** | "design a board for …", "wire up an ESP32 with …" | generates the board from a requirements file through spark's own chain (parts → pin map → board file → build → simulation); tscircuit is written by hand only where the generator stops ([`SKILL.md`](../../skills/spark-design/SKILL.md)) |
+| **spark-design** | "design a board for …", "wire up an ESP32 with …" | generates the board from a requirements file through spark's own chain (parts → pin map → `board.tsx` → build → simulation); tscircuit is written by hand only where the generator stops ([`SKILL.md`](../../skills/spark-design/SKILL.md)) |
 | **spark-review** | "review my design", or before ordering a board | runs every deterministic check, then one `design-reviewer` per dimension (power, signals, thermal-mechanical, manufacturability, firmware-hardware) reading the primary artefacts only, and ends with the fabrication gate ([`SKILL.md`](../../skills/spark-review/SKILL.md)) |
 | **spark-reverse-engineer** | a photo of a board, "what's connected to what" | fuses copper-trace reading, datasheet pinouts and functional reasoning into a netlist, then writes a bench protocol to confirm it ([`SKILL.md`](../../skills/spark-reverse-engineer/SKILL.md)) |
+
+`spark-review`'s gate lists what nobody has checked about the parts you name. On the journey's example:
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified l9110s-module jst-ph-2-power-inlet tactile-button
+```
+
+<!-- output: run 2026-10-06, spark 0.6.0 -->
+```text
+  5 thing(s) nobody has checked:
+
+  l9110s-module.pin_order = ['BIA', 'BIB', 'GND', 'VCC', 'AIA', 'AIB']
+      a pin order read wrong reverses a supply or swaps a signal
+  jst-ph-2-power-inlet.pin_order = ['VCC', 'GND']
+      a pin order read wrong reverses a supply or swaps a signal
+  tactile-button.debounce_ms_typical = 40
+      too short double-fires a control, too long makes a remote feel broken. On a driving remote it is the difference between steering and twitching.
+  tactile-button.cap_height_mm = None
+      the only dimension that decides whether the enclosure closes
+  tactile-button.pin_order = ['A', 'B']
+      a pin order read wrong reverses a supply or swaps a signal
+```
+
+`spark-reverse-engineer` writes its bench protocol from
+[a template](../../skills/spark-reverse-engineer/references/test-protocol-template.md) written for the smart bin's
+original board. The skills themselves were not run for these pages.
 
 ## Agents
 
@@ -170,3 +226,14 @@ Page: [`commands/build.md`](../../commands/build.md).
 
 The two MCP servers spark declares serve these agents: **jlcpcb** for `part-finder`, and **espressif-docs** for
 `datasheet-reader`.
+
+How they have done so far:
+
+- `parts-researcher` wrote the Kingbright L-7113ID LED record on 2026-10-03, on a lean brief, before the two smaller
+  agents existed. It is the worked example in the design skill's
+  [part-data notes](../../skills/spark-design/references/part-data.md).
+- `part-finder`'s first use, on 2026-10-03, broke its search budget, returned the wrong variant's part number, and
+  stated a current the maker's page does not. Checking its claims against the maker's document caught both, and its
+  rules were tightened the same hour.
+- `datasheet-reader` has not yet run on a real need.
+- `design-reviewer` has been measured only in a few trial runs ([honest limits](../../README.md#honest-limits)).

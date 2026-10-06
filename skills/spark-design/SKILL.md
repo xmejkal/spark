@@ -58,7 +58,7 @@ a rule checklist in the loop. Follow it.
      name. The file says what it invented and what it could not size.
    - `${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board <id> -o <Footprint>.tsx` — the
      footprint the board file imports on its first line, from the board file's measured geometry.
-     `npx tsci build board.tsx` stops at that import until it exists.
+     `npx --no tsci build board.tsx` stops at that import until it exists.
    - `${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json` — the whole chain,
      `idea → parts → pin map → schematic → footprint → build → simulation`, and the stage that
      stopped it. `????` is could-not-run and never a pass; `!!` is a defect in the design.
@@ -82,7 +82,7 @@ a rule checklist in the loop. Follow it.
    compile time. **Name every component descriptively** — `MotorDriver`, `OledDisplay`,
    `PullupSda`, `MotorBulkCap`, `BtnOpen`, `IrSensor` — never bare `U1`/`R2`/`SW1`, and clear net
    names (`MOTOR6V`, `GND`, `V33`): the generator does, and the schematic, the selectors and the
-   git diff stay self-documenting. Then build and iterate on the errors: `npx tsci build board.tsx`,
+   git diff stay self-documenting. Then build and iterate on the errors: `npx --no tsci build board.tsx`,
    read `dist/<board>/circuit.json` for `*_error` / `*_warning` entries (unconnected pins, missing
    power/ground, overlaps), fix and rebuild until clean. Do not rely on the `tsci check` CLI
    subcommands (work-in-progress) — read the circuit.json errors.
@@ -92,7 +92,7 @@ a rule checklist in the loop. Follow it.
    `parts.py --unverified <every part on the board>`, then `kicad-cli sch erc` if KiCad is installed. Do NOT produce Gerbers
    while something load-bearing is unverified.
 
-7. **Render and show.** `npx tsci export -f schematic-svg board.tsx`, convert to PNG if needed,
+7. **Render and show.** `npx --no tsci export -f schematic-svg board.tsx`, convert to PNG if needed,
    and show the user the schematic. Summarize what is verified vs still a placeholder.
 
 8. **PCB layout (only when the user wants a board).** Read `references/pcb-layout.md`. State the
@@ -104,10 +104,13 @@ a rule checklist in the loop. Follow it.
 
 ## tscircuit command reference
 
-- `npx tsci build board.tsx` -> `dist/<board>/circuit.json` (+ SVGs with flags).
-- `npx tsci export -f schematic-svg board.tsx` -> schematic SVG.
-- `npx tsci export -f kicad_pcb board.tsx` / `-f gerbers` / `-f step` -> KiCad / fab / 3D.
-- `npx tsci add <author>/<pkg>` -> install a registry part/module.
+- `npx --no tsci build board.tsx` -> `dist/<board>/circuit.json` (+ SVGs with flags).
+- `npx --no tsci export -f schematic-svg board.tsx` -> schematic SVG.
+- `npx --no tsci export -f kicad_pcb board.tsx` / `-f gerbers` / `-f step` -> KiCad / fab / 3D.
+- `npx --no tsci add <author>/<pkg>` -> install a registry part/module.
+- `--no` makes npx refuse to download: in a project with no `node_modules`, a bare `npx tsci` fetches an unrelated
+  npm package of that name. If `tools.py --status` shows board-engine `[????]`, offer
+  `tools.py --install tscircuit --project . --dry-run` first.
 - Install the official tscircuit skill for full syntax: `npx skills add tscircuit/skill`.
 
 ## Honest limits (state these to the user)

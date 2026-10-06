@@ -136,7 +136,9 @@ class TheGlossaryDefinesWordsThisRepositoryActuallyUsesTest(unittest.TestCase):
 
     def test_the_glossary_exists_and_the_readme_points_at_it(self):
         self.assertTrue((ROOT / "GLOSSARY.md").is_file())
-        self.assertIn("GLOSSARY.md", (ROOT / "README.md").read_text(),
+        # The page itself, not an entry: the README links terms to GLOSSARY.md#<entry> at first use, and
+        # those links alone kept this green when the line sending a newcomer to the glossary was gone (P104).
+        self.assertIn("](GLOSSARY.md)", (ROOT / "README.md").read_text(),
                       "a document nobody is sent to is a document nobody opens")
 
     def test_every_word_it_defines_is_used_somewhere_else(self):

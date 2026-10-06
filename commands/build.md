@@ -61,7 +61,7 @@ would hold only `requirements.json`, and `check_all --project .` would answer "n
 a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, edited or
 not; delete it to have it regenerated. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
-`npx tsci build board.tsx`.
+`npx --no tsci build board.tsx`.
 
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
@@ -84,7 +84,7 @@ trivial board, a requirements file that is not JSON, an empty parts list — and
 says so. A chain that could not be exercised has not been proven; the difference is the whole
 point.
 
-A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once).
+A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
 
 ## The steps, when one is wanted on its own
 
@@ -95,7 +95,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per 
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board firebeetle2-esp32s3 -o FireBeetle2Esp32S3.tsx
-npm install && npx tsci build board.tsx                             # the project's own tscircuit (init writes the package file)
+npm install && npx --no tsci build board.tsx                        # the project's own tscircuit (init writes the package file); tsci runs on bun
 ```
 
 The board file imports `./FireBeetle2Esp32S3` — the footprint `emit_footprint.py` writes from
@@ -132,16 +132,17 @@ build stops on a net with one member. Add the connector to the parts list.
 the package file that installs it):
 
 ```
-npx tsci dev board.tsx        # then open http://localhost:3020/#file=board.tsx — PCB, schematic, 3D
+npx --no tsci dev board.tsx        # then open http://localhost:3020/#file=board.tsx — PCB, schematic, 3D
 ```
 
 It rebuilds whenever `board.tsx` changes, so it is the window to keep open while a board is being
 worked on. Its interface loads from a CDN, so it needs a network; the server itself is local.
 
 **The simulation, watched rather than asserted** — the Wokwi for VS Code extension opens the files
-the last stage writes into `sim/` when the build runs with `--sim-dir sim`
-(`check_spine.py requirements.json --keep . --sim-dir sim`; the two flags work together): `wokwi.toml`,
-`diagram.json`, the chips. It runs the flash image live: press the board's buttons, drag a sensor's slider, read its serial port. Open the
+the last stage writes into `sim/` when the build runs with `--sim-dir sim`: `wokwi.toml`, `diagram.json`, the chips.
+It needs the flash image too, so make both first: `check_spine.py requirements.json --keep . --sim-dir sim --firmware
+flash-with-firmware.bin`, then `flash_image.py --files firmware -o sim/flash-with-firmware.bin` (below); without them
+the extension has no firmware to run. It runs the flash image live: press the board's buttons, drag a sensor's slider, read its serial port. Open the
 project in VS Code, run **Wokwi: Select Config File** and pick `sim/wokwi.toml`, then **Wokwi: Start
 Simulator** (the command names are the extension's own, from its package). It needs a Wokwi licence
 that includes VS Code — Hobby+ or above, per wokwi.com/pricing (read 2026-10-01); **Wokwi: Request a
@@ -164,18 +165,23 @@ The first keeps the simulation project — `diagram.json`, `wokwi.toml`, the chi
 the second puts MicroPython and the project's own files into one flash image (the interpreter is
 the tools list's `firmware-image` — MicroPython v1.29.0 for the ESP32-S3, fetched and checked by
 `/spark:setup`; for another chip, `--micropython <its .bin from micropython.org>`); the third runs
-a scenario, whose `set-control` lines are the chips' sliders — a probe's `moisturePct`, a flow
-meter's `flowLpm` — and whose `wait-serial` and `expect-pin` lines are what it asserts:
+a scenario. The scenario and the firmware are yours to write: spark ships neither for the documented example
+([P130](https://github.com/xmejkal/spark/issues/64)). A scenario's `set-control` lines press a button or move a
+chip's slider (a probe's `moisturePct`), and its `wait-serial` and `expect-pin` lines are what it asserts. For the
+documented example, with firmware that drives the motor's IA input while the open button is held (not run):
 
 ```yaml
 steps:
-  - wait-serial: "irrigation ready"
-  - set-control: { part-id: soil1, control: moisturePct, value: 20 }
-  - wait-serial: "valve1 open"
-  - expect-pin: { part-id: mcu, pin: 38, value: 1 }
+  - wait-serial: "ready"                                        # a line your firmware prints once it runs
+  - set-control: { part-id: btnopen, name: pressed, value: 1 }
+  - delay: 500ms                                                # longer than the firmware's debounce
+  - expect-pin: { part-id: mcu, name: 38, value: 1 }            # GPIO38 is MOTOR_IA in firmware/pins.py
 ```
 
-(`control:` and `value:` are the keys wokwi-cli 0.27.1 reads.) Two facts about the simulator that
+Part ids come from the board's component names (`BtnOpen` becomes `btnopen`). `name:` is the key the smart bin's
+passing scenarios use ([lid-cycle](https://github.com/xmejkal/sisuo-brain-transplant/blob/main/firmware/micropython/sim/lid-cycle.scenario.yaml)),
+whose notes call `control:` a deprecated alias. `wait-serial` reads the MCU's serial only: a chip's printf never
+reaches it. Two facts about the simulator that
 a firmware meets here and not on a bench: its ADC is referenced to 5 V whatever the chip, so a
 raw reading must be converted with a 5 V full scale — the flash image's `--config` is the place
 to say so (`{"ADC_REFERENCE_V": 5.0}`); and a chip's control ids are letters and digits only.
@@ -192,6 +198,7 @@ that runs on Node, with nothing else to install; a project's own `cli.ts` runs w
 `check_all.py --project .` for the deterministic checks; the `spark-review` skill for the full
 gate before anything is fabricated. The fab package (the zip of Gerbers and bill of materials a board house takes)
 comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the
-time comes, `npx tsci export -f gerbers board.tsx -o board-gerbers.zip` makes one; `check_all` finds `*-gerbers.zip`
-or `fab/*.zip` and reads the `bom.csv` inside it. The generated placement is a column that does not overlap — a draft, and
+time comes, `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip` makes one; `check_all` finds `*-gerbers.zip`
+or `fab/*.zip` and reads the `bom.csv` inside it
+([run on the example](../docs/guide/journey.md#from-draft-to-order)). The generated placement is a column that does not overlap — a draft, and
 the file's own header says so.

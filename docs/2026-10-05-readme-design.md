@@ -170,3 +170,19 @@ verifier) returned 110 findings: 93 confirmed, 17 partly, none refuted, collated
     `?` line otherwise; `--keep .` builds the kept `board.tsx` into `dist/`; an explicit not-applicable value for
     fields a design does not need; both MCP packages pinned and their rows labelled "declared, not checked" (the
     README names `@jlcpcb/mcp` as a community package now).
+
+### The council's second round (the PO, 2026-10-06)
+
+Seven lenses (fact-check ×2, a stranger, an AI agent, an editor, a fix-verifier, a gap-finder), each refuted: 144
+findings, 111 confirmed, 33 partly, none refuted. The PO decided:
+
+14. **A "What it shows" block** under the README's lead, from the recorded runs, each line labelled for what it is.
+15. **The editor's cuts:** no second list of the steps, a two-line AI section, the build output trimmed to its stage
+    lines with the full output in the journey; about 175 lines.
+16. **The XIAO ESP32-C6 is pin-map only** until its board file records header geometry; a card.
+17. **The first run's fifth step is `/spark:init` again,** which names the rails and, by its page, runs the checks.
+18. **GitHub's About text** says the new headline (set 2026-10-06).
+19. **A line on reporting a problem and one on what an update keeps;** a card for a bug form a stranger can fill.
+20. **spark's terms are linked at first use in the README,** and the glossary guard is strengthened so it still fails
+    when the README stops sending readers to the glossary.
+21. **A "From draft to order" section** in the journey: look, lay out, rebuild, gate and DRC, Gerbers — each sourced.

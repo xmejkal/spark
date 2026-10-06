@@ -2,8 +2,8 @@
 
 spark takes a gadget from an idea in words toward a board that builds and is checked, with a Wokwi diagram generated
 from it. Today the chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file); nothing yet
-writes one from an idea ([P76](https://github.com/xmejkal/spark/issues/5)). Each step says what it could not look at,
-except where [what never to assume](agents.md#what-never-to-assume) says otherwise.
+writes one from a vague idea with no parts named ([P76](https://github.com/xmejkal/spark/issues/5)). Each step reports
+what it could not look at; [what never to assume](agents.md#what-never-to-assume) lists where that does not hold yet.
 
 This page walks each step on real runs: what was typed, what spark printed, what it wrote, and where the step stops
 today.
@@ -28,21 +28,21 @@ The same journey in words:
 
 What the three words mean:
 
-- **works**: it ran end to end for these pages.
-- **partly**: it stops before its goal, or its scripts ran and the rest (agents, or a conversation) was not run for
-  these pages; the section says which.
+- **works**: it ran end to end for these docs.
+- **partly**: it stops before its goal, or part of it was not run here (agents, a conversation, or a paid simulation
+  run); the section says which.
 - **not yet**: nothing does it yet; the linked issue plans it.
 
 **How these runs were made.**
 
-- When: 2026-10-05, with spark 0.6.0 and tscircuit 0.0.2600, the version spark pins. The tscircuit came from an
-  existing install.
+- When: 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600, the version spark pins.
+  The tscircuit came from an existing install, linked into the project.
 - Where: in two fresh project folders that share one scratch store, so the drawer filled in [Drawer](#drawer) is the
   one [Idea](#idea)'s match reads.
 - How: each command typed as shown. In Claude Code you type the `/spark:` command, and Claude runs these scripts for
-  you. You, or another AI, can run them directly; the [guide for agents](agents.md) says how.
-- Paths: `$CLAUDE_PLUGIN_ROOT` is where spark is installed. In outputs, `~/` is the home folder and `<temp>` a
-  temporary one.
+  you. You, or another AI, can run them directly; [the guide for AI agents](agents.md) says how.
+- Paths: `$CLAUDE_PLUGIN_ROOT` is where spark is installed. In outputs, `~/` is the home folder, `<temp>` a temporary
+  one, the scratch store is shown as `~/.local/share/spark`, and each project folder by its name.
 
 There are two example projects:
 
@@ -52,8 +52,7 @@ There are two example projects:
 
 ## Drawer
 
-**Partly.** [`/spark:drawer`](../../commands/drawer.md) keeps what you own in your own store,
-`~/.local/share/spark`, never in a repository.
+**Partly.** [`/spark:drawer`](../../commands/drawer.md) keeps what you own in your own store, never in a repository.
 
 You say what you own in plain words. Claude writes the entries to a file and shows what would change:
 
@@ -89,13 +88,13 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --drawer
   2 entries
 ```
 
-Your DFRobot order history can also come in from your logged-in browser:
+Your DFRobot order history can also come in from your logged-in browser, through Claude in Chrome:
 
 - Claude drives your Chrome on dfrobot.com/account/order.
 - spark's extractor reads each order page there and hands back only each line's SKU, name and count: no page text,
   address or price.
-- Two things are rules Claude follows from the drawer's page, not something code enforces: it reads those pages no
-  other way (no page text, no screenshot), and it never types credentials.
+- Two things are rules Claude follows from the drawer's page, not something code enforces: it reads the order pages no
+  other way (no page text, no accessibility tree, no screenshot), and it never types credentials or solves a challenge.
 - The same page also lets Claude adapt the extractor when DFRobot changes its pages.
 
 This path was not run here.
@@ -103,7 +102,8 @@ This path was not run here.
 ## Idea
 
 **Partly.** [`/spark:idea`](../../commands/idea.md) turns a goal in your words into needs, then matches each need
-against your drawer and spark's records. It stops after matching each need. Not built yet:
+against your drawer and spark's records. It stops once each need is marked: have, have-unknown, know or gap. Not built
+yet:
 
 - choosing and reserving parts ([P97](https://github.com/xmejkal/spark/issues/18));
 - turning needs into a requirements file ([P76](https://github.com/xmejkal/spark/issues/5)).
@@ -202,8 +202,10 @@ A real gap goes to [`/spark:research`](../../commands/research.md), which works 
 - `datasheet-reader` then fills the record from the datasheet pages the decision needs.
 - For a module, `parts-researcher` researches it from primary sources.
 
-Either way the result is a record with every fact cited and every unconfirmed fact marked, so the next project finds
-it. That part runs as agents in a conversation and was not run for this page.
+Either way the result is a record in the project's `parts/`, with every fact cited and every unconfirmed fact marked.
+Another project finds it once `parts.py --promote <id> --project .` copies it into spark's library, or once a drawer
+entry links it, which puts a copy on your shelf. That part runs as agents in a conversation and was not run for this
+page.
 
 A module you already own can start from a photo instead: [`/spark:identify`](../../commands/identify.md).
 
@@ -270,11 +272,34 @@ What this status shows:
 - **tscircuit was linked in, not installed.** It was linked into the project from an existing install, so
   board-engine reads `[ok  ]`. In a fresh folder it reads `[????]` until `/spark:setup` installs it. On this Mac,
   before the link, the last line read `2 to install: tscircuit micropython-esp32s3`.
-- **Exit 2.** The status exits 2 while any tool is missing. Here only the MicroPython image is missing, and only the
-  firmware step needs it.
+- **Exit 2.** The status exits 2 while any tool is missing. Here only the MicroPython image is missing, and only a
+  simulation run needs it ([Simulate](#simulate)).
 - **An MCP row's `[ok  ]`** (chip-docs, parts-search) means only that spark declares the server and Node is on the
-  PATH. Nothing checks that Claude Code has the server registered, that it answers, or the Node version;
-  espressif-docs needs 20 or newer ([P112](https://github.com/xmejkal/spark/issues/46)).
+  PATH. Nothing checks that Claude Code has the server registered or that it answers
+  ([P112](https://github.com/xmejkal/spark/issues/46)), or the Node version; espressif-docs needs Node 20 or newer
+  ([docs/mcp.md](../mcp.md)).
+- **No `[!   ]` simulator row here.** This shell had a Wokwi token set. Without `WOKWI_CLI_TOKEN`, the simulator gets a
+  `[!   ]` row: a token only you can make, at wokwi.com/dashboard/ci.
+
+The library's parts, whose ids a requirements file names:
+
+<!-- runs: exit 0 -->
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --list
+```
+
+<!-- output: run 2026-10-06, spark 0.6.0 -->
+```text
+  dfr0534-module               audio          library   DFRobot DFR0534 voice module
+  jst-ph-2-power-inlet         connector      library   JST PH 2-pin power inlet
+  l9110s-module                motor-driver   library   L9110S dual motor driver module
+  led-red-5mm                  indicator      library   Kingbright L-7113ID 5 mm red LED
+  max98357a-dfr0954            audio-amplifier library   DFRobot DFR0954 MAX98357A I2S amplifier
+  tactile-button               button         library   6x6 mm tactile push button
+  vl6180x-breakout             rangefinder    library   VL6180X time-of-flight rangefinder breakout
+```
+
+`parts.py --audit` names what each record still owes.
 
 Save the requirements file as `requirements.json` in the project:
 
@@ -289,6 +314,12 @@ Save the requirements file as `requirements.json` in the project:
   ]
 }
 ```
+
+What else a requirements file takes ([`/spark:build`'s page](../../commands/build.md#the-requirements-file)):
+
+- each part as an id, or as `{part, name}` when the same part appears twice;
+- a part's `rails`, which puts one of its power pins on a rail you name without copying its record;
+- `signals`, entries of `{name, needs}`, which add a pin no part claims (an LED, a limit switch).
 
 Then [`/spark:build`](../../commands/build.md) runs the whole chain on it:
 
@@ -371,7 +402,8 @@ reports it as unverifiable rather than passing it:
   project.json  sellers
 ```
 
-init's last sentence claims more than physics does today; see [what never to assume](agents.md#what-never-to-assume).
+Its last sentence overclaims here too, as above. The motor rail's net is named `MOTOR6V` whatever the motor's voltage
+([P129](https://github.com/xmejkal/spark/issues/63)). A part's `rails` puts its pin on a rail you name instead.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project .
@@ -419,22 +451,25 @@ It does not change the outcome.
 **Here physics could not look, and neither `!` line is about a rail value:**
 
 1. **What MOTOR6V draws.** The L9110S and power-inlet records name no current on their VCC pins
-   ([P120](https://github.com/xmejkal/spark/issues/54)). A power pin names one of its record's facts with `draws` or
-   `can_supply`, and a project's own copy of a record (`parts/<id>.json`, with its folder) wins over the library.
-2. **Four pull resistors.** State each one's current under its rail's `resistor_currents` in `.spark/rules.json`, a key
-   init does not write.
+   ([P120](https://github.com/xmejkal/spark/issues/54)).
+2. **Four pull resistors.** Each needs its current stated under its rail, a key init does not write.
 
-The rails' nulls show only as `?` lines, GND's and MOTOR6V's; V33's `?` line is a record figure nobody verified.
-check_all does not yet say what clears each `!` line ([P118](https://github.com/xmejkal/spark/issues/52)).
+What clears each, and its shape, is in [what never to assume](agents.md#what-never-to-assume)
+([P118](https://github.com/xmejkal/spark/issues/52)).
+
+Of the 12 rail values init left null, two show, as `?` lines: GND's and MOTOR6V's `max_current_a`.
+
+- V33's is taken from the part records' sum (355 mA), so it shows nothing of its own. V33's `?` line is about its
+  supply, the dev board's unverified 1.50 A.
+- The other nine print nothing. A null `served_by_pour` is read as false. `nominal_volts` and `capacitor_chemistry` are
+  read only for capacitors, and this board has none.
 
 The run exits 2, could-not-run, because physics could not look. Once a rail's `max_current_a` is stated, delete
 `board.tsx` and run `/spark:build` again, so the generator sizes that rail's traces.
 
-**`[--  ]` the-order: no fab package yet.** That is the zip of Gerbers and bill of materials a board house takes. It
-comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the
-time comes, `npx tsci export -f gerbers board.tsx -o board-gerbers.zip` makes one. check_all finds `*-gerbers.zip` or
-`fab/*.zip` and reads the `bom.csv` inside it. This was not run for these pages, and the `bom.csv` was confirmed in an
-older export, not on tscircuit 0.0.2600.
+**`[--  ]` the-order: no fab package yet.** That is the zip of Gerbers and bill of materials a board house takes. The
+`spark-design` skill tells Claude to make no Gerbers while anything load-bearing is unverified; nothing in code stops
+the export. [From draft to order](#from-draft-to-order) makes one, and the-order then reads it.
 
 **check_all is not the whole answer.** For this board, `parts.py --show` names a CONFLICT on AIA and AIB that no check
 reports ([P109](https://github.com/xmejkal/spark/issues/43)). The board's 10 kΩ pull-downs against the module's own
@@ -469,6 +504,9 @@ L9110S dual motor driver module — motor-driver
   CONFLICT: AIB: the board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at 0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply above 5 V (input-high threshold 2.5 V); the module's input-low threshold is not recorded, so below that the level is undefined
 ```
 
+The next step is the `spark-review` skill: it runs `check_all`, then reviewer agents, then the fabrication gate. It
+was not run here; [is it ready?](agents.md#is-it-ready) says what each part covers.
+
 ## Firmware
 
 **Partly.** spark does not write your firmware; you or Claude do. It gives the firmware its pins:
@@ -499,18 +537,23 @@ Not built yet: checking the firmware on a Mac against the pin map, before any ha
 
 ## Simulate
 
-**Partly.** The build's simulation stage generates the Wokwi diagram and the chips (simulated models of modules Wokwi
-lacks). It keeps them in `sim/` only with `--sim-dir sim` ([P116](https://github.com/xmejkal/spark/issues/50)).
+**Partly.** The build's simulation stage generates the Wokwi diagram and stages the chips: hand-written models of
+modules Wokwi has no part for, kept beside a part's record and compiled with `wokwi-cli` only when the binary is
+missing or older than its source. It keeps them in `sim/` only with `--sim-dir sim`
+([P116](https://github.com/xmejkal/spark/issues/50)).
 
 A run is a separate step:
 
-1. Build with `--sim-dir sim`.
-2. Put MicroPython and the project's files into one flash image with `flash_image.py`. That needs MicroPython for the
-   S3: `/spark:setup add micropython-esp32s3`.
-3. Write a scenario.
-4. Run `wokwi-cli`.
+1. **Build with the simulation kept and a firmware image named:**
+   `check_spine.py requirements.json --keep . --sim-dir sim --firmware flash-with-firmware.bin`.
+2. **Make the flash image:** `flash_image.py --files firmware -o sim/flash-with-firmware.bin`. It puts MicroPython and
+   the project's files into one image, and needs MicroPython for the S3: `/spark:setup add micropython-esp32s3`.
+3. **Write a scenario.** spark ships none for this example
+   ([P130](https://github.com/xmejkal/spark/issues/64)).
+4. **Run `wokwi-cli`,** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci).
 
-A scenario run spends Wokwi CI minutes; none was run for this page. `/spark:build`'s page has the commands
+A scenario run spends Wokwi CI minutes; none was run for this page. Watching it live in VS Code needs a Wokwi licence
+that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01). `/spark:build`'s page has both routes
 ([Simulate it](../../commands/build.md#simulate-it--for-real-with-the-values-set-in-the-test)).
 
 ## Bench
@@ -523,5 +566,102 @@ A bench session that leaves a verdict a command can read is planned first in a s
 brain. That plan is [P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2), first used in the bin's
 bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
 
+The `spark-reverse-engineer` skill writes a bench protocol, but for a board reverse-engineered from photos, not for a
+board spark generated.
+
 Until then, every green result in this guide is a build, a generated diagram or a check. No simulation was run, and
 nothing touched hardware.
+
+## From draft to order
+
+Ordering a board of modules is an optional step of the journey, after the firmware works: slice 8 of
+[the story map](../../scrum/STORY_MAP.md), not designed yet. What exists today, in order:
+
+1. **Look at it** in tscircuit's viewer: [see it](../../commands/build.md#see-it).
+2. **Lay it out.** The `spark-design` skill's
+   [layout notes](../../skills/spark-design/references/pcb-layout.md) name the routes; they were not run for these docs.
+3. **State the currents, generate again, and build your own `board.tsx`:** the README's
+   [before ordering](../../README.md#before-ordering) gives the order.
+4. **Run the `spark-review` skill:** its reviewer agents, then the fabrication gate
+   ([is it ready?](agents.md#is-it-ready)).
+5. **A design-rule check, if you have KiCad.** The export ran here; `kicad-cli` was not installed, so the check did not:
+
+```sh
+npx --no tsci export board.tsx -f kicad_pcb -o board.kicad_pcb
+```
+
+<!-- output: run 2026-10-06, spark 0.6.0 -->
+```text
+Exported to board.kicad_pcb!
+```
+
+6. **The fab package:**
+
+```sh
+npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip
+```
+
+<!-- output: run 2026-10-06, spark 0.6.0 -->
+```text
+Mcu: cannot verify jlcpcb pick-and-place rotation (missing_pin1_location); PCB rotation 0 is unverified.
+L9110sModule: cannot verify jlcpcb pick-and-place rotation (missing_pin1_location); PCB rotation 0 is unverified.
+JstPh2PowerInlet: cannot verify jlcpcb pick-and-place rotation (missing_supplier_pin1_location); PCB rotation 0 is unverified.
+BtnOpen: cannot verify jlcpcb pick-and-place rotation (missing_supplier_pin1_location); PCB rotation 0 is unverified.
+BtnMode: cannot verify jlcpcb pick-and-place rotation (missing_supplier_pin1_location); PCB rotation 0 is unverified.
+Exported to board-gerbers.zip!
+```
+
+This export was made for these docs, on the draft, with five facts about its parts still unverified (the pin step in
+[Firmware](#firmware) lists them): the skill would not have made it, and nothing in code stopped it. The five "cannot verify jlcpcb
+pick-and-place rotation" lines are the five parts with no JLCPCB part number.
+
+The bill of materials inside gives no part number for the dev board, the motor driver, the inlet or the buttons, and
+no footprint for the dev board. Only the four 10 kΩ resistors carry a JLCPCB part number:
+
+```sh
+unzip -p board-gerbers.zip bom.csv
+```
+
+<!-- output: run 2026-10-06, spark 0.6.0 -->
+```text
+"Designator","Comment","Value","Footprint","JLCPCB Part #"
+"Mcu","",""," ",
+"L9110sModule","","","headermodule6",""
+"JstPh2PowerInlet","","","jst_ph_2",""
+"BtnOpen","","","pushbutton",""
+"BtnMode","","","pushbutton",""
+"L9110sModulePulldownAIA","10k","10k","res0603","C25804"
+"L9110sModulePulldownAIB","10k","10k","res0603","C25804"
+"BtnOpenPullupA","10k","10k","res0603","C25804"
+"BtnModePullupA","10k","10k","res0603","C25804"
+```
+
+With the package in the project, `check_all` finds it and the-order answers `[ok  ]`:
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project .
+```
+
+<!-- output: run 2026-10-06, spark 0.6.0 -->
+```text
+  resolved from .:
+    circuit      dist/board/circuit.json
+    rules        .spark/rules.json
+    package      board-gerbers.zip
+    boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6
+
+  [ok  ] vendor-truth       the board definition matches the vendor's own pin header
+  [ok  ] buildability       holes take their pins, packages hold their values
+           ? JstPh2PowerInlet: pad 1.20 mm around a 0.75 mm hole leaves 0.225 mm of ring: over the 0.18 mm this process can make, under the 0.25 mm it recommends
+  [ok  ] the-order          the fab package orders the parts the schematic specifies
+  [????] physics            the board obeys physics, not just itself
+           ! MOTOR6V: draws at least 0 mA; not stated: L9110sModule.VCC: names no fact for its current; JstPh2PowerInlet.VCC: names no fact for its current
+           ! 4 resistor(s): could not be assessed: BtnModePullupA, BtnOpenPullupA, L9110sModulePulldownAIA, L9110sModulePulldownAIB. A netlist records neither the current through a resistor nor the voltage across it, and both depend on topology the design does not state
+           ? V33: draws 355 mA of 1.50 A, resting on figures nobody has verified: Mcu.3V3: regulator_3v3_a
+           ? GND: no maximum current stated, so nothing here can be verified
+           ? MOTOR6V: no maximum current stated, so nothing here can be verified; the part records leave it open: L9110sModule.VCC
+  [ok  ] rules-vs-netlist   written rules hold in the design that was built
+
+  1 check(s) could not look: physics
+  nothing found by the 4 check(s) that completed, of 5
+```

@@ -16,7 +16,7 @@ worse, it is not persuasive — you will delete the rule the first time it is in
 
 What every command exits with: **0**, **1**, **2**. They live in `scripts/outcomes.py`, which the
 command-line scripts import, so no command spells its own. Not every script keeps to them yet: a crash exits 1, and
-one script says `mismatch` for `problems` ([the guide for agents](docs/guide/agents.md#the-outcomes-and-their-exit-codes), P43).
+one script says `mismatch` for `problems` ([the guide for AI agents](docs/guide/agents.md#the-outcomes-and-their-exit-codes), P43).
 
 The third one is most of this product's reason for existing. **A check that could not look must
 never read as a check that passed.** Before this was one rule in one file, `check_physics` would
