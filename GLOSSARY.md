@@ -217,7 +217,7 @@ read its evidence before deciding it is bureaucracy.
 
 The backlog is two GitHub Projects — spark's (https://github.com/users/xmejkal/projects/2) and the bin's
 (/projects/1) — since 2026-10-05 (P102a). Each item is an issue; its card moves **Idea → Discovery → Design → Ready
-→ Build → Review → Done**, each stage with a limit on the cards it holds and one on the cards in flight at once — the
+→ Build → Review → Done**, with limits on how many cards a stage may hold and on how many are in flight at once — the
 numbers, and what counts toward them, are [the flow's table](scrum/README.md#the-flow--an-items-stages). **The failure
 behind it:** the PO added items mid-sprint in 3 of the 6 sprints read closely, and Sprint 10 stayed open from 10-03
 after work came in that it never planned — so "what are we doing now" had no answer a command could read (the design's

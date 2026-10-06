@@ -70,7 +70,7 @@ Every item is an issue on the board, and its card moves through the stages as th
 | **Done** | — | merged **and** its *Value proven by* has run | the proof is posted on the issue |
 
 At most three cards are in flight — Discovery to Review — at once: one worked in the session, one by agents in the
-background, one waiting. Three rules say what counts (P146, the PO, 2026-10-06):
+background, one waiting. What counts (P146, the PO, 2026-10-06):
 
 - an epic counts where it is the work itself, in Discovery and Design; from Build on its stories carry the limit;
 - a card is in its working stage while any work runs on it, a background read included; a read that only answers a
