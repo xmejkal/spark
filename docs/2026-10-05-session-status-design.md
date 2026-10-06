@@ -47,8 +47,9 @@ spark — 28 open, the limits hold · trial check 2026-11-02
 ```
 
 - **In flight** is the cards in Discovery, Design, Build and Review. Each shows its stage and its **age**: the days
-  since its Status value last changed (GitHub keeps `updatedAt` on each field value). Epics and tasks are left out,
-  as the check leaves them out.
+  since its Status value last changed (GitHub keeps `updatedAt` on each field value). A task is left out, and so is an
+  epic from Build on; an epic in Discovery or Design shows, because the check counts it there (P146: `counts()` in
+  `check_backlog.py` is the one rule both read).
 - **Waits on the PO** is the cards with *Waiting on* set to the PO, in both boards, each with *Waiting since* and its
   age. A card waiting more than 3 days is marked, as the weekly look asks.
 - **Ready** is the Ready column in the board's own row order, which is the PO's order (W11).

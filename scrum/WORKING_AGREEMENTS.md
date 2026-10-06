@@ -66,9 +66,11 @@ carrier and was applied to another.
 
 ## W6 — Finish before starting
 
-The board's limits are the rule: one item in each working stage, at most two in flight (one being worked, one
-waiting), three in Ready. `tools/check_backlog.py` fails the push when a limit is broken, so this holds by command,
-not by memory (P102a, 2026-10-05).
+The board's limits are the rule: one item in each working stage, at most three in flight (one worked in the session,
+one by agents in the background, one waiting), five in Ready. What counts is in
+[the flow](README.md#the-flow--an-items-stages): an epic counts in Discovery and Design, a card is in its stage while
+any work runs on it, and every card counts. `tools/check_backlog.py` fails the push when a limit is broken, so this
+holds by command, not by memory (P102a, 2026-10-05; raised on 2026-10-06 at the PO's word, P146).
 
 **Origin:** Petr, twice: *"make sure you often prioritize your work, finish before moving on to
 too many things at the same time"* and *"go by priority and concentrate on the goal in mind"*.

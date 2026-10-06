@@ -49,7 +49,7 @@ are no sprints; the cadences are these.
 
 | cadence | when | must produce |
 | --- | --- | --- |
-| **Replenish** | Ready runs low | the PO orders the Ready column (at most three); refilling it is when he chooses what comes next |
+| **Replenish** | Ready runs low | the PO orders the Ready column (at most five); refilling it is when he chooses what comes next |
 | **Day-close** | the end of each working day | one dated line: what moved, what was proven, what is aging, the next card — posted as a status update on the spark board with `tools/board.py close` (P102c). Claude writes it when the PO stops; a session that opens with *"! the day of … has no close"* writes that day's close first, with `--date` |
 | **Weekly look** | once a week | the PO's look at the board: anything waiting more than three days, epics started and finished |
 | **Epic done** | an epic's last story is Done | its **review** (validated value — see below), the **outside audit**, then the **retro**: one change to how we work, written into `WORKING_AGREEMENTS.md`, **with a check that tells us later whether it stuck** |
@@ -62,24 +62,34 @@ Every item is an issue on the board, and its card moves through the stages as th
 | stage | limit | what happens there | how |
 | --- | --- | --- | --- |
 | **Idea** | — | the PO's words are recorded as an issue — nothing more (ideas stay ideas) | the issue form: *Needed by*, *Value proven by* |
-| **Discovery** | 1 | who it is for and what it is: the journeys, the story map, the PO's answers | with the PO, one question at a time; the journeys and map kept as text in the repo — drawn in Miro and Canva, and run with a discovery skill, once P102b and P102e are built (both planned) |
-| **Design** | 1 | a spec, reviewed by a council, approved by the PO | superpowers' brainstorming, then the spec in `docs/` |
-| **Ready** | 3 | approved and ordered by the PO | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
+| **Discovery** | 1, epics count | who it is for and what it is: the journeys, the story map, the PO's answers | with the PO, one question at a time; the journeys and map kept as text in the repo — drawn in Miro and Canva, and run with a discovery skill, once P102b and P102e are built (both planned) |
+| **Design** | 1, epics count | a spec, reviewed by a council, approved by the PO | superpowers' brainstorming, then the spec in `docs/` |
+| **Ready** | 5 | approved and ordered by the PO | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
 | **Build** | 1 | a plan, its council, the PO's choice of execution, then the tasks test-first | superpowers' writing-plans, then executing-plans or subagent-driven-development; the plan's tasks become sub-issues |
 | **Review** | 1 | the final review on the most capable model, one fix pass, the PR open | the PR says `Closes #N` |
 | **Done** | — | merged **and** its *Value proven by* has run | the proof is posted on the issue |
 
-At most two cards are in flight — Discovery to Review — at once; epics and a plan's tasks carry no limit.
+At most three cards are in flight — Discovery to Review — at once: one worked in the session, one by agents in the
+background, one waiting. What counts (P146, the PO, 2026-10-06):
+
+- an epic counts where it is the work itself, in Discovery and Design; from Build on its stories carry the limit;
+- a card is in its working stage while any work runs on it, a background read included; a read that only answers a
+  question puts its card back in Idea when the answer is posted;
+- every card counts: a card that one PR closes together with another still counts on its own, so Build takes one card
+  at a time.
 
 Chores and bugs skip Discovery and Design. At every session start, in the PO's project folders, `tools/board.py
 status` prints the board — what is in flight and for how long, what waits on the PO, Ready, the open PRs, the last
 close (P102c's hook, in the PO's own settings).
 
 **A plan's tasks are sub-issues of their story** (labelled `task`): they show the story's progress on the board and
-ride on it — no slice, *Needed by* or WIP of their own (`tools/check_backlog.py` skips them, as epics carry no limit).
+ride on it — no slice, *Needed by* or WIP of their own (`tools/check_backlog.py` skips them, and counts an epic only in
+Discovery and Design).
 
-The trial is checked on 2026-11-02: was the Build limit broken without being caught, was a weekly look skipped twice,
-do epics start and finish? If not, one-day sprints replace it (the design's §9).
+The trial is checked on 2026-11-02 (the limits were raised on 2026-10-06, the trial's second day, and the check compares
+how many days cards waited on the PO before and after): was any limit broken without being caught, counting work on a
+card the board showed in Idea, was a weekly look skipped twice, do epics start and finish? If not, one-day sprints
+replace it (the design's §9).
 
 ## Validating value, which is not the same as finishing
 
