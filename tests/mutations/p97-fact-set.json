@@ -18,5 +18,7 @@
  {"file": "scripts/parts.py", "name": "the answer forgets what was set",
   "find": "\"was\": was, \"now\": values, \"written\"", "replace": "\"was\": was, \"now\": {}, \"written\""},
  {"file": "scripts/parts.py", "name": "the answer forgets what a fact was",
-  "find": "\"was\": was, \"now\": values, \"written\"", "replace": "\"was\": {}, \"now\": values, \"written\""}
+  "find": "\"was\": was, \"now\": values, \"written\"", "replace": "\"was\": {}, \"now\": values, \"written\""},
+ {"file": "scripts/parts.py", "name": "a footprint of any type is a footprint",
+  "find": "    if not (_absent(\"footprint\", footprint) or isinstance(footprint, str)):", "replace": "    if False:"}
 ]

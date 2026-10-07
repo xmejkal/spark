@@ -143,6 +143,17 @@ class TheContractTest(unittest.TestCase):
             footprint="jst_ph_2", footprint_placeholder=True,
             footprint_note="stands in for an XT30-PW nobody has drawn"), [])
 
+    def test_a_footprint_is_the_name_of_one_and_a_number_or_a_list_is_not(self):
+        for given, said in ((5, "footprint is 5"), (True, "footprint is True"), (3.5, "footprint is 3.5"),
+                            (["pinrow2"], "footprint is ['pinrow2']"), ({"name": "pinrow2"}, "footprint is {'name': 'pinrow2'}")):
+            with self.subTest(footprint=given):
+                problems = self._problems(footprint=given)
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith(said), problems)
+        for given in ("pinrow2", "jlcpcb:C2040", None, "", [], {}):
+            with self.subTest(footprint=given):
+                self.assertEqual(self._problems(footprint=given), [], "a name is a footprint, and an absent one is owed, not wrong")
+
     def test_a_real_footprint_needs_no_note(self):
         # Opt-in, so the five shipped records and every honest footprint are untouched.
         self.assertEqual(self._problems(footprint="pinrow5"), [])
@@ -1886,6 +1897,18 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("5 pads", said["problems"][0]["sentence"])
 
+    def test_a_footprint_that_is_no_name_is_refused_and_nothing_is_written(self):
+        home = self.a_probe()
+        before = (home / "catalog" / "x-soil.json").read_text()
+        with in_store(home):
+            for given in (5, True, 3.5, ["jst_ph_3"], {"name": "jst_ph_3"}):
+                for flags in ([], ["--dry-run"]):
+                    with self.subTest(footprint=given, flags=flags):
+                        said, code = run_json(["--fact-set", "x-soil", self.facts({"footprint": given})] + flags)
+                        self.assertEqual((said["status"], code), ("problems", 1))
+                        self.assertTrue(said["problems"][0]["sentence"].startswith("footprint is "), said["problems"])
+        self.assertEqual((home / "catalog" / "x-soil.json").read_text(), before)
+
     def test_a_record_that_is_no_object_is_refused_with_a_sentence_never_a_traceback(self):
         home = self.a_probe()
         function = Path(tempfile.mkdtemp()) / "function.json"
@@ -1945,6 +1968,14 @@ class OwedIsNotBrokenTest(unittest.TestCase):
     def test_a_present_wrong_value_is_broken(self):
         definition = part(needs=[{"signal": "SIG", "pin": "S", "direction": "sideways"}])
         self.assertTrue(any("sideways" in p for p in parts.broken_problems(definition, written(definition))))
+
+    def test_a_footprint_of_the_wrong_type_is_broken_and_an_absent_one_is_only_owed(self):
+        wrong = part(footprint=5)
+        self.assertNotIn("footprint", parts.owes(wrong))
+        self.assertEqual([p[:14] for p in parts.broken_problems(wrong, written(wrong))], ["footprint is 5"])
+        absent = part(footprint=None)
+        self.assertIn("footprint", parts.owes(absent))
+        self.assertEqual(parts.broken_problems(absent, written(absent)), [])
 
     def test_a_problem_that_merely_names_an_owed_key_is_still_broken(self):
         placeholder = part(footprint=None, footprint_placeholder=True)

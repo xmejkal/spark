@@ -620,6 +620,14 @@ def validate(part: dict, path: Path) -> list:
             problems.append("footprint_placeholder is set with no footprint_note — say what the "
                             "real footprint is and why this one stands in, or nobody can finish it")
 
+    # A footprint is the NAME of one: the board is written with it as the text of an attribute, so a number or
+    # `true` would reach tscircuit as the footprint "5" or "True". An absent one (`_absent`: null, no key, empty) is
+    # owed, not wrong, so only a value that is there is checked; whether a string names a real footprint is a build's to say.
+    footprint = part.get("footprint")
+    if not (_absent("footprint", footprint) or isinstance(footprint, str)):
+        problems.append("footprint is %r, but a footprint is the name of one — a string such as pinrow5, "
+                        "jst_ph_3 or jlcpcb:C<number>" % (footprint,))
+
     # Which pad is pin 1. The generator numbered `pinLabels` from the order the pins happened to
     # appear in this file — so an L9110S whose header reads BIA BIB GND VCC AIA AIB was emitted
     # as pin1: "AIA", and every trace to the module landed on the wrong pad. Nothing here could
