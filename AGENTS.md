@@ -2,9 +2,9 @@
 
 spark is a Claude Code plugin for gadgets built from an ESP32 dev board and modules. From a requirements file it
 generates a board that builds, with a Wokwi diagram generated from it (kept only with `--sim-dir`,
-[P116](https://github.com/xmejkal/spark/issues/50)), and checks the board. Nothing yet writes the requirements file
-from a vague idea with no parts named ([P76](https://github.com/xmejkal/spark/issues/5)), and no simulation runs unless
-you run one. [What works today](README.md#what-works-today) gives each step's status.
+[P116](https://github.com/xmejkal/spark/issues/50)), and checks the board. `parts.py --requirements` writes the
+requirements file from the parts picked for a goal's needs ([P97](https://github.com/xmejkal/spark/issues/18)), and no
+simulation runs unless you run one. [What works today](README.md#what-works-today) gives each step's status.
 
 **If you are an AI agent using spark, read [`docs/guide/agents.md`](docs/guide/agents.md) first.** It covers:
 

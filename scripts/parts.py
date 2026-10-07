@@ -841,32 +841,50 @@ SHELF_DROPS = ("owned", "photo", "photos", "sourcing", "alternatives")
 
 #: The facts a build reads from a part record (§5.7): a digest of these vouches for a record until one changes.
 BUILD_FACTS = ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts")
+#: The facts a build reads from a board (§5.7).
+BOARD_FACTS = ("pins", "power_pads", "physical")
 
 
-def digest(record):
-    """The sha256 of the facts a build reads from a part record — rewriting anything else keeps it (§5.7)."""
-    facts = {key: record[key] for key in BUILD_FACTS if key in record}
-    return hashlib.sha256(json.dumps(facts, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+def digest(record, facts=BUILD_FACTS):
+    """The sha256 of the facts a build reads from a record — a part's by default, a board's with BOARD_FACTS (§5.7)."""
+    shown = {key: record[key] for key in facts if key in record}
+    return hashlib.sha256(json.dumps(shown, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def _shelf_copy(path, project_name):
-    """What the shelf would hold of a project's record: filtered, and saying which project it came from and its digest."""
+def note_built(design):
+    """
+    A `built` line in the history when a listed project's board runs end to end (§5.7, §8 T): the board's and each part's
+    digest, so a proof of an old pin order never vouches for a corrected one. A project not on the list keeps no history.
+    """
+    name = store.project_name(design.project)
+    if name is None:
+        return False
+    with store.locked():
+        return store.append_event({"event": "built", "project": name,
+                                   "board": {"id": design.board["id"], "digest": digest(design.board, BOARD_FACTS)},
+                                   "parts": [{"id": part["id"], "digest": digest(part)} for part in design.parts]})
+
+
+def _shelf_copy(path, project_name=None):
+    """What the shelf would hold of a record: filtered — and when it came from a project, which one and its digest (§5.5)."""
     record = json.loads(Path(path).read_text())
     copy = {key: value for key, value in record.items() if key not in SHELF_DROPS}
-    copy["based_on"] = {"project": project_name, "digest": digest(record)}
+    if project_name:
+        copy["based_on"] = {"project": project_name, "digest": digest(record)}
     return copy
 
 
-def shelvable(path, project_name):
-    """Whether a project's record may go onto the shelf: only one whose shelf copy meets the contract, or `--list` breaks in every project."""
+def shelvable(path, project_name=None):
+    """Whether a record may go onto the shelf: only one whose shelf copy meets the contract, or `--list` breaks in every project."""
     return not validate(_shelf_copy(path, project_name), Path(path))
 
 
-def shelve(path, project_name):
+def shelve(path, project_name=None):
     """
-    Put a record that lives in one project onto the person's shelf, so every project finds it (§5.5): a filtered
-    copy that says which project it came from and that record's digest; its folder (a simulation chip) travels
-    with it. Returns whether the shelf changed — or None when the record does not meet the contract (a draft stays in its project).
+    Put a record onto the person's shelf, so every project finds it (§5.5): a filtered copy — that says which project
+    it came from and that record's digest, when it came from one; a catalog record names none, since nothing reads it.
+    Its folder (a simulation chip) travels with it. Returns whether the shelf changed — or None when the record does
+    not meet the contract (a draft stays where it is).
     """
     path = Path(path)
     copy = _shelf_copy(path, project_name)
@@ -1429,6 +1447,9 @@ OPERATIONS = (
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
      "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds",
      ("writes",), ("project", "picks", "reserved", "written")),
+    ("requirements", {"metavar": "PROJECT"},
+     "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf",
+     ("writes",), ("path", "requirements", "shelved", "unplaced", "written")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1877,6 +1898,24 @@ def _op_pick(args, project):
                    "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
                    "written": not problems and not args.dry_run},
                   _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes]), problems=problems)
+
+
+def _op_requirements(args, project):
+    import needs
+    content, shelving, unplaced, problems = needs.requirements(args.requirements)
+    path = Path(args.requirements) / needs.REQUIREMENTS
+    if not problems and not args.dry_run:
+        for record, source in shelving:
+            shelve(record, source)
+        store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + "\n")
+    said = [] if problems else ["  %s %s: board %s; parts %s" % (
+        "would write" if args.dry_run else "wrote", path, content["board"],
+        ", ".join(p if isinstance(p, str) else "%s (%s)" % (p["part"], p["name"]) for p in content["parts"]) or "none")]
+    said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
+    said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
+    return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
+                   "unplaced": unplaced, "written": not problems and not args.dry_run},
+                  _write_lines([], problems, args.dry_run, said), problems=problems)
 
 
 def _op_describe(args, project):

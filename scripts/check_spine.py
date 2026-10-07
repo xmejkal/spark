@@ -62,7 +62,9 @@ import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
 import netlist  # noqa: E402
+import parts  # noqa: E402
 import sim_project  # noqa: E402
+import store  # noqa: E402
 import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
@@ -584,6 +586,14 @@ def main(argv=None):
         # sends somebody to debug a design that was never examined.
         stages = [Stage("check_spine", COULD_NOT_RUN,
                         "%s: %s" % (type(exc).__name__, exc))]
+
+    # The history says a build ran end to end (§5.7) — written here, by the chain itself, never on anyone's say-so.
+    # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.
+    if source and not from_library and verdict(stages) == EXIT_OK:
+        try:
+            parts.note_built(design.load(source, project))
+        except (design.DesignError, store.StoreProblem, OSError) as unrecorded:
+            print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
 
     if args.sim_dir and (workdir / "sim").is_dir():
         shutil.copytree(workdir / "sim", args.sim_dir, dirs_exist_ok=True)

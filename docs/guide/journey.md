@@ -1,8 +1,8 @@
 # The journey
 
 spark takes a gadget from an idea in words toward a board that builds and is checked, with a Wokwi diagram generated
-from it. Today the chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file); nothing yet
-writes one from a vague idea with no parts named ([P76](https://github.com/xmejkal/spark/issues/5)). Each step reports
+from it. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
+`parts.py --requirements` writes from your picks ([P97](https://github.com/xmejkal/spark/issues/18)). Each step reports
 what it could not look at; [what never to assume](agents.md#what-never-to-assume) lists where that does not hold yet.
 
 This page walks each step on real runs: what was typed, what spark printed, what it wrote, and where the step stops
@@ -102,11 +102,9 @@ This path was not run here.
 ## Idea
 
 **Partly.** [`/spark:idea`](../../commands/idea.md) turns a goal in your words into needs, then matches each need
-against your drawer and spark's records. It stops once each need is marked: have, have-unknown, know or gap. Not built
-yet:
-
-- choosing and reserving parts ([P97](https://github.com/xmejkal/spark/issues/18));
-- turning needs into a requirements file ([P76](https://github.com/xmejkal/spark/issues/5)).
+against your drawer and spark's records. It marks each need: have, have-unknown, know or gap. Then a part is picked per
+need (`parts.py --pick`), what you own is reserved, and the picks become a requirements file
+(`parts.py --requirements`) ([P97](https://github.com/xmejkal/spark/issues/18)); those steps were not run for this page.
 
 In Claude Code, Claude asks at most three questions, one at a time, then writes the needs to a file:
 
@@ -138,7 +136,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../needs.json
   set board: does null → "compute"; what null → "microcontroller"
 ```
 
-The same command with `--dry-run` first shows these lines as *would set*. The needs land in `.spark/needs.json`.
+The same command with `--dry-run` first shows these lines as *would set*. Here, `null →` marks a need that did not exist
+before. The needs land in `.spark/needs.json`.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .

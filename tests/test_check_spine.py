@@ -14,11 +14,14 @@ raise?" calls it a pass.
 """
 
 import contextlib
+import hashlib
 import io
 import json
 import os
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -27,7 +30,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
+import design  # noqa: E402
 import emit_board  # noqa: E402
+import parts  # noqa: E402
+import store  # noqa: E402
 
 
 def stage(name, status):
@@ -810,6 +816,97 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
         import tools
         self.assertEqual(tools.find("diagram-converter", None, Path(tempfile.mkdtemp()) / "absent.json").command,
                          [str(self.BUNDLE)])
+
+
+class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
+    """P97 (§5.7, §8 T): when the chain runs end to end for a project on the person's list, the history says it was built."""
+
+    def setUp(self):
+        self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
+        (self.project / ".spark").mkdir(parents=True)
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def spine(self, last):
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build")] + [stage("simulation", last)]
+        with mock.patch.object(check_spine, "run", return_value=stages), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(self.project / "requirements.json")])
+        path = self.home / "history.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()] if path.is_file() else []
+
+    def answer(self, argv=None):
+        """What `check_spine.main` returned and said, stdout then stderr, for a chain whose every stage ended ok."""
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(check_spine, "run", return_value=stages), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = check_spine.main([str(self.project / "requirements.json")] if argv is None else argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_a_chain_that_runs_end_to_end_is_recorded_once_with_each_digest(self):
+        self.spine(check_spine.OK)
+        built = self.spine(check_spine.OK)
+        self.assertEqual([(e["event"], e["project"], e["board"]["id"], [p["id"] for p in e["parts"]]) for e in built],
+                         [("built", "plant-alarm", "firebeetle2-esp32s3", ["tactile-button"])])
+        self.assertEqual((len(built[0]["board"]["digest"]), len(built[0]["parts"][0]["digest"])), (64, 64))
+
+    def test_a_chain_that_did_not_run_end_to_end_records_nothing(self):
+        self.assertEqual(self.spine(check_spine.COULD_NOT_RUN), [])
+
+    def test_each_digest_is_of_the_facts_a_build_reads(self):
+        def digest_of(record, facts):
+            shown = {key: record[key] for key in facts if key in record}
+            return hashlib.sha256(json.dumps(shown, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        built = self.spine(check_spine.OK)[0]
+        self.assertEqual((built["board"]["digest"], built["parts"][0]["digest"]),
+                         (digest_of(board, ("pins", "power_pads", "physical")),
+                          digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))))
+
+    def test_a_project_that_is_not_on_the_list_keeps_no_history(self):
+        (self.home / "projects.json").write_text("{}")
+        self.assertEqual(self.spine(check_spine.OK), [])
+
+    def test_the_reference_design_has_no_project_and_records_nothing(self):
+        code, said, _ = self.answer(argv=[])
+        self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
+
+    def test_a_design_built_from_the_plugin_s_library_is_recorded_for_no_project(self):
+        # even when the person listed the plugin's own folder: a file in no project is built from it, and belongs to nobody
+        alone = Path(tempfile.mkdtemp()) / "requirements.json"
+        alone.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        (self.home / "projects.json").write_text(json.dumps({"spark": str(ROOT)}))
+        code, _, _ = self.answer(argv=[str(alone)])
+        self.assertEqual((code, (self.home / "history.jsonl").exists()), (0, False))
+
+    def test_the_line_waits_while_another_holds_the_store(self):
+        loaded = design.load(self.project / "requirements.json", self.project)
+        recorder = threading.Thread(target=parts.note_built, args=(loaded,))
+        with store.locked():
+            recorder.start()
+            time.sleep(0.5)
+            self.assertFalse((self.home / "history.jsonl").exists(), "it wrote while another held the store")
+        recorder.join(timeout=60)
+        self.assertEqual(len((self.home / "history.jsonl").read_text().splitlines()), 1)
+
+    def test_a_history_that_cannot_be_kept_does_not_hide_the_verdict(self):
+        (self.home / "history.jsonl").write_text("this is not an event\n")
+        code, said, complained = self.answer()
+        self.assertEqual((code, "the chain runs end to end" in said), (0, True))
+        self.assertIn("history.jsonl line 1 is not a history event", complained)
+
+    def test_whatever_stops_the_recording_the_verdict_stands_and_the_reason_is_said(self):
+        for refusal in (store.StoreProblem("the projects list is not JSON"), OSError("the disk is full"),
+                        design.DesignError("the file changed under the build")):
+            with self.subTest(refusal=refusal), mock.patch.object(check_spine.parts, "note_built", side_effect=refusal):
+                code, said, complained = self.answer()
+                self.assertEqual((code, "the chain runs end to end" in said), (0, True))
+                self.assertIn(str(refusal), complained)
+
 
 if __name__ == "__main__":
     unittest.main()

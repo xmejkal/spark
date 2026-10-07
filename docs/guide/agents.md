@@ -103,13 +103,14 @@ These write:
 - `init_project.py`: four project files, plus the store's projects list.
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
   reads, and creates `.tscircuit/cache/`. It may also compile a chip beside its record, which for a library part is
-  inside the plugin. Its input, the requirements file, is described on
+  inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
+  history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
 - `check_vendor_pins.py` without `--offline`: the header cache.
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
-  - `--drawer-set`, `--needs-set`, `--pick`, `--function-set`, `--fact-set`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
+  - `--drawer-set`, `--needs-set`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
     also uses the network.
 - `tools.py --install`, `--on`, `--off`, `--pin`, `--use` and `--new`.
 

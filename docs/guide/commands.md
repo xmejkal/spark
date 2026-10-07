@@ -99,11 +99,9 @@ Turns a goal in your words into needs, asking at most three questions, one at a 
 against your drawer and spark's records, owned parts first ([journey: Idea](journey.md#idea)). The needs are written
 to the project's `.spark/needs.json`.
 
-It stops after matching each need. Not built yet:
-
-- choosing a part per need, and reserving the parts you own
-  ([P97](https://github.com/xmejkal/spark/issues/18));
-- turning needs into a requirements file ([P76](https://github.com/xmejkal/spark/issues/5)).
+Then it picks a part per need and reserves what you own of it, and the picks become a requirements file
+([P97](https://github.com/xmejkal/spark/issues/18)); one line at the end says what the run cost and what came from
+your store.
 
 Page: [`commands/idea.md`](../../commands/idea.md).
 

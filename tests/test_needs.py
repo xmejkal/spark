@@ -892,6 +892,165 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual(self.picks()["soil"], [{"part": "x-soil"}])
 
 
+def a_project_with_picks(picks):
+    """A scratch store holding a catalog record that owes nothing (the library's LED, as x-led) and one that owes facts,
+    and a project whose needs pick `picks` — [(need id, [pick])]."""
+    home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
+    (home / "catalog").mkdir()
+    led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+    (home / "catalog" / "x-led.json").write_text(json.dumps(dict(led, id="x-led")))
+    (home / "catalog" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor", "needs": []}))
+    (project / ".spark").mkdir(parents=True)
+    (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+        {"id": need_id, "does": "sense", "what": "x", "pick": pick} for need_id, pick in picks]}))
+    return home, project
+
+
+class TheRequirementsFileTest(unittest.TestCase):
+    """P97, §8 L: the picks become a requirements file — the board and each part pick with a record that owes nothing."""
+
+    BOARD = ("board", [{"board": "firebeetle2-esp32s3"}])
+
+    def project(self, picks):
+        home, project = a_project_with_picks(picks)
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return home, project
+
+    def written(self, project):
+        return json.loads((project / "requirements.json").read_text())
+
+    def test_the_picks_become_the_board_and_the_parts_with_records(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}]), ("alarm", [{"entry": "speaker"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)), (0, {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]}))
+        self.assertEqual(said["data"]["unplaced"], ["speaker"])
+
+    def test_a_pick_that_owes_facts_is_named_and_nothing_is_written(self):
+        _, project = self.project([self.BOARD, ("soil", [{"part": "x-soil"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("owes footprint", said["problems"][0]["sentence"])
+        self.assertFalse((project / "requirements.json").exists())
+
+    def test_a_catalog_pick_that_owes_nothing_goes_onto_the_shelf(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+        run(["--requirements", str(project)])
+        shelved = json.loads((home / "shelf" / "x-led.json").read_text())
+        self.assertEqual((shelved["id"], "based_on" in shelved, self.written(project)["parts"]), ("x-led", False, ["x-led"]))
+
+    def test_one_board_is_picked(self):
+        for picks in ([("light", [{"part": "led-red-5mm"}])], [self.BOARD, ("other", [{"board": "xiao-esp32-c6"}])]):
+            with self.subTest(picks=picks):
+                _, project = self.project(picks)
+                said, code = run(["--requirements", str(project)])
+                self.assertEqual((code, said["problems"][0]["subject"]), (1, "board"))
+
+    def test_a_part_picked_for_two_needs_is_named_after_each(self):
+        _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])
+        run(["--requirements", str(project)])
+        self.assertEqual(self.written(project)["parts"], [{"part": "tactile-button", "name": "OpenLid"},
+                                                          {"part": "tactile-button", "name": "Mode"}])
+
+    def test_what_the_person_added_to_the_file_stays(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        (project / "requirements.json").write_text(json.dumps({"board": "x", "parts": [], "signals": [{"name": "LED_STATUS", "needs": []}]}))
+        run(["--requirements", str(project)])
+        self.assertEqual(self.written(project), {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"],
+                                                 "signals": [{"name": "LED_STATUS", "needs": []}]})
+
+    def test_a_dry_run_writes_nothing(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+        said, code = run(["--requirements", str(project), "--dry-run"])
+        self.assertEqual((code, said["data"]["written"]), (0, False))
+        self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
+
+    def test_a_pick_from_spark_s_library_is_not_copied_onto_the_shelf(self):
+        # the shelf is nearer than the library, so a copy there would hide every later improvement to the library's record
+        home, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        run(["--requirements", str(project)])
+        self.assertFalse((home / "shelf").exists())
+
+    def test_a_part_already_on_the_shelf_is_not_replaced_by_the_catalog_s_copy(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-led.json").write_text(json.dumps(dict(json.loads((home / "catalog" / "x-led.json").read_text()),
+                                                                   name="the shelf's own name")))
+        before = (home / "shelf" / "x-led.json").read_text()
+        said, _ = run(["--requirements", str(project)])
+        self.assertEqual(((home / "shelf" / "x-led.json").read_text(), said["data"]["shelved"], self.written(project)["parts"]),
+                         (before, [], ["x-led"]))
+
+    def test_a_pick_from_another_project_goes_onto_the_shelf_saying_which(self):
+        home, project = self.project([self.BOARD, ("water", [{"part": "x-valve"}])])
+        other = Path(tempfile.mkdtemp()) / "irrigation"
+        (other / "parts").mkdir(parents=True)
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (other / "parts" / "x-valve.json").write_text(json.dumps(dict(led, id="x-valve")))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        said, code = run(["--requirements", str(project)])
+        shelved = json.loads((home / "shelf" / "x-valve.json").read_text())
+        self.assertEqual((code, said["data"]["shelved"], said["data"]["written"], self.written(project)["parts"]),
+                         (0, ["x-valve"], True, ["x-valve"]))
+        self.assertEqual((shelved["based_on"]["project"], len(shelved["based_on"]["digest"])), ("irrigation", 64))
+
+    def test_a_pick_whose_record_is_gone_or_broken_is_named_and_nothing_is_written(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-gone"}]), ("alarm", [{"part": "x-broken"}])])
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (home / "catalog" / "x-broken.json").write_text(json.dumps(dict(led, id="x-broken", needs="five pins")))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, sorted({p["subject"] for p in said["problems"]})), ("problems", 1, ["x-broken", "x-gone"]))
+        self.assertIn("no record called x-gone any more", said["problems"][0]["sentence"])
+        self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
+
+    def test_a_catalog_part_picked_for_two_needs_goes_onto_the_shelf_once(self):
+        _, project = self.project([self.BOARD, ("left", [{"part": "x-led"}]), ("right", [{"part": "x-led"}])])
+        said, _ = run(["--requirements", str(project)])
+        self.assertEqual((said["data"]["shelved"], self.written(project)["parts"]),
+                         (["x-led"], [{"part": "x-led", "name": "Left"}, {"part": "x-led", "name": "Right"}]))
+
+    def test_a_part_that_owes_facts_is_refused_once_however_many_needs_pick_it(self):
+        _, project = self.project([self.BOARD, ("soil", [{"part": "x-soil"}]), ("moisture", [{"part": "x-soil"}])])
+        said, _ = run(["--requirements", str(project)])
+        self.assertEqual([p["subject"] for p in said["problems"]], ["x-soil"])
+
+    def test_a_pick_with_no_record_is_said_once_however_many_needs_pick_it(self):
+        _, project = self.project([self.BOARD, ("alarm", [{"entry": "speaker"}]), ("backup", [{"entry": "speaker"}])])
+        said, _ = run(["--requirements", str(project)])
+        self.assertEqual(said["data"]["unplaced"], ["speaker"])
+
+    def test_a_requirements_file_that_cannot_be_read_is_named_and_nothing_is_written(self):
+        for broken in (b"{not json", b"\xff\xfe{"):
+            with self.subTest(broken=broken):
+                home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+                (project / "requirements.json").write_bytes(broken)
+                said, code = run(["--requirements", str(project)])
+                self.assertEqual((said["status"], code), ("could-not-run", 2))
+                self.assertIn("requirements.json is not JSON", said["unchecked"][0]["sentence"])
+                self.assertEqual(((project / "requirements.json").read_bytes(), (home / "shelf").exists()), (broken, False))
+
+    def test_text_mode_says_a_refusal_and_nothing_of_a_write(self):
+        _, project = self.project([self.BOARD, ("soil", [{"part": "x-soil"}]), ("alarm", [{"entry": "speaker"}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--requirements", str(project)])
+        self.assertEqual(out.getvalue(), "  refused, so nothing was written: x-soil — owes footprint, pin_order, pin_order_proof, body_mm, "
+                                         "simulation — fill it in its own home with --fact-set\n")
+
+    def test_text_mode_says_what_it_wrote_what_went_onto_the_shelf_and_what_is_reserved(self):
+        _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}]),
+                                   ("light", [{"part": "x-led"}]), ("alarm", [{"entry": "speaker"}])])
+        for extra, verb in ((["--dry-run"], "would write"), ([], "wrote")):  # in this order: a real run puts x-led on the shelf
+            with self.subTest(extra=extra):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    parts.main(["--requirements", str(project)] + extra)
+                self.assertEqual(out.getvalue(), "  %s %s: board firebeetle2-esp32s3; parts tactile-button (OpenLid), tactile-button (Mode), x-led\n"
+                                 "  onto the shelf, so every project builds with it: x-led\n"
+                                 "  reserved, not placed — no record: speaker\n" % (verb, project / "requirements.json"))
+
+
 class TheIdeaCommandTest(unittest.TestCase):
     """commands/idea.md is followed as written (R4.2): the project is named where a command takes it as a flag, and only there."""
 
@@ -902,7 +1061,7 @@ class TheIdeaCommandTest(unittest.TestCase):
         for line in flagged:
             self.assertIn("--project <project>", line, line)
         for line in lines:
-            if any(op in line for op in ("--needs-set", "--match", "--pick")):
+            if any(op in line for op in ("--needs-set", "--match", "--pick", "--requirements")):
                 self.assertNotIn("--project", line, "--needs-set and --match take the project as their argument: " + line)
 
 

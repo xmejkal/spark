@@ -17,10 +17,10 @@ From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and
   [P116](https://github.com/xmejkal/spark/issues/50)).
 - spark's checks read it.
 
-Its placement is a first draft, which you lay out before ordering. Today
-[the chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from that requirements file; nothing yet
-writes one from a vague idea with no parts named ([P76](https://github.com/xmejkal/spark/issues/5)). `--board`, and a
-requirements file's `board`, name the dev board.
+Its placement is a first draft, which you lay out before ordering.
+[The chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from that requirements file, which you
+write, or which `parts.py --requirements` writes from the parts you picked for your needs
+([P97](https://github.com/xmejkal/spark/issues/18)). `--board`, and a requirements file's `board`, name the dev board.
 
 On 2026-10-06 the library defined two dev boards and held 7 parts (`boards.py --list`, `parts.py --list`). Only the
 FireBeetle 2 ESP32-S3 builds: the Seeed XIAO ESP32-C6 is defined for the pin map only, and its file records no header
@@ -66,7 +66,7 @@ the linked issue plans it.
 | step | today | with |
 | --- | --- | --- |
 | [Drawer](docs/guide/journey.md#drawer) | **partly**: what you own, kept in your own store; the scripts that list and write entries ran. Turning your words into entries, and the DFRobot import, were not run here | `/spark:drawer` |
-| [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; the conversation was not run here. Not built yet: choosing and reserving parts ([P97](https://github.com/xmejkal/spark/issues/18)), and turning needs into a requirements file ([P76](https://github.com/xmejkal/spark/issues/5)) | `/spark:idea` |
+| [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; a part is picked per need, what you own is reserved, and the picks become a requirements file ([P97](https://github.com/xmejkal/spark/issues/18)). The conversation, the picking and the requirements file were not run here | `/spark:idea` |
 | [Research](docs/guide/journey.md#research) | **partly**: the library search runs. Research of a new part is done by agents, not run here | `/spark:research`, `/spark:identify` |
 | [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it, or the stage that stopped it | `/spark:build` |
 | [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |

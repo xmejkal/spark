@@ -100,7 +100,7 @@ own home, and one line saying what it cost and what came from the store.
 | --- | --- |
 | C1 As the hobbyist, I pick per need; a part passed over keeps its reason | `parts.py --pick <project> <need>=<id> --json`; `passed_over` lines in the history |
 | C2 As the maker, a reservation past what I own is refused, naming who holds it | the plant alarm reserving the bin's only FireBeetle S3 is refused: "1 owned, held by smart-bin" — the person frees it or picks another |
-| L1 As the hobbyist, owed facts are filled in the record's own home, then the picks become a requirements file | `/spark:init --board <pick>` after C; `check_spine` ends `[ok] … the chain runs end to end` |
+| L1 As the hobbyist, owed facts are filled in the record's own home, then the picks become a requirements file | `/spark:init --board <pick>` after C; `check_spine` ends `[ok] … the chain runs end to end` and `emit_board.py` without `--assume-missing-sizes` exits 0 — no placeholder outline (the PO, 2026-10-06) |
 | T1 As the PO, the step ends with one cost line, and the history records what was reused and built | "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14 min" (§6.7) |
 
 **Foundations it brings:** the fetcher and the document store's checked keep (§6.2) — the DFR0954 footprint is

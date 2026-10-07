@@ -63,6 +63,9 @@ not; delete it to have it regenerated. `dist/` is still replaced with a build of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.
 
+When the chain runs end to end for a project on your list, your store's history records `built`, with a digest of the
+board and of each part, so a later project sees what has been built and with which facts.
+
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 

@@ -93,4 +93,14 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <proje
 and without `--dry-run`. A record in spark's own library is changed in spark's repository, not from here: say so. A
 source not kept yet is fetched only after the person's yes — it reaches the network.
 
-Building from the picks is store 1c's next steps; say so, and stop at the picks.
+## L — the building list
+
+Run `/spark:init --board <the board pick>` in the project first. Then fill what the part picks owe (above), and:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
+```
+
+and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A pick with no
+record (the speaker, the battery) is reserved, not placed. A pick from the catalog goes onto the shelf, so every project
+builds with it. `/spark:build` takes it from there.

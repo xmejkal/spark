@@ -279,3 +279,41 @@ def plan_pick(project, given, passed_over=()):
         events.append(dict({"event": "passed_over", "project": name, "need": item["need"]}, **pick,
                            why=drawer.clean(item["why"]), by=item.get("by", "person")))
     return after, changes, events, notes, problems
+
+
+REQUIREMENTS = "requirements.json"
+
+
+def requirements(project):
+    """
+    The picks as a requirements file (§5.3, §8 L): (its content, records to shelve, picks not placed, problems). The board
+    pick, and every part pick whose record owes nothing — one in the catalog or in another project goes onto the shelf, so
+    the build finds it; a pick with no record is reserved, not placed. A part picked for two needs is named after each.
+    The keys the person added to the file (signals, rails) stay.
+    """
+    known = {row[:2]: row for row in drawer.linkable(project)}
+    picks = [(need["id"], next(iter(pick.items()))) for need in read(project) for pick in need.get("pick") or []]
+    board_picks = sorted({key for _, (kind, key) in picks if kind == "board"})
+    problems = [] if len(board_picks) == 1 else [parts._problem("board", "pick one board — %s" % (
+        "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
+    part_ids = [key for _, (kind, key) in picks if kind == "part"]
+    placed, shelve = [], []
+    for need_id, (kind, key) in picks:
+        if kind != "part":
+            continue
+        _, _, where, path = known.get(("part", key), (None, None, None, None))
+        record = parts._parse(path) if path else None
+        wrong = (["no record called %s any more" % key] if not isinstance(record, dict) else
+                 ["owes %s — fill it in its own home with --fact-set" % ", ".join(parts.owes(record))] if parts.owes(record)
+                 else parts.broken_problems(record, path))
+        problems += [parts._problem(key, sentence) for sentence in wrong]
+        shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
+        placed.append(key if part_ids.count(key) == 1 else {"part": key, "name": "".join(word.capitalize() for word in need_id.split("-"))})
+    path = Path(project) / REQUIREMENTS
+    try:
+        kept = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    except ValueError as broken:
+        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand" % (path, broken))
+    content = dict(kept if isinstance(kept, dict) else {}, board=board_picks[0] if board_picks else None, parts=placed)
+    problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
+    return content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")), problems
