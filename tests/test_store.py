@@ -415,6 +415,26 @@ class TheHistoryTest(unittest.TestCase):
         self.assertEqual(store.events(), [first])
 
 
+class AnAnswer:
+    """What `urlopen` hands the door, as far as the door looks at it: the URL it ended at (after any redirect) and a body it counts reads of."""
+
+    def __init__(self, ended_at, body=b"served"):
+        self.ended_at, self.body, self.reads = ended_at, body, 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *gone):
+        return False
+
+    def geturl(self):
+        return self.ended_at
+
+    def read(self):
+        self.reads += 1
+        return self.body
+
+
 class TheOneDoorTest(unittest.TestCase):
     """P97 (§6.2, §6.5): spark reaches the network through one door, and a kept document is checked before it takes its name."""
 
@@ -472,28 +492,89 @@ class TheOneDoorTest(unittest.TestCase):
         import urllib.request
         asked = []
 
-        class Served:
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *gone):
-                return False
-
-            def read(self):
-                return b"served"
-
         def served(request, timeout=None):
             asked.append((request.get_method(), request.full_url, request.get_header("User-agent"), timeout))
-            return Served()
+            return AnAnswer(request.full_url)
 
         with mock.patch.object(urllib.request, "urlopen", served):
             self.assertEqual((store.fetch("https://v.example/a.pdf", method="HEAD"), store.fetch("https://v.example/b.pdf")),
-                             (b"served", b"served"))
+                             (b"", b"served"))
         self.assertEqual(asked, [("HEAD", "https://v.example/a.pdf", "spark", 30), ("GET", "https://v.example/b.pdf", "spark", 30)])
 
+    def test_a_head_never_reads_the_document_even_after_a_redirect_made_it_a_get(self):
+        # Python 3.10 follows a redirect with a GET whatever the first request was, and hands back the document itself.
+        import urllib.request
+        answers = []
+
+        def redirected(request, timeout=None):
+            answers.append(AnAnswer("https://v.example/b.pdf", b"x" * 1024))
+            return answers[-1]
+
+        with mock.patch.object(urllib.request, "urlopen", redirected):
+            head, get = store.fetch("https://v.example/a.pdf", method="HEAD"), store.fetch("https://v.example/a.pdf")
+        self.assertEqual((head, get), (b"", b"x" * 1024))
+        self.assertEqual([answer.reads for answer in answers], [0, 1], "a HEAD reads nothing, a GET reads once")
+
+    def test_the_door_opens_only_http_and_https_and_says_which_scheme_it_refused(self):
+        import urllib.request
+        opened = []
+
+        def opens(request, timeout=None):
+            opened.append(request.full_url)
+            return AnAnswer(request.full_url)
+
+        with mock.patch.object(urllib.request, "urlopen", opens):
+            for url, scheme in (("ftp://v.example/a.pdf", "ftp"), ("data:text/plain;base64,aGVsbG8=", "data"),
+                                ("gopher://v.example/a.pdf", "gopher"), ("/etc/hosts", "missing")):
+                with self.subTest(url=url):
+                    with self.assertRaises(store.StoreProblem) as refused:
+                        store.fetch(url)
+                    self.assertEqual(str(refused.exception),
+                                     url + " is not fetched: its scheme is " + scheme + ", and spark opens only http and https")
+            store.fetch("http://v.example/a.pdf")
+            store.fetch("HTTPS://v.example/b.pdf", method="HEAD")
+        self.assertEqual(opened, ["http://v.example/a.pdf", "HTTPS://v.example/b.pdf"], "only the web was opened")
+
+    def test_a_redirect_that_leaves_the_web_is_refused_before_a_byte_is_read(self):
+        import urllib.request
+        answers = []
+
+        def redirected_off_the_web(request, timeout=None):
+            answers.append(AnAnswer("ftp://elsewhere.example/b.pdf"))
+            return answers[-1]
+
+        with mock.patch.object(urllib.request, "urlopen", redirected_off_the_web):
+            for method in ("GET", "HEAD"):
+                with self.subTest(method=method):
+                    with self.assertRaises(store.StoreProblem) as refused:
+                        store.fetch("https://v.example/a.pdf", method=method)
+                    self.assertEqual(str(refused.exception), "https://v.example/a.pdf was redirected to a URL whose scheme is ftp, "
+                                                             "and spark follows a redirect only to http or https")
+        self.assertEqual([answer.reads for answer in answers], [0, 0], "nothing was read")
+
+    def test_a_real_run_refuses_a_file_url_though_the_suite_may_fetch_one(self):
+        # The suite fetches file:// URLs of temp files (no network). A run of spark itself, with no unittest in the process,
+        # must not read the person's files on the word of a cited URL.
+        uri = self.a_file(b"%PDF drawing").as_uri()
+        probe = "import store\ntry:\n    print(len(store.fetch(%r)))\nexcept store.StoreProblem as refused:\n    print(refused)\n" % uri
+        done = subprocess.run([sys.executable, "-c", probe], cwd=SCRIPTS, env=dict(os.environ), capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.stdout.strip(), uri + " is not fetched: its scheme is file, and spark opens only http and https", done.stderr)
+
     def test_every_way_of_not_answering_is_a_store_problem_that_names_the_url(self):
-        for url in ("not a url", (Path(tempfile.mkdtemp()) / "gone.pdf").as_uri()):
+        import http.client
+        import urllib.request
+        for url in ("not a url", (Path(tempfile.mkdtemp()) / "gone.pdf").as_uri(), "http://[::1/x.pdf"):
             with self.subTest(url=url):
+                with self.assertRaises(store.StoreProblem) as missing:
+                    store.fetch(url)
+                self.assertIn(url, str(missing.exception))
+        # The ways urllib itself fails that are not an OSError: a URL it cannot make sense of, an answer cut short.
+        for url, failure in (("https://v.example/a.pdf", ValueError("unknown url type")),
+                             ("https://v.example/b.pdf", http.client.InvalidURL("nonnumeric port: 'abc'")),
+                             ("https://v.example/c.pdf", http.client.IncompleteRead(b"half", 10))):
+            def fails(request, timeout=None, failure=failure):
+                raise failure
+            with self.subTest(url=url, failure=type(failure).__name__), mock.patch.object(urllib.request, "urlopen", fails):
                 with self.assertRaises(store.StoreProblem) as missing:
                     store.fetch(url)
                 self.assertIn(url, str(missing.exception))
@@ -532,9 +613,11 @@ class TheOneDoorTest(unittest.TestCase):
 
         for what, failing in (("on the part", mock.patch.object(Path, "write_bytes", autospec=True, side_effect=runs_out_of_room_on_the_part)),
                               ("at the rename", mock.patch.object(Path, "replace", autospec=True, side_effect=runs_out_of_room_at_the_rename))):
-            with self.subTest(runs_out_of_room=what), failing, self.assertRaises(OSError):
-                store.keep(b"%PDF drawing", "drawing.pdf")
-            self.assertEqual([found.name for found in (self.home / "sources").rglob("*") if found.is_file()], [])
+            with self.subTest(runs_out_of_room=what):
+                home = Path(tempfile.mkdtemp())  # a store of its own, so what one mode leaves is not blamed on the next
+                with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}), failing, self.assertRaises(OSError):
+                    store.keep(b"%PDF drawing", "drawing.pdf")
+                self.assertEqual([found.name for found in (home / "sources").rglob("*") if found.is_file()], [])
 
     def test_a_url_that_does_not_answer_is_not_reachable_and_downloads_as_none(self):
         import parts
@@ -544,8 +627,14 @@ class TheOneDoorTest(unittest.TestCase):
 
     def test_a_name_with_a_control_character_in_it_is_refused_with_a_sentence_of_its_own(self):
         # A NUL byte is not a path out of the sources, so the operating system refused it with a ValueError nothing caught.
+        # C0 and C1 controls, DEL; then the characters that reorder or break the text a listing prints: the direction marks
+        # (U+200E/F, U+202A-E, U+2066-9) and the line and paragraph separators (U+2028/9), at both ends of each range.
         for name, shown in (("a\x00.pdf", r"'a\x00.pdf'"), ("a\nb.pdf", r"'a\nb.pdf'"), ("a\tb.pdf", r"'a\tb.pdf'"),
-                            ("a\x1bb.pdf", r"'a\x1bb.pdf'"), ("a\x7fb.pdf", r"'a\x7fb.pdf'"), ("a\x85b.pdf", r"'a\x85b.pdf'")):
+                            ("a\x1bb.pdf", r"'a\x1bb.pdf'"), ("a\x7fb.pdf", r"'a\x7fb.pdf'"), ("a\x85b.pdf", r"'a\x85b.pdf'"),
+                            ("a\u200eb.pdf", r"'a\u200eb.pdf'"), ("a\u200fb.pdf", r"'a\u200fb.pdf'"),
+                            ("a\u2028b.pdf", r"'a\u2028b.pdf'"), ("a\u2029b.pdf", r"'a\u2029b.pdf'"),
+                            ("a\u202ab.pdf", r"'a\u202ab.pdf'"), ("a\u202eb.pdf", r"'a\u202eb.pdf'"),
+                            ("a\u2066b.pdf", r"'a\u2066b.pdf'"), ("a\u2069b.pdf", r"'a\u2069b.pdf'")):
             with self.subTest(name=name):
                 self.assertEqual(store.file_name_problem(name), shown + " has a control character in it, so it is not a file name")
                 with self.assertRaises(store.StoreProblem) as refused:
@@ -554,9 +643,27 @@ class TheOneDoorTest(unittest.TestCase):
         self.assertFalse((self.home / "sources").exists(), "refused before anything was made")
 
     def test_an_ordinary_file_name_is_not_a_problem(self):
-        for name in ("drawing.pdf", "DFR (1).pdf", "příručka v2.pdf", "L-7113ID(Ver.29A).pdf", "ds_v1.1.pdf", "a b.jpg"):
+        # The last four sit just outside the refused ranges: a zero-width joiner, a hyphen, a hyphenation point, a narrow space.
+        for name in ("drawing.pdf", "DFR (1).pdf", "příručka v2.pdf", "L-7113ID(Ver.29A).pdf", "ds_v1.1.pdf", "a b.jpg",
+                     "a\u200db.pdf", "a\u2010b.pdf", "a\u2027b.pdf", "a\u202fb.pdf"):
             with self.subTest(name=name):
                 self.assertIsNone(store.file_name_problem(name))
+
+    def test_a_name_too_long_to_keep_is_refused_before_anything_is_made(self):
+        # A file name holds 255 bytes and the keep writes `name.part` first: 250 bytes can be kept, 251 never can.
+        fits, too_long = "a" * 246 + ".pdf", "a" * 247 + ".pdf"
+        wide_fits, wide_too_long = "ř" * 123 + ".pdf", "ř" * 124 + ".pdf"  # two bytes a letter: 250 and 252 bytes, 127 and 128 characters
+        for name in (fits, wide_fits):
+            self.assertIsNone(store.file_name_problem(name))
+        for name, shown, size in ((too_long, "'" + "a" * 40 + "…'", 256), (wide_too_long, "'" + "ř" * 40 + "…'", 257)):
+            expected = "%s is too long a file name to keep: with its .part it comes to %d bytes, and a file name holds at most 255" % (shown, size)
+            with self.subTest(size=size):
+                self.assertEqual(store.file_name_problem(name), expected)
+                with self.assertRaises(store.StoreProblem) as refused:
+                    store.keep(b"x", name)
+                self.assertEqual(str(refused.exception), expected, "a sentence naming the name, not an OSError naming a path")
+        self.assertFalse((self.home / "sources").exists(), "refused before anything was made")
+        self.assertEqual(len(store.keep(b"x", fits)), 64, "the other side of the line: this one really is kept")
 
 
 class TheProjectsListTest(unittest.TestCase):

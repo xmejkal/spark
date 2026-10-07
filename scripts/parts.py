@@ -928,10 +928,18 @@ def without_location(payload):
 
 
 def keep_in_store(payload, name, dry_run=False):
-    """Put a file in the store under its checksum, checked (§6.2), and return the checksum (P62a) — a photo without its location (P75)."""
+    """
+    Put a file in the store under its checksum, checked (§6.2), and return the checksum (P62a) — a photo without its
+    location (P75). A dry run asks the name rule the real run enforces, so it refuses what the real run would refuse.
+    """
     if name.lower().endswith((".jpg", ".jpeg")):
         payload = without_location(payload)[0]
-    return hashlib.sha256(payload).hexdigest() if dry_run else store.keep(payload, name)
+    if not dry_run:
+        return store.keep(payload, name)
+    problem = store.file_name_problem(name)
+    if problem:
+        raise store.StoreProblem(problem)
+    return hashlib.sha256(payload).hexdigest()
 
 
 #: The unit a fact's name ends in, as a datasheet prints it.

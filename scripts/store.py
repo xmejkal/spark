@@ -20,6 +20,7 @@ import shutil
 import sys
 import tempfile
 import threading
+import urllib.parse
 from pathlib import Path
 
 try:
@@ -93,10 +94,22 @@ PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history")
 #: A key names one file inside a place, and only that: lower-case letters, digits and '-'.
 PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")
 
-#: A character spark will not have in a file name it keeps: the C0 controls, DEL and the C1 controls (Unicode's Cc, as
-#: `drawer.CONTROL` strips them from a label). A NUL byte is refused by the operating system itself, with an exception
-#: nothing catches; a line break in a name breaks every listing that prints it.
-CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+#: A character spark will not have in a file name it keeps: the C0 controls, DEL and the C1 controls (Unicode's Cc), the
+#: direction marks (U+200E/F, U+202A-E, U+2066-9) — the set `drawer.CONTROL` strips from a label — and the line and
+#: paragraph separators (U+2028/9). A NUL byte is refused by the operating system itself, with an exception nothing
+#: catches; a line break, a separator or a right-to-left override in a name breaks or reorders every listing that prints it.
+CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f-\x9f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]")
+
+#: What `keep` adds to a name while the file is written, before the file takes its name.
+PART_SUFFIX = ".part"
+
+#: The most bytes a file name holds: what ext4, APFS and most file systems allow.
+FILE_NAME_MAX_BYTES = 255
+
+#: The only URL schemes spark's one door opens (§6.5), for a cited URL and for every redirect it follows. A `file:`, `ftp:`
+#: or `data:` URL — or a redirect to one — is how a hostile source would read the person's files or reach a server of its
+#: own choosing.
+WEB_SCHEMES = ("http", "https")
 
 
 class StoreProblem(Exception):
@@ -300,39 +313,65 @@ def append_event(event):
     return True
 
 
+def _must_be_web(url, redirected_from=None):
+    """
+    Raise a StoreProblem unless the door may open `url`: http or https — and `file:` only while the suite runs, whose tests
+    fetch files, never the network (the suite guard above: no script imports unittest, so a real run never gets it).
+    `redirected_from` is the URL that was asked for, when `url` is where the answer ended.
+    """
+    scheme = urllib.parse.urlsplit(url).scheme.lower()
+    if scheme in WEB_SCHEMES + (("file",) if "unittest" in sys.modules else ()):
+        return
+    if redirected_from:
+        raise StoreProblem("%s was redirected to a URL whose scheme is %s, and spark follows a redirect only to http or https"
+                           % (redirected_from, scheme or "missing"))
+    raise StoreProblem("%s is not fetched: its scheme is %s, and spark opens only http and https" % (url, scheme or "missing"))
+
+
 def fetch(url, method="GET"):
     """
-    spark's one door to the network (§6.5): one download — or, with HEAD, only whether the URL answers. Nothing else in
-    spark's code opens a URL, and each call is counted from the session's transcript (§6.7). A URL that does not answer is
-    a StoreProblem, never empty bytes.
+    spark's one door to the network (§6.5): one download — or, with HEAD, only whether the URL answers, and then the body
+    is never read. Nothing else in spark's code opens a URL, and each call is counted from the session's transcript (§6.7).
+    It opens http and https URLs only, and follows a redirect only to the same. A URL that does not answer is a
+    StoreProblem, never empty bytes.
     """
     import urllib.request
     try:
+        _must_be_web(url)
         with urllib.request.urlopen(urllib.request.Request(url, method=method, headers={"User-Agent": "spark"}), timeout=30) as answer:
-            return answer.read()
+            _must_be_web(answer.geturl(), redirected_from=url)
+            return b"" if method == "HEAD" else answer.read()
+    except StoreProblem:
+        raise
     except Exception as unreachable:  # noqa: BLE001 — every way of not answering is the same answer here
         raise StoreProblem("%s does not answer (%s)" % (url, unreachable))
 
 
 def file_name_problem(name):
     """
-    Why `name` is not a plain file name — one name in the folder it is written to, not a path out of it, and with no
-    control character in it — or None when it is one. `keep` refuses such a name; a caller that knows its names before it
-    starts (`--fetch` does) asks first, so one bad name stops everything rather than the work half done.
+    Why `name` is not a plain file name — one name in the folder it is written to, not a path out of it, with no control
+    character in it and short enough to be kept (`name.part` is written first) — or None when it is one. `keep` refuses such
+    a name; a caller that knows its names before it starts (`--fetch` and a dry run do) asks first, so one bad name stops
+    everything rather than the work half done.
     """
     if Path(name).name != name or name in ("", ".", ".."):
         return "%r is not a file name, so it could leave the store's sources" % name
     if CONTROL_CHARACTER.search(name):
         return "%r has a control character in it, so it is not a file name" % name
+    size = len(os.fsencode(name + PART_SUFFIX))
+    if size > FILE_NAME_MAX_BYTES:
+        return ("%r is too long a file name to keep: with its %s it comes to %d bytes, and a file name holds at most %d"
+                % (name[:40] + "…", PART_SUFFIX, size, FILE_NAME_MAX_BYTES))
     return None
 
 
 def keep(payload, name):
     """
     The document store's checked keep (§6.2): a file under its checksum, written to `.part`, read back and checked, then
-    renamed — what does not match what was fetched is deleted and named, never kept. Returns the checksum. A name that is
-    not a plain file name would leave the store's sources, and is refused. A keep that fails for any reason leaves no
-    `.part` behind: `--kept` lists a file under `sources` that no record cites yet, so a stray one would read as kept.
+    renamed — what does not match what was fetched is deleted and named, never kept. Returns the checksum. A name that
+    `file_name_problem` refuses (a path out of the sources, a control character, one too long to keep) is refused before
+    anything is made. A keep that fails for any reason leaves no `.part` behind: `--kept` lists a file under `sources` that
+    no record cites yet, so a stray one would read as kept.
     """
     problem = file_name_problem(name)
     if problem:
@@ -340,7 +379,7 @@ def keep(payload, name):
     digest = hashlib.sha256(payload).hexdigest()
     folder = place("sources") / digest
     folder.mkdir(parents=True, exist_ok=True)
-    part = folder / (name + ".part")
+    part = folder / (name + PART_SUFFIX)
     try:
         part.write_bytes(payload)
         if hashlib.sha256(part.read_bytes()).hexdigest() != digest:

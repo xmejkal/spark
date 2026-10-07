@@ -887,10 +887,12 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
     # --- all or nothing (§6.4): a name the store would refuse stops the whole fetch before it starts ---
 
-    #: Two documents whose names the store refuses, each cited second in a record that also cites a fine one: its URL, and the
-    #: name it would be kept under as a refusal shows it. The first would leave the sources; the second holds a NUL byte.
+    #: Documents whose names the store refuses, each cited second in a record that also cites a fine one: its URL, and the
+    #: name it would be kept under as a refusal shows it. The first would leave the sources; the second holds a NUL byte; the
+    #: third is 251 bytes, which no file can be named once `.part` is added (the shown name is cut at 40 characters).
     REFUSED = {"a path out of the sources": ("https://v.example/..%2fevil.pdf", "'../evil.pdf'"),
-               "a NUL byte": ("https://v.example/a%00.pdf", r"'a\x00.pdf'")}
+               "a NUL byte": ("https://v.example/a%00.pdf", r"'a\x00.pdf'"),
+               "a name too long to keep": ("https://v.example/" + "a" * 247 + ".pdf", "'" + "a" * 40 + "…'")}
 
     def _a_record_citing_a_fine_source_and_then(self, second):
         home = self._home()
@@ -1001,6 +1003,28 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual(entry, {"url": "https://v.example/ds.pdf", "sha256": digest, "file": "ds_v1.1.pdf",
                                  "retrieved": datetime.date.today().isoformat(), "title": None, "version": None})
         self.assertEqual((store / digest / "ds_v1.1.pdf").read_bytes(), b"the v1.1 pdf")
+
+    def test_a_dry_run_of_keep_refuses_the_name_the_real_run_refuses_and_keeps_nothing(self):
+        home = self._home()
+        for what, name in (("a line break in the name", "a\nb.pdf"), ("a name too long to keep", "a" * 247 + ".pdf")):
+            local = Path(tempfile.mkdtemp()) / name
+            local.write_bytes(b"%PDF drawing")
+            for flags in (["--dry-run"], []):
+                with self.subTest(what=what, flags=flags):
+                    with in_store(home):
+                        said, code = run_json(["--keep", str(local)] + flags)
+                    self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
+
+    def test_a_dry_run_of_keep_says_what_the_real_run_would_record_and_keeps_nothing(self):
+        home = self._home()
+        local = Path(tempfile.mkdtemp()) / "ds.pdf"
+        local.write_bytes(b"%PDF drawing")
+        with in_store(home):
+            said, code = run_json(["--keep", str(local), "--dry-run"])
+        self.assertEqual((said["status"], code, said["data"]["written"]), ("ok", 0, False))
+        self.assertEqual(said["data"]["document"]["sha256"], "8158f0d8a471f168c2daf1361a3919c034b7e43a62f5f2ac08c048ee9e58168e")
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
 
     def test_a_document_with_no_url_is_allowed_a_photo_of_your_own_module_has_none(self):
         definition = part(documents={"photo": {"url": None, "sha256": "a" * 64, "file": "top.jpg",
