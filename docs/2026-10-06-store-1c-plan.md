@@ -671,8 +671,7 @@ Re-point four rows.
 - Produces: `store.write_file(path, text, private=False) -> bool` — to `.part`, then renamed; only when the bytes
   differ; 0600 when private. `store.locked()` — a context manager: one writer at a time, through a lock file in the
   system's temp folder named after the store's home.
-- Produces: `parts.main` holds `store.locked()` around every operation whose effects include `writes`. Nothing else may (Ruled 2026-10-07 at Task 4's review: `store.locked()` is re-entrant for the thread that holds it — an inner acquisition passes through and only the outermost releases — so a store function may take the lock inside a locked operation.)
-  take the lock (a second lock in one process waits for ever).
+- Produces: `parts.main` holds `store.locked()` around every operation whose effects include `writes`. Ruled 2026-10-07 at Task 4's review, replacing the plan's "nothing else may take the lock": `store.locked()` is re-entrant for the thread that holds it — an inner acquisition passes through and only the outermost releases — so a store function may take the lock inside a locked operation. (The verbatim `write_file` and `locked` code below is the pre-review text; the branch's `scripts/store.py` at 6228278 is the implementation.)
 
 - [ ] **Step 1: Failing tests.** In `tests/test_store.py`, add `import time` beside `import tempfile`, and before
   `class TheProjectsListTest`:
