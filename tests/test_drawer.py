@@ -243,6 +243,19 @@ class TheDrawerTest(unittest.TestCase):
         self.assertNotIn("is", self.entry("b"))
         self.assertEqual(said["data"]["questions"], [])
 
+    def test_an_alias_that_is_no_list_names_nothing(self):
+        self.assertEqual(drawer.numbers({"sku": "X1", "also_known_as": "DFR0954"}, "x-part"), ({"x1"}, set()))
+        self.assertEqual(drawer.numbers({"sku": "X1", "also_known_as": 7}, "x-part"), ({"x1"}, set()))
+        (self.home / "catalog" / "x-odd.json").write_text(json.dumps(
+            {"schema": 1, "id": "x-odd", "name": "Odd", "kind": "sensor", "also_known_as": 7}))
+        said, code = run(["--drawer-set", a_file([{"label": "probe", "count": 1, "part_number": {"number": "SEN0193"}}])])
+        self.assertEqual((code, self.entry("probe")["is"]), (0, {"part": "sen0193-soil-moisture"}),
+                         "one odd record in the catalog takes no drawer write down")
+
+    def test_an_alias_that_is_no_word_names_nothing(self):
+        self.assertEqual(drawer.numbers({"sku": "X1", "also_known_as": ["DFR0954", 7, None]}, "x-part"), ({"x1", "dfr0954"}, {"dfr0954"}),
+                         "the words in the list name it; the 7 and the null beside them are passed over")
+
     def test_a_different_maker_makes_an_exact_number_a_question(self):
         said, _ = run(["--drawer-set", a_file([{"label": "p", "count": 1, "part_number": {"maker": "adafruit", "number": "SEN0193"}}])])
         self.assertNotIn("is", self.entry("p"))

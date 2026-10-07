@@ -288,6 +288,15 @@ class TheMatcherTest(unittest.TestCase):
         self.assertTrue(found["z-seven"]["what_matches"], "matched by its function; the stray alias is passed over")
         self.assertFalse(found["x-other"]["what_matches"], "a gas sensor is not a distance sensor")
 
+    def test_a_search_by_words_passes_over_an_alias_that_is_no_list(self):
+        self.catalog({"id": "y-seven", "name": "Quirky probe", "also_known_as": 7},
+                     {"id": "y-mixed", "name": "Mixed probe", "also_known_as": ["QZ5520", 7]})
+        said, code = run(["--need", "quirky"])
+        self.assertEqual((code, said["data"]["catalog"]), (0, [{"id": "y-seven", "kind": "sensor", "name": "Quirky probe"}]))
+        said, code = run(["--need", "qz5520"])
+        self.assertEqual((code, said["data"]["catalog"]), (0, [{"id": "y-mixed", "kind": "sensor", "name": "Mixed probe"}]),
+                         "the word in the list names it; the 7 beside it is passed over")
+
     def test_a_used_up_part_without_a_record_is_not_offered(self):
         (self.home / "drawer" / "used-up.json").write_text(json.dumps({"schema": 1, "label": "an old buzzer", "count": 0,
                                                                        "function": [{"does": "sound", "what": "buzzer"}]}))
@@ -310,9 +319,59 @@ class TheMatcherTest(unittest.TestCase):
         self.assertIn("soil-moisture", next(line for line in lines if "x-soil (catalog)" in line))
         self.assertIn("gas [other words]", next(line for line in lines if "x-other (catalog)" in line))
 
-    def test_a_board_owes_nothing_and_is_never_broken_here(self):
+    def test_a_board_owes_nothing_and_a_sound_one_is_not_broken(self):
         board = [c for c in self.needs["board"]["candidates"] if c["id"] == "firebeetle2-esp32s3"][0]
         self.assertEqual((board["owes"], board["broken"]), ([], False))
+
+    def test_a_broken_board_is_marked_broken(self):
+        (self.project / "boards").mkdir(parents=True)
+        (self.project / "boards" / "half-board.json").write_text(json.dumps({"schema": 1, "id": "half-board", "name": "Half a board"}))
+        found = [c["broken"] for c in self.alone({"id": "mcu", "does": "compute", "what": "microcontroller"})["candidates"]
+                 if c["id"] == "half-board"]
+        self.assertEqual(found, [True])
+
+    def test_a_project_s_own_reservation_is_free_to_it(self):
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        (self.home / "drawer" / "probe.json").write_text(json.dumps({"schema": 1, "label": "soil probe", "count": 8, "is": {"part": "x-soil"},
+                                                                    "used_in": {"plant-alarm": 1, "smartbin-local": 2}}))
+        soil = [c for c in self.alone({"id": "soil", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"] == "x-soil"][0]
+        self.assertEqual((soil["owned"], soil["free"]), (8, 6), "what plant-alarm holds is free to it; what the bin holds is not")
+
+    def test_a_project_s_own_reservation_is_free_to_it_on_an_entry_with_no_record_too(self):
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        (self.home / "drawer" / "buzzers.json").write_text(json.dumps({"schema": 1, "label": "piezo buzzers", "count": 3,
+                                                                      "function": [{"does": "sound", "what": "alarm"}],
+                                                                      "used_in": {"plant-alarm": 1, "smartbin-local": 1}}))
+        buzzers = [c for c in self.alone({"id": "alarm", "does": "sound", "what": "alarm"})["candidates"] if c["entry"] == "buzzers"][0]
+        self.assertEqual((buzzers["owned"], buzzers["free"]), (3, 2), "one held by plant-alarm is free to it; one held by the bin is not")
+
+    def test_a_project_is_found_on_the_list_by_its_folder_however_the_path_is_spelled(self):
+        """Another project is listed first; the list names the folder through a link, or the question does."""
+        link = Path(tempfile.mkdtemp()) / "plant-alarm-link"
+        link.symlink_to(self.project)
+        (self.home / "drawer" / "probe.json").write_text(json.dumps({"schema": 1, "label": "soil probe", "count": 8, "is": {"part": "x-soil"},
+                                                                    "used_in": {"plant-alarm": 1, "smartbin-local": 2}}))
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "soil-moisture"}]}))
+        for listed, asked in ((link, self.project), (self.project, link)):
+            with self.subTest(listed=listed.name, asked=asked.name):
+                (self.home / "projects.json").write_text(json.dumps({"smartbin-local": tempfile.mkdtemp(), "plant-alarm": str(listed)}))
+                said, _ = run(["--match", str(asked)])
+                soil = [c for c in said["data"]["needs"][0]["candidates"] if c["id"] == "x-soil"][0]
+                self.assertEqual((soil["owned"], soil["free"]), (8, 6))
+
+    def test_a_candidate_is_said_whole_and_only_for_the_need_s_verb(self):
+        self.catalog({"id": "y-combo", "name": "A combo board", "function": [{"does": "sense", "what": "temperature"},
+                                                                            {"does": "indicate", "what": "light"}]})
+        (self.home / "drawer" / "ntc.json").write_text(json.dumps({"schema": 1, "label": "an NTC thermistor", "count": 3,
+                                                                    "function": [{"does": "sense", "what": "temperature"},
+                                                                                 {"does": "sound", "what": "beeper"}]}))
+        found = {c["id"] or c["entry"]: c for c in self.alone({"id": "heat", "does": "sense", "what": "temperature"})["candidates"]}
+        self.assertEqual(found["ntc"], {"id": None, "kind": None, "entry": "ntc", "owes": [], "broken": False, "proof": [], "in": "drawer",
+                                        "label": "an NTC thermistor", "what": ["temperature"], "what_matches": True,
+                                        "owned": 3, "free": 3, "unsure": False})
+        combo = found["y-combo"]
+        self.assertEqual((combo["kind"], combo["entry"], combo["in"], combo["label"], combo["what"], combo["proof"], combo["what_matches"]),
+                         ("part", None, "catalog", "A combo board", ["temperature"], [], True))
 
     def test_a_project_s_own_record_shadows_the_same_id_elsewhere(self):
         (self.project / "parts").mkdir(parents=True)

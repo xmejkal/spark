@@ -87,6 +87,13 @@ def function_problems(record):
         return []
     return ['function is [{"does": one of %s, "what": words}]' % ", ".join(VERBS)]
 
+
+def aliases(record):
+    """A record's other names (`also_known_as`) — only those that are words; a value that is no list names nothing (§5.5)."""
+    said = record.get("also_known_as")
+    return [alias for alias in said if isinstance(alias, str)] if isinstance(said, list) else []
+
+
 #: The facts the chain reads from a part record (§5.4): absent, the record owes them, and no build can place it.
 CHAIN_FACTS = ("footprint", "pin_order", "pin_order_proof", "body_mm", "simulation")
 
@@ -1201,7 +1208,7 @@ def sellers(project=None):
 
 def _matches(words, part_id, record):
     haystack = " ".join([part_id, record.get("name") or "", record.get("kind") or "",
-                         " ".join(record.get("also_known_as") or [])]).lower()
+                         " ".join(aliases(record))]).lower()
     return all(word.lower() in haystack for word in words)
 
 

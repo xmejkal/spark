@@ -126,7 +126,7 @@ def numbers(record, record_id):
     word like "button" is never a number.
     """
     sku = record.get("sku")
-    aliases = [alias for alias in record.get("also_known_as") or [] if isinstance(alias, str)]
+    aliases = parts.aliases(record)
     stated = {s.lower() for s in (sku if isinstance(sku, list) else [sku]) + aliases if isinstance(s, str)}
     words = (token for word in [record_id] + aliases for token in re.split(r"[^a-z0-9]+", word.lower()))
     return stated, {w for w in words if re.search(r"[a-z]", w) and re.search(r"\d", w)}

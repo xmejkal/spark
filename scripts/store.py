@@ -172,6 +172,12 @@ def projects():
     return {name: Path(folder) for name, folder in listed.items()}
 
 
+def project_name(folder):
+    """The name a project's folder has on the person's list (§5.5), or None when it is not on it."""
+    folder = Path(folder).resolve()
+    return next((name for name, where in projects().items() if where.resolve() == folder), None)
+
+
 def add_project(folder):
     """Put a project on the list under its folder's name — `name-2` when another folder that still exists has it. Returns the name."""
     folder = Path(folder).resolve()
