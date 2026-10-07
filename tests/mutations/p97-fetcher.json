@@ -35,5 +35,7 @@
  {"file": "scripts/parts.py", "name": "the refusal does not say which document it is",
   "find": "\"%s: %s — nothing was fetched\" % (url, problem)", "replace": "\"%s — nothing was fetched\" % problem"},
  {"file": "scripts/parts.py", "name": "a dry run of --fetch fetches",
-  "find": "    if args.dry_run:\n        home = record_home(args.fetch, project)", "replace": "    if False:\n        home = record_home(args.fetch, project)"}
+  "find": "    if args.dry_run:\n        home = record_home(args.fetch, project)", "replace": "    if False:\n        home = record_home(args.fetch, project)"},
+ {"file": "scripts/store.py", "name": "a control character in a name is not refused, so a NUL byte reaches the operating system",
+  "find": "    if CONTROL_CHARACTER.search(name):\n", "replace": "    if False:\n"}
 ]

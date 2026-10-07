@@ -93,6 +93,11 @@ PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history")
 #: A key names one file inside a place, and only that: lower-case letters, digits and '-'.
 PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")
 
+#: A character spark will not have in a file name it keeps: the C0 controls, DEL and the C1 controls (Unicode's Cc, as
+#: `drawer.CONTROL` strips them from a label). A NUL byte is refused by the operating system itself, with an exception
+#: nothing catches; a line break in a name breaks every listing that prints it.
+CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+
 
 class StoreProblem(Exception):
     """A store spark cannot read, or a write it will not make. The message is the whole sentence."""
@@ -311,12 +316,14 @@ def fetch(url, method="GET"):
 
 def file_name_problem(name):
     """
-    Why `name` is not a plain file name — one name in the folder it is written to, not a path out of it — or None when it
-    is one. `keep` refuses such a name; a caller that knows its names before it starts (`--fetch` does) asks first, so
-    one bad name stops everything rather than the work half done.
+    Why `name` is not a plain file name — one name in the folder it is written to, not a path out of it, and with no
+    control character in it — or None when it is one. `keep` refuses such a name; a caller that knows its names before it
+    starts (`--fetch` does) asks first, so one bad name stops everything rather than the work half done.
     """
     if Path(name).name != name or name in ("", ".", ".."):
         return "%r is not a file name, so it could leave the store's sources" % name
+    if CONTROL_CHARACTER.search(name):
+        return "%r has a control character in it, so it is not a file name" % name
     return None
 
 

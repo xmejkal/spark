@@ -542,6 +542,22 @@ class TheOneDoorTest(unittest.TestCase):
         self.assertEqual((parts.reachable(gone), parts._download(gone)), (False, None))
         self.assertEqual((parts.reachable(here), parts._download(here)), (True, b"%PDF drawing"))
 
+    def test_a_name_with_a_control_character_in_it_is_refused_with_a_sentence_of_its_own(self):
+        # A NUL byte is not a path out of the sources, so the operating system refused it with a ValueError nothing caught.
+        for name, shown in (("a\x00.pdf", r"'a\x00.pdf'"), ("a\nb.pdf", r"'a\nb.pdf'"), ("a\tb.pdf", r"'a\tb.pdf'"),
+                            ("a\x1bb.pdf", r"'a\x1bb.pdf'"), ("a\x7fb.pdf", r"'a\x7fb.pdf'"), ("a\x85b.pdf", r"'a\x85b.pdf'")):
+            with self.subTest(name=name):
+                self.assertEqual(store.file_name_problem(name), shown + " has a control character in it, so it is not a file name")
+                with self.assertRaises(store.StoreProblem) as refused:
+                    store.keep(b"x", name)
+                self.assertEqual(str(refused.exception), shown + " has a control character in it, so it is not a file name")
+        self.assertFalse((self.home / "sources").exists(), "refused before anything was made")
+
+    def test_an_ordinary_file_name_is_not_a_problem(self):
+        for name in ("drawing.pdf", "DFR (1).pdf", "příručka v2.pdf", "L-7113ID(Ver.29A).pdf", "ds_v1.1.pdf", "a b.jpg"):
+            with self.subTest(name=name):
+                self.assertIsNone(store.file_name_problem(name))
+
 
 class TheProjectsListTest(unittest.TestCase):
     """§5.5: the projects list tells spark where the person's projects are."""
