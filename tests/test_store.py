@@ -294,6 +294,127 @@ class OneWriterAtATimeTest(unittest.TestCase):
         self.assertTrue(entered.is_set())
 
 
+class TheHistoryTest(unittest.TestCase):
+    """P97 (§5.7): one event per line, appended, a repeat of a key not written, private."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_an_event_is_written_once(self):
+        reused = {"event": "reused", "project": "plant-alarm", "need": "soil", "part": "sen0193-soil-moisture"}
+        self.assertEqual((store.append_event(reused), store.append_event(dict(reused))), (True, False))
+        self.assertEqual([json.loads(line) for line in (self.home / "history.jsonl").read_text().splitlines()], [reused])
+
+    def test_a_reason_given_again_is_the_same_event(self):
+        first = {"event": "passed_over", "project": "plant-alarm", "need": "soil", "part": "x", "why": "too big", "by": "person"}
+        store.append_event(first)
+        self.assertFalse(store.append_event(dict(first, why="too dear")), "keyed by project, need and part")
+
+    def test_a_step_started_again_is_another_event(self):
+        step = {"event": "step", "project": "plant-alarm", "step": "C", "session": "s1", "start": "2026-10-06T10:00:00+00:00"}
+        store.append_event(step)
+        self.assertTrue(store.append_event(dict(step, start="2026-10-06T11:00:00+00:00")))
+        self.assertEqual(len(store.events()), 2)
+
+    def test_the_history_is_private_and_never_inside_git(self):
+        store.append_event({"event": "reused", "project": "p", "need": "n", "part": "x"})
+        self.assertEqual(stat.S_IMODE((self.home / "history.jsonl").stat().st_mode), 0o600)
+        repo = Path(tempfile.mkdtemp())
+        (repo / ".git").mkdir()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(repo / "store")}), self.assertRaises(store.StoreProblem):
+            store.append_event({"event": "reused", "project": "p", "need": "n", "part": "x"})
+        self.assertFalse((repo / "store" / "history.jsonl").exists())
+
+    def test_a_line_that_is_not_an_event_is_named(self):
+        (self.home / "history.jsonl").write_text('{"event":"reused"}\nnot json\n')
+        with self.assertRaises(store.StoreProblem) as broken:
+            store.events()
+        self.assertIn("line 2", str(broken.exception))
+
+    def test_a_reason_with_a_line_separator_in_it_is_still_one_line_and_one_event(self):
+        said = "příliš velké\u2028a drahé\u0085také"  # json.dumps(ensure_ascii=False) leaves U+2028 and U+0085 as they are
+        passed = {"event": "passed_over", "project": "plant-alarm", "need": "soil", "part": "x", "why": said, "by": "person"}
+        self.assertTrue(store.append_event(passed))
+        self.assertEqual(store.events(), [passed])
+        self.assertIn("příliš velké", (self.home / "history.jsonl").read_text(encoding="utf-8"), "kept readable, not escaped")
+        self.assertFalse(store.append_event(dict(passed, why="again")), "the file still reads as the one event it holds")
+
+    def test_the_events_come_back_in_the_order_they_were_written(self):
+        reused = {"event": "reused", "project": "p", "need": "n", "part": "x"}
+        step = {"event": "step", "project": "p", "step": "C", "session": "s1", "start": "2026-10-06T10:00:00+00:00"}
+        store.append_event(reused)
+        store.append_event(step)
+        self.assertEqual(store.events(), [reused, step])
+
+    def test_a_repeat_of_any_earlier_event_is_refused_not_only_of_the_last(self):
+        first = {"event": "reused", "project": "p", "need": "n", "part": "x"}
+        second = {"event": "reused", "project": "p", "need": "n", "part": "y"}
+        store.append_event(first)
+        store.append_event(second)
+        self.assertFalse(store.append_event(dict(first)))
+        self.assertEqual(store.events(), [first, second])
+
+    def test_a_part_passed_over_and_picked_later_is_two_events(self):
+        passed = {"event": "passed_over", "project": "plant-alarm", "need": "soil", "part": "x", "why": "too big", "by": "person"}
+        picked = {"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x"}
+        self.assertEqual((store.append_event(passed), store.append_event(picked)), (True, True))
+        self.assertEqual([event["event"] for event in store.events()], ["passed_over", "reused"])
+
+    def test_events_that_differ_in_one_field_of_their_key_are_each_written(self):
+        # §5.7's keys, written out: a step by (project, step, session, start); a reuse and a pass-over by (project, need,
+        # and the pick's part, board or entry); a build by (project, board, parts).
+        step = {"event": "step", "project": "p", "step": "C", "session": "s1", "start": "t1"}
+        reuse = {"event": "reused", "project": "p", "need": "n", "part": "x"}
+        passing = {"event": "passed_over", "project": "p", "need": "n", "part": "x"}
+        build = {"event": "built", "project": "p", "board": {"id": "b", "digest": "d1"}, "parts": [{"id": "x", "digest": "d2"}]}
+        another_pick = {"project": "q", "need": "m", "part": "y", "board": "b", "entry": "e"}
+        differences = [(step, {"project": "q", "step": "D", "session": "s2", "start": "t2"}),
+                       (reuse, another_pick), (passing, another_pick),
+                       (build, {"project": "q", "board": {"id": "b", "digest": "d3"}, "parts": [{"id": "x", "digest": "d4"}]})]
+        for event, changes in differences:
+            for field, other in changes.items():
+                with self.subTest(event=event["event"], field=field):
+                    (self.home / "history.jsonl").unlink(missing_ok=True)
+                    store.append_event(event)
+                    self.assertTrue(store.append_event(dict(event, **{field: other})), "%s is part of the key" % field)
+
+    def test_every_kind_of_line_that_is_not_an_event_is_named_with_its_file_and_line(self):
+        not_events = [b"[1]", b'"reused"', b"5", b"null", b'{"project":"p"}', b'{"event":5}', b'{"event":null}',
+                      b"", b"\xff\xfe not utf-8"]
+        for line in not_events:
+            with self.subTest(line=line):
+                (self.home / "history.jsonl").write_bytes(b'{"event":"reused"}\n' + line + b"\n")
+                with self.assertRaises(store.StoreProblem) as broken:
+                    store.events()
+                self.assertIn("history.jsonl line 2 ", str(broken.exception))
+
+    def test_a_history_someone_loosened_is_private_again_after_the_next_event(self):
+        store.append_event({"event": "reused", "project": "p", "need": "n", "part": "x"})
+        target = self.home / "history.jsonl"
+        os.chmod(target, 0o644)
+        os.chmod(self.home, 0o755)
+        store.append_event({"event": "reused", "project": "p", "need": "n", "part": "y"})
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE(self.home.stat().st_mode), 0o700)
+
+    def test_a_last_line_left_without_its_newline_does_not_swallow_the_next_event(self):
+        left_open = {"event": "reused", "project": "p", "need": "n", "part": "x"}
+        (self.home / "history.jsonl").write_text(json.dumps(left_open))  # a hand edit that did not end its line
+        after = {"event": "reused", "project": "p", "need": "n", "part": "y"}
+        self.assertTrue(store.append_event(after))
+        self.assertEqual(store.events(), [left_open, after])
+
+    def test_an_empty_history_file_takes_its_first_event(self):
+        (self.home / "history.jsonl").write_text("")
+        first = {"event": "reused", "project": "p", "need": "n", "part": "x"}
+        self.assertEqual(store.events(), [])
+        self.assertTrue(store.append_event(first))
+        self.assertEqual(store.events(), [first])
+
+
 class TheProjectsListTest(unittest.TestCase):
     """§5.5: the projects list tells spark where the person's projects are."""
 

@@ -2,7 +2,7 @@
 Where spark keeps what it keeps, and how bytes get there (P88; docs/2026-10-04-store-design.md §6.1).
 
 The person's store is one folder outside every repository: the kept documents, the catalog, the drawer, the
-shelf, the projects list, the tools list. Its place was spelled `Path.home() / ".local" / "share" / "spark"` in
+shelf, the history, the projects list, the tools list. Its place was spelled `Path.home() / ".local" / "share" / "spark"` in
 two scripts and read once at import, so the suite kept away from the real one only by patching sixteen
 constants by hand — and a test that forgot one would have written into the person's store. Now the home is
 read on every call: SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark.
@@ -54,7 +54,8 @@ def home():
 #: `catalog`: everything research has read and not chosen (P83) — a candidate keeps its part facts (pinout, power,
 #: body, the cited facts: the PO, 2026-10-04) and no seller listings, which go stale before anyone reads them (W21).
 PLACES = {"sources": "sources", "catalog": "catalog", "downloads": "downloads", "tools": "tools.json",
-          "drawer": "drawer", "drawer-import": "drawer-import", "shelf": "shelf", "projects": "projects.json"}
+          "drawer": "drawer", "drawer-import": "drawer-import", "shelf": "shelf", "projects": "projects.json",
+          "history": "history.jsonl"}
 
 
 def place(name):
@@ -87,7 +88,7 @@ def records(kind, library, project=None, drafts=False, skip=()):
 
 #: The places only the person should see (§5.8): files 0600 in folders 0700, and never inside a git work tree,
 #: where one `git add .` would publish them.
-PRIVATE = ("drawer", "drawer-import", "shelf", "projects")
+PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history")
 
 #: A key names one file inside a place, and only that: lower-case letters, digits and '-'.
 PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")
@@ -240,3 +241,51 @@ def add_project(folder):
     listed[name] = str(folder)
     write_json("projects", None, listed)
     return name
+
+
+#: What makes two history lines one event (§5.7): a line whose key fields equal an earlier one's is not written again.
+EVENT_KEYS = {"step": ("project", "step", "session", "start"), "reused": ("project", "need", "part", "board", "entry"),
+              "passed_over": ("project", "need", "part", "board", "entry"), "built": ("project", "board", "parts")}
+
+
+def events():
+    """The history (§5.7), every line in order — [] before the first. A line that is not an event is named, never skipped."""
+    path = place("history")
+    said = []
+    # Bytes, not text: str.splitlines() also cuts at U+2028, U+0085 and the like, which a reason may hold unescaped
+    # (ensure_ascii=False), and one whole line would read as two broken ones. Bytes cut only at \n, \r and \r\n.
+    for number, line in enumerate(path.read_bytes().splitlines() if path.is_file() else [], 1):
+        try:
+            event = json.loads(line.decode("utf-8"))
+        except ValueError:  # not JSON, or not UTF-8 (UnicodeDecodeError is a ValueError)
+            event = None
+        if not (isinstance(event, dict) and isinstance(event.get("event"), str)):
+            raise StoreProblem("%s line %d is not a history event — fix it by hand" % (path, number))
+        said.append(event)
+    return said
+
+
+def _last_line_is_open(path):
+    """Whether the file's last line has no newline — a hand edit can leave it so, and an append would glue itself onto it."""
+    if not path.is_file() or path.stat().st_size == 0:
+        return False
+    with open(path, "rb") as history:
+        history.seek(-1, os.SEEK_END)
+        return history.read(1) != b"\n"
+
+
+def append_event(event):
+    """
+    One event onto the history (§5.7) — not written when an event with the same key is there. Returns whether it was.
+    Looking and appending are two steps, so the caller holds `locked()` across both (`parts.main` does).
+    """
+    keys = EVENT_KEYS[event["event"]]
+    if any(other.get("event") == event["event"] and all(other.get(key) == event.get(key) for key in keys) for other in events()):
+        return False
+    target = place("history")
+    _make_ready("history", target)
+    end_last_line = "\n" if _last_line_is_open(target) else ""
+    with open(target, "a", encoding="utf-8") as history:
+        history.write(end_last_line + json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
+    os.chmod(target, 0o600)
+    return True
