@@ -124,7 +124,18 @@ card: spark#18 and the PO's three decisions of 2026-10-06 in its comment. Builds
    the history, which lands here; the first project to read them is the second one, P100); the drawer import's cost
    line.
 
-## Open questions for the PO — each with the default the plan follows
+## Open questions for the PO — answered 2026-10-07 (recorded on spark#18)
+
+- **Execution:** subagent-driven, the PO's choice.
+- **1 — not the default.** The S3 and the LiPo stay held by the bin. The alarm's real run (Task 12) takes another
+  ESP32 from his drawer, which he picks on the spot (Beetle ESP32 C6 Mini ×3 and Beetle ESP32 ×2 beside the S3; a
+  board without a record cannot build, so the run may end at the refusal and the pick, with `check_spine [ok]`
+  proven by Task 11). The refusal itself still proves "already held". His wider answer — offer every owned module
+  with the same function and recommend the minimal one that fits — is P157 (spark#93), designed with him later.
+- **2 — the default:** the potentiometer stand-in.
+- **3 — the default:** report what is actually counted.
+
+The questions as they were asked, each with the default the plan followed before the answer:
 
 1. **The board for the plant alarm after the refusal.** The S3 is the only board that builds today (the XIAO C6 stops
    at the footprint stage, P121), and the bin holds both the S3 and the LiPo. **Default:** in the real run (Task 12)
@@ -2715,8 +2726,9 @@ below on its own, read its output, then go on.
 - [ ] **Step 3: The refusal — value proof 1.**
   `scripts/parts.py --pick ~/Development/plant-alarm board=firebeetle2-esp32s3 --dry-run` — expected: exit 1 and
   `firebeetle2-esp32s3 — 1 owned, held by smartbin-local — 1 picked here`. Show the PO.
-- [ ] **Step 4: The PO's choice (open question 1).** By default: free the S3's and the LiPo's entries from the bin with
-  `--drawer-set` (each `used_in` without `smartbin-local`), a dry run first.
+- [ ] **Step 4: The PO's choice (open question 1, answered 2026-10-07).** The S3 and the LiPo stay with the bin. The
+  PO names another ESP32 from his drawer for the alarm; if it has no record, the run ends after the refusal and the
+  other picks, and `check_spine [ok]` stands on Task 11. Do not free the bin's entries.
 - [ ] **Step 5: The picks.** Ask the PO for his reasons for what he passed over in M (the DFPlayer Pro, the XIAO, the
   piezo as the simpler road), written in his words to a JSON file with the Write tool; then
   `scripts/parts.py --pick ~/Development/plant-alarm soil=sen0193-soil-moisture alarm=max98357a-dfr0954 alarm=<the speaker's key> board=firebeetle2-esp32s3 battery=<the LiPo's key> --passed-over <file> --dry-run`,
