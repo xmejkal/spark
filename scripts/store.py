@@ -309,6 +309,17 @@ def fetch(url, method="GET"):
         raise StoreProblem("%s does not answer (%s)" % (url, unreachable))
 
 
+def file_name_problem(name):
+    """
+    Why `name` is not a plain file name — one name in the folder it is written to, not a path out of it — or None when it
+    is one. `keep` refuses such a name; a caller that knows its names before it starts (`--fetch` does) asks first, so
+    one bad name stops everything rather than the work half done.
+    """
+    if Path(name).name != name or name in ("", ".", ".."):
+        return "%r is not a file name, so it could leave the store's sources" % name
+    return None
+
+
 def keep(payload, name):
     """
     The document store's checked keep (§6.2): a file under its checksum, written to `.part`, read back and checked, then
@@ -316,8 +327,9 @@ def keep(payload, name):
     not a plain file name would leave the store's sources, and is refused. A keep that fails for any reason leaves no
     `.part` behind: `--kept` lists a file under `sources` that no record cites yet, so a stray one would read as kept.
     """
-    if Path(name).name != name or name in ("", ".", ".."):
-        raise StoreProblem("%r is not a file name, so it could leave the store's sources" % name)
+    problem = file_name_problem(name)
+    if problem:
+        raise StoreProblem(problem)
     digest = hashlib.sha256(payload).hexdigest()
     folder = place("sources") / digest
     folder.mkdir(parents=True, exist_ok=True)

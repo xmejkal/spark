@@ -24,5 +24,16 @@
  {"file": "scripts/parts.py", "name": "a URL that does not answer comes back as an empty document, which is kept",
   "find": "    except store.StoreProblem:\n        return None\n", "replace": "    except store.StoreProblem:\n        return b\"\"\n"},
  {"file": "scripts/parts.py", "name": "a URL that does not answer is reachable",
-  "find": "    except store.StoreProblem:\n        return False\n    return True\n", "replace": "    except store.StoreProblem:\n        return True\n    return True\n"}
+  "find": "    except store.StoreProblem:\n        return False\n    return True\n", "replace": "    except store.StoreProblem:\n        return True\n    return True\n"},
+ {"file": "scripts/parts.py", "name": "a name the store would refuse is found only when its turn comes, after the documents before it were downloaded",
+  "find": "        if problem:\n            raise store.StoreProblem(\"%s: %s — nothing was fetched\" % (url, problem))\n",
+  "replace": "        if False:\n            raise store.StoreProblem(\"%s: %s — nothing was fetched\" % (url, problem))\n"},
+ {"file": "scripts/parts.py", "name": "a fetch goes through the documents without asking the plan about their names",
+  "find": "    for url, name in fetch_plan(record):\n", "replace": "    for url, name in [(each, document_name(each)) for each in to_fetch(record)]:\n"},
+ {"file": "scripts/parts.py", "name": "a dry run does not look at the names",
+  "find": "        wanted = [url for url, _ in fetch_plan(", "replace": "        wanted = [url for url in to_fetch("},
+ {"file": "scripts/parts.py", "name": "the refusal does not say which document it is",
+  "find": "\"%s: %s — nothing was fetched\" % (url, problem)", "replace": "\"%s — nothing was fetched\" % problem"},
+ {"file": "scripts/parts.py", "name": "a dry run of --fetch fetches",
+  "find": "    if args.dry_run:\n        home = record_home(args.fetch, project)", "replace": "    if False:\n        home = record_home(args.fetch, project)"}
 ]

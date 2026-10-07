@@ -885,6 +885,50 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual((catalog / "x-part.json").read_text(), before)
         self.assertEqual([found.name for found in (home / "sources").rglob("*") if found.is_file()], ["x.pdf"])
 
+    # --- all or nothing (§6.4): a name the store would refuse stops the whole fetch before it starts ---
+
+    HOSTILE = "https://v.example/..%2fevil.pdf"  # its file name decodes to "../evil.pdf", which would leave the sources
+
+    def _a_record_with_a_hostile_second_source(self):
+        home = self._home()
+        self._catalog_record(home / "catalog", "x-part", sources=["https://v.example/ok.pdf", self.HOSTILE])
+        return home, (home / "catalog" / "x-part.json").read_text()
+
+    def test_a_name_the_store_would_refuse_stops_the_whole_fetch_before_anything_is_downloaded_or_kept(self):
+        home, before = self._a_record_with_a_hostile_second_source()
+        asked = []
+        with in_store(home):
+            with self.assertRaises(store.StoreProblem) as refused:
+                parts.fetch_documents("x-part", fetch=lambda url: asked.append(url) or b"pdf")
+        self.assertEqual(asked, [], "the first document, which is fine, is not downloaded either: all or nothing")
+        self.assertIn(self.HOSTILE, str(refused.exception), "the refusal names the document")
+        self.assertIn("'../evil.pdf'", str(refused.exception), "and the name the store would not keep it under")
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
+        self.assertEqual((home / "catalog" / "x-part.json").read_text(), before)
+
+    def test_the_fetch_operation_and_its_dry_run_refuse_such_a_name_the_same_way(self):
+        home, before = self._a_record_with_a_hostile_second_source()
+        asked = []
+        for argv in (["--fetch", "x-part"], ["--fetch", "x-part", "--dry-run"]):
+            with self.subTest(argv=argv):
+                with in_store(home), mock.patch.object(store, "fetch", lambda url, method="GET": asked.append(url) or b"pdf"):
+                    said, code = run_json(argv)
+                self.assertEqual((said["status"], code), ("could-not-run", 2))
+                self.assertIn(self.HOSTILE, said["unchecked"][0]["sentence"])
+        self.assertEqual(asked, [], "the door was not asked once")
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
+        self.assertEqual((home / "catalog" / "x-part.json").read_text(), before)
+
+    def test_a_dry_run_of_a_fetch_says_what_it_would_fetch_and_reaches_nothing(self):
+        home = self._home()
+        self._catalog_record(home / "catalog", "x-part", sources=["https://v.example/ok.pdf", "https://v.example/page.html"])
+        asked = []
+        with in_store(home), mock.patch.object(store, "fetch", lambda url, method="GET": asked.append(url) or b"pdf"):
+            said, code = run_json(["--fetch", "x-part", "--dry-run"])
+        self.assertEqual((said["status"], code, said["data"]["would_fetch"]), ("ok", 0, ["https://v.example/ok.pdf"]))
+        self.assertEqual(asked, [])
+        self.assertFalse((home / "sources").exists())
+
     def test_two_sources_with_one_basename_are_both_kept(self):
         import tempfile
         from unittest import mock

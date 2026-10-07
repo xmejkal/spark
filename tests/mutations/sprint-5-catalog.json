@@ -50,8 +50,8 @@
  {
   "file": "scripts/parts.py",
   "name": "the saved name keeps its percent-encoding",
-  "find": "            name = urllib.parse.unquote(bare.rsplit(\"/\", 1)[-1]) or \"document\"",
-  "replace": "            name = bare.rsplit(\"/\", 1)[-1] or \"document\""
+  "find": "    return urllib.parse.unquote(url.split(\"?\")[0].rsplit(\"/\", 1)[-1]) or \"document\"",
+  "replace": "    return url.split(\"?\")[0].rsplit(\"/\", 1)[-1] or \"document\""
  },
  {
   "file": "scripts/parts.py",

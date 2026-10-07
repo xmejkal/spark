@@ -1121,12 +1121,33 @@ def to_fetch(record):
     return [url for url in cited_urls(record) if url.split("?")[0].lower().endswith(KEEPABLE) and url not in known]
 
 
+def document_name(url):
+    """The file name a cited URL is kept under: the last segment of its path, decoded — never its query."""
+    return urllib.parse.unquote(url.split("?")[0].rsplit("/", 1)[-1]) or "document"
+
+
+def fetch_plan(record):
+    """
+    [(url, file name)] for every document `--fetch` would keep, or a StoreProblem naming the first one the store would
+    refuse by name. All or nothing (§6.4): the names come from the URLs, so every one is known before any download, and a
+    refusal stops the whole fetch — not halfway, with the documents before it kept and no record pointing at them.
+    `store.keep` still refuses such a name itself, as the last line of defence.
+    """
+    plan = [(url, document_name(url)) for url in to_fetch(record)]
+    for url, name in plan:
+        problem = store.file_name_problem(name)
+        if problem:
+            raise store.StoreProblem("%s: %s — nothing was fetched" % (url, problem))
+    return plan
+
+
 def fetch_documents(part_id, project=None, fetch=None):
     """
     Download every cited datasheet or image into the store and point at each from the record's
     `documents`: its URL, checksum, file name and the date it was fetched — `title` and `version`
     stay null until someone reads them, because a version is what the document PRINTS, not a
-    guess (P61). `fetch(url) -> bytes or None` is a parameter for the tests.
+    guess (P61). A document the store would refuse by name stops the whole fetch before any
+    download (`fetch_plan`). `fetch(url) -> bytes or None` is a parameter for the tests.
     """
     home = record_home(part_id, project)
     if home is None:
@@ -1134,11 +1155,9 @@ def fetch_documents(part_id, project=None, fetch=None):
     path = home / (part_id + DEFINITION_SUFFIX)
     record = json.loads(path.read_text())
     documents = dict(record.get("documents") or {})
-    for url in to_fetch(record):
-        bare = url.split("?")[0]
+    for url, name in fetch_plan(record):
         payload = (fetch or _download)(url)
         if payload is not None:
-            name = urllib.parse.unquote(bare.rsplit("/", 1)[-1]) or "document"
             documents[document_key(name, documents)] = {
                 "url": url, "sha256": keep_in_store(payload, name), "file": name,
                 "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
@@ -1537,7 +1556,7 @@ def _op_fetch(args, project):
         home = record_home(args.fetch, project)
         if home is None:
             raise PartError("no record called %r to fetch for" % args.fetch)
-        wanted = to_fetch(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))
+        wanted = [url for url, _ in fetch_plan(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))]
         return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
                       or ["  %s cites no datasheet or image URL to keep" % args.fetch])
     kept = fetch_documents(args.fetch, project)
