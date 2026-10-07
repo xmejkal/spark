@@ -162,9 +162,10 @@ irrigation's repositories, a P84 clone).
 - **Every write sets, never adds:** the agent works out the new value and the dry run shows it ("DFR0954: 2 → 4");
   a retried write changes nothing. An entry at 0 is kept (deleting it would let the next import add it back).
 - **Re-import:** with a source total T, `count += T − bought[source]` when T is larger, then `bought[source] = T`; a
-  smaller T changes nothing and is reported. `"many"` stays `"many"`. An import that confirms an `unsure` entry
-  sets its count and clears `unsure`. An import naming something already said in words is asked once: the same
-  item, or another.
+  smaller T changes nothing and is reported. `"many"` stays `"many"`, and an entry with no `count` stays so — only
+  `bought` moves (owned, count unknown: the PO, 2026-10-06). An import that confirms an `unsure` entry sets its
+  count and clears `unsure`. An import naming something already said in words is asked once: the same item, or
+  another.
 
 ### 5.3 The needs file — `<project>/.spark/needs.json`
 

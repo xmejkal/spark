@@ -378,6 +378,16 @@ class TheDfrobotImportTest(unittest.TestCase):
         self.bring(orders(("FIT0096", "buttons", 4)))
         self.assertEqual(self.entry("dfrobot-fit0096")["count"], "many")
 
+    def test_a_count_left_out_stays_left_out_and_a_re_import_only_learns_what_was_bought(self):
+        tied = {"seller": "dfrobot", "product": "DFR0954"}
+        run(["--drawer-set", a_file([{"label": "my amplifiers", "from": tied}])])
+        self.bring(orders(("DFR0954", "amp", 2)))
+        self.assertEqual(self.entry("my-amplifiers"), {"schema": 1, "label": "my amplifiers", "from": tied, "bought": {"dfrobot": 2}})
+        said, _ = self.bring(orders(("DFR0954", "amp", 5)))
+        self.assertEqual(said["data"]["changes"], [{"entry": "my-amplifiers", "new": False, "was": {"bought": {"dfrobot": 2}},
+                                                    "now": {"bought": {"dfrobot": 5}}}], "three more bought: not three owned")
+        self.assertEqual(self.entry("my-amplifiers"), {"schema": 1, "label": "my amplifiers", "from": tied, "bought": {"dfrobot": 5}})
+
     def test_an_import_confirms_an_unsure_entry(self):
         run(["--drawer-set", a_file([{"label": "MP3 mini module", "count": 1, "unsure": True,
                                       "from": {"seller": "dfrobot", "product": "DFR0768"}}])])

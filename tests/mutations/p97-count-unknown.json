@@ -20,5 +20,8 @@
  {"file": "scripts/parts.py", "name": "a count of zero is listed as one nobody gave",
   "find": "\"?\" if e[\"count\"] is None else e[\"count\"]", "replace": "\"?\" if not e[\"count\"] else e[\"count\"]"},
  {"file": "scripts/parts.py", "name": "the write of an entry with no count says None",
-  "find": "now.get(\"count\", \"?\")", "replace": "now.get(\"count\")"}
+  "find": "now.get(\"count\", \"?\")", "replace": "now.get(\"count\")"},
+ {"file": "scripts/drawer.py", "name": "a re-import gives a count left out a count",
+  "find": "            elif \"count\" in before and before[\"count\"] != \"many\" and seen is not None:  # no total seen yet: the count is the person's own\n                values[\"count\"] = before[\"count\"] + total - seen",
+  "replace": "            elif before.get(\"count\") != \"many\" and seen is not None:  # no total seen yet: the count is the person's own\n                values[\"count\"] = before.get(\"count\", 0) + total - seen"}
 ]

@@ -14,8 +14,8 @@
  {
   "file": "scripts/drawer.py",
   "name": "a re-import adds the whole total again",
-  "find": "                values[\"count\"] = before.get(\"count\", 0) + total - seen",
-  "replace": "                values[\"count\"] = before.get(\"count\", 0) + total"
+  "find": "                values[\"count\"] = before[\"count\"] + total - seen",
+  "replace": "                values[\"count\"] = before[\"count\"] + total"
  },
  {
   "file": "scripts/drawer.py",
@@ -44,8 +44,8 @@
  {
   "file": "scripts/drawer.py",
   "name": "an entry with no total seen yet has the whole total added to its own count",
-  "find": "            elif before.get(\"count\") != \"many\" and seen is not None:",
-  "replace": "            elif before.get(\"count\") != \"many\":"
+  "find": "            elif \"count\" in before and before[\"count\"] != \"many\" and seen is not None:",
+  "replace": "            elif \"count\" in before and before[\"count\"] != \"many\":"
  },
  {
   "file": "scripts/drawer.py",

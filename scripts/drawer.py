@@ -324,9 +324,10 @@ def plan_import(source, payload):
     What applying an importer's payload would do (§5.2): (changes, questions, problems, smaller). A SKU the drawer
     has not seen becomes an entry, counted as owned — the person corrects. One seen before follows the re-import rule:
     when its total T grew, `count += T − bought` and `bought` becomes T — but a count the person corrected away from
-    `bought` is a question, not arithmetic (a pack of 10 is not one more piece); an `unsure` entry it
-    confirms takes T and is sure; a smaller T changes nothing and is said. A new SKU whose record an entry said in
-    words already is, is a question — not written until the person answers.
+    `bought` is a question, not arithmetic (a pack of 10 is not one more piece); an entry with no count keeps none —
+    only `bought` moves, as `many` stays many (owned, count unknown: the PO, 2026-10-06); an `unsure` entry it confirms
+    takes T and is sure; a smaller T changes nothing and is said. A new SKU whose record an entry said in words
+    already is, is a question — not written until the person answers.
     """
     refused = payload_problems(source, payload)
     if refused:
@@ -372,8 +373,8 @@ def plan_import(source, payload):
                                   "now? Set it with --drawer-set, with `bought` %s." % (entry_id, total - seen, source, before["count"], seen,
                                                                                       json.dumps({source: total}))})
                 continue
-            elif before.get("count") != "many" and seen is not None:  # no total seen yet: the count is the person's own
-                values["count"] = before.get("count", 0) + total - seen
+            elif "count" in before and before["count"] != "many" and seen is not None:  # no total seen yet: the count is the person's own
+                values["count"] = before["count"] + total - seen
         change, asked, refused = settle(entry_id, before, values, known)
         questions += asked
         problems += refused
