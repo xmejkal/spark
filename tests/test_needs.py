@@ -897,7 +897,7 @@ class TheIdeaCommandTest(unittest.TestCase):
 
     def test_it_names_the_project_where_a_command_takes_it_and_only_there(self):
         lines = (ROOT / "commands" / "idea.md").read_text().splitlines()
-        flagged = [line for line in lines if "--audit" in line or "--function-set" in line]
+        flagged = [line for line in lines if any(op in line for op in ("--audit", "--function-set", "--fact-set"))]
         self.assertTrue(flagged)
         for line in flagged:
             self.assertIn("--project <project>", line, line)

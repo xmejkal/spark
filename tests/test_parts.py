@@ -1542,6 +1542,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
                      ["--unverified", "tactile-button"], ["--need", "unobtainium"], ["--skeleton", "x-part"],
                      ["--kept", "nothing-like-this"], ["--catalog"], ["--describe"], ["--promote", "x-part"],
                      ["--keep", str(project / "absent.pdf")], ["--function-set", "x-part", str(project / "absent.json")],
+                     ["--fact-set", "x-part", str(project / "absent.json")],
                      ["--audit"], ["--needs", str(project)], ["--needs-set", str(project), str(project / "absent.json")],
                      ["--match", str(project)], ["--pick", str(project), "soil=x-part"], ["--bogus"], [],
                      ["--list", "--show", "x"]):
@@ -1830,6 +1831,107 @@ class WhatAPartDoesTest(unittest.TestCase):
                 self.assertEqual((said["status"], code), ("problems", 1))
                 self.assertIn("non-empty list", said["problems"][0]["sentence"])
             self.assertEqual(json.loads((home / "catalog" / "x-soil.json").read_text()), record)
+
+
+class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
+    """P97 (§5.4): what a record owes is filled once, in its own home, through parts.py — never in spark's library."""
+
+    def a_probe(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-soil.json").write_text(json.dumps(
+            {"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor", "pin_order": ["GND", "VCC", "SIG"],
+             "needs": [{"signal": "SOIL", "pin": "SIG", "direction": "out"}],
+             "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}, {"pin": "GND", "rail": "ground", "direction": "in"}]}))
+        return home
+
+    def facts(self, given):
+        path = Path(tempfile.mkdtemp()) / "facts.json"
+        path.write_text(json.dumps(given))
+        return str(path)
+
+    def test_a_fact_is_filled_in_the_catalog_after_a_dry_run(self):
+        home = self.a_probe()
+        given = self.facts({"footprint": "jst_ph_3", "simulation": {"skip": "no soil in a simulator"}})
+        with in_store(home):
+            dry, code = run_json(["--fact-set", "x-soil", given, "--dry-run"])
+            self.assertEqual((code, dry["data"]["written"]), (0, False))
+            self.assertNotIn("footprint", json.loads((home / "catalog" / "x-soil.json").read_text()))
+            _, code = run_json(["--fact-set", "x-soil", given])
+        record = json.loads((home / "catalog" / "x-soil.json").read_text())
+        self.assertEqual((code, record["footprint"], parts.owes(record)), (0, "jst_ph_3", ["pin_order_proof", "body_mm"]))
+
+    def test_spark_s_library_is_refused(self):
+        library = Path(tempfile.mkdtemp()) / "parts"
+        library.mkdir()
+        record = {"schema": 1, "id": "x-amp", "name": "An amp", "kind": "audio-amplifier", "needs": []}
+        (library / "x-amp.json").write_text(json.dumps(record))
+        with in_store(Path(tempfile.mkdtemp())), mock.patch.object(parts, "LIBRARY", library):
+            said, code = run_json(["--fact-set", "x-amp", self.facts({"footprint": "pinrow12"})])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("spark's own library", said["problems"][0]["sentence"])
+        self.assertEqual(json.loads((library / "x-amp.json").read_text()), record)
+
+    def test_only_a_fact_the_chain_reads_and_never_an_empty_one(self):
+        home = self.a_probe()
+        with in_store(home):
+            for given in ({"price_czk": 89}, {"footprint": None}, {}, ["jst_ph_3"]):
+                with self.subTest(given=given):
+                    self.assertEqual(run_json(["--fact-set", "x-soil", self.facts(given)])[1], 1)
+
+    def test_a_fact_that_breaks_the_record_is_refused(self):
+        home = self.a_probe()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-soil", self.facts({"footprint": "pinrow5"})])
+        self.assertEqual(code, 1)
+        self.assertIn("5 pads", said["problems"][0]["sentence"])
+
+    def test_a_record_that_is_no_object_is_refused_with_a_sentence_never_a_traceback(self):
+        home = self.a_probe()
+        function = Path(tempfile.mkdtemp()) / "function.json"
+        function.write_text(json.dumps([{"does": "sense", "what": "soil-moisture"}]))
+        for text in ("[]", "5", "null", '"a probe"'):
+            (home / "catalog" / "x-soil.json").write_text(text)
+            for argv in (["--fact-set", "x-soil", self.facts({"footprint": "jst_ph_3"})], ["--function-set", "x-soil", str(function)]):
+                with self.subTest(text=text, op=argv[0]), in_store(home):
+                    said, code = run_json(argv)
+                    self.assertEqual((said["status"], code), ("problems", 1))
+                    self.assertIn("is not a JSON object", said["problems"][0]["sentence"])
+            self.assertEqual((home / "catalog" / "x-soil.json").read_text(), text)
+
+    def test_a_shelf_copy_of_a_listed_project_s_record_is_filled_in_that_project_and_shelved_again(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "irrigation"
+        (other / "parts").mkdir(parents=True)
+        record = {"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}
+        (other / "parts" / "x-valve.json").write_text(json.dumps(record))
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-valve.json").write_text(json.dumps(dict(record, based_on={"project": "irrigation", "digest": "0" * 64})))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})])
+        self.assertEqual((code, Path(said["data"]["path"]).resolve()), (0, (other / "parts" / "x-valve.json").resolve()))
+        self.assertEqual(json.loads((other / "parts" / "x-valve.json").read_text())["footprint"], "pinrow2")
+        self.assertEqual(json.loads((home / "shelf" / "x-valve.json").read_text())["footprint"], "pinrow2", "the shelf copy follows")
+
+    def test_a_shelf_copy_whose_project_has_lost_the_record_is_filled_where_it_is(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "irrigation"
+        (other / "parts").mkdir(parents=True)
+        record = {"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-valve.json").write_text(json.dumps(dict(record, based_on={"project": "irrigation", "digest": "0" * 64})))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})])
+        self.assertEqual((code, Path(said["data"]["path"]).resolve()), (0, (home / "shelf" / "x-valve.json").resolve()))
+        self.assertEqual(json.loads((home / "shelf" / "x-valve.json").read_text())["footprint"], "pinrow2")
+        self.assertFalse((other / "parts" / "x-valve.json").exists(), "the project's record is not made up")
+
+    def test_the_answer_says_what_each_fact_was_and_what_it_is_now(self):
+        home = self.a_probe()
+        with in_store(home):
+            said, _ = run_json(["--fact-set", "x-soil", self.facts({"footprint": "jst_ph_3"}), "--dry-run"])
+        self.assertEqual((said["data"]["part"], said["data"]["was"], said["data"]["now"]),
+                         ("x-soil", {"footprint": None}, {"footprint": "jst_ph_3"}))
 
 
 class OwedIsNotBrokenTest(unittest.TestCase):

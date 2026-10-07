@@ -13,5 +13,5 @@
  {"file": "scripts/parts.py", "name": "a needs write joins its values with commas",
   "find": "change.get(\"entry\") or change.get(\"need\"), \"; \".join(", "replace": "change.get(\"entry\") or change.get(\"need\"), \", \".join("},
  {"file": "scripts/parts.py", "name": "a needs write that was carried out says it would set",
-  "find": "\"would set\" if dry_run else \"set\"", "replace": "\"would set\" if dry_run else \"would set\""}
+  "find": "\"would set\" if dry_run else \"set\", change.get(\"entry\")", "replace": "\"would set\" if dry_run else \"would set\", change.get(\"entry\")"}
 ]

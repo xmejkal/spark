@@ -1,0 +1,22 @@
+[
+ {"file": "scripts/parts.py", "name": "a shelf copy is its own home",
+  "find": "    return (home, named) if home is not None and home.is_file() else (path, None)", "replace": "    return (path, None)"},
+ {"file": "scripts/parts.py", "name": "the shelf copy does not follow its record",
+  "find": "        if source:\n            shelve(path, source)", "replace": "        if False:\n            shelve(path, source)"},
+ {"file": "scripts/parts.py", "name": "an empty fact is a fact",
+  "find": "[\"%s is absent — a write fills a fact, it never empties one\" % key for key in facts if _absent(key, facts[key])]",
+  "replace": "[]"},
+ {"file": "scripts/parts.py", "name": "a fact may break the record",
+  "find": "+ sorted(set(broken_problems(after, path)) - set(broken_problems(record, path)))", "replace": "+ []"},
+ {"file": "scripts/parts.py", "name": "any key is a fact", "find": "set(facts) <= set(CHAIN_FACTS)", "replace": "True"},
+ {"file": "scripts/parts.py", "name": "a record that is no object is read as one",
+  "find": "    if not isinstance(record, dict):\n        return Answer(problems=[_problem(part_id, \"is not a JSON object (%s) — repair the file by hand first\" % path)])\n",
+  "replace": ""},
+ {"file": "scripts/parts.py", "name": "a project that lost the record is still the home",
+  "find": "    return (home, named) if home is not None and home.is_file() else (path, None)",
+  "replace": "    return (home, named) if home is not None else (path, None)"},
+ {"file": "scripts/parts.py", "name": "the answer forgets what was set",
+  "find": "\"was\": was, \"now\": values, \"written\"", "replace": "\"was\": was, \"now\": {}, \"written\""},
+ {"file": "scripts/parts.py", "name": "the answer forgets what a fact was",
+  "find": "\"was\": was, \"now\": values, \"written\"", "replace": "\"was\": {}, \"now\": values, \"written\""}
+]

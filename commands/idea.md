@@ -62,8 +62,8 @@ any repository with the Write tool, then:
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set <part> <file> --project <project> --dry-run
 ```
 
-Show the person the file it prints, then run it without `--dry-run`. A file in the store's `shelf/` is a copy: a
-later re-shelve from its project overwrites it, so say so. spark's own library is not changed from here.
+Show the person the file it prints, then run it without `--dry-run`. A record on the shelf that came from one of the
+person's projects is written in that project, and its shelf copy follows. spark's own library is not changed from here.
 
 ## C — a part per need
 
@@ -81,5 +81,16 @@ picks another. Say "to get" (known, not owned), "maybe owned — check the drawe
 person as they are. For each candidate the person passed over, write their reason **in their words** to a JSON file
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
+
+A part pick whose record owes facts cannot be built from. Fill each owed fact once, in the record's own home, from its
+source: a JSON object of the facts (`footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation`) in a file
+written with the Write tool, then
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <project> --dry-run
+```
+
+and without `--dry-run`. A record in spark's own library is changed in spark's repository, not from here: say so. A
+source not kept yet is fetched only after the person's yes — it reaches the network.
 
 Building from the picks is store 1c's next steps; say so, and stop at the picks.

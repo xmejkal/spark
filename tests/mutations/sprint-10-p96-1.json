@@ -4,5 +4,5 @@
  {"file": "scripts/parts.py", "name": "any verb is a function",
   "find": "and f.get(\"does\") in VERBS", "replace": "and f.get(\"does\")"},
  {"file": "scripts/parts.py", "name": "a dry run of --function-set writes",
-  "find": "    if changes and not args.dry_run:\n        record[\"function\"] = function", "replace": "    if changes:\n        record[\"function\"] = function"}
+  "find": "    if changes and not dry_run:\n        _write_record(path, after)", "replace": "    if changes:\n        _write_record(path, after)"}
 ]

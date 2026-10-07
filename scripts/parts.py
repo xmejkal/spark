@@ -1407,6 +1407,9 @@ OPERATIONS = (
     ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written")),
+    ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
+     "fill what a record owes — a JSON object of the facts the chain reads, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     ("writes",), ("part", "path", "was", "now", "written")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling")),
     ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
@@ -1691,9 +1694,18 @@ def _op_drawer_import(args, project):
 
 
 def _record_path(part_id, project):
-    """A part record's own file: the nearest layer that has it, the catalog included, else a project on the person's list."""
+    """
+    A part record's own file, and the project to shelve it again from (§5.4, §5.5): the nearest layer that has it, the
+    catalog included, else a project on the person's list — except that a shelf copy of a listed project's record is not a
+    home: that project's record is, and the copy follows it.
+    """
     import drawer
-    return next((path for kind, found, _, path in drawer.linkable(project) if (kind, found) == ("part", part_id)), None)
+    path = next((path for kind, found, _, path in drawer.linkable(project) if (kind, found) == ("part", part_id)), None)
+    record = _parse(path) if path is not None and path.parent == store.place("shelf") else None
+    named = record.get("based_on", {}).get("project") if isinstance(record, dict) and isinstance(record.get("based_on"), dict) else None
+    folder = store.projects().get(named) if isinstance(named, str) else None
+    home = folder / "parts" / path.name if folder is not None else None
+    return (home, named) if home is not None and home.is_file() else (path, None)
 
 
 def _write_record(path, record):
@@ -1704,29 +1716,57 @@ def _write_record(path, record):
     return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + "\n")
 
 
+def _set_in_home(part_id, project, values, dry_run, refuse):
+    """
+    Set fields of a part record in its own home (§5.4) — the catalog's, a project's, or a listed project's behind a shelf
+    copy, which is then shelved again — never spark's library, which is changed in spark's repository. `refuse(record,
+    after, path)` says what is wrong with the result, and anything it says refuses the write.
+    """
+    path, source = _record_path(part_id, project)
+    if path is None:
+        raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
+    if path.parent.resolve() == LIBRARY.resolve():
+        return Answer(problems=[_problem(part_id, "is in spark's own library, which is changed in spark's repository, "
+                                                  "not by parts.py")])
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(record, dict):
+        return Answer(problems=[_problem(part_id, "is not a JSON object (%s) — repair the file by hand first" % path)])
+    after = dict(record, **values)
+    wrong = refuse(record, after, path)
+    if wrong:
+        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
+    was, changes = {key: record.get(key) for key in values}, after != record
+    if changes and not dry_run:
+        _write_record(path, after)
+        if source:
+            shelve(path, source)
+    said = ("  %s %s (%s): %s" % ("would set" if dry_run else "set", part_id, path, "; ".join(
+                "%s %s → %s" % (key, json.dumps(was[key], ensure_ascii=False), json.dumps(value, ensure_ascii=False))
+                for key, value in values.items()))
+            if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
+    return Answer({"part": part_id, "path": str(path), "was": was, "now": values, "written": not dry_run}, [said])
+
+
 def _op_function_set(args, project):
     part_id, name = args.function_set
     function, unreadable = _read_json_input(name)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    path = _record_path(part_id, project)
-    if path is None:
-        raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
-    if path.parent.resolve() == LIBRARY.resolve():
-        return Answer(problems=[_problem(part_id, "is in spark's own library, which is changed in spark's repository, "
-                                                  "not by --function-set")])
-    wrong = function_problems({"function": function}) if function else ["a function is a non-empty list [{does, what}]"]
-    if wrong:
-        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-    record = json.loads(path.read_text(encoding="utf-8"))
-    was, changes = record.get("function"), record.get("function") != function
-    if changes and not args.dry_run:
-        record["function"] = function
-        _write_record(path, record)
-    said = ("  %s %s (%s): function %s → %s" % ("would set" if args.dry_run else "set", part_id, path,
-                                                json.dumps(was, ensure_ascii=False), json.dumps(function, ensure_ascii=False))
-            if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
-    return Answer({"part": part_id, "path": str(path), "was": was, "now": function, "written": not args.dry_run}, [said])
+    answer = _set_in_home(part_id, project, {"function": function}, args.dry_run, lambda record, after, path:
+                          function_problems(after) if function else ["a function is a non-empty list [{does, what}]"])
+    return answer._replace(data=dict(answer.data, was=answer.data["was"]["function"], now=function)) if answer.data else answer
+
+
+def _op_fact_set(args, project):
+    part_id, name = args.fact_set
+    facts, unreadable = _read_json_input(name)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS)):
+        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s" % ", ".join(CHAIN_FACTS))])
+    return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: (
+        ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
+        + sorted(set(broken_problems(after, path)) - set(broken_problems(record, path)))))
 
 
 def _op_catalog(args, project):
