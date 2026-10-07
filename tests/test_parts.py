@@ -1457,7 +1457,8 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
                      ["--kept", "nothing-like-this"], ["--catalog"], ["--describe"], ["--promote", "x-part"],
                      ["--keep", str(project / "absent.pdf")], ["--function-set", "x-part", str(project / "absent.json")],
                      ["--audit"], ["--needs", str(project)], ["--needs-set", str(project), str(project / "absent.json")],
-                     ["--match", str(project)], ["--bogus"], [], ["--list", "--show", "x"]):
+                     ["--match", str(project)], ["--pick", str(project), "soil=x-part"], ["--bogus"], [],
+                     ["--list", "--show", "x"]):
             with self.subTest(argv=argv):
                 said, code = run_json(argv)
                 self.assertEqual(sorted(said), ENVELOPE_KEYS)

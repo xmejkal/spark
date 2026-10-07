@@ -27,7 +27,8 @@ spark's records before anything is researched (docs/2026-10-04-store-design.md �
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set <project> <file> --dry-run
    ```
 
-   then without `--dry-run`. A need holds no reason, count, place or pick — the file belongs to the project.
+   then without `--dry-run`. A need holds no reason, count or place, and `--needs-set` sets no pick (`--pick` does, below) — the
+   file belongs to the project.
 
 ## M — what the store offers for each need
 
@@ -64,8 +65,21 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set <part> <file> --project <p
 Show the person the file it prints, then run it without `--dry-run`. A file in the store's `shelf/` is a copy: a
 later re-shelve from its project overwrites it, so say so. spark's own library is not changed from here.
 
-## Not yet
+## C — a part per need
 
-Choosing a part per need and reserving owned parts are store 1c ([P97](https://github.com/xmejkal/spark/issues/18));
-turning needs into a requirements file is [P76](https://github.com/xmejkal/spark/issues/5). Say so, and stop at the
-marks.
+Pick with the person, need by need, from what `--match` offered: a record's id, or the drawer entry's key of an owned
+thing with no record (a speaker, a battery). Then:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick <project> soil=sen0193-soil-moisture alarm=max98357a-dfr0954 alarm=dfrobot-fit0502 --dry-run
+```
+
+and without `--dry-run`. Each need it names gets exactly those picks, and what the person owns of each is reserved for
+the project, one piece per pick. A pick another project holds is **refused, naming the holder** ("1 owned, held by
+…"): say so; the person frees it — `--drawer-set` of that entry's `used_in` without the holder, after a dry run — or
+picks another. Say "to get" (known, not owned), "maybe owned — check the drawer first" and "count unknown" to the
+person as they are. For each candidate the person passed over, write their reason **in their words** to a JSON file
+with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
+`--passed-over <file>`: the reason goes to the history in your store, never to the project.
+
+Building from the picks is store 1c's next steps; say so, and stop at the picks.

@@ -7,6 +7,7 @@ no part numbers, no owned counts, no places and no reasons: it belongs to a proj
 need is marked as it is, is said to the person, and 1c's history keeps it. Every write sets, never adds.
 """
 
+import collections
 import json
 import re
 from pathlib import Path
@@ -18,12 +19,17 @@ import store
 
 #: How a need stands against the store (§3).
 MARKS = ("have", "have-unknown", "know", "gap")
+#: What a pick names (§5.3): a part or a board record, or the drawer entry of an owned thing with no record.
+PICKS = ("part", "board", "entry")
 #: Each field of a need besides its `id` (§5.3): its test, and what is said when a value fails it — read and write alike.
-#: A pick is 1c's, and will be one more row.
+#: A pick is set only by --pick, which reserves what the person owns (§8 C).
 CHECKS = {"does": (lambda v: v in parts.VERBS, "`does` is one of %s" % ", ".join(parts.VERBS)),
           "what": (drawer._words, "`what` is a few words: soil-moisture, alarm, microcontroller"),
           "condition": (lambda v: v is None or drawer._words(v), "`condition` is words, or null"),
-          "mark": (lambda v: v is None or v in MARKS, "`mark` is one of %s, or null" % ", ".join(MARKS))}
+          "mark": (lambda v: v is None or v in MARKS, "`mark` is one of %s, or null" % ", ".join(MARKS)),
+          "pick": (lambda v: v is None or (isinstance(v, list) and all(
+              isinstance(p, dict) and len(p) == 1 and next(iter(p)) in PICKS and isinstance(next(iter(p.values())), str)
+              and store.PLAIN.fullmatch(next(iter(p.values()))) for p in v)), '`pick` is a list of {"part"|"board"|"entry": id}, set with --pick')}
 NEED_FIELDS = tuple(CHECKS)
 FILE = Path(".spark") / "needs.json"
 
@@ -76,6 +82,9 @@ def plan_set(project, items):
         if not (isinstance(need_id, str) and store.PLAIN.fullmatch(need_id)):
             problems.append(parts._problem("item %d" % number, "a need's `id` is lower-case letters, digits and '-', not %s"
                                            % json.dumps(need_id, ensure_ascii=False)))
+            continue
+        if "pick" in item:
+            problems.append(parts._problem(need_id, "a pick is set with --pick, which reserves what you own"))
             continue
         before = current.get(need_id)
         after = dict(before or {}, **{key: (drawer.clean(value) if isinstance(value, str) else value) for key, value in item.items()})
@@ -142,14 +151,11 @@ def candidates(need, known, entries, mine=None):
     has the need's verb, owned first, then those whose `what` is the need's, nearest first. Similar enough is the agent's call.
     What `mine`, the asking project, holds is free to it.
     """
-    pointing = {}
-    for entry in entries.values():
-        if not entry.get("skip") and isinstance(entry.get("is"), dict) and entry["is"]:
-            pointing.setdefault(next(iter(entry["is"].items())), []).append(entry)
+    pointing = _pointing(entries)
     found, known_keys = [], set()
     for kind, record_id, where, path in known:
         record = parts._parse(path)
-        holding = pointing.get((kind, record_id), [])
+        holding = [entry for _, entry in pointing.get((kind, record_id), [])]
         if not isinstance(record, dict):
             continue
         known_keys.add((kind, record_id))
@@ -186,3 +192,84 @@ def match(project):
         matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"],
                             candidates=candidates(need, known, entries, mine)))
     return matched, problems
+
+
+def _pointing(entries):
+    """{(kind, id): [(entry key, entry)]} for every live drawer entry that says what it is — one said to be dead holds nothing."""
+    pointing = {}
+    for entry_id, entry in entries.items():
+        if not entry.get("skip") and isinstance(entry.get("is"), dict) and entry["is"]:
+            pointing.setdefault(next(iter(entry["is"].items())), []).append((entry_id, entry))
+    return pointing
+
+
+def _held(pick, entries, pointing):
+    """The live drawer entries that hold one pick (§8 C), as (key, entry): those that say they are its record, or the entry it names."""
+    kind, key = next(iter(pick.items()))
+    if kind == "entry":
+        return [(key, entries[key])] if key in entries and not entries[key].get("skip") else []
+    return pointing.get((kind, key), [])
+
+
+def _resolve(pick_id, known, entries):
+    """A pick by its id (§5.3): the record of that id — a part's, then a board's — else the drawer entry of that key, else None."""
+    kind = next((kind for kind in ("part", "board") if (kind, pick_id) in known), "entry" if pick_id in entries else None)
+    return {kind: pick_id} if kind else None
+
+
+def plan_pick(project, given, passed_over=()):
+    """
+    What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
+    [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
+    from every need's picks — one piece per pick — on the entries that hold them, never past what another project holds
+    (C2), so a re-pick frees what it no longer picks. A pick no entry holds is to get, not reserved. Nothing is written here.
+    """
+    name, current, entries = store.add_project(project, dry_run=True), read(project), drawer.entries()
+    known, ids, problems, picked = {row[:2] for row in drawer.linkable(project)}, {need["id"] for need in current}, [], {}
+    for need_id, pick_id in given:
+        pick = _resolve(pick_id, known, entries)
+        if need_id not in ids:
+            problems.append(parts._problem(need_id, "no need called %s — --needs lists them" % need_id))
+        elif pick is None:
+            problems.append(parts._problem(need_id, "no record or drawer entry called %s — --match lists the candidates" % pick_id))
+        elif pick not in picked.setdefault(need_id, []):
+            picked[need_id].append(pick)
+    after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
+    wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
+    pointing, mine, notes = _pointing(entries), collections.Counter(), []
+    for (kind, key), pieces in sorted(wanted.items()):
+        held = _held({kind: key}, entries, pointing)
+        owned, _, unsure = _counts([entry for _, entry in held], name)
+        if owned == 0:
+            notes.append("%s: to get — known, not owned" % key)
+            continue
+        for entry_id, entry in held:
+            room = pieces if not isinstance(entry.get("count"), int) else entry["count"] - sum(
+                n for who, n in (entry.get("used_in") or {}).items() if who != name)
+            taken = max(min(room, pieces), 0)
+            mine[entry_id] += taken
+            pieces -= taken
+        holders = sorted({who for _, entry in held for who in entry.get("used_in") or {} if who != name})
+        if pieces:
+            problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(holders) if holders else "",
+                                                                                 wanted[(kind, key)]),
+                                           "free it — --drawer-set %s with `used_in` leaving out %s, after a dry run — or pick another"
+                                           % (", ".join(entry_id for entry_id, _ in held), ", ".join(holders) or "nobody")))
+        notes += ["%s: maybe owned — check the drawer first" % key] if unsure else []
+        notes += ["%s: count unknown — check the drawer" % key] if owned == "unknown" else []
+    changes = []
+    for entry_id, entry in sorted(entries.items()):
+        used_in = {who: n for who, n in (entry.get("used_in") or {}).items() if who != name}
+        used_in.update({name: mine[entry_id]} if mine[entry_id] else {})
+        if used_in != (entry.get("used_in") or {}):
+            changes.append(drawer.settle(entry_id, entry, {"used_in": used_in}, [])[0])
+    events = [dict({"event": "reused", "project": name, "need": need_id}, **pick) for need_id in picked for pick in picked[need_id]]
+    for number, item in enumerate(passed_over if isinstance(passed_over, (list, tuple)) else [None], 1):
+        pick = _resolve(item.get("id"), known, entries) if isinstance(item, dict) and isinstance(item.get("id"), str) else None
+        if not (pick and item.get("need") in ids and drawer._words(item.get("why")) and item.get("by", "person") in ("person", "agent")):
+            problems.append(parts._problem("passed over %d" % number, 'a part passed over is {"need", "id", "why", "by": '
+                                           '"person" or "agent"}: a need and an id spark has, and the reason in words'))
+            continue
+        events.append(dict({"event": "passed_over", "project": name, "need": item["need"]}, **pick,
+                           why=drawer.clean(item["why"]), by=item.get("by", "person")))
+    return after, changes, events, notes, problems

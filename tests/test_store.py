@@ -437,6 +437,22 @@ class TheProjectsListTest(unittest.TestCase):
         second.mkdir()
         self.assertEqual((store.add_project(first), store.add_project(second)), ("bin", "bin-2"))
 
+    def test_a_folder_listed_under_another_spelling_keeps_its_one_name(self):
+        folder, link = Path(tempfile.mkdtemp()) / "plant-alarm", Path(tempfile.mkdtemp()) / "alarm-link"
+        folder.mkdir()
+        link.symlink_to(folder)
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(link)}))
+        self.assertEqual(store.add_project(folder), "plant-alarm")
+        self.assertEqual(json.loads((self.home / "projects.json").read_text()), {"plant-alarm": str(link)})
+
+    def test_a_dry_run_says_the_name_and_lists_nothing(self):
+        first, second = (Path(tempfile.mkdtemp()) / "bin" for _ in range(2))
+        first.mkdir()
+        second.mkdir()
+        store.add_project(first)
+        self.assertEqual(store.add_project(second, dry_run=True), "bin-2")
+        self.assertEqual(store.projects(), {"bin": first.resolve()})
+
     def test_a_list_that_is_not_json_is_named(self):
         (self.home / "projects.json").write_text("{")
         with self.assertRaises(store.StoreProblem) as broken:

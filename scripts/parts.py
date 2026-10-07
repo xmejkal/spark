@@ -1394,6 +1394,9 @@ OPERATIONS = (
      ("changes", "written")),
     ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
      (), ("needs",)),
+    ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
+     "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds",
+     ("writes",), ("project", "picks", "reserved", "written")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1412,6 +1415,7 @@ OPTIONS = (
     ("url", {}, "with --keep: where the file came from, if anyone knows"),
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
+    ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
@@ -1775,6 +1779,34 @@ def _op_needs_set(args, project):
     if written and changes:
         needs.write(target, after)
     return Answer({"changes": changes, "written": written}, _write_lines(changes, problems, args.dry_run), problems=problems)
+
+
+def _op_pick(args, project):
+    import drawer
+    import needs
+    target, given = args.pick[0], args.pick[1:]
+    pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
+    if not pairs or len(pairs) != len(given):
+        return Answer(unchecked=[_cannot("--pick takes the project, then NEED=ID for each pick: soil=sen0193-soil-moisture",
+                                         "parts.py --match <project> lists each need's candidates and their ids")])
+    reasons, unreadable = _read_json_input(args.passed_over) if args.passed_over else ([], None)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    store.events()  # the history is read whole before the first write: one that cannot be read refuses the pick, with nothing written
+    after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
+    if not problems and not args.dry_run:
+        store.add_project(target)
+        needs.write(target, after)
+        drawer.apply(changes)
+        for event in events:
+            store.append_event(event)
+    asked = dict(pairs)
+    picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
+    said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]
+    return Answer({"project": store.add_project(target, dry_run=True), "picks": picks,
+                   "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
+                   "written": not problems and not args.dry_run},
+                  _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes]), problems=problems)
 
 
 def _op_describe(args, project):

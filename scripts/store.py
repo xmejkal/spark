@@ -228,18 +228,22 @@ def project_name(folder):
     return next((name for name, where in projects().items() if where.resolve() == folder), None)
 
 
-def add_project(folder):
-    """Put a project on the list under its folder's name — `name-2` when another folder that still exists has it. Returns the name."""
+def add_project(folder, dry_run=False):
+    """
+    Put a project on the list under its folder's name — `name-2` when another folder that still exists has it. A folder
+    already on the list keeps its name, however its path is spelled. Returns the name; a dry run only says it.
+    """
     folder = Path(folder).resolve()
+    named = project_name(folder)
+    if named:
+        return named
     listed = {name: str(where) for name, where in projects().items()}
-    for name, where in listed.items():
-        if where == str(folder):
-            return name
     name, number = folder.name, 2
     while name in listed and Path(listed[name]).is_dir():
         name, number = "%s-%d" % (folder.name, number), number + 1
     listed[name] = str(folder)
-    write_json("projects", None, listed)
+    if not dry_run:
+        write_json("projects", None, listed)
     return name
 
 

@@ -4,8 +4,10 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -13,7 +15,9 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import needs  # noqa: E402
 import parts  # noqa: E402
+import store  # noqa: E402
 
 
 def run(argv):
@@ -228,8 +232,7 @@ class TheMatcherTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
         run(["--needs-set", str(self.project), a_file([
             {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "alarm", "does": "sound", "what": "alarm"},
-            {"id": "board", "does": "compute", "what": "microcontroller"}, {"id": "input", "does": "input", "what": "button"},
-            {"id": "keep", "does": "store", "what": "logs"}])])
+            {"id": "board", "does": "compute", "what": "microcontroller"}, {"id": "input", "does": "input", "what": "button"}])])
         said, self.code = run(["--match", str(self.project)])
         self.needs = {need["need"]: need for need in said["data"]["needs"]}
 
@@ -440,7 +443,8 @@ class TheMatcherTest(unittest.TestCase):
         self.assertEqual((buzzers["owned"], buzzers["free"], buzzers["unsure"]), ("unknown", "unknown", True))
 
     def test_a_verb_nothing_has_is_an_empty_answer(self):
-        self.assertEqual((self.code, self.needs["keep"]["candidates"]), (0, []))
+        keep = self.alone({"id": "keep", "does": "store", "what": "logs"})
+        self.assertEqual((self.code, keep["candidates"]), (0, []))
 
     def test_an_owned_part_that_says_nothing_of_what_it_does_is_no_candidate(self):
         self.assertNotIn("x-silent", [c["id"] for c in self.needs["soil"]["candidates"]])
@@ -504,6 +508,305 @@ class TheMatcherTest(unittest.TestCase):
         self.assertEqual((said["status"], code), ("problems", 1))
 
 
+class ThePicksTest(unittest.TestCase):
+    """P97, §8 C: a pick per need; what you own is reserved, never past what another project holds; a reason is kept."""
+
+    def setUp(self):
+        self.home, self.project = a_store_with_a_drawer(), Path(tempfile.mkdtemp()) / "plant-alarm"
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        run(["--needs-set", str(self.project), a_file([
+            {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "alarm", "does": "sound", "what": "alarm"},
+            {"id": "board", "does": "compute", "what": "microcontroller"}, {"id": "input", "does": "input", "what": "button"}])])
+
+    def entry(self, key):
+        return json.loads((self.home / "drawer" / (key + ".json")).read_text())
+
+    def picks(self):
+        return {need["id"]: need.get("pick") for need in json.loads((self.project / ".spark" / "needs.json").read_text())["needs"]}
+
+    def history(self):
+        path = self.home / "history.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()] if path.is_file() else []
+
+    def text(self, argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            parts.main(argv)
+        return out.getvalue()
+
+    def test_the_bin_s_only_board_is_refused_naming_who_holds_it(self):
+        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("1 owned, held by smartbin-local", said["problems"][0]["sentence"])
+        self.assertIn("--drawer-set board", said["problems"][0]["fix"])
+        self.assertEqual((self.picks()["board"], self.entry("board")["used_in"]), (None, {"smartbin-local": 1}))
+
+    def test_a_pick_reserves_one_piece_and_the_history_says_it_was_reused(self):
+        _, code = run(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"])
+        self.assertEqual(code, 0)
+        self.assertEqual((self.picks()["soil"], self.picks()["alarm"]), ([{"part": "x-soil"}], [{"entry": "speaker"}]))
+        self.assertEqual((self.entry("probe")["used_in"], self.entry("speaker")["used_in"]), ({"plant-alarm": 1}, {"plant-alarm": 1}))
+        self.assertEqual(self.history(), [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"},
+                                          {"event": "reused", "project": "plant-alarm", "need": "alarm", "entry": "speaker"}])
+
+    def test_freed_by_the_person_the_board_is_reserved_for_this_project(self):
+        run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
+        _, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
+        self.assertEqual((code, self.entry("board")["used_in"]), (0, {"plant-alarm": 1}))
+
+    def test_a_refused_pick_writes_nothing_at_all(self):
+        _, code = run(["--pick", str(self.project), "soil=x-soil", "board=firebeetle2-esp32s3"])
+        self.assertEqual(code, 1)
+        self.assertEqual((self.picks()["soil"], self.entry("probe").get("used_in"), self.history()), (None, None, []))
+
+    def test_a_re_pick_frees_what_it_no_longer_picks(self):
+        run(["--pick", str(self.project), "soil=x-soil"])
+        _, code = run(["--pick", str(self.project), "soil=x-other"])
+        self.assertEqual((code, self.picks()["soil"], self.entry("probe")["used_in"]), (0, [{"part": "x-other"}], {}))
+
+    def test_a_pick_nobody_owns_is_to_get_and_reserves_nothing(self):
+        self.assertIn("x-other: to get — known, not owned", self.text(["--pick", str(self.project), "soil=x-other"]))
+
+    def test_an_unsure_pick_says_check_the_drawer_first(self):
+        self.assertIn("mp3: maybe owned — check the drawer first", self.text(["--pick", str(self.project), "alarm=mp3"]))
+
+    def test_a_count_nobody_gave_is_reserved_and_said(self):
+        (self.home / "drawer" / "probes.json").write_text(json.dumps({"schema": 1, "label": "some probes"}))
+        self.assertIn("probes: count unknown — check the drawer", self.text(["--pick", str(self.project), "soil=probes"]))
+        self.assertEqual(self.entry("probes")["used_in"], {"plant-alarm": 1})
+
+    def test_many_is_reserved_one_piece_at_a_time(self):
+        run(["--pick", str(self.project), "input=tactile-button"])
+        self.assertEqual(self.entry("buttons")["used_in"], {"plant-alarm": 1})
+
+    def test_a_part_passed_over_keeps_its_reason_once(self):
+        reasons = a_file([{"need": "soil", "id": "x-other", "why": "a gas sensor does not sense soil", "by": "person"}])
+        for _ in range(2):
+            run(["--pick", str(self.project), "soil=x-soil", "--passed-over", reasons])
+        self.assertEqual([event for event in self.history() if event["event"] == "passed_over"],
+                         [{"event": "passed_over", "project": "plant-alarm", "need": "soil", "part": "x-other",
+                           "why": "a gas sensor does not sense soil", "by": "person"}])
+
+    def test_a_retried_pick_changes_nothing(self):
+        run(["--pick", str(self.project), "soil=x-soil"])
+        said, code = run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((code, said["data"]["reserved"], self.entry("probe")["used_in"]), (0, [], {"plant-alarm": 1}))
+
+    def test_a_need_or_an_id_spark_does_not_have_is_named(self):
+        said, code = run(["--pick", str(self.project), "smell=x-soil", "soil=no-such-thing"])
+        self.assertEqual((code, [p["subject"] for p in said["problems"]]), (1, ["smell", "soil"]))
+
+    def test_a_pick_names_ids_only(self):
+        said, code = run(["--pick", str(self.project), "soil"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+
+    def test_a_hand_edited_pick_of_the_wrong_shape_is_named(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps(
+            {"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "x", "pick": [{"part": 7}]}]}))
+        said, code = run(["--needs", str(self.project)])
+        self.assertEqual(code, 2)
+        self.assertIn("needs.json", said["unchecked"][0]["sentence"])
+
+    # The rest pin one behaviour each: what a pick says, what it reserves and frees, what it refuses, and what it leaves alone.
+
+    def test_a_hand_edited_pick_is_read_only_in_the_shape_a_pick_has(self):
+        def with_pick(pick):
+            (self.project / ".spark" / "needs.json").write_text(json.dumps(
+                {"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "x", "pick": pick}]}))
+        for pick in ([{"part": "a-part"}], [{"board": "a-board"}, {"entry": "an-entry"}, {"part": "b"}]):
+            with self.subTest(pick=pick):
+                with_pick(pick)
+                self.assertEqual(run(["--needs", str(self.project)])[1], 0)
+        for pick in ("x-soil", {"part": "x-soil"}, [{"part": "x-soil", "board": "y"}], [{"thing": "x-soil"}], [{"part": "X Soil"}],
+                     ["x-soil"], [{}], [{"part": None}]):
+            with self.subTest(pick=pick):
+                with_pick(pick)
+                said, code = run(["--needs", str(self.project)])
+                self.assertEqual(code, 2)
+                self.assertIn("`pick` is a list of", said["unchecked"][0]["sentence"])
+
+    def test_a_pick_says_what_it_changed_what_it_picked_and_what_it_noted_in_that_order(self):
+        self.assertEqual(self.text(["--pick", str(self.project), "soil=x-soil", "alarm=mp3"]), "\n".join([
+            '  set mp3: used_in null → {"plant-alarm": 1}',
+            '  set probe: used_in null → {"plant-alarm": 1}',
+            "  soil: x-soil",
+            "  alarm: mp3",
+            "  mp3: maybe owned — check the drawer first", ""]))
+
+    def test_a_refused_pick_says_its_notes_between_what_it_would_have_changed_and_what_it_refused(self):
+        self.assertEqual(self.text(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3"]), "\n".join([
+            '  refused, not written: set mp3: used_in null → {"plant-alarm": 1}',
+            "  mp3: maybe owned — check the drawer first",
+            "  refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by smartbin-local — 1 picked here", ""]))
+
+    def test_a_history_that_cannot_be_read_stops_a_pick_before_anything_is_written(self):
+        (self.home / "history.jsonl").write_text("this is not an event\n")
+        for extra in ([], ["--dry-run"]):
+            with self.subTest(extra=extra):
+                said, code = run(["--pick", str(self.project), "soil=x-soil"] + extra)
+                self.assertEqual((said["status"], code), ("could-not-run", 2))
+                self.assertIn("history.jsonl", said["unchecked"][0]["sentence"])
+                self.assertEqual((self.picks()["soil"], self.entry("probe").get("used_in")), (None, None))
+                self.assertFalse((self.home / "projects.json").exists())
+        self.assertEqual((self.home / "history.jsonl").read_text(), "this is not an event\n")
+
+    def test_asking_for_a_plan_with_no_reasons_is_asking_for_no_reasons(self):
+        _, _, events, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")])
+        self.assertEqual((problems, events), ([], [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"}]))
+
+    def test_a_pick_answers_with_the_project_what_it_picked_what_it_reserved_and_that_it_was_written(self):
+        said, code = run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((code, said["data"]), (0, {"project": "plant-alarm", "picks": [{"need": "soil", "pick": [{"part": "x-soil"}]}],
+                                                     "reserved": [{"entry": "probe", "used_in": {"plant-alarm": 1}}], "written": True}))
+
+    def test_a_dry_run_says_what_it_would_do_and_writes_nothing(self):
+        said, code = run(["--pick", str(self.project), "soil=x-soil", "--dry-run"])
+        self.assertEqual((code, said["data"]["written"], said["data"]["reserved"]),
+                         (0, False, [{"entry": "probe", "used_in": {"plant-alarm": 1}}]))
+        self.assertEqual((self.picks()["soil"], self.entry("probe").get("used_in"), self.history()), (None, None, []))
+        self.assertFalse((self.home / "projects.json").exists())
+        self.assertEqual(self.text(["--pick", str(self.project), "soil=x-soil", "--dry-run"]),
+                         '  would set probe: used_in null → {"plant-alarm": 1}\n  soil: x-soil\n')
+
+    def test_a_pick_puts_the_project_on_the_list_so_what_it_reserved_stays_free_to_it(self):
+        run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual(json.loads((self.home / "projects.json").read_text()), {"plant-alarm": str(self.project.resolve())})
+        said, _ = run(["--match", str(self.project)])
+        soil = [c for c in said["data"]["needs"][0]["candidates"] if c["id"] == "x-soil"][0]
+        self.assertEqual((said["data"]["needs"][0]["need"], soil["owned"], soil["free"]), ("soil", 8, 8))
+
+    def test_a_need_the_pick_does_not_name_keeps_its_pick_and_its_reservation(self):
+        run(["--pick", str(self.project), "soil=x-soil"])
+        run(["--pick", str(self.project), "alarm=speaker"])
+        self.assertEqual((self.picks()["soil"], self.entry("probe")["used_in"], self.entry("speaker")["used_in"]),
+                         ([{"part": "x-soil"}], {"plant-alarm": 1}, {"plant-alarm": 1}))
+
+    def test_a_reservation_leaves_what_other_projects_hold_as_it_was(self):
+        (self.home / "drawer" / "probe.json").write_text(json.dumps({"schema": 1, "label": "soil probe", "count": 8, "is": {"part": "x-soil"},
+                                                                    "used_in": {"smartbin-local": 2}}))
+        run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual(self.entry("probe")["used_in"], {"smartbin-local": 2, "plant-alarm": 1})
+
+    def test_a_need_takes_every_pick_it_is_given_once_each_and_reserves_one_piece_for_each(self):
+        run(["--pick", str(self.project), "alarm=speaker", "alarm=mp3", "alarm=speaker"])
+        self.assertEqual(self.picks()["alarm"], [{"entry": "speaker"}, {"entry": "mp3"}])
+        self.assertEqual((self.entry("speaker")["used_in"], self.entry("mp3")["used_in"]), ({"plant-alarm": 1}, {"plant-alarm": 1}))
+        self.assertEqual([event["entry"] for event in self.history()], ["speaker", "mp3"])
+
+    def test_the_refusal_names_only_the_others_and_counts_what_this_project_picked(self):
+        (self.home / "drawer" / "board.json").write_text(json.dumps({"schema": 1, "label": "FireBeetle", "count": 2, "is": {"board": "firebeetle2-esp32s3"},
+                                                                    "used_in": {"smartbin-local": 1, "plant-alarm": 1}}))
+        run(["--needs-set", str(self.project), a_file([{"id": "spare", "does": "compute", "what": "microcontroller"}])])
+        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3", "spare=firebeetle2-esp32s3"])
+        self.assertEqual((code, said["problems"][0]["sentence"], said["problems"][0]["fix"]), (
+            1, "2 owned, held by smartbin-local — 2 picked here",
+            "free it — --drawer-set board with `used_in` leaving out smartbin-local, after a dry run — or pick another"))
+
+    def test_more_picked_than_is_owned_is_refused_though_nobody_else_holds_any(self):
+        run(["--needs-set", str(self.project), a_file([{"id": "chime", "does": "sound", "what": "alarm"}])])
+        said, code = run(["--pick", str(self.project), "alarm=mp3", "chime=mp3"])
+        self.assertEqual((code, said["problems"][0]["sentence"]), (1, "1 owned — 2 picked here"))
+
+    def test_a_retried_pick_of_the_only_one_is_not_held_against_its_own_project(self):
+        run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
+        run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
+        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
+        self.assertEqual((code, said["data"]["reserved"], self.entry("board")["used_in"]), (0, [], {"plant-alarm": 1}))
+
+    def test_two_picks_of_one_part_take_what_is_free_of_one_entry_and_the_rest_from_the_next(self):
+        (self.home / "drawer" / "probe.json").write_text(json.dumps({"schema": 1, "label": "soil probe", "count": 8, "is": {"part": "x-soil"},
+                                                                    "used_in": {"smartbin-local": 7}}))
+        (self.home / "drawer" / "spare-probe.json").write_text(json.dumps({"schema": 1, "label": "spare soil probes", "count": 4,
+                                                                          "is": {"part": "x-soil"}}))
+        run(["--needs-set", str(self.project), a_file([{"id": "deep", "does": "sense", "what": "soil-moisture"}])])
+        _, code = run(["--pick", str(self.project), "soil=x-soil", "deep=x-soil"])
+        self.assertEqual((code, self.entry("probe")["used_in"], self.entry("spare-probe")["used_in"]),
+                         (0, {"smartbin-local": 7, "plant-alarm": 1}, {"plant-alarm": 1}))
+
+    def test_many_is_never_held_up_by_what_another_project_holds(self):
+        (self.home / "drawer" / "buttons.json").write_text(json.dumps({"schema": 1, "label": "a bag of buttons", "count": "many",
+                                                                      "is": {"part": "tactile-button"}, "used_in": {"smartbin-local": 2}}))
+        _, code = run(["--pick", str(self.project), "input=tactile-button"])
+        self.assertEqual((code, self.entry("buttons")["used_in"]), (0, {"smartbin-local": 2, "plant-alarm": 1}))
+
+    def test_a_part_another_project_holds_more_of_than_is_owned_is_refused_not_a_crash(self):
+        (self.home / "drawer" / "board.json").write_text(json.dumps({"schema": 1, "label": "FireBeetle", "count": 1, "is": {"board": "firebeetle2-esp32s3"},
+                                                                    "used_in": {"smartbin-local": 3}}))
+        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
+        self.assertEqual((said["status"], code, self.entry("board")["used_in"]), ("problems", 1, {"smartbin-local": 3}))
+
+    def test_an_id_that_is_a_record_is_the_record_even_when_a_drawer_entry_has_the_same_key(self):
+        (self.home / "drawer" / "x-soil.json").write_text(json.dumps({"schema": 1, "label": "loose probes", "count": 3}))
+        run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((self.picks()["soil"], self.entry("probe")["used_in"], self.entry("x-soil").get("used_in")),
+                         ([{"part": "x-soil"}], {"plant-alarm": 1}, None))
+
+    def test_an_id_that_is_a_part_and_a_board_is_the_part(self):
+        (self.project / "parts").mkdir()
+        (self.project / "parts" / "firebeetle2-esp32s3.json").write_text(json.dumps(
+            {"schema": 1, "id": "firebeetle2-esp32s3", "name": "Our own sheet for the board", "kind": "sensor"}))
+        _, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
+        self.assertEqual((code, self.picks()["board"], self.entry("board")["used_in"]),
+                         (0, [{"part": "firebeetle2-esp32s3"}], {"smartbin-local": 1}))
+
+    def test_a_dead_entry_is_to_get_and_reserves_nothing(self):
+        self.assertIn("dead: to get — known, not owned", self.text(["--pick", str(self.project), "alarm=dead"]))
+        self.assertIsNone(self.entry("dead").get("used_in"))
+
+    def test_a_re_pick_to_another_owned_part_moves_the_reservation_in_one_write(self):
+        run(["--pick", str(self.project), "alarm=speaker"])
+        _, code = run(["--pick", str(self.project), "alarm=mp3"])
+        self.assertEqual((code, self.picks()["alarm"], self.entry("speaker")["used_in"], self.entry("mp3")["used_in"]),
+                         (0, [{"entry": "mp3"}], {}, {"plant-alarm": 1}))
+
+    def test_a_pick_nobody_owns_is_still_a_pick_and_still_reused_from_the_store(self):
+        run(["--pick", str(self.project), "soil=x-other"])
+        self.assertEqual((self.picks()["soil"], self.history()),
+                         ([{"part": "x-other"}], [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-other"}]))
+
+    def test_a_reason_is_the_person_s_unless_it_says_the_agent_and_may_pass_over_an_entry(self):
+        reasons = a_file([{"need": "soil", "id": "x-other", "why": "a gas sensor does not sense soil"},
+                          {"need": "alarm", "id": "mp3", "why": "not sure it is here\nand old", "by": "agent"}])
+        run(["--pick", str(self.project), "soil=x-soil", "--passed-over", reasons])
+        self.assertEqual([event for event in self.history() if event["event"] == "passed_over"], [
+            {"event": "passed_over", "project": "plant-alarm", "need": "soil", "part": "x-other",
+             "why": "a gas sensor does not sense soil", "by": "person"},
+            {"event": "passed_over", "project": "plant-alarm", "need": "alarm", "entry": "mp3",
+             "why": "not sure it is here and old", "by": "agent"}])
+
+    def test_a_part_passed_over_that_is_not_one_is_named_and_nothing_is_written(self):
+        good = {"need": "soil", "id": "x-other", "why": "a gas sensor does not sense soil"}
+        for name, reasons in (("a need the project has not", [dict(good, need="smell")]), ("an id spark has not", [dict(good, id="nothing")]),
+                              ("no reason", [{key: value for key, value in good.items() if key != "why"}]),
+                              ("an empty reason", [dict(good, why="  ")]), ("a reason that is not words", [dict(good, why=7)]),
+                              ("nobody", [dict(good, by="robot")]), ("not an object", ["x-other"]), ("not a list", good), ("null", None)):
+            with self.subTest(name=name):
+                said, code = run(["--pick", str(self.project), "soil=x-soil", "--passed-over", a_file(reasons)])
+                self.assertEqual((code, said["problems"][0]["subject"]), (1, "passed over 1"))
+                self.assertEqual((self.picks()["soil"], self.entry("probe").get("used_in"), self.history()), (None, None, []))
+
+    def test_a_reasons_file_that_cannot_be_read_stops_the_pick(self):
+        said, code = run(["--pick", str(self.project), "soil=x-soil", "--passed-over", str(self.project / "no-such-file.json")])
+        self.assertEqual((said["status"], code, self.picks()["soil"], self.history()), ("could-not-run", 2, None, []))
+
+    def test_one_word_that_is_not_need_equals_id_refuses_the_whole_pick(self):
+        for argv in (["soil=x-soil", "alarm"], []):
+            with self.subTest(argv=argv):
+                said, code = run(["--pick", str(self.project)] + argv)
+                self.assertEqual((said["status"], code, self.picks()["soil"]), ("could-not-run", 2, None))
+
+    def test_a_pick_waits_while_another_holds_the_store(self):
+        with store.locked():
+            picker = subprocess.Popen([sys.executable, str(ROOT / "scripts" / "parts.py"), "--pick", str(self.project), "soil=x-soil"],
+                                      env=dict(os.environ), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(1.5)
+            self.assertIsNone(self.picks()["soil"], "it wrote while another held the store")
+        self.assertEqual(picker.wait(timeout=60), 0)
+        self.assertEqual(self.picks()["soil"], [{"part": "x-soil"}])
+
+
 class TheIdeaCommandTest(unittest.TestCase):
     """commands/idea.md is followed as written (R4.2): the project is named where a command takes it as a flag, and only there."""
 
@@ -514,7 +817,7 @@ class TheIdeaCommandTest(unittest.TestCase):
         for line in flagged:
             self.assertIn("--project <project>", line, line)
         for line in lines:
-            if "--needs-set" in line or "--match" in line:
+            if any(op in line for op in ("--needs-set", "--match", "--pick")):
                 self.assertNotIn("--project", line, "--needs-set and --match take the project as their argument: " + line)
 
 
