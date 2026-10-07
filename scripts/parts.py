@@ -37,7 +37,6 @@ import shlex
 import struct
 import sys
 import urllib.parse
-import urllib.request
 from collections import namedtuple
 from pathlib import Path
 
@@ -929,14 +928,10 @@ def without_location(payload):
 
 
 def keep_in_store(payload, name, dry_run=False):
-    """Put a file in the store under its checksum and return the checksum (P62a) — a photo without its location (P75)."""
+    """Put a file in the store under its checksum, checked (§6.2), and return the checksum (P62a) — a photo without its location (P75)."""
     if name.lower().endswith((".jpg", ".jpeg")):
         payload = without_location(payload)[0]
-    digest = hashlib.sha256(payload).hexdigest()
-    if not dry_run:
-        (store.place("sources") / digest).mkdir(parents=True, exist_ok=True)
-        (store.place("sources") / digest / name).write_bytes(payload)
-    return digest
+    return hashlib.sha256(payload).hexdigest() if dry_run else store.keep(payload, name)
 
 
 #: The unit a fact's name ends in, as a datasheet prints it.
@@ -1160,9 +1155,10 @@ def _parse(path):
 
 
 def _download(url):
+    """One cited document through spark's one door to the network (§6.5) — None when it does not answer, so it is not kept."""
     try:
-        return urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "spark"}), timeout=30).read()
-    except Exception:  # noqa: BLE001 — a source that does not answer is simply not kept
+        return store.fetch(url)
+    except store.StoreProblem:
         return None
 
 
@@ -1274,14 +1270,12 @@ def cited_urls(record):
 
 
 def reachable(url):
-    """Whether a URL answers at all. A hallucinated source is the one lie research tells easily."""
-    import urllib.request
+    """Whether a URL answers at all, asked through spark's one door (§6.5). A hallucinated source is the one lie research tells easily."""
     try:
-        request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "spark"})
-        with urllib.request.urlopen(request, timeout=10) as answer:
-            return 200 <= answer.status < 400
-    except Exception:  # noqa: BLE001 — any failure to reach it is the same answer here
+        store.fetch(url, method="HEAD")
+    except store.StoreProblem:
         return False
+    return True
 
 
 def sources_resolve(record, fetch=reachable):

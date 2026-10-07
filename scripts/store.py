@@ -293,3 +293,41 @@ def append_event(event):
         history.write(end_last_line + json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
     os.chmod(target, 0o600)
     return True
+
+
+def fetch(url, method="GET"):
+    """
+    spark's one door to the network (§6.5): one download — or, with HEAD, only whether the URL answers. Nothing else in
+    spark's code opens a URL, and each call is counted from the session's transcript (§6.7). A URL that does not answer is
+    a StoreProblem, never empty bytes.
+    """
+    import urllib.request
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, method=method, headers={"User-Agent": "spark"}), timeout=30) as answer:
+            return answer.read()
+    except Exception as unreachable:  # noqa: BLE001 — every way of not answering is the same answer here
+        raise StoreProblem("%s does not answer (%s)" % (url, unreachable))
+
+
+def keep(payload, name):
+    """
+    The document store's checked keep (§6.2): a file under its checksum, written to `.part`, read back and checked, then
+    renamed — what does not match what was fetched is deleted and named, never kept. Returns the checksum. A name that is
+    not a plain file name would leave the store's sources, and is refused. A keep that fails for any reason leaves no
+    `.part` behind: `--kept` lists a file under `sources` that no record cites yet, so a stray one would read as kept.
+    """
+    if Path(name).name != name or name in ("", ".", ".."):
+        raise StoreProblem("%r is not a file name, so it could leave the store's sources" % name)
+    digest = hashlib.sha256(payload).hexdigest()
+    folder = place("sources") / digest
+    folder.mkdir(parents=True, exist_ok=True)
+    part = folder / (name + ".part")
+    try:
+        part.write_bytes(payload)
+        if hashlib.sha256(part.read_bytes()).hexdigest() != digest:
+            raise StoreProblem("%s was not kept: what was written is not what was fetched" % name)
+        part.replace(folder / name)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
+    return digest

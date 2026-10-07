@@ -415,6 +415,134 @@ class TheHistoryTest(unittest.TestCase):
         self.assertEqual(store.events(), [first])
 
 
+class TheOneDoorTest(unittest.TestCase):
+    """P97 (§6.2, §6.5): spark reaches the network through one door, and a kept document is checked before it takes its name."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def a_file(self, payload):
+        path = Path(tempfile.mkdtemp()) / "drawing.pdf"
+        path.write_bytes(payload)
+        return path
+
+    def test_the_door_brings_back_what_the_url_serves(self):
+        self.assertEqual(store.fetch(self.a_file(b"%PDF drawing").as_uri()), b"%PDF drawing")
+
+    def test_a_url_that_does_not_answer_is_a_store_problem_never_empty_bytes(self):
+        with self.assertRaises(store.StoreProblem) as missing:
+            store.fetch((Path(tempfile.mkdtemp()) / "gone.pdf").as_uri())
+        self.assertIn("does not answer", str(missing.exception))
+
+    def test_parts_asks_through_the_door(self):
+        import parts
+        asked = []
+        with mock.patch.object(store, "fetch", lambda url, method="GET": asked.append((url, method)) or b"x"):
+            self.assertEqual((parts.reachable("https://v.example/a.pdf"), parts._download("https://v.example/b.pdf")), (True, b"x"))
+        self.assertEqual(asked, [("https://v.example/a.pdf", "HEAD"), ("https://v.example/b.pdf", "GET")])
+
+    def test_only_the_store_opens_a_url(self):
+        opening = [path.name for path in sorted(SCRIPTS.glob("*.py")) if "urlopen" in path.read_text() and path.name != "store.py"]
+        self.assertEqual(opening, [], "spark's code reaches the network through store.fetch alone (§6.5)")
+
+    def test_a_kept_file_lands_under_its_checksum(self):
+        digest = store.keep(b"%PDF drawing", "drawing.pdf")
+        self.assertEqual(digest, "8158f0d8a471f168c2daf1361a3919c034b7e43a62f5f2ac08c048ee9e58168e")
+        self.assertEqual((self.home / "sources" / digest / "drawing.pdf").read_bytes(), b"%PDF drawing")
+
+    def test_a_kept_file_is_checked_before_it_takes_its_name(self):
+        real = Path.write_bytes
+        with mock.patch.object(Path, "write_bytes", lambda self, data: real(self, data[:3])), self.assertRaises(store.StoreProblem):
+            store.keep(b"%PDF drawing", "drawing.pdf")
+        self.assertEqual([found.name for found in (self.home / "sources").rglob("*") if found.is_file()], [])
+
+    def test_a_name_that_would_leave_the_sources_is_refused(self):
+        for name in ("../x.pdf", "a/b.pdf", "..", ""):
+            with self.subTest(name=name), self.assertRaises(store.StoreProblem):
+                store.keep(b"x", name)
+
+    # Beyond the brief: each of these pins a defect the seven above leave green — file:// ignores the method, the timeout and
+    # who asks; a write straight to the final name passes a checksum test; a second keep of the same file was harmless
+    # before this change, and must stay so.
+
+    def test_the_door_asks_with_the_method_it_is_given_says_who_asks_and_gives_up_waiting(self):
+        import urllib.request
+        asked = []
+
+        class Served:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *gone):
+                return False
+
+            def read(self):
+                return b"served"
+
+        def served(request, timeout=None):
+            asked.append((request.get_method(), request.full_url, request.get_header("User-agent"), timeout))
+            return Served()
+
+        with mock.patch.object(urllib.request, "urlopen", served):
+            self.assertEqual((store.fetch("https://v.example/a.pdf", method="HEAD"), store.fetch("https://v.example/b.pdf")),
+                             (b"served", b"served"))
+        self.assertEqual(asked, [("HEAD", "https://v.example/a.pdf", "spark", 30), ("GET", "https://v.example/b.pdf", "spark", 30)])
+
+    def test_every_way_of_not_answering_is_a_store_problem_that_names_the_url(self):
+        for url in ("not a url", (Path(tempfile.mkdtemp()) / "gone.pdf").as_uri()):
+            with self.subTest(url=url):
+                with self.assertRaises(store.StoreProblem) as missing:
+                    store.fetch(url)
+                self.assertIn(url, str(missing.exception))
+
+    def test_keeping_the_same_file_again_changes_nothing(self):
+        first = store.keep(b"%PDF drawing", "drawing.pdf")
+        self.assertEqual(store.keep(b"%PDF drawing", "drawing.pdf"), first)
+        self.assertEqual([found.name for found in (self.home / "sources").rglob("*") if found.is_file()], ["drawing.pdf"])
+        self.assertEqual((self.home / "sources" / first / "drawing.pdf").read_bytes(), b"%PDF drawing")
+
+    def test_a_kept_file_takes_its_name_only_by_the_rename_of_its_whole_part(self):
+        real_replace, seen = Path.replace, []
+
+        def look_at_the_rename(part, target):
+            seen.append((part.name, part.read_bytes(), Path(target).name, Path(target).exists()))
+            return real_replace(part, target)
+
+        with mock.patch.object(Path, "replace", autospec=True, side_effect=look_at_the_rename):
+            digest = store.keep(b"%PDF drawing", "drawing.pdf")
+        self.assertEqual(seen, [("drawing.pdf.part", b"%PDF drawing", "drawing.pdf", False)])
+        self.assertEqual((self.home / "sources" / digest / "drawing.pdf").read_bytes(), b"%PDF drawing")
+
+    def test_a_keep_that_fails_leaves_no_part_file_and_no_file_under_the_name(self):
+        real_write, real_replace = Path.write_bytes, Path.replace
+
+        def runs_out_of_room_on_the_part(part, data):
+            if part.name.endswith(".part"):
+                real_write(part, data[:3])  # a little of it lands first
+                raise OSError("the disk is full")
+            return real_write(part, data)
+
+        def runs_out_of_room_at_the_rename(part, target):
+            if Path(target).name == "drawing.pdf":
+                raise OSError("the disk is full")
+            return real_replace(part, target)
+
+        for what, failing in (("on the part", mock.patch.object(Path, "write_bytes", autospec=True, side_effect=runs_out_of_room_on_the_part)),
+                              ("at the rename", mock.patch.object(Path, "replace", autospec=True, side_effect=runs_out_of_room_at_the_rename))):
+            with self.subTest(runs_out_of_room=what), failing, self.assertRaises(OSError):
+                store.keep(b"%PDF drawing", "drawing.pdf")
+            self.assertEqual([found.name for found in (self.home / "sources").rglob("*") if found.is_file()], [])
+
+    def test_a_url_that_does_not_answer_is_not_reachable_and_downloads_as_none(self):
+        import parts
+        gone, here = (Path(tempfile.mkdtemp()) / "gone.pdf").as_uri(), self.a_file(b"%PDF drawing").as_uri()
+        self.assertEqual((parts.reachable(gone), parts._download(gone)), (False, None))
+        self.assertEqual((parts.reachable(here), parts._download(here)), (True, b"%PDF drawing"))
+
+
 class TheProjectsListTest(unittest.TestCase):
     """§5.5: the projects list tells spark where the person's projects are."""
 

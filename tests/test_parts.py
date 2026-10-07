@@ -870,10 +870,20 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
         before = (catalog / "x-part.json").read_text()
-        with in_store(home), mock.patch.object(Path, "replace", side_effect=OSError("the disk is full")):
+        real_replace = Path.replace
+
+        def the_disk_fills_at_the_record(part, target):
+            # Only the record's own rename fails: the document is kept first (its rename runs for real), so the failure
+            # cannot be the keep's — a patch on every rename would raise there and never reach the record at all.
+            if Path(target).name == "x-part.json":
+                raise OSError("the disk is full")
+            return real_replace(part, target)
+
+        with in_store(home), mock.patch.object(Path, "replace", autospec=True, side_effect=the_disk_fills_at_the_record):
             with self.assertRaises(OSError):
                 parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
         self.assertEqual((catalog / "x-part.json").read_text(), before)
+        self.assertEqual([found.name for found in (home / "sources").rglob("*") if found.is_file()], ["x.pdf"])
 
     def test_two_sources_with_one_basename_are_both_kept(self):
         import tempfile

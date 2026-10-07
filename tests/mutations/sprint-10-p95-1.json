@@ -7,6 +7,6 @@
   "find": "\"tools\": \"tools.json\"", "replace": "\"tools\": \"tools-list.json\""},
  {"file": "scripts/parts.py", "name": "the catalog is read from the plugin again",
   "find": "for path in sorted(store.place(\"catalog\").glob(\"*\" + DEFINITION_SUFFIX)):", "replace": "for path in sorted((store.PLUGIN / \"catalog\").glob(\"*\" + DEFINITION_SUFFIX)):"},
- {"file": "scripts/parts.py", "name": "a kept document goes beside the catalog, not into sources",
-  "find": "(store.place(\"sources\") / digest / name).write_bytes(payload)", "replace": "(store.place(\"sources\").parent / digest / name).write_bytes(payload)"}
+ {"file": "scripts/store.py", "name": "a kept document goes beside the catalog, not into sources",
+  "find": "    folder = place(\"sources\") / digest\n", "replace": "    folder = place(\"sources\").parent / digest\n"}
 ]
