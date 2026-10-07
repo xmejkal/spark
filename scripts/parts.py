@@ -1796,10 +1796,11 @@ def _op_pick(args, project):
     after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
     if not problems and not args.dry_run:
         store.add_project(target)
-        needs.write(target, after)
         drawer.apply(changes)
         for event in events:
             store.append_event(event)
+        # the project's own file last: a store that refuses leaves it as it was, and the same pick, retried, finishes the rest
+        needs.write(target, after)
     asked = dict(pairs)
     picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
     said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]

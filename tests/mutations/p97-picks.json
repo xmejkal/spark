@@ -61,5 +61,11 @@
   "replace": "wanted[(kind, key)]),"},
  {"file": "scripts/needs.py", "name": "a pick of a record is allocated before a pick of one of its entries",
   "find": "sorted(wanted.items(), key=lambda asked: (asked[0][0] != \"entry\", asked[0]))",
-  "replace": "sorted(wanted.items())"}
+  "replace": "sorted(wanted.items())"},
+ {"file": "scripts/needs.py", "name": "a pick of an id that is not a plain key is written",
+  "find": "        elif not store.PLAIN.fullmatch(pick_id):\n",
+  "replace": "        elif False:\n"},
+ {"file": "scripts/parts.py", "name": "the project's own file is written before the store",
+  "find": "        store.add_project(target)\n        drawer.apply(changes)\n",
+  "replace": "        store.add_project(target)\n        needs.write(target, after)\n        drawer.apply(changes)\n"}
 ]

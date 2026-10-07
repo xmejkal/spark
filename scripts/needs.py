@@ -233,6 +233,9 @@ def plan_pick(project, given, passed_over=()):
             problems.append(parts._problem(need_id, "no need called %s — --needs lists them" % need_id))
         elif pick is None:
             problems.append(parts._problem(need_id, "no record or drawer entry called %s — --match lists the candidates" % pick_id))
+        elif not store.PLAIN.fullmatch(pick_id):
+            raise store.StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so a pick cannot name it: "
+                                     "rename the drawer entry, or the record's file, then pick it" % pick_id)
         elif pick not in picked.setdefault(need_id, []):
             picked[need_id].append(pick)
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]

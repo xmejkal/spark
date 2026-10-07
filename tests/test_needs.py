@@ -792,6 +792,54 @@ class ThePicksTest(unittest.TestCase):
         self.assertIn("dead: to get — known, not owned", self.text(["--pick", str(self.project), "alarm=dead"]))
         self.assertIsNone(self.entry("dead").get("used_in"))
 
+    def test_a_drawer_entry_whose_key_is_not_plain_cannot_be_picked_and_nothing_is_written(self):
+        (self.home / "drawer" / "Piezo_Buzzer.json").write_text(json.dumps({"schema": 1, "label": "a buzzer", "count": 1,
+                                                                           "function": [{"does": "sound", "what": "alarm"}]}))
+        for extra in ([], ["--dry-run"]):
+            with self.subTest(extra=extra):
+                said, code = run(["--pick", str(self.project), "soil=x-soil", "alarm=Piezo_Buzzer"] + extra)
+                self.assertEqual((said["status"], code), ("could-not-run", 2))
+                self.assertIn("'Piezo_Buzzer' is not a plain key", said["unchecked"][0]["sentence"])
+                self.assertEqual((self.picks()["soil"], self.picks()["alarm"], self.entry("probe").get("used_in"),
+                                  self.entry("Piezo_Buzzer").get("used_in"), self.history()), (None, None, None, None, []))
+                self.assertFalse((self.home / "projects.json").exists())
+                self.assertEqual(run(["--needs", str(self.project)])[1], 0)
+
+    def test_a_record_whose_id_is_not_plain_cannot_be_picked_and_nothing_is_written(self):
+        (self.project / "parts").mkdir()
+        (self.project / "parts" / "Lone_Sensor.json").write_text(json.dumps({"schema": 1, "id": "Lone_Sensor", "name": "A lone sensor", "kind": "sensor"}))
+        for extra in ([], ["--dry-run"]):
+            with self.subTest(extra=extra):
+                said, code = run(["--pick", str(self.project), "soil=Lone_Sensor", "alarm=speaker"] + extra)
+                self.assertEqual((said["status"], code), ("could-not-run", 2))
+                self.assertIn("'Lone_Sensor' is not a plain key", said["unchecked"][0]["sentence"])
+                self.assertEqual((self.picks()["soil"], self.picks()["alarm"], self.entry("speaker").get("used_in"), self.history()),
+                                 (None, None, None, []))
+                self.assertFalse((self.home / "projects.json").exists())
+                self.assertEqual(run(["--needs", str(self.project)])[1], 0)
+
+    def test_an_id_nothing_has_is_named_even_when_it_is_not_plain(self):
+        said, code = run(["--pick", str(self.project), "soil=No_Such_Part"])
+        self.assertEqual((said["status"], code, said["problems"][0]["sentence"]),
+                         ("problems", 1, "no record or drawer entry called No_Such_Part — --match lists the candidates"))
+
+    def test_a_store_that_refuses_the_history_leaves_the_project_file_untouched_and_a_retry_finishes_the_pick(self):
+        needs_file = self.project / ".spark" / "needs.json"
+        before, real = needs_file.read_text(), store._make_ready
+
+        def refuse_the_history(name, target):
+            if name == "history":
+                raise store.StoreProblem("%s would be inside the git work tree — what you own stays out of every repository" % target)
+            return real(name, target)
+        with mock.patch.object(store, "_make_ready", side_effect=refuse_the_history):
+            said, code = run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("inside the git work tree", said["unchecked"][0]["sentence"])
+        self.assertEqual((needs_file.read_text(), self.history()), (before, []))
+        _, code = run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((code, self.picks()["soil"], self.entry("probe")["used_in"], self.history()),
+                         (0, [{"part": "x-soil"}], {"plant-alarm": 1}, [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"}]))
+
     def test_a_re_pick_to_another_owned_part_moves_the_reservation_in_one_write(self):
         run(["--pick", str(self.project), "alarm=speaker"])
         _, code = run(["--pick", str(self.project), "alarm=mp3"])

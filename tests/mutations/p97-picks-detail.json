@@ -114,8 +114,8 @@
   "find": "    if unreadable:\n        return Answer(unchecked=[_cannot(unreadable)])\n    store.events()",
   "replace": "    store.events()"},
  {"file": "scripts/parts.py", "name": "a pick is not written to the needs file",
-  "find": "        needs.write(target, after)\n        drawer.apply(changes)",
-  "replace": "        drawer.apply(changes)"},
+  "find": "finishes the rest\n        needs.write(target, after)\n",
+  "replace": "finishes the rest\n"},
  {"file": "scripts/parts.py", "name": "a reservation is not written to the drawer",
   "find": "        drawer.apply(changes)\n        for event in events:",
   "replace": "        for event in events:"},
@@ -163,5 +163,8 @@
   "replace": "for need_id in picked for pick in picked[need_id] if _held(pick, entries, pointing)]"},
  {"file": "scripts/needs.py", "name": "a second pointing at one stock is counted twice against it",
   "find": "if who != name) - mine[entry_id]",
-  "replace": "if who != name) - 2 * mine[entry_id]"}
+  "replace": "if who != name) - 2 * mine[entry_id]"},
+ {"file": "scripts/needs.py", "name": "an id nothing has is taken for an id the store cannot use",
+  "find": "        elif pick is None:\n",
+  "replace": "        elif not store.PLAIN.fullmatch(pick_id):\n            raise store.StoreProblem(\"%r is not a plain key\" % pick_id)\n        elif pick is None:\n"}
 ]
