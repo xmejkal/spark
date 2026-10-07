@@ -131,11 +131,11 @@ commands below are real runs.
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../needs.json
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-07, spark 0.6.0 -->
 ```text
-  set soil: does → "sense", what → "soil-moisture", condition → "indoor pot, short probe; low power"
-  set alarm: does → "indicate", what → "alarm"
-  set board: does → "compute", what → "microcontroller"
+  set soil: does null → "sense"; what null → "soil-moisture"; condition null → "indoor pot, short probe; low power"
+  set alarm: does null → "indicate"; what null → "alarm"
+  set board: does null → "compute"; what null → "microcontroller"
 ```
 
 The same command with `--dry-run` first shows these lines as *would set*. The needs land in `.spark/needs.json`.
