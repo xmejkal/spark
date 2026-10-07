@@ -1590,11 +1590,12 @@ def _read_json_input(name):
 def _change_line(change, dry_run):
     """
     One set-only write's change (§5.2), the drawer's and the needs file's alike: '  new soil-probe: soil probe × 8 — is
-    part sen0193-soil-moisture' for a new drawer entry, else '  set soil: mark null → "have"', every value from what it was.
+    part sen0193-soil-moisture' for a new drawer entry (× ? when its count was left out), else '  set soil: mark null →
+    "have"', every value from what it was.
     """
     if change["new"] and "entry" in change:
         now, linked = change["now"], change["now"].get("is")
-        return "  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count"),
+        return "  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count", "?"),
                                          " — is %s %s" % next(iter(linked.items())) if linked else "")
     return "  %s %s: %s" % ("would set" if dry_run else "set", change.get("entry") or change.get("need"), "; ".join(
         "%s %s → %s" % (key, json.dumps(change["was"].get(key), ensure_ascii=False), json.dumps(value, ensure_ascii=False))
@@ -1634,7 +1635,8 @@ def _op_drawer(args, project):
     import drawer
     entries = drawer.listing()
     shown, truncated = page(entries, args.start, "drawer", ["--drawer"])
-    lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], e["count"], "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
+    lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], "?" if e["count"] is None else e["count"],
+                                         "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
                                          "maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""))
              for e in entries]
     lines.append("  %d entr%s" % (len(entries), "y" if len(entries) == 1 else "ies"))

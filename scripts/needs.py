@@ -116,13 +116,16 @@ def _what_matches(need, functions, names):
 
 def _counts(holding, mine=None):
     """
-    (owned, free, unsure) over the live drawer entries (callers pass none said to be dead) — `many` stays many, and what
-    `mine`, the asking project, holds is free to it: only other projects' reservations are not free.
+    (owned, free, unsure) over the live drawer entries (callers pass none said to be dead) — `many` stays many, an entry
+    with no count is owned, count unknown (the PO, 2026-10-06), and what `mine`, the asking project, holds is free to it:
+    only other projects' reservations are not free.
     """
     unsure = any(entry.get("unsure") for entry in holding)
     if any(entry.get("count") == "many" for entry in holding):
         return "many", "many", unsure
-    owned = sum(entry.get("count", 0) for entry in holding)
+    if any("count" not in entry for entry in holding):
+        return "unknown", "unknown", unsure
+    owned = sum(entry["count"] for entry in holding)
     held = sum(n for entry in holding for who, n in (entry.get("used_in") or {}).items() if who != mine)
     return owned, max(owned - held, 0), unsure
 

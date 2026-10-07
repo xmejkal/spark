@@ -80,7 +80,8 @@ What you own, in your own store, never in a repository:
 - **Add to it:** say more in plain words, through `--drawer-set` with `--dry-run` first.
 - **Import your DFRobot order history** from your logged-in browser.
 
-An entry needs only a label and a count, and adding a part to the drawer never starts research on it.
+An entry needs only a label; with no count it is owned, count unknown, and adding a part to the drawer never starts
+research on it.
 
 How the import works:
 

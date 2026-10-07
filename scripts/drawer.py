@@ -1,11 +1,12 @@
 """
 What the person owns: the drawer (P93, P95; docs/2026-10-04-store-design.md §5.2, §5.5, §8 D).
 
-An entry is light — a label and a count are enough, and owning never triggers research. It points at a record
-when one exists (`is`), found by an exact part number only: a near number, two matches or a name alone is a
-question for the person, never a link. Every write SETS values the agent worked out and the dry run showed
-("count 2 → 4"), so a retried write changes nothing, and nothing is deleted — gone is count 0. When an entry
-links a part that lives only in another project, the record goes onto the shelf, so every project finds it.
+An entry is light — a label is enough (with no count it is owned, count unknown), and owning never triggers
+research. It points at a record when one exists (`is`), found by an exact part number only: a near number, two
+matches or a name alone is a question for the person, never a link. Every write SETS values the agent worked out
+and the dry run showed ("count 2 → 4"), so a retried write changes nothing, and nothing is deleted — gone is count 0.
+When an entry links a part that lives only in another project, the record goes onto the shelf, so every project
+finds it.
 """
 
 import json
@@ -204,8 +205,8 @@ def settle(entry_id, before, values, known):
     problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (key, ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
     problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]
-    if before is None and not {"label", "count"} <= set(values):
-        problems.append(parts._problem(entry_id, "a new entry needs a label and a count"))
+    if before is None and "label" not in values:
+        problems.append(parts._problem(entry_id, "a new entry needs a label — with no count it is owned, count unknown"))
     if problems:
         return None, [], problems
     after, questions, shelve = dict(before or {"schema": 1}, **values), [], None

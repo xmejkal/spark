@@ -151,8 +151,9 @@ irrigation's repositories, a P84 clone).
  "photos": []}
 ```
 
-- Required: `label`, `count`. `count` is an integer ≥ 0 or `"many"`, in **pieces** (a 10-pack counts 10; the label
-  keeps "pack of 10") — the PO.
+- Required: `label`. `count` is an integer ≥ 0 or `"many"`, in **pieces** (a 10-pack counts 10; the label
+  keeps "pack of 10") — the PO; an entry with no `count` is owned, count unknown, and a pick of it says so (the PO,
+  2026-10-06).
 - `is` is `{"part": id}` or `{"board": id}`, no layer — resolved on read; absent when unknown.
 - `from.product` is a shop's product code, **never an order number**. `bought` is each source's total as last seen.
 - `skip` holds the person's words ("I think it's dead"); matching and ideas skip the entry unless asked.
@@ -362,7 +363,7 @@ at the second project with a history.
 
 ### D — the drawer
 
-**Rules.** (1) An entry needs only a label and a count. (2) Owning never triggers research; spark's code makes
+**Rules.** (1) An entry needs only a label; with no count it is owned, count unknown (§5.2). (2) Owning never triggers research; spark's code makes
 no web request (an importer's browser calls are counted on the drawer's line). (3) Words or a part number that name
 a part spark knows link the entry (§5.5). (4) Unclear items are asked once, together. (5) Every write sets; a
 retried write changes nothing. (6) The drawer lives in the store, never in a git work tree. (7) An owned part

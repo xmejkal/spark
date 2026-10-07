@@ -406,6 +406,32 @@ class TheMatcherTest(unittest.TestCase):
         button = [c for c in self.needs["input"]["candidates"] if c["id"] == "tactile-button"][0]
         self.assertEqual((button["owned"], button["free"]), ("many", "many"))
 
+    def test_a_count_nobody_gave_is_owned_count_unknown(self):
+        self.catalog({"id": "y-probe", "name": "Probe Y", "function": [{"does": "sense", "what": "soil-moisture"}]})
+        (self.home / "drawer" / "y.json").write_text(json.dumps({"schema": 1, "label": "some probes", "is": {"part": "y-probe"}}))
+        found = [c for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"] == "y-probe"][0]
+        self.assertEqual((found["owned"], found["free"]), ("unknown", "unknown"))
+
+    def test_a_count_nobody_gave_outweighs_the_counted_entries_beside_it(self):
+        self.catalog({"id": "y-probe", "name": "Probe Y", "function": [{"does": "sense", "what": "soil-moisture"}]})
+        (self.home / "drawer" / "a.json").write_text(json.dumps({"schema": 1, "label": "probes, counted", "count": 3, "is": {"part": "y-probe"}}))
+        (self.home / "drawer" / "b.json").write_text(json.dumps({"schema": 1, "label": "probes, not counted", "is": {"part": "y-probe"}}))
+        found = [c for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"] == "y-probe"][0]
+        self.assertEqual((found["owned"], found["free"]), ("unknown", "unknown"), "three and some more are not three")
+
+    def test_many_still_wins_over_a_count_nobody_gave(self):
+        self.catalog({"id": "y-probe", "name": "Probe Y", "function": [{"does": "sense", "what": "soil-moisture"}]})
+        (self.home / "drawer" / "a.json").write_text(json.dumps({"schema": 1, "label": "probes, not counted", "is": {"part": "y-probe"}}))
+        (self.home / "drawer" / "b.json").write_text(json.dumps({"schema": 1, "label": "a bag of probes", "count": "many", "is": {"part": "y-probe"}}))
+        found = [c for c in self.alone({"id": "wet", "does": "sense", "what": "soil-moisture"})["candidates"] if c["id"] == "y-probe"][0]
+        self.assertEqual((found["owned"], found["free"]), ("many", "many"))
+
+    def test_an_entry_with_no_record_and_no_count_is_still_offered_and_keeps_its_doubt(self):
+        (self.home / "drawer" / "buzzers.json").write_text(json.dumps({"schema": 1, "label": "some buzzers", "unsure": True,
+                                                                      "function": [{"does": "sound", "what": "alarm"}]}))
+        buzzers = [c for c in self.alone({"id": "alarm", "does": "sound", "what": "alarm"})["candidates"] if c["entry"] == "buzzers"][0]
+        self.assertEqual((buzzers["owned"], buzzers["free"], buzzers["unsure"]), ("unknown", "unknown", True))
+
     def test_a_verb_nothing_has_is_an_empty_answer(self):
         self.assertEqual((self.code, self.needs["keep"]["candidates"]), (0, []))
 

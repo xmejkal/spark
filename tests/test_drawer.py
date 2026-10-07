@@ -64,6 +64,39 @@ class TheDrawerTest(unittest.TestCase):
         self.assertEqual((code, said["status"]), (0, "ok"))
         self.assertEqual(self.entry("a-cjmcu-111"), {"schema": 1, "label": "a CJMCU-111", "count": 1})
 
+    def test_an_entry_with_no_count_is_owned_count_unknown(self):
+        said, code = run(["--drawer-set", a_file([{"label": "some resistors"}])])
+        self.assertEqual((code, self.entry("some-resistors")), (0, {"schema": 1, "label": "some resistors"}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--drawer"])
+        self.assertEqual(next(line for line in out.getvalue().splitlines() if "some resistors" in line).split()[2], "?")
+
+    def test_the_write_of_an_entry_with_no_count_says_a_question_mark_for_it(self):
+        write = a_file([{"label": "some resistors"}])
+        for extra, line in ((["--dry-run"], "  would add some-resistors: some resistors × ?"),
+                            ([], "  new some-resistors: some resistors × ?")):
+            with self.subTest(extra=extra):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    parts.main(["--drawer-set", write] + extra)
+                self.assertEqual(out.getvalue().splitlines(), [line])
+
+    def test_a_count_of_zero_is_listed_as_0_and_only_a_count_left_out_as_a_question_mark(self):
+        run(["--drawer-set", a_file([{"label": "burnt buzzers", "count": 0}, {"label": "some resistors"}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--drawer"])
+        lines = out.getvalue().splitlines()
+        self.assertEqual([next(line for line in lines if label in line).split()[2] for label in ("burnt buzzers", "some resistors")],
+                         ["0", "?"])
+
+    def test_a_new_entry_with_a_count_and_no_label_is_still_refused(self):
+        said, code = run(["--drawer-set", a_file([{"entry": "some-resistors", "count": 50}])])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("needs a label", said["problems"][0]["sentence"])
+        self.assertFalse((self.home / "drawer").exists())
+
     def test_a_dry_run_says_what_would_change_and_changes_nothing(self):
         run(["--drawer-set", a_file([{"entry": "dfrobot-dfr0954", "label": "I2S amplifier", "count": 2}])])
         said, code = run(["--drawer-set", a_file([{"entry": "dfrobot-dfr0954", "count": 4}]), "--dry-run"])
