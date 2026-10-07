@@ -42,10 +42,10 @@
   "replace": "    if False:\n        return {}"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/store.py",
   "name": "a rewrite turns the record's text into escapes",
-  "find": "    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")",
-  "replace": "    path.write_text(json.dumps(record, indent=2) + \"\\n\")"
+  "find": "    return write_file(target, json.dumps(data, indent=2, ensure_ascii=False) + \"\\n\", name in PRIVATE)",
+  "replace": "    return write_file(target, json.dumps(data, indent=2) + \"\\n\", name in PRIVATE)"
  },
  {
   "file": "scripts/parts.py",

@@ -94,9 +94,7 @@ def write(project, needs):
     """The needs file, whole (`.part`, then renamed) — the project's folder made when it is new (§8 S rule 5)."""
     path = Path(project) / FILE
     path.parent.mkdir(parents=True, exist_ok=True)
-    part = path.with_name(path.name + ".part")
-    part.write_text(json.dumps({"schema": 1, "needs": needs}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    part.replace(path)
+    store.write_file(path, json.dumps({"schema": 1, "needs": needs}, indent=2, ensure_ascii=False) + "\n")
 
 
 #: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.

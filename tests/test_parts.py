@@ -866,6 +866,15 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertTrue((store / entry["sha256"] / "DFR (1).pdf").is_file())
         self.assertIn("98 Kč — 帝江", (catalog / "x-part.json").read_text(), "a rewrite must not turn text into escapes")
 
+    def test_a_fetch_that_fails_halfway_leaves_the_record_whole(self):
+        home = self._home(); catalog = home / "catalog"
+        self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
+        before = (catalog / "x-part.json").read_text()
+        with in_store(home), mock.patch.object(Path, "replace", side_effect=OSError("the disk is full")):
+            with self.assertRaises(OSError):
+                parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
+        self.assertEqual((catalog / "x-part.json").read_text(), before)
+
     def test_two_sources_with_one_basename_are_both_kept(self):
         import tempfile
         from unittest import mock
@@ -1685,6 +1694,17 @@ class WhatAPartDoesTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("function", json.loads((project / "parts" / "x-soil.json").read_text()))
         self.assertNotIn("function", json.loads((home / "catalog" / "x-soil.json").read_text()))
+
+    def test_a_project_s_record_is_never_left_half_written(self):
+        home, given = self.a_probe_in_the_catalog()
+        project = Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        record = {"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}
+        (project / "parts" / "x-soil.json").write_text(json.dumps(record))
+        with in_store(home), mock.patch.object(Path, "replace", side_effect=OSError("the disk is full")):
+            said, code = run_json(["--function-set", "x-soil", str(given), "--project", str(project)])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertEqual(json.loads((project / "parts" / "x-soil.json").read_text()), record)
 
     def test_function_set_on_a_shelf_copy_says_it_writes_the_shelf(self):
         home, given = self.a_probe_in_the_catalog()

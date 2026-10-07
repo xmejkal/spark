@@ -7,6 +7,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -180,6 +181,50 @@ class ContainedWritesTest(unittest.TestCase):
         self.assertEqual(store.slug("dfrobot-MYST01-Raspberry Pi"), "dfrobot-myst01-raspberry-pi")
         self.assertEqual(len(store.slug("x" * 100)), 60)
         self.assertEqual(store.slug("!!!"), "entry")
+
+
+class OneWriterAtATimeTest(unittest.TestCase):
+    """P97 (§6.1): a write is whole or not at all, and a second writer waits for the first."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_write_that_fails_halfway_leaves_the_old_file_whole(self):
+        target = Path(tempfile.mkdtemp()) / "record.json"
+        target.write_text("old\n")
+        with mock.patch.object(Path, "replace", side_effect=OSError("the disk is full")), self.assertRaises(OSError):
+            store.write_file(target, "new\n")
+        self.assertEqual(target.read_text(), "old\n")
+
+    def test_a_write_waits_while_another_holds_the_store(self):
+        given = Path(tempfile.mkdtemp()) / "entries.json"
+        given.write_text(json.dumps([{"label": "a probe", "count": 1}]))
+        with store.locked():
+            writer = subprocess.Popen([sys.executable, str(SCRIPTS / "parts.py"), "--drawer-set", str(given)],
+                                      env=dict(os.environ), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(1.5)
+            self.assertFalse((self.home / "drawer" / "a-probe.json").exists(), "it wrote while another held the store")
+        self.assertEqual(writer.wait(timeout=60), 0)
+        self.assertTrue((self.home / "drawer" / "a-probe.json").exists())
+
+    def test_a_writer_on_another_store_does_not_wait(self):
+        elsewhere = Path(tempfile.mkdtemp())
+        given = Path(tempfile.mkdtemp()) / "entries.json"
+        given.write_text(json.dumps([{"label": "a probe", "count": 1}]))
+        with store.locked():
+            writer = subprocess.run([sys.executable, str(SCRIPTS / "parts.py"), "--drawer-set", str(given)],
+                                    env=dict(os.environ, SPARK_HOME=str(elsewhere)), capture_output=True, timeout=30)
+        self.assertEqual(writer.returncode, 0, writer.stderr)
+        self.assertTrue((elsewhere / "drawer" / "a-probe.json").exists())
+
+    def test_a_read_does_not_wait_for_a_writer(self):
+        with store.locked():
+            reader = subprocess.run([sys.executable, str(SCRIPTS / "parts.py"), "--drawer"], env=dict(os.environ),
+                                    capture_output=True, timeout=30)
+        self.assertEqual(reader.returncode, 0, reader.stderr)
 
 
 class TheProjectsListTest(unittest.TestCase):

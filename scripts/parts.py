@@ -28,6 +28,7 @@ every document quietly assumed.
 """
 
 import argparse
+import contextlib
 import datetime
 import hashlib
 import json
@@ -1147,7 +1148,7 @@ def fetch_documents(part_id, project=None, fetch=None):
                 "url": url, "sha256": keep_in_store(payload, name), "file": name,
                 "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
     record["documents"] = documents
-    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
+    _write_record(path, record)
     return documents
 
 
@@ -1671,11 +1672,11 @@ def _record_path(part_id, project):
 
 
 def _write_record(path, record):
-    """A record back to its own home: through the store when it lives there (contained, atomic), else to its file."""
+    """A record back to its own home, whole (§6.1): through the store when it lives there (contained, private), else to its file."""
     for name in ("shelf", "catalog"):
         if path.parent == store.place(name):
             return store.write_json(name, path.stem, record)
-    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + "\n")
 
 
 def _op_function_set(args, project):
@@ -1815,8 +1816,10 @@ def main(argv=None):
                     "--json" in argv)
     op = next(name for name, *_ in OPERATIONS if getattr(args, name.replace("-", "_")) not in (None, False))
     project = args.project.resolve() if args.project else None
+    writes = "writes" in next(effects for name, _, _, effects, _ in OPERATIONS if name == op)
     try:
-        answer = globals()["_op_" + op.replace("-", "_")](args, project)
+        with store.locked() if writes else contextlib.nullcontext():
+            answer = globals()["_op_" + op.replace("-", "_")](args, project)
     except (OSError, json.JSONDecodeError) as unreadable:
         answer = Answer(unchecked=[_cannot("--%s: %s" % (op, unreadable))])
     except PartError as broken:

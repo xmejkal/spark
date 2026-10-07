@@ -11,6 +11,8 @@ This module owns *where* and *how bytes move*; `parts.py` owns what a record mus
 standard library.
 """
 
+import contextlib
+import hashlib
 import json
 import os
 import re
@@ -18,6 +20,11 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+
+try:
+    import fcntl
+except ImportError:  # spark installs on macOS and Linux (README); where there is no fcntl, a write takes no lock
+    fcntl = None
 
 #: The plugin's own folder: spark's library of parts and boards ships here, read-only.
 PLUGIN = Path(__file__).resolve().parent.parent
@@ -104,27 +111,47 @@ def inside_git(path):
     return None
 
 
-def write_json(name, key, data):
+def write_file(path, text, private=False):
     """
-    Put one JSON file into a place (§5.1) and say whether it changed. `key` names the file inside the place (None
-    for a place that is itself a file). The write is whole — to `.part`, then renamed — and made only when the
-    bytes differ, so a retried write changes nothing. A private place is written 0600 in 0700 folders, never
-    inside a git work tree.
+    A whole file (§6.1): written to `.part` and renamed, so a write that fails halfway leaves the old file whole — and only
+    when the bytes differ, so a retried write changes nothing. A private file is 0600. Returns whether it changed.
     """
-    target = _target(name, key)
-    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    private = name in PRIVATE
-    _make_ready(name, target)
-    if target.is_file() and target.read_text(encoding="utf-8") == text:
+    path = Path(path)
+    if path.is_file() and path.read_text(encoding="utf-8") == text:
         if private:
-            os.chmod(target, 0o600)
+            os.chmod(path, 0o600)
         return False
-    part = target.with_name(target.name + ".part")
+    part = path.with_name(path.name + ".part")
     part.write_text(text, encoding="utf-8")
     if private:
         os.chmod(part, 0o600)
-    part.replace(target)
+    part.replace(path)
     return True
+
+
+def write_json(name, key, data):
+    """
+    Put one JSON file into a place (§5.1) and say whether it changed. `key` names the file inside the place (None for a
+    place that is itself a file). A private place is written 0600 in 0700 folders, never inside a git work tree.
+    """
+    target = _target(name, key)
+    _make_ready(name, target)
+    return write_file(target, json.dumps(data, indent=2, ensure_ascii=False) + "\n", name in PRIVATE)
+
+
+@contextlib.contextmanager
+def locked():
+    """
+    One writer at a time (§6.1): the store held from a write's plan to its last byte, so two agents writing at once cannot
+    each write what the other never read — a part reserved twice, a count lost. The lock is a file in the system's temp
+    folder named after this home, never in the store, so it is never a stray file in a repository; the operating system
+    lets go of it when its holder exits.
+    """
+    named = hashlib.sha256(str(home().resolve()).encode()).hexdigest()[:16]
+    with open(Path(tempfile.gettempdir()) / ("spark-%s.lock" % named), "a") as held:
+        if fcntl:
+            fcntl.flock(held, fcntl.LOCK_EX)
+        yield
 
 
 def _target(name, key):

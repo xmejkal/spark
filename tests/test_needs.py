@@ -103,6 +103,13 @@ class TheNeedsFileTest(unittest.TestCase):
             parts.main(["--needs-set", str(self.project), a_file([{"id": "alarm", "does": "indicate", "what": "alarm"}])])
         self.assertEqual(out.getvalue(), '  set alarm: does null → "indicate"; what null → "alarm"\n')
 
+    def test_a_needs_write_that_fails_halfway_leaves_the_file_whole(self):
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"}])])
+        before = self.saved()
+        with mock.patch.object(Path, "replace", side_effect=OSError("the disk is full")):
+            _, code = run(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "have"}])])
+        self.assertEqual((code, self.saved()), (2, before))
+
     def test_a_goal_s_needs_are_written_and_the_folder_made(self):
         said, code = run(["--needs-set", str(self.project), a_file([
             {"id": "soil", "does": "sense", "what": "soil-moisture", "condition": "indoor pot, short probe; low power"},
