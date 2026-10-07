@@ -19,6 +19,7 @@ import re
 import shutil
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 try:
@@ -113,8 +114,9 @@ def inside_git(path):
 
 def write_file(path, text, private=False):
     """
-    A whole file (§6.1): written to `.part` and renamed, so a write that fails halfway leaves the old file whole — and only
-    when the bytes differ, so a retried write changes nothing. A private file is 0600. Returns whether it changed.
+    A whole file (§6.1): written to `.part` and renamed, so a write that fails halfway leaves the old file whole and no
+    `.part` behind — and only when the bytes differ, so a retried write changes nothing. A private file is 0600, and its
+    `.part` is made new at 0600 before it holds a byte. Returns whether it changed.
     """
     path = Path(path)
     if path.is_file() and path.read_text(encoding="utf-8") == text:
@@ -122,10 +124,16 @@ def write_file(path, text, private=False):
             os.chmod(path, 0o600)
         return False
     part = path.with_name(path.name + ".part")
-    part.write_text(text, encoding="utf-8")
-    if private:
-        os.chmod(part, 0o600)
-    part.replace(path)
+    try:
+        if private:
+            # made new at 0600, so its bytes are never readable by others, not even for a moment — an old `.part` may be looser
+            part.unlink(missing_ok=True)
+            os.close(os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+        part.write_text(text, encoding="utf-8")
+        part.replace(path)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
     return True
 
 
@@ -139,19 +147,33 @@ def write_json(name, key, data):
     return write_file(target, json.dumps(data, indent=2, ensure_ascii=False) + "\n", name in PRIVATE)
 
 
+#: The stores this process holds, as (thread, lock file) pairs: what makes `locked()` re-entrant for the thread that holds one.
+_HELD = set()
+
+
 @contextlib.contextmanager
 def locked():
     """
     One writer at a time (§6.1): the store held from a write's plan to its last byte, so two agents writing at once cannot
     each write what the other never read — a part reserved twice, a count lost. The lock is a file in the system's temp
     folder named after this home, never in the store, so it is never a stray file in a repository; the operating system
-    lets go of it when its holder exits.
+    lets go of it when its holder exits. A `locked()` inside a `locked()` of the same store, in the same thread, passes
+    through and only the outermost lets go: a second `flock` on a second open file would wait behind the first for ever.
     """
     named = hashlib.sha256(str(home().resolve()).encode()).hexdigest()[:16]
-    with open(Path(tempfile.gettempdir()) / ("spark-%s.lock" % named), "a") as held:
+    lock_file = Path(tempfile.gettempdir()) / ("spark-%s.lock" % named)
+    holder = (threading.get_ident(), lock_file)
+    if holder in _HELD:
+        yield
+        return
+    with open(lock_file, "a") as held:
         if fcntl:
             fcntl.flock(held, fcntl.LOCK_EX)
-        yield
+        _HELD.add(holder)
+        try:
+            yield
+        finally:
+            _HELD.discard(holder)
 
 
 def _target(name, key):

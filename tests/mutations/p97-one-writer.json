@@ -1,6 +1,6 @@
 [
- {"file": "scripts/store.py", "name": "a write is made in place", "find": "    part.replace(path)\n    return True",
-  "replace": "    path.write_text(text, encoding=\"utf-8\")\n    return True"},
+ {"file": "scripts/store.py", "name": "a write is made in place", "find": "        part.replace(path)\n    except BaseException:",
+  "replace": "        path.write_text(text, encoding=\"utf-8\")\n    except BaseException:"},
  {"file": "scripts/store.py", "name": "the store is never locked", "find": "            fcntl.flock(held, fcntl.LOCK_EX)",
   "replace": "            pass"},
  {"file": "scripts/parts.py", "name": "a write takes no lock",

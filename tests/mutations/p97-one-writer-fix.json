@@ -1,0 +1,11 @@
+[
+ {"file": "scripts/store.py", "name": "a lock inside a lock waits for itself", "find": "    if holder in _HELD:", "replace": "    if False:"},
+ {"file": "scripts/store.py", "name": "another thread passes through a store this one holds",
+  "find": "    holder = (threading.get_ident(), lock_file)", "replace": "    holder = (0, lock_file)"},
+ {"file": "scripts/store.py", "name": "a store let go of is never taken again", "find": "            _HELD.discard(holder)",
+  "replace": "            pass"},
+ {"file": "scripts/store.py", "name": "a failed write leaves its .part behind",
+  "find": "        part.unlink(missing_ok=True)\n        raise", "replace": "        raise"},
+ {"file": "scripts/store.py", "name": "an old .part is written into with the mode it had",
+  "find": "            part.unlink(missing_ok=True)\n            os.close(", "replace": "            os.close("}
+]

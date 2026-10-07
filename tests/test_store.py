@@ -7,6 +7,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -154,6 +155,28 @@ class ContainedWritesTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE((self.home / "drawer").stat().st_mode), 0o700)
 
+    def test_a_private_part_file_is_0600_before_it_holds_a_byte(self):
+        real_write_text = Path.write_text
+        seen = []
+
+        def look_at_the_part_first(path, text, *args, **kwargs):
+            if path.name.endswith(".part"):
+                seen.append((stat.S_IMODE(path.stat().st_mode), path.stat().st_size))
+            return real_write_text(path, text, *args, **kwargs)
+
+        for stale in (False, True):
+            with self.subTest(stale=stale):
+                target = Path(tempfile.mkdtemp()) / "entry.json"
+                if stale:  # what an older, failed write left behind: looser than 0600, and not empty
+                    left_behind = target.with_name("entry.json.part")
+                    left_behind.write_text("half of an old write")
+                    os.chmod(left_behind, 0o644)
+                seen.clear()
+                with mock.patch.object(Path, "write_text", autospec=True, side_effect=look_at_the_part_first):
+                    store.write_file(target, "secret\n", private=True)
+                self.assertEqual(seen, [(0o600, 0)])
+                self.assertEqual((target.read_text(), stat.S_IMODE(target.stat().st_mode)), ("secret\n", 0o600))
+
     def test_a_copied_folder_is_private_all_the_way_down(self):
         source = Path(tempfile.mkdtemp()) / "chip"
         (source / "sub").mkdir(parents=True)
@@ -199,6 +222,25 @@ class OneWriterAtATimeTest(unittest.TestCase):
             store.write_file(target, "new\n")
         self.assertEqual(target.read_text(), "old\n")
 
+    def test_a_write_that_fails_leaves_no_part_file_behind(self):
+        real_write_text = Path.write_text
+
+        def runs_out_of_room_on_the_part(path, text, *args, **kwargs):
+            if path.name.endswith(".part"):
+                real_write_text(path, text[:2], *args, **kwargs)  # half of it lands first
+                raise OSError("the disk is full")
+            return real_write_text(path, text, *args, **kwargs)
+
+        for private in (False, True):
+            with self.subTest(private=private):
+                target = Path(tempfile.mkdtemp()) / "record.json"
+                target.write_text("old\n")
+                with mock.patch.object(Path, "write_text", autospec=True, side_effect=runs_out_of_room_on_the_part):
+                    with self.assertRaises(OSError):
+                        store.write_file(target, "new\n", private=private)
+                self.assertEqual(sorted(found.name for found in target.parent.iterdir()), ["record.json"])
+                self.assertEqual(target.read_text(), "old\n")
+
     def test_a_write_waits_while_another_holds_the_store(self):
         given = Path(tempfile.mkdtemp()) / "entries.json"
         given.write_text(json.dumps([{"label": "a probe", "count": 1}]))
@@ -225,6 +267,31 @@ class OneWriterAtATimeTest(unittest.TestCase):
             reader = subprocess.run([sys.executable, str(SCRIPTS / "parts.py"), "--drawer"], env=dict(os.environ),
                                     capture_output=True, timeout=30)
         self.assertEqual(reader.returncode, 0, reader.stderr)
+
+    def test_a_lock_taken_inside_a_lock_does_not_wait_for_itself(self):
+        nesting = "import store\nwith store.locked():\n    with store.locked():\n        print('twice')"
+        try:
+            nested = subprocess.run([sys.executable, "-c", nesting], cwd=SCRIPTS, env=dict(os.environ),
+                                    capture_output=True, text=True, timeout=20)
+        except subprocess.TimeoutExpired:
+            self.fail("a lock taken inside a lock waited for itself, and would have waited for ever")
+        self.assertEqual((nested.returncode, nested.stdout.strip()), (0, "twice"), nested.stderr)
+
+    def test_another_thread_waits_for_a_store_taken_a_second_time(self):
+        entered = threading.Event()
+
+        def take_the_store():
+            with store.locked():
+                entered.set()
+
+        other = threading.Thread(target=take_the_store, daemon=True)
+        with store.locked():
+            pass
+        with store.locked():
+            other.start()
+            self.assertFalse(entered.wait(timeout=0.5), "another thread got in while this one held the store")
+        other.join(timeout=20)
+        self.assertTrue(entered.is_set())
 
 
 class TheProjectsListTest(unittest.TestCase):
