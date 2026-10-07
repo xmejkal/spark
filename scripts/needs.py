@@ -221,8 +221,9 @@ def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
     [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
-    from every need's picks — one piece per pick — on the entries that hold them, never past what another project holds
-    (C2), so a re-pick frees what it no longer picks. A pick no entry holds is to get, not reserved. Nothing is written here.
+    from every need's picks — one piece per pick — on the entries that hold them, never past what is owned or what another
+    project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
+    longer picks. A pick no entry holds is to get, not reserved. Nothing is written here.
     """
     name, current, entries = store.add_project(project, dry_run=True), read(project), drawer.entries()
     known, ids, problems, picked = {row[:2] for row in drawer.linkable(project)}, {need["id"] for need in current}, [], {}
@@ -237,22 +238,24 @@ def plan_pick(project, given, passed_over=()):
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
     wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
     pointing, mine, notes = _pointing(entries), collections.Counter(), []
-    for (kind, key), pieces in sorted(wanted.items()):
+    # a pick of one drawer entry has nowhere else to go: it takes its piece before a pick of a record, which may take another entry
+    for (kind, key), pieces in sorted(wanted.items(), key=lambda asked: (asked[0][0] != "entry", asked[0])):
         held = _held({kind: key}, entries, pointing)
         owned, _, unsure = _counts([entry for _, entry in held], name)
         if owned == 0:
             notes.append("%s: to get — known, not owned" % key)
             continue
         for entry_id, entry in held:
+            # what an earlier pick of the same stock — its record, or its drawer entry by key — took is not there to take again
             room = pieces if not isinstance(entry.get("count"), int) else entry["count"] - sum(
-                n for who, n in (entry.get("used_in") or {}).items() if who != name)
+                n for who, n in (entry.get("used_in") or {}).items() if who != name) - mine[entry_id]
             taken = max(min(room, pieces), 0)
             mine[entry_id] += taken
             pieces -= taken
         holders = sorted({who for _, entry in held for who in entry.get("used_in") or {} if who != name})
         if pieces:
             problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(holders) if holders else "",
-                                                                                 wanted[(kind, key)]),
+                                                                                 pieces + sum(mine[entry_id] for entry_id, _ in held)),
                                            "free it — --drawer-set %s with `used_in` leaving out %s, after a dry run — or pick another"
                                            % (", ".join(entry_id for entry_id, _ in held), ", ".join(holders) or "nobody")))
         notes += ["%s: maybe owned — check the drawer first" % key] if unsure else []

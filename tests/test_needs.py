@@ -709,6 +709,43 @@ class ThePicksTest(unittest.TestCase):
         said, code = run(["--pick", str(self.project), "alarm=mp3", "chime=mp3"])
         self.assertEqual((code, said["problems"][0]["sentence"]), (1, "1 owned — 2 picked here"))
 
+    def a_stock_pointed_at_twice(self, count, used_in=None):
+        """One record and the drawer entry of it, `count` owned; the project has two needs of its own, `soil` and `deep`."""
+        (self.home / "catalog" / "x-solo.json").write_text(json.dumps({"schema": 1, "id": "x-solo", "name": "A lone sensor", "kind": "sensor",
+                                                                      "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        (self.home / "drawer" / "solo.json").write_text(json.dumps(dict({"schema": 1, "label": "my sensors", "count": count, "is": {"part": "x-solo"}},
+                                                                        **({"used_in": used_in} if used_in else {}))))
+        run(["--needs-set", str(self.project), a_file([{"id": "deep", "does": "sense", "what": "soil-moisture"}])])
+
+    def test_one_stock_picked_as_its_record_and_as_its_drawer_entry_is_counted_once_against_what_is_owned(self):
+        self.a_stock_pointed_at_twice(1)
+        said, code = run(["--pick", str(self.project), "soil=x-solo", "deep=solo"])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertEqual(said["problems"][0]["sentence"], "1 owned — 2 picked here")
+        self.assertEqual((self.picks()["soil"], self.picks()["deep"], self.entry("solo").get("used_in"), self.history()), (None, None, None, []))
+
+    def test_one_stock_picked_both_ways_is_reserved_twice_when_two_are_owned(self):
+        self.a_stock_pointed_at_twice(2)
+        _, code = run(["--pick", str(self.project), "soil=x-solo", "deep=solo"])
+        self.assertEqual((code, self.picks()["soil"], self.picks()["deep"], self.entry("solo")["used_in"]),
+                         (0, [{"part": "x-solo"}], [{"entry": "solo"}], {"plant-alarm": 2}))
+
+    def test_one_stock_picked_both_ways_never_goes_past_what_another_project_holds(self):
+        self.a_stock_pointed_at_twice(2, {"smartbin-local": 1})
+        said, code = run(["--pick", str(self.project), "soil=x-solo", "deep=solo"])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertEqual(said["problems"][0]["sentence"], "2 owned, held by smartbin-local — 2 picked here")
+        self.assertEqual((self.picks()["soil"], self.entry("solo")["used_in"], self.history()), (None, {"smartbin-local": 1}, []))
+
+    def test_a_record_owned_over_two_entries_serves_a_pick_of_the_first_by_key_and_a_pick_of_the_record(self):
+        (self.home / "drawer" / "board.json").unlink()
+        for key in ("a-board", "b-board"):
+            (self.home / "drawer" / (key + ".json")).write_text(json.dumps({"schema": 1, "label": key, "count": 1, "is": {"board": "firebeetle2-esp32s3"}}))
+        run(["--needs-set", str(self.project), a_file([{"id": "spare", "does": "compute", "what": "microcontroller"}])])
+        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3", "spare=a-board"])
+        self.assertEqual((code, said["problems"]), (0, []))
+        self.assertEqual((self.entry("a-board")["used_in"], self.entry("b-board")["used_in"]), ({"plant-alarm": 1}, {"plant-alarm": 1}))
+
     def test_a_retried_pick_of_the_only_one_is_not_held_against_its_own_project(self):
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
         run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])

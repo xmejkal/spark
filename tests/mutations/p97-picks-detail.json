@@ -54,8 +54,8 @@
   "find": "for who in entry.get(\"used_in\") or {} if who != name})",
   "replace": "for who in entry.get(\"used_in\") or {}})"},
  {"file": "scripts/needs.py", "name": "the refusal counts the pieces left, not the pieces picked",
-  "find": "                                                                                 wanted[(kind, key)]),",
-  "replace": "                                                                                 pieces),"},
+  "find": "pieces + sum(mine[entry_id] for entry_id, _ in held)),",
+  "replace": "pieces),"},
  {"file": "scripts/needs.py", "name": "the fix never names who holds it",
   "find": "\"free it — --drawer-set %s with `used_in` leaving out %s, after a dry run — or pick another\"\n                                           % (\", \".join(entry_id for entry_id, _ in held), \", \".join(holders) or \"nobody\")))",
   "replace": "\"free it — --drawer-set %s with `used_in` leaving out %s, after a dry run — or pick another\"\n                                           % (\", \".join(entry_id for entry_id, _ in held), \"nobody\")))"},
@@ -160,5 +160,8 @@
   "replace": "            room = pieces - sum(n for who, n in (entry.get(\"used_in\") or {}).items() if who != name) if not isinstance(entry.get(\"count\"), int) else entry[\"count\"] - sum("},
  {"file": "scripts/needs.py", "name": "a pick nobody owns is not a reused one",
   "find": "for need_id in picked for pick in picked[need_id]]",
-  "replace": "for need_id in picked for pick in picked[need_id] if _held(pick, entries, pointing)]"}
+  "replace": "for need_id in picked for pick in picked[need_id] if _held(pick, entries, pointing)]"},
+ {"file": "scripts/needs.py", "name": "a second pointing at one stock is counted twice against it",
+  "find": "if who != name) - mine[entry_id]",
+  "replace": "if who != name) - 2 * mine[entry_id]"}
 ]

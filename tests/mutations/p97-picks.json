@@ -52,5 +52,14 @@
   "replace": "isinstance(passed_over, list)"},
  {"file": "scripts/parts.py", "name": "a pick takes no lock",
   "find": "     (\"writes\",), (\"project\", \"picks\", \"reserved\", \"written\")),",
-  "replace": "     (), (\"project\", \"picks\", \"reserved\", \"written\")),"}
+  "replace": "     (), (\"project\", \"picks\", \"reserved\", \"written\")),"},
+ {"file": "scripts/needs.py", "name": "a second pointing at one stock is not counted against it",
+  "find": "if who != name) - mine[entry_id]",
+  "replace": "if who != name)"},
+ {"file": "scripts/needs.py", "name": "the refusal counts only the pieces of the pointing it names",
+  "find": "pieces + sum(mine[entry_id] for entry_id, _ in held)),",
+  "replace": "wanted[(kind, key)]),"},
+ {"file": "scripts/needs.py", "name": "a pick of a record is allocated before a pick of one of its entries",
+  "find": "sorted(wanted.items(), key=lambda asked: (asked[0][0] != \"entry\", asked[0]))",
+  "replace": "sorted(wanted.items())"}
 ]
