@@ -1596,8 +1596,9 @@ def _change_line(change, dry_run):
 
 def _write_lines(changes, problems, dry_run, said=()):
     """
-    What a set-only write did or would do (§5.2), said one way for every write: each change — marked when anything was
-    refused, because then nothing is written — what else the write has to say, then each refusal; or that nothing changes.
+    What a set-only write did or would do (§5.2), said one way for the drawer and the needs file: each change — marked
+    when anything was refused, because then nothing is written — what else the write has to say, then each refusal; or
+    that nothing changes.
     """
     lines = [("  refused, not written: " + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run)
              for change in changes] + list(said)

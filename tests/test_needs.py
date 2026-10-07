@@ -89,6 +89,20 @@ class TheNeedsFileTest(unittest.TestCase):
             parts.main(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "have"}]), "--dry-run"])
         self.assertEqual(out.getvalue(), '  would set soil: mark null → "have"\n')
 
+    def test_a_needs_write_over_a_set_value_says_what_it_was(self):
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"}])])
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "have"}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "know"}]), "--dry-run"])
+        self.assertEqual(out.getvalue(), '  would set soil: mark "have" → "know"\n')
+
+    def test_a_new_need_is_said_value_by_value(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--needs-set", str(self.project), a_file([{"id": "alarm", "does": "indicate", "what": "alarm"}])])
+        self.assertEqual(out.getvalue(), '  set alarm: does null → "indicate"; what null → "alarm"\n')
+
     def test_a_goal_s_needs_are_written_and_the_folder_made(self):
         said, code = run(["--needs-set", str(self.project), a_file([
             {"id": "soil", "does": "sense", "what": "soil-moisture", "condition": "indoor pot, short probe; low power"},
