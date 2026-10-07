@@ -1581,14 +1581,28 @@ def _read_json_input(name):
 
 
 def _change_line(change, dry_run):
-    """'  new soil-probe: soil probe × 8 — is part sen0193-soil-moisture', or '  set dfrobot-dfr0954: count 2 → 4'."""
-    if change["new"]:
+    """
+    One set-only write's change (§5.2), the drawer's and the needs file's alike: '  new soil-probe: soil probe × 8 — is
+    part sen0193-soil-moisture' for a new drawer entry, else '  set soil: mark null → "have"', every value from what it was.
+    """
+    if change["new"] and "entry" in change:
         now, linked = change["now"], change["now"].get("is")
         return "  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count"),
                                          " — is %s %s" % next(iter(linked.items())) if linked else "")
-    return "  %s %s: %s" % ("would set" if dry_run else "set", change["entry"], "; ".join(
+    return "  %s %s: %s" % ("would set" if dry_run else "set", change.get("entry") or change.get("need"), "; ".join(
         "%s %s → %s" % (key, json.dumps(change["was"].get(key), ensure_ascii=False), json.dumps(value, ensure_ascii=False))
         for key, value in change["now"].items()))
+
+
+def _write_lines(changes, problems, dry_run, said=()):
+    """
+    What a set-only write did or would do (§5.2), said one way for every write: each change — marked when anything was
+    refused, because then nothing is written — what else the write has to say, then each refusal; or that nothing changes.
+    """
+    lines = [("  refused, not written: " + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run)
+             for change in changes] + list(said)
+    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
+    return lines or ["  nothing to change"]
 
 
 def _drawer_answer(changes, questions, problems, dry_run):
@@ -1600,14 +1614,12 @@ def _drawer_answer(changes, questions, problems, dry_run):
     wanted = [change["shelve"] for change in made if change["shelve"]]
     shelved = [Path(path).stem for path, project in wanted if shelvable(path, project)]
     left = [Path(path).stem for path, project in wanted if not shelvable(path, project)]
-    lines = [(("  refused, not written: " + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run))
-             for change in made] + ["  ? %s" % q["sentence"] for q in questions]
-    lines += ["  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it" % stem
-              for stem in left]
-    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
+    said = ["  ? %s" % q["sentence"] for q in questions] + [
+        "  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it"
+        % stem for stem in left]
     return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],
                    "questions": questions, "shelved": shelved, "not_shelved": left, "written": not (problems or dry_run)},
-                  lines or ["  nothing to change"], problems=problems)
+                  _write_lines(made, problems, dry_run, said), problems=problems)
 
 
 def _op_drawer(args, project):
@@ -1751,11 +1763,7 @@ def _op_needs_set(args, project):
     written = not (problems or args.dry_run)
     if written and changes:
         needs.write(target, after)
-    lines = ["  %s%s %s: %s" % ("refused, not written: " if problems else "", "would set" if args.dry_run else "set",
-                                c["need"], ", ".join("%s → %s" % (k, json.dumps(v, ensure_ascii=False)) for k, v in c["now"].items()))
-             for c in changes] or ([] if problems else ["  nothing to change"])
-    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
-    return Answer({"changes": changes, "written": written}, lines, problems=problems)
+    return Answer({"changes": changes, "written": written}, _write_lines(changes, problems, args.dry_run), problems=problems)
 
 
 def _op_describe(args, project):

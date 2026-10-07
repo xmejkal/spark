@@ -82,6 +82,13 @@ class TheNeedsFileTest(unittest.TestCase):
     def test_a_new_need_with_no_what_is_refused(self):
         self.assertEqual(run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense"}])])[1], 1)
 
+    def test_a_needs_write_says_what_each_value_was(self):
+        run(["--needs-set", str(self.project), a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--needs-set", str(self.project), a_file([{"id": "soil", "mark": "have"}]), "--dry-run"])
+        self.assertEqual(out.getvalue(), '  would set soil: mark null → "have"\n')
+
     def test_a_goal_s_needs_are_written_and_the_folder_made(self):
         said, code = run(["--needs-set", str(self.project), a_file([
             {"id": "soil", "does": "sense", "what": "soil-moisture", "condition": "indoor pot, short probe; low power"},

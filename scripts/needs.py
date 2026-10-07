@@ -123,6 +123,14 @@ def _counts(holding):
     return owned, max(owned - held, 0), unsure
 
 
+def _candidate(need, functions, names, holding, said):
+    """One candidate (§6.2): `said` names it and where it lives; the rest is what its verb's functions say, and its counts."""
+    owned, free, unsure = _counts(holding)
+    return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": []}, **said,
+                what=sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
+                what_matches=_what_matches(need, functions, names), owned=owned, free=free, unsure=unsure)
+
+
 def candidates(need, known, entries):
     """
     The store's candidates for one need (§6.2's code half): every record and every record-less drawer entry whose function
@@ -144,22 +152,17 @@ def candidates(need, known, entries):
             continue
         aliases = record.get("also_known_as")
         names = [record.get("name")] + ([a for a in aliases if isinstance(a, str)] if isinstance(aliases, list) else [])
-        owned, free, unsure = _counts(holding)
-        found.append({"id": record_id, "kind": kind, "entry": None, "in": where, "label": record.get("name"),
-                      "what": sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
-                      "what_matches": _what_matches(need, functions, names),
-                      "owned": owned, "free": free, "unsure": unsure, "owes": [] if kind == "board" else parts.owes(record),
-                      "broken": kind == "part" and bool(parts.broken_problems(record, path)), "proof": []})
+        found.append(_candidate(need, functions, names, holding,
+                                {"id": record_id, "kind": kind, "in": where, "label": record.get("name"),
+                                 "owes": [] if kind == "board" else parts.owes(record),
+                                 "broken": kind == "part" and bool(parts.broken_problems(record, path))}))
     for entry_id, entry in entries.items():
         functions = entry.get("function") or []
         points_at_a_record = isinstance(entry.get("is"), dict) and bool(entry["is"]) and next(iter(entry["is"].items())) in known_keys
         if points_at_a_record or entry.get("skip") or entry.get("count") == 0 or not any(f.get("does") == need["does"] for f in functions):
             continue
-        owned, free, unsure = _counts([entry])
-        found.append({"id": None, "kind": None, "entry": entry_id, "in": "drawer", "label": entry.get("label"),
-                      "what": sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
-                      "what_matches": _what_matches(need, functions, [entry.get("label")]),
-                      "owned": owned, "free": free, "unsure": unsure, "owes": [], "broken": False, "proof": []})
+        found.append(_candidate(need, functions, [entry.get("label")], [entry],
+                                {"entry": entry_id, "in": "drawer", "label": entry.get("label")}))
     return sorted(found, key=lambda c: (c["owned"] == 0, not c["what_matches"],
                                         LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS), c["id"] or c["entry"]))
 
