@@ -70,7 +70,8 @@ class WhatItWritesTest(unittest.TestCase):
         self.assertNotIn("SDA", self.rules["physics"]["rails"])
 
     def test_the_brief_is_written_too(self):
-        # No script reads it; every reviewer does, and it is what consequence is judged against.
+        # parts.py reads its prefer and sellers, and the review skill hands the reviewers its must list: it is
+        # what consequence is judged against.
         brief = json.loads((self.root / ".spark" / "project.json").read_text())
         self.assertIn("must", brief)
 

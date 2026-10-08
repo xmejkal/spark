@@ -21,9 +21,10 @@ look like a checked one. A null here is not a gap in the output — it is the ou
 reads a null rail and reports "no maximum current stated, so nothing here can be verified", which
 is the correct answer until somebody measures it.
 
-`project.json` is the brief: what the design must do, what parts are already owned, what has been
-decided. No script reads it. The reviewers do, and it is what they judge consequence against — a
-finding is only "bad" relative to something the project promised.
+`project.json` is the brief: the goal, what the design must do (`must`), whose modules to research
+first (`prefer`), where the person buys (`sellers`), and what has been decided. `parts.py` reads `prefer`
+and `sellers`; the `spark-review` skill hands the reviewers the `must` list, and it is what they judge
+consequence against — a finding is only "bad" relative to something the project promised.
 """
 
 import argparse
@@ -199,8 +200,9 @@ def rules_for(nets, part_list=()):
 
 
 PROJECT_TEMPLATE = {
-    "//": ("The brief. No script reads this; the reviewers do, and it is what they judge "
-           "consequence against — a finding is only 'bad' relative to something you promised."),
+    "//": ("The brief. parts.py reads `prefer` and `sellers`; the spark-review skill hands the reviewers "
+           "`must`, and it is what they judge consequence against — a finding is only 'bad' relative "
+           "to something you promised."),
     "goal": None,
     "must": [],
     "//must": ('What the design has to do, in terms that can be violated. "Runs a year on one '
@@ -383,7 +385,10 @@ def main(argv=None):
     parser.add_argument("--project", default=".", help="the project to set up (default: here)")
     parser.add_argument("--board", help="board id to make active; omit to see what is available")
     parser.add_argument("--circuit", help="a built netlist to name the rails from")
-    parser.add_argument("--force", action="store_true", help="overwrite files that exist")
+    parser.add_argument("--force", action="store_true",
+                        help="work on files that exist too: merge what is derived into rules.json (answers stay), "
+                             "rewrite project.json only if it has no answers, set boards/active.json when --board "
+                             "names one; package.json is never rewritten")
     args = parser.parse_args(argv)
 
     project = Path(args.project).resolve()
@@ -479,7 +484,8 @@ def main(argv=None):
                 print("  %s  %s" % (path.name, field))
 
     if not written and not args.board:
-        print("\nnothing to do — everything already exists. --force rewrites it.")
+        print("\nnothing to do — everything already exists. "
+              "--force merges what is derived into rules.json and keeps your answers.")
         return EXIT_NOTHING_TO_DO
     # Part of the job could not be done, and W1 applies to this tool as much as to a check: the
     # rails are unseeded and the exit code says so, even though everything else was written.
