@@ -243,8 +243,8 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 
 **`parts.py`'s envelope:**
 
-- `next` holds suggested next commands, with their effects, and `truncated.next` the command for the rest of a long
-  answer.
+- `next` is where suggested next commands, with their effects, would go. It is empty today: no operation fills it. Only
+  `truncated.next` is filled, with the command for the rest of a long answer.
 - Run every write with `--dry-run` first.
 - `--unverified` puts its open items in `data.questions` (`part`, `fact`, `assumed`, `why_it_matters`, `source`); its
   `status` ok means only that the listing ran.
@@ -301,7 +301,9 @@ count.
 
    `compare_design.py`, `assign_pins.py` and `check_spine.py` answer 2 instead. So exit 1 with an empty stdout is a
    crash, not problems; check_all reports each as could-not-run.
-3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout. That is not a
+3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout, except that
+   `parts.py --json` answers an argument it cannot run with in its envelope (`status` is `could-not-run`). With
+   `CLAUDE_PLUGIN_ROOT` unset, Python never starts the script, so even that prints nothing. A bad command line is not a
    check that could not look, so with `--json`, parse stdout before trusting the code.
 4. **`init_project.py`'s exits.**
    - Without `--board`, it exits 1 when every file exists ("nothing to do").
