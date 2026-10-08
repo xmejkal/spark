@@ -181,9 +181,11 @@ image of [MicroPython](https://micropython.org) and the project's files, needs a
 CI minutes. Node and bun run the tools. For the research agents spark declares two MCP servers, both started unpinned
 with `npx -y` ([P112](https://github.com/xmejkal/spark/issues/46)): `@jlcpcb/mcp`, an unofficial community package
 ([l3wi/jlc-cli](https://github.com/l3wi/jlc-cli)), and `mcp-remote` to Espressif's hosted documentation. The DFRobot
-order import uses Claude in Chrome. Your store, `~/.local/share/spark`, sits outside every repository.
-[KiCad](https://www.kicad.org)'s `kicad-cli` is optional, for the skills' electrical-rule and design-rule checks. Each,
-with what it needs: [how spark works underneath](docs/guide/how-it-works.md#the-tools-spark-calls).
+order import uses Claude in Chrome. Your store, `~/.local/share/spark`, sits outside every repository. It keeps a
+history, `history.jsonl`, whose line for each step of a project names the Claude Code session the step ran in;
+`parts.py --tally` reads Claude Code's transcripts of those sessions, under `~/.claude/projects`, for tool names and
+counts only. [KiCad](https://www.kicad.org)'s `kicad-cli` is optional, for the skills' electrical-rule and design-rule
+checks. Each, with what it needs: [how spark works underneath](docs/guide/how-it-works.md#the-tools-spark-calls).
 
 ## Before ordering
 
