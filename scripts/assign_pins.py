@@ -5,7 +5,7 @@ Which pin should each signal go on, and why?
     assign_pins.py requirements.json
     assign_pins.py requirements.json --board firebeetle2-esp32s3 --json
 
-`check_design.py` tells you a pin assignment is wrong. This works out a right one, and — the part
+Checking a finished pin assignment tells you it is wrong. This works out a right one, and — the part
 that matters more — says what each choice cost, so a person can disagree with it.
 
 WHY THIS IS A SCRIPT
@@ -415,7 +415,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="assign_pins.py",
         description="Work out which pin each signal should go on, and say why.")
-    parser.add_argument("requirements", help="JSON naming the signals and what each pin must do")
+    parser.add_argument("requirements", help="the requirements file (a board and a list of parts)")
     parser.add_argument("--board", help="board id (default: the project's active board)")
     parser.add_argument("--project", help="the project to resolve the board from")
     parser.add_argument("--json", action="store_true")

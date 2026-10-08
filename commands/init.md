@@ -19,8 +19,8 @@ If the user has already said which board, use it. If not, show them the list and
 pick one. The board decides every pin capability downstream, so guessing it wrongly makes every
 later check confidently wrong rather than silent.
 
-If their board is not listed, `boards/README.md` in this plugin has the schema, and a project's
-own `boards/<id>.json` beats the library.
+If their board is not listed, `boards/README.md` in this plugin has the schema — its steps are the smart bin's, so follow
+the ones in the plugin's `docs/guide/how-it-works.md`, "Your own dev board" — and a project's own `boards/<id>.json` beats the library.
 
 ## 2. Initialise
 

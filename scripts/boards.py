@@ -2,19 +2,19 @@
 """
 Which board this project is built around — resolved in one place, and checked against a contract.
 
-    python3 tools/boards.py --path        the active board's definition file
-    python3 tools/boards.py --id          the active board's id
-    python3 tools/boards.py --list        every board available to switch to
-    python3 tools/boards.py --paths       their file paths, for tools that take a list
-    python3 tools/boards.py --get chip    one field, by dotted path
-    python3 tools/boards.py --validate    check every board file against the contract
-    python3 tools/boards.py --validate --for-fab
-                                          also require what the PCB needs, not just the firmware
+    python3 scripts/boards.py --path        the active board's definition file
+    python3 scripts/boards.py --id          the active board's id
+    python3 scripts/boards.py --list        every board available to switch to
+    python3 scripts/boards.py --paths       their file paths, for tools that take a list
+    python3 scripts/boards.py --get chip    one field, by dotted path
+    python3 scripts/boards.py --validate    check every board file against the contract
+    python3 scripts/boards.py --validate --for-fab
+                                            also require what the PCB needs, not just the firmware
 
-Boards are drop-in: add `boards/<id>.json`, put that id in `boards/active.json`, run `make`.
-Nothing else names a board. This file is both the library the Python tools import and the command
-the Makefile and `make check` call, because a second copy of "where is the board file" would be
-the exact duplication that boards/ exists to remove.
+Boards are drop-in: add `boards/<id>.json` and put that id in `boards/active.json`. Nothing else
+names a board. This file is both the library the Python tools import and the command `/spark:init`,
+`/spark:build` and the review skill call, because a second copy of "where is the board file" would
+be the exact duplication that boards/ exists to remove.
 
 The contract is enforced rather than documented. A board definition that a person merely
 *described* correctly is how the C6 pin map nearly shipped with D3 read as GPIO3; a definition
@@ -73,19 +73,22 @@ REQUIRED_FOR_FAB = ("footprint_module", "footprint_export")
 #: A fact is true of the board whatever you build with it. A decision is a choice you made, and
 #: a board file that accumulates choices stops being swappable, which is the point of boards/.
 FORBIDDEN_KEYS = {
-    "wake_on_high": "follows from how the buttons are wired; belongs in config.WAKE_ON_HIGH",
+    "wake_on_high": ("follows from how the buttons are wired; belongs in the firmware's own settings "
+                     "(the smart bin's is config.WAKE_ON_HIGH)"),
     "i2c_freq": "a firmware setting, not a property of the board",
     "i2c_freq_hz": "a firmware setting, not a property of the board",
-    "pin_assignments": "which function sits on which pin is the design; see mcu-pins.ts",
-    "signals": "which function sits on which pin is the design; see mcu-pins.ts",
+    "pin_assignments": ("which function sits on which pin is the design "
+                        "(assign_pins.py works it out; the smart bin keeps it in mcu-pins.ts)"),
+    "signals": ("which function sits on which pin is the design "
+                "(assign_pins.py works it out; the smart bin keeps it in mcu-pins.ts)"),
 }
 
 #: The role names a board file may use, and what each one means to the scripts that read them.
 #:
 #: Closed, because an open vocabulary silently disabled a headline check. Two shipped boards
 #: described the same hazard — the serial console — under two names, `boot_log_tx` and
-#: `console_uart`. `check_design.py` knew only the first and `assign_pins.py` only the second, so
-#: a serial-parsing part sitting on the console UART was caught on one board and passed without a
+#: `console_uart`. `check_design.py` (since cut, 066c4af) knew only the first and `assign_pins.py` only
+#: the second, so a serial-parsing part sitting on the console UART was caught on one board and passed without a
 #: word on the other. Nothing noticed, because a role nobody consumes looks exactly like a role
 #: that is fine. A name outside this set is now an error rather than a silent no-op.
 PIN_ROLES = {
@@ -399,8 +402,8 @@ def get(project: Path, key_path: str, board_id: str = None):
     """
     One field out of a board definition, addressed by dotted path.
 
-    A generic accessor rather than a flag per field, because the Makefile and any future consumer
-    should be able to reach a new board fact without this file growing a new option for it.
+    A generic accessor rather than a flag per field, because a project's own Makefile or script, and any
+    future consumer, should be able to reach a new board fact without this file growing a new option for it.
     """
     value = load(project, board_id)
     for step in key_path.split(KEY_PATH_SEPARATOR):

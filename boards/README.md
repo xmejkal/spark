@@ -1,5 +1,8 @@
 # Board definitions
 
+> The schema and the contract are spark's. The steps are the smart bin's: they name a Makefile, `make check` and `config.py`,
+> which a spark project does not have. With spark's own scripts, see [Your own dev board](../docs/guide/how-it-works.md#your-own-dev-board).
+
 One file per board, holding everything the rest of the project needs to know about which
 microcontroller this is: the silkscreen-to-GPIO map, which pins can wake it, which have an ADC,
 which have a second job, which MicroPython build it runs, and what it is physically — its
@@ -58,7 +61,7 @@ re-implementing a lookup.
    `SOC_RTCIO_PIN_COUNT` gives the wake-capable range, `SOC_PM_SUPPORT_EXT0_WAKEUP` says whether
    `esp32.wake_on_ext0` exists, `SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN` whether wake pins may
    have different polarities. Guessing any of these costs a bench session.
-4. **Check it**: `python3 tools/boards.py --validate`. The contract is enforced, not documented.
+4. **Check it**: `boards.py --validate`. The contract is enforced, not documented.
 5. **Rework `config.py`'s pin assignments.** Which function sits on which pin is a design
    decision, not a board fact — see below.
 6. **Swap the footprint in `board.tsx`** to the one named in `physical.footprint_export`.

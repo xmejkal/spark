@@ -5,9 +5,10 @@ Does the fab package order the parts the schematic actually specifies?
     check_bom.py board-gerbers.zip
     check_bom.py board-gerbers.zip --circuit dist/board/circuit.json
 
-Nothing else compares these two. `make check` proves the firmware, the board, the bench scripts
-and the simulation agree — and every one of those reads the *design*. The BOM is the one artifact
-that leaves the design behind and becomes an order, and it was never checked against anything.
+Nothing else compares these two. The smart bin's own gate, `make check`, proves the firmware, the
+board, the bench scripts and the simulation agree — and every one of those reads the *design*. The BOM
+is the one artifact that leaves the design behind and becomes an order, and it was never checked against
+anything.
 
 It needed to be. In the exported package, `SenseFilterCap` (1uF) and the four 100nF decoupling
 capacitors were all assigned LCSC part **C14663**. One part number cannot be two capacitances, so
