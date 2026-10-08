@@ -907,7 +907,10 @@ BOARD_FACTS = ("pins", "power_pads", "physical")
 
 
 def digest(record, facts=BUILD_FACTS):
-    """The sha256 of the facts a build reads from a record — a part's by default, a board's with BOARD_FACTS (§5.7)."""
+    """
+    The sha256 of some of the facts a build reads (BUILD_FACTS / BOARD_FACTS: not a part's outline or simulation stand-in,
+    nor a board's pin roles) — a part's by default, a board's with BOARD_FACTS (§5.7).
+    """
     shown = {key: record[key] for key in facts if key in record}
     return hashlib.sha256(json.dumps(shown, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
