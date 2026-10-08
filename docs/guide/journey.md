@@ -35,10 +35,11 @@ What the three words mean:
 
 **How these runs were made.**
 
-- When: [Drawer](#drawer), [Idea](#idea) and the library's list in [Build](#build) on 2026-10-08, with spark 0.7.0;
-  the Idea section's build used tscircuit 0.0.2621, an existing install on the PATH. The rest on 2026-10-05, and the
-  exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600, the version spark pins; that tscircuit came from an
-  existing install, linked into the project. The note above each output names its run.
+- When: [Drawer](#drawer), [Idea](#idea), the two `--need` lists in [Research](#research) and the library's list in
+  [Build](#build) on 2026-10-08, with spark 0.7.0; the Idea section's build used tscircuit 0.0.2621, an existing
+  install on the PATH. The rest on 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600,
+  the version spark pins; that tscircuit came from an existing install, linked into the project. The note above each
+  output names its run.
 - Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer, `plant-alarm` and
   `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read; each
   example under [owed facts and gaps](#owed-facts-and-gaps) ran in a store of its own.
@@ -497,7 +498,7 @@ The file keeps that note under `unserved`, and the build's verdict repeats it:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --need motor driver --project .
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
   l9110s-module                motor-driver   L9110S dual motor driver module
 ```
@@ -506,7 +507,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --need motor driver --project .
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --need soil moisture --project .
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
   nothing in the library matches 'soil moisture'.
   Research it: /spark:research "soil moisture"  — vendors in order: dfrobot, seeed; sellers: none named in the brief
