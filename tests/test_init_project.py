@@ -220,6 +220,19 @@ class WithoutABuiltDesignTest(unittest.TestCase):
                          init_project.EXIT_COULD_NOT_RUN)
         self.assertFalse((root / "boards" / "active.json").exists())
 
+    def test_a_board_that_stops_at_the_footprint_is_written_saying_so(self):
+        # F12's follow-up: `--board xiao-esp32-c6` wrote active.json without a word — /spark:idea's L runs this; never refused
+        said = {}
+        for board in ("xiao-esp32-c6", "firebeetle2-esp32s3"):
+            root, out = a_project(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = init_project.main(["--project", str(root), "--board", board])
+            self.assertEqual((code, json.loads((root / "boards" / "active.json").read_text())["board"]), (init_project.EXIT_OK, board))
+            said[board] = out.getvalue()
+        self.assertIn("\n  wrote active.json\n  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its "
+                      "board file\n", said["xiao-esp32-c6"])
+        self.assertNotIn("stops at", said["firebeetle2-esp32s3"])
+
     def test_the_boards_offered_are_those_that_build_then_each_that_stops_said_as_such(self):
         # F12 (C-7): both "Available:" lines offered the XIAO unmarked — /spark:idea's L runs this first; never hidden
         offered = ("Available: firebeetle2-esp32s3; xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry "

@@ -108,5 +108,6 @@
  {"file": "scripts/needs.py", "name": "F14 follow-up: any letters end a bare host again, so pinout.png/page 2 is cut", "find": "\\.(?:%s)(?::\\d+)?/", "replace": "\\.[a-z]{2,}(?::\\d+)?/"},
  {"file": "scripts/needs.py", "name": "F14 follow-up: a currency symbol glued to the number is kept", "find": "(?:[$€£¥]\\s?|\\b%s\\s)", "replace": "(?:[$€£¥]\\s|\\b%s\\s)"},
  {"file": "scripts/emit_board.py", "name": "F15 follow-up: the board's comment tells a side of a pair to add a supply again", "find": "        if net in pair_sides:\n            lines.append(\"    {/* NOTHING ON THIS BOARD DRIVES", "replace": "        if False:\n            lines.append(\"    {/* NOTHING ON THIS BOARD DRIVES"},
- {"file": "scripts/emit_board.py", "name": "F15 follow-up: emit_board's note tells a side of a pair to add a supply again", "find": "        if net in pair_sides:  # F15: what drives a side of a pair", "replace": "        if False:  # F15: what drives a side of a pair"}
+ {"file": "scripts/emit_board.py", "name": "F15 follow-up: emit_board's note tells a side of a pair to add a supply again", "find": "        if net in pair_sides:  # F15: what drives a side of a pair", "replace": "        if False:  # F15: what drives a side of a pair"},
+ {"file": "scripts/init_project.py", "name": "F12 follow-up: init --board writes a board that stops without a word", "find": "        notes += [\"board %s %s\" % (args.board, stop)] if stop else []", "replace": "        notes += []"}
 ]
