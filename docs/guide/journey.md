@@ -35,20 +35,23 @@ What the three words mean:
 
 **How these runs were made.**
 
-- When: [Drawer](#drawer), [Idea](#idea) and the library's list in [Build](#build) on 2026-10-08, with spark 0.7.0.
-  The rest on 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600, the version spark
-  pins; that tscircuit came from an existing install, linked into the project. The note above each output names its
-  run.
-- Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer and `plant-alarm`, so
-  the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s match reads.
+- When: [Drawer](#drawer), [Idea](#idea) and the library's list in [Build](#build) on 2026-10-08, with spark 0.7.0;
+  the Idea section's build used tscircuit 0.0.2621, an existing install on the PATH. The rest on 2026-10-05, and the
+  exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600, the version spark pins; that tscircuit came from an
+  existing install, linked into the project. The note above each output names its run.
+- Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer, `plant-alarm` and
+  `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read.
 - How: each command typed as shown. In Claude Code you type the `/spark:` command, and Claude runs these scripts for
   you. You, or another AI, can run them directly; [the guide for AI agents](agents.md) says how.
 - Paths: `$CLAUDE_PLUGIN_ROOT` is where spark is installed. In outputs, `~/` is the home folder, `<temp>` a temporary
   one, the scratch store is shown as `~/.local/share/spark`, and each project folder by its name.
 
-There are two example projects:
+There are three example projects:
 
-- `plant-alarm` holds the drawer and idea steps. Its goal is the one `/spark:idea`'s own page uses.
+- `plant-alarm` holds the drawer step and the idea's needs and matches. Its goal is the one `/spark:idea`'s own page
+  uses.
+- `button-light`, a button and an LED, goes on from its needs to a board that builds, and the tally:
+  [a recorded run](#a-recorded-run-a-button-and-an-led).
 - `my-gadget` holds the rest. It uses the requirements file that `/spark:build`'s page documents: a DFRobot
   FireBeetle 2 ESP32-S3, an L9110S motor driver, a power inlet and two buttons.
 
@@ -106,7 +109,8 @@ This path was not run here.
 **Partly.** [`/spark:idea`](../../commands/idea.md) turns a goal in your words into needs, then matches each need
 against your drawer and spark's records. It marks each need: have, have-unknown, know or gap. Then a part is picked per
 need (`parts.py --pick`), what you own is reserved, and the picks become a requirements file
-(`parts.py --requirements`) ([P97](https://github.com/xmejkal/spark/issues/18)); those steps were not run for this page.
+(`parts.py --requirements`) ([P97](https://github.com/xmejkal/spark/issues/18)). Those steps ran for this page, in
+[a recorded run](#a-recorded-run-a-button-and-an-led) below; the conversation did not.
 
 In Claude Code, Claude asks at most three questions, one at a time, then writes the needs to a file:
 
@@ -175,6 +179,213 @@ How to read the matches:
 
 Here a distance sensor is offered for soil moisture. It senses distance, not moisture, so soil moisture is a real gap.
 Research is for that.
+
+### A recorded run: a button and an LED
+
+A smaller project, `button-light` — a button and a light on a board — went through every step `/spark:idea` walks,
+with `/spark:build` before the tally. It ran on 2026-10-08 in the same scratch store as the runs above, so the drawer
+holds the FireBeetle and the LED pack. The conversation was not run: the needs, the marks and the reason were written
+to files by hand, and every command below is a real run.
+
+These commands ran from a recording script, not through `/spark:idea` in Claude Code, so the session id that `--step`
+records was set by hand: `CLAUDE_CODE_SESSION_ID=demo-session`. When Claude runs them in Claude Code, that variable is
+already set.
+
+**S — the needs.** Each step is marked when it starts, so the tally can count it:
+
+```sh
+CLAUDE_CODE_SESSION_ID=demo-session python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --step . S
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  started step S of button-light — a line in your history, with this Claude Code session's id
+  listed button-light on your projects
+```
+
+M, C and L were marked the same way as each began, and printed the first line only. The needs, in
+`../button-needs.json`:
+
+```json
+[
+  {"id": "press", "does": "input", "what": "button"},
+  {"id": "light", "does": "indicate", "what": "light"},
+  {"id": "board", "does": "compute", "what": "microcontroller"}
+]
+```
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../button-needs.json
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  set press: does null → "input"; what null → "button"
+  set light: does null → "indicate"; what null → "light"
+  set board: does null → "compute"; what null → "microcontroller"
+```
+
+**M — the matches, then the marks.**
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  press — input / button
+                 tactile-button (library)                       button
+  light — indicate / light
+      owned 10   red-leds-pack-of-10 (drawer)                   light  free 10
+                 led-red-5mm (library)                          light
+  board — compute / microcontroller
+      owned 1    firebeetle2-esp32s3 (library)                  microcontroller  free 1
+                 xiao-esp32-c6 (library)                        microcontroller  stops at the footprint stage (P121)
+```
+
+The LED pack is owned, but it has no record, so spark can reserve it and cannot place it on the board; the library's
+LED can be placed. The button and that LED are known, not owned (`know`); the board is owned, with a record (`have`).
+The marks, in `../marks.json`:
+
+```json
+[{"id": "press", "mark": "know"}, {"id": "light", "mark": "know"}, {"id": "board", "mark": "have"}]
+```
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../marks.json
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  set press: mark null → "know"
+  set light: mark null → "know"
+  set board: mark null → "have"
+```
+
+**C — the picks.** The reason for passing over the LED pack, in `../passed.json`:
+
+```json
+[{"need": "light", "id": "red-leds-pack-of-10", "why": "no record for them, so spark cannot place them on the board", "by": "person"}]
+```
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3 --passed-over ../passed.json
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  set firebeetle-2-esp32-s3: used_in null → {"button-light": 1}
+  press: tactile-button
+  light: led-red-5mm
+  board: firebeetle2-esp32s3
+  led-red-5mm: to get — known, not owned
+  tactile-button: to get — known, not owned
+  wrote to your history: 3 reused
+  noted why you passed over red-leds-pack-of-10 (light)
+```
+
+With `--dry-run` first, the same lines read *would set*, *would write* and *would note*. The picks are in the
+project's `.spark/needs.json`; the reason is in the history in your store, never in the project. The FireBeetle's
+drawer entry is now held for `button-light`, so another project's pick of it is refused. From `plant-alarm`'s folder,
+in the same store:
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --pick . board=firebeetle2-esp32s3 --dry-run
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by button-light — 1 picked here
+```
+
+**L — the requirements file.** First `/spark:init --board firebeetle2-esp32s3` in the project, as in
+[Build](#build); it printed the same lines as there, with this project's name. Then:
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --requirements .
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  wrote requirements.json: board firebeetle2-esp32s3; parts tactile-button, led-red-5mm
+```
+
+With `--dry-run` first it says *would write*. The file it wrote:
+
+```json
+{
+  "board": "firebeetle2-esp32s3",
+  "parts": [
+    "tactile-button",
+    "led-red-5mm"
+  ]
+}
+```
+
+**The build.** [`/spark:build`](../../commands/build.md) runs the chain on it, as in [Build](#build):
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
+  wrote FireBeetle2Esp32S3.tsx
+  wrote board.tsx
+  wrote dist — this is what every check reads
+
+  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
+
+  [ok  ] board            DFRobot FireBeetle 2 ESP32-S3
+  [ok  ] schematic        11 trace(s) written
+  [ok  ] footprint        FireBeetle2Esp32S3.tsx
+  [ok  ] build            9 trace(s), 0 errors, tsci 0.0.2621; the documents were measured on core 0.0.2600
+  [ok  ] simulation       9 wire(s) in the diagram
+           what it cannot show, from the records (2):
+             LedRed5mm: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's
+             TactileButton: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled
+
+  the chain runs end to end
+```
+
+This build used tscircuit 0.0.2621, an existing install on the PATH, not the 0.0.2600 spark pins: the build line says
+so, and does not fail for it.
+
+**T — the tally.**
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --tally .
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  3 picks: 3 from the store (1 owned) — its cost was not counted
+  3 of 3 needs picked
+  from the store: known to spark before this project — its library, your store, your projects
+  --tally reads the Claude Code transcripts of the sessions the steps ran in, for tool names and counts only
+  no transcript of session demo-session here, so the cost of its steps is not known
+```
+
+All three picks were known to spark before this project, and one of them, the FireBeetle, is owned. The cost could
+not be counted, and the tally exits 2, could-not-run: it looks for each step's session among the Claude Code
+transcripts under the home folder (`~/.claude/projects`), and this run's home folder was the scratch store, which
+holds none. A missing transcript is never counted as a cost of 0.
+
+In Claude Code the line ends with the cost instead. A run by spark's author on 2026-10-08, in Claude Code and not
+recorded for this page, printed `4 picks: 4 from the store (4 owned) — 2 requests, 1 document, 12 min`. Its words, as
+spark's code defines them:
+
+- **from the store**: known to spark before this project — its library, your store, your projects;
+- **owned**: your drawer holds it;
+- **requests**: tool calls that reach the network, every MCP call among them;
+- **documents**: the PDFs and images read (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`), with the Read tool or
+  `parts.py --read`, each counted once;
+- **min**: wall-clock minutes of the session between the steps.
+
+The run left nine lines in the store's history, `history.jsonl` ([your store](how-it-works.md#your-store)): a `step`
+line for each of S, M, C and L, with the session id; a `reused` line for each pick; the reason for passing over the
+LED pack; and a `built` line, written by the green build.
 
 ## Research
 
