@@ -41,8 +41,9 @@ What the three words mean:
   the version spark pins; that tscircuit came from an existing install, linked into the project. The note above each
   output names its run.
 - Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer, `plant-alarm` and
-  `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read; each
-  example under [owed facts and gaps](#owed-facts-and-gaps) ran in a store of its own.
+  `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read. The
+  `--audit` at the top of [owed facts and gaps](#owed-facts-and-gaps) ran in that store too, and each later example
+  there ran in a store of its own.
 - How: each command typed as shown. In Claude Code you type the `/spark:` command, and Claude runs these scripts for
   you. You, or another AI, can run them directly; [the guide for AI agents](agents.md) says how.
 - Paths: `$CLAUDE_PLUGIN_ROOT` is where spark is installed. In outputs, `~/` is the home folder, `<temp>` a temporary
@@ -411,8 +412,28 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --audit
   xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file
 ```
 
-In a scratch store of its own, the plant alarm's soil need matched (`--match .`) a catalog record written by hand,
-`soil-probe`, that owed three facts:
+In a scratch store of its own, a catalog record was written by hand to `<store>/catalog/soil-probe.json`:
+
+```json
+{"schema": 1, "id": "soil-probe", "name": "A capacitive soil probe on a 3-pin cable", "kind": "sensor",
+ "function": [{"does": "sense", "what": "soil-moisture"}],
+ "needs": [{"signal": "SOIL_MOISTURE", "pin": "Signal", "direction": "out", "needs": ["adc"]}],
+ "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}, {"pin": "GND", "rail": "ground", "direction": "in"}],
+ "unused_pins": [], "pin_order": ["GND", "VCC", "Signal"],
+ "body_mm": {"width": 10, "height": 6, "verified": false, "source": "measured with a ruler", "why_it_matters": "where the socket sits"}}
+```
+
+That store's drawer held only the FireBeetle, and its project two needs, in `../needs.json`: the plant alarm's soil
+need without its condition, and the board.
+
+```json
+[
+  {"id": "soil", "does": "sense", "what": "soil-moisture"},
+  {"id": "board", "does": "compute", "what": "microcontroller"}
+]
+```
+
+`--match .` then offered the record, which owed three facts:
 
 <!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
@@ -438,8 +459,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --requirements .
   refused, so nothing was written: soil-probe — owes footprint, pin_order_proof, simulation — fill it in its own home with --fact-set
 ```
 
-It exits 1. **Only the outline** (`body_mm`) does not stop it. The same record with those three facts and no outline,
-picked the same way in another store, goes into the file with a warning:
+It exits 1. **Only the outline** (`body_mm`) does not stop it. In another store, the same record carrying the three
+facts of `../facts.json` (below) and no `body_mm`, picked the same way, goes into the file with a warning:
 
 <!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
@@ -479,8 +500,8 @@ Then `--requirements` wrote the file and put the record on the shelf:
 `--fact-set` never changes spark's own library: a library record is changed in spark's repository.
 
 **What follows a gap.** A need marked `gap` has nothing in the store to pick. Left unpicked, it does not stop the
-building list, and `--requirements` says so. In a store of its own, the plant alarm with soil marked `gap` and the
-library's LED picked for the alarm:
+building list, and `--requirements` says so. In a store of its own, the plant alarm with soil marked `gap`, the
+library's LED picked for the alarm and the FireBeetle for the board (`--pick . alarm=led-red-5mm board=firebeetle2-esp32s3`):
 
 <!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
@@ -488,7 +509,8 @@ library's LED picked for the alarm:
   not on the board: soil — marked a gap: nothing like it is in the store yet; research it before it can be built
 ```
 
-The file keeps that note under `unserved`, and the build's verdict repeats it:
+The board, unlike the other needs, cannot be left unpicked: without it `--requirements` refuses, `board — pick one
+board — none is picked`. The file keeps that note under `unserved`, and the build's verdict repeats it:
 `the chain runs end to end — but not every need is on the board: soil (a gap)`. [Research](#research) comes next:
 `/spark:research` writes a new record into the project's `parts/`. A new record can still owe facts;
 `parts.py --audit --project .` names them, and `--fact-set` fills them as above. Then pick it for the need and run
