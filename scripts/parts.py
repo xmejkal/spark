@@ -1989,9 +1989,16 @@ def _what_a_pick_wrote(name, listed, history, events, new_keys, dry_run):
         passed = "%s (%s)" % (next(event[kind] for kind in ("part", "board", "entry") if kind in event), event["need"])
         lines.append("  %s why you passed over %s" % ("would note" if dry_run else "noted", passed) if event in new else
                      "  already noted, not changed: why you passed over %s — your history keeps the first reason" % passed)
-    lines += ["  needs.json %s your drawer entr%s %s — a key made from your label, in the project's own file" % (
-        "would name" if dry_run else "names", "y" if len(new_keys) == 1 else "ies", ", ".join(sorted(new_keys)))] if new_keys else []
-    return lines
+    return lines + _names_your_entries("needs.json", new_keys, dry_run)
+
+
+def _names_your_entries(file_name, new_keys, dry_run):
+    """
+    What a write says once when a project file starts naming drawer entries by their keys — each a key made from the person's
+    label (C-17; F16): needs.json for --pick, requirements.json for --requirements, worded alike. Nothing when no key is new.
+    """
+    return ["  %s %s your drawer entr%s %s — a key made from your label, in the project's own file" % (file_name, "would name" if dry_run else
+        "names", "y" if len(new_keys) == 1 else "ies", ", ".join(sorted(new_keys)))] if new_keys else []
 
 
 def _released(changes, name):
@@ -2017,6 +2024,8 @@ def _op_requirements(args, project):
     content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = needs.requirements(
         args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
+    # F16: the drawer keys the file names before this write — needs.requirements has read it as JSON already
+    named = needs.unserved_keys(json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {})
     if not problems and not args.dry_run:
         for record, source in shelving:
             shelve(record, source)
@@ -2043,6 +2052,7 @@ def _op_requirements(args, project):
              for gap in ([] if problems else no_driver)]
     said += ["  not on the board: %s — %s" % (item["need"], NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
              for item in ([] if problems else unserved)]
+    said += [] if problems else _names_your_entries(needs.REQUIREMENTS, needs.unserved_keys(content) - named, args.dry_run)
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
                    "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
                    "unserved": unserved, "no_supply": no_supply, "no_driver": no_driver,

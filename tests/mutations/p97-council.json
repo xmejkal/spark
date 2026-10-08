@@ -95,5 +95,9 @@
  {"file": "scripts/needs.py", "name": "F14: thousands spaced with a no-break space are cut at it", "find": "(?:[ \\u00a0]\\d{3})+", "replace": "(?:[ ]\\d{3})+"},
  {"file": "scripts/needs.py", "name": "F14: a Czech ,- before the crowns is kept", "find": "|(?:%s)(?:,-)?\\s?(?:", "replace": "|(?:%s)\\s?(?:"},
  {"file": "scripts/needs.py", "name": "F14: a Czech ,- with no crowns is kept", "find": "|\\b\\d[\\d. ]*,-(?!\\w)\" % (CODES", "replace": "\" % (CODES"},
- {"file": "scripts/needs.py", "name": "F14: what is left with no letter in it is a reason", "find": "        why = why if re.search(r\"[^\\W\\d_]\", why) else \"\"", "replace": "        why = why"}
+ {"file": "scripts/needs.py", "name": "F14: what is left with no letter in it is a reason", "find": "        why = why if re.search(r\"[^\\W\\d_]\", why) else \"\"", "replace": "        why = why"},
+ {"file": "scripts/parts.py", "name": "F16: --requirements says nothing of the drawer keys it writes into the file", "find": "    said += [] if problems else _names_your_entries(needs.REQUIREMENTS, needs.unserved_keys(content) - named, args.dry_run)", "replace": "    said += []"},
+ {"file": "scripts/parts.py", "name": "F16: the drawer keys in requirements.json are said on every run, not once", "find": "needs.unserved_keys(content) - named, args.dry_run)", "replace": "needs.unserved_keys(content), args.dry_run)"},
+ {"file": "scripts/parts.py", "name": "F16: --requirements says the keys are in needs.json", "find": "_names_your_entries(needs.REQUIREMENTS, ", "replace": "_names_your_entries(\"needs.json\", "},
+ {"file": "scripts/parts.py", "name": "F16: several drawer keys are said as one entry", "find": "\"y\" if len(new_keys) == 1 else \"ies\"", "replace": "\"y\""}
 ]

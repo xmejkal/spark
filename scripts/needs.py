@@ -382,6 +382,16 @@ Requirements = collections.namedtuple("Requirements", "content shelving unplaced
 #: The note a requirements file keeps of the needs it leaves off the board (C-2): `check_spine` reads it into its verdict.
 UNSERVED = "unserved"
 
+
+def unserved_keys(content):
+    """
+    The drawer entry keys a requirements file names (F16): the picks of each `unserved` note "no record" — keys made from the
+    person's labels, which `--requirements` says once, as `--pick` does of needs.json's. A note that is no such note names none.
+    """
+    notes = content.get(UNSERVED) if isinstance(content, dict) else None
+    return {key for note in (notes if isinstance(notes, list) else []) if isinstance(note, dict) and note.get("why") == "no record"
+            for key in (note.get("picks") if isinstance(note.get("picks"), list) else []) if isinstance(key, str)}
+
 #: The facts that place a part, not wire it (the PO, 2026-10-08; P165): a pick that owes only these is written, and the PCB step
 #: lays it out at a placeholder size, said; one that owes a fact the circuit needs — a footprint, a pin order and its proof, a
 #: simulation stance — is refused, as before.

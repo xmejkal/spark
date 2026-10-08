@@ -1355,7 +1355,7 @@ class TheRequirementsFileTest(unittest.TestCase):
     def test_text_mode_says_what_it_wrote_what_went_onto_the_shelf_and_what_is_reserved(self):
         _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}]),
                                    ("light", [{"part": "x-led"}]), ("alarm", [{"entry": "speaker"}])])
-        for extra, verb in ((["--dry-run"], "would write"), ([], "wrote")):  # in this order: a real run puts x-led on the shelf
+        for extra, verb, names in ((["--dry-run"], "would write", "would name"), ([], "wrote", "names")):  # a real run shelves x-led
             with self.subTest(extra=extra):
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):
@@ -1365,7 +1365,18 @@ class TheRequirementsFileTest(unittest.TestCase):
                                  "  reserved, not placed — no record: speaker\n"
                                  "  not on the board: alarm — speaker has no record: fine for what is wired off the board (a speaker, "
                                  "a battery); what sits on the board needs one — link its drawer entry to a record with `is`, or "
-                                 "research one\n" % (verb, project / "requirements.json"))
+                                 "research one\n"
+                                 "  requirements.json %s your drawer entry speaker — a key made from your label, in the project's own file\n"
+                                 % (verb, project / "requirements.json", names))
+
+    def test_a_drawer_entry_s_key_the_file_names_is_said_once(self):
+        # F16 (C-17's rule): `unserved` writes a key made from the person's label into requirements.json, the file most often
+        # committed — said by the write that adds it, never again; two keys at once are said together
+        _, project = self.project([self.BOARD, ("alarm", [{"entry": "speaker"}]), ("power", [{"entry": "lipo"}])])
+        first, again = self.text(["--requirements", str(project)]), self.text(["--requirements", str(project)])
+        self.assertIn("\n  requirements.json names your drawer entries lipo, speaker — a key made from your label, in the project's own "
+                      "file\n", first)
+        self.assertNotIn("your drawer entr", again)
 
     # --- a re-run keeps what the person did by hand (the PO, 2026-10-08) ---
 
