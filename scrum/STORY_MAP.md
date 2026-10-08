@@ -9,10 +9,10 @@ log proves. **An open backlog item sits on one slice below, or it is parked or d
 
 | # | step | spark today | gap |
 | --- | --- | --- | --- |
-| 0 | **Shape the idea** — a conversation: what it must do, which *kinds* of module do it, what else it could do; a block diagram with no part numbers yet | nothing: `/spark:build` starts from a requirements file | **all of it** (P76) |
+| 0 | **Shape the idea** — a conversation: what it must do, which *kinds* of module do it, what else it could do; a block diagram with no part numbers yet | `/spark:idea` (S): a goal in words becomes needs — a verb and a few words each, no part numbers, at most three questions, one at a time — written to the project's `.spark/needs.json` | brainstorming what else it could do and which *kinds* of module; a block diagram; the ways in beyond goal first (P76) |
 | 1 | Install, start a project | README; `/spark:init` (`init_project.py`) | public since 2026-10-03; `/spark:setup` installs what is missing with one yes (P82), and the simulation needs only Node (B10) |
-| 2 | Know what you own | `/spark:identify` (a module from a photo) | never pointed at the bin's drawer (B1) |
-| 3 | Choose parts | `/spark:research`, `parts.py --need/--kept`, the catalog | `--need measure distance` misses the rangefinder (P39) |
+| 2 | Know what you own | `/spark:drawer` (your drawer, in your store: what you say in plain words and what your DFRobot orders held, linked to the record spark has for the part by its exact part number), `/spark:identify` (a module from a photo) | DFRobot's is the only order importer; AliExpress orders come later (the store spec, §7) |
+| 3 | Choose parts | `/spark:idea`: M matches each need against your drawer and spark's records, store first (`parts.py --match`); C picks a part per need, reserves what you own and refuses a pick another project holds, naming it (`--pick`); L writes the picks as `requirements.json`; T ends with one cost line (`--tally`). `/spark:research` for a gap, `parts.py --need/--kept`, the catalog | `--need measure distance` misses the rangefinder (P39) |
 | 4 | Assign pins | `assign_pins.py`, `--emit-pins` | — |
 | 5 | Generate, build | `emit_board.py`, `check_spine.py` | no capacitors (P38) |
 | 6 | Check, review | `check_all.py` (5 checks), `/spark:review` | the agent loses `fix` (P43) |
@@ -31,7 +31,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
 | **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71, P44, P75, B10, P82 (done); **P104** (#33), the README |
-| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | *not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5), **P100** (#6) |
+| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | goal first runs today: `/spark:drawer`, then `/spark:idea` from a goal in words to a requirements file that `/spark:build` turns into a board (store 1a–1c, done 2026-10-04 to 2026-10-08). *Not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5) — the brainstorm, the block diagram and the ways in beyond goal first; **P100** (#6) — a new idea and an existing project, each walked through with the person |
 | **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | P81 (done), **B1** (bin #1), **P58** (bin #5), **P73** (bin #2), **B8** (bin #3), **B5** (bin #4), B11 (done) |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59** (#7), **P74** (#8) |
 | **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
