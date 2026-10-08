@@ -86,7 +86,7 @@ card: spark#18 and the PO's three decisions of 2026-10-06 in its comment. Builds
    instance after its need, so the build does not refuse two components of one name. Test in Task 9
    (`test_a_part_picked_for_two_needs_is_named_after_each`).
 4. **A `requirements.json` the person extended by hand** (`signals`, `rails`, as `/spark:build`'s page documents) —
-   expected: `--requirements` sets `board` and `parts` and keeps every other key. Test in Task 9
+   expected: `--requirements` sets `board` and `parts` and keeps every other key. (Changed 2026-10-08 by the PO's decision "Keep them", at Task 9's review: a re-run also keeps every existing `parts` entry unchanged and adds only the missing pick instances; `kept` lists the entries no pick explains.) Test in Task 9
    (`test_what_the_person_added_to_the_file_stays`).
 5. **A tally with no transcript** (spark run outside Claude Code, or the harness has cleaned old transcripts away) —
    expected: could-not-run, and the line says the cost was not counted — never "0 requests". Test in Task 10
@@ -2043,7 +2043,7 @@ builds with it. `/spark:build` takes it from there.
 
 `commands/build.md`: after the paragraph that begins "`--keep .` writes the board into the project", add: "When the
 chain runs end to end for a project on your list, your store's history records `built`, with a digest of the board
-and of each part, so a later project sees what has been built and with which facts."
+and of each part, so a later project sees what has been built and with which facts." (Reworded at Task 9's review, W17: the history records the board and parts built, each with a digest of the facts the build read; nothing reads those facts yet.)
 
 The PO's decision 2 — the requirements file is P97's, and P76's output is `needs.json` — in the same commit:
 - `README.md`: "Its placement is a first draft, which you lay out before ordering. Today
@@ -2802,7 +2802,7 @@ that run reads from its own earlier output, said where each comes from.
 **Type consistency.** `_candidate(need, functions, names, holding, said, mine=None)`, `_counts(holding, mine=None)`,
 `candidates(need, known, entries, mine=None)` (Tasks 1–3); `_pointing(entries) -> {(kind, id): [(key, entry)]}` and
 `_held(pick, entries, pointing)` used by `plan_pick` (Task 6) and `owned` (Task 10); `plan_pick(...)` returns five
-values, `_op_pick` unpacks five; `requirements(...)` returns four, `_op_requirements` unpacks four;
+values, `_op_pick` unpacks five; `requirements(...)` returns four, `_op_requirements` unpacks four; (since Task 9's review `needs.requirements` returns `needs.Requirements`, six fields: content, shelving, unplaced, kept, board_was, problems)
 `store.add_project(folder, dry_run=False)` (Task 6) used by Tasks 6 and 10; `store.project_name` (Task 2) used by Tasks
 2, 9, 10; `_record_path` returns `(path, source)` everywhere after Task 8 (its one caller is `_set_in_home`);
 `shelve(path, project_name=None)` (Task 9) keeps `drawer.apply`'s two-argument call; `digest(record, facts=BUILD_FACTS)`
