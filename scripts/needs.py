@@ -348,14 +348,16 @@ def plan_pick(project, given, passed_over=()):
 
 
 #: What a passed-over reason never keeps (§5.7, W21: "never a URL … a price"): a web address — any scheme, `www.`, or a bare
-#: host whose last label is letters, with a path, so `3.3/5V` and `v1.1/v1.2` stay — with a bracket around it; and an amount
-#: of money — a currency sign or code against a number on either side, glued or spaced, thousands spaced with a space or a
-#: no-break space, a Czech `,-` with or without its crowns (F14).
+#: host with a path whose last label is a common top-level domain (TLDS), so `3.3/5V`, `v1.1/v1.2` and `pinout.png/page 2`
+#: stay — with a bracket around it; and an amount of money — a currency symbol before a number, glued or spaced, a code
+#: before it only spaced (`EUR 12`; `EUR12` and `KC868` are part numbers), a symbol or a code after it, glued or spaced,
+#: thousands spaced with a space or a no-break space, a Czech `,-` with or without its crowns (F14).
+TLDS = "com|org|net|io|cz|sk|de|eu|co|uk|pl|at|ch|fr|it|es|nl|info|shop|dev|app"
 URL_IN_WORDS = re.compile(r"[<(\[]?(?:[a-z][a-z0-9+.-]*://|www\.)[^\s>)\]]+[>)\]]?"
-                          r"|[<(\[]?\b[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}(?::\d+)?/[^\s>)\]]*[>)\]]?", re.IGNORECASE)
+                          r"|[<(\[]?\b[\w-]+(?:\.[\w-]+)*\.(?:%s)(?::\d+)?/[^\s>)\]]*[>)\]]?" % TLDS, re.IGNORECASE)
 CODES = r"(?:eur|euros?|usd|dollars?|czk|kč|kc|gbp|chf|pln|zł|cny|rmb|yuan|jpy|yen)"
 AMOUNT = r"\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d+)?|\d[\d.,]*"
-PRICE_IN_WORDS = re.compile(r"(?:[$€£¥]|\b%s)\s?(?:%s)|(?:%s)(?:,-)?\s?(?:[$€£¥]|%s\b)|\b\d[\d. ]*,-(?!\w)" % (CODES, AMOUNT, AMOUNT, CODES),
+PRICE_IN_WORDS = re.compile(r"(?:[$€£¥]\s?|\b%s\s)(?:%s)|(?:%s)(?:,-)?\s?(?:[$€£¥]|%s\b)|\b\d[\d. ]*,-(?!\w)" % (CODES, AMOUNT, AMOUNT, CODES),
                             re.IGNORECASE)
 
 

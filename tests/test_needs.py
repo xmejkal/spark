@@ -675,17 +675,21 @@ class ThePicksTest(unittest.TestCase):
                             ("too dear at 12EUR", "too dear at"),
                             ("300Kč at the shop", "at the shop"),
                             ("costs 300Kc here", "costs here"),
-                            ("EUR12 is too much", "is too much"),
-                            ("USD5", ""),
-                            ("kč300", ""),
                             ("1 200 Kč", ""),
                             ("1\u00a0200 Kč", ""),
                             ("costs 300,- Kč here", "costs here"),
-                            ("costs 300,- here", "costs here")):
+                            ("costs 300,- here", "costs here"),
+                            # the controller's cases, as given: a symbol may be glued in front, a code only after
+                            ("12EUR", ""), ("300Kč", ""), ("€12", ""), ("$5", ""), ("EUR 12", ""),
+                            ("aliexpress.com/item/1005006.html", ""), ("www.x.cz/y", "")):
             with self.subTest(given=given):
                 self.assertEqual(needs.kept_reason(given), (kept, True))
         for given in ("a 3 W speaker is loud enough", "it senses distance, not moisture.", "2 of them are dead",
-                      "it runs at 3.3/5V only", "board v1.1/v1.2 differ"):
+                      "it runs at 3.3/5V only", "board v1.1/v1.2 differ",
+                      # a currency code glued before a number is a part number, not a price; a bare host is a URL only
+                      # when its last label is a common TLD — png is a file's
+                      "the KC868 has no free pins", "not the GBP10 variant", "pinout.png/page 2",
+                      "EUR12 is too much", "USD5", "kč300"):
             with self.subTest(given=given):
                 self.assertEqual(needs.kept_reason(given), (given, False))
 
