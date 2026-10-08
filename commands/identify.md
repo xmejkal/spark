@@ -53,7 +53,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified <id> --project .
 ```
 
 `--sources` asks every cited URL whether it answers, so it reaches the network: no command's `allowed-tools` lets it run
-unasked, and Claude Code asks before it does. `--validate` and `--unverified` stay on the machine.
+unasked, and Claude Code asks before it does (unless the person's own settings already let it run: an allow rule of
+theirs, or auto mode). `--validate` and `--unverified` stay on the machine.
 
 Then put it in the drawer — an entry whose `is` is the record's id, with the photo kept by `parts.py --keep <photo>` as its `photos` (`/spark:drawer`, *Say what else you own*) — so nothing recommends buying what is already owned. The photo stays in the person's store, not the project: it is theirs, and a repository would publish it.
 

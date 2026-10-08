@@ -118,7 +118,8 @@ and without `--dry-run`. A record in spark's own library is changed in spark's r
 shelf copy of the record follows it ("shelf copy refreshed"), even when the record already said it; "shelf copy not
 refreshed: …" says why it could not: tell the person. A source not kept yet is fetched only after the person's yes — it
 reaches the network, and no command's `allowed-tools` lets `parts.py --fetch` run unasked, so Claude Code asks before it
-does: the person's answer there is the yes.
+does (unless the person's own settings already let it run: an allow rule of theirs, or auto mode): the person's answer
+there is the yes.
 
 ## L — the building list
 

@@ -54,9 +54,10 @@ to run. Then show the picture again — what was installed reads `[ok  ]`. A row
 *here* while the list *pins* another is offered the same way: `--install` puts the pinned one in.
 
 `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before any
-`--install` line runs, the dry run too. An install so takes three answers: Claude Code's prompt for the dry run, the
-person's to *install them now?*, then Claude Code's prompt for the install. The dry run is where they see what it would
-do, so show it first, as above.
+`--install` line runs, the dry run too (unless the person's own settings already let it run: an allow rule of theirs,
+or auto mode). An install so takes three answers: Claude Code's prompt for the dry run, the person's to *install them
+now?*, then Claude Code's prompt for the install. The dry run is where they see what it would do, so show it first, as
+above.
 
 ## 3. The choices — each writes one line
 
@@ -68,8 +69,9 @@ do, so show it first, as above.
 | `pin tscircuit core=0.0.2700` | `tools.py --pin tscircuit.core=0.0.2700 --project .` | `{"tscircuit": {"core": "0.0.2700"}}` — the core decides the build; `tscircuit=<v>` pins the CLI (`@tscircuit/cli`, versions like 0.1.2113). Then `--install tscircuit --project .` puts the pinned one in |
 | `new` | `tools.py --new 'NAME={…}'` | the person's own entry — ask its name, what it is for, how spark finds it (`kind` and `exe`, `module`, `file`/`url`/`sha256`, or `mcp.command`), how it installs, and which contract it `meets` |
 
-`--on` installs too, so like `--install` it is in no `allowed-tools`, and Claude Code asks before it runs. `--off`, `--use`,
-`--pin` and `--new` do not download, and are listed.
+`--on` installs too, so like `--install` it is in no `allowed-tools`, and Claude Code asks before it runs (unless the
+person's own settings already let it run: an allow rule of theirs, or auto mode). `--off`, `--use`, `--pin` and `--new`
+do not download, and are listed.
 
 A choice is the person's own by default. Add `--project .` to make it this design's: it goes into
 `.spark/tools.json` and travels with the project. A pin is usually the project's. A project's file wins
@@ -85,4 +87,5 @@ with the plugin; turning one off is done in Claude Code's `/mcp`.
 A spark command that reports a missing tool — `… is not installed — install: …` — is answered the same
 way: ask the person once, run `tools.py --install <name> --project .`, and carry on with the step. The same
 `package.json` rule holds: no `package.json`, `/spark:init` first. Claude Code asks before that `--install` runs, whichever
-command is open: none lists it.
+command is open (unless the person's own settings already let it run: an allow rule of theirs, or auto mode): none
+lists it.

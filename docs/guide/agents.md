@@ -17,8 +17,9 @@ name them.
 
 A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch` and
 `--sources`, and `tools.py --install` and `--on`, reach the network and are on no command's or skill's list, so Claude
-Code asks the person before any of them runs; their answer is the yes, and you do not work around it.
-`parts.py --describe --json` marks the network operations of `parts.py`.
+Code asks the person before any of them runs, and their answer is the yes. Their own settings can answer first: an allow
+rule of theirs, or auto mode, can let it run without asking, which is a yes given in advance, and auto mode can also
+refuse it. You do not work around either. `parts.py --describe --json` marks the network operations of `parts.py`.
 
 A new project starts with `/spark:init`, then `/spark:setup`. The [journey guide](journey.md) shows each step on real
 runs.
