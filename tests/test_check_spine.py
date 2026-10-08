@@ -650,6 +650,39 @@ class NothingToBuildIsNotAPassTest(unittest.TestCase):
         self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
 
 
+class AnEmitBoardCrashIsNotADesignFaultTest(unittest.TestCase):
+    def test_a_crash_of_the_generator_is_could_not_run_with_its_last_words(self):
+        # F5: emit_board exits 0 or 2 on purpose, so any other exit is a crash — and it read as `[!!  ] schematic`, problems,
+        # "the chain is broken", for a design nobody had examined. A real one here: a Python that raises, in its place.
+        import subprocess
+        real_run = subprocess.run
+        for crash, said in (("raise ValueError('a fault of its own')", "emit_board.py crashed: ValueError: a fault of its own"),
+                            ("import sys; sys.exit(3)", "emit_board.py crashed: exit 3, and nothing said")):
+            with self.subTest(crash=crash):
+                workdir = Path(tempfile.mkdtemp())
+                requirements = dict(check_spine.REFERENCE)
+                (workdir / "requirements.json").write_text(json.dumps(requirements))
+
+                def emit_board_crashes(command, *args, **kwargs):
+                    if any(str(word).endswith("emit_board.py") for word in command):
+                        command = [sys.executable, "-c", crash]
+                    return real_run(command, *args, **kwargs)
+
+                with mock.patch.object(subprocess, "run", side_effect=emit_board_crashes):
+                    stages = check_spine.run(requirements, workdir, from_library=True)
+                self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail), ("schematic", check_spine.COULD_NOT_RUN, said))
+                self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+
+    def test_a_refusal_of_the_generator_is_could_not_run_in_its_own_words(self):
+        # the control: exit 2 is emit_board refusing the input, and its sentence is the stage's detail, whole
+        workdir = Path(tempfile.mkdtemp())
+        requirements = {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        stages = check_spine.run(requirements, workdir, from_library=True)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("schematic", check_spine.COULD_NOT_RUN))
+        self.assertTrue(stages[-1].detail.startswith("cannot emit a board: led-red-5mm asks for 5 mA"), stages[-1].detail)
+
+
 class AConverterLimitIsNotADesignFaultTest(unittest.TestCase):
     def test_a_component_the_converter_cannot_map_is_could_not_look(self):
         # The RC car builds (13 traces) and the converter has no Wokwi part for its servo, buck

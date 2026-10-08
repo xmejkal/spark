@@ -359,12 +359,15 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         [sys.executable, str(SCRIPTS / "emit_board.py"), str(workdir / "requirements.json"),
          "--project", str(project), "--assume-missing-sizes"],
         capture_output=True, text=True)
+    if emitted.returncode == emit_board.EXIT_COULD_NOT_RUN:
+        # It refused the input — a part with no measured outline, a resistor nothing sizes — in its own words.
+        return stages + [Stage("schematic", COULD_NOT_RUN, emitted.stderr.strip())]
     if emitted.returncode != 0:
-        # emit_board distinguishes the two, and so must this. "It refused because a part has no
-        # measured outline" and "it produced a broken design" send a person to different places.
-        refused = emitted.returncode == emit_board.EXIT_COULD_NOT_RUN
-        return stages + [Stage("schematic", COULD_NOT_RUN if refused else PROBLEMS,
-                               emitted.stderr.strip())]
+        # emit_board exits 0 or 2 on purpose, so anything else is a crash: could-not-run, as `main` says of anything
+        # unforeseen, with the traceback's last line. Read as problems, it sent people to debug a design nobody examined (F5).
+        said = emitted.stderr.strip().splitlines()
+        return stages + [Stage("schematic", COULD_NOT_RUN, "emit_board.py crashed: %s" % (
+            said[-1] if said else "exit %d, and nothing said" % emitted.returncode))]
     board_file.write_text(emitted.stdout)
     traces_asked = emitted.stdout.count("<trace ")
     stages.append(Stage("schematic", OK, "%d trace(s) written" % traces_asked))
