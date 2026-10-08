@@ -664,10 +664,28 @@ class ThePicksTest(unittest.TestCase):
                             ("too dear: 12 EUR", "too dear"),
                             ("costs €12,50, see www.shop.example/a?b=1", "costs see"),
                             ("300 Kč and $5 more than the other", "and more than the other"),
-                            ("CZK 300 is too much", "is too much")):
+                            ("CZK 300 is too much", "is too much"),
+                            # F14: any scheme, a bare host with a path, the bracket around a URL; a currency glued to the
+                            # number on either side, thousands spaced (a space, a no-break space), a Czech ,- with or without Kč
+                            ("ftp://example.com/file", ""),
+                            ("see example.com/item/123 instead", "see instead"),
+                            ("cheaper on aliexpress.com/item/1005006.html", "cheaper on"),
+                            ("see <https://example.com/x>", "see"),
+                            ("see (https://example.com/x) instead", "see instead"),
+                            ("too dear at 12EUR", "too dear at"),
+                            ("300Kč at the shop", "at the shop"),
+                            ("costs 300Kc here", "costs here"),
+                            ("EUR12 is too much", "is too much"),
+                            ("USD5", ""),
+                            ("kč300", ""),
+                            ("1 200 Kč", ""),
+                            ("1\u00a0200 Kč", ""),
+                            ("costs 300,- Kč here", "costs here"),
+                            ("costs 300,- here", "costs here")):
             with self.subTest(given=given):
                 self.assertEqual(needs.kept_reason(given), (kept, True))
-        for given in ("a 3 W speaker is loud enough", "it senses distance, not moisture.", "2 of them are dead"):
+        for given in ("a 3 W speaker is loud enough", "it senses distance, not moisture.", "2 of them are dead",
+                      "it runs at 3.3/5V only", "board v1.1/v1.2 differ"):
             with self.subTest(given=given):
                 self.assertEqual(needs.kept_reason(given), (given, False))
 
@@ -1087,6 +1105,8 @@ class ThePicksTest(unittest.TestCase):
                               ("no reason", [{key: value for key, value in good.items() if key != "why"}]),
                               ("an empty reason", [dict(good, why="  ")]), ("a reason that is not words", [dict(good, why=7)]),
                               ("a reason that is only a URL and a price", [dict(good, why="https://shop.example/x 12 EUR")]),
+                              ("a price with its thousands spaced", [dict(good, why="1 200 Kč")]),
+                              ("a reason with no letter left", [dict(good, why="#3: $5")]),
                               ("nobody", [dict(good, by="robot")]), ("not an object", ["x-other"]), ("not a list", good), ("null", None)):
             with self.subTest(name=name):
                 said, code = run(["--pick", str(self.project), "soil=x-soil", "--passed-over", a_file(reasons)])

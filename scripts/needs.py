@@ -335,6 +335,7 @@ def plan_pick(project, given, passed_over=()):
     for number, item in enumerate(passed_over if isinstance(passed_over, (list, tuple)) else [None], 1):
         pick = _resolve(item.get("id"), known, entries) if isinstance(item, dict) and isinstance(item.get("id"), str) else None
         why, cut = kept_reason(item["why"]) if pick and isinstance(item.get("why"), str) else ("", False)
+        why = why if re.search(r"[^\W\d_]", why) else ""  # F14: what is left with no letter in it is no reason either
         if not (pick and item.get("need") in ids and drawer._words(why) and item.get("by", "person") in ("person", "agent")):
             problems.append(parts._problem("passed over %d" % number, 'a part passed over is {"need", "id", "why", "by": '
                                            '"person" or "agent"}: a need and an id spark has, and the reason in words — a URL or '
@@ -346,11 +347,16 @@ def plan_pick(project, given, passed_over=()):
     return after, changes, events, notes, problems
 
 
-#: What a passed-over reason never keeps (§5.7, W21: "never a URL … a price"): a web address, and an amount of money — a
-#: currency sign or code beside a number, on either side.
-URL_IN_WORDS = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
-CURRENCY = r"(?:[$€£¥]|\b(?:eur|euros?|usd|dollars?|czk|kč|kc|gbp|chf|pln|zł|cny|rmb|yuan|jpy|yen)\b)"
-PRICE_IN_WORDS = re.compile(r"%s\s?\d[\d.,]*|\d[\d.,]*\s?%s" % (CURRENCY, CURRENCY), re.IGNORECASE)
+#: What a passed-over reason never keeps (§5.7, W21: "never a URL … a price"): a web address — any scheme, `www.`, or a bare
+#: host whose last label is letters, with a path, so `3.3/5V` and `v1.1/v1.2` stay — with a bracket around it; and an amount
+#: of money — a currency sign or code against a number on either side, glued or spaced, thousands spaced with a space or a
+#: no-break space, a Czech `,-` with or without its crowns (F14).
+URL_IN_WORDS = re.compile(r"[<(\[]?(?:[a-z][a-z0-9+.-]*://|www\.)[^\s>)\]]+[>)\]]?"
+                          r"|[<(\[]?\b[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}(?::\d+)?/[^\s>)\]]*[>)\]]?", re.IGNORECASE)
+CODES = r"(?:eur|euros?|usd|dollars?|czk|kč|kc|gbp|chf|pln|zł|cny|rmb|yuan|jpy|yen)"
+AMOUNT = r"\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d+)?|\d[\d.,]*"
+PRICE_IN_WORDS = re.compile(r"(?:[$€£¥]|\b%s)\s?(?:%s)|(?:%s)(?:,-)?\s?(?:[$€£¥]|%s\b)|\b\d[\d. ]*,-(?!\w)" % (CODES, AMOUNT, AMOUNT, CODES),
+                            re.IGNORECASE)
 
 
 def kept_reason(text):
