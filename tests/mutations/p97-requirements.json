@@ -1,10 +1,10 @@
 [
  {"file": "scripts/needs.py", "name": "a pick that owes facts is placed",
-  "find": "[\"owes %s — fill it in its own home with --fact-set\" % \", \".join(parts.owes(record))] if parts.owes(record)",
+  "find": "[\"owes %s — %s\" % (\", \".join(parts.owes(record)), _how_to_fill(path))] if parts.owes(record)",
   "replace": "[] if False"},
  {"file": "scripts/needs.py", "name": "two boards are fine",
-  "find": "problems = [] if len(board_picks) == 1 else",
-  "replace": "problems = [] if board_picks else"},
+  "find": "    if len(board_picks) == 1:\n        return []",
+  "replace": "    if board_picks:\n        return []"},
  {"file": "scripts/needs.py", "name": "a part picked twice is not named",
   "find": "name = _name_after(need_id) if len(picked_by[part_id]) >= 2 else None",
   "replace": "name = _name_after(need_id) if False else None"},

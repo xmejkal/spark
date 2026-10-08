@@ -182,7 +182,10 @@ irrigation's repositories, a P84 clone).
 
 The goal stays in `project.json`'s `goal`. The needs file holds no owned counts, places or reasons; reasons go to
 the history (§5.7). The requirements writer places only picks with a part or board record; record-less picks (the
-speaker, the LiPo) are reserved, not placed.
+speaker, the LiPo) are reserved, not placed. A drawer entry of a record spark knows, picked by its key
+(`soil=dfrobot-sen0193`), is a pick of that record — one stock, however it is named — so its owed facts are checked and it
+is placed (P97's final review). A board picked from the drawer with no board file is refused by name: spark cannot build
+with a board until a record in `boards/` says its pins.
 
 ### 5.4 Records keep up with the contract
 
@@ -230,7 +233,8 @@ One event per line, appended, never shared; a repeat of an event with the same k
 
 ```json
 {"event":"step","project":"plant-alarm","step":"C","session":"<id>","start":"…"}
-{"event":"reused","project":"plant-alarm","need":"soil","entry":"dfrobot-sen0193"}
+{"event":"reused","project":"plant-alarm","need":"soil","part":"sen0193-soil-moisture"}
+{"event":"reused","project":"plant-alarm","need":"alarm","entry":"dfrobot-fit0502"}
 {"event":"passed_over","project":"plant-alarm","need":"soil","part":"sen0308-soil-moisture","why":"waterproof is not needed indoors","by":"person"}
 {"event":"researched","project":"plant-alarm","need":"…","found":["…"],"requests":4,"documents":1,"minutes":9}
 {"event":"built","project":"plant-alarm","board":{"id":"firebeetle2-esp32s3","digest":"…"},"parts":[{"id":"sen0193-soil-moisture","digest":"…"}]}

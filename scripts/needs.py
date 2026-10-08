@@ -211,10 +211,40 @@ def _held(pick, entries, pointing):
     return pointing.get((kind, key), [])
 
 
+def _as_record(pick, known, entries):
+    """
+    A pick as what it is (§5.3): the drawer entry of a record spark knows is a pick of that record — one stock, however it is
+    named — so the building list places the record and checks what it owes. Any other pick stays as it is.
+    """
+    kind, key = next(iter(pick.items()))
+    said = (entries.get(key) or {}).get("is") if kind == "entry" else None
+    return dict(said) if said and next(iter(said.items())) in known else pick
+
+
 def _resolve(pick_id, known, entries):
-    """A pick by its id (§5.3): the record of that id — a part's, then a board's — else the drawer entry of that key, else None."""
+    """
+    A pick by its id (§5.3): the record of that id — a part's, then a board's — else the drawer entry of that key, as the
+    record it says it is when spark knows that record (`_as_record`); None when nothing has that id.
+    """
     kind = next((kind for kind in ("part", "board") if (kind, pick_id) in known), "entry" if pick_id in entries else None)
-    return {kind: pick_id} if kind else None
+    return _as_record({kind: pick_id}, known, entries) if kind else None
+
+
+def _how_to_free(entry_keys, holders):
+    """The fix for a reservation past what is free (§8 C): what other projects hold is freed — and when none holds any, the
+    shortage is the person's own count: fewer are picked, or a count that was low is set. `--drawer-set` takes a file."""
+    if holders:
+        return ("free it — a file holding [%s] without %s, given to --drawer-set <file> after a dry run — or pick another"
+                % (", ".join('{"entry": "%s", "used_in": …}' % key for key in entry_keys), ", ".join(holders)))
+    return ("pick fewer, or another — or, if you own more, a file holding [%s], given to --drawer-set <file> after a dry run"
+            % ", ".join('{"entry": "%s", "count": …}' % key for key in entry_keys))
+
+
+def _unfiled_boards(needs, known, entries):
+    """The drawer entries picked for a need that computes — the board (`/spark:idea`, S) — that are no board spark has a file
+    for: the person owns it, and spark cannot build with it until a board file says its pins (§5.3)."""
+    return sorted({key for need in needs if need.get("does") == "compute" for pick in need.get("pick") or []
+                   for kind, key in [next(iter(_as_record(pick, known, entries).items()))] if kind == "entry"})
 
 
 def plan_pick(project, given, passed_over=()):
@@ -223,25 +253,31 @@ def plan_pick(project, given, passed_over=()):
     [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
     from every need's picks — one piece per pick — on the entries that hold them, never past what is owned or what another
     project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
-    longer picks. A pick no entry holds is to get, not reserved. A `reused` event is written for each pick except a record the
-    project keeps in its own parts/ or boards/: that was not there before the project. Nothing is written here.
+    longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
+    a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
+    own parts/ or boards/: that was not there before the project. Nothing is written here.
     """
     name, current, entries = store.add_project(project, dry_run=True), read(project), drawer.entries()
     known, ids, problems, picked = {row[:2]: row[2] for row in drawer.linkable(project)}, {need["id"] for need in current}, [], {}
+    notes = []
     for need_id, pick_id in given:
         pick = _resolve(pick_id, known, entries)
+        named = next(iter(pick.values())) if pick else None
         if need_id not in ids:
             problems.append(parts._problem(need_id, "no need called %s — --needs lists them" % need_id))
         elif pick is None:
             problems.append(parts._problem(need_id, "no record or drawer entry called %s — --match lists the candidates" % pick_id))
-        elif not store.PLAIN.fullmatch(pick_id):
+        elif not (store.PLAIN.fullmatch(pick_id) and store.PLAIN.fullmatch(named)):  # the key given, and the id written
             raise store.StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so a pick cannot name it: "
-                                     "rename the drawer entry, or the record's file, then pick it" % pick_id)
+                                     "rename the drawer entry, or the record's file, then pick it"
+                                     % (named if store.PLAIN.fullmatch(pick_id) else pick_id))
         elif pick not in picked.setdefault(need_id, []):
             picked[need_id].append(pick)
+            renamed = "%s: the drawer entry of %s — picked as that record" % (pick_id, named)
+            notes += [renamed] if named != pick_id and renamed not in notes else []
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
     wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
-    pointing, mine, notes = _pointing(entries), collections.Counter(), []
+    pointing, mine = _pointing(entries), collections.Counter()
     # a pick of one drawer entry has nowhere else to go: it takes its piece before a pick of a record, which may take another entry
     for (kind, key), pieces in sorted(wanted.items(), key=lambda asked: (asked[0][0] != "entry", asked[0])):
         held = _held({kind: key}, entries, pointing)
@@ -260,10 +296,11 @@ def plan_pick(project, given, passed_over=()):
         if pieces:
             problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(holders) if holders else "",
                                                                                  pieces + sum(mine[entry_id] for entry_id, _ in held)),
-                                           "free it — --drawer-set %s with `used_in` leaving out %s, after a dry run — or pick another"
-                                           % (", ".join(entry_id for entry_id, _ in held), ", ".join(holders) or "nobody")))
+                                           _how_to_free([entry_id for entry_id, _ in held], holders)))
         notes += ["%s: maybe owned — check the drawer first" % key] if unsure else []
         notes += ["%s: count unknown — check the drawer" % key] if owned == "unknown" else []
+    notes += ["%s: a board needs a board file — a record in boards/ — before spark can build with it" % key
+              for key in _unfiled_boards(after, known, entries)]
     changes = []
     for entry_id, entry in sorted(entries.items()):
         used_in = {who: n for who, n in (entry.get("used_in") or {}).items() if who != name}
@@ -318,18 +355,25 @@ def _called(part_id, name):
     return name or "".join(word.capitalize() for word in part_id.replace("_", "-").split("-"))
 
 
+def _one_name(name):
+    """A name as the build tells names apart: `design.signal_name` puts an instance's name in capitals before its signals, so
+    OpenLid and Openlid both give OPENLID_BUTTON — one name, and two GPIOs joined."""
+    return name.upper()
+
+
 def _serve_picks(existing, picked_by):
     """
     (the entries a pick explains, as indexes into `existing`; the picks no entry serves, as (position, need id, part id)).
-    `picked_by` is {part id: [(position, need id)]}. An entry named after a need is that need's; the entries of a part that
-    are left pair off with its other picks in order — so what a pick leaves unserved is added, and what no pick serves is
-    the entry nobody asked for.
+    `picked_by` is {part id: [(position, need id)]}. An entry named after a need — whatever its capitals — is that need's; the
+    entries of a part that are left pair off with its other picks in order — so what a pick leaves unserved is added, and
+    what no pick serves is the entry nobody asked for.
     """
     explained, unserved = set(), []
     for part_id, picks in picked_by.items():
         free, unnamed = [number for number, entry in enumerate(existing) if _part_of(entry) == part_id], []
         for position, need_id in picks:
-            own = next((number for number in free if _name_of(existing[number]) == _name_after(need_id)), None)
+            its_own = _one_name(_name_after(need_id))
+            own = next((number for number in free if _one_name(_name_of(existing[number]) or "") == its_own), None)
             if own is None:
                 unnamed.append((position, need_id))
             else:
@@ -348,29 +392,56 @@ def _merge_parts(existing, wanted):
     entry is added at the end for each pick it lacks. `wanted` is [(need id, part id)], one per pick, in pick order; a part
     picked n times needs n entries (`_serve_picks` says which are there). What no pick explains — added by hand, or left by a
     pick since changed — is kept, and said. An entry added for a part with two or more instances is named after its need, and
-    refused by need id when the file already has that name: the build refuses two components of one name.
+    refused by need id when the file already has that name, in any capitals (`_one_name`): the build refuses two components
+    of one name.
     """
     picked_by = collections.defaultdict(list)
     for position, (need_id, part_id) in enumerate(wanted):
         picked_by[part_id].append((position, need_id))
     explained, unserved = _serve_picks(existing, picked_by)
-    held_by = {}
+    held_by = {}  # {one name: (who has it, what it is called there)}
     for entry in existing:
         if _part_of(entry):
-            held_by.setdefault(_called(_part_of(entry), _name_of(entry)), "%s in requirements.json" % entry_label(entry))
+            called = _called(_part_of(entry), _name_of(entry))
+            held_by.setdefault(_one_name(called), ("%s in requirements.json" % _part_of(entry), called))
     added, problems = [], []
     for _, need_id, part_id in sorted(unserved):
         name = _name_after(need_id) if len(picked_by[part_id]) >= 2 else None
         called = _called(part_id, name)
-        if called in held_by:
-            problems.append(parts._problem(need_id, 'its %s would be called %s, which %s has too — the build refuses two components '
-                                           'of one name; give one of them a name of your own in requirements.json, '
-                                           '{"part": "%s", "name": …}, and run this again' % (part_id, called, held_by[called], part_id)))
+        if _one_name(called) in held_by:
+            holder, its_name = held_by[_one_name(called)]
+            problems.append(parts._problem(need_id, 'its %s would be called %s, and %s is called %s — the build refuses two components '
+                                           'of one name, and capitals do not make two names; give one of them a name of your own in '
+                                           'requirements.json, {"part": "%s", "name": …}, and run this again'
+                                           % (part_id, called, holder, its_name, part_id)))
             continue
-        held_by[called] = "need %s's %s" % (need_id, part_id)
+        held_by[_one_name(called)] = ("need %s's %s" % (need_id, part_id), called)
         added.append(part_id if name is None else {"part": part_id, "name": name})
     kept = [{"part": _part_of(entry), "name": _name_of(entry)} for number, entry in enumerate(existing) if number not in explained]
     return list(existing) + added, kept, problems
+
+
+def _board_problems(board_picks, unfiled, project):
+    """
+    What refuses the board (§8 L): it is one, picked as its record. A board picked from the drawer that spark has no board
+    file for is named, with the boards spark has a file for — the library's and the project's; no board, or two, is said so.
+    """
+    if len(board_picks) == 1:
+        return []
+    if unfiled and not board_picks:
+        filed = ", ".join(boards.available(project)) or "none"
+        return [parts._problem(key, "picked as the board, but a board needs a board file — a record in boards/ — before spark can "
+                                    "build with it, and it has none; spark has one for %s" % filed,
+                               "pick one of %s, or write a board file for %s first" % (filed, key)) for key in unfiled]
+    return [parts._problem("board", "pick one board — %s" % (
+        "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
+
+
+def _how_to_fill(path):
+    """Where what a record owes is filled (§5.4): a record in spark's own library in spark's repository; any other with --fact-set."""
+    if Path(path).parent.resolve() == parts.LIBRARY.resolve():
+        return "it is in spark's own library, so it is filled in spark's repository, by a commit — --fact-set does not change the library"
+    return "fill it in its own home with --fact-set"
 
 
 def requirements(project):
@@ -378,14 +449,14 @@ def requirements(project):
     The picks read into the project's requirements file (§5.3, §8 L): a `Requirements` of (the file as it would be, the records
     to shelve, the picks not placed, the entries it keeps that no pick explains, the board it named before, the problems). The
     board pick, and every part pick whose record owes nothing — one in the catalog or in another project goes onto the shelf,
-    so the build finds it; a pick with no record is reserved, not placed. The file's own `parts` stay as they are and gain an
-    entry for each pick they lack (`_merge_parts`); the keys the person added to the file (signals) stay.
+    so the build finds it; a pick with no record is reserved, not placed. A pick of a drawer entry is read as the record that
+    entry is, when spark knows it (`_as_record`). The file's own `parts` stay as they are and gain an entry for each pick they
+    lack (`_merge_parts`); the keys the person added to the file (signals) stay.
     """
-    known = {row[:2]: row for row in drawer.linkable(project)}
-    picks = [(need["id"], next(iter(pick.items()))) for need in read(project) for pick in need.get("pick") or []]
+    known, entries, needs = {row[:2]: row for row in drawer.linkable(project)}, drawer.entries(), read(project)
+    picks = [(need["id"], next(iter(_as_record(pick, known, entries).items()))) for need in needs for pick in need.get("pick") or []]
     board_picks = sorted({key for _, (kind, key) in picks if kind == "board"})
-    problems = [] if len(board_picks) == 1 else [parts._problem("board", "pick one board — %s" % (
-        "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
+    problems = _board_problems(board_picks, _unfiled_boards(needs, known, entries), project)
     shelve, wanted = [], []
     for need_id, (kind, key) in picks:
         if kind != "part":
@@ -394,7 +465,7 @@ def requirements(project):
         record = parts._parse(path) if path else None
         wrong = (["no record called %s any more" % key] if path is None else
                  ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
-                 ["owes %s — fill it in its own home with --fact-set" % ", ".join(parts.owes(record))] if parts.owes(record)
+                 ["owes %s — %s" % (", ".join(parts.owes(record)), _how_to_fill(path))] if parts.owes(record)
                  else parts.broken_problems(record, path))
         problems += [parts._problem(key, sentence) for sentence in wrong]
         shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []

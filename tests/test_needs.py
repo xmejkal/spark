@@ -15,6 +15,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import boards  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import needs  # noqa: E402
@@ -542,7 +543,7 @@ class ThePicksTest(unittest.TestCase):
         said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
         self.assertEqual((said["status"], code), ("problems", 1))
         self.assertIn("1 owned, held by smartbin-local", said["problems"][0]["sentence"])
-        self.assertIn("--drawer-set board", said["problems"][0]["fix"])
+        self.assertIn('[{"entry": "board", "used_in": …}]', said["problems"][0]["fix"])
         self.assertEqual((self.picks()["board"], self.entry("board")["used_in"]), (None, {"smartbin-local": 1}))
 
     def test_a_pick_reserves_one_piece_and_the_history_says_it_was_reused(self):
@@ -717,12 +718,82 @@ class ThePicksTest(unittest.TestCase):
         said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3", "spare=firebeetle2-esp32s3"])
         self.assertEqual((code, said["problems"][0]["sentence"], said["problems"][0]["fix"]), (
             1, "2 owned, held by smartbin-local — 2 picked here",
-            "free it — --drawer-set board with `used_in` leaving out smartbin-local, after a dry run — or pick another"))
+            'free it — a file holding [{"entry": "board", "used_in": …}] without smartbin-local, given to --drawer-set <file> after '
+            "a dry run — or pick another"))
 
     def test_more_picked_than_is_owned_is_refused_though_nobody_else_holds_any(self):
         run(["--needs-set", str(self.project), a_file([{"id": "chime", "does": "sound", "what": "alarm"}])])
         said, code = run(["--pick", str(self.project), "alarm=mp3", "chime=mp3"])
-        self.assertEqual((code, said["problems"][0]["sentence"]), (1, "1 owned — 2 picked here"))
+        self.assertEqual((code, said["problems"][0]["sentence"], said["problems"][0]["fix"]), (
+            1, "1 owned — 2 picked here",
+            'pick fewer, or another — or, if you own more, a file holding [{"entry": "mp3", "count": …}], given to --drawer-set '
+            "<file> after a dry run"))
+
+    def test_a_drawer_entry_of_a_record_picked_by_its_key_is_a_pick_of_that_record(self):
+        said = self.text(["--pick", str(self.project), "soil=probe", "alarm=old-amp"])
+        self.assertEqual((self.picks()["soil"], self.picks()["alarm"], self.entry("probe")["used_in"], self.entry("old-amp")["used_in"]),
+                         ([{"part": "x-soil"}], [{"entry": "old-amp"}], {"plant-alarm": 1}, {"plant-alarm": 1}))
+        self.assertEqual(self.history(), [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"},
+                                          {"event": "reused", "project": "plant-alarm", "need": "alarm", "entry": "old-amp"}])
+        self.assertEqual(said, "\n".join([
+            '  set old-amp: used_in null → {"plant-alarm": 1}',
+            '  set probe: used_in null → {"plant-alarm": 1}',
+            "  soil: x-soil",
+            "  alarm: old-amp",
+            "  probe: the drawer entry of x-soil — picked as that record", ""]))
+
+    def test_a_drawer_entry_of_a_board_picked_by_its_key_is_a_pick_of_that_board(self):
+        run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
+        _, code = run(["--pick", str(self.project), "board=board"])
+        self.assertEqual((code, self.picks()["board"], self.entry("board")["used_in"]),
+                         (0, [{"board": "firebeetle2-esp32s3"}], {"plant-alarm": 1}))
+
+    def test_a_board_picked_from_the_drawer_with_no_record_is_reserved_and_said_to_need_a_board_file(self):
+        (self.home / "drawer" / "beetle-c6.json").write_text(json.dumps({"schema": 1, "label": "Beetle ESP32 C6 Mini", "count": 3}))
+        self.assertEqual(self.text(["--pick", str(self.project), "board=beetle-c6", "alarm=speaker"]), "\n".join([
+            '  set beetle-c6: used_in null → {"plant-alarm": 1}',
+            '  set speaker: used_in null → {"plant-alarm": 1}',
+            "  alarm: speaker",
+            "  board: beetle-c6",
+            "  beetle-c6: a board needs a board file — a record in boards/ — before spark can build with it", ""]))
+
+    def a_needs_file_from_before(self, need_id, pick):
+        """The needs file as one written before a pick of an entry key became its record's — or edited by hand: `need_id`
+        picks `pick`. A pick names no other need, so what such a file holds stays, and is reserved as it says."""
+        needs_file = self.project / ".spark" / "needs.json"
+        written = json.loads(needs_file.read_text())
+        needs_file.write_text(json.dumps(dict(written, needs=[dict(need, pick=[pick]) if need["id"] == need_id else need
+                                                              for need in written["needs"]])))
+
+    def test_a_board_picked_by_its_entry_s_key_before_is_not_said_to_need_a_board_file(self):
+        self.a_needs_file_from_before("board", {"entry": "board"})
+        run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
+        said = self.text(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((self.entry("board")["used_in"], "board file" in said), ({"plant-alarm": 1}, False))
+
+    def test_a_pick_kept_as_the_drawer_entry_of_a_record_shares_one_stock_with_a_pick_of_that_record(self):
+        self.a_stock_pointed_at_twice(1)
+        self.a_needs_file_from_before("deep", {"entry": "solo"})
+        said, code = run(["--pick", str(self.project), "soil=x-solo"])
+        self.assertEqual((said["status"], code, said["problems"][0]["sentence"]), ("problems", 1, "1 owned — 2 picked here"))
+        self.assertEqual((self.picks()["soil"], self.entry("solo").get("used_in"), self.history()), (None, None, []))
+
+    def test_a_pick_kept_as_the_drawer_entry_of_a_record_and_a_pick_of_that_record_take_two_when_two_are_owned(self):
+        self.a_stock_pointed_at_twice(2)
+        self.a_needs_file_from_before("deep", {"entry": "solo"})
+        _, code = run(["--pick", str(self.project), "soil=x-solo"])
+        self.assertEqual((code, self.picks()["soil"], self.picks()["deep"], self.entry("solo")["used_in"]),
+                         (0, [{"part": "x-solo"}], [{"entry": "solo"}], {"plant-alarm": 2}))
+
+    def test_a_pick_kept_as_one_entry_of_a_record_takes_that_entry_before_the_record_takes_another(self):
+        (self.home / "drawer" / "board.json").unlink()
+        for key in ("a-board", "b-board"):
+            (self.home / "drawer" / (key + ".json")).write_text(json.dumps({"schema": 1, "label": key, "count": 1, "is": {"board": "firebeetle2-esp32s3"}}))
+        run(["--needs-set", str(self.project), a_file([{"id": "spare", "does": "compute", "what": "microcontroller"}])])
+        self.a_needs_file_from_before("spare", {"entry": "a-board"})
+        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])
+        self.assertEqual((code, said["problems"]), (0, []))
+        self.assertEqual((self.entry("a-board")["used_in"], self.entry("b-board")["used_in"]), ({"plant-alarm": 1}, {"plant-alarm": 1}))
 
     def a_stock_pointed_at_twice(self, count, used_in=None):
         """One record and the drawer entry of it, `count` owned; the project has two needs of its own, `soil` and `deep`."""
@@ -743,7 +814,7 @@ class ThePicksTest(unittest.TestCase):
         self.a_stock_pointed_at_twice(2)
         _, code = run(["--pick", str(self.project), "soil=x-solo", "deep=solo"])
         self.assertEqual((code, self.picks()["soil"], self.picks()["deep"], self.entry("solo")["used_in"]),
-                         (0, [{"part": "x-solo"}], [{"entry": "solo"}], {"plant-alarm": 2}))
+                         (0, [{"part": "x-solo"}], [{"part": "x-solo"}], {"plant-alarm": 2}))
 
     def test_one_stock_picked_both_ways_never_goes_past_what_another_project_holds(self):
         self.a_stock_pointed_at_twice(2, {"smartbin-local": 1})
@@ -832,6 +903,21 @@ class ThePicksTest(unittest.TestCase):
                                  (None, None, None, []))
                 self.assertFalse((self.home / "projects.json").exists())
                 self.assertEqual(run(["--needs", str(self.project)])[1], 0)
+
+    def test_a_key_given_and_the_record_it_is_must_both_be_plain_and_nothing_is_written(self):
+        # the key given is checked, and so is the id written: a needs file holding a key that is not plain cannot be read again
+        (self.project / "parts").mkdir()
+        (self.project / "parts" / "Lone_Sensor.json").write_text(json.dumps({"schema": 1, "id": "Lone_Sensor", "name": "A lone sensor", "kind": "sensor"}))
+        (self.home / "drawer" / "lone.json").write_text(json.dumps({"schema": 1, "label": "a lone sensor", "count": 1, "is": {"part": "Lone_Sensor"}}))
+        (self.home / "drawer" / "Old_Probe.json").write_text(json.dumps({"schema": 1, "label": "an old probe", "count": 1, "is": {"part": "x-soil"}}))
+        for given, named in (("lone", "'Lone_Sensor'"), ("Old_Probe", "'Old_Probe'")):
+            with self.subTest(given=given):
+                said, code = run(["--pick", str(self.project), "soil=" + given])
+                self.assertEqual((said["status"], code), ("could-not-run", 2))
+                self.assertIn(named + " is not a plain key", said["unchecked"][0]["sentence"])
+                self.assertEqual((self.picks()["soil"], self.entry("lone").get("used_in"), self.entry("probe").get("used_in"),
+                                  self.history()), (None, None, None, []))
+                self.assertFalse((self.home / "projects.json").exists())
 
     def test_an_id_nothing_has_is_named_even_when_it_is_not_plain(self):
         said, code = run(["--pick", str(self.project), "soil=No_Such_Part"])
@@ -1212,6 +1298,108 @@ class TheRequirementsFileTest(unittest.TestCase):
                          (0, [5, {"name": "Orphan"}, "led-red-5mm"], [{"part": None, "name": None}, {"part": None, "name": "Orphan"}]))
         self.assertIn("  kept, not from a pick: an entry that names no part, an entry that names no part (Orphan)\n",
                       self.text(["--requirements", str(project)]))
+
+    # --- a pick is what it is, however it is named; a name is one name whatever its capitals (the final review) ---
+
+    def owned(self, home, key, entry):
+        """A drawer entry of the scratch store, as the person keeps it."""
+        (home / "drawer").mkdir(exist_ok=True)
+        (home / "drawer" / (key + ".json")).write_text(json.dumps(dict({"schema": 1}, **entry)))
+
+    def test_a_drawer_entry_picked_by_its_key_is_placed_as_the_record_it_is_and_what_that_owes_refuses(self):
+        home, project = self.project([self.BOARD, ("light", None), ("soil", None)])
+        self.owned(home, "my-leds", {"label": "my LEDs", "count": 2, "is": {"part": "x-led"}})
+        self.owned(home, "dfrobot-x-soil", {"label": "soil probes", "count": 2, "is": {"part": "x-soil"}})
+        _, picked = run(["--pick", str(project), "light=my-leds"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((picked, code, self.written(project)["parts"], said["data"]["shelved"], said["data"]["unplaced"]),
+                         (0, 0, ["x-led"], ["x-led"], []))
+        _, picked = run(["--pick", str(project), "soil=dfrobot-x-soil"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((picked, said["status"], code, said["problems"], said["data"]["unplaced"]), (0, "problems", 1, [
+            {"subject": "x-soil", "sentence": "owes footprint, pin_order, pin_order_proof, body_mm, simulation — fill it in its own "
+                                              "home with --fact-set", "fix": None}], []))
+
+    def test_a_pick_written_as_the_drawer_entry_of_a_record_is_read_as_that_record(self):
+        # a needs file from before a pick of an entry key became its record's, or edited by hand
+        home, project = self.project([self.BOARD, ("soil", [{"entry": "dfrobot-x-soil"}])])
+        self.owned(home, "dfrobot-x-soil", {"label": "soil probes", "count": 2, "is": {"part": "x-soil"}})
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, [p["subject"] for p in said["problems"]], said["data"]["unplaced"]),
+                         ("problems", 1, ["x-soil"], []))
+
+    def test_a_board_picked_by_its_drawer_entry_s_key_is_that_board(self):
+        home, project = self.project([("board", None), ("light", [{"part": "led-red-5mm"}])])
+        self.owned(home, "my-firebeetle", {"label": "my FireBeetle", "count": 1, "is": {"board": "firebeetle2-esp32s3"}})
+        _, picked = run(["--pick", str(project), "board=my-firebeetle"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((picked, code, self.written(project)), (0, 0, {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]}))
+
+    def test_a_board_picked_from_the_drawer_with_no_board_file_is_named_with_the_boards_spark_has(self):
+        home, project = self.project([])
+        library = Path(tempfile.mkdtemp())
+        (library / "x-lib-board.json").write_text(json.dumps({"id": "x-lib-board"}))
+        (project / "boards").mkdir()
+        (project / "boards" / "x-own-board.json").write_text(json.dumps({"id": "x-own-board"}))
+        (project / "boards" / "active.json").write_text(json.dumps({"board": "x-own-board"}))  # the board chosen: no board itself
+        self.owned(home, "beetle-c6", {"label": "Beetle ESP32 C6 Mini", "count": 3})
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle-c6"}]},
+            {"id": "light", "does": "indicate", "what": "led", "pick": [{"part": "led-red-5mm"}]}]}))
+        with mock.patch.object(boards, "LIBRARY", library):
+            said, code = run(["--requirements", str(project)])
+            text = self.text(["--requirements", str(project)])
+        sentence = ("picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, "
+                    "and it has none; spark has one for x-lib-board, x-own-board")
+        self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [
+            {"subject": "beetle-c6", "sentence": sentence,
+             "fix": "pick one of x-lib-board, x-own-board, or write a board file for beetle-c6 first"}]))
+        self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n" % sentence)
+        self.assertFalse((project / "requirements.json").exists())
+
+    def test_with_no_board_picked_a_drawer_entry_of_another_need_is_no_board(self):
+        _, project = self.project([("alarm", [{"entry": "speaker"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["problems"]), (1, [{"subject": "board", "sentence": "pick one board — none is picked", "fix": None}]))
+
+    def test_two_needs_whose_names_differ_only_in_capitals_are_refused_by_need_id(self):
+        _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("openlid", [{"part": "tactile-button"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [{"subject": "openlid", "fix": None, "sentence":
+            "its tactile-button would be called Openlid, and need open-lid's tactile-button is called OpenLid — the build refuses two "
+            "components of one name, and capitals do not make two names; give one of them a name of your own in requirements.json, "
+            '{"part": "tactile-button", "name": …}, and run this again'}]))
+        self.assertFalse((project / "requirements.json").exists())
+
+    def test_a_name_the_person_gave_in_other_capitals_is_the_need_s_own(self):
+        _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])
+        (project / "requirements.json").write_text(json.dumps({"parts": [{"part": "tactile-button", "name": "MODE"}]}))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)["parts"], said["data"]["kept"]),
+                         (0, [{"part": "tactile-button", "name": "MODE"}, {"part": "tactile-button", "name": "OpenLid"}], []))
+
+    def test_a_new_name_another_part_has_in_other_capitals_is_refused_by_need_id(self):
+        _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])
+        held = json.dumps({"parts": [{"part": "jst-ph-2-power-inlet", "name": "MODE"}]})
+        (project / "requirements.json").write_text(held)
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, [p["subject"] for p in said["problems"]]), (1, ["mode"]))
+        self.assertIn("its tactile-button would be called Mode, and jst-ph-2-power-inlet in requirements.json is called MODE",
+                      said["problems"][0]["sentence"])
+        self.assertEqual((project / "requirements.json").read_text(), held)
+
+    def test_what_a_pick_owes_is_filled_where_its_record_lives(self):
+        library = Path(tempfile.mkdtemp()) / "parts"
+        library.mkdir()
+        (library / "x-amp.json").write_text(json.dumps({"schema": 1, "id": "x-amp", "name": "An amp", "kind": "audio-amplifier", "needs": []}))
+        _, project = self.project([self.BOARD, ("alarm", [{"part": "x-amp"}]), ("soil", [{"part": "x-soil"}])])
+        with mock.patch.object(parts, "LIBRARY", library):
+            said, code = run(["--requirements", str(project)])
+        owed = "owes footprint, pin_order, pin_order_proof, body_mm, simulation — "
+        self.assertEqual((code, [(p["subject"], p["sentence"]) for p in said["problems"]]), (1, [
+            ("x-amp", owed + "it is in spark's own library, so it is filled in spark's repository, by a commit — --fact-set does "
+                             "not change the library"),
+            ("x-soil", owed + "fill it in its own home with --fact-set")]))
 
 
 class WhatTheDrawerHoldsTest(unittest.TestCase):

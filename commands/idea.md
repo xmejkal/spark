@@ -75,7 +75,8 @@ person's projects is written in that project, and its shelf copy follows. spark'
 ## C — a part per need
 
 Pick with the person, need by need, from what `--match` offered: a record's id, or the drawer entry's key of an owned
-thing with no record (a speaker, a battery). Then:
+thing with no record (a speaker, a battery). The key of an entry that has a record is picked as that record, and the
+pick says so. Then:
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick <project> soil=sen0193-soil-moisture alarm=max98357a-dfr0954 alarm=dfrobot-fit0502 --dry-run
@@ -83,9 +84,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick <project> soil=sen0193-soil-moistu
 
 and without `--dry-run`. Each need it names gets exactly those picks, and what the person owns of each is reserved for
 the project, one piece per pick. A pick another project holds is **refused, naming the holder** ("1 owned, held by
-…"): say so; the person frees it — `--drawer-set` of that entry's `used_in` without the holder, after a dry run — or
-picks another. Say "to get" (known, not owned), "maybe owned — check the drawer first" and "count unknown" to the
-person as they are. For each candidate the person passed over, write their reason **in their words** to a JSON file
+…"): say so; the person frees it — `--drawer-set` with a file setting that entry's `used_in` without the holder, after a
+dry run — or picks another. Refused with no holder, more were picked than are owned: pick fewer, or correct the count.
+Say "to get" (known, not owned), "maybe owned — check the drawer first", "count unknown" and "a board needs a board
+file" to the person as they are. For each candidate the person passed over, write their reason **in their words** to a JSON file
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
 
@@ -111,8 +113,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
 and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A later run keeps
 everything already in the file — a part you added, a `name`, `rails`, `signals` — adds only the parts your picks still lack,
 and says which entries no pick explains (`kept, not from a pick`), for you to remove if you changed a pick. A pick with no
-record (the speaker, the battery) is reserved, not placed. A pick from the catalog goes onto the shelf, so every project
-builds with it. `/spark:build` takes it from there.
+record (the speaker, the battery) is reserved, not placed. A board picked from the drawer with no board file stops it,
+naming the boards spark has a file for: say so — the person picks one of those, or a board file is written first
+(research). A pick from the catalog goes onto the shelf, so every project builds with it. `/spark:build` takes it from
+there.
 
 ## T — the tally
 
