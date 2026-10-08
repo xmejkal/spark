@@ -53,8 +53,9 @@ against its checksum before it is used. **Never `sudo`**: a line that needs it i
 to run. Then show the picture again — what was installed reads `[ok  ]`. A row that says a version is
 *here* while the list *pins* another is offered the same way: `--install` puts the pinned one in.
 
-`--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs, and
-the person's answer to that prompt is the yes. The dry run is where they see what it would do, so show it first, as above.
+`--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before any
+`--install` line runs, the dry run too, and the person's answer before the real run is the yes. The dry run is where they
+see what it would do, so show it first, as above.
 
 ## 3. The choices — each writes one line
 
