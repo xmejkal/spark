@@ -273,7 +273,10 @@ key is already there is not written again. The events are `step` (a project's st
 Claude Code session it ran in), `reused` (a pick taken from your store, spark's library or another
 project — not one from the project's own `parts/` or `boards/`), `passed_over` (a part you passed over,
 with your reason, URLs and prices in their usual forms taken out) and `built` (a board of a project
-on your list that built end to end, with a digest of the facts the build read). It is there so that a
+on your list that built end to end, with a digest of some of the facts the build read: each part's
+needs, power, unused pins, pin order, footprint and host parts, and the board's pins, power pads and
+`physical`. A part's size, simulation stand-in and other facts, and the board's pin roles and GPIO
+capabilities, are not in it, so changing them leaves the digest as it was). It is there so that a
 project shows what it cost and what came from reuse ([the tally](#tally)).
 
 ### Tally

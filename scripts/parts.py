@@ -893,9 +893,11 @@ def catalog_matches(words):
 #: the options one project weighed. The shelf keeps the part, not one project's story of it.
 SHELF_DROPS = ("owned", "photo", "photos", "sourcing", "alternatives")
 
-#: The facts a build reads from a part record (§5.7): a digest of these vouches for a record until one changes.
+#: Some of the facts a build reads from a part record (§5.7) — not its outline (`body_mm`) or its simulation stand-in: a
+#: digest of these vouches for a record until one of them changes.
 BUILD_FACTS = ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts")
-#: The facts a build reads from a board (§5.7).
+#: Some of the facts a build reads from a board (§5.7) — not its pin roles or GPIO capabilities (`pin_roles`, `adc_gpio`,
+#: `wake_capable_gpio`, which assign_pins reads).
 BOARD_FACTS = ("pins", "power_pads", "physical")
 
 

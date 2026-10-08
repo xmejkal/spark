@@ -72,7 +72,8 @@ your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check 
 `npx --no tsci build board.tsx`.
 
 When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
-that were built, each with a digest of the facts the build read from it.
+that were built, each with a digest of some of the facts the build read from it (the pins, power and footprint; not a
+part's size or simulation stand-in, nor the board's pin roles).
 
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
