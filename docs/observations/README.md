@@ -37,8 +37,9 @@ been verified first, and should say so.
 This is four steps because the alternative was demonstrated here: a findings store that held
 twenty findings and resolved none of them, cut on 2026-09-29. Good mechanism, no closing move.
 
-The reports here are the sprint audits since 09-29. The four essays of 09-25 that fed the first
-rows are in git history; every claim they made is a row in `INDEX.md`, which is what survives.
+The reports here are the sprint audits since 09-29 and, since 2026-10-08, the council's report on
+PR #98 (`2026-10-08-p97-store-1c-council.md`). The four essays of 09-25 that fed the first rows are
+in git history; every claim they made is a row in `INDEX.md`, which is what survives.
 
 ## What good observations look like over time
 
