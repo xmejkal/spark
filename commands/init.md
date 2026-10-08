@@ -17,7 +17,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/boards.py --list
 
 If the user has already said which board, use it. If not, show them the list and ask — do not
 pick one. The board decides every pin capability downstream, so guessing it wrongly makes every
-later check confidently wrong rather than silent.
+later check confidently wrong rather than silent. A board whose line ends `stops at the footprint stage (P121) — no
+header geometry in its board file` can still be chosen, for its pin map, but the chain cannot generate its footprint:
+say so before they choose.
 
 If their board is not listed, `boards/README.md` in this plugin has the schema — its steps are the smart bin's, so follow
 the ones in the plugin's `docs/guide/how-it-works.md`, "Your own dev board" — and a project's own `boards/<id>.json` beats the library.
@@ -27,6 +29,9 @@ the ones in the plugin's `docs/guide/how-it-works.md`, "Your own dev board" — 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id>
 ```
+
+With such a board it prints the same words after `wrote active.json` (`board xiao-esp32-c6 stops at the footprint stage
+(P121) — …`) and writes the file all the same.
 
 **After a build, run it again with `--force`:** it names the rails from the built board and keeps every answer
 already in rules.json. Without `--force` it leaves an existing rules.json alone, names no rail, and still prints

@@ -34,7 +34,7 @@ In words:
 | board | the dev board's definition, resolved and checked against its contract ([`boards.py`](../../scripts/boards.py)) |
 | parts | each part's record from the library ([`parts.py`](../../scripts/parts.py)); reported only when it stops there |
 | schematic | `board.tsx` is written ([`emit_board.py`](../../scripts/emit_board.py)), with the pin map made inside it: every signal gets a pin with a reason ([`assign_pins.py`](../../scripts/assign_pins.py)) |
-| schematic-notes | reported only when the generator printed a note: a pin no part claims, an output nothing receives, a rail nothing sources, or a rail two supplies drive. It counts as a problem, so the run exits 1 even when the board builds |
+| schematic-notes | reported only when the generator printed a note: a pin no part claims, an output nothing receives, a rail nothing sources, one side of a driven pair (a speaker terminal's) that nothing drives, or a rail two supplies drive. It counts as a problem, so the run exits 1 even when the board builds |
 | footprint | the dev board's footprint is made from its board definition ([`emit_footprint.py`](../../scripts/emit_footprint.py)) |
 | build | tscircuit builds it, and copper is counted: a build with no copper is not a pass |
 | simulation | the Wokwi diagram and chips are generated ([`sim_project.py`](../../scripts/sim_project.py) and the converter in [`tools/circuit-to-wokwi/`](../../tools/circuit-to-wokwi/)), and kept only with `--sim-dir`. No simulation runs |

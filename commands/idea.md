@@ -96,9 +96,11 @@ and without `--dry-run`. Each need it names gets exactly those picks, and what t
 the project, one piece per pick. A pick another project holds is **refused, naming the holder** ("1 owned, held by
 …"): say so; the person frees it — `--drawer-set` with a file setting that entry's `used_in` without the holder, after a
 dry run — or picks another. Refused with no holder, more were picked than are owned: pick fewer, or correct the count.
-Say "to get" (known, not owned), "maybe owned — check the drawer first", "count unknown" and "a board needs a board
-file" to the person as they are — and, before the real run, each "would release: …": a hold of this project that no pick
-of it explains any more, which the pick lets go. For each candidate the person passed over, write their reason **in their words** to a JSON file
+Say "to get" (known, not owned), "maybe owned — check the drawer first", "count unknown", "a board needs a board
+file" and "board … stops at the footprint stage (P121) — no header geometry in its board file" (the pick stands, and
+such a board is a choice for its pin map, but the chain cannot generate its footprint) to the person as they are — and,
+before the real run, each "would release: …": a hold of this project that no pick of it explains any more, which the
+pick lets go. For each candidate the person passed over, write their reason **in their words** to a JSON file
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
 
@@ -120,7 +122,9 @@ does: the person's answer there is the yes.
 
 ## L — the building list
 
-Run `/spark:init --board <the board pick>` in the project first. Then fill what the part picks owe (above), and:
+Run `/spark:init --board <the board pick>` in the project first; for a board with no header geometry it adds
+`board … stops at the footprint stage (P121) — no header geometry in its board file` after `wrote active.json`, and
+writes the file all the same: say so. Then fill what the part picks owe (above), and:
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
@@ -138,13 +142,20 @@ pick from the catalog goes onto the shelf, so every project builds with it. `/sp
 The answer can carry notes after its first line. Say each to the person as it is printed; none of them refuses, and the
 file is written:
 
+- `board … stops at the footprint stage (P121) — no header geometry in its board file`: the board picked has no header
+  geometry, so the chain cannot generate its footprint; it is still a choice for the pin map;
 - `placeholder outline — …`: a pick whose record owes only its outline;
 - `reserved, not placed — no record: …`: a pick with no record;
 - `kept, not from a pick: …`: an entry no pick explains;
 - `rail … has no supply — …`: a part draws from a rail nothing listed supplies; pick a power inlet or a supply;
 - `net … is driven by … and nothing listed receives it — …`: an output with no receiver; pick what it drives;
+- `net … is one side of a driven pair and nothing listed drives it — …`: a speaker terminal with nothing driving it;
+  pick what drives the pair (the amplifier the terminal hangs off), never a supply;
 - `not on the board: … — …`: a need nothing on the board serves — no pick, a gap, or only picks with no record. The file
-  keeps it under `unserved`, and the build's verdict repeats it (`/spark:build`).
+  keeps it under `unserved`, and the build's verdict repeats it (`/spark:build`);
+- `requirements.json names your drawer entry … — a key made from your label, in the project's own file` (`would name`
+  in the dry run): said once, when the file starts naming a drawer entry's key, which a pick with no record puts under
+  `unserved`.
 
 ## T — the tally
 
