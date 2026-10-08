@@ -1,5 +1,5 @@
 ---
-description: From a goal in words to needs, and each need matched against what you own and what spark knows — store first; research only for a real gap, later.
+description: From a goal in words to needs, each matched against what you own and what spark knows — store first; research only for a real gap — then a part picked per need with what you own reserved, a requirements file for /spark:build, and one cost line.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *)
 ---
 
@@ -54,6 +54,15 @@ prices. Then mark each need — `have` (owned, with a record), `have-unknown` (o
 `know` (a record, not owned) or `gap` (nothing similar) — and **say why in the conversation**: the reason is not
 written to the project. Write the marks with `--needs-set` (`{"id", "mark"}`).
 
+An owned thing with no record may be a part spark has a record for — the pack of red LEDs and `led-red-5mm`, say. Ask the
+person whether it is. Only when they say which record, link the entry: write it with `"is": {"part": "<id>"}` (a board:
+`{"board": "<id>"}`) through `--drawer-set`, after a dry run (`/spark:drawer` says how), and match again. Linked, it is
+that record, and a pick of it can be placed on the board; unlinked, a pick of it is reserved and not placed.
+
+A `gap` is for `/spark:research`, not for this command. It looks in the store first — `--need` for a record, `--kept` for a
+datasheet already kept — and researches only what is still missing, writing a record into the project's `parts/`. Pick that
+record for the need afterwards (C); it can still owe facts (below).
+
 When a need shows no candidate, or fewer than you expect, a record may say nothing of what it does — such a record
 is never offered. Look:
 
@@ -105,7 +114,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <proje
 and without `--dry-run`. A record in spark's own library is changed in spark's repository, not from here: say so. A
 shelf copy of the record follows it ("shelf copy refreshed"), even when the record already said it; "shelf copy not
 refreshed: …" says why it could not: tell the person. A source not kept yet is fetched only after the person's yes — it
-reaches the network.
+reaches the network, and no command's `allowed-tools` lets `parts.py --fetch` run unasked, so Claude Code asks before it
+does: the person's answer there is the yes.
 
 ## L — the building list
 
@@ -123,6 +133,17 @@ record (the speaker, the battery) is reserved, not placed. A board picked from t
 naming the boards spark has a file for that builds, and those that stop at the footprint stage (P121): say so — the
 person picks one that builds, or a board file is written first (docs/guide/how-it-works.md, "Your own dev board"). A
 pick from the catalog goes onto the shelf, so every project builds with it. `/spark:build` takes it from there.
+
+The answer can carry notes after its first line. Say each to the person as it is printed; none of them refuses, and the
+file is written:
+
+- `placeholder outline — …`: a pick whose record owes only its outline;
+- `reserved, not placed — no record: …`: a pick with no record;
+- `kept, not from a pick: …`: an entry no pick explains;
+- `rail … has no supply — …`: a part draws from a rail nothing listed supplies; pick a power inlet or a supply;
+- `net … is driven by … and nothing listed receives it — …`: an output with no receiver; pick what it drives;
+- `not on the board: … — …`: a need nothing on the board serves — no pick, a gap, or only picks with no record. The file
+  keeps it under `unserved`, and the build's verdict repeats it (`/spark:build`).
 
 ## T — the tally
 
