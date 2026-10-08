@@ -192,7 +192,8 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
   refused inside a git work tree). The events are `step` (a project's step started, with the Claude Code session it
   ran in), `reused` (a pick taken from the library, your store or another project), `passed_over` (a part you passed
   over, with your reason) and `built` (a board that built end to end, with a digest of the facts the build read from
-  the board and from each part). It keeps ids, project names, your reasons without any URL or price, and session ids.
+  the board and from each part). It keeps ids, project names, your reasons, and session ids; URLs and prices in their
+  usual forms are taken out of a reason.
   `parts.py --tally` reads the Claude Code transcripts of those sessions (`~/.claude/projects`, tool names and counts
   only) for the cost line;
 - the list of your projects;
