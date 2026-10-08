@@ -15,7 +15,7 @@ log proves. **An open backlog item sits on one slice below, or it is parked or d
 | 3 | Choose parts | `/spark:idea`: M matches each need against your drawer and spark's records, store first (`parts.py --match`); C picks a part per need, reserves what you own and refuses a pick another project holds, naming it (`--pick`); L writes the picks as `requirements.json`; T ends with one cost line (`--tally`). `/spark:research` for a gap, `parts.py --need/--kept`, the catalog | `--need measure distance` misses the rangefinder (P39) |
 | 4 | Assign pins | `assign_pins.py`, `--emit-pins` | — |
 | 5 | Generate, build | `emit_board.py`, `check_spine.py` | no capacitors (P38) |
-| 6 | Check, review | `check_all.py` (5 checks), `/spark:review` | the agent loses `fix` (P43) |
+| 6 | Check, review | `check_all.py` (5 checks), the `spark-review` skill | the agent loses `fix` (P43) |
 | 7 | See it | `tsci dev`, Wokwi for VS Code (P65, P67) | — |
 | 8 | Simulate | `check_spine` → Wokwi (paid minutes) | — |
 | 9 | Firmware | `pins.py` only | nothing tests firmware against the board (P59, P74) |
@@ -34,7 +34,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | goal first runs today: `/spark:drawer`, then `/spark:idea` from a goal in words to a requirements file that `/spark:build` turns into a board (store 1a–1c, done 2026-10-04 to 2026-10-08). *Not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5) — the brainstorm, the block diagram and the ways in beyond goal first; **P100** (#6) — a new idea and an existing project, each walked through with the person |
 | **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | P81 (done), **B1** (bin #1), **P58** (bin #5), **P73** (bin #2), **B8** (bin #3), **B5** (bin #4), B11 (done) |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59** (#7), **P74** (#8) |
-| **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
+| **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; `check_all` shows no `[FAIL]`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6** (#15), then F3 and F4 as they pull |
 | **7** | **Breadboard or wires → perfboard → PCB** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard; a soldered perfboard build as an optional step; a PCB offered only after | **P79** (#16) |
 | **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
@@ -66,8 +66,8 @@ P102b to draw.
 | 2.4 | the firmware gate · run 200 times under load · no failure, or a named one | the runs, kept whole | **partly** — one failure named in 60 |
 | 3.1 | irrigation's firmware · imported with a fake `machine` · it does not start running | an import | **no** — `main()` runs at import |
 | 3.2 | requirements that ask for Valve4 and a mode button · the firmware is checked against `pins.py` · both reported | P74's check | **no** — no such check |
-| 4.1 | an empty directory and the documented example · init → `check_spine` → `check_all` · exit 0, no `!!` | the commands | **yes, by record** (P51, P57) |
-| 4.2 | irrigation · `check_all` · no `!!`; each `????` names what to state | the command | **yes** |
+| 4.1 | an empty directory and the documented example · init → `check_spine` → `check_all` · exit 0, no `[FAIL]` | the commands | **yes, by record** (P51, P57) |
+| 4.2 | irrigation · `check_all` · no `[FAIL]`; each `????` names what to state | the command | **yes** |
 | 4.3 | "something to measure distance" · `parts.py --need` · the rangefinder | the command | **no** (P39) |
 | 4.4 | a record with `verified: true` and only a prose source · `--validate` · refused | the command | **no** (P64a) |
 | 5.1 | a domain the PO picks · a real outsider follows the docs · a checked board and running firmware; scored by someone else | the diary | **no** |
