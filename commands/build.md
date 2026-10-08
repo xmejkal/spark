@@ -84,6 +84,12 @@ that were built, each with a digest of the facts the build read from it.
 
 19 routed traces carry the 22 written connections: a group of N connected pins needs N−1 traces.
 
+The last line can say more. A requirements file that `parts.py --requirements` wrote carries a note, `unserved`, for a need
+the board does not serve: it has no pick, it is marked a gap, or every pick of it is a drawer entry with no record. When
+the chain runs end to end all the same, the verdict ends `the chain runs end to end — but not every need is on the board:`
+followed by each need and why, as `soil (no pick)`, `soil (a gap)` or `battery (no record: lipo-battery)`. With `--json`,
+the answer gains an `unserved` key. Say it to the person: a green build says nothing about those needs.
+
 Three outcomes, never two. `ok` means copper reached the board — traces counted, no error
 element, every component on a ground. `!!` is a defect in the design, named. `????` is
 **could-not-run**: the stage was not exercised — no `tsci`, a tool that cannot build even a
@@ -91,7 +97,7 @@ trivial board, a requirements file that is not JSON, an empty parts list — and
 says so. A chain that could not be exercised has not been proven; the difference is the whole
 point.
 
-A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
+A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs, and the person's answer there is the yes. If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
 
 ## The steps, when one is wanted on its own
 

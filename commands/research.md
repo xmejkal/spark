@@ -43,9 +43,14 @@ completely. Two small agents, in turn:
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton <id> --kind <kind> --vendor <maker> --project .
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fetch <id> --project .        # or --keep <file> --url <url>
    ```
+   `--fetch` downloads the datasheet, so it reaches the network. No command's `allowed-tools` lets it run unasked, so
+   Claude Code asks before it does: the person's answer there is the yes. `--keep` puts a file you already have into the
+   store and does not reach the network.
 3. Launch **`datasheet-reader`** with the record's path, the kept datasheet and the facts for its
    kind (below). It reads with `parts.py --read`, page by page, stopping where the facts are.
    A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then launching the reader again (`/spark:setup` does the same for everything at once).
+   `--install` downloads, so no command's `allowed-tools` lists it: Claude Code asks before it runs, and the person's answer
+   there is the yes.
 
 **A module, or a part identified from a photo** (`/spark:identify`) — variants, a chip inside, a
 schematic to read: launch **`parts-researcher`** with the need, the vendor order (the brief's `prefer`,
@@ -74,6 +79,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate --project .          # the con
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --sources <id> --project .      # every cited URL answers
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified <id> --project .   # what nobody has checked
 ```
+
+`--sources` asks every cited URL whether it answers, so it reaches the network: no command's `allowed-tools` lets it run
+unasked, and Claude Code asks before it does. `--validate` and `--unverified` stay on the machine.
 
 The contract refuses a pin order without its proof and a citation of a document the record does not
 hold. `--unverified` is the list to hand a person: each item, and what depends on it.
