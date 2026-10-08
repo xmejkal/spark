@@ -5,8 +5,9 @@
 useful tool"*), then reviewed by a five-lens council (coherence, feasibility against the code, data model,
 agents and trust, value and scope — read-only, offline), whose findings and the PO's answers to them are folded
 in. Process (his choice): story map + flows + example mapping; a spec and a plan per slice. Inputs: the P85
-discovery (`docs/2026-10-04-store-discovery.md`), the design council, the review council. Every decision the PO
-made is in §11 with its date.
+discovery (`docs/2026-10-04-store-discovery.md`), the design council, the review council. §11 holds the decisions
+the PO made on 2026-10-04. A later decision, or a later change to what a section says, is marked where it stands, with
+its date or the review that made it.
 
 ## 1. What it is for
 
@@ -193,7 +194,9 @@ with a board until a record in `boards/` says its pins.
   `pin_order_proof`, `body_mm`, `simulation` (a stand-in or a skip with its reason). **broken** = a value present
   and wrong. Today's 18 catalog records are all owed, none broken; SEN0193 owes `pin_order_proof` (which P89's
   migration fills from its `//pin_order` note), `footprint` (`jst_ph_3`) and `simulation`; the library's DFR0954
-  owes `footprint`.
+  owes `footprint` (amended 2026-10-08: it owes nothing now — its `footprint` is `dip12_w15.24mm`, read off page 1 of
+  DFRobot's dimension drawing, which is kept in the store and cited by its sha256 in the record (d75344c); a scratch
+  store's `parts.py --audit` now prints `library 10 current, 0 owe facts, 0 broken`).
 - Resolving an id, the nearer layer wins unless its record is broken; a broken record is named and the next
   layer's is used.
 - `schema` changes only for a mechanical upgrade: a lower one is upgraded on read and saved on spark's next write
@@ -279,12 +282,19 @@ hand-written ones).
 | seam | operations | errors | built in | later |
 | --- | --- | --- | --- | --- |
 | record store | `get(id)`, `put(id, record, check)` (validated, contained, atomic, idempotent; a read-only layer refuses), `ids()`, `delete(id)` (needs yes) | not found; refused (check failed, read-only, outside) | 1a — folders of JSON | a shared git clone (P84), a database |
-| document store | `put(bytes, name) → sha256` (to `.part`, checked, renamed), `get(sha256) → path`, `status(entry)` → present / missing / outside | wrong checksum (deleted, named) | 1c — checksum folders | a private bucket |
+| document store | `keep(payload, name) → sha256` (to `.part`, checked, renamed), `get(sha256) → path`, `status(entry)` → present / missing / outside | wrong checksum (deleted, named) | 1c — checksum folders | a private bucket |
 | drawer importer | `read(source) → payload` (agent half); `apply(payload, dry_run) → [entry changes]` (code half) | payload shape; line counts disagree | 1a — DFRobot orders, typed list | AliExpress orders, photos |
 | matcher | `match(needs) → [{need, candidates:[{id, layer, owned, free, unsure, proof, owes}]}]` (code); the mark (agent; its reason is said to the person, §5.3) | a need with no `does` | 1b — function field + the agent | embeddings, a shared index |
 | researcher | `research(need, budget) → records + a researched event` (agent) | over budget (stops, says so) | the first real gap | the JLCPCB MCP alone, manual |
 | cost counter | `count(window) → {requests, runs, documents, tokens, minutes}` | no transcript → could-not-run, never 0 | 1c — session transcripts | spark logging its own calls |
-| fetcher | `fetch(url, sha256?) → bytes` (counted; one at a time) | unreachable; wrong checksum | 1c — one checked download | a cache, offline mode |
+| fetcher | `fetch(url, method="GET") → bytes` (counted; one at a time) | unreachable; not http or https | 1c — one checked download | a cache, offline mode |
+
+*What 1c built, 2026-10-08.* The fetcher is `store.fetch(url, method="GET")`: `GET`, or `HEAD`, which only asks whether
+the URL answers and reads no body; http and https only, and a redirect only to the same; a URL that does not answer is a
+`StoreProblem`, never empty bytes; and it takes no checksum. The checksum is the document store's:
+`store.keep(payload, name)` writes `<name>.part`, reads it back, checks it, renames it and returns the sha256 (the
+table's first operation). `get` and `status` are not functions: `parts.py --kept` finds a document under
+`sources/<sha256>/<file>` and says present or MISSING.
 
 A seam an agent implements is tested by the artefact it leaves — the payload, the record, the history line —
 never by the agent. Every implementation passes its seam's contract test.
@@ -448,7 +458,8 @@ Owned first, the simpler option shown beside it, with what it would cost (the PO
 `footprint`, `simulation`; irrigation's SEN0308 shown, passed over there for an outdoor bed. Alarm — **have**:
 DFR0954 (2 owned, owes `footprint`) driving the FIT0502 speaker (have-unknown, off the board); the DFPlayer Pro is
 the other owned route; a piezo buzzer is shown beside them as the simpler gap. Board — **have**: the FireBeetle S3,
-1 owned, **0 free** (the bin holds it). Battery — **have**: the 1S LiPo, 0 free (the bin).
+1 owned, **0 free** (the bin holds it). Battery — **have**: the 1S LiPo, 0 free (the bin). (Amended 2026-10-08: the
+DFR0954 no longer owes `footprint`, §5.4.)
 
 ### C — choose
 
@@ -478,6 +489,15 @@ a skip, decided in 1c); the DFR0954's `footprint` from DFRobot's dimension drawi
 drawing kept in the store. Requirements: board `firebeetle2-esp32s3`; parts `sen0193-soil-moisture`,
 `max98357a-dfr0954`. `check_spine` ends `[ok] … the chain runs end to end`.
 
+*Amended 2026-10-08.* The DFR0954's `footprint` is filled (§5.4). Its two output nets end only on a speaker terminal: in
+scratch runs, a requirements file naming the board and `max98357a-dfr0954` alone ended with
+`2 error(s): pcb_port_not_connected_error` at the build stage and `the chain is broken`, and the same file with the
+library's `speaker-terminal` beside it ended `the chain runs end to end`. So this example's parts also list
+`speaker-terminal`. The PO's own store keeps the FireBeetle S3 and the LiPo with the bin (his answer of 2026-10-07 to
+the plan's open question 1), so a pick of the S3 for the alarm is refused there while the bin holds it (§8 C); the
+example's requirements, with the S3 in them, are made in a scratch store (the plan's Task 11 builds that way, on a
+synthetic probe — SEN0193 lives only in his catalog).
+
 ### T — the tally
 
 **Rules.** (1) One cost line at the end. (2) `reused` per pick from the store, `built` when `check_spine` passes,
@@ -497,7 +517,9 @@ drawing kept in the store. Requirements: board `firebeetle2-esp32s3`; parts `sen
 
 **Budget** (estimates, W20): code 4,708 of 5,000; the refactor may reclaim about 60–90 lines; 1a about 150, 1b
 about 140, 1c about 180. The cap is raised per item, by what the item measures it needs after its refactor
-(W15b), never in advance.
+(W15b), never in advance. (Amended: since P99, the PO, 2026-10-04, there is no cap — W15b: "It is a number, not a
+cap". The pre-push gate prints `scripts/: N code lines (+M since origin/main)`, and an item's Done line says how many
+lines it added and why.)
 
 ## 10. Hypotheses, said as such
 
