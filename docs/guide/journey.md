@@ -35,10 +35,12 @@ What the three words mean:
 
 **How these runs were made.**
 
-- When: 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600, the version spark pins.
-  The tscircuit came from an existing install, linked into the project.
-- Where: in two fresh project folders that share one scratch store, so the drawer filled in [Drawer](#drawer) is the
-  one [Idea](#idea)'s match reads.
+- When: [Drawer](#drawer), [Idea](#idea) and the library's list in [Build](#build) on 2026-10-08, with spark 0.7.0.
+  The rest on 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600, the version spark
+  pins; that tscircuit came from an existing install, linked into the project. The note above each output names its
+  run.
+- Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer and `plant-alarm`, so
+  the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s match reads.
 - How: each command typed as shown. In Claude Code you type the `/spark:` command, and Claude runs these scripts for
   you. You, or another AI, can run them directly; [the guide for AI agents](agents.md) says how.
 - Paths: `$CLAUDE_PLUGIN_ROOT` is where spark is installed. In outputs, `~/` is the home folder, `<temp>` a temporary
@@ -69,7 +71,7 @@ The conversation was not run for this page. These entries were written by hand; 
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --drawer-set ../drawer.json --dry-run
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
   would add firebeetle-2-esp32-s3: FireBeetle 2 ESP32-S3 × 1 — is board firebeetle2-esp32s3
   would add red-leds-pack-of-10: red LEDs, pack of 10 × 10
@@ -81,7 +83,7 @@ Without `--dry-run` it writes them. Then the drawer lists them:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --drawer
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
   FireBeetle 2 ESP32-S3                             1  board firebeetle2-esp32s3
   red LEDs, pack of 10                             10  —
@@ -129,30 +131,32 @@ commands below are real runs.
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../needs.json
 ```
 
-<!-- output: run 2026-10-07, spark 0.6.0 -->
+<!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
   set soil: does null → "sense"; what null → "soil-moisture"; condition null → "indoor pot, short probe; low power"
   set alarm: does null → "indicate"; what null → "alarm"
   set board: does null → "compute"; what null → "microcontroller"
 ```
 
-The same command with `--dry-run` first shows these lines as *would set*. Here, `null →` marks a need that did not exist
-before. The needs land in `.spark/needs.json`.
+The same command with `--dry-run` first shows these lines as *would set*. `null →` means the field had no value
+before. Every field of a new need shows it, as here. A write to a need that is already there shows only the fields it
+changes, each with what it held: a mark given later reads `mark null → "know"`. The needs land in
+`.spark/needs.json`.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
   soil — sense / soil-moisture  (indoor pot, short probe; low power)
-                 vl6180x-breakout (library)                     distance [other words]  owes body_mm
+                 vl6180x-breakout (library)                     distance [other words]
   alarm — indicate / alarm
       owned 10   red-leds-pack-of-10 (drawer)                   light [other words]  free 10
                  led-red-5mm (library)                          light [other words]
   board — compute / microcontroller
       owned 1    firebeetle2-esp32s3 (library)                  microcontroller  free 1
-                 xiao-esp32-c6 (library)                        microcontroller
+                 xiao-esp32-c6 (library)                        microcontroller  stops at the footprint stage (P121)
 ```
 
 How to read the matches:
@@ -165,6 +169,9 @@ How to read the matches:
   - without `simulation`, the simulation stage cannot run.
 - `[other words]` marks a looser match: the part does the same thing (*sense*, *indicate*) but names a different object
   (*distance*, *light*). Whether that fits is Claude's call, and Claude says so to you.
+- `stops at the footprint stage (P121)` marks a board whose board file has no header geometry: the chain stops at its
+  footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). Of spark's two boards, only the FireBeetle
+  builds today.
 
 Here a distance sensor is offered for soil moisture. It senses distance, not moisture, so soil moisture is a real gap.
 Research is for that.
@@ -290,13 +297,14 @@ The library's parts, whose ids a requirements file names:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --list
 ```
 
-<!-- output: run 2026-10-06, spark 0.6.0 -->
+<!-- output: run 2026-10-08, spark 0.7.0 -->
 ```text
   dfr0534-module               audio          library   DFRobot DFR0534 voice module
   jst-ph-2-power-inlet         connector      library   JST PH 2-pin power inlet
   l9110s-module                motor-driver   library   L9110S dual motor driver module
   led-red-5mm                  indicator      library   Kingbright L-7113ID 5 mm red LED
   max98357a-dfr0954            audio-amplifier library   DFRobot DFR0954 MAX98357A I2S amplifier
+  speaker-terminal             connector      library   2-pin speaker terminal (JST PH)
   tactile-button               button         library   6x6 mm tactile push button
   vl6180x-breakout             rangefinder    library   VL6180X time-of-flight rangefinder breakout
 ```
