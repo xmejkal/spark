@@ -2012,6 +2012,7 @@ NOT_ON_THE_BOARD = {"no pick": "no pick; --match lists its candidates",
 
 
 def _op_requirements(args, project):
+    import boards
     import needs
     content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver = needs.requirements(args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
@@ -2023,6 +2024,8 @@ def _op_requirements(args, project):
         "would write" if args.dry_run else "wrote" if changed else "unchanged", path, content["board"],
         ", ".join(needs.entry_label(entry) for entry in content["parts"]) or "none")]
     said += ["  board: %s → %s" % (json.dumps(board_was), json.dumps(content["board"]))] if board_was not in (None, content["board"]) and not problems else []
+    stop = "" if problems else boards.footprint_stop(content["board"], Path(args.requirements))  # F12 (C-7): said, never refused
+    said += ["  board %s %s" % (content["board"], stop)] if stop else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
              "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.emit_board.DEFAULT_BODY_MM + (how,))

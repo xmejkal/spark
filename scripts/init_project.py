@@ -379,6 +379,18 @@ def package_file(project):
                   "this core; see init_project.PINNED_TSCI and PINNED_CORE."}
 
 
+def boards_offered(project):
+    """
+    The boards to choose from, as both "Available:" lines say them: those that build first, then each that stops at the
+    footprint stage, said as such (C-7, F12) — offered, never hidden, since such a board is still a choice for pin-map work.
+    """
+    offered = boards.available(project)
+    stops = {board_id: boards.footprint_stop(board_id, project) for board_id in offered}
+    said = [", ".join(board_id for board_id in offered if not stops[board_id])]
+    said += ["%s %s" % (board_id, stops[board_id]) for board_id in offered if stops[board_id]]
+    return "; ".join(part for part in said if part) or "none"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="init_project.py",
@@ -455,10 +467,8 @@ def main(argv=None):
     notes.extend(unstated)
 
     if args.board:
-        available = boards.available(project)
-        if args.board not in available:
-            print("no board called %r. Available: %s"
-                  % (args.board, ", ".join(available) or "none"), file=sys.stderr)
+        if args.board not in boards.available(project):
+            print("no board called %r. Available: %s" % (args.board, boards_offered(project)), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
         did, note = write(project / "boards" / "active.json",
                           {"schema": 1, "board": args.board}, args.force)
@@ -472,8 +482,7 @@ def main(argv=None):
     else:
         print("  no built design found, so the rails are empty — build, then re-run with --force")
     if not args.board:
-        print("  no board chosen. Available: %s"
-              % (", ".join(boards.available(project)) or "none"))
+        print("  no board chosen. Available: %s" % boards_offered(project))
 
     unanswered = [(path, nulls_in(payload)) for path, payload in written]
     total = sum(len(fields) for _, fields in unanswered)

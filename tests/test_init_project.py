@@ -220,6 +220,17 @@ class WithoutABuiltDesignTest(unittest.TestCase):
                          init_project.EXIT_COULD_NOT_RUN)
         self.assertFalse((root / "boards" / "active.json").exists())
 
+    def test_the_boards_offered_are_those_that_build_then_each_that_stops_said_as_such(self):
+        # F12 (C-7): both "Available:" lines offered the XIAO unmarked — /spark:idea's L runs this first; never hidden
+        offered = ("Available: firebeetle2-esp32s3; xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry "
+                   "in its board file")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            init_project.main(["--project", str(a_project())])
+            init_project.main(["--project", str(a_project()), "--board", "no-such-board"])
+        self.assertIn("  no board chosen. %s\n" % offered, out.getvalue())
+        self.assertIn("no board called 'no-such-board'. %s\n" % offered, err.getvalue())
+
 
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
     """

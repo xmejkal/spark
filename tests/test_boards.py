@@ -324,6 +324,34 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
                 self.assertIn(code, (0, 1), err)
                 self.assertTrue(said or err, "it must say something either way")
 
+class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
+    """
+    F12 (C-7): /spark:init shows this list and asks the person to choose, and the XIAO — whose file records no header
+    geometry, so the chain stops at its footprint stage — was offered unmarked. It is marked, in the words --audit uses,
+    and never hidden: it is still a choice for pin-map work. The `  * id (layer)` start of each line is unchanged.
+    """
+
+    def listed(self, root):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = boards.main(["--list", "--project", str(root)])
+        return code, out.getvalue().splitlines()
+
+    def test_a_board_that_stops_is_listed_saying_so_and_one_that_builds_is_not(self):
+        code, lines = self.listed(project())
+        self.assertEqual(code, 0)
+        self.assertIn("    xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file", lines)
+        self.assertIn("  * firebeetle2-esp32s3 (library)", lines)
+
+    def test_a_board_file_that_cannot_be_read_is_still_listed(self):
+        root = project()
+        (root / "boards" / "half-board.json").write_text("{not json")
+        code, lines = self.listed(root)
+        self.assertEqual((code, "    half-board (project)" in lines), (0, True), lines)
+
+
 class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
     """
     Found by P32a, caused by P29: a pad became wirable and nothing checked Wokwi knew it.

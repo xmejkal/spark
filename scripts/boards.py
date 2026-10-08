@@ -228,6 +228,23 @@ def available(project: Path) -> list:
     return sorted(records(project))
 
 
+def footprint_stop(board_id: str, project: Path = None) -> str:
+    """
+    `parts.STOPS_AT_FOOTPRINT` for a board that stops the chain at the footprint stage — its file has no header geometry to
+    draw the footprint from (`emit_footprint.footprint_gaps`; C-7, P121) — and "" for one that builds on. Said wherever a
+    board is offered or picked (F12: the XIAO was listed and picked without a word), never refused: such a board is still a
+    choice for pin-map work. A file that cannot be read is not said to stop here; `--validate` names it.
+    """
+    import emit_footprint  # here, not at the top: it imports this module
+    import parts
+    found = records(project).get(board_id)
+    try:
+        board = _read_json(found[1], "board definition") if found else None
+    except BoardError:
+        return ""
+    return parts.STOPS_AT_FOOTPRINT if isinstance(board, dict) and emit_footprint.footprint_gaps(board) else ""
+
+
 def load(project: Path, board_id: str = None) -> dict:
     """A board definition, validated. Defaults to the active board."""
     path = definition_path(project, board_id)
@@ -483,7 +500,8 @@ def main(argv=None) -> int:
             for board_id in available(project):
                 where = "library" if definition_path(project, board_id).parent == LIBRARY \
                     else "project"
-                print(f"  {'*' if board_id == current else ' '} {board_id} ({where})")
+                stop = footprint_stop(board_id, project)
+                print(f"  {'*' if board_id == current else ' '} {board_id} ({where}){' ' + stop if stop else ''}")
         else:
             return _validate_all(project, for_fab=args.for_fab)
     except BoardError as broken:

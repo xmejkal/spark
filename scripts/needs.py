@@ -319,6 +319,10 @@ def plan_pick(project, given, passed_over=()):
         notes += ["%s: count unknown — check the drawer" % key] if owned == "unknown" else []
     notes += ["%s: a board needs a board file — a record in boards/ — before spark can build with it" % key
               for key in _unfiled_boards(after, known, entries)]
+    # F12 (C-7): a board this pick picks that stops the chain at the footprint stage is said, never refused
+    for key in sorted({key for need_id in picked for pick in picked[need_id] for kind, key in pick.items() if kind == "board"}):
+        stop = boards.footprint_stop(key, project)
+        notes += ["board %s %s" % (key, stop)] if stop else []
     changes = []
     for entry_id, entry in sorted(entries.items()):
         used_in = {who: n for who, n in (entry.get("used_in") or {}).items() if who != name}

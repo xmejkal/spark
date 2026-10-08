@@ -624,6 +624,15 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual(said["data"]["released"], [])
         self.assertNotIn("release", self.text(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"]))
 
+    def test_a_board_that_stops_at_the_footprint_is_picked_saying_so_and_one_that_builds_is_not(self):
+        # F12 (C-7): the XIAO was picked without a word, and the person learnt it when the build stopped; warned, never refused
+        said = self.text(["--pick", str(self.project), "board=xiao-esp32-c6"])
+        self.assertIn("  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its board file",
+                      said.splitlines())
+        self.assertEqual(self.picks()["board"], [{"board": "xiao-esp32-c6"}])
+        run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
+        self.assertNotIn("stops at", self.text(["--pick", str(self.project), "board=firebeetle2-esp32s3"]))
+
     def test_a_pick_nobody_owns_is_to_get_and_reserves_nothing(self):
         self.assertIn("x-other: to get — known, not owned", self.text(["--pick", str(self.project), "soil=x-other"]))
 
@@ -1277,6 +1286,17 @@ class TheRequirementsFileTest(unittest.TestCase):
         board = (kept / "board.tsx").read_text()
         self.assertIn("REVIEW-INJECTED", board)
         self.assertNotIn("REVIEW-INJECTED", re.sub(r"/\*.*?\*/", "", board, flags=re.DOTALL), "outside every comment")
+
+    def test_a_board_that_stops_at_the_footprint_is_written_saying_so(self):
+        # F12 (C-7): --requirements wrote the XIAO without a word, and the build then stopped; warned, never refused
+        _, project = self.project([("board", [{"board": "xiao-esp32-c6"}]), ("light", [{"part": "led-red-5mm"}])])
+        for extra in (["--dry-run"], []):
+            with self.subTest(extra=extra):
+                self.assertIn("  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its board file",
+                              self.text(["--requirements", str(project)] + extra).splitlines())
+        self.assertEqual(self.written(project)["board"], "xiao-esp32-c6")
+        _, builds = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        self.assertNotIn("stops at", self.text(["--requirements", str(builds)]))
 
     def test_a_catalog_part_picked_for_two_needs_goes_onto_the_shelf_once(self):
         _, project = self.project([self.BOARD, ("left", [{"part": "x-led"}]), ("right", [{"part": "x-led"}])])
