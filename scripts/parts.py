@@ -1947,7 +1947,8 @@ def _op_pick(args, project):
     reasons, unreadable = _read_json_input(args.passed_over) if args.passed_over else ([], None)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    store.events()  # the history is read whole before the first write: one that cannot be read refuses the pick, with nothing written
+    history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
+    listed, keys_before = store.project_name(target) is not None, needs.entry_keys(needs.read(target))
     after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
     if not problems and not args.dry_run:
         store.add_project(target)
@@ -1963,10 +1964,34 @@ def _op_pick(args, project):
     said += [] if problems else ["  %s%s: %s — no pick of this project explains it" % (
         "would release" if args.dry_run else "released", "" if hold["now"] == 0 else " %d of %d" % (hold["was"] - hold["now"], hold["was"]),
         hold["entry"]) for hold in released]
+    wrote = [] if problems else _what_a_pick_wrote(name, listed, history, events, needs.entry_keys(after) - keys_before, args.dry_run)
     return Answer({"project": name, "picks": picks,
                    "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
                    "released": released, "written": not problems and not args.dry_run},
-                  _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes]), problems=problems)
+                  _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes] + wrote), problems=problems)
+
+
+def _what_a_pick_wrote(name, listed, history, events, new_keys, dry_run):
+    """
+    What a pick writes beyond the drawer, said in its answer (C-17; the PO, 2026-10-08): the project put on the person's list,
+    the `reused` lines its history gains, each reason noted — or already noted, and not changed, since the history keeps a
+    need's first reason for a part — and a drawer entry's key that the project's own needs.json names from now on, said once.
+    """
+    seen, new = list(history), []
+    for event in events:
+        if not store.recorded(event, seen):
+            new.append(event)
+            seen.append(event)
+    reused = sum(1 for event in new if event["event"] == "reused")
+    lines = [] if listed else ["  %s %s on your projects" % ("would list" if dry_run else "listed", name)]
+    lines += ["  %s to your history: %d reused" % ("would write" if dry_run else "wrote", reused)] if reused else []
+    for event in (event for event in events if event["event"] == "passed_over"):
+        passed = "%s (%s)" % (next(event[kind] for kind in ("part", "board", "entry") if kind in event), event["need"])
+        lines.append("  %s why you passed over %s" % ("would note" if dry_run else "noted", passed) if event in new else
+                     "  already noted, not changed: why you passed over %s — your history keeps the first reason" % passed)
+    lines += ["  needs.json %s your drawer entr%s %s — a key made from your label, in the project's own file" % (
+        "would name" if dry_run else "names", "y" if len(new_keys) == 1 else "ies", ", ".join(sorted(new_keys)))] if new_keys else []
+    return lines
 
 
 def _released(changes, name):
@@ -2021,12 +2046,16 @@ def _op_step(args, project):
     target, step = args.step
     if step not in cost.STEPS:
         return Answer(unchecked=[_cannot("a step is one of %s (the spine, §2 of the store design)" % ", ".join(cost.STEPS))])
+    listed = store.project_name(target) is not None
     event = cost.step_event(store.add_project(target, dry_run=args.dry_run), step)
     if not args.dry_run:
         store.append_event(event)
+    # C-17: what a step writes is said — a line in the person's history, with the session's id, and the project on their list
     return Answer({"step": event, "written": not args.dry_run},
-                  ["  %s step %s of %s%s" % ("would start" if args.dry_run else "started", step, event["project"],
-                                             "" if event["session"] else cost.session_note())])
+                  ["  %s step %s of %s — a line in your history%s" % (
+                      "would start" if args.dry_run else "started", step, event["project"],
+                      ", with this Claude Code session's id" if event["session"] else cost.session_note())]
+                  + ([] if listed else ["  %s %s on your projects" % ("would list" if args.dry_run else "listed", event["project"])]))
 
 
 def _op_tally(args, project):

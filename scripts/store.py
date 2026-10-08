@@ -302,13 +302,18 @@ def _last_line_is_open(path):
         return history.read(1) != b"\n"
 
 
+def recorded(event, history):
+    """Whether `history` holds an event of the same kind and key as `event` (§5.7): what `append_event` does not write again."""
+    keys = EVENT_KEYS[event["event"]]
+    return any(other.get("event") == event["event"] and all(other.get(key) == event.get(key) for key in keys) for other in history)
+
+
 def append_event(event):
     """
     One event onto the history (§5.7) — not written when an event with the same key is there. Returns whether it was.
     Looking and appending are two steps, so the caller holds `locked()` across both (`parts.main` does).
     """
-    keys = EVENT_KEYS[event["event"]]
-    if any(other.get("event") == event["event"] and all(other.get(key) == event.get(key) for key in keys) for other in events()):
+    if recorded(event, events()):
         return False
     target = place("history")
     _make_ready("history", target)

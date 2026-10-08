@@ -645,6 +645,56 @@ class ThePicksTest(unittest.TestCase):
                          [{"event": "passed_over", "project": "plant-alarm", "need": "soil", "part": "x-other",
                            "why": "a gas sensor does not sense soil", "by": "person"}])
 
+    # --- what the store keeps of a pick, and what the pick says it wrote (C-17; the PO, 2026-10-08) ---
+
+    def test_a_reason_is_kept_without_its_urls_and_prices(self):
+        # §5.7 (W21): the history keeps the person's reasons, never a URL or a price — and a reason kept both, as typed
+        for given, kept in (("a gas sensor does not sense soil — https://shop.example/x", "a gas sensor does not sense soil"),
+                            ("too dear: 12 EUR", "too dear"),
+                            ("costs €12,50, see www.shop.example/a?b=1", "costs see"),
+                            ("300 Kč and $5 more than the other", "and more than the other"),
+                            ("CZK 300 is too much", "is too much")):
+            with self.subTest(given=given):
+                self.assertEqual(needs.kept_reason(given), (kept, True))
+        for given in ("a 3 W speaker is loud enough", "it senses distance, not moisture.", "2 of them are dead"):
+            with self.subTest(given=given):
+                self.assertEqual(needs.kept_reason(given), (given, False))
+
+    def test_a_reason_s_url_and_price_never_reach_the_history_and_the_pick_says_so(self):
+        reasons = a_file([{"need": "soil", "id": "x-other", "why": "a gas sensor does not sense soil — 12 EUR at https://shop.example/x",
+                           "by": "person"}])
+        said = self.text(["--pick", str(self.project), "soil=x-soil", "--passed-over", reasons])
+        self.assertEqual([event["why"] for event in self.history() if event["event"] == "passed_over"], ["a gas sensor does not sense soil — at"])
+        self.assertIn("\n  x-other: the reason is kept without the URL or price in it — your history keeps words, never a URL or a price\n",
+                      said)
+
+    def test_a_reason_is_said_noted_and_a_second_for_the_same_part_already_noted(self):
+        first = a_file([{"need": "soil", "id": "x-other", "why": "a gas sensor does not sense soil", "by": "person"}])
+        self.assertIn("\n  would note why you passed over x-other (soil)\n",
+                      self.text(["--pick", str(self.project), "soil=x-soil", "--passed-over", first, "--dry-run"]))
+        self.assertIn("\n  noted why you passed over x-other (soil)\n", self.text(["--pick", str(self.project), "soil=x-soil", "--passed-over", first]))
+        second = a_file([{"need": "soil", "id": "x-other", "why": "the wrong sensor altogether", "by": "person"}])
+        said = self.text(["--pick", str(self.project), "soil=x-soil", "--passed-over", second])
+        self.assertIn("\n  already noted, not changed: why you passed over x-other (soil) — your history keeps the first reason\n", said)
+        self.assertEqual([event["why"] for event in self.history() if event["event"] == "passed_over"], ["a gas sensor does not sense soil"])
+
+    def test_a_pick_that_writes_a_drawer_entry_s_key_into_needs_json_says_so_once(self):
+        dry = self.text(["--pick", str(self.project), "alarm=speaker", "--dry-run"])
+        first = self.text(["--pick", str(self.project), "alarm=speaker"])
+        again = self.text(["--pick", str(self.project), "alarm=speaker", "soil=x-soil"])
+        self.assertIn("\n  needs.json would name your drawer entry speaker — a key made from your label, in the project's own file\n", dry)
+        self.assertIn("\n  needs.json names your drawer entry speaker — a key made from your label, in the project's own file\n", first)
+        self.assertNotIn("needs.json", again)
+
+    def test_a_pick_says_it_listed_the_project_and_what_it_wrote_to_the_history(self):
+        dry = self.text(["--pick", str(self.project), "soil=x-soil", "input=tactile-button", "--dry-run"])
+        first = self.text(["--pick", str(self.project), "soil=x-soil", "input=tactile-button"])
+        again = self.text(["--pick", str(self.project), "soil=x-soil", "input=tactile-button"])
+        self.assertIn("\n  would list plant-alarm on your projects\n  would write to your history: 2 reused\n", dry)
+        self.assertIn("\n  listed plant-alarm on your projects\n  wrote to your history: 2 reused\n", first)
+        self.assertNotIn("projects", again)
+        self.assertNotIn("history", again)
+
     def test_a_retried_pick_changes_nothing(self):
         run(["--pick", str(self.project), "soil=x-soil"])
         said, code = run(["--pick", str(self.project), "soil=x-soil"])
@@ -689,7 +739,10 @@ class ThePicksTest(unittest.TestCase):
             '  set probe: used_in null → {"plant-alarm": 1}',
             "  soil: x-soil",
             "  alarm: mp3",
-            "  mp3: maybe owned — check the drawer first", ""]))
+            "  mp3: maybe owned — check the drawer first",
+            "  listed plant-alarm on your projects",
+            "  wrote to your history: 2 reused",
+            "  needs.json names your drawer entry mp3 — a key made from your label, in the project's own file", ""]))
 
     def test_a_refused_pick_says_its_notes_between_what_it_would_have_changed_and_what_it_refused(self):
         self.assertEqual(self.text(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3"]), "\n".join([
@@ -732,7 +785,8 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual((self.picks()["soil"], self.entry("probe").get("used_in"), self.history()), (None, None, []))
         self.assertFalse((self.home / "projects.json").exists())
         self.assertEqual(self.text(["--pick", str(self.project), "soil=x-soil", "--dry-run"]),
-                         '  would set probe: used_in null → {"plant-alarm": 1}\n  soil: x-soil\n')
+                         '  would set probe: used_in null → {"plant-alarm": 1}\n  soil: x-soil\n'
+                         "  would list plant-alarm on your projects\n  would write to your history: 1 reused\n")
 
     def test_a_pick_puts_the_project_on_the_list_so_what_it_reserved_stays_free_to_it(self):
         run(["--pick", str(self.project), "soil=x-soil"])
@@ -788,7 +842,10 @@ class ThePicksTest(unittest.TestCase):
             '  set probe: used_in null → {"plant-alarm": 1}',
             "  soil: x-soil",
             "  alarm: old-amp",
-            "  probe: the drawer entry of x-soil — picked as that record", ""]))
+            "  probe: the drawer entry of x-soil — picked as that record",
+            "  listed plant-alarm on your projects",
+            "  wrote to your history: 2 reused",
+            "  needs.json names your drawer entry old-amp — a key made from your label, in the project's own file", ""]))
 
     def test_a_drawer_entry_of_a_board_picked_by_its_key_is_a_pick_of_that_board(self):
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
@@ -803,7 +860,10 @@ class ThePicksTest(unittest.TestCase):
             '  set speaker: used_in null → {"plant-alarm": 1}',
             "  alarm: speaker",
             "  board: beetle-c6",
-            "  beetle-c6: a board needs a board file — a record in boards/ — before spark can build with it", ""]))
+            "  beetle-c6: a board needs a board file — a record in boards/ — before spark can build with it",
+            "  listed plant-alarm on your projects",
+            "  wrote to your history: 2 reused",
+            "  needs.json names your drawer entries beetle-c6, speaker — a key made from your label, in the project's own file", ""]))
 
     def a_needs_file_from_before(self, need_id, pick):
         """The needs file as one written before a pick of an entry key became its record's — or edited by hand: `need_id`
@@ -1015,6 +1075,7 @@ class ThePicksTest(unittest.TestCase):
         for name, reasons in (("a need the project has not", [dict(good, need="smell")]), ("an id spark has not", [dict(good, id="nothing")]),
                               ("no reason", [{key: value for key, value in good.items() if key != "why"}]),
                               ("an empty reason", [dict(good, why="  ")]), ("a reason that is not words", [dict(good, why=7)]),
+                              ("a reason that is only a URL and a price", [dict(good, why="https://shop.example/x 12 EUR")]),
                               ("nobody", [dict(good, by="robot")]), ("not an object", ["x-other"]), ("not a list", good), ("null", None)):
             with self.subTest(name=name):
                 said, code = run(["--pick", str(self.project), "soil=x-soil", "--passed-over", a_file(reasons)])

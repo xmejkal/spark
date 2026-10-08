@@ -102,6 +102,12 @@ def plan_set(project, items):
     return [current[need_id] for need_id in order], changes, problems
 
 
+def entry_keys(listed):
+    """The drawer entry keys a needs file names (§5.8, C-17): what a pick of an owned thing with no record writes into the
+    project's own file — a key made from the person's label."""
+    return {pick["entry"] for need in listed for pick in need.get("pick") or [] if "entry" in pick}
+
+
 def write(project, needs):
     """The needs file, whole (`.part`, then renamed) — the project's folder made when it is new (§8 S rule 5)."""
     path = Path(project) / FILE
@@ -266,7 +272,8 @@ def plan_pick(project, given, passed_over=()):
     project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
     longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
     a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
-    own parts/ or boards/: that was not there before the project. Nothing is written here.
+    own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
+    words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
     """
     name, current, entries = store.add_project(project, dry_run=True), read(project), drawer.entries()
     known, ids, problems, picked = {row[:2]: row[2] for row in drawer.linkable(project)}, {need["id"] for need in current}, [], {}
@@ -323,13 +330,35 @@ def plan_pick(project, given, passed_over=()):
     events = [event for event in events if not any(known.get((kind, event.get(kind))) == "project" for kind in ("part", "board"))]
     for number, item in enumerate(passed_over if isinstance(passed_over, (list, tuple)) else [None], 1):
         pick = _resolve(item.get("id"), known, entries) if isinstance(item, dict) and isinstance(item.get("id"), str) else None
-        if not (pick and item.get("need") in ids and drawer._words(item.get("why")) and item.get("by", "person") in ("person", "agent")):
+        why, cut = kept_reason(item["why"]) if pick and isinstance(item.get("why"), str) else ("", False)
+        if not (pick and item.get("need") in ids and drawer._words(why) and item.get("by", "person") in ("person", "agent")):
             problems.append(parts._problem("passed over %d" % number, 'a part passed over is {"need", "id", "why", "by": '
-                                           '"person" or "agent"}: a need and an id spark has, and the reason in words'))
+                                           '"person" or "agent"}: a need and an id spark has, and the reason in words — a URL or '
+                                           'a price is not kept, so a reason that is only those is none'))
             continue
-        events.append(dict({"event": "passed_over", "project": name, "need": item["need"]}, **pick,
-                           why=drawer.clean(item["why"]), by=item.get("by", "person")))
+        events.append(dict({"event": "passed_over", "project": name, "need": item["need"]}, **pick, why=why, by=item.get("by", "person")))
+        notes += ["%s: the reason is kept without the URL or price in it — your history keeps words, never a URL or a price"
+                  % item["id"]] if cut else []
     return after, changes, events, notes, problems
+
+
+#: What a passed-over reason never keeps (§5.7, W21: "never a URL … a price"): a web address, and an amount of money — a
+#: currency sign or code beside a number, on either side.
+URL_IN_WORDS = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
+CURRENCY = r"(?:[$€£¥]|\b(?:eur|euros?|usd|dollars?|czk|kč|kc|gbp|chf|pln|zł|cny|rmb|yuan|jpy|yen)\b)"
+PRICE_IN_WORDS = re.compile(r"%s\s?\d[\d.,]*|\d[\d.,]*\s?%s" % (CURRENCY, CURRENCY), re.IGNORECASE)
+
+
+def kept_reason(text):
+    """
+    A passed-over reason as the history keeps it (§5.7, W21; C-17): cleaned as a label is, and with every URL and every price
+    taken out — (the reason, whether anything was taken out). The person's words stay; what the history never keeps does not.
+    """
+    said = drawer.clean(text)
+    kept = PRICE_IN_WORDS.sub("", URL_IN_WORDS.sub("", said))
+    if kept == said:
+        return said, False
+    return re.sub(r"\s+([,;:.])", r"\1", re.sub(r"\s{2,}", " ", kept)).strip(" ,;:.-—"), True
 
 
 REQUIREMENTS = "requirements.json"

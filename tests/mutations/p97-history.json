@@ -16,7 +16,7 @@
  {"file": "scripts/store.py", "name": "the events come back reversed",
   "find": "    return said\n", "replace": "    return said[::-1]\n"},
  {"file": "scripts/store.py", "name": "only the last event is compared, so an earlier one is written again",
-  "find": "for other in events())", "replace": "for other in events()[-1:])"},
+  "find": "    if recorded(event, events()):", "replace": "    if recorded(event, events()[-1:]):"},
  {"file": "scripts/store.py", "name": "the kind of event is not compared, so a part passed over and picked later is a repeat",
   "find": "other.get(\"event\") == event[\"event\"] and all(", "replace": "all("},
  {"file": "scripts/store.py", "name": "a step's key leaves out its session",

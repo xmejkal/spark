@@ -201,6 +201,21 @@ class TheStepTest(unittest.TestCase):
             parts.main(["--step", str(self.project), "C"])
         self.assertIn("no Claude Code session here", out.getvalue())
 
+    def test_a_step_says_what_it_wrote(self):
+        # C-17 (the council on PR #98): a step wrote a line with the session's id, and listed the project, and said neither
+        def text(argv):
+            out = io.StringIO()
+            with mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "s9"}), contextlib.redirect_stdout(out):
+                parts.main(argv)
+            return out.getvalue()
+        dry = text(["--step", str(self.project), "C", "--dry-run"])
+        first, again = text(["--step", str(self.project), "C"]), text(["--step", str(self.project), "M"])
+        self.assertEqual(dry, "  would start step C of plant-alarm — a line in your history, with this Claude Code session's id\n"
+                              "  would list plant-alarm on your projects\n")
+        self.assertEqual(first, "  started step C of plant-alarm — a line in your history, with this Claude Code session's id\n"
+                                "  listed plant-alarm on your projects\n")
+        self.assertEqual(again, "  started step M of plant-alarm — a line in your history, with this Claude Code session's id\n")
+
     def test_a_step_is_one_of_the_spine_s_letters(self):
         said, code = run(["--step", str(self.project), "X"])
         self.assertEqual((said["status"], code), ("could-not-run", 2))
@@ -254,8 +269,10 @@ class AStepStartsWhenItIsMarkedTest(unittest.TestCase):
         self.assertEqual(said["data"]["step"]["session"], "04754b5c-E6be-4924-97bc-e6cf796455f7")
 
     def test_a_step_says_what_it_started_or_would_start(self):
-        for argv, said in ((["--step", str(self.project), "L"], "started step L of plant-alarm"),
-                           (["--step", str(self.project), "L", "--dry-run"], "would start step L of plant-alarm")):
+        for argv, said in ((["--step", str(self.project), "L"], "started step L of plant-alarm — a line in your history, with this "
+                                                                 "Claude Code session's id\n  listed plant-alarm on your projects"),
+                           (["--step", str(self.project), "L", "--dry-run"],
+                            "would start step L of plant-alarm — a line in your history, with this Claude Code session's id")):
             with self.subTest(argv=argv):
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):
