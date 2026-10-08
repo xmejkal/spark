@@ -116,13 +116,14 @@ Each by its name in check_all's answer:
   definition to facts, never decisions.
 - `parts.py`: what a part asks of the board it plugs into, and what is actually known about it. Every fact carries a
   value, a source and whether anyone checked; `--unverified` lists what nobody has. It also keeps the drawer and the
-  needs.
+  needs, writes the picks and the requirements file from them, and marks a project's steps and tallies what they cost
+  (`--step`, `--tally`; `cost.py` below does the counting).
 - `init_project.py`: everything a project needs before any check can run, with nothing guessed.
 - `tools.py`: the tools spark depends on, found from one merged list. It is what `/spark:setup` runs.
 
 ### The libraries
 
-Imported by the scripts above, and not run on their own:
+Imported by the scripts above, and not run on their own, except `cost.py`:
 
 - `design.py`: a design, loaded once: the requirements file, its project, the board, the parts and the rules;
 - `netlist.py`: the built design, as connectivity;
@@ -132,6 +133,9 @@ Imported by the scripts above, and not run on their own:
 - `store.py`: where spark keeps what it keeps;
 - `drawer.py`: what you own;
 - `needs.py`: what a goal needs, and what the store offers for each;
+- `cost.py`: what a project's run cost, read from the Claude Code transcripts of the sessions its steps ran in, tool
+  names and counts only. `parts.py --step` and `--tally` use it. On one transcript it runs on its own:
+  `cost.py <transcript.jsonl>` says what that run cost;
 - `sim_project.py`: the simulation project a design implies, written by `check_spine.py`'s simulation stage.
 
 ## The data
@@ -176,8 +180,16 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
 - the documents research kept;
 - the catalog of parts research read and did not choose;
 - your drawer;
-- your shelf: the records a drawer entry linked from another of your projects, which every project then finds (a
-  shelf for every part you choose is [P91](https://github.com/xmejkal/spark/issues/22));
+- your shelf: records that every project then finds. One gets there when a drawer entry links a record from another of
+  your projects, or when `parts.py --requirements` writes a file for a pick that came from the catalog or from another
+  of your projects (a shelf for every part you choose is [P91](https://github.com/xmejkal/spark/issues/22));
+- your history, `history.jsonl`: one line for each event, appended, and private to you (0600 files in 0700 folders,
+  refused inside a git work tree). The events are `step` (a project's step started, with the Claude Code session it
+  ran in), `reused` (a pick taken from the library, your store or another project), `passed_over` (a part you passed
+  over, with your reason) and `built` (a board that built end to end, with a digest of the facts the build read from
+  the board and from each part). It keeps ids, project names, your reasons without any URL or price, and session ids.
+  `parts.py --tally` reads the Claude Code transcripts of those sessions (`~/.claude/projects`, tool names and counts
+  only) for the cost line;
 - the list of your projects;
 - your tools list;
 - the tools `/spark:setup` downloads (`downloads/`);
