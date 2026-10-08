@@ -119,9 +119,9 @@ only what the picks decide: the parts you wrote stay — a part you added, a `na
 board follows the pick. It adds only the parts your picks still lack, and says which entries no pick explains (`kept,
 not from a pick`), for you to remove if you changed a pick. A pick with no
 record (the speaker, the battery) is reserved, not placed. A board picked from the drawer with no board file stops it,
-naming the boards spark has a file for: say so — the person picks one of those, or a board file is written first
-(research). A pick from the catalog goes onto the shelf, so every project builds with it. `/spark:build` takes it from
-there.
+naming the boards spark has a file for that builds, and those that stop at the footprint stage (P121): say so — the
+person picks one that builds, or a board file is written first (docs/guide/how-it-works.md, "Your own dev board"). A
+pick from the catalog goes onto the shelf, so every project builds with it. `/spark:build` takes it from there.
 
 ## T — the tally
 

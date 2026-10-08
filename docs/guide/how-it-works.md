@@ -164,8 +164,9 @@ spark's own scripts:
    `vendor.arduino_variant` names, fetched through the GitHub CLI `gh`.
 5. **Name the id as `board`** in the requirements file. The chain takes the project's definition before the library's.
 
-No check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has none
-([P121](https://github.com/xmejkal/spark/issues/55)). Nothing compares copied geometry with the new board either.
+No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has
+none ([P121](https://github.com/xmejkal/spark/issues/55)); `parts.py --audit` and `--match` say such a board stops at the
+footprint stage. Nothing compares copied geometry with the new board either.
 
 ## Your store
 

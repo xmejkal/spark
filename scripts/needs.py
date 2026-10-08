@@ -15,6 +15,7 @@ from pathlib import Path
 import boards
 import drawer
 import emit_board
+import emit_footprint
 import parts
 import store
 
@@ -138,6 +139,12 @@ def _counts(holding, mine=None):
     return owned, max(owned - held, 0), unsure
 
 
+def stops_at_footprint(board):
+    """Whether a board stops the chain at the footprint stage (C-7, P121): its file has no header geometry to draw the footprint
+    from (`emit_footprint.footprint_gaps`) — or it is no board file at all. A board owes nothing; this is what it lacks."""
+    return not isinstance(board, dict) or bool(emit_footprint.footprint_gaps(board))
+
+
 def _candidate(need, functions, names, holding, said, mine=None):
     """One candidate (§6.2): `said` names it and where it lives; the rest is what its verb's functions say, and its counts."""
     owned, free, unsure = _counts(holding, mine)
@@ -164,11 +171,13 @@ def candidates(need, known, entries, mine=None):
         if not any(f.get("does") == need["does"] for f in functions):
             continue
         names = [record.get("name")] + parts.aliases(record)
-        found.append(_candidate(need, functions, names, holding,
-                                {"id": record_id, "kind": kind, "in": where, "label": record.get("name"),
-                                 "owes": [] if kind == "board" else parts.owes(record),
-                                 "broken": bool(parts._shape_problems(boards.validate, record, path, "board definition")) if kind == "board"
-                                 else bool(parts.broken_problems(record, path))}, mine))
+        said = {"id": record_id, "kind": kind, "in": where, "label": record.get("name"),
+                "owes": [] if kind == "board" else parts.owes(record),
+                "broken": bool(parts._shape_problems(boards.validate, record, path, "board definition")) if kind == "board"
+                else bool(parts.broken_problems(record, path))}
+        if kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
+            said["stops_at"] = "footprint" if stops_at_footprint(record) else None
+        found.append(_candidate(need, functions, names, holding, said, mine))
     for entry_id, entry in entries.items():
         functions = entry.get("function") or []
         points_at_a_record = isinstance(entry.get("is"), dict) and bool(entry["is"]) and next(iter(entry["is"].items())) in known_keys
@@ -434,15 +443,22 @@ def _merge_parts(existing, wanted):
 def _board_problems(board_picks, unfiled, project):
     """
     What refuses the board (§8 L): it is one, picked as its record. A board picked from the drawer that spark has no board
-    file for is named, with the boards spark has a file for — the library's and the project's; no board, or two, is said so.
+    file for is named, with the boards spark has a file for — the library's and the project's — that build, and those that stop
+    at the footprint stage, which are never suggested (C-7); no board, or two, is said so.
     """
     if len(board_picks) == 1:
         return []
     if unfiled and not board_picks:
-        filed = ", ".join(boards.available(project)) or "none"
+        filed = boards.records(project)
+        stopping = [board_id for board_id, (_, path) in filed.items() if stops_at_footprint(parts._parse(path))]
+        builds = [board_id for board_id in filed if board_id not in stopping]  # C-7: a board that stops is never suggested
+        said = ("spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds") + (
+            "; %s stop%s at the footprint stage (P121) — no header geometry in %s board file" % (
+                ", ".join(stopping), "s" if len(stopping) == 1 else "", "its" if len(stopping) == 1 else "their") if stopping else "")
         return [parts._problem(key, "picked as the board, but a board needs a board file — a record in boards/ — before spark can "
-                                    "build with it, and it has none; spark has one for %s" % filed,
-                               "pick one of %s, or write a board file for %s first" % (filed, key)) for key in unfiled]
+                                    "build with it, and it has none; %s" % said,
+                               '%swrite a board file for %s first (docs/guide/how-it-works.md, "Your own dev board")'
+                               % ("pick %s, or " % " or ".join(builds) if builds else "", key)) for key in unfiled]
     return [parts._problem("board", "pick one board — %s" % (
         "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
 

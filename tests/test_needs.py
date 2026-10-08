@@ -336,6 +336,17 @@ class TheMatcherTest(unittest.TestCase):
         board = [c for c in self.needs["board"]["candidates"] if c["id"] == "firebeetle2-esp32s3"][0]
         self.assertEqual((board["owes"], board["broken"]), ([], False))
 
+    def test_a_board_whose_file_has_no_header_geometry_says_it_stops_at_the_footprint(self):
+        # C-7 (the council on PR #98): the XIAO was offered like the S3, and the chain stops at its footprint stage (P121)
+        boards_offered = {c["id"]: c for c in self.needs["board"]["candidates"] if c["kind"] == "board"}
+        self.assertEqual((boards_offered["xiao-esp32-c6"]["stops_at"], boards_offered["firebeetle2-esp32s3"]["stops_at"]), ("footprint", None))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        lines = out.getvalue().splitlines()
+        self.assertIn("stops at the footprint stage (P121)", next(line for line in lines if "xiao-esp32-c6 (library)" in line))
+        self.assertNotIn("stops at", next(line for line in lines if "firebeetle2-esp32s3 (library)" in line))
+
     def test_a_broken_board_is_marked_broken(self):
         (self.project / "boards").mkdir(parents=True)
         (self.project / "boards" / "half-board.json").write_text(json.dumps({"schema": 1, "id": "half-board", "name": "Half a board"}))
@@ -1365,7 +1376,8 @@ class TheRequirementsFileTest(unittest.TestCase):
     def test_a_board_picked_from_the_drawer_with_no_board_file_is_named_with_the_boards_spark_has(self):
         home, project = self.project([])
         library = Path(tempfile.mkdtemp())
-        (library / "x-lib-board.json").write_text(json.dumps({"id": "x-lib-board"}))
+        (library / "x-lib-board.json").write_text(json.dumps(dict(json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text()),
+                                                                  id="x-lib-board")))
         (project / "boards").mkdir()
         (project / "boards" / "x-own-board.json").write_text(json.dumps({"id": "x-own-board"}))
         (project / "boards" / "active.json").write_text(json.dumps({"board": "x-own-board"}))  # the board chosen: no board itself
@@ -1377,12 +1389,24 @@ class TheRequirementsFileTest(unittest.TestCase):
             said, code = run(["--requirements", str(project)])
             text = self.text(["--requirements", str(project)])
         sentence = ("picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, "
-                    "and it has none; spark has one for x-lib-board, x-own-board")
+                    "and it has none; spark has one that builds for x-lib-board; x-own-board stops at the footprint stage (P121) "
+                    "— no header geometry in its board file")
         self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [
             {"subject": "beetle-c6", "sentence": sentence,
-             "fix": "pick one of x-lib-board, x-own-board, or write a board file for beetle-c6 first"}]))
+             "fix": 'pick x-lib-board, or write a board file for beetle-c6 first (docs/guide/how-it-works.md, "Your own dev board")'}]))
         self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n" % sentence)
         self.assertFalse((project / "requirements.json").exists())
+
+    def test_a_board_that_stops_at_the_footprint_is_never_suggested(self):
+        # C-7: the refusal suggested the XIAO, whose board file has no header geometry, beside the S3
+        home, project = self.project([])
+        self.owned(home, "beetle-c6", {"label": "Beetle ESP32 C6 Mini", "count": 3})
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle-c6"}]}]}))
+        said, _ = run(["--requirements", str(project)])
+        self.assertIn("spark has one that builds for firebeetle2-esp32s3; xiao-esp32-c6 stops at the footprint stage (P121)",
+                      said["problems"][0]["sentence"])
+        self.assertNotIn("xiao", said["problems"][0]["fix"])
 
     def test_with_no_board_picked_a_drawer_entry_of_another_need_is_no_board(self):
         _, project = self.project([("alarm", [{"entry": "speaker"}])])

@@ -2158,6 +2158,17 @@ class OwedIsNotBrokenTest(unittest.TestCase):
             parts.main(["--audit", "--project", str(project)])
         self.assertIn("--function-set <part> <file> --project %s: x-local" % project.resolve(), out.getvalue())
 
+    def test_audit_says_a_board_whose_file_has_no_header_geometry_stops_at_the_footprint(self):
+        # C-7 (the council on PR #98): the XIAO was counted current, and the chain stops at its footprint stage all the same
+        out = io.StringIO()
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--audit"])
+            with contextlib.redirect_stdout(out):
+                parts.main(["--audit"])
+        self.assertEqual((code, said["data"]["stops_at_footprint"]), (0, [{"id": "xiao-esp32-c6", "layer": "library"}]))
+        self.assertIn("  xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file\n",
+                      out.getvalue())
+
     def test_audit_names_a_drawer_link_to_a_record_nobody_has(self):
         home = Path(tempfile.mkdtemp())
         (home / "drawer").mkdir()

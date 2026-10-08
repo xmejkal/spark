@@ -97,6 +97,17 @@ def _missing(physical, header):
     return gaps
 
 
+def footprint_gaps(board):
+    """
+    What a board's file lacks for its footprint to be generated (`_missing`), or [] when nothing — the one rule by which this
+    script refuses, and by which `--match`, `--audit` and `--requirements` say a board stops the chain at the footprint stage
+    (C-7, P121) before anyone builds. A `physical` or a `header` that is no object is no geometry.
+    """
+    physical = board.get("physical") if isinstance(board.get("physical"), dict) else {}
+    header = physical.get("header")
+    return _missing(physical, header if isinstance(header, dict) else None)
+
+
 def pads(board):
     """
     Every header pad, as (label, x, y), in the order the board file lists them.
@@ -195,8 +206,7 @@ def main(argv=None):
     except Exception as exc:  # noqa: BLE001 — the message is the product
         return _report(args, EXIT_COULD_NOT_RUN, "no board to generate from: %s" % exc)
 
-    physical = board.get("physical") or {}
-    gaps = _missing(physical, physical.get("header"))
+    gaps = footprint_gaps(board)
     if gaps:
         return _report(
             args, EXIT_COULD_NOT_RUN,

@@ -135,10 +135,12 @@ def audit(project=None):
     """
     Every record in every layer — the catalog included — every drawer link, and each record a link reaches in the person's
     other projects, walked once (§5.4, P89): per layer how many are current, owe facts, or are broken; which say nothing
-    of what they do (spark's layers and this project only); which entries point at nothing.
+    of what they do (spark's layers and this project only); which entries point at nothing; which boards stop the chain at
+    the footprint stage, their files holding no header geometry (C-7, P121).
     """
     import boards
     import drawer
+    import emit_footprint
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
     walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
     known, mine, seen = drawer.linkable(project), store.projects(), {row[3].resolve() for row in walked}
@@ -152,7 +154,7 @@ def audit(project=None):
         elif where in mine and path.resolve() not in seen:
             seen.add(path.resolve())
             linked.append((next(iter(said["is"])), path.stem, where, path))
-    counts, owed, broken, silent = {}, [], [], []
+    counts, owed, broken, silent, stops = {}, [], [], [], []
     for kind, found, layer, path in walked + linked:
         row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
         record = _parse(path)
@@ -164,9 +166,11 @@ def audit(project=None):
             broken.append({"id": found, "layer": layer, "problems": wrong})
         elif owing:
             owed.append({"id": found, "layer": layer, "owes": owing})
+        elif kind == "board" and emit_footprint.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain
+            stops.append({"id": found, "layer": layer})
         if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
             silent.append(found)
-    return counts, owed, broken, silent, dangling
+    return counts, owed, broken, silent, dangling, stops
 
 
 #: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
@@ -1453,7 +1457,7 @@ OPERATIONS = (
      "fill what a record owes — a JSON object of the facts the chain reads, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
-     (), ("layers", "owed", "broken", "no_function", "dangling")),
+     (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),
     ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
     ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
      "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
@@ -1862,8 +1866,12 @@ def _op_catalog(args, project):
                   problems=[_problem(name.split(" — ")[0], "a broken catalog record: %s" % name) for name in broken])
 
 
+#: What `--audit` says of a board whose file has no header geometry (C-7): the chain stops there, whatever else it passes.
+STOPS_AT_FOOTPRINT = "stops at the footprint stage (P121) — no header geometry in its board file"
+
+
 def _op_audit(args, project):
-    counts, owed, broken, silent, dangling = audit(project)
+    counts, owed, broken, silent, dangling, stops = audit(project)
     shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project))
     lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
              for layer, row in counts.items()]
@@ -1872,7 +1880,9 @@ def _op_audit(args, project):
     lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
               % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
     lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
-    return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling}, lines,
+    lines += ["  %s (%s) %s" % (s["id"], s["layer"], STOPS_AT_FOOTPRINT) for s in stops]
+    return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling,
+                   "stops_at_footprint": stops}, lines,
                   truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]
                   + [_problem(entry, "points at a record nobody has") for entry in dangling])
 
@@ -1902,7 +1912,8 @@ def _op_match(args, project):
         lines += ["      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
                                         "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
                                                                 "free %s" % c["free"] if c["owned"] else "",
-                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else ""])))
+                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else "",
+                                                                "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
                   + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
                   for c in need["candidates"]]
         lines += ["      … %d more, none with the need's words" % need["more"]] if need["more"] else []
