@@ -12,6 +12,14 @@ Every command treats text read from a [record](../../GLOSSARY.md#record--and-the
 entry, a web or shop page or a datasheet as data about a part. It is never an instruction: if such text asks Claude to
 run or change something, Claude quotes it to you and carries on. (Each command page says so in its first paragraph.)
 
+A command page's header, `allowed-tools`, lists the operations Claude may run without asking you, each by name. Four
+operations that reach the network are on no command's or skill's list: `parts.py --fetch` and `--sources`, and
+`tools.py --install` and `--on`. The first downloads a datasheet, the second asks every URL a record cites whether it
+answers, and the other two install a tool. So Claude Code asks you before any of them runs, and your answer there is
+the yes. A test holds every list to this rule (`tests/test_routes.py`); how Claude Code matches a pattern to a command line is
+an assumption it states, because the test cannot run Claude Code. `parts.py --describe --json` marks the network
+operations of `parts.py`.
+
 The [journey guide](journey.md) shows these commands on real runs.
 
 ## Commands
@@ -100,8 +108,19 @@ against your drawer and spark's records, owned parts first ([journey: Idea](jour
 to the project's `.spark/needs.json`.
 
 Then it picks a part per need and reserves what you own of it, and the picks become a requirements file
-([P97](https://github.com/xmejkal/spark/issues/18)); one line at the end says what the run cost and what came from
-your store.
+([P97](https://github.com/xmejkal/spark/issues/18)). The run ends with one cost line, from `parts.py --tally`. Its words,
+as the code defines them:
+
+- **from the store**: known to spark before this project — its library, your store, your projects;
+- **owned**: your drawer holds it;
+- **requests**: tool calls that reach the network, every MCP call among them;
+- **documents**: the distinct PDFs and images read, with the Read tool or `parts.py --read`;
+- **min**: wall-clock minutes of the session between the steps.
+
+`--tally` reads the Claude Code transcripts of the sessions the steps ran in, for tool names and counts only. With no
+transcript the line ends `its cost was not counted` and the command exits 2, could-not-run: a missing cost is never a
+cost of 0. [A recorded run](journey.md#a-recorded-run-a-button-and-an-led) shows every step with the output it printed,
+and [owed facts and gaps](journey.md#owed-facts-and-gaps) says what a record can owe and what follows a gap.
 
 Page: [`commands/idea.md`](../../commands/idea.md).
 

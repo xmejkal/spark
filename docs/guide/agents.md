@@ -15,6 +15,11 @@ The person types a `/spark:` command, and you follow that command's page in [`co
 (`part-finder`, `datasheet-reader`, `parts-researcher`, `design-reviewer`) are launched by the commands and skills that
 name them.
 
+A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch` and
+`--sources`, and `tools.py --install` and `--on`, reach the network and are on no command's or skill's list, so Claude
+Code asks the person before any of them runs; their answer is the yes, and you do not work around it.
+`parts.py --describe --json` marks the network operations of `parts.py`.
+
 A new project starts with `/spark:init`, then `/spark:setup`. The [journey guide](journey.md) shows each step on real
 runs.
 
@@ -233,7 +238,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, each entry `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
-| `check_spine.py` | `check`, `stages`, `status`. `stages` names the one that stopped it |
+| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it |
 | `parts.py` | the envelope: `data`, `envelope`, `next`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
 **`parts.py`'s envelope:**
