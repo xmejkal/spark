@@ -1806,6 +1806,7 @@ class WhatAPartDoesTest(unittest.TestCase):
             said, code = run_json(["--function-set", "x-inlet", str(given)])
         self.assertEqual((said["status"], code), ("problems", 1))
         self.assertIn("spark's own library", said["problems"][0]["sentence"])
+        self.assertIn("x-inlet is in spark's own library", said["problems"][0]["sentence"])  # F10: text mode prints the sentence alone
         self.assertEqual(json.loads((library / "x-inlet.json").read_text()), record)
 
     def test_function_set_says_which_file_it_changes(self):
@@ -1927,6 +1928,7 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
             said, code = run_json(["--fact-set", "x-amp", self.facts({"footprint": "pinrow12"})])
         self.assertEqual((said["status"], code), ("problems", 1))
         self.assertIn("spark's own library", said["problems"][0]["sentence"])
+        self.assertIn("x-amp is in spark's own library", said["problems"][0]["sentence"])  # F10: text mode prints the sentence alone
         self.assertEqual(json.loads((library / "x-amp.json").read_text()), record)
 
     def test_only_a_fact_the_chain_reads_and_never_an_empty_one(self):
@@ -1966,6 +1968,7 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
                     said, code = run_json(argv)
                     self.assertEqual((said["status"], code), ("problems", 1))
                     self.assertIn("is not a JSON object", said["problems"][0]["sentence"])
+                    self.assertIn("x-soil is not a JSON object", said["problems"][0]["sentence"])  # F10: the path names it too
             self.assertEqual((home / "catalog" / "x-soil.json").read_text(), text)
 
     def test_a_shelf_copy_of_a_listed_project_s_record_is_filled_in_that_project_and_shelved_again(self):

@@ -1813,11 +1813,11 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     if path is None:
         raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
     if path.parent.resolve() == LIBRARY.resolve():
-        return Answer(problems=[_problem(part_id, "is in spark's own library, which is changed in spark's repository, "
-                                                  "not by parts.py")])
+        return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
+                                                  "not by parts.py" % part_id)])
     record = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(record, dict):
-        return Answer(problems=[_problem(part_id, "is not a JSON object (%s) — repair the file by hand first" % path)])
+        return Answer(problems=[_problem(part_id, "%s is not a JSON object (%s) — repair the file by hand first" % (part_id, path))])
     after = dict(record, **values)
     wrong = refuse(record, after, path)
     if wrong:

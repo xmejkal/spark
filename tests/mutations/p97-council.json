@@ -82,5 +82,7 @@
  {"file": "scripts/parts.py", "name": "F15: --requirements says nothing of a pair side nothing drives", "find": "             for gap in ([] if problems else no_driver)]", "replace": "             for gap in []]"},
  {"file": "scripts/parts.py", "name": "F15: several terminals on one side are said as one", "find": "\"is\" if len(gap[\"received_by\"]) == 1 else \"are\")", "replace": "\"is\")"},
  {"file": "scripts/parts.py", "name": "F15: the answer carries no no_driver", "find": "\"no_supply\": no_supply, \"no_driver\": no_driver,", "replace": "\"no_supply\": no_supply,"},
- {"file": "scripts/parts.py", "name": "F15: --describe does not name no_driver", "find": "\"no_driver\", \"no_receiver\", \"written\")),", "replace": "\"no_receiver\", \"written\")),"}
+ {"file": "scripts/parts.py", "name": "F15: --describe does not name no_driver", "find": "\"no_driver\", \"no_receiver\", \"written\")),", "replace": "\"no_receiver\", \"written\")),"},
+ {"file": "scripts/parts.py", "name": "F10: the refusal of spark's library names no part", "find": "\"not by parts.py\" % part_id)])", "replace": "\"not by parts.py\" % \"\")])"},
+ {"file": "scripts/parts.py", "name": "F10: the refusal of a record that is no object names no part", "find": "\"%s is not a JSON object (%s) — repair the file by hand first\" % (part_id, path))])", "replace": "\"%s is not a JSON object (%s) — repair the file by hand first\" % (\"\", path))])"}
 ]

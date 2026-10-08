@@ -10,7 +10,7 @@
   "find": "+ sorted(set(broken_problems(after, path)) - set(broken_problems(record, path)))", "replace": "+ []"},
  {"file": "scripts/parts.py", "name": "any key is a fact", "find": "set(facts) <= set(CHAIN_FACTS)", "replace": "True"},
  {"file": "scripts/parts.py", "name": "a record that is no object is read as one",
-  "find": "    if not isinstance(record, dict):\n        return Answer(problems=[_problem(part_id, \"is not a JSON object (%s) — repair the file by hand first\" % path)])\n",
+  "find": "    if not isinstance(record, dict):\n        return Answer(problems=[_problem(part_id, \"%s is not a JSON object (%s) — repair the file by hand first\" % (part_id, path))])\n",
   "replace": ""},
  {"file": "scripts/parts.py", "name": "a project that lost the record is still the home",
   "find": "    return (home, named) if home is not None and home.is_file() else (path, None)",
