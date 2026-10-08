@@ -2,8 +2,8 @@
  {
   "file": "scripts/emit_board.py",
   "name": "rules looked up by nothing again (A2)",
-  "find": "                          design.rules))",
-  "replace": "                          {}))"
+  "find": "        text = emit(board, part_list, assignments, placements, width, height, design.rules)",
+  "replace": "        text = emit(board, part_list, assignments, placements, width, height, {})"
  },
  {
   "file": "scripts/design.py",

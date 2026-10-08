@@ -872,6 +872,27 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
         self.assertIn("parts[0]", err)
 
+    def test_a_resistor_the_board_gives_no_voltage_for_is_could_not_run_naming_the_fact(self):
+        # F9: series_ohms' refusal was a traceback and exit 1, which check_spine read as a defect in the design
+        root = self._project()
+        (root / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}))
+        code, tsx, err = self._main(["requirements.json"], root)
+        self.assertEqual((code, tsx), (emit_board.EXIT_COULD_NOT_RUN, ""))
+        self.assertIn("cannot emit a board: led-red-5mm asks for 5 mA through a series resistor, but the board states no "
+                      "power.io_volts — nothing to compute it from", err)
+
+    def test_an_led_the_pin_cannot_light_is_could_not_run_too(self):
+        # F9: the input asks the impossible, which is could-not-run like every refusal of the input here — not "problems"
+        root = self._project()
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        led["facts"]["forward_voltage_v"]["value"] = 3.4
+        (root / "parts").mkdir()
+        (root / "parts" / "led-red-5mm.json").write_text(json.dumps(led))
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]}))
+        code, tsx, err = self._main(["requirements.json"], root)
+        self.assertEqual((code, tsx), (emit_board.EXIT_COULD_NOT_RUN, ""))
+        self.assertIn("cannot emit a board: led-red-5mm needs 3.4 V forward, and a 3.3 V pin cannot push current through it", err)
+
 
 class EachSectionStandsAloneTest(unittest.TestCase):
     """

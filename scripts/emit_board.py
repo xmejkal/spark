@@ -1079,8 +1079,14 @@ def main(argv=None):
     # The rules come with the design, from the project it was resolved to. They were looked up
     # by the raw `--project` flag instead: None without the flag, so the documented invocation
     # emitted every power trace unsized, exit 0, and called the widths unjustified.
-    sys.stdout.write(emit(board, part_list, assignments, placements, width, height,
-                          design.rules))
+    try:
+        text = emit(board, part_list, assignments, placements, width, height, design.rules)
+    except ValueError as refused:
+        # `series_ohms`: a number the resistor needs is missing, or the pin cannot light the part. The input's, so
+        # could-not-run like every refusal above — it was a traceback and exit 1, which the chain read as a defect (F9).
+        print("cannot emit a board: %s" % refused, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    sys.stdout.write(text)
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
     placed = {entry["signal"] for entry in assignments}
