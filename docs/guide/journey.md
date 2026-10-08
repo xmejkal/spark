@@ -172,10 +172,10 @@ How to read the matches:
 - Owned parts come first, from the drawer above, with how many are free.
 - `owes` names facts a [record](../../GLOSSARY.md#record--and-the-four-places-one-lives) lacks
   ([owed facts and gaps](#owed-facts-and-gaps) shows one):
-  - without a footprint or a pin order, the build stops;
-  - without an outline (`body_mm`), `/spark:build` draws a declared placeholder size, and every stage still reads
-    `[ok]` ([P115](https://github.com/xmejkal/spark/issues/49));
-  - without `simulation`, the simulation stage cannot run.
+  - a pick owing a `footprint`, a `pin_order`, its `pin_order_proof` or a `simulation` stance is taken, but
+    `parts.py --requirements` writes nothing until that is filled (it says which, and how);
+  - one owing only an outline (`body_mm`) is written, and `/spark:build` draws a declared placeholder size, every stage
+    still reading `[ok]` ([P115](https://github.com/xmejkal/spark/issues/49)).
 - `[other words]` marks a looser match: the part does the same thing (*sense*, *indicate*) but names a different object
   (*distance*, *light*). Whether that fits is Claude's call, and Claude says so to you.
 - `stops at the footprint stage (P121)` marks a board whose board file has no header geometry: the chain stops at its

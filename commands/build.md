@@ -139,6 +139,7 @@ The generator refuses rather than guess, and each refusal says what to record:
 | no `pin_order` recorded | pads would be numbered from the order pins appear in a file, which is not a fact about the module |
 | no outline recorded | every placement would be arranged around an invented size; `--assume-missing-sizes` proceeds with the guess declared in the file. The one command always passes `--assume-missing-sizes`, so `/spark:build` goes ahead and declares the guess only in the header of `board.tsx` ([P115](https://github.com/xmejkal/spark/issues/49)) |
 | two components of one name | tscircuit keeps one and wires every other instance's pins to it |
+| a series resistor it cannot size — a part asks for a current (`for_current_ma`) and the board file states no `power.io_volts` | the resistor's value comes from the board's I/O voltage; the schematic stage refuses (`cannot emit a board: … — nothing to compute it from`, exit 2) rather than guess one. The library's XIAO file states none, so with the library LED it stops there |
 | a part that is not in the library | `parts.py --need <words>` says what exists; `/spark:research` writes the record from the vendor's own pages, vendor by vendor in the project's order — never a pinout from memory |
 
 A rail nothing sources (a motor rail with no connector) is not a refusal: the file says so and the
