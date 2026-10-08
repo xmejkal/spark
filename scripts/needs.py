@@ -14,6 +14,7 @@ from pathlib import Path
 
 import boards
 import drawer
+import emit_board
 import parts
 import store
 
@@ -324,8 +325,14 @@ def plan_pick(project, given, passed_over=()):
 REQUIREMENTS = "requirements.json"
 
 #: What `requirements` works out (§5.3, §8 L): the file as it would be, the records to shelve, the picks with no record to place,
-#: the entries already in the file that no pick explains, the board the file named before, and what refuses it.
-Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems")
+#: the entries already in the file that no pick explains, the board the file named before, what refuses it, and the picks laid
+#: out at a placeholder outline.
+Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder")
+
+#: The facts that place a part, not wire it (the PO, 2026-10-08; P165): a pick that owes only these is written, and the PCB step
+#: lays it out at a placeholder size, said; one that owes a fact the circuit needs — a footprint, a pin order and its proof, a
+#: simulation stance — is refused, as before.
+LAYOUT_FACTS = ("body_mm",)
 
 
 def _part_of(entry):
@@ -447,28 +454,31 @@ def _how_to_fill(path):
 def requirements(project):
     """
     The picks read into the project's requirements file (§5.3, §8 L): a `Requirements` of (the file as it would be, the records
-    to shelve, the picks not placed, the entries it keeps that no pick explains, the board it named before, the problems). The
-    board pick, and every part pick whose record owes nothing — one in the catalog or in another project goes onto the shelf,
-    so the build finds it; a pick with no record is reserved, not placed. A pick of a drawer entry is read as the record that
-    entry is, when spark knows it (`_as_record`). The file's own `parts` stay as they are and gain an entry for each pick they
-    lack (`_merge_parts`); the keys the person added to the file (signals) stay.
+    to shelve, the picks not placed, the entries it keeps that no pick explains, the board it named before, the problems, the
+    picks laid out at a placeholder outline with where theirs is filled). The board pick, and every part pick whose record owes
+    nothing the circuit needs — one owing only its outline (`LAYOUT_FACTS`) is placed and said — and one in the catalog or in
+    another project goes onto the shelf, so the build finds it; a pick with no record is reserved, not placed. A pick of a drawer
+    entry is read as the record that entry is, when spark knows it (`_as_record`). The file's own `parts` stay as they are and
+    gain an entry for each pick they lack (`_merge_parts`); the keys the person added to the file (signals) stay.
     """
     known, entries, needs = {row[:2]: row for row in drawer.linkable(project)}, drawer.entries(), read(project)
     picks = [(need["id"], next(iter(_as_record(pick, known, entries).items()))) for need in needs for pick in need.get("pick") or []]
     board_picks = sorted({key for _, (kind, key) in picks if kind == "board"})
     problems = _board_problems(board_picks, _unfiled_boards(needs, known, entries), project)
-    shelve, wanted = [], []
+    shelve, wanted, placeholder = [], [], []
     for need_id, (kind, key) in picks:
         if kind != "part":
             continue
         _, _, where, path = known.get(("part", key), (None, None, None, None))
         record = parts._parse(path) if path else None
+        owed = parts.owes(record) if isinstance(record, dict) else []
         wrong = (["no record called %s any more" % key] if path is None else
                  ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
-                 ["owes %s — %s" % (", ".join(parts.owes(record)), _how_to_fill(path))] if parts.owes(record)
+                 ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)
                  else parts.broken_problems(record, path))
         problems += [parts._problem(key, sentence) for sentence in wrong]
         shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
+        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []
         wanted.append((need_id, key))
     file = Path(project) / REQUIREMENTS
     try:
@@ -484,7 +494,7 @@ def requirements(project):
     problems += naming
     problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
     return Requirements(content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")),
-                        kept, held.get("board"), problems)
+                        kept, held.get("board"), problems, list(dict.fromkeys(placeholder)))
 
 
 def owned(pick, entries):

@@ -1,12 +1,10 @@
 [
- {"file": "scripts/parts.py", "name": "C-1: any string is a footprint again, a quote and a brace included",
-  "find": "(isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))", "replace": "isinstance(footprint, str)"},
- {"file": "scripts/parts.py", "name": "C-1: a footprinter's name may hold any character after its first",
-  "find": "FOOTPRINT_NAME = re.compile(r\"[a-z0-9][a-z0-9_.]*|jlcpcb:C[0-9]+\")",
-  "replace": "FOOTPRINT_NAME = re.compile(r\"[a-z0-9].*|jlcpcb:C[0-9]+\")"},
- {"file": "scripts/parts.py", "name": "C-1: a silkscreen that would end the board's comment is let through",
-  "find": "            elif printed is not None and any(mark in printed for mark in ENDS_THE_COMMENT):",
-  "replace": "            elif False:"},
- {"file": "scripts/parts.py", "name": "C-1: a quote in a silkscreen is let through",
-  "find": "ENDS_THE_COMMENT = (\"*/\", '\"')", "replace": "ENDS_THE_COMMENT = (\"*/\",)"}
+ {"file": "scripts/parts.py", "name": "C-1: any string is a footprint again, a quote and a brace included", "find": "(isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))", "replace": "isinstance(footprint, str)"},
+ {"file": "scripts/parts.py", "name": "C-1: a footprinter's name may hold any character after its first", "find": "FOOTPRINT_NAME = re.compile(r\"[a-z0-9][a-z0-9_.]*|jlcpcb:C[0-9]+\")", "replace": "FOOTPRINT_NAME = re.compile(r\"[a-z0-9].*|jlcpcb:C[0-9]+\")"},
+ {"file": "scripts/parts.py", "name": "C-1: a silkscreen that would end the board's comment is let through", "find": "            elif printed is not None and any(mark in printed for mark in ENDS_THE_COMMENT):", "replace": "            elif False:"},
+ {"file": "scripts/parts.py", "name": "C-1: a quote in a silkscreen is let through", "find": "ENDS_THE_COMMENT = (\"*/\", '\"')", "replace": "ENDS_THE_COMMENT = (\"*/\",)"},
+ {"file": "scripts/needs.py", "name": "item 2: a pick that owes only its outline is refused again", "find": "if set(owed) - set(LAYOUT_FACTS)", "replace": "if owed"},
+ {"file": "scripts/needs.py", "name": "item 2: a simulation stance counts as layout, so a pick owing it is written", "find": "LAYOUT_FACTS = (\"body_mm\",)", "replace": "LAYOUT_FACTS = (\"body_mm\", \"simulation\")"},
+ {"file": "scripts/needs.py", "name": "item 2: a pick laid out at a placeholder outline is placed without a word", "find": "        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []", "replace": "        placeholder += []"},
+ {"file": "scripts/needs.py", "name": "item 2: the placeholder warning sends a library record to --fact-set", "find": "        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []", "replace": "        placeholder += [(key, \"fill it in its own home with --fact-set\")] if owed and not wrong else []"}
 ]

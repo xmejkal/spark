@@ -1424,6 +1424,51 @@ class TheRequirementsFileTest(unittest.TestCase):
                              "not change the library"),
             ("x-soil", owed + "fill it in its own home with --fact-set")]))
 
+    # --- a record that owes only its outline is written, with a warning (the PO, 2026-10-08; P165) ---
+
+    def without(self, home, record_id, *keys):
+        """A catalog record that is the library's LED but for `keys`, which it owes."""
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (home / "catalog" / (record_id + ".json")).write_text(json.dumps(dict({k: v for k, v in led.items() if k not in keys},
+                                                                             id=record_id)))
+
+    def test_a_pick_that_owes_only_its_outline_is_written_with_a_placeholder_warning(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-dim"}])])
+        self.without(home, "x-dim", "body_mm")
+        dry = self.text(["--requirements", str(project), "--dry-run"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, self.written(project)["parts"], said["data"]["shelved"], said["data"]["placeholder_outline"]),
+                         ("ok", 0, ["x-dim"], ["x-dim"], ["x-dim"]))
+        self.assertIn("  placeholder outline — x-dim owes body_mm, so the PCB step lays it out at a placeholder 16 x 12 mm: a "
+                      "dimension drawing (fetched after the person's yes) or a measurement fills it — fill it in its own home "
+                      "with --fact-set\n", dry)
+
+    def test_a_pick_that_owes_its_outline_and_a_fact_the_circuit_needs_is_still_refused(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-dim"}])])
+        self.without(home, "x-dim", "body_mm", "simulation")
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, [(p["subject"], p["sentence"]) for p in said["problems"]]),
+                         ("problems", 1, [("x-dim", "owes body_mm, simulation — fill it in its own home with --fact-set")]))
+        self.assertFalse((project / "requirements.json").exists())
+
+    def test_a_library_pick_that_owes_only_its_outline_says_it_is_filled_in_spark_s_repository(self):
+        library = Path(tempfile.mkdtemp()) / "parts"
+        library.mkdir()
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (library / "x-dim.json").write_text(json.dumps(dict({k: v for k, v in led.items() if k != "body_mm"}, id="x-dim")))
+        _, project = self.project([self.BOARD, ("light", [{"part": "x-dim"}])])
+        with mock.patch.object(parts, "LIBRARY", library):
+            text = self.text(["--requirements", str(project), "--dry-run"])
+        self.assertIn("x-dim owes body_mm, so the PCB step lays it out at a placeholder 16 x 12 mm: a dimension drawing (fetched "
+                      "after the person's yes) or a measurement fills it — it is in spark's own library, so it is filled in "
+                      "spark's repository, by a commit — --fact-set does not change the library\n", text)
+
+    def test_the_library_s_rangefinder_is_picked_into_the_file(self):
+        # C-6: its outline is read off Pololu's drawing, so the only sensor spark ships is no longer refused for owing it
+        _, project = self.project([self.BOARD, ("distance", [{"part": "vl6180x-breakout"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)["parts"], said["data"]["placeholder_outline"]), (0, ["vl6180x-breakout"], []))
+
 
 class WhatTheDrawerHoldsTest(unittest.TestCase):
     """§6.7: a pick is owned when a live drawer entry holds it with a count above 0, many, or a count nobody gave."""

@@ -628,6 +628,13 @@ class TheShippedLibraryTest(unittest.TestCase):
                     "%s asks the host for no pin and carries no rail, so placing it on a board "
                     "does nothing at all" % part_id)
 
+    def test_the_rangefinder_s_outline_is_read_off_pololu_s_drawing(self):
+        # C-6 (the council on PR #98): the only sensor spark ships owed body_mm, and --requirements refused it for that
+        record = parts.load("vl6180x-breakout")
+        self.assertEqual(parts.owes(record), [])
+        self.assertEqual((record["body_mm"]["width"], record["body_mm"]["height"], record["body_mm"]["verified"],
+                          record["body_mm"]["cites"]["document"]), (12.7, 17.8, True, "pololu-2489-dimensions"))
+
 
 
 class AMissingPinIsReportedOnceTest(unittest.TestCase):

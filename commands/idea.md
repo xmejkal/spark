@@ -91,7 +91,9 @@ file" to the person as they are. For each candidate the person passed over, writ
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
 
-A part pick whose record owes facts cannot be built from. Fill each owed fact once, in the record's own home, from its
+A part pick whose record owes a fact the circuit needs — `footprint`, `pin_order`, `pin_order_proof`, `simulation` — cannot
+be built from; one that owes only its outline (`body_mm`) is written with a warning that the PCB step lays it out at a
+placeholder size. Fill each owed fact once, in the record's own home, from its
 source: a JSON object of the facts (`footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation`) in a file
 written with the Write tool, then
 

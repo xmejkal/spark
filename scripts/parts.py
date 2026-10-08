@@ -1465,7 +1465,7 @@ OPERATIONS = (
      ("writes",), ("project", "picks", "reserved", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf; what the file already holds stays",
-     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "written")),
+     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "written")),
     ("step", {"nargs": 2, "metavar": ("PROJECT", "STEP")},
      "a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here",
      ("writes",), ("step", "written")),
@@ -1955,7 +1955,7 @@ def _op_pick(args, project):
 
 def _op_requirements(args, project):
     import needs
-    content, shelving, unplaced, kept, board_was, problems = needs.requirements(args.requirements)
+    content, shelving, unplaced, kept, board_was, problems, placeholder = needs.requirements(args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
     if not problems and not args.dry_run:
         for record, source in shelving:
@@ -1966,10 +1966,14 @@ def _op_requirements(args, project):
         ", ".join(needs.entry_label(entry) for entry in content["parts"]) or "none")]
     said += ["  board: %s → %s" % (json.dumps(board_was), json.dumps(content["board"]))] if board_was not in (None, content["board"]) and not problems else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
+    said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
+             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.emit_board.DEFAULT_BODY_MM + (how,))
+             for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
     said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
-                   "unplaced": unplaced, "kept": kept, "board_was": board_was, "written": not problems and not args.dry_run},
+                   "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
+                   "written": not problems and not args.dry_run},
                   _write_lines([], problems, args.dry_run, said), problems=problems)
 
 
