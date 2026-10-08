@@ -92,6 +92,16 @@ class APadsLabelIsWrittenAsTextTest(unittest.TestCase):
         self.assertIn('portHints={["D-"]}', text, "an ordinary label is written as it always was")
 
 
+class TheFootprintsCommentsStayCommentsTest(unittest.TestCase):
+    def test_a_line_break_in_the_board_s_id_never_leaves_the_comment(self):
+        # concern 1: the footprint's first line names the board file in a `//` comment, which a line break ends
+        board = firebeetle()
+        board["id"] = 'firebeetle2-esp32s3\nexport const injected = "FOOTPRINT-INJECTED" //'
+        text = emit_footprint.render(board)
+        self.assertIn("FOOTPRINT-INJECTED", text)
+        self.assertEqual([line for line in text.splitlines() if "FOOTPRINT-INJECTED" in line and not line.startswith("//")], [])
+
+
 class ItMatchesAnIndependentlyMadeFootprintTest(unittest.TestCase):
     @unittest.skipUnless(REFERENCE.is_file(), "the hand-checked reference is not on this machine")
     def test_every_pad_agrees_with_the_hand_checked_footprint(self):

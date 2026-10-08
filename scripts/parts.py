@@ -191,6 +191,20 @@ FOOTPRINT_NAME = re.compile(r"[a-z0-9][a-z0-9_.]*|jlcpcb:C[0-9]+")
 #: What a silkscreen may not hold (C-1): the board keeps it in a `{/* … */}` comment, which `*/` ends, and `"` ends a string.
 ENDS_THE_COMMENT = ("*/", '"')
 
+#: What ends a line comment in a generated file: a line break — `\n` and `\r` end Python's `#`, and JavaScript's `//` ends
+#: at U+2028 and U+2029 too — and U+0085, which editors read as one.
+LINE_BREAKS = re.compile(r"[\r\n\u0085\u2028\u2029]")
+
+
+def one_line(text):
+    """
+    Words a generated file keeps in a `#` or `//` line comment, on that one line (concern 1, P87's line-comment half): every
+    line break a space. The pin map the firmware imports and the footprint the board imports carry a board's name, a role's
+    note, a pad's alias, a board's id; a line break in one ended the comment, and what followed was code.
+    """
+    return LINE_BREAKS.sub(" ", str(text))
+
+
 #: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
 #: here rather than keeping its own, because it had its own and the two disagreed: a servo part
 #: declaring `needs: ["pwm"]` validated as a good record and then made the pin assigner refuse

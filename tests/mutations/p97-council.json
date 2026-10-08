@@ -116,5 +116,11 @@
  {"file": "scripts/boards.py", "name": "P87: a board's id may be any file name again", "find": "    if isinstance(board.get(\"id\"), str) and not store.PLAIN.fullmatch(board[\"id\"]):", "replace": "    if False:"},
  {"file": "scripts/parts.py", "name": "P87: a record's id may be any file name again", "find": "    elif isinstance(part.get(\"id\"), str) and not store.PLAIN.fullmatch(part[\"id\"]):", "replace": "    elif False:"},
  {"file": "scripts/design.py", "name": "P87: a signal the requirements name may be any text again", "find": "        if not re.fullmatch(parts_library.SELECTOR_SAFE, signal[\"name\"]):", "replace": "        if False:"},
- {"file": "scripts/emit_footprint.py", "name": "P87: a header label is written into the footprint unescaped again", "find": "% (json.dumps(label), x, y, pad, hole))", "replace": "% ('\"%s\"' % label, x, y, pad, hole))"}
+ {"file": "scripts/emit_footprint.py", "name": "P87: a header label is written into the footprint unescaped again", "find": "% (json.dumps(label), x, y, pad, hole))", "replace": "% ('\"%s\"' % label, x, y, pad, hole))"},
+ {"file": "scripts/parts.py", "name": "concern 1: one_line keeps every line break again", "find": "    return LINE_BREAKS.sub(\" \", str(text))", "replace": "    return str(text)"},
+ {"file": "scripts/assign_pins.py", "name": "concern 1: the pin map's first comment carries the source's line break again", "find": "% parts_library.one_line(source),", "replace": "% source,"},
+ {"file": "scripts/assign_pins.py", "name": "concern 1: the pin map's second comment carries the board name's line break again", "find": "% parts_library.one_line(board[\"name\"]), \"\"]", "replace": "% board[\"name\"], \"\"]"},
+ {"file": "scripts/assign_pins.py", "name": "concern 1: a pin's comment in the pin map carries a note's or an alias's line break again", "find": "parts_library.one_line(\"; \".join(said))))", "replace": "\"; \".join(said)))"},
+ {"file": "scripts/emit_footprint.py", "name": "concern 1: the footprint's first comment carries the id's line break again", "find": "        % parts.one_line(board[\"id\"]),", "replace": "        % board[\"id\"],"},
+ {"file": "scripts/boards.py", "name": "concern 1: a drill that is text reaches the footprint's comment", "find": "    if drill is not None and (isinstance(drill, bool) or not isinstance(drill, (int, float))):", "replace": "    if False:"}
 ]

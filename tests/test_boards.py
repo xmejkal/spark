@@ -207,6 +207,16 @@ class TheContractTest(unittest.TestCase):
                                  ["%s key %r is not a name — letters, digits and _ (%s): the board is written with it as code"
                                   % (key, crafted, "D3, SDA, A0" if key == "pins" else "3V3, GND1, VCC")])
 
+    def test_a_drill_that_is_no_number_is_refused(self):
+        # concern 1: the footprint's comment quotes the drawing's drill, `NOT the <drill_mm> mm`; it is a number, never text
+        physical = {"footprint_module": "X", "footprint_export": "X"}
+        crafted = '0.9\nexport const injected = 1 //'
+        self.assertIn("physical.header.drill_mm is %r, but it is a number of millimetres (0.9): the footprint generated from "
+                      "it is written with it" % crafted, self._problems(physical=dict(physical, header={"drill_mm": crafted})))
+        for drill in (0.9, 1):
+            with self.subTest(drill=drill):
+                self.assertEqual([p for p in self._problems(physical=dict(physical, header={"drill_mm": drill})) if "drill" in p], [])
+
     def test_a_wrong_schema_version_is_refused_rather_than_read_hopefully(self):
         problems = self._problems(schema=99)
         self.assertTrue(any("schema" in p for p in problems))

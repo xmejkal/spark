@@ -423,6 +423,12 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
         if not re.fullmatch(parts.SELECTOR_SAFE, pad):
             problems.append(f"power_pads key {pad!r} is not a name — letters, digits and _ (3V3, GND1, VCC): the board is "
                             f"written with it as code")
+    # concern 1: the footprint's comment quotes the drawing's drill (`NOT the <drill_mm> mm`), so it is a number, never text
+    header = physical.get("header") if isinstance(physical, dict) else None
+    drill = header.get("drill_mm") if isinstance(header, dict) else None
+    if drill is not None and (isinstance(drill, bool) or not isinstance(drill, (int, float))):
+        problems.append(f"physical.header.drill_mm is {drill!r}, but it is a number of millimetres (0.9): the footprint "
+                        f"generated from it is written with it")
     export = physical.get("footprint_export") if isinstance(physical, dict) else None
     if export and not (isinstance(export, str) and re.fullmatch(parts.SELECTOR_SAFE, export)):
         problems.append(f"physical.footprint_export is {export!r}, but it is a name — letters, digits and _ "

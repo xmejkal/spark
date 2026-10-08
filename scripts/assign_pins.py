@@ -398,8 +398,8 @@ def pin_module(board, assignments, source):
     (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
     refused, not mangled: a renamed constant is a pin the firmware silently stops finding.
     """
-    lines = ["# The pin map: written by spark's assign_pins.py from %s" % source,
-             "# for the %s. Regenerate it; do not edit it." % board["name"], ""]
+    lines = ["# The pin map: written by spark's assign_pins.py from %s" % parts_library.one_line(source),
+             "# for the %s. Regenerate it; do not edit it." % parts_library.one_line(board["name"]), ""]
     for entry in assignments:
         if not entry["signal"].isidentifier():
             raise Impossible("signal %r is not a Python name, so no firmware could import it"
@@ -407,7 +407,7 @@ def pin_module(board, assignments, source):
         pad = ((board.get("physical") or {}).get("pad_aliases") or {}).get(entry["pin"], entry["pin"])
         said = ["pad %s" % pad, entry["why"]] + [role_note(board, role)
                                                           for role in entry["roles"]]
-        lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], "; ".join(said)))
+        lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], parts_library.one_line("; ".join(said))))
     return "\n".join(lines) + "\n"
 
 
