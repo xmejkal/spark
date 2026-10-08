@@ -44,9 +44,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match <project>
 ```
 
 Owned candidates come first, each with how many are owned and **free** (a part another project holds is not free),
-"maybe owned" when the person was not sure, what it does, and what it **owes**: without a footprint or a pin order the
-build stops; without an outline (`body_mm`) it builds at a declared placeholder size; without `simulation` the
-simulation stage cannot run. `[other words]`
+"maybe owned" when the person was not sure, what it does, and what it **owes**: a pick owing a `footprint`, a
+`pin_order`, its `pin_order_proof` or a `simulation` stance (a Wokwi stand-in, or `{"skip": "why"}`) is taken, but
+`--requirements` writes nothing until that is filled (C, below); one owing only its outline (`body_mm`) is written and
+laid out at a declared placeholder size. `[other words]`
 means the candidate has the need's verb but not its `what`: whether it is similar enough is your call, said to the person.
 With `--json`, `truncated.next` is the command for the rest of a long answer. Show the person, for each need, the
 owned option and the simpler one beside it, with what each would cost — in 1b, what it still owes; spark knows no
