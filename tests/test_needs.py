@@ -1052,7 +1052,8 @@ class TheRequirementsFileTest(unittest.TestCase):
     def test_the_picks_become_the_board_and_the_parts_with_records(self):
         _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}]), ("alarm", [{"entry": "speaker"}])])
         said, code = run(["--requirements", str(project)])
-        self.assertEqual((code, self.written(project)), (0, {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]}))
+        self.assertEqual((code, self.written(project)), (0, {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"],
+                                                             "unserved": [{"need": "alarm", "why": "no record", "picks": ["speaker"]}]}))
         self.assertEqual(said["data"]["unplaced"], ["speaker"])
 
     def test_a_pick_that_owes_facts_is_named_and_nothing_is_written(self):
@@ -1186,7 +1187,10 @@ class TheRequirementsFileTest(unittest.TestCase):
                     parts.main(["--requirements", str(project)] + extra)
                 self.assertEqual(out.getvalue(), "  %s %s: board firebeetle2-esp32s3; parts tactile-button (OpenLid), tactile-button (Mode), x-led\n"
                                  "  onto the shelf, so every project builds with it: x-led\n"
-                                 "  reserved, not placed — no record: speaker\n" % (verb, project / "requirements.json"))
+                                 "  reserved, not placed — no record: speaker\n"
+                                 "  not on the board: alarm — speaker has no record: fine for what is wired off the board (a speaker, "
+                                 "a battery); what sits on the board needs one — link its drawer entry to a record with `is`, or "
+                                 "research one\n" % (verb, project / "requirements.json"))
 
     # --- a re-run keeps what the person did by hand (the PO, 2026-10-08) ---
 
@@ -1462,6 +1466,54 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertIn("x-dim owes body_mm, so the PCB step lays it out at a placeholder 16 x 12 mm: a dimension drawing (fetched "
                       "after the person's yes) or a measurement fills it — it is in spark's own library, so it is filled in "
                       "spark's repository, by a commit — --fact-set does not change the library\n", text)
+
+    # --- a need nothing on the board serves is said, never passed over in silence (the PO, 2026-10-08; C-2) ---
+
+    def needing(self, project, *extra):
+        """The project's needs as they are, and `extra` needs after them."""
+        needs_file = project / ".spark" / "needs.json"
+        written = json.loads(needs_file.read_text())
+        needs_file.write_text(json.dumps(dict(written, needs=written["needs"] + list(extra))))
+
+    def test_a_need_with_no_pick_is_named_not_on_the_board_and_the_file_is_written(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}]), ("soil", None)])
+        dry = self.text(["--requirements", str(project), "--dry-run"])
+        said, code = run(["--requirements", str(project)])
+        unserved = [{"need": "soil", "why": "no pick", "picks": []}]
+        self.assertEqual((said["status"], code, said["data"]["unserved"], self.written(project)),
+                         ("ok", 0, unserved, {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"], "unserved": unserved}))
+        self.assertIn("  not on the board: soil — no pick; --match lists its candidates\n", dry)
+
+    def test_a_need_marked_a_gap_is_said_as_one(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        self.needing(project, {"id": "smell", "does": "sense", "what": "gas", "mark": "gap"})
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["unserved"]), (0, [{"need": "smell", "why": "a gap", "picks": []}]))
+        self.assertIn("  not on the board: smell — marked a gap: nothing like it is in the store yet; research it before it can "
+                      "be built\n", self.text(["--requirements", str(project), "--dry-run"]))
+
+    def test_a_need_picked_only_as_drawer_entries_with_no_record_is_named(self):
+        _, project = self.project([self.BOARD, ("light", [{"entry": "red-leds"}]),
+                                   ("alarm", [{"part": "led-red-5mm"}, {"entry": "speaker"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["unserved"], said["data"]["unplaced"]),
+                         (0, [{"need": "light", "why": "no record", "picks": ["red-leds"]}], ["red-leds", "speaker"]))
+        self.assertIn("  not on the board: light — red-leds has no record: fine for what is wired off the board (a speaker, a "
+                      "battery); what sits on the board needs one — link its drawer entry to a record with `is`, or research "
+                      "one\n", self.text(["--requirements", str(project), "--dry-run"]))
+
+    def test_a_need_picked_as_the_drawer_entry_of_a_record_is_on_the_board(self):
+        home, project = self.project([self.BOARD, ("light", [{"entry": "my-leds"}])])
+        self.owned(home, "my-leds", {"label": "my LEDs", "count": 2, "is": {"part": "x-led"}})
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)["parts"], said["data"]["unserved"]), (0, ["x-led"], []))
+
+    def test_a_file_whose_every_need_is_served_carries_no_note_and_loses_an_old_one(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        (project / "requirements.json").write_text(json.dumps({"parts": [], "unserved": [{"need": "light", "why": "no pick", "picks": []}]}))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["unserved"], self.written(project)),
+                         (0, [], {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]}))
 
     def test_the_library_s_rangefinder_is_picked_into_the_file(self):
         # C-6: its outline is read off Pololu's drawing, so the only sensor spark ships is no longer refused for owing it

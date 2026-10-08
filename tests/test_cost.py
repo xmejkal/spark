@@ -148,6 +148,28 @@ class TheCostLineTest(unittest.TestCase):
         self.transcript("s1", assistant("2026-10-06T10:01:00Z"))
         self.assertTrue(run(["--tally", str(self.project)])[0]["data"]["line"].startswith("5 picks: 5 from the store (4 owned)"))
 
+    def test_the_tally_says_how_many_of_the_needs_are_picked(self):
+        # C-2 (the PO, 2026-10-08): "5 picks: 5 from the store" read as a whole goal served when a need had none
+        needs_file = self.project / ".spark" / "needs.json"
+        written = json.loads(needs_file.read_text())
+        needs_file.write_text(json.dumps(dict(written, needs=written["needs"] + [{"id": "light", "does": "indicate", "what": "led"}])))
+        self.step("s1", "2026-10-06T10:00:00+00:00")
+        self.transcript("s1", assistant("2026-10-06T10:01:00Z"))
+        said, code = run(["--tally", str(self.project)])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--tally", str(self.project)])
+        self.assertEqual((code, said["data"]["needs"], said["data"]["needs_picked"]), (0, 5, 4))
+        self.assertIn("\n  4 of 5 needs picked — not picked: light\n", out.getvalue())
+
+    def test_a_tally_whose_every_need_is_picked_says_so(self):
+        self.step("s1", "2026-10-06T10:00:00+00:00")
+        self.transcript("s1", assistant("2026-10-06T10:01:00Z"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--tally", str(self.project)])
+        self.assertIn("\n  4 of 4 needs picked\n", out.getvalue())
+
     def test_a_pick_with_no_reused_line_is_not_from_the_store(self):
         lines = (self.home / "history.jsonl").read_text().splitlines()
         (self.home / "history.jsonl").write_text("".join(line + "\n" for line in lines if '"lipo"' not in line))

@@ -951,5 +951,41 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
                 self.assertIn(str(refusal), complained)
 
 
+class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
+    """C-2 (the PO, 2026-10-08): "the chain runs end to end" never stands alone over needs the requirements file left off the
+    board — `--requirements` writes them into the file (`unserved`), and the closing line reads them from there."""
+
+    UNSERVED = [{"need": "soil", "why": "no pick", "picks": []}, {"need": "smell", "why": "a gap", "picks": []},
+                {"need": "battery", "why": "no record", "picks": ["lipo", "spare-lipo"]}]
+
+    def answer(self, requirements, *flags):
+        path = Path(tempfile.mkdtemp()) / "requirements.json"
+        path.write_text(json.dumps(requirements))
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+        out = io.StringIO()
+        with mock.patch.object(check_spine, "run", return_value=stages), contextlib.redirect_stdout(out), \
+                contextlib.redirect_stderr(io.StringIO()):
+            code = check_spine.main([str(path)] + list(flags))
+        return code, out.getvalue()
+
+    def test_needs_the_file_leaves_off_the_board_are_said_on_the_verdict_s_line(self):
+        code, said = self.answer({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": self.UNSERVED})
+        self.assertEqual(code, 0)
+        self.assertTrue(said.endswith("  the chain runs end to end — but not every need is on the board: soil (no pick), smell (a gap), "
+                                      "battery (no record: lipo, spare-lipo)\n"), said)
+
+    def test_with_json_the_needs_left_off_are_part_of_the_answer(self):
+        code, said = self.answer({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": self.UNSERVED}, "--json")
+        self.assertEqual((code, json.loads(said)["unserved"]), (0, self.UNSERVED))
+
+    def test_a_file_that_leaves_nothing_off_says_the_verdict_alone(self):
+        for requirements in ({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]},
+                             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": []}):
+            with self.subTest(requirements=requirements):
+                code, said = self.answer(requirements)
+                self.assertTrue(said.endswith("\n  the chain runs end to end\n"), said)
+                self.assertNotIn("unserved", json.loads(self.answer(requirements, "--json")[1]))
+
+
 if __name__ == "__main__":
     unittest.main()

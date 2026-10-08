@@ -1465,13 +1465,13 @@ OPERATIONS = (
      ("writes",), ("project", "picks", "reserved", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf; what the file already holds stays",
-     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "written")),
+     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "written")),
     ("step", {"nargs": 2, "metavar": ("PROJECT", "STEP")},
      "a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here",
      ("writes",), ("step", "written")),
     ("tally", {"metavar": "PROJECT"},
      "the cost line: the picks, how many came from your store and how many you own, and what the project's steps cost",
-     (), ("picks", "from_store", "owned", "cost", "built", "line")),
+     (), ("picks", "from_store", "owned", "cost", "built", "line", "needs", "needs_picked")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1953,9 +1953,16 @@ def _op_pick(args, project):
                   _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes]), problems=problems)
 
 
+#: What `--requirements` says of a need nothing on the board serves (C-2), by why: plainly, and what the person can do.
+NOT_ON_THE_BOARD = {"no pick": "no pick; --match lists its candidates",
+                    "a gap": "marked a gap: nothing like it is in the store yet; research it before it can be built",
+                    "no record": "{picks} has no record: fine for what is wired off the board (a speaker, a battery); what sits on the "
+                                 "board needs one — link its drawer entry to a record with `is`, or research one"}
+
+
 def _op_requirements(args, project):
     import needs
-    content, shelving, unplaced, kept, board_was, problems, placeholder = needs.requirements(args.requirements)
+    content, shelving, unplaced, kept, board_was, problems, placeholder, unserved = needs.requirements(args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
     if not problems and not args.dry_run:
         for record, source in shelving:
@@ -1971,9 +1978,11 @@ def _op_requirements(args, project):
              for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
     said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []
+    said += ["  not on the board: %s — %s" % (item["need"], NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
+             for item in ([] if problems else unserved)]
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
                    "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
-                   "written": not problems and not args.dry_run},
+                   "unserved": unserved, "written": not problems and not args.dry_run},
                   _write_lines([], problems, args.dry_run, said), problems=problems)
 
 
@@ -1998,8 +2007,9 @@ def _op_tally(args, project):
     if name is None:
         return Answer(unchecked=[_cannot("%s is not on your list of projects, so no step of it was marked" % args.tally,
                                          "mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list")])
-    history, entries = store.events(), drawer.entries()
-    picks = [(need["id"], pick) for need in needs.read(args.tally) for pick in need.get("pick") or []]
+    history, entries, listed = store.events(), drawer.entries(), needs.read(args.tally)
+    picks = [(need["id"], pick) for need in listed for pick in need.get("pick") or []]
+    unpicked = [need["id"] for need in listed if not need.get("pick")]  # C-2: the picks are counted against the needs they serve
     reused = [event for event in history if event.get("event") == "reused" and event.get("project") == name]
     from_store = sum(1 for need_id, pick in picks if dict({"event": "reused", "project": name, "need": need_id}, **pick) in reused)
     owned = sum(1 for _, pick in picks if needs.owned(pick, entries))
@@ -2009,8 +2019,11 @@ def _op_tally(args, project):
         counted, unchecked = None, [_cannot(str(missing), "mark each step with parts.py --step <project> <step> in a Claude Code session")]
     said, unreadable = cost.line(len(picks), from_store, owned, counted), cost.unreadable_note(counted)
     built = any(event.get("event") == "built" and event.get("project") == name for event in history)
-    return Answer({"picks": len(picks), "from_store": from_store, "owned": owned, "cost": counted, "built": built, "line": said},
-                  ["  " + said] + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
+    needs_said = "%d of %d needs picked%s" % (len(listed) - len(unpicked), len(listed),
+                                              " — not picked: %s" % ", ".join(unpicked) if unpicked else "")
+    return Answer({"picks": len(picks), "from_store": from_store, "owned": owned, "cost": counted, "built": built, "line": said,
+                   "needs": len(listed), "needs_picked": len(listed) - len(unpicked)},
+                  ["  " + said, "  " + needs_said] + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
                   + ([] if built else ["  not built yet — check_spine records it when the chain runs end to end"]),
                   unchecked=unchecked)
 

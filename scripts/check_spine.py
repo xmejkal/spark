@@ -524,7 +524,18 @@ def verdict(stages):
         unchecked=[s for s in stages if s.status == COULD_NOT_RUN])]
 
 
-def render(stages, code):
+def left_off(requirements):
+    """
+    The needs the requirements file says it leaves off the board (C-2: the note `parts.py --requirements` writes, `unserved`),
+    each as `soil (no pick)` or `battery (no record: lipo)` — so "the chain runs end to end" never stands alone over a goal the
+    board does not serve. A note in no shape spark writes says nothing, as a file with no note does.
+    """
+    note = requirements.get("unserved") if isinstance(requirements, dict) else None
+    return ["%s (%s%s)" % (item["need"], item.get("why"), ": " + ", ".join(map(str, item["picks"])) if item.get("picks") else "")
+            for item in (note if isinstance(note, list) else []) if isinstance(item, dict) and isinstance(item.get("need"), str)]
+
+
+def render(stages, code, unserved=()):
     mark = {OK: "ok  ", PROBLEMS: "!!  ", COULD_NOT_RUN: "????"}
     lines = ["", "  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation", ""]
     for stage in stages:
@@ -534,7 +545,7 @@ def render(stages, code):
         EXIT_OK: "  the chain runs end to end",
         EXIT_PROBLEMS: "  the chain is broken",
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
-    }[code])
+    }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))
     return "\n".join(lines) + "\n"
 
 
@@ -614,7 +625,7 @@ def main(argv=None):
     if args.sim_dir and (workdir / "sim").is_dir():
         shutil.copytree(workdir / "sim", args.sim_dir, dirs_exist_ok=True)
         print("simulation project kept in %s" % args.sim_dir, file=sys.stderr)
-    return report(stages, args, workdir)
+    return report(stages, args, workdir, requirements)
 
 
 def keep_into(workdir, destination):
@@ -648,15 +659,18 @@ def keep_into(workdir, destination):
     return said
 
 
-def report(stages, args, workdir=None):
-    """The verdict, rendered the way it was asked for; the working directory kept or removed."""
+def report(stages, args, workdir=None, requirements=None):
+    """
+    The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
+    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed.
+    """
     code = verdict(stages)
     if args.json:
-        print(json.dumps({"check": "spine", "status": STATUS_FOR[code],
-                          "stages": [{"name": s.name, "status": s.status, "detail": s.detail}
-                                     for s in stages]}))
+        said = {"check": "spine", "status": STATUS_FOR[code],
+                "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
+        print(json.dumps(dict(said, unserved=requirements["unserved"]) if left_off(requirements) else said))
     else:
-        sys.stdout.write(render(stages, code))
+        sys.stdout.write(render(stages, code, left_off(requirements)))
     if workdir is None:
         return code
     if args.keep:

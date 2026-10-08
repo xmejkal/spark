@@ -325,9 +325,12 @@ def plan_pick(project, given, passed_over=()):
 REQUIREMENTS = "requirements.json"
 
 #: What `requirements` works out (§5.3, §8 L): the file as it would be, the records to shelve, the picks with no record to place,
-#: the entries already in the file that no pick explains, the board the file named before, what refuses it, and the picks laid
-#: out at a placeholder outline.
-Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder")
+#: the entries already in the file that no pick explains, the board the file named before, what refuses it, the picks laid out
+#: at a placeholder outline, and the needs nothing on the board serves.
+Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder unserved")
+
+#: The note a requirements file keeps of the needs it leaves off the board (C-2): `check_spine` reads it into its verdict.
+UNSERVED = "unserved"
 
 #: The facts that place a part, not wire it (the PO, 2026-10-08; P165): a pick that owes only these is written, and the PCB step
 #: lays it out at a placeholder size, said; one that owes a fact the circuit needs — a footprint, a pin order and its proof, a
@@ -444,6 +447,23 @@ def _board_problems(board_picks, unfiled, project):
         "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
 
 
+def _unserved(needs, known, entries):
+    """
+    The needs nothing on the board serves (the PO, 2026-10-08; C-2), as {"need", "why", "picks"}: one with no pick — "no pick",
+    or "a gap" when it is marked one — and one whose every pick is a drawer entry with no record ("no record"), which the
+    building list reserves and does not place. A record-less pick beside a placed one (the speaker beside its amplifier) leaves
+    its need served. Said, never refused: whether a thing belongs on the board is the person's to say.
+    """
+    said = []
+    for need in needs:
+        picks = [_as_record(pick, known, entries) for pick in need.get("pick") or []]
+        if not picks:
+            said.append({"need": need["id"], "why": "a gap" if need.get("mark") == "gap" else "no pick", "picks": []})
+        elif all("entry" in pick for pick in picks):
+            said.append({"need": need["id"], "why": "no record", "picks": [pick["entry"] for pick in picks]})
+    return said
+
+
 def _how_to_fill(path):
     """Where what a record owes is filled (§5.4): a record in spark's own library in spark's repository; any other with --fact-set."""
     if Path(path).parent.resolve() == parts.LIBRARY.resolve():
@@ -491,10 +511,15 @@ def requirements(project):
         raise store.StoreProblem("%s: `parts` is not a list — fix it by hand" % file)
     after, kept, naming = _merge_parts(existing, wanted)
     content = dict(held, board=board_picks[0] if board_picks else None, parts=after)
+    unserved = _unserved(needs, known, entries)
+    if unserved:
+        content[UNSERVED] = unserved
+    else:
+        content.pop(UNSERVED, None)  # an old note goes once every need is on the board
     problems += naming
     problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
     return Requirements(content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")),
-                        kept, held.get("board"), problems, list(dict.fromkeys(placeholder)))
+                        kept, held.get("board"), problems, list(dict.fromkeys(placeholder)), unserved)
 
 
 def owned(pick, entries):
