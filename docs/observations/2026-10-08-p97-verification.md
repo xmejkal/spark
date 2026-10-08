@@ -24,7 +24,7 @@ Each line: the finding, where it was found, the claim in a few words, the verdic
 - **F8** · `docs/guide/journey.md:478` · the gap example leaves out the board pick, without which `--requirements`
   refuses · holds · `99c74bb`
 - **F9** · `scripts/emit_board.py:1069` · a series resistor emit_board cannot size is a traceback the chain reads as a
-  defect in the design · holds · `72b7ad6`
+  defect in the design · holds · `72b7ad6`; `bad9444`: build.md's refusal table
 - **F10** · `scripts/parts.py:1816` · `--fact-set`'s and `--function-set`'s refusals print without the part's name ·
   holds · `6f42aea`
 - **F11** · `scripts/emit_board.py:713` · a `*/` in a record's name ends the board's comment, and what follows runs in
@@ -32,7 +32,7 @@ Each line: the finding, where it was found, the claim in a few words, the verdic
 - **F12** · `scripts/init_project.py:475` · a board that stops at the footprint stage is offered and picked without a
   word · holds · `61db204`, `729bc00`, `8b7d01d`
 - **F13** · `commands/idea.md:48` · step M says an owed `simulation` stops only the simulation stage; L refuses the pick
-  · holds · `448cfb1`
+  · holds · `448cfb1`; `bad9444`: the journey's match-reading list
 - **F14** · `scripts/needs.py:349` · the cleaning of a passed-over reason misses common URL and price forms, and a cut
   can leave junk · holds · `d124d66`, `50180f8`, `39d9901`
 - **F15** · `scripts/parts.py:2032` · a speaker terminal picked without its amplifier is told to pick a supply · holds ·
@@ -83,3 +83,6 @@ Three more, found while the code half was fixed. They are cards, not rows here.
   item, in the note beside the diagram.
 - **The `--firmware` value lands in `wokwi.toml` unescaped** (low). `check_spine.py` writes it as `firmware = "…"`. It
   is the person's own argument, not record text.
+
+Since fixed, on the re-check's ruling: the first, now V33 in [`INDEX.md`](INDEX.md) — `176a10e` holds a chip's name to a
+name and writes every `wokwi.toml` value as an escaped string, `--firmware`'s among them.
