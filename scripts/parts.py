@@ -191,6 +191,11 @@ FOOTPRINT_NAME = re.compile(r"[a-z0-9][a-z0-9_.]*|jlcpcb:C[0-9]+")
 #: What a silkscreen may not hold (C-1): the board keeps it in a `{/* … */}` comment, which `*/` ends, and `"` ends a string.
 ENDS_THE_COMMENT = ("*/", '"')
 
+#: Why a record's id must be a plain key (`store.PLAIN`; P87): `validate` refuses a record named otherwise, and `--skeleton`
+#: refuses to write one, so nobody is handed a file every reader refuses.
+NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by it, "
+                  "and the board names the part after it in code")
+
 #: What ends a line comment in a generated file: a line break — `\n` and `\r` end Python's `#`, and JavaScript's `//` ends
 #: at U+2028 and U+2029 too — and U+0085, which editors read as one.
 LINE_BREAKS = re.compile(r"[\r\n\u0085\u2028\u2029]")
@@ -557,8 +562,7 @@ def validate(part: dict, path: Path) -> list:
     elif isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
         # P87's attribute half: `emit_board.component_name` capitalises the id's words and strips nothing, so the id is
         # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
-        problems.append("id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named "
-                        "by it, and the board names the part after it in code" % part["id"])
+        problems.append(NOT_A_PLAIN_ID % part["id"])
     for key, now in RETIRED.items():
         if key in part:
             problems.append("%r is retired: %s — delete the key (W16)" % (key, now))
@@ -1626,6 +1630,8 @@ def _op_need(args, project):
 def _op_skeleton(args, project):
     if not project or not args.kind:
         return Answer(unchecked=[_cannot("--skeleton needs --project (the record belongs to a project's parts/) and --kind")])
+    if not store.PLAIN.fullmatch(args.skeleton):  # P87: a file every reader would refuse is never written
+        return Answer(problems=[_problem(args.skeleton, NOT_A_PLAIN_ID % args.skeleton)])
     target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
     if target.exists():
         return Answer(problems=[_problem(args.skeleton, "%s exists; fill it in, do not overwrite it" % target)])

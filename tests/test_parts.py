@@ -834,6 +834,19 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertEqual(parts.sellers(root), ("laskakit", "gme"))
         self.assertIn("sourcing", parts.skeleton("x", "connector"))
 
+    def test_a_skeleton_whose_id_is_no_plain_key_is_refused_and_nothing_is_written(self):
+        # P87's follow-through: every reader refuses a record named so, so nobody is handed a file they cannot use
+        root = Path(tempfile.mkdtemp())
+        for part_id in ("my_sensor", 'x"y', "X-LED"):
+            for flags in ([], ["--dry-run"]):
+                with self.subTest(id=part_id, flags=flags):
+                    said, code = run_json(["--skeleton", part_id, "--kind", "sensor", "--project", str(root)] + flags)
+                    self.assertEqual((said["status"], code), ("problems", 1))
+                    self.assertEqual(said["problems"][0]["sentence"], "id is %r, but an id is a plain key — lower-case letters, "
+                                     "digits and - (led-red-5mm): files are named by it, and the board names the part after it "
+                                     "in code" % part_id)
+        self.assertFalse((root / "parts").exists())
+
     def test_a_skeleton_has_every_field_and_no_guess_and_the_contract_refuses_it_until_filled(self):
         import tempfile
         root = Path(tempfile.mkdtemp())

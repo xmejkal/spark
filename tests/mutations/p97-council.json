@@ -122,5 +122,6 @@
  {"file": "scripts/assign_pins.py", "name": "concern 1: the pin map's second comment carries the board name's line break again", "find": "% parts_library.one_line(board[\"name\"]), \"\"]", "replace": "% board[\"name\"], \"\"]"},
  {"file": "scripts/assign_pins.py", "name": "concern 1: a pin's comment in the pin map carries a note's or an alias's line break again", "find": "parts_library.one_line(\"; \".join(said))))", "replace": "\"; \".join(said)))"},
  {"file": "scripts/emit_footprint.py", "name": "concern 1: the footprint's first comment carries the id's line break again", "find": "        % parts.one_line(board[\"id\"]),", "replace": "        % board[\"id\"],"},
- {"file": "scripts/boards.py", "name": "concern 1: a drill that is text reaches the footprint's comment", "find": "    if drill is not None and (isinstance(drill, bool) or not isinstance(drill, (int, float))):", "replace": "    if False:"}
+ {"file": "scripts/boards.py", "name": "concern 1: a drill that is text reaches the footprint's comment", "find": "    if drill is not None and (isinstance(drill, bool) or not isinstance(drill, (int, float))):", "replace": "    if False:"},
+ {"file": "scripts/parts.py", "name": "P87: --skeleton writes a record no reader will take, named with no plain key", "find": "    if not store.PLAIN.fullmatch(args.skeleton):  # P87: a file every reader would refuse is never written", "replace": "    if False:  # P87: a file every reader would refuse is never written"}
 ]
