@@ -1201,6 +1201,28 @@ class TheRequirementsFileTest(unittest.TestCase):
                       self.text(["--requirements", str(project)]))
 
 
+class WhatTheDrawerHoldsTest(unittest.TestCase):
+    """§6.7: a pick is owned when a live drawer entry holds it with a count above 0, many, or a count nobody gave."""
+
+    ENTRIES = {"zero": {"label": "a spent pack", "count": 0, "is": {"part": "x-zero"}},
+               "many": {"label": "a bag", "count": "many", "is": {"part": "x-many"}},
+               "unknown": {"label": "a box", "is": {"part": "x-unknown"}},
+               "dead": {"label": "a broken one", "count": 2, "is": {"part": "x-dead"}, "skip": "it died"},
+               "split-a": {"label": "one of two", "count": 0, "is": {"part": "x-split"}},
+               "split-b": {"label": "the other", "count": 2, "is": {"part": "x-split"}},
+               "speaker": {"label": "a speaker", "count": 1}}
+
+    def test_a_count_above_zero_many_and_a_count_nobody_gave_are_owned(self):
+        for pick in ({"part": "x-many"}, {"part": "x-unknown"}, {"part": "x-split"}, {"entry": "speaker"}):
+            with self.subTest(pick=pick):
+                self.assertTrue(needs.owned(pick, self.ENTRIES))
+
+    def test_a_count_of_zero_a_dead_entry_and_a_record_nobody_holds_are_not_owned(self):
+        for pick in ({"part": "x-zero"}, {"part": "x-dead"}, {"entry": "dead"}, {"entry": "missing"}, {"board": "no-board"}):
+            with self.subTest(pick=pick):
+                self.assertFalse(needs.owned(pick, self.ENTRIES))
+
+
 class TheIdeaCommandTest(unittest.TestCase):
     """commands/idea.md is followed as written (R4.2): the project is named where a command takes it as a flag, and only there."""
 
@@ -1211,8 +1233,15 @@ class TheIdeaCommandTest(unittest.TestCase):
         for line in flagged:
             self.assertIn("--project <project>", line, line)
         for line in lines:
-            if any(op in line for op in ("--needs-set", "--match", "--pick", "--requirements")):
+            if any(op in line for op in ("--needs-set", "--match", "--pick", "--requirements", "--step", "--tally")):
                 self.assertNotIn("--project", line, "--needs-set and --match take the project as their argument: " + line)
+
+    def test_it_marks_its_steps_and_ends_with_the_tally(self):
+        idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())
+        self.assertIn("At the start of each step below — S, M, C and L — mark it", idea)
+        self.assertIn("scripts/parts.py --step <project> S", idea)
+        self.assertIn("## T — the tally", idea)
+        self.assertIn("scripts/parts.py --tally <project>", idea)
 
     def test_section_l_and_the_build_page_say_what_a_later_run_keeps(self):
         idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())

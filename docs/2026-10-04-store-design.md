@@ -52,7 +52,8 @@ and writes through spark (as P56 does for firmware).
 - A record is **current** (passes everything), **owed** (a value is absent — `null`, `[]` or a missing key — for a
   contract rule or for a fact the chain reads), or **broken** (a value is present and wrong).
 - **A pick** — a part chosen for a need, on or off the board. **Reserve** — a project marks how many of an owned
-  item it uses. **A step** — one spine step of one project, with a start and an end.
+  item it uses. **A step** — one spine step of one project, with a start; it ends where the next step of its session
+  starts (P97).
 
 ## 4. Store slices — three increments, value first (the PO, 2026-10-04)
 
@@ -228,7 +229,7 @@ the agent judges similarity and marks the need, saying why and what would change
 One event per line, appended, never shared; a repeat of an event with the same key is not written.
 
 ```json
-{"event":"step","project":"plant-alarm","step":"C","session":"<id>","start":"…","end":"…"}
+{"event":"step","project":"plant-alarm","step":"C","session":"<id>","start":"…"}
 {"event":"reused","project":"plant-alarm","need":"soil","entry":"dfrobot-sen0193"}
 {"event":"passed_over","project":"plant-alarm","need":"soil","part":"sen0308-soil-moisture","why":"waterproof is not needed indoors","by":"person"}
 {"event":"researched","project":"plant-alarm","need":"…","found":["…"],"requests":4,"documents":1,"minutes":9}
@@ -338,11 +339,12 @@ through … I'd like ai to be able to do that for me"*). Its rules:
 
 ### 6.7 The cost counter and the cost line
 
-Each spine step writes a `step` event with its session id, start and end. The counter sums the main and subagent
-session transcripts inside those windows: network = a data table of tool names and shell patterns (web search and
-fetch, network MCP calls, browser tools, `curl`, `wget`, `gh api`, `--fetch`, `--sources`); research runs by agent
-type; documents read; new tokens apart from cache reads; minutes. It prints tool names and counts, never arguments.
-It lives in `scripts/`; `tools/research_cost.py` goes (W16). The drawer import's browser cost goes on the
+Each spine step writes a `step` event with its session id and start; a step ends where the next step of the same
+session starts, or at the session's last line (P97: an append-only history cannot fill in an end). The counter sums the
+main and subagent session transcripts inside those windows: network = a data table of tool names and shell patterns
+(web search and fetch, network MCP calls, browser tools, `curl`, `wget`, `gh api`, `--fetch`, `--sources`); research
+runs by agent type; documents read; new tokens apart from cache reads; minutes. It prints tool names and counts, never
+arguments. It lives in `scripts/`; `tools/research_cost.py` goes (W16). The drawer import's browser cost goes on the
 drawer's own line, not on a project's.
 
 **The cost line**, one format, at the end of T: "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14

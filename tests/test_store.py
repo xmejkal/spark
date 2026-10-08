@@ -68,6 +68,9 @@ class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):
                    if '".local"' in path.read_text() and path.name != "store.py"]
         self.assertEqual(spelled, [], "every path into the person's store comes from store.place()")
 
+    def test_the_suite_s_steps_never_name_the_person_s_session(self):
+        self.assertEqual(os.environ.get("CLAUDE_CODE_SESSION_ID"), "spark-suite")
+
 
 class TheLayersTest(unittest.TestCase):
     """§5.5: one walk over every layer, nearest first — the project, the shelf, spark's library, the catalog."""

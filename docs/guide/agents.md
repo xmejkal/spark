@@ -110,7 +110,7 @@ These write:
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
-  - `--drawer-set`, `--needs-set`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
+  - `--drawer-set`, `--needs-set`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
     also uses the network.
 - `tools.py --install`, `--on`, `--off`, `--pin`, `--use` and `--new`.
 

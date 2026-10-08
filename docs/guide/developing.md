@@ -102,4 +102,5 @@ in the [glossary](../../GLOSSARY.md).
 The team's own tools sit beside the gate:
 
 - [`tools/board.py`](../../tools/board.py): the state of the work at every session start, and the day-close;
-- [`tools/research_cost.py`](../../tools/research_cost.py): the cost of one research run, read from its transcript.
+- [`scripts/cost.py`](../../scripts/cost.py): the cost of one research run, read from its transcript; `parts.py --tally`
+  says a whole project's.

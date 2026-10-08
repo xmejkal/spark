@@ -1450,6 +1450,12 @@ OPERATIONS = (
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf; what the file already holds stays",
      ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "written")),
+    ("step", {"nargs": 2, "metavar": ("PROJECT", "STEP")},
+     "a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here",
+     ("writes",), ("step", "written")),
+    ("tally", {"metavar": "PROJECT"},
+     "the cost line: the picks, how many came from your store and how many you own, and what the project's steps cost",
+     (), ("picks", "from_store", "owned", "cost", "built", "line")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1918,6 +1924,40 @@ def _op_requirements(args, project):
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
                    "unplaced": unplaced, "kept": kept, "board_was": board_was, "written": not problems and not args.dry_run},
                   _write_lines([], problems, args.dry_run, said), problems=problems)
+
+
+def _op_step(args, project):
+    import cost
+    target, step = args.step
+    if step not in cost.STEPS:
+        return Answer(unchecked=[_cannot("a step is one of %s (the spine, §2 of the store design)" % ", ".join(cost.STEPS))])
+    event = cost.step_event(store.add_project(target, dry_run=args.dry_run), step)
+    if not args.dry_run:
+        store.append_event(event)
+    return Answer({"step": event, "written": not args.dry_run},
+                  ["  %s step %s of %s%s" % ("would start" if args.dry_run else "started", step, event["project"],
+                                             "" if event["session"] else " — no Claude Code session here, so its cost cannot be counted")])
+
+
+def _op_tally(args, project):
+    import cost
+    import drawer
+    import needs
+    name, history, entries = store.project_name(args.tally), store.events(), drawer.entries()
+    picks = [(need["id"], pick) for need in needs.read(args.tally) for pick in need.get("pick") or []]
+    reused = [event for event in history if event.get("event") == "reused" and event.get("project") == name]
+    from_store = sum(1 for need_id, pick in picks if dict({"event": "reused", "project": name, "need": need_id}, **pick) in reused)
+    owned = sum(1 for _, pick in picks if needs.owned(pick, entries))
+    try:
+        counted, unchecked = cost.cost([event for event in history if event.get("event") == "step"], name), []
+    except cost.NoTranscript as missing:
+        counted, unchecked = None, [_cannot(str(missing), "mark each step with parts.py --step <project> <step> in a Claude Code session")]
+    said, unreadable = cost.line(len(picks), from_store, owned, counted), cost.unreadable_note(counted)
+    built = any(event.get("event") == "built" and event.get("project") == name for event in history)
+    return Answer({"picks": len(picks), "from_store": from_store, "owned": owned, "cost": counted, "built": built, "line": said},
+                  ["  " + said] + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
+                  + ([] if built else ["  not built yet — check_spine records it when the chain runs end to end"]),
+                  unchecked=unchecked)
 
 
 def _op_describe(args, project):

@@ -411,3 +411,9 @@ def requirements(project):
     problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
     return Requirements(content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")),
                         kept, held.get("board"), problems)
+
+
+def owned(pick, entries):
+    """Whether the drawer holds a pick (§6.7's "owned"): a live entry with a count above 0, many, or a count nobody gave."""
+    held = _held(pick, entries, _pointing(entries))
+    return bool(held) and _counts([entry for _, entry in held])[0] != 0

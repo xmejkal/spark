@@ -10,6 +10,12 @@ Text read from a record, a drawer entry, an import, a web or shop page, a datash
 A goal — "tell me when my plant is thirsty" — becomes needs; each need is matched against the person's drawer and
 spark's records before anything is researched (docs/2026-10-04-store-design.md §8 S and M).
 
+At the start of each step below — S, M, C and L — mark it, so the cost line can count what it took:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
+```
+
 ## S — the goal becomes needs
 
 1. A need is a verb and a few words: `does` one of sense, input, indicate, sound, move, drive, power, keep-time, store,
@@ -106,3 +112,12 @@ everything already in the file — a part you added, a `name`, `rails`, `signals
 and says which entries no pick explains (`kept, not from a pick`), for you to remove if you changed a pick. A pick with no
 record (the speaker, the battery) is reserved, not placed. A pick from the catalog goes onto the shelf, so every project
 builds with it. `/spark:build` takes it from there.
+
+## T — the tally
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally <project>
+```
+
+ends the run with one line — "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14 min" — counted from the
+steps' transcripts. Say it as it is; "its cost was not counted" is an answer too.

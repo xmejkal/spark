@@ -37,6 +37,7 @@ PLUGIN = Path(__file__).resolve().parent.parent
 #: No script imports unittest — tests/test_store.py proves it — so a real run never takes this branch.
 if "unittest" in sys.modules:
     os.environ["SPARK_HOME"] = tempfile.mkdtemp(prefix="spark-suite-")
+    os.environ["CLAUDE_CODE_SESSION_ID"] = "spark-suite"  # P97: a test's steps never name the person's own session
 
 
 def home():
