@@ -846,6 +846,25 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
             code = check_spine.main([str(self.project / "requirements.json")] if argv is None else argv)
         return code, out.getvalue(), err.getvalue()
 
+    def meanwhile(self, happens):
+        """The history after `check_spine.main` on the person's file, whose chain ends ok and, while it builds, has `happens()` happen."""
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+
+        def build(*_, **__):
+            happens()
+            return stages
+        with mock.patch.object(check_spine, "run", side_effect=build), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(self.project / "requirements.json")])
+        path = self.home / "history.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()] if path.is_file() else []
+
+    @staticmethod
+    def digest_of(record, facts):
+        """The sha256 of the facts of a record, written out here as the history means it (§5.7) rather than asked of parts.py."""
+        shown = {key: record[key] for key in facts if key in record}
+        return hashlib.sha256(json.dumps(shown, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
     def test_a_chain_that_runs_end_to_end_is_recorded_once_with_each_digest(self):
         self.spine(check_spine.OK)
         built = self.spine(check_spine.OK)
@@ -857,21 +876,46 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         self.assertEqual(self.spine(check_spine.COULD_NOT_RUN), [])
 
     def test_each_digest_is_of_the_facts_a_build_reads(self):
-        def digest_of(record, facts):
-            shown = {key: record[key] for key in facts if key in record}
-            return hashlib.sha256(json.dumps(shown, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
         built = self.spine(check_spine.OK)[0]
         self.assertEqual((built["board"]["digest"], built["parts"][0]["digest"]),
-                         (digest_of(board, ("pins", "power_pads", "physical")),
-                          digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))))
+                         (self.digest_of(board, ("pins", "power_pads", "physical")),
+                          self.digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))))
+
+    def test_what_the_chain_was_handed_is_what_is_recorded_not_what_the_file_became_meanwhile(self):
+        def the_person_edits_the_file():
+            (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
+        built = self.meanwhile(the_person_edits_the_file)
+        self.assertEqual([[p["id"] for p in e["parts"]] for e in built], [["tactile-button"]])
+
+    def test_the_facts_recorded_are_those_the_chain_was_handed_not_those_a_record_became_meanwhile(self):
+        def the_person_edits_a_record():
+            record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+            record["host_parts"][0]["ohms"] = 4700
+            (self.project / "parts").mkdir()
+            (self.project / "parts" / "tactile-button.json").write_text(json.dumps(record))
+        built = self.meanwhile(the_person_edits_a_record)
+        button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        self.assertEqual([e["parts"][0]["digest"] for e in built],
+                         [self.digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))])
+
+    def test_a_design_that_cannot_be_loaded_records_nothing_and_breaks_nothing(self):
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}))
+        code, said, _ = self.answer()
+        self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        with mock.patch.object(check_spine.design, "load", side_effect=TypeError("a record of a shape nobody foresaw")):
+            code, said, _ = self.answer()
+        self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
 
     def test_a_project_that_is_not_on_the_list_keeps_no_history(self):
         (self.home / "projects.json").write_text("{}")
         self.assertEqual(self.spine(check_spine.OK), [])
 
     def test_the_reference_design_has_no_project_and_records_nothing(self):
+        # even when the person listed the plugin's own folder, which a design with no file is built from
+        (self.home / "projects.json").write_text(json.dumps({"spark": str(ROOT)}))
         code, said, _ = self.answer(argv=[])
         self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
 
@@ -900,8 +944,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         self.assertIn("history.jsonl line 1 is not a history event", complained)
 
     def test_whatever_stops_the_recording_the_verdict_stands_and_the_reason_is_said(self):
-        for refusal in (store.StoreProblem("the projects list is not JSON"), OSError("the disk is full"),
-                        design.DesignError("the file changed under the build")):
+        for refusal in (store.StoreProblem("the projects list is not JSON"), OSError("the disk is full")):
             with self.subTest(refusal=refusal), mock.patch.object(check_spine.parts, "note_built", side_effect=refusal):
                 code, said, complained = self.answer()
                 self.assertEqual((code, "the chain runs end to end" in said), (0, True))

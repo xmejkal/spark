@@ -1448,8 +1448,8 @@ OPERATIONS = (
      "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds",
      ("writes",), ("project", "picks", "reserved", "written")),
     ("requirements", {"metavar": "PROJECT"},
-     "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf",
-     ("writes",), ("path", "requirements", "shelved", "unplaced", "written")),
+     "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf; what the file already holds stays",
+     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "written")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1902,7 +1902,7 @@ def _op_pick(args, project):
 
 def _op_requirements(args, project):
     import needs
-    content, shelving, unplaced, problems = needs.requirements(args.requirements)
+    content, shelving, unplaced, kept, board_was, problems = needs.requirements(args.requirements)
     path = Path(args.requirements) / needs.REQUIREMENTS
     if not problems and not args.dry_run:
         for record, source in shelving:
@@ -1910,11 +1910,13 @@ def _op_requirements(args, project):
         store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + "\n")
     said = [] if problems else ["  %s %s: board %s; parts %s" % (
         "would write" if args.dry_run else "wrote", path, content["board"],
-        ", ".join(p if isinstance(p, str) else "%s (%s)" % (p["part"], p["name"]) for p in content["parts"]) or "none")]
+        ", ".join(needs.entry_label(entry) for entry in content["parts"]) or "none")]
+    said += ["  board: %s → %s" % (json.dumps(board_was), json.dumps(content["board"]))] if board_was not in (None, content["board"]) and not problems else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
+    said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
-                   "unplaced": unplaced, "written": not problems and not args.dry_run},
+                   "unplaced": unplaced, "kept": kept, "board_was": board_was, "written": not problems and not args.dry_run},
                   _write_lines([], problems, args.dry_run, said), problems=problems)
 
 

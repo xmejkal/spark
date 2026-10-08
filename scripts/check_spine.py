@@ -538,6 +538,19 @@ def render(stages, code):
     return "\n".join(lines) + "\n"
 
 
+def design_handed_to(workdir, project):
+    """
+    The design the chain is about to be handed (§5.7): the work folder's copy of the requirements, with the board and the
+    part records they name, loaded once, now. `built` names this — what the chain ran on — and not what the person's files
+    say by the time the build has finished, minutes later. None when it cannot be loaded: `run` says why, as a stage, and a
+    chain that did not run end to end records nothing.
+    """
+    try:
+        return design.load(workdir / "requirements.json", project)
+    except Exception:  # noqa: BLE001 — whatever is wrong with the input, `run` names it; only the record of the build goes without
+        return None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("requirements", nargs="?",
@@ -575,6 +588,9 @@ def main(argv=None):
     if modules is not None and not (workdir / "node_modules").exists():
         os.symlink(modules, workdir / "node_modules")
 
+    # What `built` will name is loaded now, once, before anything can change under it.
+    handed = design_handed_to(workdir, project) if source and not from_library else None
+
     try:
         stages = run(requirements, workdir, toolchain, project, from_library, firmware=args.firmware)
     except subprocess.TimeoutExpired:
@@ -589,10 +605,10 @@ def main(argv=None):
 
     # The history says a build ran end to end (§5.7) — written here, by the chain itself, never on anyone's say-so.
     # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.
-    if source and not from_library and verdict(stages) == EXIT_OK:
+    if handed is not None and verdict(stages) == EXIT_OK:
         try:
-            parts.note_built(design.load(source, project))
-        except (design.DesignError, store.StoreProblem, OSError) as unrecorded:
+            parts.note_built(handed)
+        except (store.StoreProblem, OSError) as unrecorded:
             print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
 
     if args.sim_dir and (workdir / "sim").is_dir():

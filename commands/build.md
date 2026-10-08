@@ -40,6 +40,9 @@ somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
 *assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
 
+`parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, it keeps
+whatever you added to the file by hand and adds only the parts your picks still lack.
+
 The project is found up from the requirements file's own directory, so this works from anywhere —
 and from nowhere: a file inside no project is built from the plugin's own library, with no rules,
 and every command says so. `/spark:init` in a directory makes it a project, which is where a
@@ -63,8 +66,8 @@ not; delete it to have it regenerated. `dist/` is still replaced with a build of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.
 
-When the chain runs end to end for a project on your list, your store's history records `built`, with a digest of the
-board and of each part, so a later project sees what has been built and with which facts.
+When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
+that were built, each with a digest of the facts the build read from it.
 
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation

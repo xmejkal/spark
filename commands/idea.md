@@ -101,6 +101,8 @@ Run `/spark:init --board <the board pick>` in the project first. Then fill what 
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
 ```
 
-and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A pick with no
+and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A later run keeps
+everything already in the file — a part you added, a `name`, `rails`, `signals` — adds only the parts your picks still lack,
+and says which entries no pick explains (`kept, not from a pick`), for you to remove if you changed a pick. A pick with no
 record (the speaker, the battery) is reserved, not placed. A pick from the catalog goes onto the shelf, so every project
 builds with it. `/spark:build` takes it from there.

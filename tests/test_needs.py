@@ -15,6 +15,8 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import design  # noqa: E402
+import emit_board  # noqa: E402
 import needs  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
@@ -910,6 +912,15 @@ class TheRequirementsFileTest(unittest.TestCase):
     """P97, §8 L: the picks become a requirements file — the board and each part pick with a record that owes nothing."""
 
     BOARD = ("board", [{"board": "firebeetle2-esp32s3"}])
+    #: The build page's example as a person extends it by hand: a part's own rail, the inlet no need picks, two buttons given
+    #: names of their own, a signal no part claims.
+    BY_HAND = {"board": "firebeetle2-esp32s3",
+               "parts": [{"part": "l9110s-module", "rails": {"VCC": "traction"}}, "jst-ph-2-power-inlet",
+                         {"part": "tactile-button", "name": "BtnOpen"}, {"part": "tactile-button", "name": "BtnMode"}],
+               "signals": [{"name": "LED_STATUS", "needs": []}]}
+    #: The picks that explain all of BY_HAND but the inlet.
+    DRIVER_AND_TWO_BUTTONS = [BOARD, ("drive", [{"part": "l9110s-module"}]), ("open-lid", [{"part": "tactile-button"}]),
+                              ("mode", [{"part": "tactile-button"}])]
 
     def project(self, picks):
         home, project = a_project_with_picks(picks)
@@ -918,8 +929,19 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
         return home, project
 
+    def picking(self, project, picks):
+        """The person changes their mind: from now on the project's needs pick `picks`."""
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": need_id, "does": "sense", "what": "x", "pick": pick} for need_id, pick in picks]}))
+
     def written(self, project):
         return json.loads((project / "requirements.json").read_text())
+
+    def text(self, argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(argv)
+        return out.getvalue()
 
     def test_the_picks_become_the_board_and_the_parts_with_records(self):
         _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}]), ("alarm", [{"entry": "speaker"}])])
@@ -954,11 +976,11 @@ class TheRequirementsFileTest(unittest.TestCase):
                                                           {"part": "tactile-button", "name": "Mode"}])
 
     def test_what_the_person_added_to_the_file_stays(self):
-        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
-        (project / "requirements.json").write_text(json.dumps({"board": "x", "parts": [], "signals": [{"name": "LED_STATUS", "needs": []}]}))
-        run(["--requirements", str(project)])
-        self.assertEqual(self.written(project), {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"],
-                                                 "signals": [{"name": "LED_STATUS", "needs": []}]})
+        _, project = self.project(self.DRIVER_AND_TWO_BUTTONS)
+        (project / "requirements.json").write_text(json.dumps(self.BY_HAND))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)), (0, self.BY_HAND))
+        self.assertEqual(said["data"]["kept"], [{"part": "jst-ph-2-power-inlet", "name": None}])
 
     def test_a_dry_run_writes_nothing(self):
         home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
@@ -1050,6 +1072,134 @@ class TheRequirementsFileTest(unittest.TestCase):
                                  "  onto the shelf, so every project builds with it: x-led\n"
                                  "  reserved, not placed — no record: speaker\n" % (verb, project / "requirements.json"))
 
+    # --- a re-run keeps what the person did by hand (the PO, 2026-10-08) ---
+
+    def test_the_dry_run_says_what_it_would_keep_and_the_board_it_would_change(self):
+        _, project = self.project(self.DRIVER_AND_TWO_BUTTONS)
+        (project / "requirements.json").write_text(json.dumps(dict(self.BY_HAND, board="xiao-esp32-c6")))
+        before = (project / "requirements.json").read_text()
+        self.assertEqual(self.text(["--requirements", str(project), "--dry-run"]),
+                         "  would write %s: board firebeetle2-esp32s3; parts l9110s-module, jst-ph-2-power-inlet, "
+                         "tactile-button (BtnOpen), tactile-button (BtnMode)\n"
+                         '  board: "xiao-esp32-c6" → "firebeetle2-esp32s3"\n'
+                         "  kept, not from a pick: jst-ph-2-power-inlet\n" % (project / "requirements.json"))
+        self.assertEqual((project / "requirements.json").read_text(), before)
+
+    def test_a_board_that_changes_is_said_from_and_to_and_one_that_does_not_is_not(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
+        said, _ = run(["--requirements", str(project), "--dry-run"])
+        self.assertEqual((said["data"]["board_was"], said["data"]["requirements"]["board"]), ("xiao-esp32-c6", "firebeetle2-esp32s3"))
+        self.assertIn('  board: "xiao-esp32-c6" → "firebeetle2-esp32s3"\n', self.text(["--requirements", str(project)]))
+        self.assertNotIn("→", self.text(["--requirements", str(project)]))
+
+    def test_a_second_run_with_the_same_picks_changes_nothing(self):
+        _, project = self.project(self.DRIVER_AND_TWO_BUTTONS + [("light", [{"part": "x-led"}])])
+        first_said, _ = run(["--requirements", str(project)])
+        first = (project / "requirements.json").read_text()
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((first_said["data"]["shelved"], first_said["data"]["board_was"], code, (project / "requirements.json").read_text(),
+                          said["data"]["kept"], said["data"]["shelved"], said["data"]["board_was"]),
+                         (["x-led"], None, 0, first, [], [], "firebeetle2-esp32s3"))
+
+    def test_the_names_it_checks_are_the_ones_the_generator_gives(self):
+        for part_id, name in (("tactile-button", None), ("led-1", None), ("led1", None), ("jst_ph_2", None), ("tactile-button", "BtnOpen")):
+            with self.subTest(part_id=part_id, name=name):
+                instance = {"_instance": name} if name else {}
+                self.assertEqual(needs._called(part_id, name), emit_board.component_name(dict({"id": part_id}, **instance)))
+
+    def test_a_re_pick_leaves_the_old_part_listed_as_kept(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        run(["--requirements", str(project)])
+        self.picking(project, [self.BOARD, ("light", [{"part": "x-led"}])])
+        said, _ = run(["--requirements", str(project)])
+        self.assertEqual((self.written(project)["parts"], said["data"]["kept"]),
+                         (["led-red-5mm", "x-led"], [{"part": "led-red-5mm", "name": None}]))
+        self.assertIn("  kept, not from a pick: led-red-5mm\n", self.text(["--requirements", str(project), "--dry-run"]))
+
+    def test_a_part_picked_for_two_needs_when_the_file_holds_one_of_it_adds_only_the_other(self):
+        for held in ({"part": "tactile-button", "name": "BtnOpen"}, "tactile-button"):
+            with self.subTest(held=held):
+                _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])
+                (project / "requirements.json").write_text(json.dumps({"parts": [held]}))
+                said, _ = run(["--requirements", str(project)])
+                self.assertEqual((self.written(project)["parts"], said["data"]["kept"]),
+                                 ([held, {"part": "tactile-button", "name": "Mode"}], []))
+                self.assertEqual(emit_board.duplicate_component_names(design.parts_of(self.written(project), project)), [])
+
+    def test_an_entry_named_after_a_need_is_that_need_s_own(self):
+        _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])
+        (project / "requirements.json").write_text(json.dumps({"parts": [{"part": "tactile-button", "name": "Mode"}]}))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)["parts"], said["data"]["kept"]),
+                         (0, [{"part": "tactile-button", "name": "Mode"}, {"part": "tactile-button", "name": "OpenLid"}], []))
+
+    def test_of_two_instances_the_one_no_pick_explains_is_the_one_kept(self):
+        _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])
+        run(["--requirements", str(project)])
+        self.picking(project, [self.BOARD, ("open-lid", [{"part": "led-red-5mm"}]), ("mode", [{"part": "tactile-button"}])])
+        said, _ = run(["--requirements", str(project)])
+        self.assertEqual((self.written(project)["parts"], said["data"]["kept"]),
+                         ([{"part": "tactile-button", "name": "OpenLid"}, {"part": "tactile-button", "name": "Mode"}, "led-red-5mm"],
+                          [{"part": "tactile-button", "name": "OpenLid"}]))
+
+    def test_two_needs_whose_ids_make_one_name_are_refused_by_need_id_and_a_name_by_hand_settles_it(self):
+        home, project = self.project([self.BOARD, ("led-1", [{"part": "led-red-5mm"}]), ("led1", [{"part": "led-red-5mm"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, [p["subject"] for p in said["problems"]]), ("problems", 1, ["led1"]))
+        self.assertIn("Led1", said["problems"][0]["sentence"])
+        self.assertIn("led-1", said["problems"][0]["sentence"])
+        self.assertFalse((project / "requirements.json").exists())
+        (project / "requirements.json").write_text(json.dumps({"parts": [{"part": "led-red-5mm", "name": "Led2"}]}))
+        _, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)["parts"]),
+                         (0, [{"part": "led-red-5mm", "name": "Led2"}, {"part": "led-red-5mm", "name": "Led1"}]))
+
+    def test_a_new_name_that_the_file_already_gives_another_part_is_refused_by_need_id(self):
+        home, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])
+        held = json.dumps({"parts": [{"part": "jst-ph-2-power-inlet", "name": "Mode"}]})
+        (project / "requirements.json").write_text(held)
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, [p["subject"] for p in said["problems"]]), (1, ["mode"]))
+        self.assertIn("jst-ph-2-power-inlet", said["problems"][0]["sentence"])
+        self.assertEqual((project / "requirements.json").read_text(), held)
+
+    def test_one_need_picking_two_parts_that_other_needs_pick_too_is_refused_by_need_id(self):
+        home, project = self.project([self.BOARD, ("alarm", [{"part": "x-led"}, {"part": "led-red-5mm"}]),
+                                      ("backup", [{"part": "x-led"}]), ("status", [{"part": "led-red-5mm"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, [p["subject"] for p in said["problems"]]), (1, ["alarm"]))
+        self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
+
+    def test_a_pick_whose_record_does_not_parse_is_said_so_and_is_not_called_gone(self):
+        for garbled in ("{", "[]"):
+            with self.subTest(garbled=garbled):
+                home, project = self.project([self.BOARD, ("light", [{"part": "x-garbled"}])])
+                (home / "catalog" / "x-garbled.json").write_text(garbled)
+                said, code = run(["--requirements", str(project)])
+                self.assertEqual((said["status"], code, [p["subject"] for p in said["problems"]]), ("problems", 1, ["x-garbled"]))
+                self.assertIn("does not parse", said["problems"][0]["sentence"])
+                self.assertNotIn("any more", said["problems"][0]["sentence"])
+
+    def test_a_parts_list_that_is_no_list_is_refused_and_left_alone(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+        held = json.dumps({"parts": "tactile-button"})
+        (project / "requirements.json").write_text(held)
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("requirements.json", said["unchecked"][0]["sentence"])
+        self.assertIn("`parts`", said["unchecked"][0]["sentence"])
+        self.assertEqual(((project / "requirements.json").read_text(), (home / "shelf").exists()), (held, False))
+
+    def test_an_entry_that_names_no_part_is_kept_and_said(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        (project / "requirements.json").write_text(json.dumps({"parts": [5, {"name": "Orphan"}]}))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, self.written(project)["parts"], said["data"]["kept"]),
+                         (0, [5, {"name": "Orphan"}, "led-red-5mm"], [{"part": None, "name": None}, {"part": None, "name": "Orphan"}]))
+        self.assertIn("  kept, not from a pick: an entry that names no part, an entry that names no part (Orphan)\n",
+                      self.text(["--requirements", str(project)]))
+
 
 class TheIdeaCommandTest(unittest.TestCase):
     """commands/idea.md is followed as written (R4.2): the project is named where a command takes it as a flag, and only there."""
@@ -1063,6 +1213,13 @@ class TheIdeaCommandTest(unittest.TestCase):
         for line in lines:
             if any(op in line for op in ("--needs-set", "--match", "--pick", "--requirements")):
                 self.assertNotIn("--project", line, "--needs-set and --match take the project as their argument: " + line)
+
+    def test_section_l_and_the_build_page_say_what_a_later_run_keeps(self):
+        idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())
+        build = " ".join((ROOT / "commands" / "build.md").read_text().split())
+        self.assertIn("A later run keeps everything already in the file", idea)
+        self.assertIn("says which entries no pick explains (`kept, not from a pick`)", idea)
+        self.assertIn("run again, it keeps whatever you added to the file by hand and adds only the parts your picks still lack", build)
 
 
 if __name__ == "__main__":

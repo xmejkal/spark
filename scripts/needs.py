@@ -283,37 +283,131 @@ def plan_pick(project, given, passed_over=()):
 
 REQUIREMENTS = "requirements.json"
 
+#: What `requirements` works out (§5.3, §8 L): the file as it would be, the records to shelve, the picks with no record to place,
+#: the entries already in the file that no pick explains, the board the file named before, and what refuses it.
+Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems")
+
+
+def _part_of(entry):
+    """The part an entry of a requirements file's `parts` names — a bare id, or {part, name} — or None when it names none."""
+    named = entry.get("part") if isinstance(entry, dict) else entry
+    return named if isinstance(named, str) else None
+
+
+def _name_of(entry):
+    """The name an entry of `parts` gives its instance, or None."""
+    name = entry.get("name") if isinstance(entry, dict) else None
+    return name if isinstance(name, str) and name else None
+
+
+def entry_label(entry):
+    """An entry of `parts` in a sentence: tactile-button (BtnOpen), l9110s-module, or an entry that names no part."""
+    return "%s%s" % (_part_of(entry) or "an entry that names no part", " (%s)" % _name_of(entry) if _name_of(entry) else "")
+
+
+def _name_after(need_id):
+    """A need's id as the name of its instance: open-lid is OpenLid."""
+    return "".join(word.capitalize() for word in need_id.split("-"))
+
+
+def _called(part_id, name):
+    """What the generator calls an instance (`emit_board.component_name`): the name it is given, else its part id in capitals."""
+    return name or "".join(word.capitalize() for word in part_id.replace("_", "-").split("-"))
+
+
+def _serve_picks(existing, picked_by):
+    """
+    (the entries a pick explains, as indexes into `existing`; the picks no entry serves, as (position, need id, part id)).
+    `picked_by` is {part id: [(position, need id)]}. An entry named after a need is that need's; the entries of a part that
+    are left pair off with its other picks in order — so what a pick leaves unserved is added, and what no pick serves is
+    the entry nobody asked for.
+    """
+    explained, unserved = set(), []
+    for part_id, picks in picked_by.items():
+        free, unnamed = [number for number, entry in enumerate(existing) if _part_of(entry) == part_id], []
+        for position, need_id in picks:
+            own = next((number for number in free if _name_of(existing[number]) == _name_after(need_id)), None)
+            if own is None:
+                unnamed.append((position, need_id))
+            else:
+                free.remove(own)
+                explained.add(own)
+        paired = min(len(unnamed), len(free))
+        explained.update(free[:paired])
+        unserved += [(position, need_id, part_id) for position, need_id in unnamed[paired:]]
+    return explained, unserved
+
+
+def _merge_parts(existing, wanted):
+    """
+    (the parts after, the entries no pick explains, problems): the file's `parts` with its picks read into them (the PO,
+    2026-10-08). What is there stays, unchanged and in its order — a name, `rails` and any other key are the person's — and an
+    entry is added at the end for each pick it lacks. `wanted` is [(need id, part id)], one per pick, in pick order; a part
+    picked n times needs n entries (`_serve_picks` says which are there). What no pick explains — added by hand, or left by a
+    pick since changed — is kept, and said. An entry added for a part with two or more instances is named after its need, and
+    refused by need id when the file already has that name: the build refuses two components of one name.
+    """
+    picked_by = collections.defaultdict(list)
+    for position, (need_id, part_id) in enumerate(wanted):
+        picked_by[part_id].append((position, need_id))
+    explained, unserved = _serve_picks(existing, picked_by)
+    held_by = {}
+    for entry in existing:
+        if _part_of(entry):
+            held_by.setdefault(_called(_part_of(entry), _name_of(entry)), "%s in requirements.json" % entry_label(entry))
+    added, problems = [], []
+    for _, need_id, part_id in sorted(unserved):
+        name = _name_after(need_id) if len(picked_by[part_id]) >= 2 else None
+        called = _called(part_id, name)
+        if called in held_by:
+            problems.append(parts._problem(need_id, 'its %s would be called %s, which %s has too — the build refuses two components '
+                                           'of one name; give one of them a name of your own in requirements.json, '
+                                           '{"part": "%s", "name": …}, and run this again' % (part_id, called, held_by[called], part_id)))
+            continue
+        held_by[called] = "need %s's %s" % (need_id, part_id)
+        added.append(part_id if name is None else {"part": part_id, "name": name})
+    kept = [{"part": _part_of(entry), "name": _name_of(entry)} for number, entry in enumerate(existing) if number not in explained]
+    return list(existing) + added, kept, problems
+
 
 def requirements(project):
     """
-    The picks as a requirements file (§5.3, §8 L): (its content, records to shelve, picks not placed, problems). The board
-    pick, and every part pick whose record owes nothing — one in the catalog or in another project goes onto the shelf, so
-    the build finds it; a pick with no record is reserved, not placed. A part picked for two needs is named after each.
-    The keys the person added to the file (signals, rails) stay.
+    The picks read into the project's requirements file (§5.3, §8 L): a `Requirements` of (the file as it would be, the records
+    to shelve, the picks not placed, the entries it keeps that no pick explains, the board it named before, the problems). The
+    board pick, and every part pick whose record owes nothing — one in the catalog or in another project goes onto the shelf,
+    so the build finds it; a pick with no record is reserved, not placed. The file's own `parts` stay as they are and gain an
+    entry for each pick they lack (`_merge_parts`); the keys the person added to the file (signals) stay.
     """
     known = {row[:2]: row for row in drawer.linkable(project)}
     picks = [(need["id"], next(iter(pick.items()))) for need in read(project) for pick in need.get("pick") or []]
     board_picks = sorted({key for _, (kind, key) in picks if kind == "board"})
     problems = [] if len(board_picks) == 1 else [parts._problem("board", "pick one board — %s" % (
         "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
-    part_ids = [key for _, (kind, key) in picks if kind == "part"]
-    placed, shelve = [], []
+    shelve, wanted = [], []
     for need_id, (kind, key) in picks:
         if kind != "part":
             continue
         _, _, where, path = known.get(("part", key), (None, None, None, None))
         record = parts._parse(path) if path else None
-        wrong = (["no record called %s any more" % key] if not isinstance(record, dict) else
+        wrong = (["no record called %s any more" % key] if path is None else
+                 ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
                  ["owes %s — fill it in its own home with --fact-set" % ", ".join(parts.owes(record))] if parts.owes(record)
                  else parts.broken_problems(record, path))
         problems += [parts._problem(key, sentence) for sentence in wrong]
         shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
-        placed.append(key if part_ids.count(key) == 1 else {"part": key, "name": "".join(word.capitalize() for word in need_id.split("-"))})
-    path = Path(project) / REQUIREMENTS
+        wanted.append((need_id, key))
+    file = Path(project) / REQUIREMENTS
     try:
-        kept = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        held = json.loads(file.read_text(encoding="utf-8")) if file.is_file() else {}
     except ValueError as broken:
-        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand" % (path, broken))
-    content = dict(kept if isinstance(kept, dict) else {}, board=board_picks[0] if board_picks else None, parts=placed)
+        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand" % (file, broken))
+    held = held if isinstance(held, dict) else {}
+    existing = held.get("parts") or []
+    if not isinstance(existing, list):
+        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand" % file)
+    after, kept, naming = _merge_parts(existing, wanted)
+    content = dict(held, board=board_picks[0] if board_picks else None, parts=after)
+    problems += naming
     problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
-    return content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")), problems
+    return Requirements(content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")),
+                        kept, held.get("board"), problems)
