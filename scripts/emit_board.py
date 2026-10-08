@@ -902,7 +902,13 @@ def power_note_lines(part_list):
         for invented_net, pins in invented.items():
             lines.append("          net.%-12s from %s" % (inert(invented_net), inert(", ".join(pins))))
         lines.append("     */}")
+    pair_sides = pair_sides_without_a_driver(part_list)  # F15: an amplifier drives these, never a supply
     for net in rails_without_a_source(part_list):
+        if net in pair_sides:
+            lines.append("    {/* NOTHING ON THIS BOARD DRIVES net.%s, one side of a driven pair. Add what" % inert(net))
+            lines.append("        drives the pair (the amplifier this terminal hangs off), never a supply,")
+            lines.append("        or the net has one member and will not route. */}")
+            continue
         lines.append("    {/* NOTHING ON THIS BOARD SOURCES net.%s. A module list is a list of" % inert(net))
         lines.append("        consumers — whatever supplies this rail (a connector, a regulator,")
         lines.append("        a battery) has to be added, or the net has one member and will not")
@@ -1115,7 +1121,13 @@ def main(argv=None):
         print("note: %s.%s drives net.%s and nothing on this board receives it — add whatever it "
               "drives, or that net has one member and will not route" % (part_name, pin, net),
               file=sys.stderr)
+    pair_sides = pair_sides_without_a_driver(part_list)
     for net in rails_without_a_source(part_list):
+        if net in pair_sides:  # F15: what drives a side of a pair is an amplifier, and a supply into it destroys it
+            print("note: nothing drives net.%s, one side of a driven pair — add what drives the pair (the amplifier this "
+                  "terminal hangs off), never a supply, or that net has one member and the board will not route" % net,
+                  file=sys.stderr)
+            continue
         print("note: nothing sources net.%s — add whatever supplies it, or that net has one "
               "member and the board will not route" % net, file=sys.stderr)
     for net, who in outputs_in_contention(part_list):

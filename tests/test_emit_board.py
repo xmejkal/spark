@@ -706,6 +706,26 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
     def test_the_terminal_alone_is_a_rail_nothing_drives(self):
         self.assertEqual(emit_board.rails_without_a_source([parts.load("speaker-terminal")]), ["SPEAKER_N", "SPEAKER_P"])
 
+    def test_the_terminal_alone_is_told_to_add_what_drives_the_pair_never_a_supply(self):
+        # F15's follow-up: --requirements said "never a supply", while the board's comment and emit_board's own note still
+        # said to add "whatever supplies this rail (a connector, a regulator, a battery)" — into a bridged amplifier output
+        said = "\n".join(emit_board.power_note_lines([parts.load("speaker-terminal")]))
+        self.assertIn("    {/* NOTHING ON THIS BOARD DRIVES net.SPEAKER_P, one side of a driven pair. Add what\n"
+                      "        drives the pair (the amplifier this terminal hangs off), never a supply,\n"
+                      "        or the net has one member and will not route. */}", said)
+        self.assertNotIn("supplies this rail", said)
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["speaker-terminal"]}))
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = emit_board.main([str(root / "requirements.json")])
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertIn("note: nothing drives net.SPEAKER_P, one side of a driven pair — add what drives the pair (the amplifier "
+                      "this terminal hangs off), never a supply, or that net has one member and the board will not route\n",
+                      err.getvalue())
+        self.assertNotIn("add whatever supplies it", err.getvalue())
+
     def test_a_load_across_a_pair_is_named_so_the_island_check_asks_it_no_ground(self):
         part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal"), parts.load("l9110s-module"),
                      parts.load("jst-ph-2-power-inlet")]
