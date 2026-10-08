@@ -87,7 +87,8 @@ the project, one piece per pick. A pick another project holds is **refused, nami
 …"): say so; the person frees it — `--drawer-set` with a file setting that entry's `used_in` without the holder, after a
 dry run — or picks another. Refused with no holder, more were picked than are owned: pick fewer, or correct the count.
 Say "to get" (known, not owned), "maybe owned — check the drawer first", "count unknown" and "a board needs a board
-file" to the person as they are. For each candidate the person passed over, write their reason **in their words** to a JSON file
+file" to the person as they are — and, before the real run, each "would release: …": a hold of this project that no pick
+of it explains any more, which the pick lets go. For each candidate the person passed over, write their reason **in their words** to a JSON file
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
 `--passed-over <file>`: the reason goes to the history in your store, never to the project.
 

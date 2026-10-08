@@ -1466,7 +1466,7 @@ OPERATIONS = (
      (), ("needs",)),
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
      "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds",
-     ("writes",), ("project", "picks", "reserved", "written")),
+     ("writes",), ("project", "picks", "reserved", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf; what the file already holds stays",
      ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "no_supply",
@@ -1956,13 +1956,27 @@ def _op_pick(args, project):
             store.append_event(event)
         # the project's own file last: a store that refuses leaves it as it was, and the same pick, retried, finishes the rest
         needs.write(target, after)
-    asked = dict(pairs)
+    asked, name = dict(pairs), store.add_project(target, dry_run=True)
     picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
     said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]
-    return Answer({"project": store.add_project(target, dry_run=True), "picks": picks,
+    released = _released(changes, name)
+    said += [] if problems else ["  %s%s: %s — no pick of this project explains it" % (
+        "would release" if args.dry_run else "released", "" if hold["now"] == 0 else " %d of %d" % (hold["was"] - hold["now"], hold["was"]),
+        hold["entry"]) for hold in released]
+    return Answer({"project": name, "picks": picks,
                    "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
-                   "written": not problems and not args.dry_run},
+                   "released": released, "written": not problems and not args.dry_run},
                   _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes]), problems=problems)
+
+
+def _released(changes, name):
+    """
+    The holds of project `name` a pick lets go (C-4): each drawer entry whose reservation for it goes down, because no pick of
+    the project explains it any more — a re-pick, or a hold given by hand — as {"entry", "was", "now"}. A pick rebuilds the
+    project's holds from its picks (§8 C), and what it drops is said, never left to a bare `used_in … → {}`.
+    """
+    return [{"entry": change["entry"], "was": was, "now": now} for change in changes
+            for was, now in [((change["was"].get("used_in") or {}).get(name, 0), change["now"]["used_in"].get(name, 0))] if now < was]
 
 
 #: What `--requirements` says of a need nothing on the board serves (C-2), by why: plainly, and what the person can do.

@@ -597,6 +597,31 @@ class ThePicksTest(unittest.TestCase):
         _, code = run(["--pick", str(self.project), "soil=x-other"])
         self.assertEqual((code, self.picks()["soil"], self.entry("probe")["used_in"]), (0, [{"part": "x-other"}], {}))
 
+    def test_a_hold_no_pick_of_the_project_explains_is_released_and_said(self):
+        # C-4 (the council on PR #98): a pick rebuilt the project's holds and dropped a hand-given one behind a bare `set … → {}`
+        run(["--drawer-set", a_file([{"entry": "speaker", "used_in": {"plant-alarm": 1}}])])
+        dry, _ = run(["--pick", str(self.project), "soil=x-soil", "--dry-run"])
+        dry_text = self.text(["--pick", str(self.project), "soil=x-soil", "--dry-run"])
+        said, code = run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((code, dry["data"]["released"], said["data"]["released"], self.entry("speaker")["used_in"]),
+                         (0, [{"entry": "speaker", "was": 1, "now": 0}], [{"entry": "speaker", "was": 1, "now": 0}], {}))
+        self.assertIn("\n  would release: speaker — no pick of this project explains it\n", dry_text)
+
+    def test_a_re_pick_says_what_it_releases(self):
+        run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertIn("\n  released: probe — no pick of this project explains it\n", self.text(["--pick", str(self.project), "soil=x-other"]))
+
+    def test_part_of_a_hold_released_says_how_many_of_how_many(self):
+        run(["--drawer-set", a_file([{"entry": "speaker", "used_in": {"plant-alarm": 2}}])])
+        said = self.text(["--pick", str(self.project), "alarm=speaker"])
+        self.assertIn("\n  released 1 of 2: speaker — no pick of this project explains it\n", said)
+
+    def test_a_pick_that_keeps_every_hold_releases_nothing(self):
+        run(["--pick", str(self.project), "soil=x-soil"])
+        said, _ = run(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"])
+        self.assertEqual(said["data"]["released"], [])
+        self.assertNotIn("release", self.text(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"]))
+
     def test_a_pick_nobody_owns_is_to_get_and_reserves_nothing(self):
         self.assertIn("x-other: to get — known, not owned", self.text(["--pick", str(self.project), "soil=x-other"]))
 
@@ -697,7 +722,8 @@ class ThePicksTest(unittest.TestCase):
     def test_a_pick_answers_with_the_project_what_it_picked_what_it_reserved_and_that_it_was_written(self):
         said, code = run(["--pick", str(self.project), "soil=x-soil"])
         self.assertEqual((code, said["data"]), (0, {"project": "plant-alarm", "picks": [{"need": "soil", "pick": [{"part": "x-soil"}]}],
-                                                     "reserved": [{"entry": "probe", "used_in": {"plant-alarm": 1}}], "written": True}))
+                                                     "reserved": [{"entry": "probe", "used_in": {"plant-alarm": 1}}], "released": [],
+                                                     "written": True}))
 
     def test_a_dry_run_says_what_it_would_do_and_writes_nothing(self):
         said, code = run(["--pick", str(self.project), "soil=x-soil", "--dry-run"])
