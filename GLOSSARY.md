@@ -245,9 +245,10 @@ process running the tests gets a scratch one.
 
 What you own: one small file per item in the store's `drawer/` folder, and a label is enough. It is an
 index, not a place records are read from. An entry points at a record (`is`) when spark knows the part
-by an exact part number — a near number, two matches or a name alone is a question for you, never a
-link — and at nothing when it does not. Owning never triggers research, and every write sets a value
-the agent worked out and the dry run showed, so a retried write changes nothing (`scripts/drawer.py`).
+by an exact part number, or when you say which record it is — a near number, two matches or a name
+alone is a question for you, never a link — and at nothing otherwise. Owning never triggers research,
+and every write sets a value the agent worked out and the dry run showed, so a retried write changes
+nothing (`scripts/drawer.py`).
 A record carries no `owned` and no `photo`: owning one is your fact, not the part's, and the contract
 check refuses a record that holds either (`RETIRED` in `scripts/parts.py`).
 
