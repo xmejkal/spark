@@ -101,7 +101,7 @@ own home, and one line saying what it cost and what came from the store.
 | story | check |
 | --- | --- |
 | C1 As the hobbyist, I pick per need; a part passed over keeps its reason | `parts.py --pick <project> <need>=<id> --json`; `passed_over` lines in the history |
-| C2 As the maker, a reservation past what I own is refused, naming who holds it | the plant alarm reserving the bin's only FireBeetle S3 is refused: "1 owned, held by smart-bin" — the person frees it or picks another |
+| C2 As the maker, a reservation past what I own is refused, naming who holds it | the plant alarm reserving the bin's only FireBeetle S3 is refused: "1 owned, held by smartbin-local" — the person frees it or picks another |
 | L1 As the hobbyist, owed facts are filled in the record's own home, then the picks become a requirements file | `/spark:init --board <pick>` after C; `check_spine` ends `[ok] … the chain runs end to end` and `emit_board.py` without `--assume-missing-sizes` exits 0 — no placeholder outline (the PO, 2026-10-06) |
 | T1 As the PO, the step ends with one cost line, and the history records what was reused and built | "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14 min" (§6.7) |
 
@@ -193,7 +193,8 @@ with a board until a record in `boards/` says its pins.
 - **owed** = a value is absent for a contract rule *or* for a fact the chain reads: `footprint`, `pin_order`,
   `pin_order_proof`, `body_mm`, `simulation` (a stand-in or a skip with its reason). **broken** = a value present
   and wrong. Today's 18 catalog records are all owed, none broken; SEN0193 owes `pin_order_proof` (which P89's
-  migration fills from its `//pin_order` note), `footprint` (`jst_ph_3`) and `simulation`; the library's DFR0954
+  migration fills from its `//pin_order` note), `footprint` (`jst_ph_3`) and `simulation` (amended 2026-10-08: not by
+  the migration — 1c filled all three with `--fact-set`, §8 L); the library's DFR0954
   owes `footprint` (amended 2026-10-08: it owes nothing now — its `footprint` is `dip12_w15.24mm`, read off page 1 of
   DFRobot's dimension drawing, which is kept in the store and cited by its sha256 in the record (d75344c); a scratch
   store's `parts.py --audit` now prints `library 10 current, 0 owe facts, 0 broken`).
@@ -468,7 +469,7 @@ it. (2) A pick known but not owned goes on a "to get" list; an `unsure` pick say
 reservation past what is free is refused, naming the holder; the person frees it or picks another.
 
 **Example — the PO's picks:** SEN0193, the DFR0954 with the FIT0502 speaker, the FireBeetle S3 and the LiPo —
-whose reservations are refused ("held by smart-bin") until he frees them for the alarm or picks another board; the
+whose reservations are refused ("held by smartbin-local") until he frees them for the alarm or picks another board; the
 skeleton passes when the refusal appears and his choice is recorded.
 
 ### G — research only the gap
@@ -496,7 +497,9 @@ library's `speaker-terminal` beside it ended `the chain runs end to end`. So thi
 `speaker-terminal`. The PO's own store keeps the FireBeetle S3 and the LiPo with the bin (his answer of 2026-10-07 to
 the plan's open question 1), so a pick of the S3 for the alarm is refused there while the bin holds it (§8 C); the
 example's requirements, with the S3 in them, are made in a scratch store (the plan's Task 11 builds that way, on a
-synthetic probe — SEN0193 lives only in his catalog).
+synthetic probe — SEN0193 lives only in his catalog). SEN0193's `pin_order_proof` did not come from P89's
+migration, which stays P89's (the plan's ruling 8): step 7 of the plan's Task 12, run on 2026-10-08, set it in his
+catalog, with `footprint` and `simulation`, by `--fact-set` from its `//pin_order` note.
 
 ### T — the tally
 
