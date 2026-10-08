@@ -100,7 +100,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <proje
 ```
 
 and without `--dry-run`. A record in spark's own library is changed in spark's repository, not from here: say so. A
-source not kept yet is fetched only after the person's yes — it reaches the network.
+shelf copy of the record follows it ("shelf copy refreshed"), even when the record already said it; "shelf copy not
+refreshed: …" says why it could not: tell the person. A source not kept yet is fetched only after the person's yes — it
+reaches the network.
 
 ## L — the building list
 

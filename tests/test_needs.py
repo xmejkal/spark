@@ -1201,6 +1201,12 @@ class TheRequirementsFileTest(unittest.TestCase):
                           said["data"]["kept"], said["data"]["shelved"], said["data"]["board_was"]),
                          (["x-led"], None, 0, first, [], [], "firebeetle2-esp32s3"))
 
+    def test_a_run_that_changes_nothing_says_unchanged_not_wrote(self):
+        _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        first, again = self.text(["--requirements", str(project)]), self.text(["--requirements", str(project)])
+        self.assertEqual((first, again), ("  wrote %s: board firebeetle2-esp32s3; parts led-red-5mm\n" % (project / "requirements.json"),
+                                          "  unchanged %s: board firebeetle2-esp32s3; parts led-red-5mm\n" % (project / "requirements.json")))
+
     def test_the_names_it_checks_are_the_ones_the_generator_gives(self):
         for part_id, name in (("tactile-button", None), ("led-1", None), ("led1", None), ("jst_ph_2", None), ("tactile-button", "BtnOpen")):
             with self.subTest(part_id=part_id, name=name):

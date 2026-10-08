@@ -865,9 +865,12 @@ def note_built(design):
                                    "parts": [{"id": part["id"], "digest": digest(part)} for part in design.parts]})
 
 
-def _shelf_copy(path, project_name=None):
-    """What the shelf would hold of a record: filtered — and when it came from a project, which one and its digest (§5.5)."""
-    record = json.loads(Path(path).read_text())
+def _shelf_copy(path, project_name=None, record=None):
+    """
+    What the shelf would hold of a record: filtered — and when it came from a project, which one and its digest (§5.5).
+    `record` is the record as it would be written, when that is not yet what its file says (a dry run).
+    """
+    record = json.loads(Path(path).read_text()) if record is None else record
     copy = {key: value for key, value in record.items() if key not in SHELF_DROPS}
     if project_name:
         copy["based_on"] = {"project": project_name, "digest": digest(record)}
@@ -1432,10 +1435,10 @@ OPERATIONS = (
      ("writes",), ("changes", "questions", "shelved", "smaller")),
     ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
-     ("writes",), ("part", "path", "was", "now", "written")),
+     ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
      "fill what a record owes — a JSON object of the facts the chain reads, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
-     ("writes",), ("part", "path", "was", "now", "written")),
+     ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling")),
     ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
@@ -1728,19 +1731,49 @@ def _op_drawer_import(args, project):
     return answer._replace(data=dict(answer.data, smaller=smaller), lines=list(answer.lines) + ["  %s" % s for s in smaller])
 
 
+def _shelved_from(path):
+    """The project a shelf copy says it was shelved from (its `based_on`, §5.5) — None for a catalog's copy, or no copy."""
+    record = _parse(path) if Path(path).is_file() else None
+    based_on = record.get("based_on") if isinstance(record, dict) else None
+    named = based_on.get("project") if isinstance(based_on, dict) else None
+    return named if isinstance(named, str) else None
+
+
 def _record_path(part_id, project):
     """
-    A part record's own file, and the project to shelve it again from (§5.4, §5.5): the nearest layer that has it, the
+    A part record's own file, and the project whose shelf copy follows it (§5.4, §5.5): the nearest layer that has it, the
     catalog included, else a project on the person's list — except that a shelf copy of a listed project's record is not a
-    home: that project's record is, and the copy follows it.
+    home: that project's record is. A record found in the project given names that project too, when the shelf holds a copy
+    of it shelved from there: the copy follows its record, however the record was reached.
     """
     import drawer
-    path = next((path for kind, found, _, path in drawer.linkable(project) if (kind, found) == ("part", part_id)), None)
-    record = _parse(path) if path is not None and path.parent == store.place("shelf") else None
-    named = record.get("based_on", {}).get("project") if isinstance(record, dict) and isinstance(record.get("based_on"), dict) else None
-    folder = store.projects().get(named) if isinstance(named, str) else None
-    home = folder / "parts" / path.name if folder is not None else None
-    return (home, named) if home is not None and home.is_file() else (path, None)
+    path, where = next(((path, where) for kind, found, where, path in drawer.linkable(project) if (kind, found) == ("part", part_id)),
+                       (None, None))
+    if path is not None and path.parent == store.place("shelf"):
+        named = _shelved_from(path)
+        folder = store.projects().get(named) if named else None
+        home = folder / "parts" / path.name if folder is not None else None
+        return (home, named) if home is not None and home.is_file() else (path, None)
+    named = store.project_name(project) if where == "project" else None
+    return path, named if named and _shelved_from(store.place("shelf") / path.name) == named else None
+
+
+def _refresh_shelf_copy(path, record, project_name, dry_run):
+    """
+    The shelf copy of a project's record made current again (§5.5) — after a write, and when an earlier write left it behind
+    (the record filled in its project while the copy stayed, so every retry said "nothing to change") — said in words:
+    current, refreshed, would refresh, or not refreshed and why: a copy that would not meet the contract is not written.
+    """
+    copy = _shelf_copy(path, project_name, record)
+    if _parse(store.place("shelf") / path.name) == copy:
+        return "current"
+    wrong = validate(copy, path)
+    if wrong:
+        return "shelf copy not refreshed: %s" % "; ".join(wrong)
+    if dry_run:
+        return "would refresh the shelf copy"
+    shelve(path, project_name)
+    return "shelf copy refreshed"
 
 
 def _write_record(path, record):
@@ -1754,8 +1787,9 @@ def _write_record(path, record):
 def _set_in_home(part_id, project, values, dry_run, refuse):
     """
     Set fields of a part record in its own home (§5.4) — the catalog's, a project's, or a listed project's behind a shelf
-    copy, which is then shelved again — never spark's library, which is changed in spark's repository. `refuse(record,
-    after, path)` says what is wrong with the result, and anything it says refuses the write.
+    copy — never spark's library, which is changed in spark's repository. A shelf copy that follows the record is made
+    current whether or not this write changed anything (`_refresh_shelf_copy`), and the answer says what became of it.
+    `refuse(record, after, path)` says what is wrong with the result, and anything it says refuses the write.
     """
     path, source = _record_path(part_id, project)
     if path is None:
@@ -1773,13 +1807,13 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     was, changes = {key: record.get(key) for key in values}, after != record
     if changes and not dry_run:
         _write_record(path, after)
-        if source:
-            shelve(path, source)
+    shelf_copy = _refresh_shelf_copy(path, after, source, dry_run) if source else None
     said = ("  %s %s (%s): %s" % ("would set" if dry_run else "set", part_id, path, "; ".join(
                 "%s %s → %s" % (key, json.dumps(was[key], ensure_ascii=False), json.dumps(value, ensure_ascii=False))
                 for key, value in values.items()))
             if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
-    return Answer({"part": part_id, "path": str(path), "was": was, "now": values, "written": not dry_run}, [said])
+    return Answer({"part": part_id, "path": str(path), "was": was, "now": values, "written": not dry_run, "shelf_copy": shelf_copy},
+                  [said] + (["  " + shelf_copy] if shelf_copy not in (None, "current") else []))
 
 
 def _op_function_set(args, project):
@@ -1909,13 +1943,13 @@ def _op_pick(args, project):
 def _op_requirements(args, project):
     import needs
     content, shelving, unplaced, kept, board_was, problems = needs.requirements(args.requirements)
-    path = Path(args.requirements) / needs.REQUIREMENTS
+    path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
     if not problems and not args.dry_run:
         for record, source in shelving:
             shelve(record, source)
-        store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + "\n")
+        changed = store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + "\n")
     said = [] if problems else ["  %s %s: board %s; parts %s" % (
-        "would write" if args.dry_run else "wrote", path, content["board"],
+        "would write" if args.dry_run else "wrote" if changed else "unchanged", path, content["board"],
         ", ".join(needs.entry_label(entry) for entry in content["parts"]) or "none")]
     said += ["  board: %s → %s" % (json.dumps(board_was), json.dumps(content["board"]))] if board_was not in (None, content["board"]) and not problems else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []

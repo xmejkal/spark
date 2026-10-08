@@ -1950,6 +1950,78 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
         self.assertEqual(json.loads((home / "shelf" / "x-valve.json").read_text())["footprint"], "pinrow2")
         self.assertFalse((other / "parts" / "x-valve.json").exists(), "the project's record is not made up")
 
+    # --- a shelf copy follows its record however the record is reached (the final review) ---
+
+    #: An outline as a record keeps one: the size, and where it came from.
+    OUTLINE = {"width": 20, "height": 10, "verified": True, "source": "measured with calipers"}
+
+    def a_valve_in_irrigation(self, **record):
+        """irrigation's own x-valve record, owing its footprint, and the shelf copy of it every project reads — stale on
+        purpose (a digest nobody computed); the store's list names irrigation."""
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "irrigation"
+        (other / "parts").mkdir(parents=True)
+        record = dict({"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}, **record)
+        (other / "parts" / "x-valve.json").write_text(json.dumps(record))
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-valve.json").write_text(json.dumps(dict(record, based_on={"project": "irrigation", "digest": "0" * 64})))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        return home, other
+
+    def text(self, argv):
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            parts.main(argv)
+        return out.getvalue()
+
+    def shelved(self, home):
+        return json.loads((home / "shelf" / "x-valve.json").read_text())
+
+    def test_a_fact_filled_in_its_project_refreshes_the_shelf_copy_that_follows_it(self):
+        home, other = self.a_valve_in_irrigation()
+        record = (other / "parts" / "x-valve.json").resolve()
+        footprint = self.facts({"footprint": "pinrow2"})
+        with in_store(home):
+            outline = self.text(["--fact-set", "x-valve", self.facts({"body_mm": self.OUTLINE}), "--project", str(other)])
+            dry = self.text(["--fact-set", "x-valve", footprint, "--project", str(other), "--dry-run"])
+            self.assertNotIn("footprint", self.shelved(home), "a dry run writes nothing")
+            said, code = run_json(["--fact-set", "x-valve", footprint, "--project", str(other)])
+            again = self.text(["--fact-set", "x-valve", footprint, "--project", str(other)])
+        self.assertEqual((outline.splitlines()[1:], dry.splitlines()[1:]), (["  shelf copy refreshed"], ["  would refresh the shelf copy"]))
+        self.assertEqual((code, said["data"]["shelf_copy"], self.shelved(home)["footprint"], self.shelved(home)["body_mm"]),
+                         (0, "shelf copy refreshed", "pinrow2", self.OUTLINE))
+        self.assertEqual((self.shelved(home)["based_on"]["project"], self.shelved(home)["based_on"]["digest"] == "0" * 64), ("irrigation", False))
+        self.assertEqual(again, "  nothing to change: x-valve (%s) already says this\n" % record, "a copy that follows says nothing more")
+
+    def test_a_retry_with_nothing_to_change_still_refreshes_a_stale_shelf_copy(self):
+        # filled in its project while the copy stayed behind: every retry said "nothing to change", and --requirements refused on
+        for through in ("its project", "the shelf copy"):
+            home, other = self.a_valve_in_irrigation(footprint="pinrow2")
+            with self.subTest(through=through), in_store(home):
+                said = self.text(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})]
+                                 + (["--project", str(other)] if through == "its project" else []))
+                self.assertEqual((said.splitlines()[0].startswith("  nothing to change: x-valve ("), said.splitlines()[1:]),
+                                 (True, ["  shelf copy refreshed"]))
+                self.assertEqual(self.shelved(home)["footprint"], "pinrow2")
+
+    def test_a_shelf_copy_that_would_break_the_contract_is_not_refreshed_and_says_why(self):
+        home, other = self.a_valve_in_irrigation(needs=[{"signal": "VALVE", "pin": "GATE", "direction": "sideways"}])
+        before = (home / "shelf" / "x-valve.json").read_text()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"}), "--project", str(other)])
+        self.assertEqual((code, said["data"]["shelf_copy"], (home / "shelf" / "x-valve.json").read_text()),
+                         (0, "shelf copy not refreshed: needs[0] direction is 'sideways'; expected in, out or bidirectional", before))
+
+    def test_a_shelf_copy_from_another_project_does_not_follow_this_project_s_record(self):
+        home, other = self.a_valve_in_irrigation()
+        alarm = Path(tempfile.mkdtemp()) / "plant-alarm"
+        (alarm / "parts").mkdir(parents=True)
+        (alarm / "parts" / "x-valve.json").write_text(json.dumps(
+            {"schema": 1, "id": "x-valve", "name": "Our own valve driver", "kind": "mosfet-driver", "needs": []}))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other), "plant-alarm": str(alarm)}))
+        before = (home / "shelf" / "x-valve.json").read_text()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"}), "--project", str(alarm)])
+        self.assertEqual((code, said["data"]["shelf_copy"], (home / "shelf" / "x-valve.json").read_text()), (0, None, before))
+
     def test_the_answer_says_what_each_fact_was_and_what_it_is_now(self):
         home = self.a_probe()
         with in_store(home):

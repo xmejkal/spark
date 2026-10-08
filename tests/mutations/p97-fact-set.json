@@ -2,7 +2,7 @@
  {"file": "scripts/parts.py", "name": "a shelf copy is its own home",
   "find": "    return (home, named) if home is not None and home.is_file() else (path, None)", "replace": "    return (path, None)"},
  {"file": "scripts/parts.py", "name": "the shelf copy does not follow its record",
-  "find": "        if source:\n            shelve(path, source)", "replace": "        if False:\n            shelve(path, source)"},
+  "find": "    shelf_copy = _refresh_shelf_copy(path, after, source, dry_run) if source else None", "replace": "    shelf_copy = None"},
  {"file": "scripts/parts.py", "name": "an empty fact is a fact",
   "find": "[\"%s is absent — a write fills a fact, it never empties one\" % key for key in facts if _absent(key, facts[key])]",
   "replace": "[]"},

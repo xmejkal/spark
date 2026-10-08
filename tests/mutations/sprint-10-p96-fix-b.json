@@ -4,7 +4,7 @@
  {"file": "scripts/parts.py", "name": "the answer hides the file",
   "find": "{\"part\": part_id, \"path\": str(path), \"was\"", "replace": "{\"part\": part_id, \"path\": None, \"was\""},
  {"file": "scripts/parts.py", "name": "function-set: written means bytes changed",
-  "find": "\"now\": values, \"written\": not dry_run}", "replace": "\"now\": values, \"written\": changes and not dry_run}"},
+  "find": "\"now\": values, \"written\": not dry_run, \"shelf_copy\": shelf_copy}", "replace": "\"now\": values, \"written\": changes and not dry_run, \"shelf_copy\": shelf_copy}"},
  {"file": "scripts/parts.py", "name": "a retry says it set something",
   "find": "            if changes else \"  nothing to change", "replace": "            if True else \"  nothing to change"},
  {"file": "scripts/parts.py", "name": "the audit's hint drops the project",

@@ -202,7 +202,9 @@ with a board until a record in `boards/` says its pins.
 - One `parts.py --validate` walks every layer and the drawer's links, prints counts per layer, and exits 1 only on
   broken records.
 - **Owed facts are filled in the record's own home** — the catalog record, not a project copy — through
-  `parts.py`, then the record is promoted; so the next project finds it filled.
+  `parts.py`, then the record is promoted; so the next project finds it filled. A shelf copy of a project's record
+  follows it: every such write refreshes a copy that is behind, even one that changed nothing, and says so — or why it
+  could not (P97's final review).
 
 ### 5.5 Identity, linking, the projects list and the shelf
 
