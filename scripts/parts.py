@@ -514,6 +514,11 @@ def simulation_problems(part: dict, path: Path) -> list:
         for pad in sorted(wired - set(pins)):
             problems.append("simulation.wokwi.pins does not say where the wired pad %r goes on the "
                             "stand-in; name its pin, or null when it has none" % pad)
+    if chip and not (isinstance(chip, str) and re.fullmatch(SELECTOR_SAFE, chip)):
+        # the re-check's probes: a chip's name names its files (`../escape` reached outside the chip folder, and
+        # stage_chips copied from there) and is written into wokwi.toml (`x"⏎[[chip]]` was a table of its own)
+        return problems + ["simulation.wokwi.chip is %r, but a chip's name is a name — letters, digits and _ (vl6180x, "
+                           "l9110s): its files beside the record are named by it, and wokwi.toml is written with it" % (chip,)]
     if chip:
         folder = chip_folder(part, path)
         for suffix in CHIP_SOURCE_SUFFIXES:

@@ -32,7 +32,7 @@
  {
   "file": "scripts/sim_project.py",
   "name": "the project file forgets the chips",
-  "find": "    for chip in chips:\n        lines += [\"\", \"[[chip]]\", 'name = \"%s\"' % chip, 'binary = \"chips/%s.chip.wasm\"' % chip]",
+  "find": "    for chip in chips:\n        lines += [\"\", \"[[chip]]\", \"name = %s\" % json.dumps(chip), \"binary = %s\" % json.dumps(\"chips/%s.chip.wasm\" % chip)]",
   "replace": "    for chip in []:\n        pass"
  }
 ]

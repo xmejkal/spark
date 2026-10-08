@@ -1325,6 +1325,16 @@ class ASimulationIsDeclaredTest(unittest.TestCase):
         bad = {"wokwi": {"chip": "probe", "pins": {"OUT": "NOPE", "GND": "GND", "VCC": "VCC"}}}
         self.assertTrue(any("does not have" in p and "'NOPE'" in p for p in self._problems(bad, root)[0]))
 
+    def test_a_chip_whose_name_is_no_name_is_refused_before_its_files_are_looked_for(self):
+        # the re-check's probes: `../escape` named files outside the record's chip folder, which stage_chips then copied,
+        # and `x"⏎[[chip]]` wrote a TOML table of its own into wokwi.toml
+        for name in ("../escape", 'x"\n[[chip]]\nname = "evil', "flow meter"):
+            with self.subTest(chip=name):
+                chip = {"wokwi": {"chip": name, "pins": {"OUT": "SIG", "GND": "GND", "VCC": "VCC"}}}
+                self.assertEqual(self._problems(chip)[0], [
+                    "simulation.wokwi.chip is %r, but a chip's name is a name — letters, digits and _ (vl6180x, l9110s): its "
+                    "files beside the record are named by it, and wokwi.toml is written with it" % name])
+
     def test_a_chip_must_exist_beside_the_record(self):
         import tempfile
         root = Path(tempfile.mkdtemp())

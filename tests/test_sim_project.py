@@ -127,6 +127,25 @@ class TheProjectFileTest(unittest.TestCase):
         self.assertIn('name = "probe"', toml)
         self.assertIn('binary = "chips/flow-meter.chip.wasm"', toml)
 
+    def test_a_quote_or_a_line_break_in_the_firmware_cannot_change_the_file(self):
+        # the person's own --firmware, written as a TOML string: escaped, so it stays one value on one line
+        crafted = 'x.bin"\n[[chip]]\nname = "evil'
+        toml = sim_project.wokwi_toml([], firmware=crafted)
+        self.assertIn("firmware = %s\nelf = %s\n" % (json.dumps(crafted), json.dumps(crafted)), toml)
+        self.assertNotIn("\n[[chip]]", toml)
+
+    def test_a_chip_s_name_is_written_as_one_string(self):
+        crafted = 'probe"\n[[chip]]\nname = "evil'
+        toml = sim_project.wokwi_toml([crafted])
+        self.assertIn("\nname = %s\n" % json.dumps(crafted), toml)
+        self.assertEqual(toml.count("\n[[chip]]"), 1)
+
+    def test_a_chip_s_binary_is_written_as_one_string(self):
+        crafted = 'probe"\nfirmware = "evil'
+        toml = sim_project.wokwi_toml([crafted])
+        self.assertIn("\nbinary = %s\n" % json.dumps("chips/%s.chip.wasm" % crafted), toml)
+        self.assertEqual([line for line in toml.splitlines() if line.startswith("firmware")], [])
+
     def test_without_a_firmware_it_says_none_was_named(self):
         toml = sim_project.wokwi_toml([])
         self.assertIn("no image named yet", toml)
