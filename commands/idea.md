@@ -89,7 +89,7 @@ thing with no record (a speaker, a battery). The key of an entry that has a reco
 pick says so. Then:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick <project> soil=sen0193-soil-moisture alarm=max98357a-dfr0954 alarm=dfrobot-fit0502 --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick <project> alarm=max98357a-dfr0954 alarm=speaker-terminal board=firebeetle2-esp32s3 --dry-run
 ```
 
 and without `--dry-run`. Each need it names gets exactly those picks, and what the person owns of each is reserved for

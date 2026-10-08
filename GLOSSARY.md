@@ -334,5 +334,5 @@ with its need named. This is not ceremony: the v1 close audit made 33 claims and
 ### The requirements file
 
 The input to the whole chain: a board, a list of parts, and what the design has to do. Everything
-downstream is derived from it, which is why `spark init` guesses nothing — a guessed number would
+downstream is derived from it, which is why `/spark:init` guesses nothing — a guessed number would
 poison the one check that does arithmetic.

@@ -462,7 +462,7 @@ def run(circuit, rules, loads=None):
             "no rail is described, so trace current, capacitor derating and resistor power were "
             "not checked at all — three of this tool's five rules",
             fix="fill physics.rails in the rules file: each net's nominal_volts and "
-                "max_current_a. `spark init` writes the names from the built design and leaves "
+                "max_current_a. `/spark:init` writes the names from the built design and leaves "
                 "the numbers null, which is where they have stayed.",
             severity="could-not-run"))
 

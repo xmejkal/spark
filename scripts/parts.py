@@ -1981,7 +1981,7 @@ def _op_pick(args, project):
     target, given = args.pick[0], args.pick[1:]
     pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
     if not pairs or len(pairs) != len(given):
-        return Answer(unchecked=[_cannot("--pick takes the project, then NEED=ID for each pick: soil=sen0193-soil-moisture",
+        return Answer(unchecked=[_cannot("--pick takes the project, then NEED=ID for each pick: light=led-red-5mm",
                                          "parts.py --match <project> lists each need's candidates and their ids")])
     reasons, unreadable = _read_json_input(args.passed_over) if args.passed_over else ([], None)
     if unreadable:

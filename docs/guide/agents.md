@@ -85,6 +85,12 @@ spark keeps the person's drawer, catalog, tools list and projects list in their 
 ([how it works](how-it-works.md#your-store) says where); `SPARK_HOME` overrides it. When you check someone else's
 project, use a scratch `SPARK_HOME`.
 
+Every `parts.py` operation that writes holds the store's lock from its plan to its last byte (`store.locked()`), so two
+writes at once take turns instead of each writing what the other never read. The drawer, its imports, the shelf, the
+projects list and the history are the places only the person should see (`PRIVATE` in `scripts/store.py`): spark writes
+them 0600 in folders 0700 and never inside a git work tree, and you never put them into a URL, a web search, a research
+agent's prompt or a commit.
+
 A scratch store hides three things, so tell the person:
 
 - **The shelf.** Part records then come from the library only, so physics, CONFLICT lines and `--unverified` can differ
@@ -102,7 +108,9 @@ These only read:
 - `check_all.py`, `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
 - `assign_pins.py` without `--emit-pins`;
 - `tools.py --status`, `boards.py --list`;
-- `parts.py --list`, `--show`, `--unverified` and `--validate`.
+- `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
+  `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
+  the network.
 
 These write:
 
