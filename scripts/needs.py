@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 import boards
+import design
 import drawer
 import emit_board
 import emit_footprint
@@ -335,8 +336,9 @@ REQUIREMENTS = "requirements.json"
 
 #: What `requirements` works out (§5.3, §8 L): the file as it would be, the records to shelve, the picks with no record to place,
 #: the entries already in the file that no pick explains, the board the file named before, what refuses it, the picks laid out
-#: at a placeholder outline, and the needs nothing on the board serves.
-Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder unserved")
+#: at a placeholder outline, the needs nothing on the board serves, and what the board's power would lack (`_power_gaps`).
+Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder unserved "
+                                                      "no_supply no_receiver")
 
 #: The note a requirements file keeps of the needs it leaves off the board (C-2): `check_spine` reads it into its verdict.
 UNSERVED = "unserved"
@@ -480,6 +482,35 @@ def _unserved(needs, known, entries):
     return said
 
 
+def _power_gaps(listed, known):
+    """
+    What the board's power would lack (C-3; the PO, 2026-10-08), from the records of every part the file lists, on the rails the
+    file gives them: each rail a part draws from and nothing listed supplies — `emit_board.rails_without_a_source`, the rule the
+    schematic stage stops on — as {"rail", "drawn_by"}; and each net a part drives that nothing listed receives
+    (`emit_board.outputs_with_nothing_on_them`) as {"net", "driven_by"}. A part whose record is not found or is broken is left
+    to the build to name. Said before the build, never refused: the inlet, the supply or the terminal is the person's pick.
+    """
+    part_list = []
+    for entry in listed:
+        part_id = _part_of(entry)
+        path = known.get(("part", part_id), (None,) * 4)[3] if part_id else None
+        record = parts._parse(path) if path else None
+        if not isinstance(record, dict) or parts.broken_problems(record, path):
+            continue
+        rails = entry.get("rails") if isinstance(entry, dict) and isinstance(entry.get("rails"), dict) else None
+        try:
+            # named by its id here, so what is said names what was picked rather than the record's long name
+            part_list.append(dict(design.on_rails(record, rails) if rails else record, name=part_id))
+        except (design.DesignError, TypeError, AttributeError):
+            continue  # a rail given to a pin the part does not have: the build names it
+    no_supply = [{"rail": net, "drawn_by": sorted({"%s.%s" % (part["name"], supply["pin"])
+                                                   for part, supply, on in emit_board.power_connections(part_list)
+                                                   if on == net and supply.get("direction") != "out"})}
+                 for net in emit_board.rails_without_a_source(part_list)]
+    no_receiver = [{"net": net, "driven_by": "%s.%s" % (name, pin)} for net, name, pin in emit_board.outputs_with_nothing_on_them(part_list)]
+    return no_supply, no_receiver
+
+
 def _how_to_fill(path):
     """Where what a record owes is filled (§5.4): a record in spark's own library in spark's repository; any other with --fact-set."""
     if Path(path).parent.resolve() == parts.LIBRARY.resolve():
@@ -535,7 +566,7 @@ def requirements(project):
     problems += naming
     problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
     return Requirements(content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")),
-                        kept, held.get("board"), problems, list(dict.fromkeys(placeholder)), unserved)
+                        kept, held.get("board"), problems, list(dict.fromkeys(placeholder)), unserved, *_power_gaps(after, known))
 
 
 def owned(pick, entries):

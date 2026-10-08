@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "id": "speaker-terminal",
+  "name": "2-pin speaker terminal (JST PH)",
+  "kind": "connector",
+  "also_known_as": [
+    "speaker connector",
+    "speaker socket"
+  ],
+  "function": [
+    {"does": "sound", "what": "speaker-terminal"},
+    {"does": "connect", "what": "speaker"}
+  ],
+  "//": "Where a speaker's two wires meet the board. A speaker is not a module, so nobody lists one, and an amplifier's two outputs then each end on a net with one member: the board does not route, and every amplifier ended \"the chain is broken\" (the council on PR #98, C-3). This is the other end of those nets — pick it beside the amplifier, as the power inlet is picked beside a motor driver. The speaker itself stays off the board, a drawer entry with no record.",
+  "//power": "Both pins are INPUTS on the speaker rail, each naming the side of the pair it takes (`polarity`), so each joins the net its side of the amplifier drives: SPK+ on SPEAKER_P, SPK- on SPEAKER_N. There is no ground pin, on purpose: the output is bridged, and the speaker's return is the pair's other side.",
+  "needs": [],
+  "power": [
+    {
+      "pin": "SPK_P",
+      "printed": "SPK+",
+      "rail": "speaker",
+      "direction": "in",
+      "polarity": "+",
+      "note": "To the speaker's + wire, from the amplifier's + output. Never to ground."
+    },
+    {
+      "pin": "SPK_N",
+      "printed": "SPK-",
+      "rail": "speaker",
+      "direction": "in",
+      "polarity": "-",
+      "note": "To the speaker's - wire, from the amplifier's - output. Never to ground: it swings, it is not a return."
+    }
+  ],
+  "unused_pins": [],
+  "pin_order": [
+    "SPK_P",
+    "SPK_N"
+  ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "Pad 1 is SPK+: this record's own convention for a 2-pin speaker terminal, as jst-ph-2-power-inlet's pad 1 is VCC — not read from a document. Mark SPK+ on the silkscreen, and wire the speaker's own + to it."
+  },
+  "footprint": "jst_ph_2",
+  "body_mm": {
+    "width": 7.9,
+    "height": 5.8,
+    "verified": false,
+    "source": "The JST PH 2-pin housing B2B-PH-K-S as spark's jst-ph-2-power-inlet records it from JST's PH series drawing: 7.9 mm across, 5.8 mm deep with the latch — not read again for this record",
+    "why_it_matters": "Only where a generated layout leaves room for the plug; no connection depends on it."
+  },
+  "facts": {
+    "contact_rating_a": {
+      "value": 2.0,
+      "verified": false,
+      "source": "JST PH series datasheet, current rating per contact, as jst-ph-2-power-inlet records it — not read again for this record",
+      "why_it_matters": "The speaker's current passes through it: 3 W into 4 ohm is about 0.87 A RMS (the square root of 3/4), within it; a lower impedance or a larger amplifier moves that."
+    }
+  },
+  "host_requirements": [
+    "NEVER ground either pin. The amplifier's output is bridged: SPK+ and SPK- both swing and the speaker sits across them, so a pin that meets a ground, or another output, shorts the amplifier.",
+    "This connector and any other 2-pin JST PH on the board — the power inlet's above all — can be cross-plugged. Key one of them or use another series: a motor supply into an amplifier output destroys it.",
+    "The speaker's impedance decides the current through this terminal and what the amplifier delivers: check it against the amplifier's record before choosing a speaker."
+  ],
+  "simulation": {
+    "skip": "a terminal is wiring, not a part to simulate; the amplifier it hangs off has no Wokwi part either, and no sound reaches the simulation"
+  }
+}

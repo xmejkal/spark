@@ -198,11 +198,29 @@ def net_for(supply):
     `"rail": "speaker"`, both were mapped to `net.SPEAKER`, and the generated board wired them
     together — printing the part file's own warning, "never ground either side", on the trace
     that did it.
+
+    An input that names a side of a pair (`polarity`) takes that side's net, which the pair's
+    output drives: the speaker terminal's SPK+ is on net.SPEAKER_P, its SPK- on net.SPEAKER_N
+    (C-3). Without it the amplifier's two outputs each ended on a net with one member.
     """
     net = net_name_for_rail(supply.get("rail"))
-    if net and supply.get("direction") == "out":
+    if net and (supply.get("direction") == "out" or supply.get("polarity") in POLARITY_SUFFIX):
         return net + POLARITY_SUFFIX.get(supply.get("polarity"), "")
     return net
+
+
+def loads_across_a_pair(part_list):
+    """
+    The components that sit across a driven pair and have no ground of their own, by the name the
+    emitted file gives them (C-3): a part that asks for no signal and whose every power pin is an
+    input on one side of a pair — the terminal a speaker's two wires go to. Its return is the
+    pair's other side, and a ground would short the amplifier, so `check_spine` asks of it what it
+    asks of a two-terminal passive: that neither end dangles.
+    """
+    return sorted(component_name(part) for part in part_list
+                  if not part.get("needs") and part.get("power")
+                  and all(supply.get("direction", "in") == "in" and supply.get("polarity") in POLARITY_SUFFIX
+                          for supply in part["power"]))
 
 
 def body_of(part):

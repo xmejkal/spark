@@ -632,6 +632,33 @@ class RailsWithoutASourceTest(unittest.TestCase):
         self.assertIn("MOTOR6V", emit_board.rails_without_a_source(part_list))
 
 
+class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
+    """
+    C-3 (the council on PR #98): an amplifier's two outputs each drove a net with one member, so every amplifier ended
+    "the chain is broken" — a speaker is not a module and nobody lists one. The terminal its wires go to is a record now, and
+    its two pins receive the pair: an input that names a side of a pair (`polarity`) joins that side's net.
+    """
+
+    def test_an_input_naming_a_side_of_a_pair_joins_that_side_s_net(self):
+        for polarity, net in (("+", "SPEAKER_P"), ("-", "SPEAKER_N")):
+            with self.subTest(polarity=polarity):
+                self.assertEqual(emit_board.net_for({"pin": "X", "rail": "speaker", "direction": "in", "polarity": polarity}), net)
+        self.assertEqual(emit_board.net_for({"pin": "X", "rail": "speaker", "direction": "in"}), "SPEAKER")
+
+    def test_the_terminal_receives_both_outputs_and_nothing_is_left_unrouted(self):
+        part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal")]
+        self.assertEqual([emit_board.net_for(supply) for supply in part_list[1]["power"]], ["SPEAKER_P", "SPEAKER_N"])
+        self.assertEqual((emit_board.outputs_with_nothing_on_them(part_list), emit_board.rails_without_a_source(part_list)), ([], []))
+
+    def test_the_terminal_alone_is_a_rail_nothing_drives(self):
+        self.assertEqual(emit_board.rails_without_a_source([parts.load("speaker-terminal")]), ["SPEAKER_N", "SPEAKER_P"])
+
+    def test_a_load_across_a_pair_is_named_so_the_island_check_asks_it_no_ground(self):
+        part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal"), parts.load("l9110s-module"),
+                     parts.load("jst-ph-2-power-inlet")]
+        self.assertEqual(emit_board.loads_across_a_pair(part_list), ["SpeakerTerminal"])
+
+
 class PlacementTest(unittest.TestCase):
     def test_nothing_is_placed_on_top_of_anything_else(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())

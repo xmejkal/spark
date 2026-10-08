@@ -237,7 +237,11 @@ class TheMatcherTest(unittest.TestCase):
             {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "alarm", "does": "sound", "what": "alarm"},
             {"id": "board", "does": "compute", "what": "microcontroller"}, {"id": "input", "does": "input", "what": "button"}])])
         said, self.code = run(["--match", str(self.project)])
-        self.needs = {need["need"]: need for need in said["data"]["needs"]}
+        matched = list(said["data"]["needs"])
+        while said["truncated"] and said["truncated"]["next"]:  # every need, however many pages the library's growth takes
+            said, _ = run(["--match", str(self.project), "--from", str(len(matched))])
+            matched += said["data"]["needs"]
+        self.needs = {need["need"]: need for need in matched}
 
     def test_owned_first_with_counts_and_what_it_owes(self):
         first = self.needs["soil"]["candidates"][0]
@@ -1213,7 +1217,10 @@ class TheRequirementsFileTest(unittest.TestCase):
                          "  would write %s: board firebeetle2-esp32s3; parts l9110s-module, jst-ph-2-power-inlet, "
                          "tactile-button (BtnOpen), tactile-button (BtnMode)\n"
                          '  board: "xiao-esp32-c6" → "firebeetle2-esp32s3"\n'
-                         "  kept, not from a pick: jst-ph-2-power-inlet\n" % (project / "requirements.json"))
+                         "  kept, not from a pick: jst-ph-2-power-inlet\n"
+                         "  rail TRACTION has no supply — pick a power inlet or a supply (l9110s-module.VCC draws from it)\n"
+                         "  net MOTOR6V is driven by jst-ph-2-power-inlet.VCC and nothing listed receives it — pick what it drives "
+                         "(a speaker terminal, a motor, a connector)\n" % (project / "requirements.json"))
         self.assertEqual((project / "requirements.json").read_text(), before)
 
     def test_a_board_that_changes_is_said_from_and_to_and_one_that_does_not_is_not(self):
@@ -1538,6 +1545,51 @@ class TheRequirementsFileTest(unittest.TestCase):
         said, code = run(["--requirements", str(project)])
         self.assertEqual((code, said["data"]["unserved"], self.written(project)),
                          (0, [], {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]}))
+
+    # --- what the board's power would lack is said before the build (C-3; the PO, 2026-10-08) ---
+
+    def test_a_rail_nothing_listed_supplies_is_said_and_the_file_is_written(self):
+        _, project = self.project([self.BOARD, ("drive", [{"part": "l9110s-module"}])])
+        dry = self.text(["--requirements", str(project), "--dry-run"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, said["data"]["no_supply"], self.written(project)["parts"]),
+                         ("ok", 0, [{"rail": "MOTOR6V", "drawn_by": ["l9110s-module.VCC"]}], ["l9110s-module"]))
+        self.assertIn("  rail MOTOR6V has no supply — pick a power inlet or a supply (l9110s-module.VCC draws from it)\n", dry)
+
+    def test_a_supply_picked_or_kept_in_the_file_answers_the_rail(self):
+        _, project = self.project([self.BOARD, ("drive", [{"part": "l9110s-module"}]), ("power", [{"part": "jst-ph-2-power-inlet"}])])
+        self.assertEqual(run(["--requirements", str(project)])[0]["data"]["no_supply"], [])
+        _, project = self.project([self.BOARD, ("drive", [{"part": "l9110s-module"}])])
+        (project / "requirements.json").write_text(json.dumps({"parts": ["jst-ph-2-power-inlet"]}))
+        self.assertEqual(run(["--requirements", str(project)])[0]["data"]["no_supply"], [])
+
+    def test_a_rail_the_file_moves_a_part_onto_is_the_rail_asked_of(self):
+        _, project = self.project(self.DRIVER_AND_TWO_BUTTONS)
+        (project / "requirements.json").write_text(json.dumps(self.BY_HAND))
+        said, _ = run(["--requirements", str(project)])
+        self.assertEqual((said["data"]["no_supply"], said["data"]["no_receiver"]),
+                         ([{"rail": "TRACTION", "drawn_by": ["l9110s-module.VCC"]}],
+                          [{"net": "MOTOR6V", "driven_by": "jst-ph-2-power-inlet.VCC"}]))
+
+    def test_an_output_nothing_listed_receives_is_said_and_a_speaker_terminal_answers_it(self):
+        _, project = self.project([self.BOARD, ("alarm", [{"part": "max98357a-dfr0954"}])])
+        dry = self.text(["--requirements", str(project), "--dry-run"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["no_receiver"]), (0, [{"net": "SPEAKER_N", "driven_by": "max98357a-dfr0954.SPK_N"},
+                                                                  {"net": "SPEAKER_P", "driven_by": "max98357a-dfr0954.SPK_P"}]))
+        self.assertIn("  net SPEAKER_P is driven by max98357a-dfr0954.SPK_P and nothing listed receives it — pick what it drives "
+                      "(a speaker terminal, a motor, a connector)\n", dry)
+        _, project = self.project([self.BOARD, ("alarm", [{"part": "max98357a-dfr0954"}, {"part": "speaker-terminal"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["no_receiver"], said["data"]["no_supply"]), (0, [], []))
+
+    def test_a_part_in_the_file_whose_record_is_broken_is_left_to_the_build_never_a_traceback(self):
+        home, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        (home / "catalog" / "x-broken.json").write_text(json.dumps({"schema": 1, "id": "x-broken", "name": "B", "kind": "sensor",
+                                                                    "needs": [], "power": ["VCC"]}))
+        (project / "requirements.json").write_text(json.dumps({"parts": ["x-broken"]}))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, said["data"]["no_supply"], said["data"]["no_receiver"]), ("ok", 0, [], []))
 
     def test_the_library_s_rangefinder_is_picked_into_the_file(self):
         # C-6: its outline is read off Pololu's drawing, so the only sensor spark ships is no longer refused for owing it

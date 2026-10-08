@@ -951,6 +951,51 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
                 self.assertIn(str(refusal), complained)
 
 
+class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
+    """
+    C-3 (the council on PR #98): a speaker terminal sits across the amplifier's bridged output — its return is the pair's
+    other side, and a ground on either pin would short the amplifier. It is asked what a two-terminal passive is asked, that
+    neither end dangles, and not whether it reaches ground.
+    """
+
+    @staticmethod
+    def circuit(*, both_ends=True):
+        elements = [
+            {"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+            {"type": "source_net", "source_net_id": "n_p", "name": "SPEAKER_P"},
+            {"type": "source_net", "source_net_id": "n_n", "name": "SPEAKER_N"},
+            {"type": "source_component", "source_component_id": "c_amp", "name": "Amp"},
+            {"type": "source_component", "source_component_id": "c_spk", "name": "SpeakerTerminal"},
+            {"type": "source_port", "source_port_id": "p_amp_gnd", "source_component_id": "c_amp", "name": "GND"},
+            {"type": "source_port", "source_port_id": "p_amp_p", "source_component_id": "c_amp", "name": "SPK_P"},
+            {"type": "source_port", "source_port_id": "p_amp_n", "source_component_id": "c_amp", "name": "SPK_N"},
+            {"type": "source_port", "source_port_id": "p_spk_p", "source_component_id": "c_spk", "name": "SPK_P"},
+            {"type": "source_port", "source_port_id": "p_spk_n", "source_component_id": "c_spk", "name": "SPK_N"},
+            {"type": "source_trace", "source_trace_id": "t1", "connected_source_port_ids": ["p_amp_gnd"], "connected_source_net_ids": ["n_gnd"]},
+            {"type": "source_trace", "source_trace_id": "t2", "connected_source_port_ids": ["p_amp_p", "p_spk_p"], "connected_source_net_ids": ["n_p"]},
+            {"type": "source_trace", "source_trace_id": "t3", "connected_source_port_ids": ["p_amp_n"], "connected_source_net_ids": ["n_n"]}]
+        if both_ends:
+            elements.append({"type": "source_trace", "source_trace_id": "t4", "connected_source_port_ids": ["p_spk_n"],
+                             "connected_source_net_ids": ["n_n"]})
+        return elements
+
+    def test_a_terminal_across_a_pair_is_asked_only_whether_an_end_dangles(self):
+        self.assertEqual(check_spine.islands_in(self.circuit()), ["SpeakerTerminal reaches no ground"])
+        self.assertEqual(check_spine.islands_in(self.circuit(), across=("SpeakerTerminal",)), [])
+        self.assertEqual(check_spine.islands_in(self.circuit(both_ends=False), across=("SpeakerTerminal",)),
+                         ["SpeakerTerminal.SPK_N (a terminal connected to nothing)"])
+
+    def test_the_build_stage_hands_the_loads_across_a_pair_to_the_island_check(self):
+        root = Path(tempfile.mkdtemp())
+        workdir = root / "work"
+        workdir.mkdir()
+        requirements = {"board": "firebeetle2-esp32s3", "parts": ["max98357a-dfr0954", "speaker-terminal"]}
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        with mock.patch.object(check_spine, "islands_in", return_value=[]) as islands:
+            check_spine.run(requirements, workdir, toolchain=fake_tsci(root, "true"), from_library=True)
+        self.assertEqual(islands.call_args.kwargs["across"], ["SpeakerTerminal"])
+
+
 class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
     """C-2 (the PO, 2026-10-08): "the chain runs end to end" never stands alone over needs the requirements file left off the
     board — `--requirements` writes them into the file (`unserved`), and the closing line reads them from there."""

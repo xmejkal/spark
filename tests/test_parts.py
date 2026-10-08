@@ -628,6 +628,13 @@ class TheShippedLibraryTest(unittest.TestCase):
                     "%s asks the host for no pin and carries no rail, so placing it on a board "
                     "does nothing at all" % part_id)
 
+    def test_the_speaker_terminal_owes_nothing_and_says_what_it_does(self):
+        # C-3 (the council on PR #98): the record an amplifier's two outputs needed, so a sound need builds end to end
+        record = parts.load("speaker-terminal")
+        self.assertEqual((parts.owes(record), record["footprint"], [s["pin"] for s in record["power"]], parts.function_of(record)),
+                         ([], "jst_ph_2", ["SPK_P", "SPK_N"],
+                          [{"does": "sound", "what": "speaker-terminal"}, {"does": "connect", "what": "speaker"}]))
+
     def test_the_rangefinder_s_outline_is_read_off_pololu_s_drawing(self):
         # C-6 (the council on PR #98): the only sensor spark ships owed body_mm, and --requirements refused it for that
         record = parts.load("vl6180x-breakout")

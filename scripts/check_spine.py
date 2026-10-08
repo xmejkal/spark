@@ -239,9 +239,11 @@ GROUND_NETS = emit_board.GROUND_NETS
 PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "simple_diode")
 
 
-def islands_in(circuit, claims=()):
+def islands_in(circuit, claims=(), across=()):
     """
-    Every component the board leaves on an island, said in its own words.
+    Every component the board leaves on an island, said in its own words. `across` names the
+    components that sit across a driven pair (`emit_board.loads_across_a_pair`: a speaker
+    terminal, C-3) — asked, as a passive is, whether an end dangles, never whether they reach ground.
 
     Three questions, because a component can be stranded in three ways and a board builds,
     routes and reports no error for any of them:
@@ -271,7 +273,7 @@ def islands_in(circuit, claims=()):
                   if (net.get("name") or "").upper() in GROUND_NETS}
     names = {cid: element.get("name") or "?" for cid, element in board.components.items()}
     passives = {cid for cid, element in board.components.items()
-                if element.get("ftype") in PASSIVE_FTYPES}
+                if element.get("ftype") in PASSIVE_FTYPES or element.get("name") in across}
     grounded, present = set(), set()
     for port_id, net_ids in board.nets_of_port.items():
         owner = board.ports[port_id].get("source_component_id")
@@ -423,7 +425,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # routed and reported zero errors, while every module around it was correctly wired to a
     # ground the processor was not on.
     islands = islands_in(json.loads(circuit_path.read_text()),
-                         emit_board.supply_inputs(board, part_list))
+                         emit_board.supply_inputs(board, part_list),
+                         across=emit_board.loads_across_a_pair(part_list))
     if islands:
         return stages + [Stage("build", PROBLEMS,
                                "%s. A board builds, routes and reports no error with a component "

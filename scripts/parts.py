@@ -1469,7 +1469,8 @@ OPERATIONS = (
      ("writes",), ("project", "picks", "reserved", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record that owes nothing — a catalog one goes onto the shelf; what the file already holds stays",
-     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "written")),
+     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "no_supply",
+                   "no_receiver", "written")),
     ("step", {"nargs": 2, "metavar": ("PROJECT", "STEP")},
      "a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here",
      ("writes",), ("step", "written")),
@@ -1973,7 +1974,7 @@ NOT_ON_THE_BOARD = {"no pick": "no pick; --match lists its candidates",
 
 def _op_requirements(args, project):
     import needs
-    content, shelving, unplaced, kept, board_was, problems, placeholder, unserved = needs.requirements(args.requirements)
+    content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver = needs.requirements(args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
     if not problems and not args.dry_run:
         for record, source in shelving:
@@ -1989,11 +1990,15 @@ def _op_requirements(args, project):
              for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
     said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []
+    said += ["  rail %s has no supply — pick a power inlet or a supply (%s draw%s from it)"
+             % (gap["rail"], ", ".join(gap["drawn_by"]), "s" if len(gap["drawn_by"]) == 1 else "") for gap in ([] if problems else no_supply)]
+    said += ["  net %s is driven by %s and nothing listed receives it — pick what it drives (a speaker terminal, a motor, a connector)"
+             % (gap["net"], gap["driven_by"]) for gap in ([] if problems else no_receiver)]
     said += ["  not on the board: %s — %s" % (item["need"], NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
              for item in ([] if problems else unserved)]
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
                    "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
-                   "unserved": unserved, "written": not problems and not args.dry_run},
+                   "unserved": unserved, "no_supply": no_supply, "no_receiver": no_receiver, "written": not problems and not args.dry_run},
                   _write_lines([], problems, args.dry_run, said), problems=problems)
 
 
