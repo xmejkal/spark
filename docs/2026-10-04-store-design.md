@@ -243,6 +243,9 @@ One event per line, appended, never shared; a repeat of an event with the same k
   rewrite that changes nothing a build reads keeps the proof.
 - Keys: `built` and `simulated` by (project, board digest, part digests); `reused` and `passed_over` by (project,
   need, part); `step` by (project, step, session, start).
+- `reused` is written for a pick taken from your store (the drawer, the shelf, the catalog) or from spark's library or
+  another project's records, and for none that resolves to a record in the project's own `parts/` or `boards/`: that was
+  not there before the project (P97). The cost line's "from the store" counts these lines.
 - Kept: ids, project names, the person's reasons, counts. Never: URLs, queries, paths, prices, order numbers.
 - The 18 catalog `//why_not` notes become `passed_over` lines for project "irrigation", their prices dropped.
 
@@ -342,9 +345,16 @@ through … I'd like ai to be able to do that for me"*). Its rules:
 Each spine step writes a `step` event with its session id and start; a step ends where the next step of the same
 session starts, or at the session's last line (P97: an append-only history cannot fill in an end). The counter sums the
 main and subagent session transcripts inside those windows: network = a data table of tool names and shell patterns
-(web search and fetch, network MCP calls, browser tools, `curl`, `wget`, `gh api`, `--fetch`, `--sources`; a command
-run with `--dry-run` opens no URL and counts for nothing); research runs by agent type; documents read; new tokens apart
-from cache reads; minutes. It prints tool names and counts, never arguments. It lives in `scripts/cost.py`, which
+(web search and fetch; every MCP tool call, the browser tools among them, because a tool's name does not say whether it
+reaches the network; `curl`, `wget`, `gh api`, `--fetch`, `--sources` — each simple command of a command line on its
+own, and one run with `--dry-run` opens no URL and counts for nothing); research runs by agent type; documents read;
+new tokens apart from cache reads, each message at its largest count; minutes. It prints tool names and counts, never
+arguments.
+
+It never turns what it could not read into a 0. A session whose main transcript is not there, cannot be opened, names no
+time spark can read or ends before the step began is could-not-run, and the line says the cost was not counted; a
+transcript line that is no JSON object, and an assistant turn whose time cannot be read, are left out, counted and
+said. A session id is looked up only if it is letters, digits and hyphens. It lives in `scripts/cost.py`, which
 replaced `tools/research_cost.py` (deleted in P97, W16) and still answers for one transcript. The drawer import's
 browser cost goes on the drawer's own line, not on a project's.
 

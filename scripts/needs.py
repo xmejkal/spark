@@ -223,10 +223,11 @@ def plan_pick(project, given, passed_over=()):
     [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
     from every need's picks — one piece per pick — on the entries that hold them, never past what is owned or what another
     project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
-    longer picks. A pick no entry holds is to get, not reserved. Nothing is written here.
+    longer picks. A pick no entry holds is to get, not reserved. A `reused` event is written for each pick except a record the
+    project keeps in its own parts/ or boards/: that was not there before the project. Nothing is written here.
     """
     name, current, entries = store.add_project(project, dry_run=True), read(project), drawer.entries()
-    known, ids, problems, picked = {row[:2] for row in drawer.linkable(project)}, {need["id"] for need in current}, [], {}
+    known, ids, problems, picked = {row[:2]: row[2] for row in drawer.linkable(project)}, {need["id"] for need in current}, [], {}
     for need_id, pick_id in given:
         pick = _resolve(pick_id, known, entries)
         if need_id not in ids:
@@ -270,6 +271,8 @@ def plan_pick(project, given, passed_over=()):
         if used_in != (entry.get("used_in") or {}):
             changes.append(drawer.settle(entry_id, entry, {"used_in": used_in}, [])[0])
     events = [dict({"event": "reused", "project": name, "need": need_id}, **pick) for need_id in picked for pick in picked[need_id]]
+    # a record the project keeps in its own parts/ or boards/ was not there before the project: it is no reuse of the store (§6.7)
+    events = [event for event in events if not any(known.get((kind, event.get(kind))) == "project" for kind in ("part", "board"))]
     for number, item in enumerate(passed_over if isinstance(passed_over, (list, tuple)) else [None], 1):
         pick = _resolve(item.get("id"), known, entries) if isinstance(item, dict) and isinstance(item.get("id"), str) else None
         if not (pick and item.get("need") in ids and drawer._words(item.get("why")) and item.get("by", "person") in ("person", "agent")):

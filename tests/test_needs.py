@@ -553,6 +553,19 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual(self.history(), [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"},
                                           {"event": "reused", "project": "plant-alarm", "need": "alarm", "entry": "speaker"}])
 
+    def test_a_pick_of_a_record_the_project_keeps_itself_is_not_a_reuse_of_the_store(self):
+        (self.project / "parts").mkdir(parents=True)
+        (self.project / "parts" / "x-own.json").write_text(json.dumps({"schema": 1, "id": "x-own", "name": "Own sensor", "kind": "sensor"}))
+        _, code = run(["--pick", str(self.project), "soil=x-own", "alarm=speaker"])
+        self.assertEqual((code, self.picks()["soil"]), (0, [{"part": "x-own"}]))
+        self.assertEqual(self.history(), [{"event": "reused", "project": "plant-alarm", "need": "alarm", "entry": "speaker"}])
+
+    def test_a_pick_of_a_board_the_project_keeps_itself_is_not_a_reuse_of_the_store_either(self):
+        (self.project / "boards").mkdir(parents=True)
+        (self.project / "boards" / "my-board.json").write_text(json.dumps({"id": "my-board"}))
+        _, code = run(["--pick", str(self.project), "board=my-board"])
+        self.assertEqual((code, self.picks()["board"], self.history()), (0, [{"board": "my-board"}], []))
+
     def test_freed_by_the_person_the_board_is_reserved_for_this_project(self):
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
         _, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3"])

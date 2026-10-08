@@ -8,8 +8,9 @@ reads the main and the subagent transcripts of each step's session inside its wi
 network (a table of tool names and shell patterns), the runs of each agent type, the documents read, the new tokens
 apart from cache reads, and the minutes. It keeps tool names and counts, never arguments. No transcript is
 could-not-run, never 0: the harness keeps transcripts for a while, not for ever. The transcript is the harness's format,
-not spark's, and may change: a line that is no JSON object (one half written while the session is live, say) is left out
-and counted, and a turn shaped oddly is counted for what it holds — never a traceback. This replaced
+not spark's, and may change: a line that is no JSON object (one half written while the session is live, say) and an
+assistant turn whose time cannot be read are left out and counted, and a turn shaped oddly is counted for what it holds —
+never a traceback. A transcript that names no time at all, or ends before a step began, is not a cost of 0. This replaced
 tools/research_cost.py (W16), and still answers for one transcript:
 
     cost.py <transcript.jsonl>      what one run cost — a research agent's, for instance
@@ -25,16 +26,21 @@ from pathlib import Path
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 
-#: What reaches the network (§6.7): these tools, every MCP server's tools, and a shell command that names one of these —
-#: unless it says `--dry-run`, which opens no URL (a command line that mixes a dry run and the real run counts as none).
+#: What reaches the network (§6.7): these tools, every MCP tool (its name does not say whether it reaches the network), and a
+#: simple shell command that names one of these — unless that command says `--dry-run`, which opens no URL.
 NETWORK_TOOLS = ("WebSearch", "WebFetch")
 NETWORK_SHELL = re.compile(r"\b(curl|wget)\b|\bgh api\b|--(fetch|sources)\b")
+#: What joins the simple commands of a command line: `a && b || c; d | e & f`, and a new line.
+SHELL_JOINS = re.compile(r"[;&|\n]")
+#: The path `parts.py --read` is given: in double quotes, in single quotes, or bare.
+READ_PATH = re.compile(r"--read\s+(?:\"([^\"]*)\"|'([^']*)'|(\S+))")
 #: What reading a document is: the Read tool, or `parts.py --read`, on one of these.
 DOCUMENTS = (".pdf", ".png", ".jpg", ".jpeg", ".webp", ".svg")
+#: What a session id may be. A Claude Code session id is a UUID, and spark makes it a glob pattern and a path to a transcript, so a
+#: `*`, a `/` or a `..` in it would read what it was never meant to.
+SESSION_ID = re.compile(r"[0-9A-Za-z-]+")
 #: A project's spine steps (§2): shape, match, choose, research the gap, the part list, the tally; ideas, fit, revive.
 STEPS = ("S", "M", "C", "G", "L", "T", "I", "F", "R")
-#: Earlier than any transcript: the lower bound for a window that has none.
-EPOCH = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
 
 
 class NoTranscript(Exception):
@@ -58,23 +64,46 @@ def _start_of(step):
                            % (step.get("project"), step.get("step"))) from None
 
 
+def session_id():
+    """The Claude Code session this process runs in, or None: it runs in none, or its id is not one a transcript may be looked up by."""
+    found = os.environ.get("CLAUDE_CODE_SESSION_ID")
+    return found if found and SESSION_ID.fullmatch(found) else None
+
+
+def session_note():
+    """What `--step` ends its line with when it can record no session — why, and what follows — or "" when it can."""
+    if session_id():
+        return ""
+    if os.environ.get("CLAUDE_CODE_SESSION_ID"):
+        return " — this Claude Code session's id is not one spark can look a transcript up by, so its cost cannot be counted"
+    return " — no Claude Code session here, so its cost cannot be counted"
+
+
 def step_event(project, step):
     """The history line a step starts with (§5.7): which project and step, the Claude Code session it runs in, and when."""
-    return {"event": "step", "project": project, "step": step, "session": os.environ.get("CLAUDE_CODE_SESSION_ID"),
+    return {"event": "step", "project": project, "step": step, "session": session_id(),
             "start": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")}
 
 
 def transcripts(session, root=None):
-    """The main and the subagent transcripts of one session, wherever the harness filed them."""
+    """
+    The main and the subagent transcripts of one session, wherever the harness filed them. [] for a session id that
+    `SESSION_ID` does not allow — it would be a pattern or a path — and for a session whose main transcript is not here:
+    subagent files alone are not a session.
+    """
+    if not (isinstance(session, str) and SESSION_ID.fullmatch(session)):
+        return []
     root = Path(root) if root else Path.home() / ".claude" / "projects"
-    return sorted(root.glob("*/%s.jsonl" % session)) + sorted(root.glob("*/%s/subagents/*.jsonl" % session))
+    main = sorted(root.glob("*/%s.jsonl" % session))
+    return main + sorted(root.glob("*/%s/subagents/*.jsonl" % session)) if main else []
 
 
 def _read(paths):
     """
-    (entries, unreadable): the JSON object on each line of the transcripts, and how many lines were no JSON object — one half
-    written while the session is live, say. A blank line is neither. Left out and counted, so the cost line never rests on a
-    line it silently dropped.
+    (entries, unreadable): the JSON object on each line of the transcripts, and how many lines were left out as unreadable —
+    a line that is no JSON object (one half written while the session is live, say), and an assistant turn whose time cannot be
+    read, which belongs to no window and would be dropped without a word. A blank line, and an entry of another kind that
+    names no time (a summary), are neither. Left out and counted, so the cost line never rests on a line it silently dropped.
     """
     entries, unreadable = [], 0
     for path in paths:
@@ -85,20 +114,25 @@ def _read(paths):
                 entry = json.loads(text)
             except ValueError:
                 entry = None
-            if isinstance(entry, dict):
+            if isinstance(entry, dict) and not (entry.get("type") == "assistant" and _moment(entry) is None):
                 entries.append(entry)
             else:
                 unreadable += 1
     return entries, unreadable
 
 
+def _moment(entry):
+    """The time a transcript entry names, or None when it names none spark can read (no `timestamp`, no zone, not a time)."""
+    try:
+        return _when(entry.get("timestamp"))
+    except ValueError:
+        return None
+
+
 def _inside(entry, start, end):
     """Whether a transcript entry's own time falls in the window [start, end) — end None is open. No readable time is in no window."""
-    try:
-        when = _when(entry.get("timestamp"))
-    except ValueError:
-        return False
-    return start <= when and (end is None or when < end)
+    when = _moment(entry)
+    return when is not None and start <= when and (end is None or when < end)
 
 
 def _number(value):
@@ -106,33 +140,61 @@ def _number(value):
     return value if isinstance(value, int) else 0
 
 
-def count(entries):
-    """What a run of transcript entries did (§6.7): {requests, by_tool, runs, documents, tokens} — names and counts only."""
-    by_tool, runs, documents, seen, tokens = collections.Counter(), collections.Counter(), set(), set(), 0
+def _path_read(command):
+    """The path `parts.py --read` is given in a command, with its quotes taken off, or None."""
+    reading = READ_PATH.search(command)
+    return (reading.group(1) or reading.group(2) or reading.group(3)) if reading else None
+
+
+def _reaches_the_network(command):
+    """Whether a command line holds a simple command that names a network pattern and is not a dry run: `a --dry-run && a` does."""
+    return any(NETWORK_SHELL.search(part) and "--dry-run" not in part for part in SHELL_JOINS.split(command))
+
+
+def _tokens(entries):
+    """
+    The new tokens (§6.7) of the assistant turns in `entries`: input, cache creation and output, never cache reads. A message
+    is written once for each block it holds and its usage grows as it streams (an output of 1, then of 7), so each message
+    counts its largest of each kind; a turn that names no message counts as it stands.
+    """
+    streamed, tokens = {}, 0
     for entry in entries:
         message = entry.get("message")
         if entry.get("type") != "assistant" or not isinstance(message, dict):
             continue
-        if message.get("id") is None or message["id"] not in seen:
-            seen.add(message.get("id"))
-            usage = message.get("usage") if isinstance(message.get("usage"), dict) else {}
-            tokens += sum(_number(usage.get(key)) for key in ("input_tokens", "cache_creation_input_tokens", "output_tokens"))
+        usage = message.get("usage") if isinstance(message.get("usage"), dict) else {}
+        used = {key: _number(usage.get(key)) for key in ("input_tokens", "cache_creation_input_tokens", "output_tokens")}
+        if isinstance(message.get("id"), str):
+            largest = streamed.setdefault(message["id"], dict.fromkeys(used, 0))
+            largest.update({key: max(largest[key], value) for key, value in used.items()})
+        else:
+            tokens += sum(used.values())
+    return tokens + sum(sum(largest.values()) for largest in streamed.values())
+
+
+def count(entries):
+    """What a run of transcript entries did (§6.7): {requests, by_tool, runs, documents, tokens} — names and counts only."""
+    entries = list(entries)
+    by_tool, runs, documents = collections.Counter(), collections.Counter(), set()
+    for entry in entries:
+        message = entry.get("message")
+        if entry.get("type") != "assistant" or not isinstance(message, dict):
+            continue
         blocks = message.get("content")
         for block in blocks if isinstance(blocks, list) else []:
             if not (isinstance(block, dict) and block.get("type") == "tool_use"):
                 continue
             name, given = str(block.get("name")), block.get("input") if isinstance(block.get("input"), dict) else {}
             command = str(given.get("command") or "") if name.lower() == "bash" else ""
-            if name in NETWORK_TOOLS or name.startswith("mcp__") or (NETWORK_SHELL.search(command) and "--dry-run" not in command):
+            if name in NETWORK_TOOLS or name.startswith("mcp__") or _reaches_the_network(command):
                 by_tool[name] += 1
             if name in ("Agent", "Task"):
                 runs[str(given.get("subagent_type") or "general-purpose")] += 1
-            reading = re.search(r"--read\s+(\S+)", command)
-            read = given.get("file_path") if name == "Read" else (reading.group(1) if reading else None)
+            read = given.get("file_path") if name == "Read" else _path_read(command)
             if isinstance(read, str) and read.lower().endswith(DOCUMENTS):
                 documents.add(read)
     return {"requests": sum(by_tool.values()), "by_tool": dict(by_tool), "runs": dict(runs), "documents": len(documents),
-            "tokens": tokens}
+            "tokens": _tokens(entries)}
 
 
 def windows(steps, project):
@@ -154,12 +216,13 @@ def cost(steps, project, root=None):
     """
     What a project's steps cost (§6.7): `count` over every step's window, the minutes the windows span, and how many
     transcript lines could not be read (each session is read once, however many steps it held). NoTranscript — never a 0 —
-    when no step was recorded, a step line cannot be read, a step has no session, or its session's transcript is not here or
-    names no time spark can read (the harness's format may change, and a cost of 0 must never be what a change looks like).
+    when no step was recorded, a step line cannot be read, a step has no session, or its session's transcript is not here, cannot
+    be opened, names no time spark can read or ends before a step began (the harness's format may change, and a cost of 0 must
+    never be what a change looks like).
     """
     found = windows(steps, project)
     if not found:
-        raise NoTranscript("no step of %s is in the history — `parts.py --step <project> <step>` marks each" % (project or "this project"))
+        raise NoTranscript("no step of %s is in the history — `parts.py --step <project> <step>` marks each" % project)
     inside, minutes, read = [], 0.0, {}
     for session, start, end in found:
         if not session:
@@ -168,9 +231,14 @@ def cost(steps, project, root=None):
         if not paths:
             raise NoTranscript("no transcript of session %s here, so the cost of its steps is not known" % session)
         if session not in read:
-            read[session] = _read(paths)
-            if not any(_inside(entry, EPOCH, None) for entry in read[session][0]):
+            try:
+                read[session] = _read(paths)
+            except OSError:  # its message names the file, and the file's folder names the directory the session ran in
+                raise NoTranscript("the transcripts of session %s could not be opened, so the cost of its steps is not known" % session) from None
+            if not any(_moment(entry) for entry in read[session][0]):
                 raise NoTranscript("the transcripts of session %s name no time spark can read, so the cost of its steps is not known" % session)
+        if not any(moment >= start for moment in map(_moment, read[session][0]) if moment):
+            raise NoTranscript("the transcripts of session %s end before one of its steps began, so the cost of its steps is not known" % session)
         here = [entry for entry in read[session][0] if _inside(entry, start, end)]
         inside += here
         minutes += ((end or max([_when(entry["timestamp"]) for entry in here], default=start)) - start).total_seconds() / 60
@@ -206,9 +274,12 @@ def main(argv=None):
     except OSError as cannot:
         print("cost.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
+    stamps = sorted(moment for moment in map(_moment, entries) if moment)
+    if not stamps:
+        print("cost.py: %s holds no time cost.py can read, so what the run cost is not known" % Path(given[0]).name, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
     counted = count(entries)
-    stamps = sorted(_when(entry["timestamp"]) for entry in entries if _inside(entry, EPOCH, None))
-    counted["minutes"] = round((stamps[-1] - stamps[0]).total_seconds() / 60) if stamps else 0
+    counted["minutes"] = round((stamps[-1] - stamps[0]).total_seconds() / 60)
     for key in ("requests", "by_tool", "runs", "documents", "tokens", "minutes"):
         print("%-9s %s" % (key, counted[key]))
     if unreadable:

@@ -50,6 +50,18 @@ class WhatATranscriptSaysTest(unittest.TestCase):
         self.assertEqual(cost.count([assistant("2026-10-06T10:01:00Z", usage=usage, message_id="m1"),
                                      assistant("2026-10-06T10:01:01Z", usage=usage, message_id="m1")])["tokens"], 117)
 
+    def test_a_message_whose_usage_streams_in_is_counted_at_its_largest_of_each_kind(self):
+        for usages, tokens in ((({"output_tokens": 1}, {"output_tokens": 7}), 7), (({"output_tokens": 7}, {"output_tokens": 1}), 7),
+                               (({"input_tokens": 4, "output_tokens": 1}, {"input_tokens": 2, "output_tokens": 7}), 11)):
+            with self.subTest(usages=usages):
+                counted = cost.count([assistant("2026-10-06T10:01:0%dZ" % number, usage=usage, message_id="m1")
+                                      for number, usage in enumerate(usages)])
+                self.assertEqual(counted["tokens"], tokens)
+
+    def test_turns_that_name_no_message_are_each_counted(self):
+        turn = {"type": "assistant", "timestamp": "2026-10-06T10:01:00Z", "message": {"usage": {"output_tokens": 5}, "content": []}}
+        self.assertEqual(cost.count([turn, dict(turn)])["tokens"], 10)
+
     def test_one_transcript_is_answered_on_its_own(self):
         path = Path(tempfile.mkdtemp()) / "agent-x.jsonl"
         path.write_text("".join(json.dumps(entry) + "\n" for entry in (
@@ -201,6 +213,24 @@ class AStepStartsWhenItIsMarkedTest(unittest.TestCase):
                 said, code = run(["--step", str(self.project), letter, "--dry-run"])
                 self.assertEqual((code, said["data"]["step"]["step"]), (0, letter))
 
+    def test_a_session_id_that_is_a_pattern_or_a_path_is_not_recorded_and_the_step_says_so(self):
+        for bad in ("*", "../../x", "a b", "s1;rm", "", "s_1"):
+            with self.subTest(session=bad):
+                (self.home / "history.jsonl").unlink(missing_ok=True)
+                with mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": bad}):
+                    said, code = run(["--step", str(self.project), "M"])
+                    out = io.StringIO()
+                    with contextlib.redirect_stdout(out):
+                        parts.main(["--step", str(self.project), "C", "--dry-run"])
+                self.assertEqual((code, said["data"]["step"]["session"]), (0, None))
+                self.assertIsNone(json.loads((self.home / "history.jsonl").read_text())["session"])
+                self.assertIn("no Claude Code session here" if bad == "" else "not one spark can look a transcript up by", out.getvalue())
+
+    def test_a_session_id_of_letters_digits_and_hyphens_is_recorded(self):
+        with mock.patch.dict(os.environ, {"CLAUDE_CODE_SESSION_ID": "04754b5c-E6be-4924-97bc-e6cf796455f7"}):
+            said, _ = run(["--step", str(self.project), "M"])
+        self.assertEqual(said["data"]["step"]["session"], "04754b5c-E6be-4924-97bc-e6cf796455f7")
+
     def test_a_step_says_what_it_started_or_would_start(self):
         for argv, said in ((["--step", str(self.project), "L"], "started step L of plant-alarm"),
                            (["--step", str(self.project), "L", "--dry-run"], "would start step L of plant-alarm")):
@@ -260,6 +290,61 @@ class TheWindowOfAStepTest(AScratchStore):
         self.assertEqual((counted["requests"], counted["minutes"]), (1, 1))
 
 
+class WhatCameFromTheStoreTest(AScratchStore):
+    """§6.7: "from the store" is what a pick took from your store or spark's library — not a record the project keeps in its own parts/."""
+
+    def setUp(self):
+        super().setUp()
+        for folder, key in ((self.home / "catalog", "x-catalog"), (self.project / "parts", "x-own")):
+            folder.mkdir(parents=True)
+            (folder / (key + ".json")).write_text(json.dumps({"schema": 1, "id": key, "name": key, "kind": "sensor"}))
+        (self.project / ".spark").mkdir()
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "own", "does": "sense", "what": "x"}, {"id": "catalog", "does": "sense", "what": "y"}]}))
+
+    def test_a_pick_of_a_record_only_in_the_projects_own_parts_is_not_from_the_store(self):
+        run(["--pick", str(self.project), "own=x-own"])
+        data = run(["--tally", str(self.project)])[0]["data"]
+        self.assertEqual((data["picks"], data["from_store"]), (1, 0))
+
+    def test_a_pick_of_a_catalog_record_is_from_the_store(self):
+        run(["--pick", str(self.project), "catalog=x-catalog"])
+        data = run(["--tally", str(self.project)])[0]["data"]
+        self.assertEqual((data["picks"], data["from_store"]), (1, 1))
+
+    def test_of_two_picks_only_the_one_from_the_store_is_counted(self):
+        run(["--pick", str(self.project), "own=x-own", "catalog=x-catalog"])
+        data = run(["--tally", str(self.project)])[0]["data"]
+        self.assertEqual((data["picks"], data["from_store"]), (2, 1))
+
+
+class WhatTheTallySaysOfTheBuildTest(AScratchStore):
+    """§8 T: the line is followed by whether the chain has run end to end for this project — `built` in the history says so."""
+
+    BUILT = {"event": "built", "project": "plant-alarm", "board": {"id": "b", "digest": "d"}, "parts": []}
+
+    def text(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--tally", str(self.project)])
+        return out.getvalue()
+
+    def test_a_build_of_this_project_is_built_and_says_nothing_more(self):
+        self.history(self.BUILT)
+        self.assertTrue(run(["--tally", str(self.project)])[0]["data"]["built"])
+        self.assertNotIn("not built yet", self.text())
+
+    def test_a_project_the_chain_has_not_run_for_is_not_built_yet_and_says_so(self):
+        self.history()
+        self.assertFalse(run(["--tally", str(self.project)])[0]["data"]["built"])
+        self.assertIn("not built yet — check_spine records it when the chain runs end to end", self.text())
+
+    def test_another_project_s_build_is_not_this_one_s(self):
+        self.history(dict(self.BUILT, project="rc-car"))
+        self.assertFalse(run(["--tally", str(self.project)])[0]["data"]["built"])
+        self.assertIn("not built yet", self.text())
+
+
 class WhatIsCountedTest(AScratchStore):
     """§6.7: the shell patterns that reach the network, and the agent runs, as the table names them."""
 
@@ -267,6 +352,22 @@ class WhatIsCountedTest(AScratchStore):
         counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": "wget -q https://v.example/a"}),
                                         ("Bash", {"command": "gh api repos/x/y"}), ("Bash", {"command": "git status"}))])
         self.assertEqual((counted["requests"], counted["by_tool"]), (2, {"Bash": 2}))
+
+    def test_a_dry_run_chained_with_the_real_run_still_counts_the_real_one(self):
+        fetch, pick = "python3 scripts/parts.py --fetch x", "python3 scripts/parts.py --pick p soil=x"
+        for command, requests in ((pick + " --dry-run && " + fetch, 1), (fetch + " --dry-run; " + fetch, 1),
+                                  (fetch + " --dry-run || curl https://v.example/a", 1), (fetch + " --dry-run | cat\n" + fetch, 1),
+                                  (fetch + " --dry-run & " + fetch, 1),
+                                  (fetch + " --dry-run && python3 scripts/parts.py --sources x --dry-run", 0)):
+            with self.subTest(command=command):
+                counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": command}))])
+                self.assertEqual(counted["requests"], requests)
+
+    def test_a_path_to_read_in_quotes_is_a_document_too_and_the_same_one_once(self):
+        read = "python3 scripts/parts.py --read %s --want x"
+        counted = cost.count([assistant("2026-10-06T10:01:00Z", *[("Bash", {"command": read % path}) for path in (
+            '"/s/a.pdf"', "'/s/b.pdf'", '"/s/my datasheet.pdf"', "/s/c.pdf", "/s/a.pdf")])])
+        self.assertEqual(counted["documents"], 4)
 
     def test_a_dry_run_opens_no_url_so_it_is_no_request(self):
         fetching = "python3 scripts/parts.py --fetch max98357a-dfr0954"
@@ -331,20 +432,41 @@ class WhatCannotBeReadIsSaidNeverATracebackTest(AScratchStore):
         self.assertEqual((counted["requests"], counted["unreadable_lines"]), (2, 1))
         self.assertEqual([call.args[0].name for call in reading.call_args_list].count("s1.jsonl"), 1)
 
-    def test_a_time_naming_no_zone_is_left_out_not_a_traceback(self):
+    def test_a_turn_whose_time_has_no_zone_is_left_out_and_counted(self):
         self.history(self.STEP)
         self.transcript("s1", self.fetch_at("2026-10-06T10:01:00"), self.fetch_at("2026-10-06T10:02:00Z"))
         said, code = run(["--tally", str(self.project)])
-        self.assertEqual((code, said["data"]["cost"]["requests"]), (0, 1))
+        counted = said["data"]["cost"]
+        self.assertEqual((code, counted["requests"], counted["unreadable_lines"]), (0, 1, 1))
 
-    def test_one_transcript_with_a_time_naming_no_zone_is_answered_too(self):
+    def test_a_turn_whose_time_is_missing_is_left_out_and_counted_but_a_line_that_is_no_turn_is_not(self):
+        self.history(self.STEP)
+        summary = json.dumps({"type": "summary", "summary": "a title"})
+        no_time = json.dumps({"type": "assistant", "message": {"id": "m", "content": []}})
+        self.transcript("s1", self.fetch_at("2026-10-06T10:01:00Z"), summary, no_time)
+        self.assertEqual(run(["--tally", str(self.project)])[0]["data"]["cost"]["unreadable_lines"], 1)
+
+    def test_one_transcript_with_a_turn_whose_time_has_no_zone_says_how_many_it_left_out(self):
         path = Path(tempfile.mkdtemp()) / "agent-x.jsonl"
-        path.write_text(self.fetch_at("2026-10-06T10:00:00") + "\n" + self.fetch_at("2026-10-06T10:06:00Z") + "\n")
+        path.write_text("".join(line + "\n" for line in (self.fetch_at("2026-10-06T10:00:00"), self.fetch_at("2026-10-06T10:02:00Z"),
+                                                          self.fetch_at("2026-10-06T10:08:00Z"))))
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             self.assertEqual(cost.main([str(path)]), 0)
-        self.assertIn("requests  2", out.getvalue())
-        self.assertIn("minutes   0", out.getvalue())
+        for said in ("requests  2", "minutes   6", "unreadable_lines 1"):
+            self.assertIn(said, out.getvalue())
+
+    def test_one_transcript_naming_no_time_cost_py_can_read_is_could_not_run_never_zero(self):
+        renamed = json.dumps({"type": "assistant", "when": "2026-10-06T10:01:00Z", "message": {"id": "m", "content": []}})
+        for lines in ([], [renamed], [self.fetch_at("2026-10-06T10:00:00")], ["{not json", "[1]"]):
+            with self.subTest(lines=lines):
+                path = Path(tempfile.mkdtemp()) / "agent-x.jsonl"
+                path.write_text("".join(line + "\n" for line in lines))
+                out, err = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    self.assertEqual(cost.main([str(path)]), 2)
+                self.assertEqual(out.getvalue(), "")
+                self.assertIn("agent-x.jsonl holds no time cost.py can read, so what the run cost is not known", err.getvalue())
 
     def test_one_transcript_says_how_many_lines_it_could_not_read(self):
         path = Path(tempfile.mkdtemp()) / "agent-x.jsonl"
@@ -374,6 +496,56 @@ class WhatCannotBeReadIsSaidNeverATracebackTest(AScratchStore):
                 self.assertEqual(said["unchecked"][0]["sentence"],
                                  "the transcripts of session s1 name no time spark can read, so the cost of its steps is not known")
 
+    def test_a_session_that_ends_before_the_step_began_is_could_not_run_never_zero(self):
+        self.history(self.STEP)
+        self.transcript("s1", self.fetch_at("2026-10-06T08:58:00Z"), self.fetch_at("2026-10-06T09:00:00Z"))
+        said, code = run(["--tally", str(self.project)])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertEqual(said["data"]["line"], "0 picks: 0 from the store (0 owned) — its cost was not counted")
+        self.assertEqual(said["unchecked"][0]["sentence"],
+                         "the transcripts of session s1 end before one of its steps began, so the cost of its steps is not known")
+
+    def test_a_session_whose_last_entry_is_the_step_s_own_second_is_counted(self):
+        self.history(self.STEP)
+        self.transcript("s1", self.fetch_at("2026-10-06T09:59:00Z"), self.fetch_at("2026-10-06T10:00:00Z"))
+        said, code = run(["--tally", str(self.project)])
+        self.assertEqual((code, said["data"]["cost"]["requests"]), (0, 1))
+
+    def test_subagent_transcripts_with_no_main_transcript_are_no_session(self):
+        self.history(self.STEP)
+        folder = self.claude / ".claude" / "projects" / "-Users-someone-plant-alarm" / "s1" / "subagents"
+        folder.mkdir(parents=True)
+        (folder / "agent-a1.jsonl").write_text(self.fetch_at("2026-10-06T10:05:00Z") + "\n")
+        said, code = run(["--tally", str(self.project)])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertEqual(said["unchecked"][0]["sentence"], "no transcript of session s1 here, so the cost of its steps is not known")
+
+    def test_a_session_id_that_is_a_pattern_or_a_path_finds_no_transcript(self):
+        elsewhere = self.claude / ".claude" / "elsewhere"
+        elsewhere.mkdir(parents=True)
+        (elsewhere / "notes.jsonl").write_text(self.fetch_at("2026-10-06T10:05:00Z") + "\n")
+        self.transcript("s1", self.fetch_at("2026-10-06T10:01:00Z"))
+        for bad in ("*", "s?", "[s]1", "../../elsewhere/notes", "s1/../s1"):
+            with self.subTest(session=bad):
+                self.history(dict(self.STEP, session=bad))
+                said, code = run(["--tally", str(self.project)])
+                self.assertEqual((said["status"], code, said["data"]["cost"]), ("could-not-run", 2, None))
+
+    def test_a_transcript_that_cannot_be_opened_names_the_session_and_not_where_it_lives(self):
+        self.history(self.STEP)
+        self.transcript("s1", self.fetch_at("2026-10-06T10:01:00Z"))
+        opening = Path.read_text
+
+        def refuse(path, *given, **keywords):
+            if path.name == "s1.jsonl":
+                raise PermissionError(13, "Permission denied", str(path))
+            return opening(path, *given, **keywords)
+        with mock.patch.object(Path, "read_text", autospec=True, side_effect=refuse):
+            said, code = run(["--tally", str(self.project)])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertEqual(said["unchecked"][0]["sentence"],
+                         "the transcripts of session s1 could not be opened, so the cost of its steps is not known")
+
     def test_a_step_line_with_no_readable_start_is_could_not_run_naming_it(self):
         for broken in ({"event": "step", "project": "plant-alarm", "step": "C", "session": "s1"},
                        dict(self.STEP, start="soon"), dict(self.STEP, start="2026-10-06T10:00:00"),
@@ -392,11 +564,20 @@ class WhatCannotBeReadIsSaidNeverATracebackTest(AScratchStore):
         self.assertEqual(said["unchecked"][0]["sentence"],
                          "a step of plant-alarm was marked in no Claude Code session, so its cost cannot be counted")
 
-    def test_a_project_no_step_names_is_not_called_none(self):
-        said, code = run(["--tally", str(self.project / "elsewhere")])
+    def test_a_folder_not_on_the_list_is_refused_before_anything_is_read(self):
+        (self.home / "history.jsonl").write_text("not json\n")  # reading the history would name this line instead
+        elsewhere = self.project / "elsewhere"
+        said, code = run(["--tally", str(elsewhere)])
+        self.assertEqual((said["status"], code, said["data"]), ("could-not-run", 2, None))
+        self.assertEqual(said["unchecked"][0]["sentence"],
+                         "%s is not on your list of projects, so no step of it was marked" % elsewhere)
+        self.assertIn("parts.py --step", said["unchecked"][0]["fix"])
+
+    def test_a_listed_project_no_step_names_says_so_by_its_name(self):
+        said, code = run(["--tally", str(self.project)])
         self.assertEqual((said["status"], code), ("could-not-run", 2))
         self.assertEqual(said["unchecked"][0]["sentence"],
-                         "no step of this project is in the history — `parts.py --step <project> <step>` marks each")
+                         "no step of plant-alarm is in the history — `parts.py --step <project> <step>` marks each")
 
     def test_the_reason_a_cost_was_not_counted_is_said_in_words_too(self):
         self.history(dict(self.STEP, session="gone"))
@@ -412,9 +593,10 @@ class WhatCannotBeReadIsSaidNeverATracebackTest(AScratchStore):
                  {"type": "assistant", "timestamp": "2026-10-06T10:02:00Z",
                   "message": {"id": "m2", "usage": {"input_tokens": "5", "output_tokens": 7}, "content": 5}},
                  {"type": "assistant", "timestamp": "2026-10-06T10:03:00Z",
-                  "message": {"id": "m3", "usage": None, "content": [None, "text", {"type": "tool_use", "name": "WebFetch", "input": None}]}}]
+                  "message": {"id": "m3", "usage": None, "content": [None, "text", {"type": "tool_use", "name": "WebFetch", "input": None}]}},
+                 {"type": "assistant", "timestamp": "2026-10-06T10:04:00Z", "message": {"id": ["m4"], "usage": {"output_tokens": 2}, "content": []}}]
         counted = cost.count(oddly)
-        self.assertEqual((counted["requests"], counted["tokens"]), (1, 7))
+        self.assertEqual((counted["requests"], counted["tokens"]), (1, 9))
 
 
 if __name__ == "__main__":

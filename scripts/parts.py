@@ -1936,14 +1936,18 @@ def _op_step(args, project):
         store.append_event(event)
     return Answer({"step": event, "written": not args.dry_run},
                   ["  %s step %s of %s%s" % ("would start" if args.dry_run else "started", step, event["project"],
-                                             "" if event["session"] else " — no Claude Code session here, so its cost cannot be counted")])
+                                             "" if event["session"] else cost.session_note())])
 
 
 def _op_tally(args, project):
     import cost
     import drawer
     import needs
-    name, history, entries = store.project_name(args.tally), store.events(), drawer.entries()
+    name = store.project_name(args.tally)
+    if name is None:
+        return Answer(unchecked=[_cannot("%s is not on your list of projects, so no step of it was marked" % args.tally,
+                                         "mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list")])
+    history, entries = store.events(), drawer.entries()
     picks = [(need["id"], pick) for need in needs.read(args.tally) for pick in need.get("pick") or []]
     reused = [event for event in history if event.get("event") == "reused" and event.get("project") == name]
     from_store = sum(1 for need_id, pick in picks if dict({"event": "reused", "project": name, "need": need_id}, **pick) in reused)
