@@ -1692,9 +1692,36 @@ class TheRequirementsFileTest(unittest.TestCase):
         _, project = self.project([self.BOARD, ("drive", [{"part": "l9110s-module"}])])
         dry = self.text(["--requirements", str(project), "--dry-run"])
         said, code = run(["--requirements", str(project)])
-        self.assertEqual((said["status"], code, said["data"]["no_supply"], self.written(project)["parts"]),
-                         ("ok", 0, [{"rail": "MOTOR6V", "drawn_by": ["l9110s-module.VCC"]}], ["l9110s-module"]))
+        self.assertEqual((said["status"], code, said["data"]["no_supply"], said["data"]["no_driver"], self.written(project)["parts"]),
+                         ("ok", 0, [{"rail": "MOTOR6V", "drawn_by": ["l9110s-module.VCC"]}], [], ["l9110s-module"]))
         self.assertIn("  rail MOTOR6V has no supply — pick a power inlet or a supply (l9110s-module.VCC draws from it)\n", dry)
+
+    def test_a_speaker_terminal_alone_is_told_to_pick_what_drives_its_pair_never_a_supply(self):
+        # F15: told to pick a power inlet or a supply for SPEAKER_P and SPEAKER_N, a person would feed a supply into what the
+        # terminal's own record calls destructive. A net only inputs naming a `polarity` are on is an amplifier's to drive.
+        _, project = self.project([self.BOARD, ("alarm", [{"part": "speaker-terminal"}])])
+        dry = self.text(["--requirements", str(project), "--dry-run"])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["no_supply"], said["data"]["no_driver"]),
+                         (0, [], [{"net": "SPEAKER_N", "received_by": ["speaker-terminal.SPK_N"]},
+                                  {"net": "SPEAKER_P", "received_by": ["speaker-terminal.SPK_P"]}]))
+        self.assertIn("  net SPEAKER_P is one side of a driven pair and nothing listed drives it — pick what drives the pair (the "
+                      "amplifier this terminal hangs off), never a supply (speaker-terminal.SPK_P is on it)\n", dry)
+        self.assertNotIn("power inlet", dry)
+        listed, _ = run(["--describe"])  # and the answer's keys are the ones --describe names
+        self.assertEqual(sorted(said["data"]), sorted(next(op["data"] for op in listed["data"]["operations"] if op["op"] == "requirements")))
+
+    def test_every_terminal_on_a_side_nothing_drives_is_named(self):
+        home, project = self.project([self.BOARD, ("alarm", [{"part": "speaker-terminal"}, {"part": "x-terminal"}])])
+        terminal = json.loads((ROOT / "parts" / "speaker-terminal.json").read_text())
+        (home / "catalog" / "x-terminal.json").write_text(json.dumps(dict(terminal, id="x-terminal")))
+        self.assertIn("never a supply (speaker-terminal.SPK_P, x-terminal.SPK_P are on it)\n",
+                      self.text(["--requirements", str(project), "--dry-run"]))
+
+    def test_with_its_amplifier_the_terminal_s_pair_is_driven(self):
+        _, project = self.project([self.BOARD, ("alarm", [{"part": "max98357a-dfr0954"}, {"part": "speaker-terminal"}])])
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["no_driver"], said["data"]["no_supply"], said["data"]["no_receiver"]), (0, [], [], []))
 
     def test_a_supply_picked_or_kept_in_the_file_answers_the_rail(self):
         _, project = self.project([self.BOARD, ("drive", [{"part": "l9110s-module"}]), ("power", [{"part": "jst-ph-2-power-inlet"}])])

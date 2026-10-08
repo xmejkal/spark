@@ -371,7 +371,7 @@ REQUIREMENTS = "requirements.json"
 #: the entries already in the file that no pick explains, the board the file named before, what refuses it, the picks laid out
 #: at a placeholder outline, the needs nothing on the board serves, and what the board's power would lack (`_power_gaps`).
 Requirements = collections.namedtuple("Requirements", "content shelving unplaced kept board_was problems placeholder unserved "
-                                                      "no_supply no_receiver")
+                                                      "no_supply no_receiver no_driver")
 
 #: The note a requirements file keeps of the needs it leaves off the board (C-2): `check_spine` reads it into its verdict.
 UNSERVED = "unserved"
@@ -519,9 +519,11 @@ def _power_gaps(listed, known):
     """
     What the board's power would lack (C-3; the PO, 2026-10-08), from the records of every part the file lists, on the rails the
     file gives them: each rail a part draws from and nothing listed supplies — `emit_board.rails_without_a_source`, the rule the
-    schematic stage stops on — as {"rail", "drawn_by"}; and each net a part drives that nothing listed receives
-    (`emit_board.outputs_with_nothing_on_them`) as {"net", "driven_by"}. A part whose record is not found or is broken is left
-    to the build to name. Said before the build, never refused: the inlet, the supply or the terminal is the person's pick.
+    schematic stage stops on — as {"rail", "drawn_by"}; each net a part drives that nothing listed receives
+    (`emit_board.outputs_with_nothing_on_them`) as {"net", "driven_by"}; and, split out of the first, each side of a driven pair
+    nothing listed drives (`emit_board.pair_sides_without_a_driver`: an amplifier's, never a supply's; F15) as {"net",
+    "received_by"}. A part whose record is not found or is broken is left to the build to name. Said before the build, never
+    refused: the inlet, the supply, the amplifier or the terminal is the person's pick.
     """
     part_list = []
     for entry in listed:
@@ -541,7 +543,9 @@ def _power_gaps(listed, known):
                                                    if on == net and supply.get("direction") != "out"})}
                  for net in emit_board.rails_without_a_source(part_list)]
     no_receiver = [{"net": net, "driven_by": "%s.%s" % (name, pin)} for net, name, pin in emit_board.outputs_with_nothing_on_them(part_list)]
-    return no_supply, no_receiver
+    pair_sides = set(emit_board.pair_sides_without_a_driver(part_list))
+    no_driver = [{"net": gap["rail"], "received_by": gap["drawn_by"]} for gap in no_supply if gap["rail"] in pair_sides]
+    return [gap for gap in no_supply if gap["rail"] not in pair_sides], no_receiver, no_driver
 
 
 def _how_to_fill(path):

@@ -398,6 +398,21 @@ def rails_without_a_source(part_list):
     return sorted(consumed - provided)
 
 
+def pair_sides_without_a_driver(part_list):
+    """
+    The rails `rails_without_a_source` names that are one side of a driven pair (F15): every pin on one is an input naming
+    a `polarity` — a speaker terminal's SPK+ on SPEAKER_P. What feeds such a net is an amplifier's output, never a supply:
+    told to pick a power inlet, a person would plug a supply into what the terminal's own record calls destructive. Decided
+    by the pins, not by a `_P`/`_N` suffix, so a pair the design moves onto rails of its own is still one.
+    """
+    on = {}
+    for _, supply, net in power_connections(part_list):
+        if supply.get("direction") != "out":
+            on.setdefault(net, []).append(supply)
+    return [net for net in rails_without_a_source(part_list)
+            if all(supply.get("polarity") in POLARITY_SUFFIX for supply in on[net])]
+
+
 def outputs_in_contention(part_list):
     """
     Nets driven by more than one supply, or by a supply onto a rail the module itself provides.
