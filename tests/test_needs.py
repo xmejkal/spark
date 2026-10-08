@@ -1132,6 +1132,16 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertIn("no record called x-gone any more", said["problems"][0]["sentence"])
         self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
 
+    def test_a_catalog_pick_whose_footprint_would_be_code_is_refused_and_never_shelved(self):
+        # C-1 (TL-3's probe): a researched record carrying a crafted footprint went onto the shelf and into board.tsx
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+        led = json.loads((home / "catalog" / "x-led.json").read_text())
+        (home / "catalog" / "x-led.json").write_text(json.dumps(dict(led, footprint='pushbutton"} pcbX={(globalThis.x = 1, 0)} data-x="')))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, [p["subject"] for p in said["problems"]]), ("problems", 1, ["x-led"]))
+        self.assertTrue(said["problems"][0]["sentence"].startswith("footprint is "), said["problems"])
+        self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
+
     def test_a_catalog_part_picked_for_two_needs_goes_onto_the_shelf_once(self):
         _, project = self.project([self.BOARD, ("left", [{"part": "x-led"}]), ("right", [{"part": "x-led"}])])
         said, _ = run(["--requirements", str(project)])

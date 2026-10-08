@@ -159,6 +159,36 @@ class TheContractTest(unittest.TestCase):
         self.assertEqual(self._problems(footprint="pinrow5"), [])
         self.assertFalse(parts.has_placeholder_footprint(part(footprint="pinrow5")))
 
+    def test_a_footprint_that_is_no_footprinter_name_is_refused(self):
+        """
+        C-1 (the council on PR #98): the generated board is written with the footprint as an attribute's text, unescaped
+        (P87, #19), and `--fact-set` took any string, `--audit` called such a record current, and `--requirements` shelved
+        it "so every project builds with it" — code from a web page, one command from `board.tsx`. A footprint is a
+        footprinter's name or a JLCPCB part, and nothing else.
+        """
+        for given in ('pinrow4" onClick={alert(1)} data-x="', 'pushbutton"} pcbX={(globalThis.x = 1, 0)} data-x="',
+                      "pinrow 4", "PINROW4", "jst_ph_2>", "jlcpcb:C12a", "kicad:R_0603", "pinrow4\n"):
+            with self.subTest(footprint=given):
+                problems = self._problems(footprint=given)
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("footprint is %r" % given), problems)
+                self.assertIn("jlcpcb:C<number>", problems[0])
+        for given in ("pinrow5", "jst_ph_3", "dip12_w15.24mm", "0603", "sot23_3", "pushbutton", "jlcpcb:C2040"):
+            with self.subTest(footprint=given):
+                self.assertEqual(self._problems(footprint=given), [], "a footprinter's name, or a JLCPCB part")
+
+    def test_a_silkscreen_that_would_end_the_comment_the_board_keeps_it_in_is_refused(self):
+        """C-1: the generated board keeps `printed` in a `{/* … */}` comment, which `*/` ends — what follows would be code —
+        and a `"` would end a string; every other silkscreen stays the person's to write."""
+        for printed in ("IN+ */} <chip name=\"X\" /> {/*", 'VIN"', "*/"):
+            with self.subTest(printed=printed):
+                problems = self._problems(needs=[{"signal": "S", "pin": "VIN", "printed": printed, "direction": "in"}])
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("needs[0] printed %r" % printed), problems)
+        for printed in ("IN+", "OUT-", "GPIO0/CE", "SPK+", "~RESET", "3V3 (out)"):
+            with self.subTest(printed=printed):
+                self.assertEqual(self._problems(needs=[{"signal": "S", "pin": "VIN", "printed": printed, "direction": "in"}]), [])
+
     def test_a_pin_name_a_selector_cannot_parse_is_caught_where_it_is_written(self):
         """
         Measured on a probe board: `IN+`, `OUT-` and `A.B` do not resolve as tscircuit selectors;
@@ -178,7 +208,8 @@ class TheContractTest(unittest.TestCase):
                     needs=[{"signal": "S", "pin": good, "direction": "in"}]), [])
 
     def test_the_silkscreen_may_say_anything(self):
-        # `printed` is what is on the part. It never reaches a selector, so nothing constrains it.
+        # `printed` is what is on the part. It never reaches a selector, so nothing constrains it but the two marks that
+        # would end the comment the board keeps it in (C-1, below).
         self.assertEqual(self._problems(
             needs=[{"signal": "S", "pin": "VIN", "printed": "IN+", "direction": "in"}]), [])
 
@@ -1902,7 +1933,7 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
         home = self.a_probe()
         before = (home / "catalog" / "x-soil.json").read_text()
         with in_store(home):
-            for given in (5, True, 3.5, ["jst_ph_3"], {"name": "jst_ph_3"}):
+            for given in (5, True, 3.5, ["jst_ph_3"], {"name": "jst_ph_3"}, 'jst_ph_3" onClick={alert(1)} data-x="'):
                 for flags in ([], ["--dry-run"]):
                     with self.subTest(footprint=given, flags=flags):
                         said, code = run_json(["--fact-set", "x-soil", self.facts({"footprint": given})] + flags)

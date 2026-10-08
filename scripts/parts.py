@@ -180,6 +180,13 @@ def audit(project=None):
 #: (what is silkscreened, unrestricted). The generated file shows both where they differ.
 SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
 
+#: What a footprint may be (C-1, the council on PR #98): a footprinter's name — lower-case letters, digits, `_` and `.`, so
+#: `pinrow5`, `jst_ph_3`, `0603`, `dip12_w15.24mm` — or a JLCPCB part, `jlcpcb:C2040`. The board is written with it as an
+#: attribute's text, unescaped (P87, #19): a quote, a brace or a space in it would be code in `board.tsx`.
+FOOTPRINT_NAME = re.compile(r"[a-z0-9][a-z0-9_.]*|jlcpcb:C[0-9]+")
+#: What a silkscreen may not hold (C-1): the board keeps it in a `{/* … */}` comment, which `*/` ends, and `"` ends a string.
+ENDS_THE_COMMENT = ("*/", '"')
+
 #: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
 #: here rather than keeping its own, because it had its own and the two disagreed: a servo part
 #: declaring `needs: ["pwm"]` validated as a good record and then made the pin assigner refuse
@@ -586,6 +593,10 @@ def validate(part: dict, path: Path) -> list:
             if printed is not None and not isinstance(printed, str):
                 problems.append("%s[%d] printed is %r; it is the silkscreen text, a string"
                                 % (group, index, printed))
+            elif printed is not None and any(mark in printed for mark in ENDS_THE_COMMENT):
+                problems.append("%s[%d] printed %r holds %s — the generated board keeps the silkscreen in a comment, "
+                                "which that would end; write it without" % (group, index, printed, " and ".join(
+                                    mark for mark in ENDS_THE_COMMENT if mark in printed)))
 
     # Dimensions are a real schema, not an open fact, because every part has an outline and a
     # generator reads them structurally to decide where things go. They sat OUTSIDE the
@@ -621,12 +632,14 @@ def validate(part: dict, path: Path) -> list:
                             "real footprint is and why this one stands in, or nobody can finish it")
 
     # A footprint is the NAME of one: the board is written with it as the text of an attribute, so a number or
-    # `true` would reach tscircuit as the footprint "5" or "True". An absent one (`_absent`: null, no key, empty) is
-    # owed, not wrong, so only a value that is there is checked; whether a string names a real footprint is a build's to say.
+    # `true` would reach tscircuit as the footprint "5" or "True" — and a string with a quote in it would be code
+    # (C-1). An absent one (`_absent`: null, no key, empty) is owed, not wrong, so only a value that is there is
+    # checked; whether a name names a real footprint is a build's to say.
     footprint = part.get("footprint")
-    if not (_absent("footprint", footprint) or isinstance(footprint, str)):
-        problems.append("footprint is %r, but a footprint is the name of one — a string such as pinrow5, "
-                        "jst_ph_3 or jlcpcb:C<number>" % (footprint,))
+    if not (_absent("footprint", footprint) or (isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))):
+        problems.append("footprint is %r, but a footprint is the name of one — a footprinter's, in lower-case letters, "
+                        "digits, _ and . (pinrow5, jst_ph_3, dip12_w15.24mm), or a JLCPCB part, jlcpcb:C<number>: the "
+                        "board is written with it as code" % (footprint,))
 
     # Which pad is pin 1. The generator numbered `pinLabels` from the order the pins happened to
     # appear in this file — so an L9110S whose header reads BIA BIB GND VCC AIA AIB was emitted

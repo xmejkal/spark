@@ -1,0 +1,12 @@
+[
+ {"file": "scripts/parts.py", "name": "C-1: any string is a footprint again, a quote and a brace included",
+  "find": "(isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))", "replace": "isinstance(footprint, str)"},
+ {"file": "scripts/parts.py", "name": "C-1: a footprinter's name may hold any character after its first",
+  "find": "FOOTPRINT_NAME = re.compile(r\"[a-z0-9][a-z0-9_.]*|jlcpcb:C[0-9]+\")",
+  "replace": "FOOTPRINT_NAME = re.compile(r\"[a-z0-9].*|jlcpcb:C[0-9]+\")"},
+ {"file": "scripts/parts.py", "name": "C-1: a silkscreen that would end the board's comment is let through",
+  "find": "            elif printed is not None and any(mark in printed for mark in ENDS_THE_COMMENT):",
+  "replace": "            elif False:"},
+ {"file": "scripts/parts.py", "name": "C-1: a quote in a silkscreen is let through",
+  "find": "ENDS_THE_COMMENT = (\"*/\", '\"')", "replace": "ENDS_THE_COMMENT = (\"*/\",)"}
+]
