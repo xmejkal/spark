@@ -162,6 +162,13 @@ class TheContractTest(unittest.TestCase):
         self.assertFalse(any("power_pads" in p for p in
                              self._problems(power_pads={"GND1": {"rail": "ground"}})))
 
+    def test_a_power_pad_rail_that_is_no_name_is_refused(self):
+        # P87's attribute half: the pad's rail is the net its trace is written to, `to="net.<RAIL>"`
+        problems = self._problems(power_pads={"GND1": {"rail": "ground"}, "VCC": {"rail": 'motor" pcbX={(globalThis.x = 1, 0)} y="'}})
+        self.assertEqual([p for p in problems if "power_pads" in p], [
+            "power_pads.VCC rail is 'motor\" pcbX={(globalThis.x = 1, 0)} y=\"', but a rail is a name — letters, digits and _ "
+            "(ground, logic, motor): the board is written with it as code"])
+
     def test_a_wrong_schema_version_is_refused_rather_than_read_hopefully(self):
         problems = self._problems(schema=99)
         self.assertTrue(any("schema" in p for p in problems))

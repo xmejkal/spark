@@ -99,5 +99,10 @@
  {"file": "scripts/parts.py", "name": "F16: --requirements says nothing of the drawer keys it writes into the file", "find": "    said += [] if problems else _names_your_entries(needs.REQUIREMENTS, needs.unserved_keys(content) - named, args.dry_run)", "replace": "    said += []"},
  {"file": "scripts/parts.py", "name": "F16: the drawer keys in requirements.json are said on every run, not once", "find": "needs.unserved_keys(content) - named, args.dry_run)", "replace": "needs.unserved_keys(content), args.dry_run)"},
  {"file": "scripts/parts.py", "name": "F16: --requirements says the keys are in needs.json", "find": "_names_your_entries(needs.REQUIREMENTS, ", "replace": "_names_your_entries(\"needs.json\", "},
- {"file": "scripts/parts.py", "name": "F16: several drawer keys are said as one entry", "find": "\"y\" if len(new_keys) == 1 else \"ies\"", "replace": "\"y\""}
+ {"file": "scripts/parts.py", "name": "F16: several drawer keys are said as one entry", "find": "\"y\" if len(new_keys) == 1 else \"ies\"", "replace": "\"y\""},
+ {"file": "scripts/parts.py", "name": "P87: a part's rail may be any text again, a quote and a brace included", "find": "        if rail and not (isinstance(rail, str) and re.fullmatch(SELECTOR_SAFE, rail)):", "replace": "        if rail and not isinstance(rail, str):"},
+ {"file": "scripts/parts.py", "name": "P87: a part's signal may be any text again", "find": "        if signal and not (isinstance(signal, str) and re.fullmatch(SELECTOR_SAFE, signal)):", "replace": "        if signal and not isinstance(signal, str):"},
+ {"file": "scripts/boards.py", "name": "P87: a board's power pad rail may be any text again", "find": "        elif not (isinstance(supply[\"rail\"], str) and re.fullmatch(parts.SELECTOR_SAFE, supply[\"rail\"])):", "replace": "        elif not isinstance(supply[\"rail\"], str):"},
+ {"file": "scripts/design.py", "name": "P87: an instance may be called anything again", "find": "            if name is not None and not (isinstance(name, str) and re.fullmatch(parts_library.SELECTOR_SAFE, name)):", "replace": "            if name is not None and not isinstance(name, str):"},
+ {"file": "scripts/design.py", "name": "P87: a rail the requirements give may be any text again", "find": "                if not re.fullmatch(parts_library.SELECTOR_SAFE, rail):", "replace": "                if not rail:"}
 ]

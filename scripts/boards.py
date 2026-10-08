@@ -25,6 +25,7 @@ unverified footprint reach a gerber.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -401,12 +402,16 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
     # such a pad with `continue` — the silent drop G2 removed for module pins, kept for the
     # processor's own. Refused here, where the board file is read, so it never reaches a
     # generator at all (sprint audit A6, item 8).
+    import parts  # a board points at its datasheets the way a part does (P62b), and names a rail as a part does
     for pad, supply in sorted((board.get("power_pads") or {}).items()):
         if not isinstance(supply, dict) or not supply.get("rail"):
             problems.append(f"power_pads.{pad} names no rail, so the microcontroller pad would be "
                             f"wired to nothing")
+        # P87's attribute half: the pad's trace is written to `net.<RAIL>`, so a rail is a name, never text
+        elif not (isinstance(supply["rail"], str) and re.fullmatch(parts.SELECTOR_SAFE, supply["rail"])):
+            problems.append(f"power_pads.{pad} rail is {supply['rail']!r}, but a rail is a name — letters, digits and _ "
+                            f"(ground, logic, motor): the board is written with it as code")
 
-    import parts  # a board points at its datasheets the way a part does (P62b)
     problems += parts.document_problems(board)
     return problems
 

@@ -602,6 +602,20 @@ def validate(part: dict, path: Path) -> list:
                                 "which that would end; write it without" % (group, index, printed, " and ".join(
                                     mark for mark in ENDS_THE_COMMENT if mark in printed)))
 
+    # A rail and a signal are names, as a pin is (P87's attribute half, after F11): a rail becomes the net the board is written
+    # with — `to="net.<RAIL>"`, upper-cased — so a crafted one was code in board.tsx; a signal is what the pin map and the
+    # firmware call a pin's job. Whole-string: `$` alone would let a trailing newline through.
+    for index, supply in enumerate(part.get("power") or []):
+        rail = supply.get("rail") if isinstance(supply, dict) else None
+        if rail and not (isinstance(rail, str) and re.fullmatch(SELECTOR_SAFE, rail)):
+            problems.append("power[%d] rail is %r, but a rail is a name — letters, digits and _ (ground, logic, motor, 5v): "
+                            "the board is written with it as code" % (index, rail))
+    for index, need in enumerate(part.get("needs") or []):
+        signal = need.get("signal") if isinstance(need, dict) else None
+        if signal and not (isinstance(signal, str) and re.fullmatch(SELECTOR_SAFE, signal)):
+            problems.append("needs[%d] signal is %r, but a signal is a name — letters, digits and _ (MOTOR_IA, STATUS_LED): "
+                            "the pin map and the board name it, and firmware is written against it" % (index, signal))
+
     # Dimensions are a real schema, not an open fact, because every part has an outline and a
     # generator reads them structurally to decide where things go. They sat OUTSIDE the
     # provenance contract as a bare `{"width": .., "height": ..}` — so one part carried a

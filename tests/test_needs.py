@@ -1276,6 +1276,17 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertTrue(said["problems"][0]["sentence"].startswith("footprint is "), said["problems"])
         self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
 
+    def test_a_catalog_pick_whose_rail_would_be_code_is_refused_and_never_shelved(self):
+        # P87's attribute half, as C-1 for the footprint: the rail is written into board.tsx as `to="net.<RAIL>"`
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+        led = json.loads((home / "catalog" / "x-led.json").read_text())
+        led["power"][0]["rail"] = 'gnd" pcbX={(globalThis.x = 1, 0)} y="'
+        (home / "catalog" / "x-led.json").write_text(json.dumps(led))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((said["status"], code, [p["subject"] for p in said["problems"]]), ("problems", 1, ["x-led"]))
+        self.assertTrue(said["problems"][0]["sentence"].startswith("power[0] rail is "), said["problems"])
+        self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
+
     def test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert(self):
         # F11 (the review's probe; P87's emitter half): a name is not refused — product names carry inch marks — so this
         # one is shelved and built, and the board keeps it in a comment it cannot end. `tsci build` printed REVIEW-INJECTED-42

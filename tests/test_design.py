@@ -80,6 +80,17 @@ class ReadingTheRequirementsTest(unittest.TestCase):
         with self.assertRaises(design.DesignError):
             design.requested_parts({"parts": [42]})
 
+    def test_an_instance_whose_name_is_no_name_is_refused(self):
+        # P87's attribute half: the instance's name is the component the board is written with, `<chip name="…">`
+        for name in ('Btn" pcbX={(globalThis.x = 1, 0)} y="', "Btn Open", "Btn-Open"):
+            with self.subTest(name=name):
+                with self.assertRaises(design.DesignError) as caught:
+                    design.requested_parts({"parts": [{"part": "tactile-button", "name": name}]})
+                self.assertTrue(str(caught.exception).startswith("parts[0] calls its instance %r, but" % name), str(caught.exception))
+                self.assertIn("the board is written with it as code", str(caught.exception))
+        self.assertEqual(design.requested_parts({"parts": [{"part": "tactile-button", "name": "Btn_Open2"}]}),
+                         [("tactile-button", "Btn_Open2")])
+
     def test_the_two_entry_forms_normalise_to_one(self):
         self.assertEqual(design.requested_parts(
             {"parts": ["l9110s-module", {"part": "tactile-button", "name": "BtnForward"}]}),
@@ -206,6 +217,13 @@ class ARailBelongsToTheDesignTest(unittest.TestCase):
     def test_rails_must_be_a_pin_to_rail_map(self):
         with self.assertRaises(design.DesignError):
             design.rails_requested({"parts": [dict(self.ENTRY, rails=["traction"])]})
+
+    def test_a_rail_the_requirements_give_that_is_no_name_is_refused(self):
+        # P87's attribute half: the rail becomes the net the pin's trace is written to
+        with self.assertRaises(design.DesignError) as caught:
+            design.rails_requested({"parts": [dict(self.ENTRY, rails={"VCC": 'traction" x="'})]})
+        self.assertEqual(str(caught.exception), "parts[0].rails puts VCC on 'traction\" x=\"', but a rail is a name — letters, "
+                                                 "digits and _ (traction, motor): the board is written with it as code")
 
     def test_an_unnamed_entry_can_carry_rails_too(self):
         entry = {"part": "l9110s-module", "rails": {"VCC": "traction"}}

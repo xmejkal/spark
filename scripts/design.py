@@ -25,6 +25,7 @@ assign pins, because only the generator needs that.
 """
 
 import json
+import re
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -122,7 +123,12 @@ def requested_parts(wanted):
         if isinstance(entry, dict):
             if not entry.get("part"):
                 raise DesignError("parts[%d] names no `part`: %s" % (index, json.dumps(entry)))
-            entries.append((entry["part"], entry.get("name")))
+            name = entry.get("name")
+            if name is not None and not (isinstance(name, str) and re.fullmatch(parts_library.SELECTOR_SAFE, name)):
+                # P87's attribute half: the instance's name is the component the board is written with, `<chip name="…">`
+                raise DesignError("parts[%d] calls its instance %r, but an instance's name is a name — letters, digits and _ "
+                                  "(BtnOpen): the board is written with it as code" % (index, name))
+            entries.append((entry["part"], name))
         elif isinstance(entry, str):
             entries.append((entry, None))
         else:
@@ -149,6 +155,10 @@ def rails_requested(wanted):
                     isinstance(pin, str) and isinstance(rail, str) and rail for pin, rail in rails.items()):
                 raise DesignError("parts[%d].rails must map pin names to rail names: %s"
                                   % (index, json.dumps(rails)))
+            for pin, rail in rails.items():
+                if not re.fullmatch(parts_library.SELECTOR_SAFE, rail):  # P87's attribute half: the rail is the net written
+                    raise DesignError("parts[%d].rails puts %s on %r, but a rail is a name — letters, digits and _ (traction, "
+                                      "motor): the board is written with it as code" % (index, pin, rail))
             overrides[(entry.get("part"), entry.get("name"))] = rails
     return overrides
 

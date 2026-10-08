@@ -177,6 +177,30 @@ class TheContractTest(unittest.TestCase):
             with self.subTest(footprint=given):
                 self.assertEqual(self._problems(footprint=given), [], "a footprinter's name, or a JLCPCB part")
 
+    def test_a_rail_or_a_signal_that_is_no_name_is_refused(self):
+        """
+        P87's attribute half (after F11): a rail becomes the net the board is written with — `to="net.<RAIL>"`, upper-cased —
+        so a crafted one was code in board.tsx past --validate, --audit and --requirements. A rail and a signal are names:
+        letters, digits and _, as a pin is; every rail and signal the library ships is one.
+        """
+        for rail in ('gnd" pcbX={(globalThis.x = 1, 0)} y="', "motor 6v", "5v-rail", "gnd\n", 5):
+            with self.subTest(rail=rail):
+                problems = self._problems(power=[{"pin": "GND", "rail": rail, "direction": "in"}])
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("power[0] rail is %r, but a rail is a name" % (rail,)), problems)
+                self.assertIn("the board is written with it as code", problems[0])
+        for signal in ('SIG" x="', "IN+", "A */ x", "MOTOR IA"):
+            with self.subTest(signal=signal):
+                problems = self._problems(needs=[{"signal": signal, "pin": "P", "direction": "in"}])
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("needs[0] signal is %r, but a signal is a name" % signal), problems)
+        for rail in ("ground", "logic", "motor", "speaker", "5v", "TRACTION"):
+            with self.subTest(rail=rail):
+                self.assertEqual(self._problems(power=[{"pin": "GND", "rail": rail, "direction": "in"}]), [])
+        for signal in ("MOTOR_IA", "STATUS_LED", "TOF_INT", "SDA"):
+            with self.subTest(signal=signal):
+                self.assertEqual(self._problems(needs=[{"signal": signal, "pin": "P", "direction": "in"}]), [])
+
     def test_a_silkscreen_that_would_end_the_comment_the_board_keeps_it_in_is_refused(self):
         """C-1: the generated board keeps `printed` in a `{/* … */}` comment, which `*/` ends — what follows would be code —
         and a `"` would end a string; every other silkscreen stays the person's to write."""
