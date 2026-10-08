@@ -40,11 +40,13 @@ What the three words mean:
   exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600, the version spark pins; that tscircuit came from an
   existing install, linked into the project. The note above each output names its run.
 - Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer, `plant-alarm` and
-  `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read.
+  `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read; each
+  example under [owed facts and gaps](#owed-facts-and-gaps) ran in a store of its own.
 - How: each command typed as shown. In Claude Code you type the `/spark:` command, and Claude runs these scripts for
   you. You, or another AI, can run them directly; [the guide for AI agents](agents.md) says how.
 - Paths: `$CLAUDE_PLUGIN_ROOT` is where spark is installed. In outputs, `~/` is the home folder, `<temp>` a temporary
-  one, the scratch store is shown as `~/.local/share/spark`, and each project folder by its name.
+  one, the scratch store is shown as `<store>` (as `~/.local/share/spark` in the 2026-10-05 runs), and each project
+  folder by its name.
 
 There are three example projects:
 
@@ -166,7 +168,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
 How to read the matches:
 
 - Owned parts come first, from the drawer above, with how many are free.
-- `owes` names facts a [record](../../GLOSSARY.md#record--and-the-three-places-one-lives) lacks:
+- `owes` names facts a [record](../../GLOSSARY.md#record--and-the-three-places-one-lives) lacks
+  ([owed facts and gaps](#owed-facts-and-gaps) shows one):
   - without a footprint or a pin order, the build stops;
   - without an outline (`body_mm`), `/spark:build` draws a declared placeholder size, and every stage still reads
     `[ok]` ([P115](https://github.com/xmejkal/spark/issues/49));
@@ -178,7 +181,7 @@ How to read the matches:
   builds today.
 
 Here a distance sensor is offered for soil moisture. It senses distance, not moisture, so soil moisture is a real gap.
-Research is for that.
+Research is for that; [owed facts and gaps](#owed-facts-and-gaps) says what a gap leaves off the board until then.
 
 ### A recorded run: a button and an LED
 
@@ -386,6 +389,105 @@ spark's code defines them:
 The run left nine lines in the store's history, `history.jsonl` ([your store](how-it-works.md#your-store)): a `step`
 line for each of S, M, C and L, with the session id; a `reused` line for each pick; the reason for passing over the
 LED pack; and a `built` line, written by the green build.
+
+### Owed facts and gaps
+
+A record **owes** a fact when one the chain reads is missing from it: `footprint`, `pin_order`, `pin_order_proof`,
+`body_mm` (its outline) or `simulation`. `--match` shows what each candidate owes, and `parts.py --audit` lists every
+record that owes one. Today spark's own library owes none:
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --audit
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  library       10 current,   0 owe facts,   0 broken
+  xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file
+```
+
+In a scratch store of its own, the plant alarm's soil need matched (`--match .`) a catalog record written by hand,
+`soil-probe`, that owed three facts:
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  soil — sense / soil-moisture
+                 soil-probe (catalog)                           soil-moisture  owes footprint, pin_order_proof, simulation
+                 vl6180x-breakout (library)                     distance [other words]
+  board — compute / microcontroller
+      owned 1    firebeetle2-esp32s3 (library)                  microcontroller  free 1
+                 xiao-esp32-c6 (library)                        microcontroller  stops at the footprint stage (P121)
+```
+
+What happens today depends on what is owed. `--pick` takes the record either way; `--requirements` decides.
+
+**A fact the circuit needs** — `footprint`, `pin_order`, `pin_order_proof` or `simulation` — stops the building list.
+The soil probe was picked with the board (`--pick . soil=soil-probe board=firebeetle2-esp32s3`), and then:
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --requirements .
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  refused, so nothing was written: soil-probe — owes footprint, pin_order_proof, simulation — fill it in its own home with --fact-set
+```
+
+It exits 1. **Only the outline** (`body_mm`) does not stop it. The same record with those three facts and no outline,
+picked the same way in another store, goes into the file with a warning:
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  wrote requirements.json: board firebeetle2-esp32s3; parts soil-probe
+  onto the shelf, so every project builds with it: soil-probe
+  placeholder outline — soil-probe owes body_mm, so the PCB step lays it out at a placeholder 16 x 12 mm: a dimension drawing (fetched after the person's yes) or a measurement fills it — fill it in its own home with --fact-set
+```
+
+**Filling one.** An owed fact is filled once, in the record's own home: here the catalog record in the store. In
+Claude Code, `/spark:idea` does it with you: Claude writes the facts from the record's source as a JSON object to a
+file, then runs `--fact-set`, first with `--dry-run`. A source not kept yet is fetched only after your yes. The soil
+probe's three, in `../facts.json`:
+
+```json
+{"footprint": "jst_ph_3",
+ "pin_order_proof": {"verified": false, "source": "read off the cable: GND, VCC, Signal"},
+ "simulation": {"skip": "no Wokwi part for a soil probe"}}
+```
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --fact-set soil-probe ../facts.json --project .
+```
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  set soil-probe (<store>/catalog/soil-probe.json): footprint null → "jst_ph_3"; pin_order_proof null → {"verified": false, "source": "read off the cable: GND, VCC, Signal"}; simulation null → {"skip": "no Wokwi part for a soil probe"}
+```
+
+Then `--requirements` wrote the file and put the record on the shelf:
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  wrote requirements.json: board firebeetle2-esp32s3; parts soil-probe
+  onto the shelf, so every project builds with it: soil-probe
+```
+
+`--fact-set` never changes spark's own library: a library record is changed in spark's repository.
+
+**What follows a gap.** A need marked `gap` has nothing in the store to pick. Left unpicked, it does not stop the
+building list, and `--requirements` says so. In a store of its own, the plant alarm with soil marked `gap` and the
+library's LED picked for the alarm:
+
+<!-- output: run 2026-10-08, spark 0.7.0 -->
+```text
+  wrote requirements.json: board firebeetle2-esp32s3; parts led-red-5mm
+  not on the board: soil — marked a gap: nothing like it is in the store yet; research it before it can be built
+```
+
+The file keeps that note under `unserved`, and the build's verdict repeats it:
+`the chain runs end to end — but not every need is on the board: soil (a gap)`. [Research](#research) comes next:
+`/spark:research` writes a new record into the project's `parts/`. A new record can still owe facts;
+`parts.py --audit --project .` names them, and `--fact-set` fills them as above. Then pick it for the need and run
+`--requirements` again, and the note goes.
 
 ## Research
 
