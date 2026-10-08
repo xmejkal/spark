@@ -24,7 +24,9 @@ write, or which `parts.py --requirements` writes from the parts you picked for y
 
 On 2026-10-08 the library defined two dev boards and held 8 parts (`boards.py --list`, `parts.py --list`). Only the
 FireBeetle 2 ESP32-S3 builds: the Seeed XIAO ESP32-C6 is defined for the pin map only, and its file records no header
-geometry, so `/spark:build` stops at the footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)).
+geometry, so `/spark:build` stops at the footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). With the
+library LED, whose series resistor is computed from the board's `power.io_volts`, which the XIAO's file does not state,
+the schematic stage refuses first (`cannot emit a board: …`), so the build stops a stage earlier.
 
 Where a fact is missing, spark refuses, or it goes on with a [stand-in](GLOSSARY.md#stand-in-placeholder) that it
 names in `board.tsx`: a placeholder outline in its header, the router's default trace width under the power traces it
