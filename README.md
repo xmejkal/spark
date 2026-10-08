@@ -22,7 +22,7 @@ Its placement is a first draft, which you lay out before ordering.
 write, or which `parts.py --requirements` writes from the parts you picked for your needs
 ([P97](https://github.com/xmejkal/spark/issues/18)). `--board`, and a requirements file's `board`, name the dev board.
 
-On 2026-10-06 the library defined two dev boards and held 7 parts (`boards.py --list`, `parts.py --list`). Only the
+On 2026-10-08 the library defined two dev boards and held 8 parts (`boards.py --list`, `parts.py --list`). Only the
 FireBeetle 2 ESP32-S3 builds: the Seeed XIAO ESP32-C6 is defined for the pin map only, and its file records no header
 geometry, so `/spark:build` stops at the footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)).
 
@@ -58,15 +58,15 @@ flowchart LR
 ```
 
 The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
-`docs/guide/`, on 2026-10-05 and 2026-10-06; [the journey guide](docs/guide/journey.md) shows the output of each step
-it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops before its goal,
-or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**: nothing does it yet;
-the linked issue plans it.
+`docs/guide/`, on 2026-10-05, 2026-10-06 and 2026-10-08; [the journey guide](docs/guide/journey.md) shows the output
+of each step it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops
+before its goal, or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**:
+nothing does it yet; the linked issue plans it.
 
 | step | today | with |
 | --- | --- | --- |
 | [Drawer](docs/guide/journey.md#drawer) | **partly**: what you own, kept in your own store; the scripts that list and write entries ran. Turning your words into entries, and the DFRobot import, were not run here | `/spark:drawer` |
-| [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; a part is picked per need, what you own is reserved, and the picks become a requirements file ([P97](https://github.com/xmejkal/spark/issues/18)). The conversation, the picking and the requirements file were not run here | `/spark:idea` |
+| [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; a part is picked per need, what you own is reserved, and the picks become a requirements file ([P97](https://github.com/xmejkal/spark/issues/18)). Its scripts ran here, from the needs to the requirements file, in [a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led) that went on to a board that builds and the tally; the conversation was not run, and with no Claude Code transcript there the tally could not count the cost | `/spark:idea` |
 | [Research](docs/guide/journey.md#research) | **partly**: the library search runs. Research of a new part is done by agents, not run here | `/spark:research`, `/spark:identify` |
 | [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it, or the stage that stopped it | `/spark:build` |
 | [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |
@@ -126,7 +126,7 @@ outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record cop
 - `/spark:init`: a project;
 - `/spark:setup`: the tools;
 - `/spark:drawer`: what you own;
-- `/spark:idea`: a goal to needs;
+- `/spark:idea`: a goal to needs, a part picked per need, and a requirements file;
 - `/spark:research`: a missing part;
 - `/spark:identify`: a module from a photo;
 - `/spark:build`: a requirements file to a board.
