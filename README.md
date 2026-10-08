@@ -115,9 +115,14 @@ LEDs*), then `/spark:idea` and say what you want to make (*a button that lights 
 matched against your drawer and spark's records; you pick a part per need, and what you own is reserved. The picks
 become a requirements file, `/spark:build` builds the board, and the tally ends the run with one cost line. The
 conversation was not run for these docs; the scripts were, each with its output in
-[a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led):
+[a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led). `/spark:idea` writes the needs to a file
+outside any repository, here `../button-needs.json` with the recorded run's three (a button, a light, a board), and
+sets them with the first line below. It also marks each step as it begins, with `parts.py --step <project> S` (then
+`M`, `C`, `L`): S once the folder is chosen, the others before `--match`, `--pick` and `--requirements`. Those marks
+are what let the tally count the cost. The block leaves them out, so its last line exits 2: no step is in the history.
 
 ```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../button-needs.json
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --requirements .
@@ -125,9 +130,12 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --tally .
 ```
 
+`$CLAUDE_PLUGIN_ROOT` is where spark is installed. A shell does not set it, so to type these lines yourself, clone spark
+and `export CLAUDE_PLUGIN_ROOT=<the clone's folder>` first, as [Set up](docs/guide/agents.md#set-up) shows.
+
 An AI agent adds `--json`, and runs each `parts.py` write with `--dry-run` first:
-`parts.py --pick . press=tactile-button light=led-red-5mm --dry-run --json` answers in one envelope, with
-`data.written` false.
+`parts.py --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3 --dry-run --json` answers in one
+envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`.
 
 **From a requirements file you write.** Name the dev board and the parts by the ids `boards.py --list` and
 `parts.py --list` print. The recorded run's picks wrote this one:
