@@ -228,7 +228,7 @@ class TheContractTest(unittest.TestCase):
         using those names produced four "could not find port" errors, and the rename that fixed
         it LOST the silkscreen — the exact failure `pad_aliases` prevents on the board side.
         """
-        for bad in ("IN+", "OUT-", "A.B", "V IN"):
+        for bad in ("IN+", "OUT-", "A.B", "V IN", "A\n"):  # the re-check: `A⏎` passed and broke the build, a string unterminated
             with self.subTest(pin=bad):
                 problems = self._problems(needs=[{"signal": "S", "pin": bad, "direction": "in"}])
                 self.assertTrue(any("cannot be a selector" in p for p in problems), problems)

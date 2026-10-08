@@ -127,5 +127,6 @@
  {"file": "scripts/parts.py", "name": "re-check 1: a chip may be called anything again, ../ and a quote included", "find": "    if chip and not (isinstance(chip, str) and re.fullmatch(SELECTOR_SAFE, chip)):", "replace": "    if chip and not isinstance(chip, str):"},
  {"file": "scripts/sim_project.py", "name": "re-check 1: wokwi.toml writes --firmware raw again", "find": "        lines += [\"firmware = %s\" % json.dumps(firmware), \"elf = %s\" % json.dumps(firmware)]", "replace": "        lines += ['firmware = \"%s\"' % firmware, 'elf = \"%s\"' % firmware]"},
  {"file": "scripts/sim_project.py", "name": "re-check 1: wokwi.toml writes a chip's name raw again", "find": "\"name = %s\" % json.dumps(chip)", "replace": "'name = \"%s\"' % chip"},
- {"file": "scripts/sim_project.py", "name": "re-check 1: wokwi.toml writes a chip's binary raw again", "find": "\"binary = %s\" % json.dumps(\"chips/%s.chip.wasm\" % chip)", "replace": "'binary = \"chips/%s.chip.wasm\"' % chip"}
+ {"file": "scripts/sim_project.py", "name": "re-check 1: wokwi.toml writes a chip's binary raw again", "find": "\"binary = %s\" % json.dumps(\"chips/%s.chip.wasm\" % chip)", "replace": "'binary = \"chips/%s.chip.wasm\"' % chip"},
+ {"file": "scripts/parts.py", "name": "re-check 2: a pin name with a trailing line break is a selector again", "find": "            if pin and not re.fullmatch(SELECTOR_SAFE, str(pin)):", "replace": "            if pin and not re.match(SELECTOR_SAFE, str(pin)):"}
 ]

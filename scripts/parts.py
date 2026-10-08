@@ -616,7 +616,7 @@ def validate(part: dict, path: Path) -> list:
     for group in PIN_LISTS:
         for index, entry in enumerate(part.get(group) or []):
             pin = entry.get("pin")
-            if pin and not re.match(SELECTOR_SAFE, str(pin)):
+            if pin and not re.fullmatch(SELECTOR_SAFE, str(pin)):  # whole: `$` alone lets a trailing newline through
                 problems.append(
                     "%s[%d] pin %r cannot be a selector — letters, digits and _ only. If that is "
                     "what the silkscreen says, keep it in `printed` and give `pin` a wiring name"

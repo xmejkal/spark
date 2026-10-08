@@ -32,7 +32,7 @@
  {
   "file": "scripts/parts.py",
   "name": "accept any pin name as a selector",
-  "find": "            if pin and not re.match(SELECTOR_SAFE, str(pin)):",
+  "find": "            if pin and not re.fullmatch(SELECTOR_SAFE, str(pin)):  # whole: `$` alone lets a trailing newline through",
   "replace": "            if False:"
  },
  {
