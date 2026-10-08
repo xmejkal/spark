@@ -86,7 +86,7 @@ the project), `wokwi-cli`, MicroPython and `littlefs-python`. The runs here were
 has apt lines only for pdftotext and `sigrok-cli` (not run here), so Node and bun are yours to install; it has none
 for Windows.
 
-## Install, and a first run
+## Install
 
 In Claude Code:
 
@@ -96,28 +96,53 @@ In Claude Code:
 ```
 
 The marketplace is named `petr-local`, so Claude Code may show the plugin as `spark@petr-local`. This install path was
-not run for these docs.
-
-Then, in a project folder:
-
-1. `/spark:init` writes the project's files without guessing, including the `package.json` that tscircuit, the engine
-   that builds the board, installs into.
-2. `/spark:setup` shows the tools spark needs, and installs what is missing with one yes.
-3. Put a `requirements.json` in the folder: the dev board and a list of parts, by the ids `parts.py --list` prints.
-   Copy the example on [`/spark:build`'s page](commands/build.md#the-requirements-file), or ask Claude to design the
-   board; the `spark-design` skill writes the file with you (not run here).
-4. `/spark:build` turns it into a board.
-5. `/spark:init` again. After a build its page runs init with `--force`, which names the rails from the built board and
-   keeps your answers; its last step runs `check_all.py --project .`.
-
-On the documented example every stage of the build reads `[ok  ]` and it ends "the chain runs end to end": 19 routed
-traces carry the 22 written connections ([the full output](docs/guide/journey.md#build), with tscircuit linked in from
-an existing install, not installed by `/spark:setup`). All green, yet the conflict above shows only in `parts.py --show`
-and in `board.tsx`'s closing comment. To look at the board, [see it](commands/build.md#see-it) in tscircuit's viewer.
+not run for these docs. Then, in a project folder, `/spark:init` writes the project's files without guessing,
+including the `package.json` that tscircuit, the engine that builds the board, installs into; `/spark:setup` shows the
+tools spark needs, and installs what is missing with one yes.
 
 An update replaces the plugin, not your files. Your store and a project's own `boards/`, `parts/` and `.spark/` are
 outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record copied into the plugin's own library with
 `parts.py --promote` lives inside the plugin.
+
+## Two roads to a board
+
+**From what you own.** Type `/spark:drawer` and say what you own (*a FireBeetle 2 ESP32-S3 and a pack of ten red
+LEDs*), then `/spark:idea` and say what you want to make (*a button that lights an LED*). Claude turns it into needs,
+matched against your drawer and spark's records; you pick a part per need, and what you own is reserved. The picks
+become a requirements file, `/spark:build` builds the board, and the tally ends the run with one cost line. The
+conversation was not run for these docs; the scripts were, each with its output in
+[a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led):
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --requirements .
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --tally .
+```
+
+An AI agent adds `--json`, and runs each `parts.py` write with `--dry-run` first:
+`parts.py --pick . press=tactile-button light=led-red-5mm --dry-run --json` answers in one envelope, with
+`data.written` false.
+
+**From a requirements file you write.** Name the dev board and the parts by the ids `boards.py --list` and
+`parts.py --list` print. The recorded run's picks wrote this one:
+
+```json
+{"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "led-red-5mm"]}
+```
+
+Save it as `requirements.json` in the project and type `/spark:build`. It runs the chain,
+`check_spine.py requirements.json --keep .`; an AI agent adds `--json` and reads `status`, and `stages`, which names
+any stage that stopped it. [`/spark:build`'s page](commands/build.md#the-requirements-file) says what else the file
+takes, and the `spark-design` skill writes one with you (not run here). On the journey's larger example the build is
+all green, yet the conflict above shows only in `parts.py --show` and in `board.tsx`'s closing comment
+([Build](docs/guide/journey.md#build)).
+
+After either road, run `/spark:init` again: its page runs init with `--force`, which names the rails from the built
+board and keeps your answers, and its last step runs `check_all.py --project .`. Every build for these docs used an
+existing tscircuit install, not one `/spark:setup` made. To look at a board, [see it](commands/build.md#see-it) in
+tscircuit's viewer.
 
 ## Commands, skills and agents
 
