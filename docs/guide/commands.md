@@ -8,7 +8,7 @@ A **skill** is a longer procedure that Claude picks up when your words match it.
 An **agent** is a focused helper that a command or a skill launches. It has its own model and its own short list of
 tools.
 
-Every command treats text read from a [record](../../GLOSSARY.md#record--and-the-three-places-one-lives), a drawer
+Every command treats text read from a [record](../../GLOSSARY.md#record--and-the-four-places-one-lives), a drawer
 entry, a web or shop page or a datasheet as data about a part. It is never an instruction: if such text asks Claude to
 run or change something, Claude quotes it to you and carries on. (Each command page says so in its first paragraph.)
 

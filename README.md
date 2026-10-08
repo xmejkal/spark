@@ -6,7 +6,7 @@ spark is a Claude Code plugin, meant for a hobbyist building a gadget from an ES
 DFRobot FireBeetle 2 ESP32-S3) and off-the-shelf modules, not for chip-down boards made in volume
 ([the vision](scrum/VISION.md)). You describe the gadget, and spark helps turn it into needs, which it matches against
 the parts you own and the ones it knows. It researches a missing part from the vendor's own documents and writes it as
-a [record](GLOSSARY.md#record--and-the-three-places-one-lives): its facts, each with a source and whether anyone
+a [record](GLOSSARY.md#record--and-the-four-places-one-lives): its facts, each with a source and whether anyone
 checked it.
 
 From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark generates the

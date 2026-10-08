@@ -4,7 +4,7 @@ spark is three things:
 
 - a set of Python scripts;
 - a library of facts about boards and parts, each a
-  [record](../../GLOSSARY.md#record--and-the-three-places-one-lives);
+  [record](../../GLOSSARY.md#record--and-the-four-places-one-lives);
 - pages that tell Claude when to run which script.
 
 The [commands](commands.md) and skills are those pages. The scripts do the work, and each one runs on its own. This

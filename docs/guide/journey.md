@@ -169,7 +169,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
 How to read the matches:
 
 - Owned parts come first, from the drawer above, with how many are free.
-- `owes` names facts a [record](../../GLOSSARY.md#record--and-the-three-places-one-lives) lacks
+- `owes` names facts a [record](../../GLOSSARY.md#record--and-the-four-places-one-lives) lacks
   ([owed facts and gaps](#owed-facts-and-gaps) shows one):
   - without a footprint or a pin order, the build stops;
   - without an outline (`body_mm`), `/spark:build` draws a declared placeholder size, and every stage still reads
