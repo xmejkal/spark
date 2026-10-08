@@ -214,8 +214,9 @@ PROJECT_TEMPLATE = {
                   "[\"adafruit\", \"digikey\"] in the US. Modules come from their makers; simple parts "
                   "(connectors, discretes) take their facts from the maker's datasheet and are bought here."),
     "decided": [],
-    "//decided": ("Choices already made and not up for re-litigation, each with why. This is "
-                  "what stops a reviewer proposing the option you already rejected."),
+    "//decided": ("Choices already made and not up for re-litigation, each with why. Kept for you and for any "
+                  "agent that reads this file: no script reads it, and the spark-review skill hands the "
+                  "reviewers only `must`, so it does not stop a reviewer proposing an option you already rejected."),
 }
 
 
