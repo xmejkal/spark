@@ -1,18 +1,19 @@
 # The council on spark PR #98 (P97, store 1c) — 2026-10-08
 
 The council's report on spark PR #98, P97 store 1c, read at `9c5411c` (base `51841d5`) on 2026-10-08. Four lenses reviewed
-the pull request: the PO assistant (value), the user's journey, the documentation and the tech lead. The refuter, on the
-most capable model, then checked their findings one by one against the checkout. What follows is the refuter's report: how
-it checked, its verdict on every lens finding (section 1), the 41 confirmed items C-1 to C-41, ranked (section 2), the
-rivals and the sentences that claim more than their evidence (section 3), and the questions for the PO (section 4).
+the pull request: the PO assistant (value), the user's journey, the documentation and the tech lead. The refuter then
+checked their findings one by one against the checkout. What follows is the refuter's report: how it checked, its verdict
+on every lens finding (section 1), the 41 confirmed items C-1 to C-41, ranked (section 2), the rivals and the sentences
+that claim more than their evidence (section 3), and the questions for the PO (section 4).
 
 The ids PO-n, JO-n, DOC-n and TL-n name findings in the four lens reports, which are kept outside the repository. Every
 confirmed item is a row in [`INDEX.md`](INDEX.md): E1 to E41 are C-1 to C-41, in order. The fixes made in PR #98 after the
 council are the commits whose subject begins `P97 council`.
 
 Redacted when this report was filed here: a path into the checkout is cut to its folder name (`spark-p97/…`), the scratch
-folder with its session id is `<scratch>`, and the bin's own project name is `<bin>`. The one price in the text, "12 EUR at
-https://example.com/x" (PO-7), is a test fixture, not a real price.
+folder with its session id is `<scratch>`, and the bin's own project name is `<bin>`; the session's own temp folder is
+named, not spelled out. The one price in the text, "12 EUR at https://example.com/x" (PO-7), is a test fixture, not a
+real price.
 
 ---
 
@@ -136,7 +137,7 @@ output I produced; "read" is a file line. Quotes are verbatim; `…` marks a cut
 
 ### 1.4 Tech lead (`tech-lead.md`) — 31 tagged E, 3 tagged H
 
-- **TL-1 · holds.** Read `store.py:183-184`. Race with `needs.plan_pick` slowed 3 s: same `TMPDIR` → B `refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by A — 1 picked here`; different `TMPDIR` → both `"status":"ok"`, drawer `"used_in":{"A":1}`, history `reused … "project":"A"` and `reused … "project":"B"`, both `needs.json` carry the pick. Lock names by spelling: `/sT 518f0ef77b918345`, `/ST 7c6b6f3982663d60`, `/St ee98c59f62b4b0e9` (one folder, APFS). `env -u TMPDIR` → `/tmp`; the session's → `/var/folders/80/…/T`.
+- **TL-1 · holds.** Read `store.py:183-184`. Race with `needs.plan_pick` slowed 3 s: same `TMPDIR` → B `refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by A — 1 picked here`; different `TMPDIR` → both `"status":"ok"`, drawer `"used_in":{"A":1}`, history `reused … "project":"A"` and `reused … "project":"B"`, both `needs.json` carry the pick. Lock names by spelling: `/sT 518f0ef77b918345`, `/ST 7c6b6f3982663d60`, `/St ee98c59f62b4b0e9` (one folder, APFS). `env -u TMPDIR` → `/tmp`; the session's → its own per-user temp folder.
 - **TL-2 · holds.** Saw `set firebeetle-2-esp32-s3: used_in {"Plant": 1} → {"Plant": 1, "plant": 1}` and `projects.json` keys `Plant`, `plant`; with count 1, `refused … held by Plant`. Name reuse: after `ext/irrigation` vanished, `new/irrigation` took the name and its hold silently; `--tally ext/irrigation` → `is not on your list of projects`. `add_project` compared path strings at base too (`51841d5:scripts/store.py:175-187`); keying holds by that name is new in 1c.
 - **TL-3 · holds** (E to `board.tsx`; execution H). A catalog copy of `tactile-button` with the crafted `footprint`: `catalog        1 current,   0 owe facts,   0 broken`, pick ok, `onto the shelf, so every project builds with it: evil-button`, `emit_board.py` exit 0, `board.tsx:26` `<chip name="EvilButton" footprint="pushbutton"} pcbX={(globalThis.__spark_injected = 1, 0)} data-x="" pcbX={11.1} pcbY={27}`. Not built (it would run). TL's own string leaves a stray `}` after the quote, which a TSX parser likely rejects; PO-10's shape stays valid JSX.
 - **TL-4 · holds** (facts; the class "lie" is overstated, see §3). As JO-3/JO-9: unpicked need silent, `[ok]`, a `built` line, `4 picks`.
