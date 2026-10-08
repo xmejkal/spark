@@ -353,8 +353,13 @@ def plan_pick(project, given, passed_over=()):
 #: before it only spaced (`EUR 12`; `EUR12` and `KC868` are part numbers), a symbol or a code after it, glued or spaced,
 #: thousands spaced with a space or a no-break space, a Czech `,-` with or without its crowns (F14).
 TLDS = "com|org|net|io|cz|sk|de|eu|co|uk|pl|at|ch|fr|it|es|nl|info|shop|dev|app"
-URL_IN_WORDS = re.compile(r"[<(\[]?(?:[a-z][a-z0-9+.-]*://|www\.)[^\s>)\]]+[>)\]]?"
-                          r"|[<(\[]?\b[\w-]+(?:\.[\w-]+)*\.(?:%s)(?::\d+)?/[^\s>)\]]*[>)\]]?" % TLDS, re.IGNORECASE)
+#: A URL's own characters: none a space or a bracket, but a bracketed run inside it (`…/wiki/Foo_(bar)`) is its own too.
+URL_CHAR = r"(?:[^\s<>()\[\]]|\([^\s<>()\[\]]*\))"
+#: A bracket around a URL goes with it only when the URL is opened by it (the re-check: `(see aliexpress.com/x)` lost its
+#: `)` to the URL and kept its `(`), so the text's own brackets stay as balanced as they were.
+URL_IN_WORDS = re.compile(r"(?:(<)|(\()|(\[))?"
+                          r"(?:(?:[a-z][a-z0-9+.-]*://|www\.)%s+|\b[\w-]+(?:\.[\w-]+)*\.(?:%s)(?::\d+)?/%s*)"
+                          r"(?(1)>?)(?(2)\)?)(?(3)\]?)" % (URL_CHAR, TLDS, URL_CHAR), re.IGNORECASE)
 CODES = r"(?:eur|euros?|usd|dollars?|czk|kč|kc|gbp|chf|pln|zł|cny|rmb|yuan|jpy|yen)"
 AMOUNT = r"\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d+)?|\d[\d.,]*"
 PRICE_IN_WORDS = re.compile(r"(?:[$€£¥]\s?|\b%s\s)(?:%s)|(?:%s)(?:,-)?\s?(?:[$€£¥]|%s\b)|\b\d[\d. ]*,-(?!\w)" % (CODES, AMOUNT, AMOUNT, CODES),
@@ -370,7 +375,7 @@ def kept_reason(text):
     kept = PRICE_IN_WORDS.sub("", URL_IN_WORDS.sub("", said))
     if kept == said:
         return said, False
-    return re.sub(r"\s+([,;:.])", r"\1", re.sub(r"\s{2,}", " ", kept)).strip(" ,;:.-—"), True
+    return re.sub(r"\s+([,;:.)\]>])", r"\1", re.sub(r"\s{2,}", " ", kept)).strip(" ,;:.-—"), True
 
 
 REQUIREMENTS = "requirements.json"

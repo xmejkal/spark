@@ -681,7 +681,11 @@ class ThePicksTest(unittest.TestCase):
                             ("costs 300,- here", "costs here"),
                             # the controller's cases, as given: a symbol may be glued in front, a code only after
                             ("12EUR", ""), ("300Kč", ""), ("€12", ""), ("$5", ""), ("EUR 12", ""),
-                            ("aliexpress.com/item/1005006.html", ""), ("www.x.cz/y", "")):
+                            ("aliexpress.com/item/1005006.html", ""), ("www.x.cz/y", ""),
+                            # the re-check: a URL takes a closing bracket only with its opener, so the text's own stay
+                            # balanced; a bracketed run inside an address goes with it
+                            ("(see aliexpress.com/x)", "(see)"), ("a (b aliexpress.com/x) c", "a (b) c"),
+                            ("see https://en.wikipedia.org/wiki/Foo_(bar) there", "see there")):
             with self.subTest(given=given):
                 self.assertEqual(needs.kept_reason(given), (kept, True))
         for given in ("a 3 W speaker is loud enough", "it senses distance, not moisture.", "2 of them are dead",

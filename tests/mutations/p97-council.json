@@ -85,10 +85,10 @@
  {"file": "scripts/parts.py", "name": "F15: --describe does not name no_driver", "find": "\"no_driver\", \"no_receiver\", \"written\")),", "replace": "\"no_receiver\", \"written\")),"},
  {"file": "scripts/parts.py", "name": "F10: the refusal of spark's library names no part", "find": "\"not by parts.py\" % part_id)])", "replace": "\"not by parts.py\" % \"\")])"},
  {"file": "scripts/parts.py", "name": "F10: the refusal of a record that is no object names no part", "find": "\"%s is not a JSON object (%s) — repair the file by hand first\" % (part_id, path))])", "replace": "\"%s is not a JSON object (%s) — repair the file by hand first\" % (\"\", path))])"},
- {"file": "scripts/needs.py", "name": "F14: a URL of another scheme than http(s) is kept", "find": "URL_IN_WORDS = re.compile(r\"[<(\\[]?(?:[a-z][a-z0-9+.-]*://|www\\.)", "replace": "URL_IN_WORDS = re.compile(r\"[<(\\[]?(?:https?://|www\\.)"},
- {"file": "scripts/needs.py", "name": "F14: a bare host with a path is kept", "find": "                          r\"|[<(\\[]?\\b[\\w-]+(?:\\.[\\w-]+)*\\.(?:%s)(?::\\d+)?/[^\\s>)\\]]*[>)\\]]?\" % TLDS, re.IGNORECASE)", "replace": "                          r\"\", re.IGNORECASE)"},
- {"file": "scripts/needs.py", "name": "F14: a bare host's last label may be digits, so 3.3/5V and v1.1/v1.2 are cut", "find": "(?:\\.[\\w-]+)*\\.(?:%s)(?::\\d+)?/", "replace": "(?:\\.[\\w-]+)*\\.\\w+(?::\\d+)?/"},
- {"file": "scripts/needs.py", "name": "F14: the bracket before a URL is kept", "find": "URL_IN_WORDS = re.compile(r\"[<(\\[]?(?:", "replace": "URL_IN_WORDS = re.compile(r\"(?:"},
+ {"file": "scripts/needs.py", "name": "F14: a URL of another scheme than http(s) is kept", "find": "(?:(?:[a-z][a-z0-9+.-]*://|www\\.)%s+|", "replace": "(?:(?:https?://|www\\.)%s+|"},
+ {"file": "scripts/needs.py", "name": "F14: a bare host with a path is kept", "find": "(?::\\d+)?/%s*)\"", "replace": "(?::\\d+)?/%s*(?!))\""},
+ {"file": "scripts/needs.py", "name": "F14: a bare host's last label may be digits, so 3.3/5V and v1.1/v1.2 are cut", "find": "(?:\\.[\\w-]+)*\\.(?:%s)(?::\\d+)?/", "replace": "(?:\\.[\\w-]+)*\\.(?:%s|\\w+)(?::\\d+)?/"},
+ {"file": "scripts/needs.py", "name": "F14: the bracket before a URL is kept", "find": "URL_IN_WORDS = re.compile(r\"(?:(<)|(\\()|(\\[))?\"", "replace": "URL_IN_WORDS = re.compile(r\"(?:(<)|(\\()|(\\[)){0}\""},
  {"file": "scripts/needs.py", "name": "F14 follow-up: a code glued before a number is cut as a price again (KC868, GBP10)", "find": "|\\b%s\\s)(?:%s)|", "replace": "|\\b%s\\s?)(?:%s)|"},
  {"file": "scripts/needs.py", "name": "F14: a currency code glued after the number is kept", "find": "\\s?(?:[$€£¥]|%s\\b)|", "replace": "\\s?(?:[$€£¥]|\\b%s\\b)|"},
  {"file": "scripts/needs.py", "name": "F14: thousands spaced are cut at the space, leaving the first group", "find": "AMOUNT = r\"\\d{1,3}(?:[ \\u00a0]\\d{3})+(?:[.,]\\d+)?|\\d[\\d.,]*\"", "replace": "AMOUNT = r\"\\d[\\d.,]*\""},
@@ -105,7 +105,7 @@
  {"file": "scripts/boards.py", "name": "P87: a board's power pad rail may be any text again", "find": "        elif not (isinstance(supply[\"rail\"], str) and re.fullmatch(parts.SELECTOR_SAFE, supply[\"rail\"])):", "replace": "        elif not isinstance(supply[\"rail\"], str):"},
  {"file": "scripts/design.py", "name": "P87: an instance may be called anything again", "find": "            if name is not None and not (isinstance(name, str) and re.fullmatch(parts_library.SELECTOR_SAFE, name)):", "replace": "            if name is not None and not isinstance(name, str):"},
  {"file": "scripts/design.py", "name": "P87: a rail the requirements give may be any text again", "find": "                if not re.fullmatch(parts_library.SELECTOR_SAFE, rail):", "replace": "                if not rail:"},
- {"file": "scripts/needs.py", "name": "F14 follow-up: any letters end a bare host again, so pinout.png/page 2 is cut", "find": "\\.(?:%s)(?::\\d+)?/", "replace": "\\.[a-z]{2,}(?::\\d+)?/"},
+ {"file": "scripts/needs.py", "name": "F14 follow-up: any letters end a bare host again, so pinout.png/page 2 is cut", "find": "\\.(?:%s)(?::\\d+)?/", "replace": "\\.(?:%s|[a-z]{2,})(?::\\d+)?/"},
  {"file": "scripts/needs.py", "name": "F14 follow-up: a currency symbol glued to the number is kept", "find": "(?:[$€£¥]\\s?|\\b%s\\s)", "replace": "(?:[$€£¥]\\s|\\b%s\\s)"},
  {"file": "scripts/emit_board.py", "name": "F15 follow-up: the board's comment tells a side of a pair to add a supply again", "find": "        if net in pair_sides:\n            lines.append(\"    {/* NOTHING ON THIS BOARD DRIVES", "replace": "        if False:\n            lines.append(\"    {/* NOTHING ON THIS BOARD DRIVES"},
  {"file": "scripts/emit_board.py", "name": "F15 follow-up: emit_board's note tells a side of a pair to add a supply again", "find": "        if net in pair_sides:  # F15: what drives a side of a pair", "replace": "        if False:  # F15: what drives a side of a pair"},
@@ -128,5 +128,8 @@
  {"file": "scripts/sim_project.py", "name": "re-check 1: wokwi.toml writes --firmware raw again", "find": "        lines += [\"firmware = %s\" % json.dumps(firmware), \"elf = %s\" % json.dumps(firmware)]", "replace": "        lines += ['firmware = \"%s\"' % firmware, 'elf = \"%s\"' % firmware]"},
  {"file": "scripts/sim_project.py", "name": "re-check 1: wokwi.toml writes a chip's name raw again", "find": "\"name = %s\" % json.dumps(chip)", "replace": "'name = \"%s\"' % chip"},
  {"file": "scripts/sim_project.py", "name": "re-check 1: wokwi.toml writes a chip's binary raw again", "find": "\"binary = %s\" % json.dumps(\"chips/%s.chip.wasm\" % chip)", "replace": "'binary = \"chips/%s.chip.wasm\"' % chip"},
- {"file": "scripts/parts.py", "name": "re-check 2: a pin name with a trailing line break is a selector again", "find": "            if pin and not re.fullmatch(SELECTOR_SAFE, str(pin)):", "replace": "            if pin and not re.match(SELECTOR_SAFE, str(pin)):"}
+ {"file": "scripts/parts.py", "name": "re-check 2: a pin name with a trailing line break is a selector again", "find": "            if pin and not re.fullmatch(SELECTOR_SAFE, str(pin)):", "replace": "            if pin and not re.match(SELECTOR_SAFE, str(pin)):"},
+ {"file": "scripts/needs.py", "name": "re-check 3: a URL takes a closing bracket it did not open again", "find": "r\"(?(1)>?)(?(2)\\)?)(?(3)\\]?)\"", "replace": "r\"[>)\\]]?\""},
+ {"file": "scripts/needs.py", "name": "re-check 3: a bracketed run inside an address ends it", "find": "URL_CHAR = r\"(?:[^\\s<>()\\[\\]]|\\([^\\s<>()\\[\\]]*\\))\"", "replace": "URL_CHAR = r\"(?:[^\\s<>()\\[\\]])\""},
+ {"file": "scripts/needs.py", "name": "re-check 3: a space left before a closing bracket stays", "find": "r\"\\s+([,;:.)\\]>])\"", "replace": "r\"\\s+([,;:.])\""}
 ]
