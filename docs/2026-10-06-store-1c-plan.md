@@ -113,7 +113,10 @@ card: spark#18 and the PO's three decisions of 2026-10-06 in its comment. Builds
    entries in your drawer lacks a count, your own-words ones included. The decision changes no entry today; it decides
    what a count left out means from now on.
 6. **"From the store" is a `reused` line written when a part is picked** — every pick in 1c, since nothing is
-   researched yet. G's item will leave out what its own research found.
+   researched yet. G's item will leave out what its own research found. (Changed 2026-10-08, in f6a8e4d, at Task 10's
+   second fix round: a pick of a record in the project's own `parts/` or `boards/` writes no `reused` line, because that
+   record was not there before the project — `plan_pick` in `scripts/needs.py`, and spec §5.7. A drawer entry, the shelf,
+   the catalog, the library and another project's records still write one.)
 7. **`built` is written by `check_spine` itself**, when the chain runs end to end for a project on your list — never by
    an agent's say-so (W1).
 8. **P90 (#21) and P89 (#20) stay their own items.** The fetcher here is one door and one checked keep; restoring
