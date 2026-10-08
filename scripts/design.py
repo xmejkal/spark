@@ -76,6 +76,9 @@ def read(path):
         if not isinstance(signal.get("needs", []), list):
             raise DesignError("%s: signals[%d].needs must be a list of what the pin must do"
                               % (path, index))
+        if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
+            raise DesignError("%s: signals[%d] is named %r, but a signal is a name — letters, digits and _ (LED_STATUS): the "
+                              "pin map and the board name it, and firmware is written against it" % (path, index, signal["name"]))
     return wanted
 
 

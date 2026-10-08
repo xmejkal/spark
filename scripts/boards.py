@@ -412,6 +412,25 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
             problems.append(f"power_pads.{pad} rail is {supply['rail']!r}, but a rail is a name — letters, digits and _ "
                             f"(ground, logic, motor): the board is written with it as code")
 
+    # P87's attribute half: board.tsx is written with `.Mcu > .<label>` for each pin and each power pad, `import { <export> }`
+    # and `<export name="Mcu">`, so each is a name — the pin's own rule, whole — refused here even when the file carries it
+    # consistently; and the id, which names files and is written into the footprint generated from it, is a plain key.
+    for label in pins if isinstance(pins, dict) else {}:
+        if not re.fullmatch(parts.SELECTOR_SAFE, label):
+            problems.append(f"pins key {label!r} is not a name — letters, digits and _ (D3, SDA, A0): the board is written "
+                            f"with it as code")
+    for pad in board.get("power_pads") if isinstance(board.get("power_pads"), dict) else {}:
+        if not re.fullmatch(parts.SELECTOR_SAFE, pad):
+            problems.append(f"power_pads key {pad!r} is not a name — letters, digits and _ (3V3, GND1, VCC): the board is "
+                            f"written with it as code")
+    export = physical.get("footprint_export") if isinstance(physical, dict) else None
+    if export and not (isinstance(export, str) and re.fullmatch(parts.SELECTOR_SAFE, export)):
+        problems.append(f"physical.footprint_export is {export!r}, but it is a name — letters, digits and _ "
+                        f"(FireBeetle2Esp32S3): the board is written with it as code")
+    if isinstance(board.get("id"), str) and not store.PLAIN.fullmatch(board["id"]):
+        problems.append(f"id is {board['id']!r}, but an id is a plain key — lower-case letters, digits and - "
+                        f"(firebeetle2-esp32s3): files are named by it, and it is written into the footprint generated from it")
+
     problems += parts.document_problems(board)
     return problems
 

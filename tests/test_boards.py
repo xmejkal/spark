@@ -169,6 +169,44 @@ class TheContractTest(unittest.TestCase):
             "power_pads.VCC rail is 'motor\" pcbX={(globalThis.x = 1, 0)} y=\"', but a rail is a name — letters, digits and _ "
             "(ground, logic, motor): the board is written with it as code"])
 
+    def test_a_label_a_pad_an_export_or_an_id_that_is_no_name_is_refused(self):
+        # P87's attribute half: board.tsx is written with `.Mcu > .<label>`, `.Mcu > .<pad>`, `import { <export> }` and
+        # `<export name="Mcu">`; the id names the board's file and heads the footprint generated from it
+        crafted = 'D3" pcbX={(globalThis.x = 1, 0)} y="'
+        for overrides, said in (
+                ({"pins": {crafted: 0}}, "pins key %r is not a name — letters, digits and _ (D3, SDA, A0): the board is written "
+                                         "with it as code" % crafted),
+                ({"power_pads": {crafted: {"rail": "ground"}}}, "power_pads key %r is not a name — letters, digits and _ (3V3, "
+                                                                "GND1, VCC): the board is written with it as code" % crafted),
+                ({"physical": {"footprint_module": "X", "footprint_export": crafted}},
+                 "physical.footprint_export is %r, but it is a name — letters, digits and _ (FireBeetle2Esp32S3): the board is "
+                 "written with it as code" % crafted)):
+            with self.subTest(said=said):
+                self.assertIn(said, self._problems(**overrides))
+        for board_id in ('x"y', "Bad_Board", "XIAO"):
+            with self.subTest(id=board_id):
+                self.assertIn("id is %r, but an id is a plain key — lower-case letters, digits and - (firebeetle2-esp32s3): "
+                              "files are named by it, and it is written into the footprint generated from it" % board_id,
+                              self._problems(board_id=board_id))
+
+    def test_a_crafted_label_carried_through_the_whole_file_is_refused_by_the_name_rule_itself(self):
+        # it was refused only when it sat on no pad (header_order) or had no simulator name (wokwi_power_pins); carried
+        # consistently through all of them it passed, and the rule that refuses it now is the name's own
+        crafted = 'D3" pcbX={(globalThis.x = 1, 0)} y="'
+        path = ROOT / "boards" / "firebeetle2-esp32s3.json"
+        for key, old in (("pins", "D3"), ("power_pads", "VCC")):
+            with self.subTest(key=key):
+                board = json.loads(path.read_text())
+                board[key][crafted] = board[key].pop(old)
+                if key == "power_pads":
+                    board["wokwi_power_pins"][crafted] = board["wokwi_power_pins"].pop(old)
+                for row, labels in board["physical"]["header_order"].items():
+                    if not row.startswith("//"):
+                        board["physical"]["header_order"][row] = [crafted if label == old else label for label in labels]
+                self.assertEqual([p for p in boards.validate(board, path) if crafted in p],
+                                 ["%s key %r is not a name — letters, digits and _ (%s): the board is written with it as code"
+                                  % (key, crafted, "D3, SDA, A0" if key == "pins" else "3V3, GND1, VCC")])
+
     def test_a_wrong_schema_version_is_refused_rather_than_read_hopefully(self):
         problems = self._problems(schema=99)
         self.assertTrue(any("schema" in p for p in problems))

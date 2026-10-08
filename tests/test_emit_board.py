@@ -226,6 +226,30 @@ class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
         self.assertEqual(emit_board.inert(5), "5")
 
 
+class ARecordsIdNamesItsComponentTest(unittest.TestCase):
+    """P87's attribute half: `component_name` capitalises the words of an id and strips nothing, so what keeps
+    `<chip name="…">` a name is the rule upstream — `parts.validate` holds every id to `store.PLAIN`."""
+
+    def test_a_plain_id_becomes_letters_and_digits_and_nothing_else_is_stripped(self):
+        for part_id in ("led-red-5mm", "jst-ph-2-power-inlet", "max98357a-dfr0954", "a", "0603-r"):
+            with self.subTest(id=part_id):
+                self.assertRegex(emit_board.component_name({"id": part_id}), r"^[A-Za-z0-9]+$")
+        self.assertEqual(emit_board.component_name({"id": 'x"y'}), 'X"y', "the conversion keeps a quote: the rule is upstream")
+
+    def test_a_record_whose_id_is_no_plain_key_never_reaches_the_board(self):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "parts").mkdir()
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (root / "parts" / 'x"y.json').write_text(json.dumps(dict(led, id='x"y')))
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ['x"y']}))
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = emit_board.main([str(root / "requirements.json")])
+        self.assertEqual((code, out.getvalue()), (emit_board.EXIT_COULD_NOT_RUN, ""))
+        self.assertIn("id is 'x\"y', but an id is a plain key", err.getvalue())
+
+
 class PlaceholderFootprintsAreNamedTest(unittest.TestCase):
     """
     The generator is where a placeholder gets the name the netlist will carry, so it is where the

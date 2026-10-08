@@ -171,9 +171,11 @@ def render(board, rules=None):
         "    footprint={<footprint>",
     ]
     for label, x, y in pads(board):
+        # P87's attribute half: a label no pin names is held to no name rule (the FireBeetle's D- and D+ are none), so it
+        # is written as a string literal, escaped — a quote in it cannot end the string, and RX is written "RX" as before
         lines.append(
-            '      <platedhole portHints={["%s"]} pcbX="%gmm" pcbY="%gmm" '
-            'outerDiameter="%gmm" holeDiameter="%gmm" shape="circle" />' % (label, x, y, pad, hole))
+            '      <platedhole portHints={[%s]} pcbX="%gmm" pcbY="%gmm" '
+            'outerDiameter="%gmm" holeDiameter="%gmm" shape="circle" />' % (json.dumps(label), x, y, pad, hole))
     for (x1, y1), (x2, y2) in zip(
             [(-half_w, half_h), (half_w, half_h), (half_w, -half_h), (-half_w, -half_h)],
             [(half_w, half_h), (half_w, -half_h), (-half_w, -half_h), (-half_w, half_h)]):

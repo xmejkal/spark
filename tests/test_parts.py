@@ -177,6 +177,14 @@ class TheContractTest(unittest.TestCase):
             with self.subTest(footprint=given):
                 self.assertEqual(self._problems(footprint=given), [], "a footprinter's name, or a JLCPCB part")
 
+    def test_an_id_that_is_no_plain_key_is_refused(self):
+        # P87's attribute half: a record's id is its file's name, and emit_board names the part after it, `<chip name="…">`
+        for part_id in ('x"y', "Lone_Sensor", "X-LED", "x*y"):
+            with self.subTest(id=part_id):
+                self.assertEqual(self._problems(part_id=part_id), [
+                    "id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by "
+                    "it, and the board names the part after it in code" % part_id])
+
     def test_a_rail_or_a_signal_that_is_no_name_is_refused(self):
         """
         P87's attribute half (after F11): a rail becomes the net the board is written with — `to="net.<RAIL>"`, upper-cased —
@@ -2191,6 +2199,17 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         with in_store(home), contextlib.redirect_stdout(out):
             parts.main(["--audit", "--project", str(project)])
         self.assertIn("--function-set <part> <file> --project %s: x-local" % project.resolve(), out.getvalue())
+
+    def test_audit_calls_a_record_whose_id_is_no_plain_key_broken(self):
+        # P87's attribute half: a record whose file is named with a quote is found by every walk of the store
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (home / "catalog" / 'x"y.json').write_text(json.dumps(dict(led, id='x"y')))
+        with in_store(home):
+            said, _ = run_json(["--audit"])
+        broken = {row["id"]: row["problems"] for row in said["data"]["broken"]}
+        self.assertTrue(broken.get('x"y', [""])[0].startswith("id is 'x\"y', but an id is a plain key"), said["data"]["broken"])
 
     def test_audit_says_a_board_whose_file_has_no_header_geometry_stops_at_the_footprint(self):
         # C-7 (the council on PR #98): the XIAO was counted current, and the chain stops at its footprint stage all the same

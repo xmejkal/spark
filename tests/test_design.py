@@ -91,6 +91,16 @@ class ReadingTheRequirementsTest(unittest.TestCase):
         self.assertEqual(design.requested_parts({"parts": [{"part": "tactile-button", "name": "Btn_Open2"}]}),
                          [("tactile-button", "Btn_Open2")])
 
+    def test_a_signal_the_requirements_name_that_is_no_name_is_refused(self):
+        # P87's attribute half, as for a part's signal: the pin map and the board name it, and firmware is written against it
+        path = Path(tempfile.mkdtemp()) / "r.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [], "signals": [{"name": 'LED" x="', "needs": []}]}))
+        with self.assertRaises(design.DesignError) as caught:
+            design.read(path)
+        self.assertEqual(str(caught.exception), "%s: signals[0] is named 'LED\" x=\"', but a signal is a name — letters, digits "
+                                                 "and _ (LED_STATUS): the pin map and the board name it, and firmware is written "
+                                                 "against it" % path)
+
     def test_the_two_entry_forms_normalise_to_one(self):
         self.assertEqual(design.requested_parts(
             {"parts": ["l9110s-module", {"part": "tactile-button", "name": "BtnForward"}]}),

@@ -540,6 +540,11 @@ def validate(part: dict, path: Path) -> list:
     if part.get("id") != path.stem:
         problems.append("id is %r but the file is named %r; they must match"
                         % (part.get("id"), path.stem))
+    elif isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
+        # P87's attribute half: `emit_board.component_name` capitalises the id's words and strips nothing, so the id is
+        # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
+        problems.append("id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named "
+                        "by it, and the board names the part after it in code" % part["id"])
     for key, now in RETIRED.items():
         if key in part:
             problems.append("%r is retired: %s — delete the key (W16)" % (key, now))
