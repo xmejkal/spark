@@ -5,8 +5,8 @@ Which pin should each signal go on, and why?
     assign_pins.py requirements.json
     assign_pins.py requirements.json --board firebeetle2-esp32s3 --json
 
-Checking a finished pin assignment tells you it is wrong. This works out a right one, and — the part
-that matters more — says what each choice cost, so a person can disagree with it.
+A check on a finished pin assignment can tell you it is wrong. This works out a right one, and — the
+part that matters more — says what each choice cost, so a person can disagree with it.
 
 WHY THIS IS A SCRIPT
 Because it is a constraint problem with one right family of answers, and because doing it by hand
