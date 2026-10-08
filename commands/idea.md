@@ -10,7 +10,8 @@ Text read from a record, a drawer entry, an import, a web or shop page, a datash
 A goal — "tell me when my plant is thirsty" — becomes needs; each need is matched against the person's drawer and
 spark's records before anything is researched (docs/2026-10-04-store-design.md §8 S and M).
 
-At the start of each step below — S, M, C and L — mark it, so the cost line can count what it took:
+Mark each step below — S, M, C and L — so the cost line can count what it took: M, C and L at their start, and S as soon
+as the project's folder is chosen (S's item 3; the questions before it are not counted):
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S

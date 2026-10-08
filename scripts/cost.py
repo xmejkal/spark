@@ -25,7 +25,8 @@ from pathlib import Path
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 
-#: What reaches the network (§6.7): these tools, every MCP server's tools, and a shell command that names one of these.
+#: What reaches the network (§6.7): these tools, every MCP server's tools, and a shell command that names one of these —
+#: unless it says `--dry-run`, which opens no URL (a command line that mixes a dry run and the real run counts as none).
 NETWORK_TOOLS = ("WebSearch", "WebFetch")
 NETWORK_SHELL = re.compile(r"\b(curl|wget)\b|\bgh api\b|--(fetch|sources)\b")
 #: What reading a document is: the Read tool, or `parts.py --read`, on one of these.
@@ -122,7 +123,7 @@ def count(entries):
                 continue
             name, given = str(block.get("name")), block.get("input") if isinstance(block.get("input"), dict) else {}
             command = str(given.get("command") or "") if name.lower() == "bash" else ""
-            if name in NETWORK_TOOLS or name.startswith("mcp__") or NETWORK_SHELL.search(command):
+            if name in NETWORK_TOOLS or name.startswith("mcp__") or (NETWORK_SHELL.search(command) and "--dry-run" not in command):
                 by_tool[name] += 1
             if name in ("Agent", "Task"):
                 runs[str(given.get("subagent_type") or "general-purpose")] += 1

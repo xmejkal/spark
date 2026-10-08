@@ -1238,7 +1238,8 @@ class TheIdeaCommandTest(unittest.TestCase):
 
     def test_it_marks_its_steps_and_ends_with_the_tally(self):
         idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())
-        self.assertIn("At the start of each step below — S, M, C and L — mark it", idea)
+        self.assertIn("M, C and L at their start, and S as soon as the project's folder is chosen", idea)
+        self.assertIn("the questions before it are not counted", idea)
         self.assertIn("scripts/parts.py --step <project> S", idea)
         self.assertIn("## T — the tally", idea)
         self.assertIn("scripts/parts.py --tally <project>", idea)

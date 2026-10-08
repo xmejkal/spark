@@ -260,13 +260,29 @@ class TheWindowOfAStepTest(AScratchStore):
         self.assertEqual((counted["requests"], counted["minutes"]), (1, 1))
 
 
-class WhatIsCountedTest(unittest.TestCase):
+class WhatIsCountedTest(AScratchStore):
     """§6.7: the shell patterns that reach the network, and the agent runs, as the table names them."""
 
     def test_every_shell_pattern_that_reaches_the_network_counts(self):
         counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": "wget -q https://v.example/a"}),
                                         ("Bash", {"command": "gh api repos/x/y"}), ("Bash", {"command": "git status"}))])
         self.assertEqual((counted["requests"], counted["by_tool"]), (2, {"Bash": 2}))
+
+    def test_a_dry_run_opens_no_url_so_it_is_no_request(self):
+        fetching = "python3 scripts/parts.py --fetch max98357a-dfr0954"
+        counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": fetching + " --dry-run"})),
+                              assistant("2026-10-06T10:02:00Z", ("Bash", {"command": "python3 scripts/parts.py --sources max98357a-dfr0954 --dry-run"})),
+                              assistant("2026-10-06T10:03:00Z", ("Bash", {"command": "python3 scripts/parts.py --dry-run --fetch max98357a-dfr0954"})),
+                              assistant("2026-10-06T10:04:00Z", ("Bash", {"command": fetching}))])
+        self.assertEqual((counted["requests"], counted["by_tool"]), (1, {"Bash": 1}))
+
+    def test_one_fetch_that_was_dry_run_first_reads_as_one_request_in_the_line(self):
+        self.history(self.STEP)
+        fetching = "python3 scripts/parts.py --fetch max98357a-dfr0954"
+        self.transcript("s1", json.dumps(assistant("2026-10-06T10:01:00Z", ("Bash", {"command": fetching + " --dry-run"}))),
+                        json.dumps(assistant("2026-10-06T10:03:00Z", ("Bash", {"command": fetching}))))
+        said, code = run(["--tally", str(self.project)])
+        self.assertEqual((code, said["data"]["line"]), (0, "0 picks: 0 from the store (0 owned) — 1 request, 0 documents, 3 min"))
 
     def test_an_agent_run_is_counted_by_its_type_and_a_general_one_by_its_name(self):
         counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Task", {"subagent_type": "spark:part-finder"}),

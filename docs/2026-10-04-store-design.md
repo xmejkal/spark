@@ -342,10 +342,11 @@ through … I'd like ai to be able to do that for me"*). Its rules:
 Each spine step writes a `step` event with its session id and start; a step ends where the next step of the same
 session starts, or at the session's last line (P97: an append-only history cannot fill in an end). The counter sums the
 main and subagent session transcripts inside those windows: network = a data table of tool names and shell patterns
-(web search and fetch, network MCP calls, browser tools, `curl`, `wget`, `gh api`, `--fetch`, `--sources`); research
-runs by agent type; documents read; new tokens apart from cache reads; minutes. It prints tool names and counts, never
-arguments. It lives in `scripts/`; `tools/research_cost.py` goes (W16). The drawer import's browser cost goes on the
-drawer's own line, not on a project's.
+(web search and fetch, network MCP calls, browser tools, `curl`, `wget`, `gh api`, `--fetch`, `--sources`; a command
+run with `--dry-run` opens no URL and counts for nothing); research runs by agent type; documents read; new tokens apart
+from cache reads; minutes. It prints tool names and counts, never arguments. It lives in `scripts/cost.py`, which
+replaced `tools/research_cost.py` (deleted in P97, W16) and still answers for one transcript. The drawer import's
+browser cost goes on the drawer's own line, not on a project's.
 
 **The cost line**, one format, at the end of T: "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14
 min". A pick is a part chosen, on or off the board; *from the store* means it was there before this project. The
