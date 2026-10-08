@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -16,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
+import check_spine  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import needs  # noqa: E402
@@ -1244,6 +1246,37 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertEqual((said["status"], code, [p["subject"] for p in said["problems"]]), ("problems", 1, ["x-led"]))
         self.assertTrue(said["problems"][0]["sentence"].startswith("footprint is "), said["problems"])
         self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
+
+    def test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert(self):
+        # F11 (the review's probe; P87's emitter half): a name is not refused — product names carry inch marks — so this
+        # one is shelved and built, and the board keeps it in a comment it cannot end. `tsci build` printed REVIEW-INJECTED-42
+        # (the name in one comment, as the review's record had it: no host requirements to repeat it in).
+        toolchain = check_spine.find_toolchain(Path(tempfile.mkdtemp()))
+        if toolchain is None:
+            self.skipTest("no tsci to build with: a project's own, or one on PATH")
+        home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])
+        led = json.loads((home / "catalog" / "x-led.json").read_text())
+        (home / "catalog" / "x-led.json").write_text(json.dumps(dict(
+            led, name='A soil probe */ console.log("REVIEW-INJECTED-" + 6*7) /* end', host_requirements=[])))
+        said, code = run(["--requirements", str(project)])
+        self.assertEqual((code, said["data"]["shelved"]), (0, ["x-led"]))
+        kept, outputs, real_run = Path(tempfile.mkdtemp()), [], subprocess.run
+
+        def watched(*args, **kwargs):
+            finished = real_run(*args, **kwargs)
+            outputs.append("%s %s" % (finished.stdout, finished.stderr))
+            return finished
+
+        out = io.StringIO()
+        with mock.patch.object(subprocess, "run", side_effect=watched), contextlib.redirect_stdout(out), \
+                contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(project / "requirements.json"), "--keep", str(kept), "--json"])
+        stages = {stage["name"]: stage["status"] for stage in json.loads(out.getvalue())["stages"]}
+        self.assertEqual(stages.get("build"), "ok", out.getvalue())
+        self.assertEqual([said for said in outputs if "REVIEW-INJECTED-42" in said], [], "the build ran the name as code")
+        board = (kept / "board.tsx").read_text()
+        self.assertIn("REVIEW-INJECTED", board)
+        self.assertNotIn("REVIEW-INJECTED", re.sub(r"/\*.*?\*/", "", board, flags=re.DOTALL), "outside every comment")
 
     def test_a_catalog_part_picked_for_two_needs_goes_onto_the_shelf_once(self):
         _, project = self.project([self.BOARD, ("left", [{"part": "x-led"}]), ("right", [{"part": "x-led"}])])

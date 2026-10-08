@@ -14,7 +14,7 @@
  {
   "file": "scripts/emit_board.py",
   "name": "a rail-less MCU pad silently skipped again",
-  "find": "            lines.append(\"    {/* Mcu.%s NAMES NO RAIL in the board file's power_pads, so it is\" % pad)\n            lines.append(\"        wired to nothing. Add a rail to that entry. */}\")\n            continue",
+  "find": "            lines.append(\"    {/* Mcu.%s NAMES NO RAIL in the board file's power_pads, so it is\" % inert(pad))\n            lines.append(\"        wired to nothing. Add a rail to that entry. */}\")\n            continue",
   "replace": "            continue"
  },
  {

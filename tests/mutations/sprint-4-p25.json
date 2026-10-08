@@ -20,7 +20,7 @@
  {
   "file": "scripts/emit_board.py",
   "name": "a pin naming no rail is no longer said in the file",
-  "find": "    for pin in power_pins_with_no_rail(part_list):\n        lines.append(\"    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no\" % pin)",
-  "replace": "    for pin in []:\n        lines.append(\"    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no\" % pin)"
+  "find": "    for pin in power_pins_with_no_rail(part_list):\n        lines.append(\"    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no\" % inert(pin))",
+  "replace": "    for pin in []:\n        lines.append(\"    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no\" % inert(pin))"
  }
 ]

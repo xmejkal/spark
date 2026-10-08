@@ -173,6 +173,59 @@ class TheSilkscreenSurvivesTest(unittest.TestCase):
         self.assertNotIn("silkscreen:", self._emit(plain))
 
 
+#: A record's text with a comment's end in it: the review's probe (F11), whose `console.log` `tsci build` ran.
+INJECTED = 'A soil probe */ console.log("REVIEW-INJECTED-" + 6*7) /* end'
+
+
+def outside_comments(tsx):
+    """The emitted file as JavaScript runs it: every `/* … */` taken out, each ending at its first `*/`."""
+    return re.sub(r"/\*.*?\*/", "", tsx, flags=re.DOTALL)
+
+
+class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
+    """
+    F11 (P87's emitter half): the board keeps a record's words in `{/* … */}` comments and in its header's doc
+    comment — a name, a signal, a passive's why, a power pin's note, a footprint note, a host requirement — and a
+    `*/` in any of them ended the comment, so `tsci build` ran what followed. They are kept, with `*/` written `* /`.
+    """
+
+    #: Where the probe goes, and how: one place at a time, in a copy of the library LED.
+    PLACES = {
+        "the name": lambda led, board: led.update(name=INJECTED),
+        "the name of a part nobody measured": lambda led, board: (led.update(name=INJECTED), led.pop("body_mm")),
+        "a signal": lambda led, board: led["needs"][0].update(signal=INJECTED),
+        "the silkscreen": lambda led, board: led["needs"][0].update(printed=INJECTED),
+        "a passive's why": lambda led, board: led["host_parts"][0].update(why=INJECTED),
+        "a power pin's note": lambda led, board: led["power"][0].update(note=INJECTED),
+        "a footprint note": lambda led, board: led.update(footprint_placeholder=True, footprint_note=INJECTED),
+        "a host requirement": lambda led, board: led["host_requirements"].append(INJECTED),
+        "the board's name": lambda led, board: board.update(name=INJECTED),
+    }
+
+    @staticmethod
+    def emitted(place):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        led = parts.load("led-red-5mm")
+        place(led, board)
+        signals = [{"name": need["signal"], "needs": need.get("needs", []), "from": led["id"]} for need in led["needs"]]
+        assignments, _ = assign_pins.assign(board, signals)
+        placements, width, height = emit_board.place(board, [led])
+        return emit_board.emit(board, [led], assignments, placements, width, height, {})
+
+    def test_text_with_a_comment_s_end_in_it_never_reaches_code(self):
+        for where, place in self.PLACES.items():
+            with self.subTest(where=where):
+                tsx = self.emitted(place)
+                self.assertEqual([line.strip() for line in outside_comments(tsx).splitlines() if "REVIEW-INJECTED" in line], [],
+                                 "what JavaScript would run")
+                self.assertTrue('A soil probe * / console.log("REVIEW-INJECTED-" + 6*7) /* end' in tsx, "kept, and inert")
+
+    def test_a_comment_s_end_is_the_only_text_changed(self):
+        # a `"` is only text inside a comment, and product names carry inch marks: nothing but `*/` is touched
+        self.assertEqual(emit_board.inert('a 1/4" jack */ and **/ twice'), 'a 1/4" jack * / and ** / twice')
+        self.assertEqual(emit_board.inert(5), "5")
+
+
 class PlaceholderFootprintsAreNamedTest(unittest.TestCase):
     """
     The generator is where a placeholder gets the name the netlist will carry, so it is where the

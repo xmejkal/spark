@@ -26,7 +26,7 @@
  {
   "file": "scripts/emit_board.py",
   "name": "the pad left open stops being explained, so forgotten and reasoned-about look alike",
-  "find": "            lines.append(\"    {/* Mcu.%s receives net.%s and NOTHING ON THIS BOARD DRIVES that\" % (pad, net))",
+  "find": "            lines.append(\"    {/* Mcu.%s receives net.%s and NOTHING ON THIS BOARD DRIVES that\" % (inert(pad), inert(net)))",
   "replace": "            lines.append(\"    {/*\")"
  },
  {
