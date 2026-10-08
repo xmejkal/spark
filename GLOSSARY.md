@@ -177,6 +177,10 @@ A part or board is a JSON file of facts with sources. A part's record can live i
 the nearest wins: the **project's** own `parts/`, then the **shelf**, then the plugin's **library**,
 then the **catalog**, which is read only when drafts are asked for. A board's record has two places:
 the project's own `boards/`, then the library (`layers` in `scripts/store.py`).
+Its `id` is its file's name and a plain key — lower-case letters, digits and `-`, like `led-red-5mm`; `--skeleton`
+writes no record under another. A part's rails and signals, and a board's pin labels, pad names, their rails and its
+footprint export, are names — letters, digits and `_` — because the board, the pin map and the firmware are written
+with them; `parts.py --validate` and `boards.py --validate` refuse anything else.
 
 ### The catalog
 

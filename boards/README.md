@@ -52,7 +52,10 @@ re-implementing a lookup.
 
 ## Adding a board
 
-1. **Write `boards/<id>.json`.** Copy the closest existing one. `id` must match the filename.
+1. **Write `boards/<id>.json`.** Copy the closest existing one. `id` must match the filename and be a plain key:
+   lower-case letters, digits and `-`. The `pins` keys, the `power_pads` keys and their rails, and
+   `physical.footprint_export` are names — letters, digits and `_` — because the board is written with them as code;
+   `physical.header.drill_mm` is a number. `boards.py --validate` refuses anything else.
 2. **Get the pin map from the vendor's Arduino variant header**, not from a pinout picture:
    `espressif/arduino-esp32` → `variants/<board>/pins_arduino.h`. Pinout diagrams are drawn by
    marketing; the header is what the toolchain compiles against. Cross-check it against the

@@ -38,7 +38,10 @@ two I2C sensors both land on SDA/SCL — and a bus line named the vendor's way (
 on the board's MOSI, SCK, SS; a line the bus does not have is refused by name, never placed
 somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
-*assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
+*assigned, and connected to nothing*, for you to wire by hand, and the spine flags that. An instance's `name`, a rail in
+`rails` and a signal's `name` are names — letters, digits and `_` — and the chain refuses the file otherwise, as
+`parts[0] calls its instance 'Btn Open', but an instance's name is a name — letters, digits and _ (BtnOpen): the board is
+written with it as code`.
 
 `parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, the
 parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack, and keeps every other

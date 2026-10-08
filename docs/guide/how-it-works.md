@@ -162,6 +162,10 @@ spark's own scripts:
    `header_order`, `width_mm`, `height_mm`), and the footprint is made from it unchanged, so measure it again from the
    vendor's drawing.
 2. **`boards.py --validate --project .`** checks every board definition against the contract: facts, never decisions.
+   The `id` matches the file name and is a plain key: lower-case letters, digits and `-`. The `pins` keys, the
+   `power_pads` keys and their rails, and `physical.footprint_export` are names — letters, digits and `_` — because the
+   board is written with them as code, and `physical.header.drill_mm` is a number. Anything else is refused, as
+   `pins key 'D 3' is not a name — letters, digits and _ (D3, SDA, A0): the board is written with it as code`.
 3. **`emit_footprint.py --board <id> --project .`** makes the footprint, or names each field it still needs. With no
    header geometry at all, it names only `physical.header`.
 4. **`check_vendor_pins.py boards/<id>.json`** compares the pin map with the vendor's header that
@@ -169,8 +173,9 @@ spark's own scripts:
 5. **Name the id as `board`** in the requirements file. The chain takes the project's definition before the library's.
 
 No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has
-none ([P121](https://github.com/xmejkal/spark/issues/55)); `parts.py --audit` and `--match` say such a board stops at the
-footprint stage. Nothing compares copied geometry with the new board either.
+none ([P121](https://github.com/xmejkal/spark/issues/55)); `boards.py --list`, `init_project.py --board`, and
+`parts.py --audit`, `--match`, `--pick` and `--requirements` say such a board stops at the footprint stage. Nothing
+compares copied geometry with the new board either.
 
 ## Your store
 

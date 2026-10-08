@@ -43,6 +43,10 @@ completely. Two small agents, in turn:
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton <id> --kind <kind> --vendor <maker> --project .
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fetch <id> --project .        # or --keep <file> --url <url>
    ```
+   The id is a plain key — lower-case letters, digits and `-`, like `led-red-5mm` — because files are named by it and
+   the board names the part after it in code. `--skeleton` refuses any other, dry run or not, and writes nothing:
+   `id is 'my_sensor', but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by it,
+   and the board names the part after it in code`.
    `--fetch` downloads the datasheet, so it reaches the network. No command's `allowed-tools` lets it run unasked, so
    Claude Code asks before it does (unless the person's own settings already let it run: an allow rule of theirs, or
    auto mode): the person's answer there is the yes. `--keep` puts a file you already have into the store and does not
@@ -86,7 +90,11 @@ unasked, and Claude Code asks before it does (unless the person's own settings a
 theirs, or auto mode). `--validate` and `--unverified` stay on the machine.
 
 The contract refuses a pin order without its proof and a citation of a document the record does not
-hold. `--unverified` is the list to hand a person: each item, and what depends on it.
+hold. It also refuses an id that is no plain key, and a rail (`power[].rail`) or a signal (`needs[].signal`) that is no
+name — letters, digits and `_` — since the board is written with a rail as code, and the pin map, the board and the
+firmware name a signal: `power[0] rail is 'gnd rail', but a rail is a name — letters, digits and _ (ground, logic,
+motor, 5v): the board is written with it as code`.
+`--unverified` is the list to hand a person: each item, and what depends on it.
 
 Then `/spark:build`. `parts.py --promote <id> --project .` copies a verified record into the plugin's
 library, and the next project finds it with `--need`.
