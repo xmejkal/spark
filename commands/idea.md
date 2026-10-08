@@ -130,5 +130,6 @@ pick from the catalog goes onto the shelf, so every project builds with it. `/sp
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally <project>
 ```
 
-ends the run with one line — "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14 min" — counted from the
-steps' transcripts. Say it as it is; "its cost was not counted" is an answer too.
+ends the run with the cost line — "5 picks: 5 from the store (5 owned) — 1 request, 1 document, 14 min" — counted from the
+transcripts of the steps' Claude Code sessions, tool names and counts only; under it, how many of the needs are picked, and
+what the line's words mean. Say it as it is; "its cost was not counted" is an answer too.

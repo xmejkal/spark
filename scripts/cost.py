@@ -255,6 +255,17 @@ def line(picks, from_store, owned, counted):
         "" if counted["documents"] == 1 else "s", counted["minutes"])
 
 
+def gloss(counted):
+    """
+    What the cost line's words mean, said where the line is printed (C-16; the PO, 2026-10-08) — the requests and the minutes
+    only when the line has them — and once, that the line was read from the Claude Code transcripts, names and counts only.
+    """
+    said = ["from the store: known to spark before this project — its library, your store, your projects"]
+    said += ["requests: tool calls that reach the network, every MCP call among them; min: wall-clock minutes of the session "
+             "between the steps"] if counted is not None else []
+    return said + ["--tally reads the Claude Code transcripts of the sessions the steps ran in, for tool names and counts only"]
+
+
 def unreadable_note(counted):
     """The sentence that goes with the line when transcript lines could not be read, or None when every line could be."""
     bad = (counted or {}).get("unreadable_lines", 0)

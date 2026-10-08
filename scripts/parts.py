@@ -2082,7 +2082,8 @@ def _op_tally(args, project):
                                               " — not picked: %s" % ", ".join(unpicked) if unpicked else "")
     return Answer({"picks": len(picks), "from_store": from_store, "owned": owned, "cost": counted, "built": built, "line": said,
                    "needs": len(listed), "needs_picked": len(listed) - len(unpicked)},
-                  ["  " + said, "  " + needs_said] + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
+                  ["  " + said, "  " + needs_said] + ["  " + glossed for glossed in cost.gloss(counted)]
+                  + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
                   + ([] if built else ["  not built yet — check_spine records it when the chain runs end to end"]),
                   unchecked=unchecked)
 

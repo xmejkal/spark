@@ -162,6 +162,30 @@ class TheCostLineTest(unittest.TestCase):
         self.assertEqual((code, said["data"]["needs"], said["data"]["needs_picked"]), (0, 5, 4))
         self.assertIn("\n  4 of 5 needs picked — not picked: light\n", out.getvalue())
 
+    def test_the_line_is_glossed_where_it_is_printed_and_says_what_it_read(self):
+        # C-16 (the council on PR #98): "from the store" counted spark's library, "min" was wall-clock, "requests" every MCP call
+        # — and no page said that --tally reads the session's transcripts
+        self.step("s1", "2026-10-06T10:00:00+00:00")
+        self.transcript("s1", assistant("2026-10-06T10:01:00Z"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--tally", str(self.project)])
+        self.assertIn("\n  from the store: known to spark before this project — its library, your store, your projects\n"
+                      "  requests: tool calls that reach the network, every MCP call among them; min: wall-clock minutes of the "
+                      "session between the steps\n"
+                      "  --tally reads the Claude Code transcripts of the sessions the steps ran in, for tool names and counts "
+                      "only\n", out.getvalue())
+
+    def test_a_line_whose_cost_was_not_counted_glosses_only_what_it_says(self):
+        self.step("gone", "2026-10-06T10:00:00+00:00")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--tally", str(self.project)])
+        self.assertIn("\n  from the store: known to spark before this project — its library, your store, your projects\n", out.getvalue())
+        self.assertIn("\n  --tally reads the Claude Code transcripts of the sessions the steps ran in, for tool names and counts only\n",
+                      out.getvalue())
+        self.assertNotIn("wall-clock", out.getvalue())
+
     def test_a_tally_whose_every_need_is_picked_says_so(self):
         self.step("s1", "2026-10-06T10:00:00+00:00")
         self.transcript("s1", assistant("2026-10-06T10:01:00Z"))
