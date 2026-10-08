@@ -112,9 +112,10 @@ outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record cop
 
 **From what you own.** Type `/spark:drawer` and say what you own (*a FireBeetle 2 ESP32-S3 and a pack of ten red
 LEDs*), then `/spark:idea` and say what you want to make (*a button that lights an LED*). Claude turns it into needs,
-matched against your drawer and spark's records; you pick a part per need, and what you own is reserved. The picks
-become a requirements file, `/spark:build` builds the board, and the tally ends the run with one cost line. The
-conversation was not run for these docs; the scripts were, each with its output in
+matched against your drawer and spark's records, and asks whether the LED pack is spark's `led-red-5mm`, linking it on
+your yes; you pick a part per need, and what you own is reserved. The picks become a requirements file, `/spark:build`
+builds the board, and the tally ends the run with one cost line. The conversation was not run for these docs; the
+scripts were, each with its output in
 [a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led). `/spark:idea` writes the needs to a file
 outside any repository, here `../button-needs.json` with the recorded run's three (a button, a light, a board), and
 sets them with the first line below. It also marks each step as it begins, with `parts.py --step <project> S` (then

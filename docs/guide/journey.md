@@ -247,9 +247,13 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
                  xiao-esp32-c6 (library)                        microcontroller  stops at the footprint stage (P121)
 ```
 
-The LED pack is owned, but it has no record, so spark can reserve it and cannot place it on the board; the library's
-LED can be placed. The button and that LED are known, not owned (`know`); the board is owned, with a record (`have`).
-The marks, in `../marks.json`:
+The LED pack is owned but has no record: picked as it is, spark reserves it and cannot place it on the board.
+`/spark:idea`'s M step asks whether the pack is `led-red-5mm`. On the person's word, `--drawer-set` with
+`[{"entry": "red-leds-pack-of-10", "is": {"part": "led-red-5mm"}}]` links it, after a dry run. `--match` then lists the
+LED as `led-red-5mm (library)`, owned 10 and free 10, and the same pick below reserves the pack and places the LED; the
+tally counts 2 owned. This run did not link it, so the library's LED is "to get" and the pack is passed over in C. The
+button and that LED are known, not owned (`know`); the board is owned, with a record (`have`). The marks, in
+`../marks.json`:
 
 ```json
 [{"id": "press", "mark": "know"}, {"id": "light", "mark": "know"}, {"id": "board", "mark": "have"}]
