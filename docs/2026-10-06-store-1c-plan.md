@@ -2713,8 +2713,8 @@ lines between the steps; outside it says the cost was not counted. Neither is as
 
 ### Task 12: The real run — the plant alarm, on the PO's store, with the PO
 
-The value proof. It writes the PO's real store and one spark commit, so it runs with the PO, in one Claude Code
-session (the cost line reads that session's transcript), from the `p97-store-1c` checkout. **Inside the C and L
+The value proof. It writes the PO's real store and one spark commit, so it runs with the PO, in one FRESH Claude Code
+session (the tally parses every transcript of its session; a long controller session would be held in memory) (the cost line reads that session's transcript), from the `p97-store-1c` checkout. **Inside the C and L
 windows do no GitHub, web or board work, and read no screenshots:** the counter would count them. Run each command
 below on its own, read its output, then go on.
 
@@ -2730,8 +2730,11 @@ below on its own, read its output, then go on.
   other picks, and `check_spine [ok]` stands on Task 11. Do not free the bin's entries.
 - [ ] **Step 5: The picks.** Ask the PO for his reasons for what he passed over in M (the DFPlayer Pro, the XIAO, the
   piezo as the simpler road), written in his words to a JSON file with the Write tool; then
-  `scripts/parts.py --pick ~/Development/plant-alarm soil=sen0193-soil-moisture alarm=max98357a-dfr0954 alarm=<the speaker's key> board=firebeetle2-esp32s3 battery=<the LiPo's key> --passed-over <file> --dry-run`,
-  then without `--dry-run`. Expected: five reservations and no refusal.
+  `scripts/parts.py --pick ~/Development/plant-alarm soil=sen0193-soil-moisture alarm=max98357a-dfr0954 alarm=<the speaker's key> board=<the Beetle's entry key> --passed-over <file> --dry-run`,
+  then without `--dry-run`. (Rewritten 2026-10-08 after the final review: the S3 and the LiPo stay with the bin, per
+  the PO's answer; the board is the Beetle he names — owned, no record — and the battery is his call on the spot, or
+  no pick.) Expected: four reservations and no refusal; the board pick carries the note that a board needs a board
+  file before spark can build with it.
 - [ ] **Step 6: L starts.** `scripts/parts.py --step ~/Development/plant-alarm L`.
 - [ ] **Step 7: SEN0193's owed facts, in its home (your catalog).** Write to a file: `footprint` `"jst_ph_3"`;
   `pin_order_proof` from its `//pin_order` note — `{"verified": false, "source": "J1 'CON/SIP3' on the V1.0 schematic:
@@ -2747,19 +2750,22 @@ below on its own, read its output, then go on.
   or the drawing's own) and a `//footprint` note citing the drawing's page. `scripts/parts.py --validate` → ok;
   `scripts/parts.py --audit` → the library's DFR0954 owes nothing. Commit on the branch:
   `P97 real run: the DFR0954's footprint from DFRobot's dimension drawing — fetched once, kept in the store, cited by its sha256`.
-- [ ] **Step 9: The building list.** `scripts/init_project.py --project ~/Development/plant-alarm --board firebeetle2-esp32s3`,
-  then `scripts/parts.py --requirements ~/Development/plant-alarm --dry-run` and without. Expected: board
-  `firebeetle2-esp32s3`; parts `sen0193-soil-moisture`, `max98357a-dfr0954`; SEN0193 onto the shelf; the speaker and
-  the LiPo reserved, not placed.
-- [ ] **Step 10: The build — value proof 3, and no placeholder outline.**
+- [ ] **Step 9: The building list — as far as it goes.** `scripts/parts.py --requirements ~/Development/plant-alarm
+  --dry-run`. Expected (rewritten 2026-10-08): a refusal naming the board pick and saying it needs a board file,
+  listing the boards spark has. That is the honest end of the real run's build unless the PO wants a board file for
+  the Beetle, which is its own card (research, a `boards/` record), not P97's. If he does, that card runs first and
+  Steps 9–10 continue with it: board the Beetle; parts `sen0193-soil-moisture`, `max98357a-dfr0954`; SEN0193 onto
+  the shelf; the speaker reserved, not placed.
+- [ ] **Step 10: The build — value proof 3, and no placeholder outline — stands on Task 11 unless Step 9 wrote a file.**
   `PATH="$HOME/Development/smartbin-local/node_modules/.bin:$PATH" scripts/check_spine.py ~/Development/plant-alarm/requirements.json --keep ~/Development/plant-alarm`
   — expected: ends `the chain runs end to end`. Then
   `scripts/emit_board.py ~/Development/plant-alarm/requirements.json --project ~/Development/plant-alarm > /dev/null; echo $?`
   — expected: `0`. If the potentiometer stand-in stops the simulation stage, open question 2's fallback is a skip: set
   it with `--fact-set`, then `--requirements` and `check_spine` again.
 - [ ] **Step 11: The line — value proof 4.** `scripts/parts.py --tally ~/Development/plant-alarm`. Expected (an
-  estimate until read, W20): `5 picks: 5 from the store (5 owned) — 1 request, 1 document, N min` — 2 requests if the
-  URL took a read of the wiki page. Show the PO; copy the line exactly as printed.
+  estimate until read, W20; rewritten 2026-10-08): `4 picks: 4 from the store (4 owned) — 1 request, 1 document,
+  N min` — 2 requests if the URL took a read of the wiki page; "not built yet" unless Step 10 ran. Show the PO;
+  copy the line exactly as printed. The card's proof line is updated to what the run showed (W13).
 - [ ] **Step 12: Value proof 2, from the record.** `git show --stat HEAD` (the DFR0954 commit) and `scripts/parts.py
   --show max98357a-dfr0954` — the footprint filled in its own home, its drawing kept and cited.
 
