@@ -83,12 +83,12 @@ names the rails, then `check_all.py --project .` (not run here; a project's own
 ## Before you start
 
 Claude Code for the commands, Python 3.9 or newer, and Node 20 or newer: on macOS, spark's install lines get Node and
-pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest with one yes: bun, tscircuit (into
-the project), `wokwi-cli`, MicroPython and `littlefs-python`. The runs here were on macOS. On Linux, `data/tools.json`
-has apt lines only for pdftotext and `sigrok-cli`, so Node is yours to install. bun then comes from `/spark:setup`
-itself, with `npm install -g bun`, when Node's global folder is yours, as with nvm. With a Node from apt, whose global
-folder belongs to root, that line fails, `tools.py` says so and exits 2, and bun is yours to install too. None of this
-was run on Linux here. `data/tools.json` has no lines for Windows.
+pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest in one go, once you have seen the
+commands and said yes: bun, tscircuit (into the project), `wokwi-cli`, MicroPython and `littlefs-python`. The runs here
+were on macOS. On Linux, `data/tools.json` has apt lines only for pdftotext and `sigrok-cli`, so Node is yours to
+install. bun then comes from `/spark:setup` itself, with `npm install -g bun`, when Node's global folder is yours, as
+with nvm. With a Node from apt, whose global folder belongs to root, that line fails, `tools.py` says so and exits 2,
+and bun is yours to install too. None of this was run on Linux here. `data/tools.json` has no lines for Windows.
 
 ## Install
 
@@ -102,7 +102,7 @@ In Claude Code:
 The marketplace is named `petr-local`, so Claude Code may show the plugin as `spark@petr-local`. This install path was
 not run for these docs. Then, in a project folder, `/spark:init` writes the project's files without guessing,
 including the `package.json` that tscircuit, the engine that builds the board, installs into; `/spark:setup` shows the
-tools spark needs, and installs what is missing with one yes.
+tools spark needs, and installs what is missing in one go once you have seen the commands and said yes.
 
 An update replaces the plugin, not your files. Your store and a project's own `boards/`, `parts/` and `.spark/` are
 outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record copied into the plugin's own library with

@@ -1,5 +1,5 @@
 ---
-description: Show which tools spark needs and which are missing, and install them with one yes; turn integrations on or off, point a job at another tool, pin a version, describe a tool of your own.
+description: Show which tools spark needs and which are missing, and install them in one go once the person has seen the commands and said yes; turn integrations on or off, point a job at another tool, pin a version, describe a tool of your own.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --status *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --off *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --use *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --pin *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --new *)
 ---
 
@@ -24,7 +24,7 @@ means only that spark declares the server and Node is on the PATH. Nothing check
 registered or that it answers ([P112](https://github.com/xmejkal/spark/issues/46)), or the Node version;
 espressif-docs needs Node 20 or newer ([docs/mcp.md](../docs/mcp.md)).
 
-## 2. One yes installs everything missing
+## 2. Everything missing installs in one go, after a yes
 
 If the project has no `package.json`, stop and run `/spark:init` first: without one, npm installs into the nearest
 parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
@@ -54,8 +54,9 @@ to run. Then show the picture again — what was installed reads `[ok  ]`. A row
 *here* while the list *pins* another is offered the same way: `--install` puts the pinned one in.
 
 `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before any
-`--install` line runs, the dry run too, and the person's answer before the real run is the yes. The dry run is where they
-see what it would do, so show it first, as above.
+`--install` line runs, the dry run too. An install so takes three answers: Claude Code's prompt for the dry run, the
+person's to *install them now?*, then Claude Code's prompt for the install. The dry run is where they see what it would
+do, so show it first, as above.
 
 ## 3. The choices — each writes one line
 

@@ -55,8 +55,8 @@ answered ([P114](https://github.com/xmejkal/spark/issues/48)). Not every check r
 
 ### `/spark:setup`
 
-Shows which tools spark needs and which are missing, and installs them with one yes. Run it after `/spark:init`:
-without a `package.json` in the project, npm installs into a parent folder
+Shows which tools spark needs and which are missing, and installs them in one go once you have seen the commands and
+said yes. Run it after `/spark:init`: without a `package.json` in the project, npm installs into a parent folder
 ([P113](https://github.com/xmejkal/spark/issues/47)). First it shows exactly what installing would run:
 
 ```sh

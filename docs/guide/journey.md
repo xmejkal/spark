@@ -539,7 +539,8 @@ A module you already own can start from a photo instead: [`/spark:identify`](../
 
 1. [`/spark:init`](../../commands/init.md) writes the project's files, guessing nothing, including the `package.json`
    that tscircuit installs into.
-2. [`/spark:setup`](../../commands/setup.md) says which tools spark needs, and installs what is missing with one yes.
+2. [`/spark:setup`](../../commands/setup.md) says which tools spark needs, and installs what is missing in one go once
+   you have seen the commands and said yes.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board firebeetle2-esp32s3

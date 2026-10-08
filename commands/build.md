@@ -52,7 +52,8 @@ design's own parts, boards and rules live.
 ## The one command
 
 It needs the board engine — tscircuit, in the project (`/spark:init` writes the package file) — and
-Node for the simulation. `/spark:setup` shows what is missing and installs it with one yes.
+Node for the simulation. `/spark:setup` shows what is missing and installs it in one go once the person has seen the
+commands and said yes.
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --keep .
