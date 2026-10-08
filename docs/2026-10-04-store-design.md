@@ -197,7 +197,7 @@ with a board until a record in `boards/` says its pins.
   the migration — 1c filled all three with `--fact-set`, §8 L); the library's DFR0954
   owes `footprint` (amended 2026-10-08: it owes nothing now — its `footprint` is `dip12_w15.24mm`, read off page 1 of
   DFRobot's dimension drawing, which is kept in the store and cited by its sha256 in the record (d75344c); a scratch
-  store's `parts.py --audit` now prints `library 10 current, 0 owe facts, 0 broken`).
+  store's `parts.py --audit` now prints `library       10 current,   0 owe facts,   0 broken`).
 - Resolving an id, the nearer layer wins unless its record is broken; a broken record is named and the next
   layer's is used.
 - `schema` changes only for a mechanical upgrade: a lower one is upgraded on read and saved on spark's next write
@@ -538,11 +538,12 @@ lines it added and why.)
 
 What "better" means (more known, proven by use, fewer requests measured) · store first · seven ways in · strategies
 at the seams, specified now and built when run · agents first; CLI + JSON now, MCP later · Option B, refactor first
-then raise the budget · the matcher: a function field and the agent's judgement · 13 verbs · the drawer's fields
-(place, used-in, from; no condition) · dead parts stay in his words; unsure parts marked; "many" a count; counts in
-pieces · four ways into the drawer, the DFRobot importer and the typed list first, AliExpress later · imported parts
-count as owned, he corrects · the importer may click through · cost and proof as in §6.7, no stop rule · the layer
-order (library before catalog) · goal first is the walking skeleton, the plant thirst alarm (sound, battery, indoor
-pot) · owned first, the simpler option shown · his picks (SEN0193; the DFR0954 and the speaker; the bin's S3 and
-LiPo, reserved twice) · three store slices, value first · a projects list and the shelf in store 1a · the DFR0954
-footprint read from DFRobot's drawing.
+then raise the budget (amended: the raise — since P99, the PO, 2026-10-04, there is no cap; the size is a number,
+said at every push; Option B and refactor first stand — §9, W15b) · the matcher: a function field and the agent's
+judgement · 13 verbs · the drawer's fields (place, used-in, from; no condition) · dead parts stay in his words;
+unsure parts marked; "many" a count; counts in pieces · four ways into the drawer, the DFRobot importer and the typed
+list first, AliExpress later · imported parts count as owned, he corrects · the importer may click through · cost and
+proof as in §6.7, no stop rule · the layer order (library before catalog) · goal first is the walking skeleton, the
+plant thirst alarm (sound, battery, indoor pot) · owned first, the simpler option shown · his picks (SEN0193; the
+DFR0954 and the speaker; the bin's S3 and LiPo, reserved twice) · three store slices, value first · a projects list
+and the shelf in store 1a · the DFR0954 footprint read from DFRobot's drawing.
