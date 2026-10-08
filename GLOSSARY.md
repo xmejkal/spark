@@ -175,8 +175,8 @@ built because it would be nice. `tools/check_backlog.py` fails a push on an open
 
 A part or board is a JSON file of facts with sources. A part's record can live in four places and
 the nearest wins: the **project's** own `parts/`, then the **shelf**, then the plugin's **library**,
-then the **catalog**, which is read only when drafts are asked for. A board's has two: the project's
-own `boards/`, then the library (`layers` in `scripts/store.py`).
+then the **catalog**, which is read only when drafts are asked for. A board's record has two places:
+the project's own `boards/`, then the library (`layers` in `scripts/store.py`).
 
 ### The catalog
 
