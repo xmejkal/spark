@@ -1,6 +1,6 @@
 ---
 description: Research a part or module the library lacks — reuse first, then find the exact part, then read only the datasheet pages a decision needs — and write it down as a record with every fact cited, so the chain can use it and the next project finds it.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --keep *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --read *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --promote *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog *)
 ---
 
 # spark:research

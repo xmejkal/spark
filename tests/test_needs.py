@@ -1711,7 +1711,8 @@ class TheIdeaCommandTest(unittest.TestCase):
     """commands/idea.md is followed as written (R4.2): the project is named where a command takes it as a flag, and only there."""
 
     def test_it_names_the_project_where_a_command_takes_it_and_only_there(self):
-        lines = (ROOT / "commands" / "idea.md").read_text().splitlines()
+        # the body's commands — the frontmatter names each operation once, for allowed-tools (C-5), and runs nothing
+        lines = (ROOT / "commands" / "idea.md").read_text().split("---", 2)[2].splitlines()
         flagged = [line for line in lines if any(op in line for op in ("--audit", "--function-set", "--fact-set"))]
         self.assertTrue(flagged)
         for line in flagged:

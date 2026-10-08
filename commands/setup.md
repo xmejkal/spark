@@ -1,6 +1,6 @@
 ---
 description: Show which tools spark needs and which are missing, and install them with one yes; turn integrations on or off, point a job at another tool, pin a version, describe a tool of your own.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --status *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --off *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --use *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --pin *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --new *)
 ---
 
 # spark:setup

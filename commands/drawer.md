@@ -1,6 +1,6 @@
 ---
 description: See what you own, say what else you own in plain words, or bring in your DFRobot order history — the drawer spark looks in before it suggests buying anything.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-import *)
 ---
 
 # spark:drawer

@@ -1,7 +1,7 @@
 ---
 name: spark-review
 description: Review an electronics design for problems and gate it before fabrication. Runs every deterministic check, then one reviewer per dimension (power, signals, thermal-mechanical, manufacturability, firmware-hardware) reading the primary artefacts only, and ends with the fabrication gate. Use when the user asks to "review my design", "what's wrong with this board", "verify this", is about to order a board, or has just changed a design and wants to know what it broke.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *)
 ---
 
 # spark-review

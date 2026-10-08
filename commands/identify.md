@@ -1,6 +1,6 @@
 ---
 description: Identify a module from a photo — the chip markings, the silkscreen, the connector — and write it down as a part record for a part the person already owns, with every fact the photo alone supports marked unverified.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --keep *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *)
 ---
 
 # spark:identify

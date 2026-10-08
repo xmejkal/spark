@@ -1,6 +1,6 @@
 ---
 description: From a goal in words to needs, and each need matched against what you own and what spark knows — store first; research only for a real gap, later.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *)
 ---
 
 # spark:idea
