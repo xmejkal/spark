@@ -85,8 +85,10 @@ names the rails, then `check_all.py --project .` (not run here; a project's own
 Claude Code for the commands, Python 3.9 or newer, and Node 20 or newer: on macOS, spark's install lines get Node and
 pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest with one yes: bun, tscircuit (into
 the project), `wokwi-cli`, MicroPython and `littlefs-python`. The runs here were on macOS. On Linux, `data/tools.json`
-has apt lines only for pdftotext and `sigrok-cli` (not run here), so Node and bun are yours to install; it has none
-for Windows.
+has apt lines only for pdftotext and `sigrok-cli`, so Node is yours to install. bun then comes from `/spark:setup`
+itself, with `npm install -g bun`, when Node's global folder is yours, as with nvm. With a Node from apt, whose global
+folder belongs to root, that line fails, `tools.py` says so and exits 2, and bun is yours to install too. None of this
+was run on Linux here. `data/tools.json` has no lines for Windows.
 
 ## Install
 
