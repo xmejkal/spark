@@ -188,4 +188,4 @@ it out, run the `spark-review` skill and its fabrication gate, a KiCad design-ru
 
 ---
 
-v0.6.0 · [MIT](LICENSE) · built with the tscircuit engine.
+v0.7.0 · [MIT](LICENSE) · built with the tscircuit engine.

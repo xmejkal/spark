@@ -1,6 +1,6 @@
 {
   "name": "spark",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "AI electronics design for dev-board-plus-modules builds. A generator turns a list of modules on a dev board into a board that builds, with a Wokwi diagram generated from it (/spark:build: parts, pin map with reasons, board file, footprint, tsci build, Wokwi diagram), refusing rather than guessing: no footprint or pin order nobody recorded, no pin that cannot do what it is asked, a bus shared where a bus is shared. Five deterministic checks on the built netlist (vendor pin truth, footprints, BOM, physics, rules), a review skill that reads primary artefacts only and ends at a fabrication gate, a parts library with provenance, board definitions for the Seeed XIAO ESP32-C6 and DFRobot FireBeetle 2 ESP32-S3, and a photo-to-schematic reverse-engineering procedure.",
   "author": {
     "name": "Petr Smejkal"
