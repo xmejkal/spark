@@ -293,14 +293,19 @@ count.
      (`check_bom.py`);
    - an `init_project.py --circuit` that is not JSON.
 
-   Three more crash too:
+   Two more crash too:
    - `check_vendor_pins.py` without `gh`, unless given `--offline` ([P119](https://github.com/xmejkal/spark/issues/53));
    - `check_physics.py` on a bus named by nets that carries a pull-up, when `i2c_hz` is stated and
-     `i2c_bus_capacitance_pf` is null ([P107](https://github.com/xmejkal/spark/issues/41));
-   - `emit_board.py` with a library LED on the XIAO ([P121](https://github.com/xmejkal/spark/issues/55)).
+     `i2c_bus_capacitance_pf` is null ([P107](https://github.com/xmejkal/spark/issues/41)).
 
    `compare_design.py`, `assign_pins.py` and `check_spine.py` answer 2 instead. So exit 1 with an empty stdout is a
-   crash, not problems; check_all reports each as could-not-run.
+   crash, not problems; check_all reports each as could-not-run. `emit_board.py` with the library LED on the XIAO is a
+   refusal, not a crash: exit 2, nothing on stdout, and on stderr `cannot emit a board: led-red-5mm asks for 5 mA
+   through a series resistor, but the board states no power.io_volts — nothing to compute it from`. `check_spine.py`
+   shows it as `[????] schematic` with that sentence, then `the chain was NOT exercised — this is not a pass`, exit 2
+   ([P121](https://github.com/xmejkal/spark/issues/55)). An `emit_board.py` that crashes inside `check_spine.py` is
+   could-not-run too: the `schematic` stage's detail is `emit_board.py crashed: ` and the traceback's last line. A stage
+   detail that starts `Traceback (most recent call last):` is a crash, not a defect in the design.
 3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout, except that
    `parts.py --json` answers an argument it cannot run with in its envelope (`status` is `could-not-run`). With
    `CLAUDE_PLUGIN_ROOT` unset, Python never starts the script, so even that prints nothing. A bad command line is not a
