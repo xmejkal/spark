@@ -40,8 +40,9 @@ somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
 *assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
 
-`parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, it keeps
-whatever you added to the file by hand and adds only the parts your picks still lack.
+`parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, the
+parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack, and keeps every other
+key you added by hand (`signals`).
 
 The project is found up from the requirements file's own directory, so this works from anywhere —
 and from nowhere: a file inside no project is built from the plugin's own library, with no rules,

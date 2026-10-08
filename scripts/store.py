@@ -272,12 +272,17 @@ EVENT_KEYS = {"step": ("project", "step", "session", "start"), "reused": ("proje
 
 
 def events():
-    """The history (§5.7), every line in order — [] before the first. A line that is not an event is named, never skipped."""
+    """
+    The history (§5.7), every line in order — [] before the first. A blank line is no event and is passed over, as a
+    transcript's is (cost.py); any other line that is not an event is named by its number, never skipped.
+    """
     path = place("history")
     said = []
     # Bytes, not text: str.splitlines() also cuts at U+2028, U+0085 and the like, which a reason may hold unescaped
     # (ensure_ascii=False), and one whole line would read as two broken ones. Bytes cut only at \n, \r and \r\n.
     for number, line in enumerate(path.read_bytes().splitlines() if path.is_file() else [], 1):
+        if not line.strip():
+            continue  # a hand edit's last Enter stopped every reader of the history: --step, --pick, --tally and built
         try:
             event = json.loads(line.decode("utf-8"))
         except ValueError:  # not JSON, or not UTF-8 (UnicodeDecodeError is a ValueError)

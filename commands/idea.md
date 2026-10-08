@@ -112,9 +112,10 @@ Run `/spark:init --board <the board pick>` in the project first. Then fill what 
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements <project> --dry-run
 ```
 
-and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A later run keeps
-everything already in the file — a part you added, a `name`, `rails`, `signals` — adds only the parts your picks still lack,
-and says which entries no pick explains (`kept, not from a pick`), for you to remove if you changed a pick. A pick with no
+and without `--dry-run`. It writes `requirements.json`: the board and every part pick with a record. A later run changes
+only what the picks decide: the parts you wrote stay — a part you added, a `name`, `rails` — as does `signals`, and the
+board follows the pick. It adds only the parts your picks still lack, and says which entries no pick explains (`kept,
+not from a pick`), for you to remove if you changed a pick. A pick with no
 record (the speaker, the battery) is reserved, not placed. A board picked from the drawer with no board file stops it,
 naming the boards spark has a file for: say so — the person picks one of those, or a board file is written first
 (research). A pick from the catalog goes onto the shelf, so every project builds with it. `/spark:build` takes it from

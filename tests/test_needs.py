@@ -668,6 +668,13 @@ class ThePicksTest(unittest.TestCase):
                 self.assertFalse((self.home / "projects.json").exists())
         self.assertEqual((self.home / "history.jsonl").read_text(), "this is not an event\n")
 
+    def test_a_history_a_hand_edit_left_ending_in_a_blank_line_does_not_stop_a_pick(self):
+        (self.home / "history.jsonl").write_text('{"event":"reused","project":"irrigation","need":"water","part":"x-valve"}\n\n')
+        _, code = run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((code, self.picks()["soil"]), (0, [{"part": "x-soil"}]))
+        self.assertEqual(json.loads((self.home / "history.jsonl").read_text().splitlines()[-1]),
+                         {"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"})
+
     def test_asking_for_a_plan_with_no_reasons_is_asking_for_no_reasons(self):
         _, _, events, _, problems = needs.plan_pick(self.project, [("soil", "x-soil")])
         self.assertEqual((problems, events), ([], [{"event": "reused", "project": "plant-alarm", "need": "soil", "part": "x-soil"}]))
@@ -1454,9 +1461,10 @@ class TheIdeaCommandTest(unittest.TestCase):
     def test_section_l_and_the_build_page_say_what_a_later_run_keeps(self):
         idea = " ".join((ROOT / "commands" / "idea.md").read_text().split())
         build = " ".join((ROOT / "commands" / "build.md").read_text().split())
-        self.assertIn("A later run keeps everything already in the file", idea)
+        self.assertIn("A later run changes only what the picks decide: the parts you wrote stay", idea)
+        self.assertIn("and the board follows the pick", idea)
         self.assertIn("says which entries no pick explains (`kept, not from a pick`)", idea)
-        self.assertIn("run again, it keeps whatever you added to the file by hand and adds only the parts your picks still lack", build)
+        self.assertIn("run again, the parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack", build)
 
 
 if __name__ == "__main__":

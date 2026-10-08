@@ -386,7 +386,7 @@ class TheHistoryTest(unittest.TestCase):
 
     def test_every_kind_of_line_that_is_not_an_event_is_named_with_its_file_and_line(self):
         not_events = [b"[1]", b'"reused"', b"5", b"null", b'{"project":"p"}', b'{"event":5}', b'{"event":null}',
-                      b"", b"\xff\xfe not utf-8"]
+                      b"\xff\xfe not utf-8"]  # a blank line is no event and stops nothing: the test below
         for line in not_events:
             with self.subTest(line=line):
                 (self.home / "history.jsonl").write_bytes(b'{"event":"reused"}\n' + line + b"\n")
@@ -416,6 +416,21 @@ class TheHistoryTest(unittest.TestCase):
         self.assertEqual(store.events(), [])
         self.assertTrue(store.append_event(first))
         self.assertEqual(store.events(), [first])
+
+    def test_a_blank_line_is_no_event_and_stops_nothing(self):
+        # a hand edit's last Enter, or an empty line left between two events: every reader of the history stopped on it
+        first = {"event": "reused", "project": "p", "need": "n", "part": "x"}
+        second = {"event": "reused", "project": "p", "need": "n", "part": "y"}
+        (self.home / "history.jsonl").write_text(json.dumps(first) + "\n\n" + json.dumps(second) + "\n \t\n\n")
+        third = {"event": "reused", "project": "p", "need": "n", "part": "z"}
+        self.assertEqual((store.events(), store.append_event(third), store.append_event(dict(second))), ([first, second], True, False))
+        self.assertEqual(store.events(), [first, second, third])
+
+    def test_a_line_after_a_blank_one_is_named_by_its_own_number(self):
+        (self.home / "history.jsonl").write_bytes(b'{"event":"reused"}\n\nnot json\n')
+        with self.assertRaises(store.StoreProblem) as broken:
+            store.events()
+        self.assertIn("history.jsonl line 3 ", str(broken.exception))
 
 
 class AnAnswer:

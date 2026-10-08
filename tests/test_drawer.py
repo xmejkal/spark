@@ -396,6 +396,18 @@ class TheDfrobotImportTest(unittest.TestCase):
         self.assertEqual((entry["count"], entry["unsure"]), (2, False))
         self.assertFalse((self.home / "drawer" / "dfrobot-dfr0768.json").exists(), "the same item, not a second entry")
 
+    def test_an_import_that_confirms_an_unsure_entry_with_no_count_gives_it_the_shop_s_count(self):
+        tied = {"seller": "dfrobot", "product": "DFR0768"}
+        run(["--drawer-set", a_file([{"label": "MP3 mini module", "unsure": True, "from": tied}])])
+        self.bring(orders(("DFR0768", "DFPlayer Pro", 2)))
+        self.assertEqual(self.entry("mp3-mini-module"), {"schema": 1, "label": "MP3 mini module", "count": 2, "from": tied,
+                                                         "bought": {"dfrobot": 2}, "unsure": False})
+
+    def test_the_drawer_page_says_which_entry_with_no_count_a_re_import_counts(self):
+        page = " ".join((ROOT / "commands" / "drawer.md").read_text().split())
+        self.assertIn("leaves an entry with no count without one (owned, count unknown) — unless the entry was `unsure`: the "
+                      "import confirms it, and its count becomes the shop's total", page)
+
     def test_a_sku_whose_record_an_entry_said_in_words_already_is_is_asked_not_written(self):
         run(["--drawer-set", a_file([{"label": "the FireBeetle 2 ESP32-S3", "count": 1, "is": {"board": "firebeetle2-esp32s3"}}])])
         said, code = self.bring(orders(("DFR0975", "FireBeetle 2 ESP32-S3 (N16R8)", 1)))

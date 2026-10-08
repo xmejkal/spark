@@ -102,5 +102,17 @@
   "replace": "\"would write\" if args.dry_run else \"wrote\", path, content[\"board\"],"},
  {"file": "scripts/parts.py", "name": "a requirements file that changed is said to be unchanged (final 10)",
   "find": "        changed = store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + \"\\n\")",
-  "replace": "        store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + \"\\n\")"}
+  "replace": "        store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + \"\\n\")"},
+ {"file": "scripts/store.py", "name": "a blank line in the history is taken for a broken event (final 8)",
+  "find": "        if not line.strip():\n            continue  # a hand edit's last Enter",
+  "replace": "        if False:\n            continue  # a hand edit's last Enter"},
+ {"file": "scripts/store.py", "name": "a line of spaces in the history is taken for an event (final 8)",
+  "find": "        if not line.strip():\n            continue  # a hand edit's last Enter",
+  "replace": "        if not line:\n            continue  # a hand edit's last Enter"},
+ {"file": "scripts/store.py", "name": "the history's lines are numbered without the blank ones (final 8)",
+  "find": "    for number, line in enumerate(path.read_bytes().splitlines() if path.is_file() else [], 1):",
+  "replace": "    for number, line in enumerate([line for line in (path.read_bytes().splitlines() if path.is_file() else []) if line.strip()], 1):"},
+ {"file": "scripts/drawer.py", "name": "an import leaves an unsure entry with no count without one (final 5)",
+  "find": "            if before.get(\"unsure\"):\n                values.update(count=total, unsure=False)",
+  "replace": "            if before.get(\"unsure\") and \"count\" in before:\n                values.update(count=total, unsure=False)"}
 ]
