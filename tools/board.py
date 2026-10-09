@@ -26,6 +26,8 @@ OWNER = "xmejkal"
 BOARDS = (("spark", 2, "spark"), ("bin", 1, "sisuo-brain-transplant"))
 #: More days than this waiting on the PO is named (the weekly look, P102a's spec §3).
 WAIT_TOO_LONG = 3
+UNDATED = "9999-12-31"  #: an undated wait sorts after every dated one
+READY_LOW = 2  #: at two the PO is asked to order Ready (the spec's cadences: "Ready is down to two")
 TRIAL_CHECK = "2026-11-02"
 #: Seconds each gh call may take at a session start before the status is skipped; a close may wait longer.
 STATUS_TIMEOUT = 8
@@ -35,7 +37,8 @@ CLOSE_TIMEOUT = 60
 def to_items(project):
     """
     The board's issues in the shape check_backlog reads, with when each card's Status last changed and the number of the
-    story each is a sub-issue of (None for an issue with no parent story).
+    story each is a sub-issue of (None for an issue with no parent story). A number field (the epic's Appetite) is read
+    like a select or a date: by the lower-cased name of its field.
     """
     items = []
     for node in project["items"]["nodes"]:
@@ -49,7 +52,7 @@ def to_items(project):
         for value in node["fieldValues"]["nodes"]:
             name = ((value or {}).get("field") or {}).get("name", "").lower()
             if name:
-                item[name] = value.get("name", value.get("date"))
+                item[name] = value.get("name", value.get("date", value.get("number")))
                 if name == "status":
                     item["status_changed"] = value.get("updatedAt")
         items.append(item)
@@ -65,25 +68,54 @@ def _short(item):
     return "%s (#%s)" % (item["content"]["title"].split(" — ")[0], item["content"]["number"])
 
 
+def _lane_marks(item):
+    """What a card in flight is besides a card: the expedite lane's holder, or a bench session (outside the flight total)."""
+    labels = item.get("labels", [])
+    return "".join(" (%s)" % mark for mark in (check_backlog.EXPEDITE, check_backlog.BENCH) if mark in labels)
+
+
 def in_flight(items, today):
-    """The cards in a working stage, with their stage and days there, counted as the check counts them (one rule)."""
-    return ["%s %s %d d" % (i["status"], _short(i), age(i["status_changed"], today)) for i in items
+    """
+    The cards in a working stage, with their stage and days there, counted as the check counts them (one rule) — with
+    one difference the line itself says: a card labelled `bench` is listed and marked, though the gate leaves it out of
+    its total (a bench session is the PO's hands); the card labelled `expedite` is marked, so the lane's holder shows.
+    """
+    return ["%s %s %d d%s" % (i["status"], _short(i), age(i["status_changed"], today), _lane_marks(i)) for i in items
             if i.get("status") in check_backlog.IN_FLIGHT and check_backlog.counts(i)]
 
 
 def waiting(items, today):
-    """The cards waiting on the PO, with since when; more than WAIT_TOO_LONG days is marked."""
+    """The cards waiting on someone, oldest first, with since when; more than WAIT_TOO_LONG days is marked."""
     said = []
     for i in items:
-        if i.get("waiting on") != "the PO" or i.get("status") == "Done":
+        if not i.get("waiting on") or i.get("status") == "Done":
             continue
         since = i.get("waiting since")
         if since:
             days = age(since, today)
-            said.append("%s since %s, %d d%s" % (_short(i), since, days, " !" if days > WAIT_TOO_LONG else ""))
+            said.append((since, "%s since %s, %d d%s" % (_short(i), since, days, " !" if days > WAIT_TOO_LONG else "")))
         else:
-            said.append(_short(i))
-    return said
+            said.append((UNDATED, _short(i)))
+    return [text for _, text in sorted(said)]
+
+
+def appetite_spent(items, work_days, today):
+    """
+    One flag per epic in a working stage whose appetite (working days, the board's Appetite field) is spent since its
+    stage last changed. An epic that is Done, or not begun, is not flagged: its clock is not running.
+    """
+    flags = []
+    for i in items:
+        appetite, changed = i.get("appetite"), i.get("status_changed")
+        if "epic" not in i.get("labels", []) or not isinstance(appetite, (int, float)) or not changed:
+            continue
+        if i.get("status") not in check_backlog.IN_FLIGHT:
+            continue
+        start = dt.date.fromisoformat(changed[:10])
+        spent = len({d for d in work_days if start <= d <= today})
+        if spent >= appetite:
+            flags.append("! %s appetite spent: %d working days of %g — ship what is Done, bet again, or drop it" % (_short(i), spent, appetite))
+    return flags
 
 
 def ready(items):
@@ -145,8 +177,11 @@ def status_lines(boards, prs, closes, worked, today, notes=()):
                                                         TRIAL_CHECK)]
     lines += ["  ! " + sentence for sentence in [*verdict, *notes, *unread_bin]]
     lines.append("  in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"))
+    lines += ["  " + flag for flag in appetite_spent(spark, worked, today)]
     lines.append("  waits on the PO: " + (", ".join(_boards_join(boards, waiting, today)) or "nothing"))
     lines.append("  Ready: " + (", ".join(ready(spark)) or "empty — the PO refills it"))
+    if 0 < len(ready(spark)) <= READY_LOW:
+        lines.append("  ! Ready is down to %d — propose an order for the PO" % len(ready(spark)))
     lines.append("  open PRs: " + (", ".join("%s #%s %s%s" % (repo, number, title[:48], " (draft)" if draft else "")
                                              for repo, number, title, draft in prs) or "none"))
     if closes:
@@ -162,7 +197,8 @@ QUERY = """query($login:String!,$number:Int!){user(login:$login){projectV2(numbe
  items(first:100){totalCount nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number}}}
   fieldValues(first:20){nodes{
    ... on ProjectV2ItemFieldSingleSelectValue{name updatedAt field{... on ProjectV2FieldCommon{name}}}
-   ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}}}}}
+   ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}
+   ... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}}}}}
  statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC}){nodes{startDate status body}}}}}"""
 POST = ("mutation($p:ID!,$d:Date!,$s:ProjectV2StatusUpdateStatus!,$b:String!){createProjectV2StatusUpdate("
         "input:{projectId:$p,startDate:$d,status:$s,body:$b}){statusUpdate{id}}}")

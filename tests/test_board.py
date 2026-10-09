@@ -21,13 +21,15 @@ BODY = "### Needed by\n\nthe PO\n\n### Value proven by\n\nx\n"
 
 
 def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",), waiting=None, since=None, slice_="team tools",
-         parent=None):
+         parent=None, appetite=None):
     values = [{"name": status, "updatedAt": changed, "field": {"name": "Status"}},
               {"name": slice_, "updatedAt": changed, "field": {"name": "Slice"}}, {}]
     if waiting:
         values.append({"name": waiting, "updatedAt": changed, "field": {"name": "Waiting on"}})
     if since:
         values.append({"date": since, "field": {"name": "Waiting since"}})
+    if appetite is not None:
+        values.append({"number": appetite, "field": {"name": "Appetite"}})
     return {"content": {"number": number, "title": title, "body": BODY, "repository": {"name": "spark"},
                         "labels": {"nodes": [{"name": label} for label in labels]},
                         "parent": {"number": parent} if parent else None},
@@ -93,6 +95,85 @@ class TheCoreTest(unittest.TestCase):
         undated = board.to_items(project(node(16, "R2.7 — A wait nobody dated", "Idea", waiting="the PO")))
         self.assertEqual(board.waiting(undated, TODAY), ["R2.7 (#16)"])
 
+    def test_waits_are_listed_oldest_first_and_an_undated_one_last(self):
+        items = board.to_items(project(node(1, "A — x", "Discovery", waiting="the PO", since="2026-10-07"),
+                                       node(2, "B — y", "Idea", waiting="the PO", since="2026-10-01"),
+                                       node(3, "C — z", "Idea", waiting="the PO")))
+        self.assertEqual(board.waiting(items, dt.date(2026, 10, 9)),
+                         ["B (#2) since 2026-10-01, 8 d !", "A (#1) since 2026-10-07, 2 d", "C (#3)"])
+
+    def test_a_wait_on_anyone_is_listed_and_a_finished_card_s_is_not(self):
+        # Task 4's rule: a card that waits on someone (any name) is asked since when; the list shows every open one.
+        items = board.to_items(project(node(1, "A — x", "Idea", waiting="Anna", since="2026-10-07"),
+                                       node(2, "B — y", "Done", waiting="the PO", since="2026-10-01"),
+                                       node(3, "C — z", "Idea")))
+        self.assertEqual(board.waiting(items, dt.date(2026, 10, 9)), ["A (#1) since 2026-10-07, 2 d"])
+
+    def test_ready_down_to_two_is_said_and_three_is_not(self):
+        two = board.to_items(project(node(1, "A — x", "Ready"), node(2, "B — y", "Ready")))
+        three = board.to_items(project(node(1, "A — x", "Ready"), node(2, "B — y", "Ready"), node(3, "C — z", "Ready")))
+        lines_two = board.status_lines([("spark", two), ("bin", [])], [], [], set(), dt.date(2026, 10, 9))
+        lines_three = board.status_lines([("spark", three), ("bin", [])], [], [], set(), dt.date(2026, 10, 9))
+        self.assertIn("  ! Ready is down to 2 — propose an order for the PO", lines_two)
+        self.assertFalse(any("Ready is down" in line for line in lines_three))
+
+    def test_an_empty_ready_keeps_its_own_line(self):
+        lines = board.status_lines([("spark", []), ("bin", [])], [], [], set(), dt.date(2026, 10, 9))
+        self.assertIn("  Ready: empty — the PO refills it", lines)
+        self.assertFalse(any("Ready is down" in line for line in lines))
+
+    def test_an_undated_wait_reaches_the_status_and_puts_the_close_at_risk(self):
+        items = board.to_items(project(node(16, "R2.7 — A wait nobody dated", "Idea", waiting="the PO")))
+        lines = board.status_lines([("spark", items), ("bin", [])], [], [], set(), dt.date(2026, 10, 9))
+        self.assertIn("spark — 1 open, 1 problem(s) · trial check 2026-11-02", lines)
+        self.assertIn("  ! #16 R2.7 — A wait nobody dated: waits on the PO since nobody knows — set Waiting since", lines)
+        status, _ = board.close_update("x", [("spark", items), ("bin", [])], set(), dt.date(2026, 10, 9), dt.date(2026, 10, 9))
+        self.assertEqual(status, "AT_RISK")
+
+    def test_a_spent_appetite_is_flagged_in_working_days(self):
+        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
+        worked = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 3), dt.date(2026, 10, 6)}
+        self.assertEqual(board.appetite_spent(epic, worked, dt.date(2026, 10, 9)),
+                         ["! E (#5) appetite spent: 4 working days of 3 — ship what is Done, bet again, or drop it"])
+        self.assertEqual(board.appetite_spent(epic, {dt.date(2026, 10, 1)}, dt.date(2026, 10, 9)), [])
+
+    def test_an_appetite_is_spent_on_the_working_day_that_reaches_it(self):
+        epic = board.to_items(project(node(5, "E — x", "Design", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
+        days = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 6), dt.date(2026, 9, 30), dt.date(2026, 10, 12)}
+        # Three of the five days fall from the day the stage began to today; the day before and the day after do not count.
+        self.assertEqual(board.appetite_spent(epic, days, dt.date(2026, 10, 9)),
+                         ["! E (#5) appetite spent: 3 working days of 3 — ship what is Done, bet again, or drop it"])
+
+    def test_an_epic_with_no_time_on_its_stage_is_not_flagged_rather_than_a_traceback(self):
+        epic = board.to_items(project(node(5, "E — x", "Design", changed=None, labels=("epic",), appetite=3)))
+        self.assertEqual(board.appetite_spent(epic, {dt.date(2026, 10, 1)}, dt.date(2026, 10, 9)), [])
+
+    def test_only_an_epic_in_a_working_stage_with_an_appetite_is_flagged(self):
+        worked = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 3), dt.date(2026, 10, 6)}
+        today = dt.date(2026, 10, 9)
+        spent = dict(changed="2026-10-01T09:00:00Z", appetite=3)
+        cards = board.to_items(project(node(5, "E — x", "Done", labels=("epic",), **spent),
+                                       node(6, "F — y", "Idea", labels=("epic",), **spent),
+                                       node(7, "G — z", "Build", labels=("story",), **spent),
+                                       node(8, "H — w", "Build", labels=("epic",), changed="2026-10-01T09:00:00Z")))
+        self.assertEqual(board.appetite_spent(cards, worked, today), [])
+
+    def test_the_status_flags_a_spent_appetite_after_the_flight_line(self):
+        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
+        worked = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 3), dt.date(2026, 10, 6)}
+        lines = board.status_lines([("spark", epic), ("bin", [])], [], [], worked, dt.date(2026, 10, 9))
+        flag = "  ! E (#5) appetite spent: 4 working days of 3 — ship what is Done, bet again, or drop it"
+        self.assertEqual(lines[lines.index("  in flight: Discovery E (#5) 8 d") + 1], flag)
+
+    def test_the_flight_line_names_the_card_that_holds_the_expedite_lane_and_a_bench_session(self):
+        # The gate does not count a bench card in the flight (check_backlog.BENCH), so the status says why the lists differ.
+        spark = board.to_items(project(node(1, "P1 — a", "Build", labels=("story", "expedite")), node(2, "P2 — b", "Design")))
+        bin_ = board.to_items(project(node(7, "B7 — c", "Build", labels=("bench",))))
+        self.assertEqual(board.in_flight(spark, TODAY), ["Build P1 (#1) 2 d (expedite)", "Design P2 (#2) 2 d"])
+        lines = board.status_lines([("spark", spark), ("bin", bin_)], [], [], set(), TODAY)
+        self.assertIn("  in flight: Build P1 (#1) 2 d (expedite), Design P2 (#2) 2 d, bin Build B7 (#7) 2 d (bench)", lines)
+        self.assertEqual(lines[0], "spark — 2 open, the limits hold · trial check 2026-11-02")
+
     def test_ready_keeps_the_board_s_order(self):
         self.assertEqual(board.ready(SPARK), ["P103 (#32)", "P97 (#18)"])
 
@@ -117,6 +198,7 @@ class TheCoreTest(unittest.TestCase):
             "  in flight: Build P102c (#26) 2 d",
             "  waits on the PO: R2.6 (#15) since 2026-10-05, 2 d, bin B1 (#1) since 2026-09-25, 12 d !",
             "  Ready: P103 (#32), P97 (#18)",
+            "  ! Ready is down to 2 — propose an order for the PO",
             "  open PRs: spark #34 P102c: the state in view (draft)",
             "  last close 2026-10-05: P102a merged; P102c designed",
             "  ! the day of 2026-10-06 has no close — write it first"])
@@ -205,6 +287,9 @@ class TheFinalReviewTest(unittest.TestCase):
     def test_the_query_reads_each_issue_s_parent_story(self):
         # A task with no parent story is a card of its own (P146): the status must be told whose sub-issue each one is.
         self.assertIn("parent{number}", board.QUERY)
+
+    def test_the_query_reads_a_number_field_for_the_appetite(self):
+        self.assertIn("... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}", board.QUERY)
 
     def test_a_board_read_short_says_how_many_it_holds(self):
         held = project(node(1, "P1 — x", "Ready"))
