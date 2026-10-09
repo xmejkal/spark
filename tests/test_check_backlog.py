@@ -13,6 +13,10 @@ from Ready on — the commitment — not in Idea, Discovery or Design, which dec
 sides, with the stages written out: a card in Idea, Discovery or Design with neither passes, and a card in Ready, Build
 or Review without one is named — an epic that holds no place in a limit (counts()) among them. A card with no Status,
 or a stage the gate does not know, is treated like Idea.
+
+P146 (docs/2026-10-06-process-design.md, "Asks to you"): a card that waits on someone carries Waiting on and Waiting
+since, and a Waiting on with no Waiting since is named — in any open stage, Idea included, since a wait is no
+commitment-stage question, and whoever is waited on (the PO, Petr). A Done card's stale wait is not judged.
 """
 
 import json
@@ -32,8 +36,9 @@ IN_FLIGHT_SAYS = "at most 4: finish one before starting another"
 
 
 def item(number, status="Ready", slice_="10 The store", needed="the PO's walking skeleton", labels=("story",), parent=None,
-         repository="xmejkal/spark"):
+         repository="xmejkal/spark", waiting=None, since=None):
     return {"status": status, "slice": slice_, "labels": list(labels), "parent": parent,
+            "waiting on": waiting, "waiting since": since,
             "content": {"number": number, "title": "P%d — x" % number, "body": BODY % needed, "repository": repository}}
 
 
@@ -163,9 +168,15 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog.problems([item(n, "Done") for n in range(9)] + [item(20 + n, "Idea") for n in range(9)]), [])
 
     def test_the_recorded_board_reads(self):
+        # The answer gh printed when the board was migrated keeps every limit, and every card from Ready on has its Needed
+        # by and slice. Its one wait — #15, on the PO — was never dated: the rule that names an undated wait (P146) is
+        # newer than the recording, so the recording stays as gh printed it and the gate names that wait and nothing else.
+        # (It is also real gh output, and `waiting on` is the key it prints.)
         items = json.loads((ROOT / "tests" / "data" / "p102a-items.json").read_text())["items"]
         self.assertTrue(items)
-        self.assertEqual(check_backlog.problems(items), [], "the board as migrated keeps every limit")
+        self.assertEqual(check_backlog.problems(items),
+                         ["#15 R2.6 — A fourth cold test: waits on the PO since nobody knows — set Waiting since"],
+                         "the board as migrated keeps every limit; only its undated wait is named")
 
     def test_a_body_with_windows_line_endings_reads_as_filled(self):
         crlf = item(1)
@@ -200,6 +211,26 @@ class TheBacklogCheckTest(unittest.TestCase):
         said = check_backlog.problems([item(9, "Ready", labels=("task",), parent=None, slice_="", needed="")])
         self.assertEqual(said, ["#9 P9 — x: no `Needed by` — W14: an item names the design that needs it",
                                 "#9 P9 — x: on no slice of the story map"])
+
+    def test_a_wait_with_no_since_is_named(self):
+        self.assertEqual(check_backlog.problems([item(3, "Discovery", waiting="the PO")]),
+                         ["#3 P3 — x: waits on the PO since nobody knows — set Waiting since"])
+
+    def test_a_dated_wait_passes_and_any_waited_on_name_is_checked(self):
+        self.assertEqual(check_backlog.problems([item(3, "Discovery", waiting="the PO", since="2026-10-06")]), [])
+        self.assertEqual(check_backlog.problems([item(3, "Discovery", waiting="Petr")]),
+                         ["#3 P3 — x: waits on Petr since nobody knows — set Waiting since"])
+
+    def test_a_done_card_s_stale_wait_is_not_judged(self):
+        self.assertEqual(check_backlog.problems([item(3, "Done", waiting="the PO")]), [])
+
+    def test_an_undated_wait_is_named_in_every_open_stage_not_only_from_ready_on(self):
+        # Unlike Needed by and the slice, a wait is no commitment-stage question: the recorded board's one wait (#15)
+        # sits in Idea. A card with no Status, or a stage the gate does not know, is named like the rest.
+        for status in (None, "Idea", "Discovery", "Design", "Ready", "Build", "Review", "Parked"):
+            with self.subTest(status=status):
+                self.assertEqual(check_backlog.problems([item(3, status, waiting="the PO")]),
+                                 ["#3 P3 — x: waits on the PO since nobody knows — set Waiting since"])
 
     def test_parents_asks_each_task_s_own_repository_in_one_call(self):
         asked = []

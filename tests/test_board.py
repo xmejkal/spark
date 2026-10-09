@@ -38,12 +38,15 @@ def project(*nodes):
     return {"id": "P", "items": {"totalCount": len(nodes), "nodes": list(nodes)}, "statusUpdates": {"nodes": []}}
 
 
+# R2.6 says since when it waits on the PO: since P146 the gate names a Waiting on with no Waiting since, and this is the
+# board whose limits hold (the status and the close read the gate's verdict). A wait nobody dated is its own card, in
+# the one test that needs it.
 SPARK = board.to_items(project(
     node(26, "P102c — The state in view", "Build", "2026-10-05T10:00:00Z"),
     node(24, "P102 — The tools chore", "Build", labels=("epic",)),
     node(32, "P103 — The process documented", "Ready"),
     node(18, "P97 — Store 1c", "Ready"),
-    node(15, "R2.6 — A fourth cold test", "Idea", waiting="the PO"),
+    node(15, "R2.6 — A fourth cold test", "Idea", waiting="the PO", since="2026-10-05"),
     {"content": {}, "fieldValues": {"nodes": []}}))
 BIN = board.to_items(project(node(1, "B1 — Identify the audio module", "Idea", waiting="the PO", since="2026-09-25")))
 
@@ -82,7 +85,9 @@ class TheCoreTest(unittest.TestCase):
 
     def test_waiting_on_the_po_says_since_when_and_marks_more_than_three_days(self):
         self.assertEqual(board.waiting(BIN, TODAY), ["B1 (#1) since 2026-09-25, 12 d !"])
-        self.assertEqual(board.waiting(SPARK, TODAY), ["R2.6 (#15)"])
+        self.assertEqual(board.waiting(SPARK, TODAY), ["R2.6 (#15) since 2026-10-05, 2 d"])
+        undated = board.to_items(project(node(16, "R2.7 — A wait nobody dated", "Idea", waiting="the PO")))
+        self.assertEqual(board.waiting(undated, TODAY), ["R2.7 (#16)"])
 
     def test_ready_keeps_the_board_s_order(self):
         self.assertEqual(board.ready(SPARK), ["P103 (#32)", "P97 (#18)"])
@@ -106,7 +111,7 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(lines, [
             "spark — 5 open, the limits hold · trial check 2026-11-02",
             "  in flight: Build P102c (#26) 2 d",
-            "  waits on the PO: R2.6 (#15), bin B1 (#1) since 2026-09-25, 12 d !",
+            "  waits on the PO: R2.6 (#15) since 2026-10-05, 2 d, bin B1 (#1) since 2026-09-25, 12 d !",
             "  Ready: P103 (#32), P97 (#18)",
             "  open PRs: spark #34 P102c: the state in view (draft)",
             "  last close 2026-10-05: P102a merged; P102c designed",

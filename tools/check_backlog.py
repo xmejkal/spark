@@ -3,6 +3,7 @@
 W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §3 and
 §8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
 A card is asked for its Needed by and slice from Ready on — the commitment — not in Idea, Discovery or Design (P146).
+A card that waits on someone is asked since when, in any open stage: a Waiting on with no Waiting since is named (P146).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories: every task
 is counted as riding on its story, a line says so with the cause, and the push goes through (W1: said, never read as
@@ -62,9 +63,10 @@ def counts(entry):
 def problems(items, bin_items=()):
     """
     Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on, the commitment
-    (JUDGED), not in Idea, Discovery or Design — and a broken WIP limit. An epic counts only in Discovery and Design; a
-    task (a plan's step, a sub-issue of its story) rides on its story and is not judged on its own — unless it has no
-    parent story, when it is a card like any other (counts()). `bin_items` is the bin's board, accepted and not read
+    (JUDGED), not in Idea, Discovery or Design — a card that waits on someone (any name) with no Waiting since, in any
+    open stage, and a broken WIP limit. An epic counts only in Discovery and Design; a task (a plan's step, a sub-issue
+    of its story) rides on its story and is not judged on its own — unless it has no parent story, when it is a card
+    like any other (counts()). A Done card is not judged at all. `bin_items` is the bin's board, accepted and not read
     yet.
     """
     said, by_stage = [], {}
@@ -80,6 +82,8 @@ def problems(items, bin_items=()):
                 said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
             if not entry.get("slice"):
                 said.append("%s: on no slice of the story map" % _name(entry))
+        if entry.get("waiting on") and not entry.get("waiting since"):
+            said.append("%s: waits on %s since nobody knows — set Waiting since" % (_name(entry), entry["waiting on"]))
     for stage, limit in LIMITS.items():
         held = by_stage.get(stage, [])
         if len(held) > limit:
