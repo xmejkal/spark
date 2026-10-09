@@ -9,6 +9,9 @@ decisions are marked where they stand, with their date: the limits of two per wo
 council with a documentation expert before any PR, its fixes before the merge (2026-10-08); and that the merge is the
 PO's, not Claude's (observed 2026-10-07 and 2026-10-08: the classifier refuses `gh pr merge` by Claude).*
 
+*Noted 2026-10-09: the clock times on this page are GitHub's, in UTC — the acceptance at 12:21 UTC was 14:21 in
+Prague.*
+
 ## 1. How we work
 
 **What it is.** We run a Kanban system that keeps Scrum's roles and commitments: the Product Owner, the Definition of
@@ -45,7 +48,8 @@ by*. There are no sprints, no Scrum Master and no ceremonies."
 - At most 3 cards are in flight, Discovery to Review (D) — **4 since 2026-10-06 evening**.
 - A card stays in its working stage while any work runs on it (D).
 - Every card counts (D). Only a plan's own sub-issues still ride on their story.
-- The bin's desk cards count in the same three. A bench session is your hands, so it sits outside them.
+- The bin's desk cards count in the same three. A bench session is your hands, so it sits outside them. **The same
+  four since 2026-10-06 evening** (noted 2026-10-09: the cap of four in flight above).
 
 ### Discovery comes before commitment
 
@@ -103,7 +107,8 @@ by*. There are no sprints, no Scrum Master and no ceremonies."
   the most capable model.
 - **Inside your allowance** (decision 2) a run starts. Above it, Claude asks first, with the estimate.
 - **Reported daily.** The day-close states the day's agent tokens.
-- **Capped by the limits.** One run per in-flight card means at most three at once.
+- **Capped by the limits.** One run per in-flight card means at most three at once. **Four since 2026-10-06
+  evening**, five while the expedite lane is in use (noted 2026-10-09).
 
 ### Asks to you
 
@@ -160,7 +165,7 @@ Nothing else. Five Done cards support no chart and no forecast.
 - the SRM and SDM role names, seven meetings, a STATIK workshop, the maturity model and Flight Levels;
 - four classes of service, WSJF, flow charts and forecasts;
 - a Definition of Ready document, a discovery board and a blocker log;
-- Build 2;
+- Build 2 — **adopted 2026-10-06 evening** (the PO: "2 everywhere, cap 4"; noted 2026-10-09);
 - agent teams, issue-driven cloud agents, a card per run, and a Scrum Master agent;
 - planted false findings to test the refuters. They marked 50 of 254 findings "partly", so they do push back.
 
