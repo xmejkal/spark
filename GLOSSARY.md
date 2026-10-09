@@ -153,7 +153,7 @@ because in this repository the prose is the product. It is a number, not a cap (
 2026-10-04; [W15b](scrum/WORKING_AGREEMENTS.md#w15b--the-size-is-said-at-every-push-with-its-reason-refactor-before-growing)). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
 item, each time to whatever had been measured, and it prompted one refactor of two lines. Now the
 pre-push gate prints the size with its growth since `origin/main` (`scripts/: N code lines (+M since
-origin/main)`), and an item's Done line says how many lines it added and why. When an item grows a
+origin/main)`), and a card's closing comment (DoD 7) says how many lines it added and why. When an item grows a
 lot, the first question is whether the same behaviour fits in less code: **refactor before growing**.
 
 ### Orphan
@@ -323,6 +323,60 @@ An **epic** is an issue whose stories are its sub-issues; its progress bar is ho
 plan — a sub-issue that rides on its story, with no slice or limit of its own, **while that story is open**. A task
 with no parent story, or only a closed one, counts as a card like any other (`counts()` and `open_parent()` in
 `tools/check_backlog.py`).
+
+### Slice
+
+A milestone on the story map: a step of the journey that ends in something a command or a bench log proves
+([`scrum/STORY_MAP.md`](scrum/STORY_MAP.md#the-slices-in-order)). On the board it is the Project's *Slice* field — one
+of the map's slices, or `team tools` or `desk lane`. The gate asks a card for one from Ready on, never in Idea,
+Discovery or Design ([the flow](scrum/README.md#the-flow--an-items-stages)). **The failure behind it:** while the gate
+asked for a slice in Idea too, an agent chose P136's "so the push gate passes" (the process design, §2).
+
+### The expedite lane
+
+One card at a time, on the PO's word ("now"), labelled `expedite`: its working stage and the four in flight may hold
+one over their limit, Ready never, and the gate fails a push on two such cards. It is one lane across both boards
+(decision 4 (a); [the flow](scrum/README.md#the-flow--an-items-stages)). **The failure behind it:** P105 went from
+filed to merged in 39 minutes, outside any rule (the process design, §2).
+
+### Bench
+
+A session of the PO's own hands at the bench: a card on the bin's board labelled `bench`. It sits outside the four in
+flight — the gate leaves it out of the total — and the status marks it in flight
+([the flow](scrum/README.md#the-flow--an-items-stages), *The bin*). The design's words: "A bench session is your
+hands, so it sits outside them."
+
+### Appetite
+
+The working days the PO gives an epic when it enters Discovery (decision 5 (a)). When they are spent — counted since
+the epic's stage last changed — the status flags it: *"ship what is Done, bet again, or drop it"*. The board has no
+Appetite field yet; adding it waits on his yes, so nothing is flagged today
+([the cadences](scrum/README.md#the-cadences-and-what-each-one-leaves)). **The failure behind it:** the trial asks "do
+epics finish?" and nothing made them: on 2026-10-06 P102 had 3 of 8 sub-issues done, and no epic had closed under
+Kanban (the process design, §2).
+
+### Waiting on, and Waiting since
+
+Two fields of a card on the board: who it waits on (`the PO`, `hardware` or `outside`) and the date it began. The gate
+fails a push on a *Waiting on* with no *Waiting since*, on both boards and in any open stage; the status lists every
+wait oldest first and marks one older than three days with `!` ([asks to the PO](scrum/README.md#asks-to-the-po)).
+**The failure behind it:** R2.6's wait had no date, so it never aged (the process design, §2).
+
+### Service level
+
+One best guess, accepted with the design on 2026-10-06: *"a card leaves Build and Review within 2 working days, 8 times
+in 10."* The status prints each card's days in its stage, but nothing flags one past the guess yet (card C3 of the
+design); the trial on 2026-11-02 corrects the guess ([the cadences](scrum/README.md#the-cadences-and-what-each-one-leaves)).
+
+### Council, lens, refuter
+
+A **council** is one run of several agents on one question — a spec, a plan, a pull request. Each agent reads it as
+one **lens**, a point of view: the PO assistant, the user's journey, the tech lead, a documentation expert. Then a
+**refuter** on the most capable model tries to knock each finding down, and what stands is fixed or goes on the run's
+checklist. Lenses run on Sonnet. Before every pull request the council is those four lenses and the refuter, and its
+findings are fixed before the merge (the PO, 2026-10-08; [runs](scrum/README.md#runs-reads-councils-reviews)). **Why
+a refuter:** a lens's finding is a hypothesis until reproduced (W9); the refuters of the design's own reads marked 50
+of 254 findings "partly" (the process design, §2).
 
 ### Day-close
 
