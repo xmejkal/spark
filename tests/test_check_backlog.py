@@ -589,7 +589,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         code, printed = self.said(run)
         self.assertEqual(code, 0)
         self.assertIn("  backlog: 1 open, the limits hold\n", printed)
-        self.assertIn("  backlog: the bin's board could not be read (TimeoutExpired) — its cards in flight were not counted",
+        self.assertIn("  backlog: the bin's board could not be read (TimeoutExpired) — its cards were not counted or checked",
                       printed)
 
     def test_main_says_when_the_project_list_has_no_bin_project(self):
@@ -597,7 +597,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("  backlog: 1 open, the limits hold\n", printed)
         self.assertIn("  backlog: the bin's board could not be read (no project titled 'the bin' under xmejkal) — "
-                      "its cards in flight were not counted", printed)
+                      "its cards were not counted or checked", printed)
 
     def test_the_summary_says_how_many_of_the_bin_s_cards_are_open(self):
         # Said when the bin was read, as the note is said when it was not: a Done card is no open card.

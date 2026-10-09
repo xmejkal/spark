@@ -29,9 +29,10 @@ OWNER, TITLE = "xmejkal", "spark"
 BIN_TITLE = "the bin"
 #: What problems() marks a card of the bin's board with, so a sentence names it apart from spark's: `bin #12`, not `#12`.
 BIN_BOARD = "bin"
-#: What main() and the status say when the bin's board could not be read: spark's cards were counted alone. A
-#: could-not-look, not a failure — said with its cause, and the push goes through (W1).
-BIN_UNREAD = "the bin's board could not be read (%s) — its cards in flight were not counted"
+#: What main() and the status say when the bin's board could not be read: spark's cards were counted alone, and the bin's
+#: expedite and waits were not checked either. A could-not-look, not a failure — said with its cause, and the push goes
+#: through (W1).
+BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not counted or checked"
 #: The stages that carry a limit (§3); Idea and Done carry none. Every working stage takes 2, the PO's call of
 #: 2026-10-06 evening (P146); Ready is a queue, not work, and stays at 5.
 LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 2, "Review": 2}

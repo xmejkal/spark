@@ -297,7 +297,7 @@ class TheCoreTest(unittest.TestCase):
 
     def test_the_status_says_when_the_bin_board_was_not_given(self):
         lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY)
-        self.assertIn("  ! the bin's board could not be read (no bin board was given) — its cards in flight were not counted", lines)
+        self.assertIn("  ! the bin's board could not be read (no bin board was given) — its cards were not counted or checked", lines)
         both = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [], set(), TODAY)
         self.assertFalse(any("could not be read" in line for line in both))
 
