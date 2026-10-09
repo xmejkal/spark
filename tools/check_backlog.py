@@ -176,6 +176,18 @@ def _gh(*args):
     return json.loads(subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60, check=True).stdout)
 
 
+def _cause(error):
+    """
+    Why gh could not be asked, as a could-not-run line says it: the first line gh wrote on stderr that says anything
+    ("gh: To get started with GitHub CLI, please run: gh auth login"), else the exception's name — a missing gh, a timeout
+    with nothing said, an answer that was no JSON. board.py's _gh says gh's first line the same way (P146 council, C2).
+    """
+    said = getattr(error, "stderr", None) or ""
+    if isinstance(said, bytes):  # a timed-out run's output comes back as bytes whatever text= said
+        said = said.decode(errors="replace")
+    return next((line.strip() for line in said.splitlines() if line.strip()), type(error).__name__)
+
+
 def parents(tasks):
     """
     ({(repository, number): its parent issue's number or None, a closed parent being none (open_parent)}, None), or
@@ -201,7 +213,7 @@ def parents(tasks):
         return {(repository, number): open_parent(found[alias]["t%d" % number]["parent"])
                 for alias, repository, numbers in groups for number in numbers}, None
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError) as unreachable:
-        return {}, type(unreachable).__name__
+        return {}, _cause(unreachable)
 
 
 def _items(number):
@@ -224,21 +236,21 @@ def fetch():
     try:
         projects = _gh("project", "list", "--owner", OWNER, "--format", "json")["projects"]
     except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-        return None, None, type(unreachable).__name__, None
+        return None, None, _cause(unreachable), None
     number = next((p["number"] for p in projects if p["title"] == TITLE), None)
     if number is None:
         raise LookupError("no project titled %r under %s — the board cannot be checked" % (TITLE, OWNER))
     try:
         items = _items(number)
     except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-        return None, None, type(unreachable).__name__, None
+        return None, None, _cause(unreachable), None
     bin_items, bin_why = None, "no project titled %r under %s" % (BIN_TITLE, OWNER)
     bin_number = next((p["number"] for p in projects if p["title"] == BIN_TITLE), None)
     if bin_number is not None:
         try:
             bin_items, bin_why = _items(bin_number), None
         except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-            bin_why = type(unreachable).__name__
+            bin_why = _cause(unreachable)
     cards = items + (bin_items or [])
     open_tasks = [(e["content"].get("repository"), e["content"].get("number")) for e in cards
                   if "task" in (e.get("labels") or []) and e.get("status") != "Done"]

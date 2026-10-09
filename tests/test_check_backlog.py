@@ -37,6 +37,10 @@ in the summary line, with its open count.
 P146 council (C1): `check_backlog.py --help` ran the gate — main() parsed no arguments. It now says what the gate checks
 and what each exit code means, and asks gh nothing: the test runs the module with a gh on PATH that writes down every
 call. main() called with no arguments (check_commit's way) reads none of its caller's.
+
+P146 council (C2): a look that could not run named the exception's class ("CalledProcessError") where gh had said why
+("please run: gh auth login"). The cause is now the first line gh wrote on stderr — at every place a look can fail: the
+project list, spark's items, the bin's items, the tasks' parents — and the exception's name only when gh wrote nothing.
 """
 
 import json
@@ -699,6 +703,47 @@ class TheBacklogCheckTest(unittest.TestCase):
             code, printed = self.said(run)
         self.assertEqual(code, 0)
         self.assertIn("backlog: could-not-run", printed)
+
+    #: What gh prints when nobody is logged in, after a blank line: the cause is its first line that says anything.
+    NOT_LOGGED_IN = "\ngh: To get started with GitHub CLI, please run: gh auth login\nAlternatively, populate the GH_TOKEN env\n"
+
+    def refused(self, stderr):
+        return subprocess.CalledProcessError(4, ["gh"], output="", stderr=stderr)
+
+    def test_a_look_gh_refused_says_gh_s_own_first_line(self):
+        unread = ("  backlog: could-not-run — gh or the network could not be reached "
+                  "(gh: To get started with GitHub CLI, please run: gh auth login); the limits were not checked\n")
+
+        def refuse_everything(*args, **kwargs):
+            raise self.refused(self.NOT_LOGGED_IN)
+        listing_refused, _ = self.board_answering(self.refused(self.NOT_LOGGED_IN), {"data": {}})
+        for where, run in (("the project list", refuse_everything), ("spark's items", listing_refused)):
+            with self.subTest(where=where):
+                code, printed = self.said(run)
+                self.assertEqual(code, 0)
+                self.assertIn(unread, printed)
+
+    def test_the_bin_s_board_and_the_parents_unread_say_gh_s_own_first_line(self):
+        run, _ = self.board_answering([item(1, "Build"), item(9, "Build", labels=("task",))],
+                                      self.refused("GraphQL: API rate limit exceeded for user\n"),
+                                      self.refused("\nHTTP 502: Bad Gateway (https://api.github.com/graphql)\n"))
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: tasks' parent stories could not be read (GraphQL: API rate limit exceeded for user)", printed)
+        self.assertIn("  backlog: the bin's board could not be read (HTTP 502: Bad Gateway (https://api.github.com/graphql))",
+                      printed)
+
+    def test_a_failure_gh_said_nothing_about_is_named_by_its_kind(self):
+        # A missing gh, a timeout, gh silent on stderr, an answer that was no JSON: nothing but the kind to say.
+        for error, named in ((FileNotFoundError("gh"), "FileNotFoundError"), (subprocess.TimeoutExpired("gh", 60), "TimeoutExpired"),
+                             (self.refused(" \n\n"), "CalledProcessError"), (self.refused(None), "CalledProcessError"),
+                             (ValueError("Expecting value"), "ValueError")):
+            with self.subTest(named=named):
+                self.assertEqual(check_backlog._cause(error), named)
+
+    def test_a_timeout_s_stderr_in_bytes_is_read_as_text(self):
+        # subprocess hands a timed-out run's output back as bytes whatever text= said.
+        self.assertEqual(check_backlog._cause(subprocess.TimeoutExpired("gh", 60, stderr=b"gh: slow network\n")), "gh: slow network")
 
 
 class TheGateSaysWhatItIsTest(unittest.TestCase):
