@@ -150,10 +150,10 @@ for two sprints, enforced by nothing.
 
 The size of `scripts/`, counted in **code** lines — docstrings, comments and blanks do not count,
 because in this repository the prose is the product. It is a number, not a cap (W15b, P99; the PO,
-2026-10-04). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
+2026-10-04; [W15b](scrum/WORKING_AGREEMENTS.md#w15b--the-size-is-said-at-every-push-with-its-reason-refactor-before-growing)). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
 item, each time to whatever had been measured, and it prompted one refactor of two lines. Now the
 pre-push gate prints the size with its growth since `origin/main` (`scripts/: N code lines (+M since
-origin/main)`), and an item's Done line says how many lines it added and why. When an item grows a
+origin/main)`), and a card's closing comment (DoD 7) says how many lines it added and why. When an item grows a
 lot, the first question is whether the same behaviour fits in less code: **refactor before growing**.
 
 ### Orphan
@@ -164,8 +164,10 @@ repository was cut in one night when this rule arrived.
 
 ### Needed by
 
-Every open item on the board names the **design that needs it** — "pull, never push" (W14). No item is
-built because it would be nice. `tools/check_backlog.py` fails a push on an open item whose *Needed by* is empty.
+Every card from Ready on names the **design that needs it** — "pull, never push" (W14). No item is
+built because it would be nice. `tools/check_backlog.py` fails a push on a card in Ready, Build or Review (its
+`JUDGED` stages, the commitment) whose *Needed by* is empty; in Idea, Discovery and Design a card is still deciding
+whether to build, so it is not asked.
 
 ---
 
@@ -293,10 +295,12 @@ with no transcript of a step's session it says the cost was not counted, and exi
 
 ## How the work is run
 
-### Working agreement — W1, W2, … W21
+### Working agreement — ten of them
 
-Not principles adopted in advance. Each one is a **failure that happened here**, written down with
-its evidence so it cannot recur quietly. `scrum/WORKING_AGREEMENTS.md`. When one is inconvenient,
+Ten, numbered W1, W2, W3, W6, W8, W13, W14, W15, W16 and W19; beside them two habits, two role rules and two product rules (P146, 2026-10-09;
+[`scrum/WORKING_AGREEMENTS.md`](scrum/WORKING_AGREEMENTS.md), the product rules in
+[`DECISIONS.md`](DECISIONS.md#product-rules)). Not principles adopted in advance. Each one is a **failure that
+happened here**, written down with its evidence so it cannot recur quietly. When one is inconvenient,
 read its evidence before deciding it is bureaucracy.
 
 ### The board
@@ -308,14 +312,71 @@ numbers, and what counts toward them, are [the flow's table](scrum/README.md#the
 behind it:** the PO added items mid-sprint in 3 of the 6 sprints read closely, and Sprint 10 stayed open from 10-03
 after work came in that it never planned — so "what are we doing now" had no answer a command could read (the design's
 §9).
-`tools/check_backlog.py` fails a push that breaks a limit on spark's board (when online); the Markdown backlog is the
-frozen archive.
+The entry and exit of each stage are [the flow's table](scrum/README.md#the-flow--an-items-stages) too, and the merge
+is the PO's. `tools/check_backlog.py` fails a push that breaks a limit on both boards: spark's stages and limits, and
+the bin's cards in the same flight total (when online); the Markdown backlog is the frozen archive.
 
 ### Epic, story, task
 
 An **epic** is an issue whose stories are its sub-issues; its progress bar is how an unfinished epic shows. A
 **story** is what a person can do afterwards, proven by its *Value proven by*. A **task** is one step of a story's
-plan — a sub-issue that rides on its story, with no slice or limit of its own.
+plan — a sub-issue that rides on its story, with no slice or limit of its own, **while that story is open**. A task
+with no parent story, or only a closed one, counts as a card like any other (`counts()` and `open_parent()` in
+`tools/check_backlog.py`).
+
+### Slice
+
+A milestone on the story map: a step of the journey that ends in something a command or a bench log proves
+([`scrum/STORY_MAP.md`](scrum/STORY_MAP.md#the-slices-in-order)). On the board it is the Project's *Slice* field — one
+of the map's slices, or `team tools` or `desk lane`. The gate asks a card for one from Ready on, never in Idea,
+Discovery or Design ([the flow](scrum/README.md#the-flow--an-items-stages)). **The failure behind it:** while the gate
+asked for a slice in Idea too, an agent chose P136's "so the push gate passes" (the process design, §2).
+
+### The expedite lane
+
+One card at a time, on the PO's word ("now"), labelled `expedite`: its working stage and the four in flight may hold
+one over their limit, Ready never, and the gate fails a push on two such cards. It is one lane across both boards
+(decision 4 (a); [the flow](scrum/README.md#the-flow--an-items-stages)). **The failure behind it:** P105 went from
+filed to merged in 39 minutes, outside any rule (the process design, §2).
+
+### Bench
+
+A session of the PO's own hands at the bench: a card on the bin's board labelled `bench`. It sits outside the four in
+flight — the gate leaves it out of the total — and the status marks it in flight
+([the flow](scrum/README.md#the-flow--an-items-stages), *The bin*). The design's words: "A bench session is your
+hands, so it sits outside them."
+
+### Appetite
+
+The working days the PO gives an epic when it enters Discovery (decision 5 (a)), recorded in the Appetite number field
+on spark's board. When they are spent: *"ship what is Done, bet again, or drop it"*. The field is process data he sets
+and reads on the board; nothing in spark reads it
+([the cadences](scrum/README.md#the-cadences-and-what-each-one-leaves)). **The failure behind it:** the trial asks "do
+epics finish?" and nothing made them: on 2026-10-06 P102 had 3 of 8 sub-issues done, and no epic had closed under
+Kanban (the process design, §2).
+
+### Waiting on, and Waiting since
+
+Two fields of a card on the board: who it waits on (`the PO`, `hardware` or `outside`) and the date it began. The gate
+fails a push on a *Waiting on* with no *Waiting since*, on both boards and in any open stage; the status lists every
+wait oldest first and marks one older than three days with `!` ([asks to the PO](scrum/README.md#asks-to-the-po)).
+**The failure behind it:** R2.6's wait had no date, so it never aged (the process design, §2).
+
+### Service level
+
+One best guess, accepted with the design on 2026-10-06: *"a card leaves Build and Review within 2 working days, 8 times
+in 10."* The status prints each card's days in its stage, but nothing flags one past the guess yet (card C3 of the
+design); the trial on 2026-11-02 corrects the guess ([the cadences](scrum/README.md#the-cadences-and-what-each-one-leaves)).
+
+### Council, lens, refuter
+
+A **council** is one run of several agents on one question — a spec, a plan, a pull request. Each agent reads it as
+one **lens**, a point of view: the PO assistant, the user's journey, the tech lead, a documentation expert. Then a
+**refuter** on the most capable model tries to knock each finding down, and what stands is fixed or goes on the run's
+checklist. Lenses run on Sonnet. Before every pull request the council is those four lenses and the refuter, and its
+findings are fixed before the merge (the PO, 2026-10-08; [runs](scrum/README.md#runs-reads-councils-reviews)). **Why
+a refuter:** a lens's finding is a hypothesis until reproduced (W9); the refuters of the design's own reads marked 50
+of 254 findings "partly" (the process design, §2).
 
 ### Day-close
 

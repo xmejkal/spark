@@ -5,7 +5,7 @@ How spark's own code is tested and gated, and where the work is planned.
 ## The tests
 
 ```sh
-python3 -m unittest discover -s tests -t tests
+python3 -m unittest discover -s tests
 ```
 
 The count is whatever that prints. A count written into the README rotted three times in four days, so a count
@@ -58,17 +58,69 @@ It reports:
 
 - the suite and every mutation anchor, as committed;
 - the size of `scripts/`;
-- the work board's limits, which [the flow's table](../../scrum/README.md#the-flow--an-items-stages) holds
-  ([the board](../../GLOSSARY.md#the-board)), and that every open item has a Needed by and a slice. With no `gh` or
-  network, the board part says skipped and passes.
+- the work board — spark's and the bin's, through your `gh` login ([the board](../../GLOSSARY.md#the-board)). It fails
+  the push on:
+  - a stage over its limit, or more than four cards in flight across both boards — the numbers and the counting rules
+    are [the flow's table](../../scrum/README.md#the-flow--an-items-stages);
+  - two open cards labelled `expedite`: the lane takes one card at a time;
+  - a card that waits on someone (*Waiting on*) with no *Waiting since*, on either board, in any open stage;
+  - a card of spark's in Ready, Build or Review with no *Needed by* or no slice.
 
-From a push on 2026-10-05:
+  With no `gh` login or no network, the board part says could-not-run, with `gh`'s own reason, and passes.
+
+From a push on 2026-10-05 (the gate's wording has changed since; the lines are a dated record, not today's output):
 
 <!-- output: run 2026-10-05, spark 0.6.0 -->
 ```text
 264a9b7 as committed: Ran 1144 tests in 22.777s / OK (skipped=1); 562 mutation(s) in 93 table(s): every anchor present, once
   scripts/: 5,529 code lines (+0 since origin/main)
   backlog: 28 open, the limits hold
+```
+
+Run the board part yourself — `--help` lists its rules and exit codes — and the status and the day-close beside it
+(`--dry-run` posts nothing):
+
+```sh
+python3 tools/check_backlog.py
+python3 tools/board.py status
+python3 tools/board.py close --dry-run "the day's one line"
+```
+
+The gate on the live boards, then the status (the last close's line cut short here):
+
+<!-- output: run 2026-10-09, spark 0.7.0 -->
+```text
+  backlog: 84 open, the limits hold; the bin: 22 open
+```
+
+<!-- output: run 2026-10-09, spark 0.7.0 -->
+```text
+spark — 84 open, the limits hold · trial check 2026-11-02
+  in flight: Build P146 (#80) 3 d, Discovery P136 (#70) 3 d, Discovery P158 (#94) 1 d
+  waits on the PO: R2.6 (#15) since 2026-10-05, 4 d !, P136 (#70) since 2026-10-06, 3 d, P146 (#80) since 2026-10-09, 0 d
+  Ready: P143 (#77)
+  ! Ready is down to 1 — propose an order for the PO
+  open PRs: spark #104 P146: the process fits how we work — the gate's  (draft)
+  last close 2026-10-08: P97 (store 1c) finished subagent-driven: …
+```
+
+A refusal: the gate's rules run on the board as `gh` printed it at the migration of 2026-10-05 (the suite's recording,
+`tests/data/p102a-items.json`, with an empty bin board). Its one wait was never dated, so the gate exits 1 and a push would fail:
+
+<!-- output: run 2026-10-09, spark 0.7.0 -->
+```text
+  backlog: 27 open, 1 problem(s); the bin: 0 open
+    #15 R2.6 — A fourth cold test: waits on the PO since nobody knows — set Waiting since
+```
+
+The other refusals read the same way, one line each, as the suite expects them: `Build holds 3 (#1, #2, #3) — its
+limit is 2: finish one before starting another`, `5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before
+starting another`, `2 cards labelled expedite (#1, #2) — one at a time, on the PO's word`, and for a card with no slice
+`#8 P8 — x: on no slice of the story map`. With no `gh` login:
+
+<!-- output: run 2026-10-09, spark 0.7.0 -->
+```text
+  backlog: could-not-run — gh or the network could not be reached (To get started with GitHub CLI, please run:  gh auth login); the limits were not checked
 ```
 
 ## The docs name only what is there
@@ -99,8 +151,11 @@ Every item is an issue on [spark's board](https://github.com/users/xmejkal/proje
 limits, and the cadences are in [`scrum/README.md`](../../scrum/README.md). The words the team uses its own way are
 in the [glossary](../../GLOSSARY.md).
 
-One more team tool sits beside the gate: [`tools/board.py`](../../tools/board.py), the state of the work at every session
-start, and the day-close.
+One more team tool sits beside the gate: [`tools/board.py`](../../tools/board.py). `python3 tools/board.py status`
+prints the state of both boards at every session start (the PO's session-start hook runs it; it always exits 0), and
+`python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board — one a
+day, a second refused with exit 1; `--dry-run` prints it and posts nothing. Each verb's `--help` says what it prints,
+posts and refuses.
 
 [`scripts/cost.py`](../../scripts/cost.py) is not a team tool. It ships with the plugin: `parts.py --step` and `--tally`
 import it to count what a project's run cost, and on one transcript it says what that run cost

@@ -64,6 +64,7 @@ spark — 28 open, the limits hold · trial check 2026-11-02
   directories. The folders are named in the PO's settings, not in the repository, so no personal path ships.
 - **Offline,** or when `gh` is logged out, it prints one line: `board: skipped — <why>`. A session start must never
   fail. Each `gh` call at a session start gives up after 8 seconds, so a stalled network costs seconds, not minutes.
+  2026-10-09 (P146 council): the word is could-not-run, W1 — the line reads `board: could-not-run — <why>`.
 
 ### `board.py close [--date D] [--dry-run] LINE|-`
 
@@ -81,7 +82,7 @@ spark — 28 open, the limits hold · trial check 2026-11-02
 - One `SessionStart` hook in `~/.claude/settings.json`:
 
   ```
-  python3 ~/Development/spark/tools/board.py status --when-in ~/Development/spark ~/Development/smartbin-local
+  python3 ~/Development/spark/tools/board.py status --when-in ~/Development/spark <the bin's folder>
   ```
 
   The folder list is the PO's to extend; irrigation can join when its demo moves (P102f).
@@ -109,7 +110,7 @@ spark — 28 open, the limits hold · trial check 2026-11-02
 - **Mutation table:** the missing-close rule and the close's refusal, the two verdicts this tool gives. The status
   text is a report (P72's cut: mutation tables only for verdict code).
 - **Proof:**
-  - one live `status` in smartbin-local;
+  - one live `status` in the bin's folder;
   - one `close --dry-run`;
   - then, with the PO's yes, one real close of today, seen on the spark board.
 

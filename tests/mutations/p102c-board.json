@@ -3,7 +3,7 @@
  {"file": "tools/board.py", "name": "today counts as a working day to close", "find": "for day in work_days if day < today", "replace": "for day in work_days if day <= today"},
  {"file": "tools/board.py", "name": "a day can be closed twice", "find": "    if day in close_days:\n", "replace": "    if False:\n"},
  {"file": "tools/board.py", "name": "waiting too long is not at risk", "find": "or any(w.endswith(\"!\") for w in waits)", "replace": "or False"},
- {"file": "tools/board.py", "name": "a broken limit is not at risk", "find": "risky = bool(check_backlog.problems(spark)) or", "replace": "risky = False or"},
+ {"file": "tools/board.py", "name": "a broken limit is not at risk", "find": "risky = bool(check_backlog.problems(spark, bin_items=dict(boards).get(\"bin\"))) or", "replace": "risky = False or"},
  {"file": "tools/board.py", "name": "status shows outside the named folders", "find": "and not inside(os.getcwd(), args.when_in):", "replace": "and False:"},
  {"file": "tools/board.py", "name": "the oldest closes are read", "find": "statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC})", "replace": "statusUpdates(last:20)"},
  {"file": "tools/board.py", "name": "a short read is silent", "find": "if held > read else None", "replace": "if False else None"},

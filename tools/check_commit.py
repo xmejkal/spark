@@ -81,8 +81,8 @@ def size_line(root, commit, base="origin/main"):
     """
     "scripts/: 5,228 code lines (+40 since origin/main)" — the product's size and what this push adds to it
     (P99). It replaced a cap that failed the suite: P95 raised that cap six times, each time to whatever was
-    measured, and it prompted one refactor of two lines. A number said at every push, with its reason on
-    the item's Done line, is what the PO asked the cap to be.
+    measured, and it prompted one refactor of two lines. A number said at every push, with its reason in
+    the card's closing comment (DoD 7), is what the PO asked the cap to be.
     """
     now = scripts_size(root, commit)
     if now is None:
