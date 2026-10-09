@@ -150,7 +150,7 @@ for two sprints, enforced by nothing.
 
 The size of `scripts/`, counted in **code** lines — docstrings, comments and blanks do not count,
 because in this repository the prose is the product. It is a number, not a cap (W15b, P99; the PO,
-2026-10-04). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
+2026-10-04; [W15b](scrum/WORKING_AGREEMENTS.md#w15b--the-size-is-said-at-every-push-with-its-reason-refactor-before-growing)). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
 item, each time to whatever had been measured, and it prompted one refactor of two lines. Now the
 pre-push gate prints the size with its growth since `origin/main` (`scripts/: N code lines (+M since
 origin/main)`), and an item's Done line says how many lines it added and why. When an item grows a
@@ -164,8 +164,10 @@ repository was cut in one night when this rule arrived.
 
 ### Needed by
 
-Every open item on the board names the **design that needs it** — "pull, never push" (W14). No item is
-built because it would be nice. `tools/check_backlog.py` fails a push on an open item whose *Needed by* is empty.
+Every card from Ready on names the **design that needs it** — "pull, never push" (W14). No item is
+built because it would be nice. `tools/check_backlog.py` fails a push on a card in Ready, Build or Review (its
+`JUDGED` stages, the commitment) whose *Needed by* is empty; in Idea, Discovery and Design a card is still deciding
+whether to build, so it is not asked.
 
 ---
 
@@ -293,10 +295,12 @@ with no transcript of a step's session it says the cost was not counted, and exi
 
 ## How the work is run
 
-### Working agreement — W1, W2, … W21
+### Working agreement — ten of them
 
-Not principles adopted in advance. Each one is a **failure that happened here**, written down with
-its evidence so it cannot recur quietly. `scrum/WORKING_AGREEMENTS.md`. When one is inconvenient,
+Ten, numbered W1, W2, W3, W6, W8, W13, W14, W15, W16 and W19; beside them two habits, two role rules and two product rules (P146, 2026-10-09;
+[`scrum/WORKING_AGREEMENTS.md`](scrum/WORKING_AGREEMENTS.md), the product rules in
+[`DECISIONS.md`](DECISIONS.md#product-rules)). Not principles adopted in advance. Each one is a **failure that
+happened here**, written down with its evidence so it cannot recur quietly. When one is inconvenient,
 read its evidence before deciding it is bureaucracy.
 
 ### The board
@@ -308,14 +312,17 @@ numbers, and what counts toward them, are [the flow's table](scrum/README.md#the
 behind it:** the PO added items mid-sprint in 3 of the 6 sprints read closely, and Sprint 10 stayed open from 10-03
 after work came in that it never planned — so "what are we doing now" had no answer a command could read (the design's
 §9).
-`tools/check_backlog.py` fails a push that breaks a limit on spark's board (when online); the Markdown backlog is the
-frozen archive.
+The entry and exit of each stage are [the flow's table](scrum/README.md#the-flow--an-items-stages) too, and the merge
+is the PO's. `tools/check_backlog.py` fails a push that breaks a limit on both boards: spark's stages and limits, and
+the bin's cards in the same flight total (when online); the Markdown backlog is the frozen archive.
 
 ### Epic, story, task
 
 An **epic** is an issue whose stories are its sub-issues; its progress bar is how an unfinished epic shows. A
 **story** is what a person can do afterwards, proven by its *Value proven by*. A **task** is one step of a story's
-plan — a sub-issue that rides on its story, with no slice or limit of its own.
+plan — a sub-issue that rides on its story, with no slice or limit of its own, **while that story is open**. A task
+with no parent story, or only a closed one, counts as a card like any other (`counts()` and `open_parent()` in
+`tools/check_backlog.py`).
 
 ### Day-close
 

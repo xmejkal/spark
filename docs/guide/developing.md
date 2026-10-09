@@ -58,11 +58,12 @@ It reports:
 
 - the suite and every mutation anchor, as committed;
 - the size of `scripts/`;
-- the work board's limits, which [the flow's table](../../scrum/README.md#the-flow--an-items-stages) holds
-  ([the board](../../GLOSSARY.md#the-board)), and that every open item has a Needed by and a slice. With no `gh` or
-  network, the board part says skipped and passes.
+- the work board's limits, which [the flow's table](../../scrum/README.md#the-flow--an-items-stages) holds, with the
+  counting rules, the expedite lane and the bin's cards in flight (P146) ([the board](../../GLOSSARY.md#the-board)),
+  and that every card from Ready on has a Needed by and a slice. With no `gh` or network, the board part says
+  could-not-run and passes.
 
-From a push on 2026-10-05:
+From a push on 2026-10-05 (the gate's wording has changed since; the lines are a dated record, not today's output):
 
 <!-- output: run 2026-10-05, spark 0.6.0 -->
 ```text

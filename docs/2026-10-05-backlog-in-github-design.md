@@ -49,7 +49,7 @@ sprints and no iterations.
   | **Discovery** | journeys, story map, the PO's answers: what it is and who it is for | 2, epics count |
   | **Design** | a spec is written and reviewed by the council, and waits for the PO's yes | 2, epics count |
   | **Ready** | the spec is approved and *Value proven by* is set; this column's order is the PO's | 5 |
-  | **Build** | plan, plan council, the PO's yes, then the tasks with their reviews | 2 |
+  | **Build** | plan, plan council, then the tasks with their reviews (decision 6, 2026-10-06: no plan yes unless the plan widens scope or goes past the allowance) | 2 |
   | **Review** | final review, fix pass, PR open, waiting for the PO's merge | 2 |
   | **Done** | merged **and** its *Value proven by* has run | — |
 
@@ -84,7 +84,6 @@ sprints and no iterations.
 - **The body comes from an issue form,** `.github/ISSUE_TEMPLATE/item.yml`. Its sections are:
   - *Needed by* (required);
   - *Value proven by* (required);
-  - *Proof*, the command that proves it (optional until P102d);
   - *Archive*, a link to the item's heading in the frozen file (moved items only).
 
   These facts live in the body, not in project fields, so a check, a CI job or a stranger's agent can read them with
@@ -136,19 +135,20 @@ because it publishes around 30 public issues. It works through `gh` with the PO'
   - The test's closed pattern gains `MOVED`.
   - Nothing is added to the file after the freeze.
 - **`STORY_MAP.md`** keeps the map as text: the backbone, the slices and which items sit in each, by issue number.
-  This text is what P102b draws in Miro and Canva. Order and status leave it for the project.
+  This text is what P102b draws in Miro and Canva. Order and status leave it for the project. Its rows say what each
+  slice does today (P97, 2026-10-08).
 
 ## 8. The checks
 
-- **`tools/check_backlog.py`,** in the pre-push gate (`tools/check_commit.py` calls it). It reads the spark project's
-  open items with `gh project item-list --format json`. It fails the push when:
-  - an open item has an empty *Needed by* section or no Slice;
+- **`tools/check_backlog.py`,** in the pre-push gate (`tools/check_commit.py` calls it). It reads both boards: spark's
+  stages and limits, and the bin's cards in the same flight total. It fails the push when:
+  - a card from Ready on (Ready, Build or Review) has an empty *Needed by* section or no Slice;
   - **a WIP limit is broken**: a stage holds more than its limit in §3, counted as §3 says, or more than four are in
     flight.
 
   This makes *finish before switching* a command, not a memory (the retros' own finding: what a command enforces
   holds).
-  - With no network or no `gh`, it prints that it was skipped and does not fail. The gate must work offline.
+  - With no network or no `gh`, it says could-not-run and passes. The gate must work offline.
   - Its test feeds it a recorded `gh` answer, so the suite stays offline.
 - **`tests/test_orphans.py`:** its two backlog checks become one. The archive is frozen when no open heading lacks a
   `MOVED`, `DONE`, `CLOSED`, `PARKED`, `MERGED`, `DELETED` or `SPLIT` marker.
@@ -193,6 +193,10 @@ The check also compares how many days cards waited on the PO before the raises a
 
 If they fail, the team moves to one-day sprints: a short plan each morning and a close each evening, on the same
 board.
+
+**P146 (2026-10-06, accepted; built 2026-10-09)** gave the stages their entry and exit, the expedite lane, the
+appetite, the counting rules and the token allowance — [`docs/2026-10-06-process-design.md`](2026-10-06-process-design.md);
+the flow's table in [`scrum/README.md`](../scrum/README.md#the-flow--an-items-stages) is where they now live.
 
 ## 10. Not in this spec
 
@@ -248,3 +252,21 @@ board.
       every card counts. With every stage at 2, a pair of cards that one PR closes fills Build.
     - The trial keeps 2026-11-02, with the limits raised to 2 per stage and 4 in flight the same evening. Its tests are
       those of decision 10 (§9).
+
+**Amended on 2026-10-09, when P146 was built (the PO accepted its design on 2026-10-06, 12:21, answering its six
+decisions (a) all three guards, (a), (a), (a), (a), (a); the decision numbers are those of
+[the process design's §5](2026-10-06-process-design.md)):**
+
+12. **Process decision 1, 2026-10-06: three guards in the PO's settings** — a hook that refuses an agent launch unless
+    its description names a card standing in a working stage (W19), branch protection on the `main` of both
+    repositories (W8), and an `ask` rule for `wokwi-cli` and `make simulate` (W10).
+13. **Process decision 2, 2026-10-06: the token allowance** — with no question asked, one run per card in flight, sized
+    to its question, and at most one full council a day; anything bigger is asked first, with its estimate.
+14. **Process decision 3, 2026-10-06: found work** — a run's findings land as one checklist on its card; at most 3
+    become cards, filed in Idea with no slice.
+15. **Process decision 4, 2026-10-06: an expedite lane** — only on the PO's word, one at a time, labelled `expedite`; it
+    may take a stage one over its limit, and the gate fails on two.
+16. **Process decision 5, 2026-10-06: an appetite per epic** — given in working days when an epic enters Discovery; the
+    status flags it when it is spent.
+17. **Process decision 6, 2026-10-06: fewer yeses per card** — a story needs the PO's yes once, on its spec; its plan
+    runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes.
