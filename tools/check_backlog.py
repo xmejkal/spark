@@ -3,7 +3,8 @@
 W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §3 and
 §8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
 A card is asked for its Needed by and slice from Ready on — the commitment — not in Idea, Discovery or Design (P146).
-A card that waits on someone is asked since when, in any open stage: a Waiting on with no Waiting since is named (P146).
+A card that waits on someone is asked since when, in any open stage and a riding task too: a Waiting on with no Waiting
+since is named (P146).
 One card at a time may carry the label `expedite`, the PO's lane past a limit: it lets its working stage, and the flight,
 hold one over, and Ready none — it enters Build; two open cards labelled so are named (P146, decision 4 of
 docs/2026-10-06-process-design.md).
@@ -92,11 +93,12 @@ def problems(items, bin_items=()):
     """
     Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on, the commitment
     (JUDGED), not in Idea, Discovery or Design — a card that waits on someone (any name) with no Waiting since, in any
-    open stage, two open cards labelled expedite (whatever their stage or board), and a broken WIP limit. A working
-    stage, or the flight, may hold one over its limit while exactly one of the cards it holds is the expedite; Ready, a
-    queue the expedite never enters, may not. An epic counts only in Discovery and Design; a task (a plan's step, a
-    sub-issue of its story) rides on its story and is not judged on its own — unless it has no parent story, when it is
-    a card like any other (counts()). A Done card is not judged at all.
+    open stage and a riding task included (the status lists every open wait, so the gate asks for every open date), two
+    open cards labelled expedite (whatever their stage or board), and a broken WIP limit. A working stage, or the
+    flight, may hold one over its limit while exactly one of the cards it holds is the expedite; Ready, a queue the
+    expedite never enters, may not. An epic counts only in Discovery and Design; a task (a plan's step, a sub-issue of
+    its story) rides on its story and is not judged on its own — unless it has no parent story, when it is a card like
+    any other (counts()) — except for its wait. A Done card is not judged at all.
     `bin_items` is the bin's board, or None when it could not be read (main() says so; nothing is said here). Its cards
     in a working stage that count (counts()) fly in the same total as spark's — all but a `bench` session, which sits
     outside the limits — and its expedite is the same lane; a card of its that waits on someone is asked since when, like
@@ -106,11 +108,16 @@ def problems(items, bin_items=()):
     bin_cards = [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]  # copies: the caller's cards stay unmarked
     for entry in [*items, *bin_cards]:
         status = entry.get("status")
-        rides = "task" in (entry.get("labels") or []) and entry.get("parent") is not None
-        if status == "Done" or rides:
-            continue  # a riding task is its story's; a parentless one is judged like any card
+        if status == "Done":
+            continue
         # The bin's cards fill none of spark's stages and are asked for no Needed by or slice; the wait is asked of both.
         from_spark = entry.get("board") != BIN_BOARD
+        # The wait is asked of every open card, a riding task included: the status lists them all (board._waits).
+        if entry.get("waiting on") and not entry.get("waiting since"):
+            said.append("%s: waits on %s since nobody knows — set Waiting since" % (_name(entry), entry["waiting on"]))
+        rides = "task" in (entry.get("labels") or []) and entry.get("parent") is not None
+        if rides:
+            continue  # a riding task is its story's; a parentless one is judged like any card
         if from_spark and counts(entry):
             by_stage.setdefault(status, []).append(entry)
         if from_spark and status in JUDGED:
@@ -118,8 +125,6 @@ def problems(items, bin_items=()):
                 said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
             if not entry.get("slice"):
                 said.append("%s: on no slice of the story map" % _name(entry))
-        if entry.get("waiting on") and not entry.get("waiting since"):
-            said.append("%s: waits on %s since nobody knows — set Waiting since" % (_name(entry), entry["waiting on"]))
     rushed = [e for e in [*items, *bin_cards] if e.get("status") != "Done" and EXPEDITE in (e.get("labels") or [])]
     if len(rushed) > 1:
         said.append("%d cards labelled expedite (%s) — one at a time, on the PO's word"

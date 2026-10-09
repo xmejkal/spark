@@ -308,10 +308,21 @@ class TheBacklogCheckTest(unittest.TestCase):
                 self.assertEqual(check_backlog.problems([], bin_items=[item(19, status, waiting="the PO")]),
                                  ["bin #19 P19 — x: waits on the PO since nobody knows — set Waiting since"])
 
-    def test_a_dated_wait_on_the_bin_passes_and_a_done_or_riding_card_s_wait_is_not_judged(self):
+    def test_a_dated_wait_on_the_bin_passes_and_a_done_card_s_wait_is_not_judged(self):
         bin_cards = [item(19, "Idea", waiting="the PO", since="2026-10-06"), item(20, "Done", waiting="the PO"),
-                     item(21, "Build", labels=("task",), parent=19, waiting="the PO")]
+                     item(21, "Build", labels=("task",), parent=19, waiting="the PO", since="2026-10-06")]
         self.assertEqual(check_backlog.problems([], bin_items=bin_cards), [])
+
+    def test_a_riding_task_s_undated_wait_is_named_on_either_board(self):
+        # The wait is asked of every open card, as the status lists it (board._waits skips only a Done card): a task that
+        # rides on its story is not counted or asked for a Needed by, but whoever it waits on is still owed a date.
+        task = item(2, "Build", needed="", slice_=None, labels=("task",), parent=1, waiting="the PO")
+        self.assertEqual(check_backlog.problems([item(1, "Build"), task]),
+                         ["#2 P2 — x: waits on the PO since nobody knows — set Waiting since"])
+        self.assertEqual(check_backlog.problems([], bin_items=[item(19, "Build"), dict(task, parent=19)]),
+                         ["bin #2 P2 — x: waits on the PO since nobody knows — set Waiting since"])
+        self.assertEqual(check_backlog.problems([item(1, "Build"), dict(task, status="Done")]), [])
+        self.assertEqual(check_backlog.problems([item(1, "Build"), dict(task, **{"waiting since": "2026-10-06"})]), [])
 
     def test_a_done_item_is_not_judged_again(self):
         self.assertEqual(check_backlog.problems([item(5, "Done", needed="", slice_=None)]), [])
