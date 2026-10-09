@@ -69,7 +69,10 @@ def _short(item):
 
 
 def _lane_marks(item):
-    """What a card in flight is besides a card: the expedite lane's holder, or a bench session (outside the flight total)."""
+    """
+    What a card in flight is besides a card, from its labels: the expedite lane's holder, a bench session. The label is
+    echoed on whichever board's card carries it; the gate leaves out of its total only the bin's bench cards.
+    """
     labels = item.get("labels", [])
     return "".join(" (%s)" % mark for mark in (check_backlog.EXPEDITE, check_backlog.BENCH) if mark in labels)
 
@@ -84,8 +87,8 @@ def in_flight(items, today):
             if i.get("status") in check_backlog.IN_FLIGHT and check_backlog.counts(i)]
 
 
-def waiting(items, today):
-    """The cards waiting on someone, oldest first, with since when; more than WAIT_TOO_LONG days is marked."""
+def _waits(items, today):
+    """(Waiting since, sentence) for each open card waiting on someone; more than WAIT_TOO_LONG days is marked."""
     said = []
     for i in items:
         if not i.get("waiting on") or i.get("status") == "Done":
@@ -96,7 +99,37 @@ def waiting(items, today):
             said.append((since, "%s since %s, %d d%s" % (_short(i), since, days, " !" if days > WAIT_TOO_LONG else "")))
         else:
             said.append((UNDATED, _short(i)))
-    return [text for _, text in sorted(said)]
+    return said
+
+
+def waiting(items, today):
+    """One board's cards waiting on someone, oldest first, with since when; an undated wait last."""
+    return [text for _, text in sorted(_waits(items, today))]
+
+
+def all_waiting(boards, today):
+    """Every wait on either board, oldest first (the spec, §1), an undated one last; the bin's are named by their board."""
+    said = sorted((since, _on_board(name, text)) for name, items in boards for since, text in _waits(items, today))
+    return [text for _, text in said]
+
+
+def _appetite_clock(item):
+    """
+    (appetite in working days, the day its stage began) for an epic in a working stage that carries an appetite, else
+    None: a story has no appetite, and an epic that is Done or not begun has no clock running.
+    """
+    appetite, changed = item.get("appetite"), item.get("status_changed")
+    if "epic" not in item.get("labels", []) or not isinstance(appetite, (int, float)) or not changed:
+        return None
+    if item.get("status") not in check_backlog.IN_FLIGHT:
+        return None
+    return appetite, dt.date.fromisoformat(changed[:10])
+
+
+def appetite_since(items, default):
+    """The day the oldest running appetite began — the working days must be read from there — else `default`."""
+    started = [clock[1] for clock in map(_appetite_clock, items) if clock]
+    return min(started, default=default)
 
 
 def appetite_spent(items, work_days, today):
@@ -106,12 +139,10 @@ def appetite_spent(items, work_days, today):
     """
     flags = []
     for i in items:
-        appetite, changed = i.get("appetite"), i.get("status_changed")
-        if "epic" not in i.get("labels", []) or not isinstance(appetite, (int, float)) or not changed:
+        clock = _appetite_clock(i)
+        if clock is None:
             continue
-        if i.get("status") not in check_backlog.IN_FLIGHT:
-            continue
-        start = dt.date.fromisoformat(changed[:10])
+        appetite, start = clock
         spent = len({d for d in work_days if start <= d <= today})
         if spent >= appetite:
             flags.append("! %s appetite spent: %d working days of %g — ship what is Done, bet again, or drop it" % (_short(i), spent, appetite))
@@ -159,8 +190,13 @@ def inside(cwd, dirs):
     return any(here == Path(d).expanduser().resolve() or Path(d).expanduser().resolve() in here.parents for d in dirs)
 
 
+def _on_board(name, said):
+    """A sentence about a card, named by its board unless it is spark's."""
+    return ("" if name == "spark" else name + " ") + said
+
+
 def _boards_join(boards, each, today):
-    return [("" if name == "spark" else name + " ") + said for name, items in boards for said in each(items, today)]
+    return [_on_board(name, said) for name, items in boards for said in each(items, today)]
 
 
 def status_lines(boards, prs, closes, worked, today, notes=()):
@@ -178,7 +214,7 @@ def status_lines(boards, prs, closes, worked, today, notes=()):
     lines += ["  ! " + sentence for sentence in [*verdict, *notes, *unread_bin]]
     lines.append("  in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"))
     lines += ["  " + flag for flag in appetite_spent(spark, worked, today)]
-    lines.append("  waits on the PO: " + (", ".join(_boards_join(boards, waiting, today)) or "nothing"))
+    lines.append("  waits on the PO: " + (", ".join(all_waiting(boards, today)) or "nothing"))
     lines.append("  Ready: " + (", ".join(ready(spark)) or "empty — the PO refills it"))
     if 0 < len(ready(spark)) <= READY_LOW:
         lines.append("  ! Ready is down to %d — propose an order for the PO" % len(ready(spark)))
@@ -219,7 +255,7 @@ def close_update(line, boards, close_days, day, today):
     if day in close_days:
         raise ValueError("%s is closed already — one close a day" % day.isoformat())
     spark = dict(boards)["spark"]
-    waits = _boards_join(boards, waiting, today)
+    waits = all_waiting(boards, today)
     risky = bool(check_backlog.problems(spark, bin_items=dict(boards).get("bin"))) or any(w.endswith("!") for w in waits)
     body = "\n\n".join([line.strip(), "in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"),
                         "waits on the PO: " + (", ".join(waits) or "nothing")])
@@ -269,6 +305,8 @@ def main(argv=None):
         try:
             boards, prs, closes, _, notes = gather(STATUS_TIMEOUT)
             since = max((day for day, _ in closes), default=today - dt.timedelta(days=14))
+            # An appetite counts working days from its epic's last stage change, which can lie before the last close.
+            since = min(since, appetite_since(dict(boards)["spark"], since))
             print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today, notes)))
         except Exception as broken:  # a session start must never fail (the spec, §2)
             print("board: skipped — %s" % (broken or type(broken).__name__))

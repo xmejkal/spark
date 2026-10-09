@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -55,6 +56,14 @@ BIN = board.to_items(project(node(1, "B1 — Identify the audio module", "Idea",
 SPARK_AT_THE_CAP = board.to_items(project(node(1, "P1 — a", "Discovery"), node(2, "P2 — b", "Design"),
                                           node(3, "P3 — c", "Build"), node(4, "P4 — d", "Review")))
 BIN_FIFTH = board.to_items(project(node(19, "B19 — e", "Build")))
+
+
+class FixedToday(dt.date):
+    """A `date` whose today() is 2026-10-09, patched in for board.dt in the tests that drive main()."""
+
+    @classmethod
+    def today(cls):
+        return cls(2026, 10, 9)
 
 
 class TheCoreTest(unittest.TestCase):
@@ -165,14 +174,74 @@ class TheCoreTest(unittest.TestCase):
         flag = "  ! E (#5) appetite spent: 4 working days of 3 — ship what is Done, bet again, or drop it"
         self.assertEqual(lines[lines.index("  in flight: Discovery E (#5) 8 d") + 1], flag)
 
-    def test_the_flight_line_names_the_card_that_holds_the_expedite_lane_and_a_bench_session(self):
-        # The gate does not count a bench card in the flight (check_backlog.BENCH), so the status says why the lists differ.
+    def test_the_flight_line_names_the_card_that_holds_the_expedite_lane(self):
         spark = board.to_items(project(node(1, "P1 — a", "Build", labels=("story", "expedite")), node(2, "P2 — b", "Design")))
-        bin_ = board.to_items(project(node(7, "B7 — c", "Build", labels=("bench",))))
         self.assertEqual(board.in_flight(spark, TODAY), ["Build P1 (#1) 2 d (expedite)", "Design P2 (#2) 2 d"])
-        lines = board.status_lines([("spark", spark), ("bin", bin_)], [], [], set(), TODAY)
-        self.assertIn("  in flight: Build P1 (#1) 2 d (expedite), Design P2 (#2) 2 d, bin Build B7 (#7) 2 d (bench)", lines)
-        self.assertEqual(lines[0], "spark — 2 open, the limits hold · trial check 2026-11-02")
+        lines = board.status_lines([("spark", spark), ("bin", [])], [], [], set(), TODAY)
+        self.assertIn("  in flight: Build P1 (#1) 2 d (expedite), Design P2 (#2) 2 d", lines)
+
+    def test_a_bench_session_is_listed_and_marked_though_the_flight_total_leaves_it_out(self):
+        # Four cards are the cap; the bin's bench card is a fifth in the list and not in the count, on purpose
+        # (check_backlog.BENCH: the PO's own hands sit outside the limits), so the line says why the two differ.
+        bench = board.to_items(project(node(7, "B7 — c", "Build", labels=("bench",))))
+        lines = board.status_lines([("spark", SPARK_AT_THE_CAP), ("bin", bench)], [], [], set(), TODAY)
+        self.assertEqual(lines[:2], [
+            "spark — 4 open, the limits hold · trial check 2026-11-02",
+            "  in flight: Discovery P1 (#1) 2 d, Design P2 (#2) 2 d, Build P3 (#3) 2 d, Review P4 (#4) 2 d, bin Build B7 (#7) 2 d (bench)"])
+
+    def test_a_card_that_is_the_expedite_and_a_bench_session_shows_both_marks(self):
+        both = board.to_items(project(node(1, "P1 — a", "Build", labels=("story", "expedite", "bench"))))
+        self.assertEqual(board.in_flight(both, TODAY), ["Build P1 (#1) 2 d (expedite) (bench)"])
+
+    def test_the_waits_of_both_boards_are_listed_together_oldest_first_and_an_undated_one_last(self):
+        # The spec: the status prints every wait, oldest first — not each board's own list one after the other.
+        undated = board.to_items(project(node(16, "B16 — A wait nobody dated", "Idea", waiting="the PO")))
+        self.assertEqual(board.all_waiting([("spark", SPARK), ("bin", undated + BIN)], TODAY),
+                         ["bin B1 (#1) since 2026-09-25, 12 d !", "R2.6 (#15) since 2026-10-05, 2 d", "bin B16 (#16)"])
+
+    def test_the_close_lists_the_waits_of_both_boards_oldest_first_too(self):
+        _, body = board.close_update("x", [("spark", SPARK), ("bin", BIN)], set(), TODAY, TODAY)
+        self.assertEqual(body.split("\n\n")[2],
+                         "waits on the PO: bin B1 (#1) since 2026-09-25, 12 d !, R2.6 (#15) since 2026-10-05, 2 d")
+
+    def test_the_oldest_running_appetite_gives_the_day_to_count_working_days_from(self):
+        epics = board.to_items(project(
+            node(1, "E1 — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3),
+            node(2, "E2 — y", "Design", changed="2026-09-28T09:00:00Z", labels=("epic",), appetite=5),
+            node(3, "E3 — done", "Done", changed="2026-09-01T09:00:00Z", labels=("epic",), appetite=3),
+            node(4, "S4 — a story", "Build", changed="2026-09-02T09:00:00Z", labels=("story",), appetite=3),
+            node(5, "E5 — no appetite", "Build", changed="2026-09-03T09:00:00Z", labels=("epic",))))
+        self.assertEqual(board.appetite_since(epics, dt.date(2026, 10, 8)), dt.date(2026, 9, 28))
+        self.assertEqual(board.appetite_since(epics[2:], dt.date(2026, 10, 8)), dt.date(2026, 10, 8))
+        self.assertEqual(board.appetite_since([], dt.date(2026, 10, 8)), dt.date(2026, 10, 8))
+
+    def status_from_main(self, items, closes, days):
+        """What `status` prints on 2026-10-09 for spark's `items`, and the work_days mock; `days` are the days with a commit."""
+        out = io.StringIO()
+        shown = types.SimpleNamespace(date=FixedToday, timedelta=dt.timedelta)
+        with mock.patch.object(board, "dt", shown), \
+                mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], closes, "P", [])), \
+                mock.patch.object(board, "work_days", side_effect=lambda dirs, since: {d for d in days if d >= since}) as git, \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        return out.getvalue().splitlines(), git
+
+    def test_the_status_counts_an_appetite_from_before_the_last_close(self):
+        # The epic's stage changed on 10-01 and the last close was 10-08: counting only the days since the close
+        # would never see a three-day appetite spent.
+        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
+        days = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 6), dt.date(2026, 10, 8), dt.date(2026, 10, 9)}
+        lines, git = self.status_from_main(epic, [(dt.date(2026, 10, 8), "closed")], days)
+        self.assertIn("  ! E (#5) appetite spent: 5 working days of 3 — ship what is Done, bet again, or drop it", lines)
+        self.assertEqual(git.call_args.args[1], dt.date(2026, 10, 1))
+
+    def test_an_appetite_that_began_after_the_last_close_does_not_hide_a_day_with_no_close(self):
+        # The working days are read from the earlier of the two days, so 10-06 (after the last close, before the
+        # epic's stage change) is still found and still asked for a close.
+        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-08T09:00:00Z", labels=("epic",), appetite=3)))
+        lines, git = self.status_from_main(epic, [(dt.date(2026, 10, 5), "closed")], {dt.date(2026, 10, 6), dt.date(2026, 10, 9)})
+        self.assertIn("  ! the day of 2026-10-06 has no close — write it first", lines)
+        self.assertEqual(git.call_args.args[1], dt.date(2026, 10, 5))
 
     def test_ready_keeps_the_board_s_order(self):
         self.assertEqual(board.ready(SPARK), ["P103 (#32)", "P97 (#18)"])
@@ -196,7 +265,7 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(lines, [
             "spark — 5 open, the limits hold · trial check 2026-11-02",
             "  in flight: Build P102c (#26) 2 d",
-            "  waits on the PO: R2.6 (#15) since 2026-10-05, 2 d, bin B1 (#1) since 2026-09-25, 12 d !",
+            "  waits on the PO: bin B1 (#1) since 2026-09-25, 12 d !, R2.6 (#15) since 2026-10-05, 2 d",
             "  Ready: P103 (#32), P97 (#18)",
             "  ! Ready is down to 2 — propose an order for the PO",
             "  open PRs: spark #34 P102c: the state in view (draft)",
