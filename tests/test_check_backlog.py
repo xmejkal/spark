@@ -190,6 +190,17 @@ class TheBacklogCheckTest(unittest.TestCase):
         said = check_backlog.problems([item(1, "Build", labels=("story", "expedite")), item(2, "Review", labels=("story", "expedite"))])
         self.assertEqual(said, ["2 cards labelled expedite (#1, #2) — one at a time, on the PO's word"])
 
+    def test_a_story_and_the_task_riding_on_it_labelled_expedite_are_one_expedite(self):
+        # A task rides on its story and is counted nowhere itself, so labelling both is one rush, not two. A task with no
+        # parent story is a card of its own, and a second rush beside the story.
+        story = item(1, "Build", labels=("story", "expedite"))
+        task = item(2, "Build", labels=("task", "expedite"), parent=1)
+        self.assertEqual(check_backlog.problems([story, task]), [])
+        self.assertEqual(check_backlog.problems([], bin_items=[story, task]), [])
+        orphan = item(3, "Build", labels=("task", "expedite"))
+        self.assertEqual(check_backlog.problems([story, orphan]),
+                         ["2 cards labelled expedite (#1, #3) — one at a time, on the PO's word"])
+
     def test_an_expedite_lets_five_fly(self):
         cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(9, "Build", labels=("story", "expedite"))]
         self.assertEqual(check_backlog.problems(cards), [])

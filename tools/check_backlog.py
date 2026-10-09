@@ -76,6 +76,14 @@ def _name(entry):
     return "%s %s" % (_ref(entry), entry["content"].get("title", ""))
 
 
+def rides(entry):
+    """
+    Whether a card is a task riding on its story (or on a parent nobody could ask, PARENT_UNREAD): it is counted nowhere
+    itself, asked for no Needed by or slice, and not the lane's holder — but its wait is asked, like every open card's.
+    """
+    return "task" in (entry.get("labels") or []) and entry.get("parent") is not None
+
+
 def counts(entry):
     """
     Whether an open card counts against the limits: a task rides on its story, so it does not count — unless it has no
@@ -115,8 +123,7 @@ def problems(items, bin_items=()):
         # The wait is asked of every open card, a riding task included: the status lists them all (board._waits).
         if entry.get("waiting on") and not entry.get("waiting since"):
             said.append("%s: waits on %s since nobody knows — set Waiting since" % (_name(entry), entry["waiting on"]))
-        rides = "task" in (entry.get("labels") or []) and entry.get("parent") is not None
-        if rides:
+        if rides(entry):
             continue  # a riding task is its story's; a parentless one is judged like any card
         if from_spark and counts(entry):
             by_stage.setdefault(status, []).append(entry)
@@ -125,7 +132,9 @@ def problems(items, bin_items=()):
                 said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
             if not entry.get("slice"):
                 said.append("%s: on no slice of the story map" % _name(entry))
-    rushed = [e for e in [*items, *bin_cards] if e.get("status") != "Done" and EXPEDITE in (e.get("labels") or [])]
+    # A story and the task riding on it, both labelled, are one rush: the task is counted nowhere itself.
+    rushed = [e for e in [*items, *bin_cards]
+              if e.get("status") != "Done" and not rides(e) and EXPEDITE in (e.get("labels") or [])]
     if len(rushed) > 1:
         said.append("%d cards labelled expedite (%s) — one at a time, on the PO's word"
                     % (len(rushed), ", ".join(_ref(e) for e in rushed)))
