@@ -435,5 +435,45 @@ class TheFinalReviewTest(unittest.TestCase):
         self.assertEqual(out.getvalue(), "board: could-not-run — 'NoneType' object has no attribute 'get'\n")
 
 
+class TheHelpTest(unittest.TestCase):
+    """
+    P146 council (C3): each verb's --help says what it prints or posts and how it exits — each claim read off the code:
+    status prints the gate's verdict, the flight with its marks, a spent appetite, the waits oldest first, Ready, the
+    open PRs and the last close, and exits 0 whatever happens; close posts the day's one update, at risk on a problem or
+    a wait past three days, and refuses a day already closed with exit 1.
+    """
+
+    def help_of(self, *verb):
+        """What `board.py <verb> --help` prints, its whitespace folded — argparse wraps to the terminal's width."""
+        fake_bin = Path(tempfile.mkdtemp())  # a gh that fails, first on PATH: a help that read a board would show it
+        (fake_bin / "gh").write_text("#!/bin/sh\necho 'a help read a board' >&2\nexit 1\n")
+        (fake_bin / "gh").chmod(0o755)
+        done = subprocess.run([sys.executable, str(ROOT / "tools" / "board.py"), *verb, "--help"], capture_output=True,
+                              text=True, timeout=60, env=dict(os.environ, PATH=str(fake_bin) + os.pathsep + os.environ.get("PATH", "")))
+        self.assertEqual((done.returncode, done.stderr), (0, ""))
+        return " ".join(done.stdout.split())
+
+    def assert_says(self, said, phrases):
+        for phrase in phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, said)
+
+    def test_the_status_help_says_what_it_prints_and_that_it_always_exits_zero(self):
+        self.assert_says(self.help_of("status"), (
+            "print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), a spent "
+            "appetite, every wait oldest first ('!' past three days), Ready", "open PRs, the last close",
+            "always exits 0", "could-not-run", "--when-in"))
+
+    def test_the_close_help_says_what_it_posts_when_it_is_at_risk_and_what_it_refuses(self):
+        self.assert_says(self.help_of("close"), (
+            "post the day's one status update to spark's board", "at risk when the gate finds a problem or a wait is older "
+            "than three days", "refuses a day already closed (exit 1)", "--dry-run print the update and post nothing",
+            "--date DATE the day to close, YYYY-MM-DD", "(default: today)"))
+
+    def test_the_top_help_names_both_verbs_with_what_they_do(self):
+        self.assert_says(self.help_of(), ("both boards", "status print the state of both boards",
+                                          "close post the day's one status update to spark's board"))
+
+
 if __name__ == "__main__":
     unittest.main()

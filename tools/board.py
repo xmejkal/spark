@@ -289,16 +289,32 @@ def gather(timeout=CLOSE_TIMEOUT):
     return boards, prs, closes, project_id, notes
 
 
+#: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what
+#: the status prints, close_update() for when a close is at risk and the day it refuses, main() for the exit codes.
+STATUS_HELP = ("print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), a "
+               "spent appetite, every wait oldest first ('!' past three days), Ready in the PO's order (a warning when "
+               "down to one or two), open PRs, the last close and a working day left without one. A board it could not "
+               "read makes the whole status one line, could-not-run with its cause; it always exits 0, since a session "
+               "start must never fail")
+CLOSE_HELP = ("post the day's one status update to spark's board: the line, then what is in flight and what waits on the "
+              "PO. It is at risk when the gate finds a problem or a wait is older than three days, else on track. It "
+              "refuses a day already closed (exit 1), and exits 1 with could-not-run when the boards could not be read")
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="The state of the work, and the day-close (P102c).")
+    parser = argparse.ArgumentParser(description="The state of both boards, spark's and the bin's, at a session start, "
+                                                 "and the day-close as a status update on spark's board (P102c). It "
+                                                 "reads through the PO's own gh login and stores nothing.")
     verbs = parser.add_subparsers(dest="verb", required=True)
-    verbs.add_parser("status").add_argument("--when-in", nargs="+", metavar="DIR",
-                                            help="the PO's project folders: nothing shows outside them, and their git "
-                                                 "history gives the working days (default: the current folder's)")
-    close = verbs.add_parser("close")
+    verbs.add_parser("status", help=STATUS_HELP, description=STATUS_HELP).add_argument(
+        "--when-in", nargs="+", metavar="DIR", help="the PO's project folders: nothing shows outside them, and their git "
+                                                    "history gives the working days (default: the current folder's)")
+    close = verbs.add_parser("close", help=CLOSE_HELP, description=CLOSE_HELP)
     close.add_argument("line", help="the day's one line, or - to read it from stdin")
-    close.add_argument("--date", help="the day to close, YYYY-MM-DD (default: today)")
-    close.add_argument("--dry-run", action="store_true")
+    close.add_argument("--date", help="the day to close, YYYY-MM-DD (default: today), for a day missed: the update's "
+                                      "start date. What it shows is still today's flight and waits")
+    close.add_argument("--dry-run", action="store_true",
+                       help="print the update and post nothing (a day already closed is still refused)")
     args = parser.parse_args(argv)
     if args.verb == "status" and args.when_in and not inside(os.getcwd(), args.when_in):
         return 0
