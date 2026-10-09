@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a needs-measurement call site misspells its severity",
+  "find": "                severity=\"needs-measurement\"))",
+  "replace": "                severity=\"needs-measurements\"))"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the constructor accepts any severity word",
+  "find": "        if severity not in SEVERITIES:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the rendering loop walks a literal tuple with a typo",
+  "find": "    for severity in SEVERITIES:",
+  "replace": "    for severity in (\"problem\", \"needs-measurment\", \"could-not-run\"):"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "check_all filters the unchecked group by a misspelt literal",
+  "find": "problems=of(PROBLEM),\n                      unchecked=of(COULD_NOT_RUN)",
+  "replace": "problems=of(PROBLEM),\n                      unchecked=of(\"could-not-runs\")"
+ },
+ {
+  "file": "scripts/check_footprints.py",
+  "name": "a footprints call site misspells its severity",
+  "find": "                severity=\"advisory\"))",
+  "replace": "                severity=\"advisories\"))"
+ },
+ {
+  "file": "scripts/check_footprints.py",
+  "name": "the footprints constructor accepts any severity word",
+  "find": "        if severity not in SEVERITIES:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "check_all filters the footprints unchecked group by a misspelt literal",
+  "find": "unchecked=of(COULD_NOT_RUN) + notes",
+  "replace": "unchecked=of(\"could-not-runs\") + notes"
+ }
+]

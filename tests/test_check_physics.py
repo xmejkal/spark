@@ -497,5 +497,85 @@ class TheRecordsFillAnUnstatedRailTest(unittest.TestCase):
         self.assertNotIn("x is not stated", findings[0].detail,
                          "who is open, not why — the supply finding beside it says why")
 
+
+class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
+    """
+    P143. Severity was free text, so a rule that wrote "problems" for "problem" vanished: the
+    rendered text only walked the three real words, the status counted only the real ones, and
+    `check_all` filtered by literal strings. `status: ok`, exit 0, over a finding nobody could see.
+    A finding whose severity is not one of the three is now a could-not-run finding that names the
+    rule and the bad word.
+    """
+
+    def _misspelt(self):
+        return check_physics.Finding("rail-current", "V33", "too thin", severity="problems")
+
+    def test_a_misspelt_severity_becomes_could_not_run_naming_the_rule_and_the_word(self):
+        finding = self._misspelt()
+        self.assertEqual(finding.severity, check_physics.COULD_NOT_RUN)
+        self.assertIn("rail-current", finding.detail)
+        self.assertIn("'problems'", finding.detail)
+
+    def test_the_rendered_text_shows_the_misspelt_finding_under_could_not_run(self):
+        result = {"status": "could-not-run", "design": "d",
+                  "findings": [self._misspelt().as_data()]}
+        rendered = check_physics.render(result)
+        self.assertIn("1 could-not-run", rendered)
+        self.assertIn("rail-current", rendered)
+
+    def test_the_rendered_text_has_a_section_for_each_of_the_three_severities(self):
+        findings = [check_physics.Finding("r%d" % i, "s", "d", severity=word).as_data()
+                    for i, word in enumerate(("problem", "needs-measurement", "could-not-run"))]
+        rendered = check_physics.render({"status": "problems", "design": "d", "findings": findings})
+        for word in ("1 problem:", "1 needs-measurement:", "1 could-not-run:"):
+            self.assertIn(word, rendered)
+
+    def test_the_status_of_a_run_with_one_misspelt_finding_is_could_not_run_not_ok(self):
+        import contextlib
+        import io
+        import json as json_module
+        original = check_physics.run
+        check_physics.run = lambda circuit, rules, loads=None: [self._misspelt()]
+        try:
+            import tempfile
+            root = Path(tempfile.mkdtemp())
+            (root / "circuit.json").write_text("[]")
+            (root / "rules.json").write_text("{}")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = check_physics.main([str(root / "circuit.json"), "--rules",
+                                           str(root / "rules.json"), "--json"])
+        finally:
+            check_physics.run = original
+        self.assertEqual(json_module.loads(out.getvalue())["status"], "could-not-run")
+        self.assertEqual(code, check_physics.EXIT_COULD_NOT_RUN)
+
+    def test_check_all_lists_a_misspelt_finding_as_unchecked(self):
+        import json as json_module
+        import tempfile
+        import check_all
+        root = Path(tempfile.mkdtemp())
+        (root / "circuit.json").write_text(json_module.dumps([net("V33")]))
+        (root / "rules.json").write_text("{}")
+        original = check_physics.run
+        check_physics.run = lambda circuit, rules, loads=None: [self._misspelt()]
+        try:
+            check = next(c for c in check_all.CHECKS if c.name == "physics")
+            result = check.run({"circuit": str(root / "circuit.json"),
+                                "rules": str(root / "rules.json")})
+        finally:
+            check_physics.run = original
+        self.assertEqual(result["status"], "could-not-run", result)
+        self.assertIn("rail-current", json_module.dumps(result["unchecked"]))
+
+    def test_every_severity_written_at_a_call_site_is_one_of_the_three(self):
+        import re
+        source = (ROOT / "scripts" / "check_physics.py").read_text()
+        written = [m.group(2) for m in re.finditer(r"""severity=(["'])(.*?)\1""", source)]
+        self.assertTrue(written, "the scan found no call site, so it checks nothing")
+        for word in written:
+            self.assertIn(word, ("problem", "needs-measurement", "could-not-run"))
+
+
 if __name__ == "__main__":
     unittest.main()

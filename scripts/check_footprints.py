@@ -45,12 +45,24 @@ MAX_CAPACITANCE_F = fab.part("max_capacitance_f")
 PACKAGE_POWER_W = fab.part("package_power_w")
 
 
+#: The only severities a finding may carry (P143): free text let a misspelling vanish.
+PROBLEM = "problem"
+ADVISORY = "advisory"
+SEVERITIES = (PROBLEM, COULD_NOT_RUN, ADVISORY)
+
+
 class Finding:
-    def __init__(self, rule, subject, detail, fix=None, severity="problem"):
+    def __init__(self, rule, subject, detail, fix=None, severity=PROBLEM):
+        if severity not in SEVERITIES:
+            detail = ("rule %s wrote severity %r, not one of %s — a bug in spark, so the rule is "
+                      "unchecked (it said: %s)" % (rule, severity, " / ".join(SEVERITIES), detail))
+            severity = COULD_NOT_RUN
         self.rule, self.subject, self.detail, self.fix = rule, subject, detail, fix
         #: "problem" — this would fail at assembly. "could-not-run" — a rule could not read the
         #: element, which is not the same as the element being fine. There was no severity here
         #: at all, so the second kind had nowhere to go and left through a bare `continue`.
+        #: "advisory" — made as drawn, under what the board house recommends (P57): said, never
+        #: failed. Any other word becomes a could-not-run that names its rule and the word (P143).
         self.severity = severity
 
     def as_data(self):
@@ -484,16 +496,16 @@ def run(circuit, placeholders=(), rules=None):
 
 
 def problems_in(findings):
-    return [f for f in findings if f.severity == "problem"]
+    return [f for f in findings if f.severity == PROBLEM]
 
 
 def unchecked_in(findings):
-    return [f for f in findings if f.severity == "could-not-run"]
+    return [f for f in findings if f.severity == COULD_NOT_RUN]
 
 
 def advisories_in(findings):
     """Made as drawn, and worth a look: under what the board house recommends (P57)."""
-    return [f for f in findings if f.severity == "advisory"]
+    return [f for f in findings if f.severity == ADVISORY]
 
 
 def render(findings, design):
@@ -504,7 +516,7 @@ def render(findings, design):
         lines.append("%s: %d thing(s) that would survive DRC and fail at assembly\n"
                      % (design, len(problems)))
     for finding in problems + unchecked + advisories_in(findings):
-        marker = {"problem": "  [%s]", "could-not-run": "  [%s, NOT EXAMINED]"}.get(
+        marker = {PROBLEM: "  [%s]", COULD_NOT_RUN: "  [%s, NOT EXAMINED]"}.get(
             finding.severity, "  [%s, advisory]") % finding.rule
         lines.append("%s %s: %s" % (marker, finding.subject, finding.detail))
         if finding.fix:

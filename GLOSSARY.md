@@ -41,6 +41,10 @@ continuity. **`advisory`**: something the board house will make, but under what 
 recommendation. It was a FAIL until P57, which is how the documented example failed spark's own
 check on a real connector: a recommendation enforced as a limit is a false alarm with a source.
 
+### Severity — a finding's word, not a run's
+
+Each finding of `check_physics` and `check_footprints` carries one: `problem`, `could-not-run`, and one of the two above — `needs-measurement` (physics) or `advisory` (footprints). The three outcomes belong to a whole run and are worked out from them. Severities were free text, so a rule that wrote the run's word `problems` for the finding's `problem` vanished from the text and from `check_all`, and the check answered `ok`, exit 0 (P143). Each check now keeps its list in `SEVERITIES`, and a finding with any other word becomes a `could-not-run` that names its rule and the word.
+
 ### The spine, or the chain — `scripts/check_spine.py`
 
 The whole flow, end to end, stopping at the first stage that cannot produce input for the next:

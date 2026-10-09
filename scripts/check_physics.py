@@ -78,10 +78,21 @@ VOLTAGE_DERATING = {"tantalum": 2.0, "electrolytic": 1.5, "ceramic": 1.5, "unkno
 PACKAGE_POWER_W = fab.part("package_power_w")
 
 
-class Finding:
-    """One thing physics says about this board."""
+#: The only severities a finding may carry. Free text let "problems" vanish: nothing rendered,
+#: counted or filtered it (P143). `could-not-run` is the outcome word of the same name.
+PROBLEM = "problem"
+NEEDS_MEASUREMENT = "needs-measurement"
+SEVERITIES = (PROBLEM, NEEDS_MEASUREMENT, COULD_NOT_RUN)
 
-    def __init__(self, rule, subject, detail, severity="problem", fix=None):
+
+class Finding:
+    """One thing physics says about this board; an unknown severity makes it a could-not-run."""
+
+    def __init__(self, rule, subject, detail, severity=PROBLEM, fix=None):
+        if severity not in SEVERITIES:
+            detail = ("rule %s wrote severity %r, not one of %s — a bug in spark, so the rule is "
+                      "unchecked (it said: %s)" % (rule, severity, " / ".join(SEVERITIES), detail))
+            severity = COULD_NOT_RUN
         self.rule, self.subject, self.detail = rule, subject, detail
         self.severity, self.fix = severity, fix
 
@@ -504,7 +515,7 @@ def render(result):
     by_severity = {}
     for finding in result["findings"]:
         by_severity.setdefault(finding["severity"], []).append(finding)
-    for severity in ("problem", "needs-measurement", "could-not-run"):
+    for severity in SEVERITIES:
         group = by_severity.get(severity) or []
         if not group:
             continue
@@ -535,7 +546,7 @@ def main(argv=None):
             return EXIT_COULD_NOT_RUN
 
     findings = run(json.loads(circuit_path.read_text()), json.loads(rules_path.read_text()))
-    problems = [f for f in findings if f.severity == "problem"]
+    problems = [f for f in findings if f.severity == PROBLEM]
     # A rule that could not look has approved nothing. This built both the status and the exit
     # code from `problems` alone, so every `could-not-run` this file emits — an unstated rail, a
     # resistor whose current no netlist records — was invisible to a caller, and the script whose
