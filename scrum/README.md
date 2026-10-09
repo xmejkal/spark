@@ -1,27 +1,31 @@
 # How this team works
 
-Every rule the team runs on is a file in this folder, and all its work is a card on a board. Nothing
-lives only in an agent's head or in a conversation that scrolls away — if a rule, a goal or a
-decision is not written here, it is not in force.
+Every rule the team runs on is a file in this folder, and all its work is a card on a board.
+
+We run a Kanban system that keeps Scrum's roles and commitments: the Product Owner, the Definition of Done, *Value
+proven by* and the retro. There are no sprints, no Scrum Master and no ceremonies. The Kanban Guide allows this: a
+team's working agreements are part of its definition of workflow.
+
+Nothing lives only in an agent's head or in a conversation that scrolls away — if a rule, a goal or a decision is not
+written here, it is not in force. The design behind this page:
+[`docs/2026-10-06-process-design.md`](../docs/2026-10-06-process-design.md) (accepted by the PO on 2026-10-06). **(D)**
+marks what he had decided on the morning of 2026-10-06, before the design.
 
 Two repositories, one team, a board for each (the PO orders both):
 
 - **`spark`** — the product. A Claude Code plugin for AI-assisted electronics design.
-- **`smartbin-local`** — the test case. An ESP32 bin controller, and the only real evidence that
-  spark works. Work on the bin is justified when it exercises or proves spark, and otherwise it
-  competes with the product for the same hours.
+- **the bin** (`sisuo-brain-transplant`) — the test case. An ESP32 bin controller, and the only real evidence that
+  spark works. Work on the bin is justified when it exercises or proves spark, and otherwise it competes with the
+  product for the same hours.
 
 ## The people
 
-| role | who | decides |
-| --- | --- | --- |
-| **Product Owner** | **Petr** | what is worth building, and in what order. Nobody else reorders the backlog. |
-| Facilitator / dev | the main Claude session | how it gets built, and says when it is done |
-| The team | the agents in [`../agents/`](../agents/) | the work, each in their discipline |
+Three roles: **the Product Owner** (Petr), **Claude** (developer and orchestrator) and **the agents** Claude launches.
+What each decides, proposes, does and may not is on their role cards in [`TEAM.md`](TEAM.md).
 
-Petr is the Product Owner and that is not decorative. Proposals for ordering come to him ranked
-with reasons; the ranking is a recommendation until he says otherwise. An agent never decides that
-something is valuable — it can only report what something costs and what it would prove.
+Petr is the Product Owner and that is not decorative. Proposals for ordering come to him ranked with reasons; the
+ranking is a recommendation until he says otherwise. An agent never decides that something is valuable — it can only
+report what something costs and what it would prove.
 
 ## The artifacts
 
@@ -39,57 +43,128 @@ The work lives on the boards and nowhere else: spark's (https://github.com/users
 queue of work: anything in it that should be built is an issue on a board or it is not happening. That consolidation is deliberate: three parallel lists is how 37 observations and 20
 findings reached zero resolved between them.
 
-## The ceremonies, and what each one must produce
+## The cadences, and what each one leaves
 
-A ceremony that produces nothing is a status meeting. Each of these has an output that changes a
-file, or it did not happen.
+A cadence that leaves nothing did not happen. Since 2026-10-05 the team works Kanban with a day-close (P102a; the PO's
+choice after a three-lens council).
 
-Since 2026-10-05 the team works **Kanban with a day-close** (P102a; the PO's choice after a three-lens council). There
-are no sprints; the cadences are these.
-
-| cadence | when | must produce |
+| when | what | what it leaves |
 | --- | --- | --- |
-| **Replenish** | Ready runs low | the PO orders the Ready column (at most five); refilling it is when he chooses what comes next |
-| **Day-close** | the end of each working day | one dated line: what moved, what was proven, what is aging, the next card — posted as a status update on the spark board with `tools/board.py close` (P102c). Claude writes it when the PO stops; a session that opens with *"! the day of … has no close"* writes that day's close first, with `--date` |
-| **Weekly look** | once a week | the PO's look at the board: anything waiting more than three days, epics started and finished |
-| **Epic done** | an epic's last story is Done | its **review** (validated value — see below), the **outside audit**, then the **retro**: one change to how we work, written into `WORKING_AGREEMENTS.md`, **with a check that tells us later whether it stuck** |
+| each session start | `tools/board.py status`, the existing hook | what is in flight and its age, the waits oldest first, Ready, the last close |
+| when the PO stops | the day-close, `tools/board.py close` | one status update: what moved, what was proven, what is aging, the runs and their tokens, the next card |
+| Ready is down to two | ordering Ready | Claude proposes in a batch, and the PO orders. When he names "next" in conversation, the card moves that turn, with his words quoted |
+| an epic's last story is Done, or its appetite is spent (decision 5) | value check, outside audit, retro | the PO's verdict; the audit's report in `docs/observations/`; a retro of at most two changes, each with the command that checks it, plus a look at the limits |
+| once a week | the weekly look | one status update: cards done; in flight and the oldest; waits and the oldest; Idea in and out. Plus a list of Idea cards to close, which the PO strikes or confirms |
+| 2026-11-02 | the trial check (kept) | its first question now counts work on cards the board showed in Idea. It notes "limits raised 2026-10-06, the trial's second day" |
+
+- **The session start** is P102c's hook, in the PO's own settings; it prints nothing outside his project folders. It
+  also gives the gate's verdict and the open PRs, marks the `expedite` and `bench` cards in flight, lists every wait on
+  both boards (one on someone other than the PO says who), marks a wait older than three days with `!`, and says
+  *"Ready is down to N"* at one or two.
+- **The day-close** posts Claude's line, then what is in flight and every wait, as a status update on the spark board —
+  at risk when a limit breaks or a wait is older than three days. A day has one close; a second for the same day is
+  refused. A session that opens with *"! the day of … has no close"* writes that day's close first, with `--date`.
+- **The appetite** (decision 5 (a)): when an epic enters Discovery, the PO gives it an appetite in working days. The
+  status flags a spark epic in a working stage whose appetite is spent, counted in working days since its stage last
+  changed: *"ship what is Done, bet again, or drop it"*. It reads the board's Appetite number field, which the board
+  does not have yet: adding it waits on the PO's yes.
 
 ## The flow — an item's stages
 
-Every item is an issue on the board, and its card moves through the stages as the work does (the stages and limits:
-`docs/2026-10-05-backlog-in-github-design.md` §3; `tools/check_backlog.py` enforces the limits at every push).
+Every item is an issue on the board, and its card moves through the stages as the work does (the process design's §1;
+`tools/check_backlog.py` checks the limits at every push). Idea, Discovery and Design decide **whether** to build; the
+PO's order into Ready commits.
 
-| stage | limit | what happens there | how |
-| --- | --- | --- | --- |
-| **Idea** | — | the PO's words are recorded as an issue — nothing more (ideas stay ideas) | the issue form: *Needed by*, *Value proven by* |
-| **Discovery** | 2, epics count | who it is for and what it is: the journeys, the story map, the PO's answers | with the PO, one question at a time; the journeys and map kept as text in the repo — drawn in Miro and Canva, and run with a discovery skill, once P102b and P102e are built (both planned) |
-| **Design** | 2, epics count | a spec, reviewed by a council, approved by the PO | superpowers' brainstorming, then the spec in `docs/` |
-| **Ready** | 5 | approved and ordered by the PO | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
-| **Build** | 2 | a plan, its council, the PO's choice of execution, then the tasks test-first | superpowers' writing-plans, then executing-plans or subagent-driven-development; the plan's tasks become sub-issues |
-| **Review** | 2 | the final review on the most capable model, one fix pass, the PR open | the PR says `Closes #N` |
-| **Done** | — | merged **and** its *Value proven by* has run | the proof is posted on the issue |
+| stage | limit | enters when | leaves when | how |
+| --- | --- | --- | --- | --- |
+| **Idea** | — | the PO's words are recorded, or Claude files found work (decision 3); no slice is needed | the PO starts it, or it closes as not planned or as a duplicate | the issue form: *Needed by*, *Value proven by* |
+| **Discovery** | 2, epics count | the PO says "discover it", or a read runs on the card (D) | its document merges by PR (D) and the PO decides: design, park or drop. A read that only answered a question posts the answer, and the card goes back to Idea (D) | with the PO, through his `product-discovery` skill (P102e): journeys, a story map, his answers in batches. Drawing them in Miro and Canva is P102b |
+| **Design** | 2, epics count | a story the PO chose has no approved spec, before Ready or when it is pulled from Ready | the spec is in `docs/`, its council has run (full by default, light on request (D)), and the PO says yes | superpowers' brainstorming, then the spec in `docs/` |
+| **Ready** | 5 | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*. Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
+| **Build** | 2 | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | superpowers' writing-plans — a plan council only for a plan of several tasks (decision 6) — then executing-plans or subagent-driven-development; the plan's tasks become sub-issues |
+| **Review** | 2 | a fresh final review on the most capable model | the council before the PR (the PO assistant, the user's journey, the tech lead, a documentation expert, then the refuter) has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
+| **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
-Each working stage takes two cards, and at most four cards are in flight — Discovery to Review — at once (the PO's
-call of 2026-10-06 evening, after the first day at the cap of three). What counts (P146, the PO, 2026-10-06):
+Each working stage takes two cards, Ready five, and at most four cards are in flight — Discovery to Review — at once:
+the PO's call of 2026-10-06 evening, after the first day at the cap of three (*"2 everywhere, cap 4"*). What counts
+(P146, the PO, 2026-10-06):
 
 - an epic counts where it is the work itself, in Discovery and Design; from Build on its stories carry the limit;
 - a card is in its working stage while any work runs on it, a background read included; a read that only answers a
   question puts its card back in Idea when the answer is posted;
 - every card counts: a card that one PR closes together with another still counts on its own, so a pair that one PR
-  closes fills Build.
+  closes fills Build;
+- a task with no parent story counts as a card, and so does one whose story is closed (`tools/check_backlog.py`).
 
-Chores and bugs skip Discovery and Design. At every session start, in the PO's project folders, `tools/board.py
-status` prints the board — what is in flight and for how long, what waits on the PO, Ready, the open PRs, the last
-close (P102c's hook, in the PO's own settings).
+The gate asks a card for its *Needed by* and slice from Ready on — Ready, Build and Review — never in Idea, Discovery
+or Design.
 
 **A plan's tasks are sub-issues of their story** (labelled `task`): they show the story's progress on the board and
-ride on it — no slice, *Needed by* or WIP of their own (`tools/check_backlog.py` skips them, and counts an epic only in
-Discovery and Design).
+ride on it while the story is open — no slice, *Needed by* or place in a limit of their own. A task with no open parent
+story is a card like any other.
+
+**The expedite lane** (decision 4 (a), the PO's choice of 2026-10-06): *"only on [the PO's] word ("now"), one at a
+time, labelled `expedite`. It may take a stage one over its limit, and the gate fails on two."* Claude proposes it for
+a check that lies or a gate that breaks. The gate lets the expedite's working stage, and the four in flight, hold one
+over; Ready never, because the expedite enters Build. It is one lane across both boards.
+
+**The bin.** The bin's cards in flight count in the same four; a bench session is the PO's hands and sits outside them:
+a bin card labelled `bench` is left out of the total. The bin's cards fill none of spark's stages and are asked for no
+*Needed by* or slice. With no `gh` or network the gate prints could-not-run and lets the push through, the exception
+the design writes into W1; a bin board or parent stories it could not read are said with their cause, and do not stop
+the push.
 
 The trial is checked on 2026-11-02 (the limits were raised on 2026-10-06, the trial's second day, then raised to 2 per
 stage and 4 in flight the same evening; the check compares how many days cards waited on the PO before and after):
 was any limit broken without being caught, counting work on a card the board showed in Idea, was a weekly look
-skipped twice, do epics start and finish? If not, one-day sprints replace it (the design's §9).
+skipped twice, do epics start and finish? If not, one-day sprints replace it (the backlog design's §9,
+`docs/2026-10-05-backlog-in-github-design.md`).
+
+## Runs: reads, councils, reviews
+
+- **Claude starts these on its own:** whatever a stage names for the card in it. That is the spec council in Design,
+  the plan's agents in Build, and the final review in Review.
+- **These start on the PO's yes:** a read that answers his question, or one that opens discovery.
+  - Claude first answers in a few lines from what is already known.
+  - Then it offers the read: *"a read of N agents, about M tokens, on #X, which moves to Discovery. Now, or after
+    the card in flight?"*
+  - If the stage is full, the PO picks which card waits.
+- **How a run shows on the board:**
+  - one run per card at a time, and the card stands in the run's stage;
+  - runs use Agent-tool agents, which the PO's VS Code panel shows, and a workflow only when he asks (D);
+  - when a run ends, it gets one comment on its card: what it found and refuted, its size and cost, and where the
+    report is.
+- **Found work** goes into that comment as one checklist. At most 3 items become cards — those that block the card's
+  proof or break W1 — filed in Idea with no slice; the rest are filed when a design pulls them (decision 3 (a)).
+- **Added 2026-10-08 (the PO, on P97's PR):** before ANY pull request, bigger or smaller, a council runs on the open
+  PR — the PO assistant, the user's journey and the tech lead, **plus a documentation expert**, then the refuter. The
+  documentation lens checks that the pages are technically correct and readable, that the front page has a teaser with
+  usage, code and agent-calling examples and a link to the detailed page, that every current page is still up to date,
+  and that the help for agents and for humans (`--help`, `--describe`, the command pages, the guides) is right and
+  complete — gaps, missing parts, changed things, wrong information, unclear text, **hallucinations above all**. Its
+  findings are fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08.
+
+## The token budget
+
+- **Sized to the question.** A look-up gets one agent; a comparison, a few. A full council (about 90 M input tokens)
+  runs only where a council belongs, and councils are full by default (D).
+- **Cheapest model that does the job.** Lenses run on Sonnet. Refuters, the synthesis and the final review run on
+  the most capable model.
+- **Inside the PO's allowance** a run starts. Above it, Claude asks first, with the estimate. The allowance is decision
+  2 (a), his choice of 2026-10-06: *"with no question asked, one run per card in flight, sized to its question, and at
+  most one full council a day. Anything bigger is asked first, with its estimate."*
+- **Reported daily.** The day-close states the day's agent tokens.
+- **Capped by the limits.** One run per in-flight card means at most four at once, five while the expedite lane is in
+  use.
+
+## Asks to the PO
+
+- **One batch is open at a time,** at most six questions (D). Each question carries Claude's recommendation.
+- **Nothing is decided until the PO answers.** An option's text names every move it makes, and his answer covers only
+  what it showed.
+- **A card that waits on the PO** carries *Waiting on* and *Waiting since*. The gate names a *Waiting on* with no
+  *Waiting since*, on both boards, in any open stage, a riding task included.
+- **The decision window.** The session start lists those cards oldest first. It is not a meeting.
 
 ## Validating value, which is not the same as finishing
 
@@ -112,15 +187,18 @@ Every one of these, for every item. No exceptions, no "mostly".
 1. `python3 -m unittest discover -s tests` — green.
 2. **Mutation tested.** Re-introduce the defect the change prevents; the suite must go red. A fix
    with no failing-first test is not a fix.
-3. `python3 scripts/check_spine.py` — exit 0. The chain still runs end to end.
-4. The item's own *Value proven by* command runs and shows what it claims, and its output is posted on the issue.
+3. `python3 scripts/check_spine.py` — exit 0 when `scripts/` changed. With no file named it runs the reference design
+   that ships with spark: the chain still runs end to end.
+4. The item's own *Value proven by* command runs and shows what it claims, and its output is posted on the issue — or,
+   for work with no PR (a setting, a board field), the output of the command that shows it, posted on the issue.
 5. Committed, with a message saying what was wrong and why the fix is right.
 6. Any claim it makes in a docstring or README is **true when run**, not when written.
-7. Its Done line says how many code lines it added to `scripts/` and why — the pre-push gate prints the
-   figure (W15b, P99).
+7. Its closing comment quotes the gate's size line (`scripts/: N code lines (+M since origin/main)`) and says why
+   (W15).
 8. A change to what a step of the journey does updates [the journey guide](../docs/guide/journey.md) and the README's
    *What works today* in the same change (P104, the PO 2026-10-05). Nothing mechanical checks it: `tools/check_docs.py`
    cannot tell whether a status is still current, so the council reads it.
+9. Before the PR: the council with a documentation expert, and its fixes (the PO, 2026-10-08).
 
 **When an epic is done** (P98; P102a moved it from the sprint's close): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
 prints its time. An escape is a missing test, opened as a backlog item the same day.
