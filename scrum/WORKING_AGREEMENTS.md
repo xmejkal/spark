@@ -20,8 +20,10 @@ cause, and never reports a pass over what it did not see.
 
 **The one written exception is the board check in the pre-push gate.** With no `gh` or no network,
 `tools/check_backlog.py` prints `could-not-run` with its cause and lets the push through, because the gate must work
-offline. A partial look — the board read, but not its tasks' parent stories, or not the bin's board — is said in a
-line with its cause, and does not stop the push either. Both are said, never read as checked (P146).
+offline — and so when `gh` handed over part of a board, or a card stands in a stage the gate does not know, or no card
+has a Status (P168, P167): the gate judges nothing it could not read whole or place, and says which. A partial look —
+the board read, but not its tasks' parent stories, or not the bin's board — is said in a line with its cause, and does
+not stop the push either. All are said, never read as checked (P146).
 
 **Origin:** the runner reported `ok` for a flagship check that called a function which had never
 existed. Six more instances have been found since, in different files, by different people.

@@ -81,7 +81,16 @@ It reports:
   - a card that waits on someone (*Waiting on*) with no *Waiting since*, on either board, in any open stage;
   - a card of spark's in Ready, Build or Review with no *Needed by* or no slice.
 
-  With no `gh` login or no network, the board part says could-not-run, with `gh`'s own reason, and passes.
+  With no `gh` login or no network, the board part says could-not-run, with `gh`'s own reason, and passes. Two more
+  looks it will not make ([P168](https://github.com/xmejkal/spark/issues/106), [P167](https://github.com/xmejkal/spark/issues/105)),
+  each could-not-run that passes, never "the limits hold": it reads a board whole or judges nothing — `gh` stops at its
+  `--limit`, so a board past the first ask's 500 is asked again with its own count, and one still short is
+  `backlog: could-not-run — the spark board holds 501 items, 500 were read; the limits were not checked` (the bin's,
+  read in part, is its unread line) — and it knows seven stages, Idea, Discovery, Design, Ready, Build, Review and Done,
+  so a card in any other is `backlog: could-not-run — #4 P4 — x is in a stage the gate does not know: "Doing"; the
+  limits were not checked`: a renamed stage is a decision, not a silent skip. A card with no *Status* (GitHub's "No
+  status" column) is in Idea and said, `backlog: 3 card(s) have no stage: #3, #5, bin #20`; a board with no *Status* on
+  any card is a changed field, could-not-run naming the shape.
 
 From a push on 2026-10-05 (the gate's wording has changed since; the lines are a dated record, not today's output):
 
@@ -167,8 +176,10 @@ limits, and the cadences are in [`scrum/README.md`](../../scrum/README.md). The 
 in the [glossary](../../GLOSSARY.md).
 
 One more team tool sits beside the gate: [`tools/board.py`](../../tools/board.py). `python3 tools/board.py status`
-prints the state of both boards at every session start (the PO's session-start hook runs it; it always exits 0), and
-`python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board — one a
+prints the state of both boards at every session start (the PO's session-start hook runs it; it always exits 0). It
+reads each board whole, 100 cards a page, and judges where a card stands by the gate's one rule: a board read in part,
+or a card in a stage the gate does not know, makes the status one could-not-run line naming it, and a card with no
+*Status* is said. `python3 tools/board.py close "the day's one line"` posts the day-close as a status update on spark's board — one a
 day, a second refused with exit 1; `--dry-run` prints it and posts nothing. Each verb's `--help` says what it prints,
 posts and refuses.
 
