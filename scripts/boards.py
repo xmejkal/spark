@@ -2,19 +2,19 @@
 """
 Which board this project is built around — resolved in one place, and checked against a contract.
 
-    python3 tools/boards.py --path        the active board's definition file
-    python3 tools/boards.py --id          the active board's id
-    python3 tools/boards.py --list        every board available to switch to
-    python3 tools/boards.py --paths       their file paths, for tools that take a list
-    python3 tools/boards.py --get chip    one field, by dotted path
-    python3 tools/boards.py --validate    check every board file against the contract
-    python3 tools/boards.py --validate --for-fab
-                                          also require what the PCB needs, not just the firmware
+    python3 scripts/boards.py --path        the active board's definition file
+    python3 scripts/boards.py --id          the active board's id
+    python3 scripts/boards.py --list        every board available to switch to
+    python3 scripts/boards.py --paths       their file paths, for tools that take a list
+    python3 scripts/boards.py --get chip    one field, by dotted path
+    python3 scripts/boards.py --validate    check every board file against the contract
+    python3 scripts/boards.py --validate --for-fab
+                                            also require what the PCB needs, not just the firmware
 
-Boards are drop-in: add `boards/<id>.json`, put that id in `boards/active.json`, run `make`.
-Nothing else names a board. This file is both the library the Python tools import and the command
-the Makefile and `make check` call, because a second copy of "where is the board file" would be
-the exact duplication that boards/ exists to remove.
+Boards are drop-in: add `boards/<id>.json` and put that id in `boards/active.json`. Nothing else
+names a board. This file is both the library the Python tools import and the command `/spark:init`,
+`/spark:build` and the review skill call, because a second copy of "where is the board file" would
+be the exact duplication that boards/ exists to remove.
 
 The contract is enforced rather than documented. A board definition that a person merely
 *described* correctly is how the C6 pin map nearly shipped with D3 read as GPIO3; a definition
@@ -25,6 +25,7 @@ unverified footprint reach a gerber.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -73,19 +74,22 @@ REQUIRED_FOR_FAB = ("footprint_module", "footprint_export")
 #: A fact is true of the board whatever you build with it. A decision is a choice you made, and
 #: a board file that accumulates choices stops being swappable, which is the point of boards/.
 FORBIDDEN_KEYS = {
-    "wake_on_high": "follows from how the buttons are wired; belongs in config.WAKE_ON_HIGH",
+    "wake_on_high": ("follows from how the buttons are wired; belongs in the firmware's own settings "
+                     "(the smart bin's is config.WAKE_ON_HIGH)"),
     "i2c_freq": "a firmware setting, not a property of the board",
     "i2c_freq_hz": "a firmware setting, not a property of the board",
-    "pin_assignments": "which function sits on which pin is the design; see mcu-pins.ts",
-    "signals": "which function sits on which pin is the design; see mcu-pins.ts",
+    "pin_assignments": ("which function sits on which pin is the design "
+                        "(assign_pins.py works it out; the smart bin keeps it in mcu-pins.ts)"),
+    "signals": ("which function sits on which pin is the design "
+                "(assign_pins.py works it out; the smart bin keeps it in mcu-pins.ts)"),
 }
 
 #: The role names a board file may use, and what each one means to the scripts that read them.
 #:
 #: Closed, because an open vocabulary silently disabled a headline check. Two shipped boards
 #: described the same hazard — the serial console — under two names, `boot_log_tx` and
-#: `console_uart`. `check_design.py` knew only the first and `assign_pins.py` only the second, so
-#: a serial-parsing part sitting on the console UART was caught on one board and passed without a
+#: `console_uart`. `check_design.py` (since cut, 066c4af) knew only the first and `assign_pins.py` only
+#: the second, so a serial-parsing part sitting on the console UART was caught on one board and passed without a
 #: word on the other. Nothing noticed, because a role nobody consumes looks exactly like a role
 #: that is fine. A name outside this set is now an error rather than a silent no-op.
 PIN_ROLES = {
@@ -223,6 +227,23 @@ def definition_path(project: Path, board_id: str = None) -> Path:
 def available(project: Path) -> list:
     """Every board that could be switched to — the project's own, plus the shipped library."""
     return sorted(records(project))
+
+
+def footprint_stop(board_id: str, project: Path = None) -> str:
+    """
+    `parts.STOPS_AT_FOOTPRINT` for a board that stops the chain at the footprint stage — its file has no header geometry to
+    draw the footprint from (`emit_footprint.footprint_gaps`; C-7, P121) — and "" for one that builds on. Said wherever a
+    board is offered or picked (F12: the XIAO was listed and picked without a word), never refused: such a board is still a
+    choice for pin-map work. A file that cannot be read is not said to stop here; `--validate` names it.
+    """
+    import emit_footprint  # here, not at the top: it imports this module
+    import parts
+    found = records(project).get(board_id)
+    try:
+        board = _read_json(found[1], "board definition") if found else None
+    except BoardError:
+        return ""
+    return parts.STOPS_AT_FOOTPRINT if isinstance(board, dict) and emit_footprint.footprint_gaps(board) else ""
 
 
 def load(project: Path, board_id: str = None) -> dict:
@@ -381,12 +402,41 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
     # such a pad with `continue` — the silent drop G2 removed for module pins, kept for the
     # processor's own. Refused here, where the board file is read, so it never reaches a
     # generator at all (sprint audit A6, item 8).
+    import parts  # a board points at its datasheets the way a part does (P62b), and names a rail as a part does
     for pad, supply in sorted((board.get("power_pads") or {}).items()):
         if not isinstance(supply, dict) or not supply.get("rail"):
             problems.append(f"power_pads.{pad} names no rail, so the microcontroller pad would be "
                             f"wired to nothing")
+        # P87's attribute half: the pad's trace is written to `net.<RAIL>`, so a rail is a name, never text
+        elif not (isinstance(supply["rail"], str) and re.fullmatch(parts.SELECTOR_SAFE, supply["rail"])):
+            problems.append(f"power_pads.{pad} rail is {supply['rail']!r}, but a rail is a name — letters, digits and _ "
+                            f"(ground, logic, motor): the board is written with it as code")
 
-    import parts  # a board points at its datasheets the way a part does (P62b)
+    # P87's attribute half: board.tsx is written with `.Mcu > .<label>` for each pin and each power pad, `import { <export> }`
+    # and `<export name="Mcu">`, so each is a name — the pin's own rule, whole — refused here even when the file carries it
+    # consistently; and the id, which names files and is written into the footprint generated from it, is a plain key.
+    for label in pins if isinstance(pins, dict) else {}:
+        if not re.fullmatch(parts.SELECTOR_SAFE, label):
+            problems.append(f"pins key {label!r} is not a name — letters, digits and _ (D3, SDA, A0): the board is written "
+                            f"with it as code")
+    for pad in board.get("power_pads") if isinstance(board.get("power_pads"), dict) else {}:
+        if not re.fullmatch(parts.SELECTOR_SAFE, pad):
+            problems.append(f"power_pads key {pad!r} is not a name — letters, digits and _ (3V3, GND1, VCC): the board is "
+                            f"written with it as code")
+    # concern 1: the footprint's comment quotes the drawing's drill (`NOT the <drill_mm> mm`), so it is a number, never text
+    header = physical.get("header") if isinstance(physical, dict) else None
+    drill = header.get("drill_mm") if isinstance(header, dict) else None
+    if drill is not None and (isinstance(drill, bool) or not isinstance(drill, (int, float))):
+        problems.append(f"physical.header.drill_mm is {drill!r}, but it is a number of millimetres (0.9): the footprint "
+                        f"generated from it is written with it")
+    export = physical.get("footprint_export") if isinstance(physical, dict) else None
+    if export and not (isinstance(export, str) and re.fullmatch(parts.SELECTOR_SAFE, export)):
+        problems.append(f"physical.footprint_export is {export!r}, but it is a name — letters, digits and _ "
+                        f"(FireBeetle2Esp32S3): the board is written with it as code")
+    if isinstance(board.get("id"), str) and not store.PLAIN.fullmatch(board["id"]):
+        problems.append(f"id is {board['id']!r}, but an id is a plain key — lower-case letters, digits and - "
+                        f"(firebeetle2-esp32s3): files are named by it, and it is written into the footprint generated from it")
+
     problems += parts.document_problems(board)
     return problems
 
@@ -399,8 +449,8 @@ def get(project: Path, key_path: str, board_id: str = None):
     """
     One field out of a board definition, addressed by dotted path.
 
-    A generic accessor rather than a flag per field, because the Makefile and any future consumer
-    should be able to reach a new board fact without this file growing a new option for it.
+    A generic accessor rather than a flag per field, because a project's own Makefile or script, and any
+    future consumer, should be able to reach a new board fact without this file growing a new option for it.
     """
     value = load(project, board_id)
     for step in key_path.split(KEY_PATH_SEPARATOR):
@@ -480,7 +530,8 @@ def main(argv=None) -> int:
             for board_id in available(project):
                 where = "library" if definition_path(project, board_id).parent == LIBRARY \
                     else "project"
-                print(f"  {'*' if board_id == current else ' '} {board_id} ({where})")
+                stop = footprint_stop(board_id, project)
+                print(f"  {'*' if board_id == current else ' '} {board_id} ({where}){' ' + stop if stop else ''}")
         else:
             return _validate_all(project, for_fab=args.for_fab)
     except BoardError as broken:

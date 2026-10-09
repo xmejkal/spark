@@ -21,9 +21,10 @@ look like a checked one. A null here is not a gap in the output — it is the ou
 reads a null rail and reports "no maximum current stated, so nothing here can be verified", which
 is the correct answer until somebody measures it.
 
-`project.json` is the brief: what the design must do, what parts are already owned, what has been
-decided. No script reads it. The reviewers do, and it is what they judge consequence against — a
-finding is only "bad" relative to something the project promised.
+`project.json` is the brief: the goal, what the design must do (`must`), whose modules to research
+first (`prefer`), where the person buys (`sellers`), and what has been decided. `parts.py` reads `prefer`
+and `sellers`; the `spark-review` skill hands the reviewers the `must` list, and it is what they judge
+consequence against — a finding is only "bad" relative to something the project promised.
 """
 
 import argparse
@@ -199,8 +200,9 @@ def rules_for(nets, part_list=()):
 
 
 PROJECT_TEMPLATE = {
-    "//": ("The brief. No script reads this; the reviewers do, and it is what they judge "
-           "consequence against — a finding is only 'bad' relative to something you promised."),
+    "//": ("The brief. parts.py reads `prefer` and `sellers`; the spark-review skill hands the reviewers "
+           "`must`, and it is what they judge consequence against — a finding is only 'bad' relative "
+           "to something you promised."),
     "goal": None,
     "must": [],
     "//must": ('What the design has to do, in terms that can be violated. "Runs a year on one '
@@ -212,8 +214,9 @@ PROJECT_TEMPLATE = {
                   "[\"adafruit\", \"digikey\"] in the US. Modules come from their makers; simple parts "
                   "(connectors, discretes) take their facts from the maker's datasheet and are bought here."),
     "decided": [],
-    "//decided": ("Choices already made and not up for re-litigation, each with why. This is "
-                  "what stops a reviewer proposing the option you already rejected."),
+    "//decided": ("Choices already made and not up for re-litigation, each with why. Kept for you and for any "
+                  "agent that reads this file: no script reads it, and the spark-review skill hands the "
+                  "reviewers only `must`, so it does not stop a reviewer proposing an option you already rejected."),
 }
 
 
@@ -376,6 +379,18 @@ def package_file(project):
                   "this core; see init_project.PINNED_TSCI and PINNED_CORE."}
 
 
+def boards_offered(project):
+    """
+    The boards to choose from, as both "Available:" lines say them: those that build first, then each that stops at the
+    footprint stage, said as such (C-7, F12) — offered, never hidden, since such a board is still a choice for pin-map work.
+    """
+    offered = boards.available(project)
+    stops = {board_id: boards.footprint_stop(board_id, project) for board_id in offered}
+    said = [", ".join(board_id for board_id in offered if not stops[board_id])]
+    said += ["%s %s" % (board_id, stops[board_id]) for board_id in offered if stops[board_id]]
+    return "; ".join(part for part in said if part) or "none"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="init_project.py",
@@ -383,7 +398,10 @@ def main(argv=None):
     parser.add_argument("--project", default=".", help="the project to set up (default: here)")
     parser.add_argument("--board", help="board id to make active; omit to see what is available")
     parser.add_argument("--circuit", help="a built netlist to name the rails from")
-    parser.add_argument("--force", action="store_true", help="overwrite files that exist")
+    parser.add_argument("--force", action="store_true",
+                        help="work on files that exist too: merge what is derived into rules.json (answers stay), "
+                             "rewrite project.json only if it has no answers, set boards/active.json when --board "
+                             "names one; package.json is never rewritten")
     args = parser.parse_args(argv)
 
     project = Path(args.project).resolve()
@@ -449,14 +467,14 @@ def main(argv=None):
     notes.extend(unstated)
 
     if args.board:
-        available = boards.available(project)
-        if args.board not in available:
-            print("no board called %r. Available: %s"
-                  % (args.board, ", ".join(available) or "none"), file=sys.stderr)
+        if args.board not in boards.available(project):
+            print("no board called %r. Available: %s" % (args.board, boards_offered(project)), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
         did, note = write(project / "boards" / "active.json",
                           {"schema": 1, "board": args.board}, args.force)
         notes.append(note)
+        stop = boards.footprint_stop(args.board, project)  # F12: said where the board is chosen, never refused
+        notes += ["board %s %s" % (args.board, stop)] if stop else []
 
     print("spark init in %s" % project)
     for note in notes:
@@ -466,8 +484,7 @@ def main(argv=None):
     else:
         print("  no built design found, so the rails are empty — build, then re-run with --force")
     if not args.board:
-        print("  no board chosen. Available: %s"
-              % (", ".join(boards.available(project)) or "none"))
+        print("  no board chosen. Available: %s" % boards_offered(project))
 
     unanswered = [(path, nulls_in(payload)) for path, payload in written]
     total = sum(len(fields) for _, fields in unanswered)
@@ -479,7 +496,8 @@ def main(argv=None):
                 print("  %s  %s" % (path.name, field))
 
     if not written and not args.board:
-        print("\nnothing to do — everything already exists. --force rewrites it.")
+        print("\nnothing to do — everything already exists. "
+              "--force merges what is derived into rules.json and keeps your answers.")
         return EXIT_NOTHING_TO_DO
     # Part of the job could not be done, and W1 applies to this tool as much as to a check: the
     # rails are unseeded and the exit code says so, even though everything else was written.

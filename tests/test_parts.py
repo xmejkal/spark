@@ -143,10 +143,83 @@ class TheContractTest(unittest.TestCase):
             footprint="jst_ph_2", footprint_placeholder=True,
             footprint_note="stands in for an XT30-PW nobody has drawn"), [])
 
+    def test_a_footprint_is_the_name_of_one_and_a_number_or_a_list_is_not(self):
+        for given, said in ((5, "footprint is 5"), (True, "footprint is True"), (3.5, "footprint is 3.5"),
+                            (["pinrow2"], "footprint is ['pinrow2']"), ({"name": "pinrow2"}, "footprint is {'name': 'pinrow2'}")):
+            with self.subTest(footprint=given):
+                problems = self._problems(footprint=given)
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith(said), problems)
+        for given in ("pinrow2", "jlcpcb:C2040", None, "", [], {}):
+            with self.subTest(footprint=given):
+                self.assertEqual(self._problems(footprint=given), [], "a name is a footprint, and an absent one is owed, not wrong")
+
     def test_a_real_footprint_needs_no_note(self):
         # Opt-in, so the five shipped records and every honest footprint are untouched.
         self.assertEqual(self._problems(footprint="pinrow5"), [])
         self.assertFalse(parts.has_placeholder_footprint(part(footprint="pinrow5")))
+
+    def test_a_footprint_that_is_no_footprinter_name_is_refused(self):
+        """
+        C-1 (the council on PR #98): the generated board is written with the footprint as an attribute's text, unescaped
+        (P87, #19), and `--fact-set` took any string, `--audit` called such a record current, and `--requirements` shelved
+        it "so every project builds with it" — code from a web page, one command from `board.tsx`. A footprint is a
+        footprinter's name or a JLCPCB part, and nothing else.
+        """
+        for given in ('pinrow4" onClick={alert(1)} data-x="', 'pushbutton"} pcbX={(globalThis.x = 1, 0)} data-x="',
+                      "pinrow 4", "PINROW4", "jst_ph_2>", "jlcpcb:C12a", "kicad:R_0603", "pinrow4\n"):
+            with self.subTest(footprint=given):
+                problems = self._problems(footprint=given)
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("footprint is %r" % given), problems)
+                self.assertIn("jlcpcb:C<number>", problems[0])
+        for given in ("pinrow5", "jst_ph_3", "dip12_w15.24mm", "0603", "sot23_3", "pushbutton", "jlcpcb:C2040"):
+            with self.subTest(footprint=given):
+                self.assertEqual(self._problems(footprint=given), [], "a footprinter's name, or a JLCPCB part")
+
+    def test_an_id_that_is_no_plain_key_is_refused(self):
+        # P87's attribute half: a record's id is its file's name, and emit_board names the part after it, `<chip name="…">`
+        for part_id in ('x"y', "Lone_Sensor", "X-LED", "x*y"):
+            with self.subTest(id=part_id):
+                self.assertEqual(self._problems(part_id=part_id), [
+                    "id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by "
+                    "it, and the board names the part after it in code" % part_id])
+
+    def test_a_rail_or_a_signal_that_is_no_name_is_refused(self):
+        """
+        P87's attribute half (after F11): a rail becomes the net the board is written with — `to="net.<RAIL>"`, upper-cased —
+        so a crafted one was code in board.tsx past --validate, --audit and --requirements. A rail and a signal are names:
+        letters, digits and _, as a pin is; every rail and signal the library ships is one.
+        """
+        for rail in ('gnd" pcbX={(globalThis.x = 1, 0)} y="', "motor 6v", "5v-rail", "gnd\n", 5):
+            with self.subTest(rail=rail):
+                problems = self._problems(power=[{"pin": "GND", "rail": rail, "direction": "in"}])
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("power[0] rail is %r, but a rail is a name" % (rail,)), problems)
+                self.assertIn("the board is written with it as code", problems[0])
+        for signal in ('SIG" x="', "IN+", "A */ x", "MOTOR IA"):
+            with self.subTest(signal=signal):
+                problems = self._problems(needs=[{"signal": signal, "pin": "P", "direction": "in"}])
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("needs[0] signal is %r, but a signal is a name" % signal), problems)
+        for rail in ("ground", "logic", "motor", "speaker", "5v", "TRACTION"):
+            with self.subTest(rail=rail):
+                self.assertEqual(self._problems(power=[{"pin": "GND", "rail": rail, "direction": "in"}]), [])
+        for signal in ("MOTOR_IA", "STATUS_LED", "TOF_INT", "SDA"):
+            with self.subTest(signal=signal):
+                self.assertEqual(self._problems(needs=[{"signal": signal, "pin": "P", "direction": "in"}]), [])
+
+    def test_a_silkscreen_that_would_end_the_comment_the_board_keeps_it_in_is_refused(self):
+        """C-1: the generated board keeps `printed` in a `{/* … */}` comment, which `*/` ends — what follows would be code —
+        and a `"` would end a string; every other silkscreen stays the person's to write."""
+        for printed in ("IN+ */} <chip name=\"X\" /> {/*", 'VIN"', "*/"):
+            with self.subTest(printed=printed):
+                problems = self._problems(needs=[{"signal": "S", "pin": "VIN", "printed": printed, "direction": "in"}])
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("needs[0] printed %r" % printed), problems)
+        for printed in ("IN+", "OUT-", "GPIO0/CE", "SPK+", "~RESET", "3V3 (out)"):
+            with self.subTest(printed=printed):
+                self.assertEqual(self._problems(needs=[{"signal": "S", "pin": "VIN", "printed": printed, "direction": "in"}]), [])
 
     def test_a_pin_name_a_selector_cannot_parse_is_caught_where_it_is_written(self):
         """
@@ -155,7 +228,7 @@ class TheContractTest(unittest.TestCase):
         using those names produced four "could not find port" errors, and the rename that fixed
         it LOST the silkscreen — the exact failure `pad_aliases` prevents on the board side.
         """
-        for bad in ("IN+", "OUT-", "A.B", "V IN"):
+        for bad in ("IN+", "OUT-", "A.B", "V IN", "A\n"):  # the re-check: `A⏎` passed and broke the build, a string unterminated
             with self.subTest(pin=bad):
                 problems = self._problems(needs=[{"signal": "S", "pin": bad, "direction": "in"}])
                 self.assertTrue(any("cannot be a selector" in p for p in problems), problems)
@@ -167,7 +240,8 @@ class TheContractTest(unittest.TestCase):
                     needs=[{"signal": "S", "pin": good, "direction": "in"}]), [])
 
     def test_the_silkscreen_may_say_anything(self):
-        # `printed` is what is on the part. It never reaches a selector, so nothing constrains it.
+        # `printed` is what is on the part. It never reaches a selector, so nothing constrains it but the two marks that
+        # would end the comment the board keeps it in (C-1, below).
         self.assertEqual(self._problems(
             needs=[{"signal": "S", "pin": "VIN", "printed": "IN+", "direction": "in"}]), [])
 
@@ -586,6 +660,20 @@ class TheShippedLibraryTest(unittest.TestCase):
                     "%s asks the host for no pin and carries no rail, so placing it on a board "
                     "does nothing at all" % part_id)
 
+    def test_the_speaker_terminal_owes_nothing_and_says_what_it_does(self):
+        # C-3 (the council on PR #98): the record an amplifier's two outputs needed, so a sound need builds end to end
+        record = parts.load("speaker-terminal")
+        self.assertEqual((parts.owes(record), record["footprint"], [s["pin"] for s in record["power"]], parts.function_of(record)),
+                         ([], "jst_ph_2", ["SPK_P", "SPK_N"],
+                          [{"does": "sound", "what": "speaker-terminal"}, {"does": "connect", "what": "speaker"}]))
+
+    def test_the_rangefinder_s_outline_is_read_off_pololu_s_drawing(self):
+        # C-6 (the council on PR #98): the only sensor spark ships owed body_mm, and --requirements refused it for that
+        record = parts.load("vl6180x-breakout")
+        self.assertEqual(parts.owes(record), [])
+        self.assertEqual((record["body_mm"]["width"], record["body_mm"]["height"], record["body_mm"]["verified"],
+                          record["body_mm"]["cites"]["document"]), (12.7, 17.8, True, "pololu-2489-dimensions"))
+
 
 
 class AMissingPinIsReportedOnceTest(unittest.TestCase):
@@ -746,6 +834,19 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertEqual(parts.sellers(root), ("laskakit", "gme"))
         self.assertIn("sourcing", parts.skeleton("x", "connector"))
 
+    def test_a_skeleton_whose_id_is_no_plain_key_is_refused_and_nothing_is_written(self):
+        # P87's follow-through: every reader refuses a record named so, so nobody is handed a file they cannot use
+        root = Path(tempfile.mkdtemp())
+        for part_id in ("my_sensor", 'x"y', "X-LED"):
+            for flags in ([], ["--dry-run"]):
+                with self.subTest(id=part_id, flags=flags):
+                    said, code = run_json(["--skeleton", part_id, "--kind", "sensor", "--project", str(root)] + flags)
+                    self.assertEqual((said["status"], code), ("problems", 1))
+                    self.assertEqual(said["problems"][0]["sentence"], "id is %r, but an id is a plain key — lower-case letters, "
+                                     "digits and - (led-red-5mm): files are named by it, and the board names the part after it "
+                                     "in code" % part_id)
+        self.assertFalse((root / "parts").exists())
+
     def test_a_skeleton_has_every_field_and_no_guess_and_the_contract_refuses_it_until_filled(self):
         import tempfile
         root = Path(tempfile.mkdtemp())
@@ -866,6 +967,79 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertTrue((store / entry["sha256"] / "DFR (1).pdf").is_file())
         self.assertIn("98 Kč — 帝江", (catalog / "x-part.json").read_text(), "a rewrite must not turn text into escapes")
 
+    def test_a_fetch_that_fails_halfway_leaves_the_record_whole(self):
+        home = self._home(); catalog = home / "catalog"
+        self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
+        before = (catalog / "x-part.json").read_text()
+        real_replace = Path.replace
+
+        def the_disk_fills_at_the_record(part, target):
+            # Only the record's own rename fails: the document is kept first (its rename runs for real), so the failure
+            # cannot be the keep's — a patch on every rename would raise there and never reach the record at all.
+            if Path(target).name == "x-part.json":
+                raise OSError("the disk is full")
+            return real_replace(part, target)
+
+        with in_store(home), mock.patch.object(Path, "replace", autospec=True, side_effect=the_disk_fills_at_the_record):
+            with self.assertRaises(OSError):
+                parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
+        self.assertEqual((catalog / "x-part.json").read_text(), before)
+        self.assertEqual([found.name for found in (home / "sources").rglob("*") if found.is_file()], ["x.pdf"])
+
+    # --- all or nothing (§6.4): a name the store would refuse stops the whole fetch before it starts ---
+
+    #: Documents whose names the store refuses, each cited second in a record that also cites a fine one: its URL, and the
+    #: name it would be kept under as a refusal shows it. The first would leave the sources; the second holds a NUL byte; the
+    #: third is 251 bytes, which no file can be named once `.part` is added (the shown name is cut at 40 characters).
+    REFUSED = {"a path out of the sources": ("https://v.example/..%2fevil.pdf", "'../evil.pdf'"),
+               "a NUL byte": ("https://v.example/a%00.pdf", r"'a\x00.pdf'"),
+               "a name too long to keep": ("https://v.example/" + "a" * 247 + ".pdf", "'" + "a" * 40 + "…'")}
+
+    def _a_record_citing_a_fine_source_and_then(self, second):
+        home = self._home()
+        self._catalog_record(home / "catalog", "x-part", sources=["https://v.example/ok.pdf", second])
+        return home, (home / "catalog" / "x-part.json").read_text()
+
+    def test_a_name_the_store_would_refuse_stops_the_whole_fetch_before_anything_is_downloaded_or_kept(self):
+        for what, (cited, shown) in self.REFUSED.items():
+            with self.subTest(what=what):
+                home, before = self._a_record_citing_a_fine_source_and_then(cited)
+                asked = []
+                with in_store(home):
+                    with self.assertRaises(store.StoreProblem) as refused:
+                        parts.fetch_documents("x-part", fetch=lambda url: asked.append(url) or b"pdf")
+                self.assertEqual(asked, [], "the first document, which is fine, is not downloaded either: all or nothing")
+                self.assertIn(cited, str(refused.exception), "the refusal names the document")
+                self.assertIn(shown, str(refused.exception), "and the name the store would not keep it under")
+                self.assertFalse((home / "sources").exists(), "nothing was kept")
+                self.assertEqual((home / "catalog" / "x-part.json").read_text(), before)
+
+    def test_the_fetch_operation_and_its_dry_run_refuse_such_a_name_the_same_way(self):
+        for what, (cited, shown) in self.REFUSED.items():
+            home, before = self._a_record_citing_a_fine_source_and_then(cited)
+            asked = []
+            for argv in (["--fetch", "x-part"], ["--fetch", "x-part", "--dry-run"]):
+                with self.subTest(what=what, argv=argv):
+                    with in_store(home), mock.patch.object(store, "fetch", lambda url, method="GET": asked.append(url) or b"pdf"):
+                        said, code = run_json(argv)  # an answer in the envelope, never a traceback
+                    self.assertEqual((said["status"], code), ("could-not-run", 2))
+                    self.assertIn(cited, said["unchecked"][0]["sentence"])
+                    self.assertIn(shown, said["unchecked"][0]["sentence"])
+            with self.subTest(what=what):
+                self.assertEqual(asked, [], "the door was not asked once")
+                self.assertFalse((home / "sources").exists(), "nothing was kept")
+                self.assertEqual((home / "catalog" / "x-part.json").read_text(), before)
+
+    def test_a_dry_run_of_a_fetch_says_what_it_would_fetch_and_reaches_nothing(self):
+        home = self._home()
+        self._catalog_record(home / "catalog", "x-part", sources=["https://v.example/ok.pdf", "https://v.example/page.html"])
+        asked = []
+        with in_store(home), mock.patch.object(store, "fetch", lambda url, method="GET": asked.append(url) or b"pdf"):
+            said, code = run_json(["--fetch", "x-part", "--dry-run"])
+        self.assertEqual((said["status"], code, said["data"]["would_fetch"]), ("ok", 0, ["https://v.example/ok.pdf"]))
+        self.assertEqual(asked, [])
+        self.assertFalse((home / "sources").exists())
+
     def test_two_sources_with_one_basename_are_both_kept(self):
         import tempfile
         from unittest import mock
@@ -930,6 +1104,28 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual(entry, {"url": "https://v.example/ds.pdf", "sha256": digest, "file": "ds_v1.1.pdf",
                                  "retrieved": datetime.date.today().isoformat(), "title": None, "version": None})
         self.assertEqual((store / digest / "ds_v1.1.pdf").read_bytes(), b"the v1.1 pdf")
+
+    def test_a_dry_run_of_keep_refuses_the_name_the_real_run_refuses_and_keeps_nothing(self):
+        home = self._home()
+        for what, name in (("a line break in the name", "a\nb.pdf"), ("a name too long to keep", "a" * 247 + ".pdf")):
+            local = Path(tempfile.mkdtemp()) / name
+            local.write_bytes(b"%PDF drawing")
+            for flags in (["--dry-run"], []):
+                with self.subTest(what=what, flags=flags):
+                    with in_store(home):
+                        said, code = run_json(["--keep", str(local)] + flags)
+                    self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
+
+    def test_a_dry_run_of_keep_says_what_the_real_run_would_record_and_keeps_nothing(self):
+        home = self._home()
+        local = Path(tempfile.mkdtemp()) / "ds.pdf"
+        local.write_bytes(b"%PDF drawing")
+        with in_store(home):
+            said, code = run_json(["--keep", str(local), "--dry-run"])
+        self.assertEqual((said["status"], code, said["data"]["written"]), ("ok", 0, False))
+        self.assertEqual(said["data"]["document"]["sha256"], "8158f0d8a471f168c2daf1361a3919c034b7e43a62f5f2ac08c048ee9e58168e")
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
 
     def test_a_document_with_no_url_is_allowed_a_photo_of_your_own_module_has_none(self):
         definition = part(documents={"photo": {"url": None, "sha256": "a" * 64, "file": "top.jpg",
@@ -1128,6 +1324,16 @@ class ASimulationIsDeclaredTest(unittest.TestCase):
         self.assertEqual(self._problems(good, root)[0], [])
         bad = {"wokwi": {"chip": "probe", "pins": {"OUT": "NOPE", "GND": "GND", "VCC": "VCC"}}}
         self.assertTrue(any("does not have" in p and "'NOPE'" in p for p in self._problems(bad, root)[0]))
+
+    def test_a_chip_whose_name_is_no_name_is_refused_before_its_files_are_looked_for(self):
+        # the re-check's probes: `../escape` named files outside the record's chip folder, which stage_chips then copied,
+        # and `x"⏎[[chip]]` wrote a TOML table of its own into wokwi.toml
+        for name in ("../escape", 'x"\n[[chip]]\nname = "evil', "flow meter"):
+            with self.subTest(chip=name):
+                chip = {"wokwi": {"chip": name, "pins": {"OUT": "SIG", "GND": "GND", "VCC": "VCC"}}}
+                self.assertEqual(self._problems(chip)[0], [
+                    "simulation.wokwi.chip is %r, but a chip's name is a name — letters, digits and _ (vl6180x, l9110s): its "
+                    "files beside the record are named by it, and wokwi.toml is written with it" % name])
 
     def test_a_chip_must_exist_beside_the_record(self):
         import tempfile
@@ -1447,8 +1653,11 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
                      ["--unverified", "tactile-button"], ["--need", "unobtainium"], ["--skeleton", "x-part"],
                      ["--kept", "nothing-like-this"], ["--catalog"], ["--describe"], ["--promote", "x-part"],
                      ["--keep", str(project / "absent.pdf")], ["--function-set", "x-part", str(project / "absent.json")],
+                     ["--fact-set", "x-part", str(project / "absent.json")],
                      ["--audit"], ["--needs", str(project)], ["--needs-set", str(project), str(project / "absent.json")],
-                     ["--match", str(project)], ["--bogus"], [], ["--list", "--show", "x"]):
+                     ["--match", str(project)], ["--pick", str(project), "soil=x-part"], ["--bogus"], [],
+                     ["--requirements", str(project)], ["--step", str(project), "C"], ["--tally", str(project / "untallied")],
+                     ["--list", "--show", "x"]):
             with self.subTest(argv=argv):
                 said, code = run_json(argv)
                 self.assertEqual(sorted(said), ENVELOPE_KEYS)
@@ -1652,6 +1861,7 @@ class WhatAPartDoesTest(unittest.TestCase):
             said, code = run_json(["--function-set", "x-inlet", str(given)])
         self.assertEqual((said["status"], code), ("problems", 1))
         self.assertIn("spark's own library", said["problems"][0]["sentence"])
+        self.assertIn("x-inlet is in spark's own library", said["problems"][0]["sentence"])  # F10: text mode prints the sentence alone
         self.assertEqual(json.loads((library / "x-inlet.json").read_text()), record)
 
     def test_function_set_says_which_file_it_changes(self):
@@ -1685,6 +1895,17 @@ class WhatAPartDoesTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("function", json.loads((project / "parts" / "x-soil.json").read_text()))
         self.assertNotIn("function", json.loads((home / "catalog" / "x-soil.json").read_text()))
+
+    def test_a_project_s_record_is_never_left_half_written(self):
+        home, given = self.a_probe_in_the_catalog()
+        project = Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        record = {"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor"}
+        (project / "parts" / "x-soil.json").write_text(json.dumps(record))
+        with in_store(home), mock.patch.object(Path, "replace", side_effect=OSError("the disk is full")):
+            said, code = run_json(["--function-set", "x-soil", str(given), "--project", str(project)])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertEqual(json.loads((project / "parts" / "x-soil.json").read_text()), record)
 
     def test_function_set_on_a_shelf_copy_says_it_writes_the_shelf(self):
         home, given = self.a_probe_in_the_catalog()
@@ -1725,6 +1946,193 @@ class WhatAPartDoesTest(unittest.TestCase):
             self.assertEqual(json.loads((home / "catalog" / "x-soil.json").read_text()), record)
 
 
+class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
+    """P97 (§5.4): what a record owes is filled once, in its own home, through parts.py — never in spark's library."""
+
+    def a_probe(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-soil.json").write_text(json.dumps(
+            {"schema": 1, "id": "x-soil", "name": "A probe", "kind": "sensor", "pin_order": ["GND", "VCC", "SIG"],
+             "needs": [{"signal": "SOIL", "pin": "SIG", "direction": "out"}],
+             "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}, {"pin": "GND", "rail": "ground", "direction": "in"}]}))
+        return home
+
+    def facts(self, given):
+        path = Path(tempfile.mkdtemp()) / "facts.json"
+        path.write_text(json.dumps(given))
+        return str(path)
+
+    def test_a_fact_is_filled_in_the_catalog_after_a_dry_run(self):
+        home = self.a_probe()
+        given = self.facts({"footprint": "jst_ph_3", "simulation": {"skip": "no soil in a simulator"}})
+        with in_store(home):
+            dry, code = run_json(["--fact-set", "x-soil", given, "--dry-run"])
+            self.assertEqual((code, dry["data"]["written"]), (0, False))
+            self.assertNotIn("footprint", json.loads((home / "catalog" / "x-soil.json").read_text()))
+            _, code = run_json(["--fact-set", "x-soil", given])
+        record = json.loads((home / "catalog" / "x-soil.json").read_text())
+        self.assertEqual((code, record["footprint"], parts.owes(record)), (0, "jst_ph_3", ["pin_order_proof", "body_mm"]))
+
+    def test_spark_s_library_is_refused(self):
+        library = Path(tempfile.mkdtemp()) / "parts"
+        library.mkdir()
+        record = {"schema": 1, "id": "x-amp", "name": "An amp", "kind": "audio-amplifier", "needs": []}
+        (library / "x-amp.json").write_text(json.dumps(record))
+        with in_store(Path(tempfile.mkdtemp())), mock.patch.object(parts, "LIBRARY", library):
+            said, code = run_json(["--fact-set", "x-amp", self.facts({"footprint": "pinrow12"})])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("spark's own library", said["problems"][0]["sentence"])
+        self.assertIn("x-amp is in spark's own library", said["problems"][0]["sentence"])  # F10: text mode prints the sentence alone
+        self.assertEqual(json.loads((library / "x-amp.json").read_text()), record)
+
+    def test_only_a_fact_the_chain_reads_and_never_an_empty_one(self):
+        home = self.a_probe()
+        with in_store(home):
+            for given in ({"price_czk": 89}, {"footprint": None}, {}, ["jst_ph_3"]):
+                with self.subTest(given=given):
+                    self.assertEqual(run_json(["--fact-set", "x-soil", self.facts(given)])[1], 1)
+
+    def test_a_fact_that_breaks_the_record_is_refused(self):
+        home = self.a_probe()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-soil", self.facts({"footprint": "pinrow5"})])
+        self.assertEqual(code, 1)
+        self.assertIn("5 pads", said["problems"][0]["sentence"])
+
+    def test_a_footprint_that_is_no_name_is_refused_and_nothing_is_written(self):
+        home = self.a_probe()
+        before = (home / "catalog" / "x-soil.json").read_text()
+        with in_store(home):
+            for given in (5, True, 3.5, ["jst_ph_3"], {"name": "jst_ph_3"}, 'jst_ph_3" onClick={alert(1)} data-x="'):
+                for flags in ([], ["--dry-run"]):
+                    with self.subTest(footprint=given, flags=flags):
+                        said, code = run_json(["--fact-set", "x-soil", self.facts({"footprint": given})] + flags)
+                        self.assertEqual((said["status"], code), ("problems", 1))
+                        self.assertTrue(said["problems"][0]["sentence"].startswith("footprint is "), said["problems"])
+        self.assertEqual((home / "catalog" / "x-soil.json").read_text(), before)
+
+    def test_a_record_that_is_no_object_is_refused_with_a_sentence_never_a_traceback(self):
+        home = self.a_probe()
+        function = Path(tempfile.mkdtemp()) / "function.json"
+        function.write_text(json.dumps([{"does": "sense", "what": "soil-moisture"}]))
+        for text in ("[]", "5", "null", '"a probe"'):
+            (home / "catalog" / "x-soil.json").write_text(text)
+            for argv in (["--fact-set", "x-soil", self.facts({"footprint": "jst_ph_3"})], ["--function-set", "x-soil", str(function)]):
+                with self.subTest(text=text, op=argv[0]), in_store(home):
+                    said, code = run_json(argv)
+                    self.assertEqual((said["status"], code), ("problems", 1))
+                    self.assertIn("is not a JSON object", said["problems"][0]["sentence"])
+                    self.assertIn("x-soil is not a JSON object", said["problems"][0]["sentence"])  # F10: the path names it too
+            self.assertEqual((home / "catalog" / "x-soil.json").read_text(), text)
+
+    def test_a_shelf_copy_of_a_listed_project_s_record_is_filled_in_that_project_and_shelved_again(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "irrigation"
+        (other / "parts").mkdir(parents=True)
+        record = {"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}
+        (other / "parts" / "x-valve.json").write_text(json.dumps(record))
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-valve.json").write_text(json.dumps(dict(record, based_on={"project": "irrigation", "digest": "0" * 64})))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})])
+        self.assertEqual((code, Path(said["data"]["path"]).resolve()), (0, (other / "parts" / "x-valve.json").resolve()))
+        self.assertEqual(json.loads((other / "parts" / "x-valve.json").read_text())["footprint"], "pinrow2")
+        self.assertEqual(json.loads((home / "shelf" / "x-valve.json").read_text())["footprint"], "pinrow2", "the shelf copy follows")
+
+    def test_a_shelf_copy_whose_project_has_lost_the_record_is_filled_where_it_is(self):
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "irrigation"
+        (other / "parts").mkdir(parents=True)
+        record = {"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-valve.json").write_text(json.dumps(dict(record, based_on={"project": "irrigation", "digest": "0" * 64})))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})])
+        self.assertEqual((code, Path(said["data"]["path"]).resolve()), (0, (home / "shelf" / "x-valve.json").resolve()))
+        self.assertEqual(json.loads((home / "shelf" / "x-valve.json").read_text())["footprint"], "pinrow2")
+        self.assertFalse((other / "parts" / "x-valve.json").exists(), "the project's record is not made up")
+
+    # --- a shelf copy follows its record however the record is reached (the final review) ---
+
+    #: An outline as a record keeps one: the size, and where it came from.
+    OUTLINE = {"width": 20, "height": 10, "verified": True, "source": "measured with calipers"}
+
+    def a_valve_in_irrigation(self, **record):
+        """irrigation's own x-valve record, owing its footprint, and the shelf copy of it every project reads — stale on
+        purpose (a digest nobody computed); the store's list names irrigation."""
+        home, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "irrigation"
+        (other / "parts").mkdir(parents=True)
+        record = dict({"schema": 1, "id": "x-valve", "name": "A valve driver", "kind": "mosfet-driver", "needs": []}, **record)
+        (other / "parts" / "x-valve.json").write_text(json.dumps(record))
+        (home / "shelf").mkdir()
+        (home / "shelf" / "x-valve.json").write_text(json.dumps(dict(record, based_on={"project": "irrigation", "digest": "0" * 64})))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other)}))
+        return home, other
+
+    def text(self, argv):
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            parts.main(argv)
+        return out.getvalue()
+
+    def shelved(self, home):
+        return json.loads((home / "shelf" / "x-valve.json").read_text())
+
+    def test_a_fact_filled_in_its_project_refreshes_the_shelf_copy_that_follows_it(self):
+        home, other = self.a_valve_in_irrigation()
+        record = (other / "parts" / "x-valve.json").resolve()
+        footprint = self.facts({"footprint": "pinrow2"})
+        with in_store(home):
+            outline = self.text(["--fact-set", "x-valve", self.facts({"body_mm": self.OUTLINE}), "--project", str(other)])
+            dry = self.text(["--fact-set", "x-valve", footprint, "--project", str(other), "--dry-run"])
+            self.assertNotIn("footprint", self.shelved(home), "a dry run writes nothing")
+            said, code = run_json(["--fact-set", "x-valve", footprint, "--project", str(other)])
+            again = self.text(["--fact-set", "x-valve", footprint, "--project", str(other)])
+        self.assertEqual((outline.splitlines()[1:], dry.splitlines()[1:]), (["  shelf copy refreshed"], ["  would refresh the shelf copy"]))
+        self.assertEqual((code, said["data"]["shelf_copy"], self.shelved(home)["footprint"], self.shelved(home)["body_mm"]),
+                         (0, "shelf copy refreshed", "pinrow2", self.OUTLINE))
+        self.assertEqual((self.shelved(home)["based_on"]["project"], self.shelved(home)["based_on"]["digest"] == "0" * 64), ("irrigation", False))
+        self.assertEqual(again, "  nothing to change: x-valve (%s) already says this\n" % record, "a copy that follows says nothing more")
+
+    def test_a_retry_with_nothing_to_change_still_refreshes_a_stale_shelf_copy(self):
+        # filled in its project while the copy stayed behind: every retry said "nothing to change", and --requirements refused on
+        for through in ("its project", "the shelf copy"):
+            home, other = self.a_valve_in_irrigation(footprint="pinrow2")
+            with self.subTest(through=through), in_store(home):
+                said = self.text(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"})]
+                                 + (["--project", str(other)] if through == "its project" else []))
+                self.assertEqual((said.splitlines()[0].startswith("  nothing to change: x-valve ("), said.splitlines()[1:]),
+                                 (True, ["  shelf copy refreshed"]))
+                self.assertEqual(self.shelved(home)["footprint"], "pinrow2")
+
+    def test_a_shelf_copy_that_would_break_the_contract_is_not_refreshed_and_says_why(self):
+        home, other = self.a_valve_in_irrigation(needs=[{"signal": "VALVE", "pin": "GATE", "direction": "sideways"}])
+        before = (home / "shelf" / "x-valve.json").read_text()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"}), "--project", str(other)])
+        self.assertEqual((code, said["data"]["shelf_copy"], (home / "shelf" / "x-valve.json").read_text()),
+                         (0, "shelf copy not refreshed: needs[0] direction is 'sideways'; expected in, out or bidirectional", before))
+
+    def test_a_shelf_copy_from_another_project_does_not_follow_this_project_s_record(self):
+        home, other = self.a_valve_in_irrigation()
+        alarm = Path(tempfile.mkdtemp()) / "plant-alarm"
+        (alarm / "parts").mkdir(parents=True)
+        (alarm / "parts" / "x-valve.json").write_text(json.dumps(
+            {"schema": 1, "id": "x-valve", "name": "Our own valve driver", "kind": "mosfet-driver", "needs": []}))
+        (home / "projects.json").write_text(json.dumps({"irrigation": str(other), "plant-alarm": str(alarm)}))
+        before = (home / "shelf" / "x-valve.json").read_text()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-valve", self.facts({"footprint": "pinrow2"}), "--project", str(alarm)])
+        self.assertEqual((code, said["data"]["shelf_copy"], (home / "shelf" / "x-valve.json").read_text()), (0, None, before))
+
+    def test_the_answer_says_what_each_fact_was_and_what_it_is_now(self):
+        home = self.a_probe()
+        with in_store(home):
+            said, _ = run_json(["--fact-set", "x-soil", self.facts({"footprint": "jst_ph_3"}), "--dry-run"])
+        self.assertEqual((said["data"]["part"], said["data"]["was"], said["data"]["now"]),
+                         ("x-soil", {"footprint": None}, {"footprint": "jst_ph_3"}))
+
+
 class OwedIsNotBrokenTest(unittest.TestCase):
     """§5.4: an absent fact is owed — the record waits for it; a present, wrong value is broken."""
 
@@ -1736,6 +2144,14 @@ class OwedIsNotBrokenTest(unittest.TestCase):
     def test_a_present_wrong_value_is_broken(self):
         definition = part(needs=[{"signal": "SIG", "pin": "S", "direction": "sideways"}])
         self.assertTrue(any("sideways" in p for p in parts.broken_problems(definition, written(definition))))
+
+    def test_a_footprint_of_the_wrong_type_is_broken_and_an_absent_one_is_only_owed(self):
+        wrong = part(footprint=5)
+        self.assertNotIn("footprint", parts.owes(wrong))
+        self.assertEqual([p[:14] for p in parts.broken_problems(wrong, written(wrong))], ["footprint is 5"])
+        absent = part(footprint=None)
+        self.assertIn("footprint", parts.owes(absent))
+        self.assertEqual(parts.broken_problems(absent, written(absent)), [])
 
     def test_a_problem_that_merely_names_an_owed_key_is_still_broken(self):
         placeholder = part(footprint=None, footprint_placeholder=True)
@@ -1806,6 +2222,28 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         with in_store(home), contextlib.redirect_stdout(out):
             parts.main(["--audit", "--project", str(project)])
         self.assertIn("--function-set <part> <file> --project %s: x-local" % project.resolve(), out.getvalue())
+
+    def test_audit_calls_a_record_whose_id_is_no_plain_key_broken(self):
+        # P87's attribute half: a record whose file is named with a quote is found by every walk of the store
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (home / "catalog" / 'x"y.json').write_text(json.dumps(dict(led, id='x"y')))
+        with in_store(home):
+            said, _ = run_json(["--audit"])
+        broken = {row["id"]: row["problems"] for row in said["data"]["broken"]}
+        self.assertTrue(broken.get('x"y', [""])[0].startswith("id is 'x\"y', but an id is a plain key"), said["data"]["broken"])
+
+    def test_audit_says_a_board_whose_file_has_no_header_geometry_stops_at_the_footprint(self):
+        # C-7 (the council on PR #98): the XIAO was counted current, and the chain stops at its footprint stage all the same
+        out = io.StringIO()
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--audit"])
+            with contextlib.redirect_stdout(out):
+                parts.main(["--audit"])
+        self.assertEqual((code, said["data"]["stops_at_footprint"]), (0, [{"id": "xiao-esp32-c6", "layer": "library"}]))
+        self.assertIn("  xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file\n",
+                      out.getvalue())
 
     def test_audit_names_a_drawer_link_to_a_record_nobody_has(self):
         home = Path(tempfile.mkdtemp())

@@ -28,7 +28,11 @@ a rule checklist in the loop. Follow it.
    confirm which exact board it is** (`boards.py --list`; a Seeed XIAO and a DFRobot FireBeetle
    differ, and one DFRobot SKU is two power designs — see the board file's `hardware_revisions`).
 
-3. **Write the requirements file and run the chain.** The requirements file *is* the design:
+3. **Write the requirements file and run the chain.** The requirements file *is* the design. It may already exist:
+   `/spark:idea` writes one from the parts the person picked for their needs (`parts.py --requirements`), and running
+   that again keeps what was written by hand — the parts, a `name`, `rails` and `signals` — while the board follows the
+   pick (`/spark:idea`'s page, step L). When the person's drawer should decide the parts, hand over to `/spark:idea`.
+   When they name the parts, write the file by hand:
 
    ```json
    {

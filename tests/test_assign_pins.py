@@ -511,6 +511,27 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         self.assertIn("Test Board", text)
         self.assertIn("do not edit", text.lower())
 
+    def test_a_line_break_in_the_board_s_words_never_leaves_the_comment(self):
+        # concern 1 (P87's line-comment half): the board's name, a role's note, a pad's alias and the source file's name are
+        # written into `#` comments, and a line break in one ended the comment — and the firmware imports this file
+        import contextlib
+        import io
+        probe = '\nprint("PINMAP-INJECTED") #'
+        assignments, _ = assign_pins.assign(board(), self.SIGNALS)
+        role = next(e for e in assignments if e["roles"])["roles"][0]
+        roles = dict(board()["pin_roles"], **{role: dict(board()["pin_roles"][role], note="its note" + probe)})
+        places = {"the board's name": (board(name="Test Board" + probe), "r.json"),
+                  "a role's note": (board(pin_roles=roles), "r.json"),
+                  "a pad's alias": (board(physical={"pad_aliases": {assignments[0]["pin"]: "SILK" + probe}}), "r.json"),
+                  "the source's name": (board(), "r" + probe + ".json")}
+        for where, (crafted, source) in places.items():
+            with self.subTest(where=where):
+                text, out = assign_pins.pin_module(crafted, assignments, source), io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    exec(text, {})
+                self.assertEqual(out.getvalue(), "", "a comment's words were run")
+                self.assertIn('print("PINMAP-INJECTED")', text, "kept, on the comment's own line")
+
     def test_a_signal_name_python_cannot_spell_is_refused_not_mangled(self):
         assignments, _ = assign_pins.assign(board(), [{"name": "2ND-LED", "needs": []}])
         with self.assertRaises(assign_pins.Impossible):

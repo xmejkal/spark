@@ -4,7 +4,7 @@ spark is three things:
 
 - a set of Python scripts;
 - a library of facts about boards and parts, each a
-  [record](../../GLOSSARY.md#record--and-the-three-places-one-lives);
+  [record](../../GLOSSARY.md#record--and-the-four-places-one-lives);
 - pages that tell Claude when to run which script.
 
 The [commands](commands.md) and skills are those pages. The scripts do the work, and each one runs on its own. This
@@ -34,7 +34,7 @@ In words:
 | board | the dev board's definition, resolved and checked against its contract ([`boards.py`](../../scripts/boards.py)) |
 | parts | each part's record from the library ([`parts.py`](../../scripts/parts.py)); reported only when it stops there |
 | schematic | `board.tsx` is written ([`emit_board.py`](../../scripts/emit_board.py)), with the pin map made inside it: every signal gets a pin with a reason ([`assign_pins.py`](../../scripts/assign_pins.py)) |
-| schematic-notes | reported only when the generator printed a note: a pin no part claims, an output nothing receives, a rail nothing sources, or a rail two supplies drive. It counts as a problem, so the run exits 1 even when the board builds |
+| schematic-notes | reported only when the generator printed a note: a pin no part claims, an output nothing receives, a rail nothing sources, one side of a driven pair (a speaker terminal's) that nothing drives, or a rail two supplies drive. It counts as a problem, so the run exits 1 even when the board builds |
 | footprint | the dev board's footprint is made from its board definition ([`emit_footprint.py`](../../scripts/emit_footprint.py)) |
 | build | tscircuit builds it, and copper is counted: a build with no copper is not a pass |
 | simulation | the Wokwi diagram and chips are generated ([`sim_project.py`](../../scripts/sim_project.py) and the converter in [`tools/circuit-to-wokwi/`](../../tools/circuit-to-wokwi/)), and kept only with `--sim-dir`. No simulation runs |
@@ -49,12 +49,12 @@ The files that join the steps:
 
 | file | written by | read by |
 | --- | --- | --- |
-| `requirements.json` | you, or the `spark-design` skill with you | the chain, `assign_pins.py`, and `check_all.py` for buildability and physics |
+| `requirements.json` | you, `parts.py --requirements` from your picks, or the `spark-design` skill with you | the chain, `assign_pins.py`, and `check_all.py` for buildability and physics |
 | `board.tsx`, and the dev board's footprint beside it | the schematic and footprint stages, kept with `--keep .` | tscircuit |
 | `dist/board/circuit.json`, the built netlist | tscircuit's build | every check, `init_project.py` (to name the rails), and the Wokwi converter |
 | `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--sim-dir sim` | `wokwi-cli`, and Wokwi for VS Code |
 | `.spark/rules.json` | `init_project.py`, then you | the checks, and the generator, which sizes a rail's traces from its `max_current_a` |
-| `.spark/needs.json` | `parts.py --needs-set` | `parts.py --match` |
+| `.spark/needs.json` | `parts.py --needs-set`, and `--pick` for a need's pick | `parts.py --match` |
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
 | `firmware/pins.py` | `assign_pins.py --emit-pins` | your firmware |
 
@@ -116,13 +116,14 @@ Each by its name in check_all's answer:
   definition to facts, never decisions.
 - `parts.py`: what a part asks of the board it plugs into, and what is actually known about it. Every fact carries a
   value, a source and whether anyone checked; `--unverified` lists what nobody has. It also keeps the drawer and the
-  needs.
+  needs, writes the picks and the requirements file from them, and marks a project's steps and tallies what they cost
+  (`--step`, `--tally`; `cost.py` below does the counting).
 - `init_project.py`: everything a project needs before any check can run, with nothing guessed.
 - `tools.py`: the tools spark depends on, found from one merged list. It is what `/spark:setup` runs.
 
 ### The libraries
 
-Imported by the scripts above, and not run on their own:
+Imported by the scripts above, and not run on their own, except `cost.py`:
 
 - `design.py`: a design, loaded once: the requirements file, its project, the board, the parts and the rules;
 - `netlist.py`: the built design, as connectivity;
@@ -132,6 +133,9 @@ Imported by the scripts above, and not run on their own:
 - `store.py`: where spark keeps what it keeps;
 - `drawer.py`: what you own;
 - `needs.py`: what a goal needs, and what the store offers for each;
+- `cost.py`: what a project's run cost, read from the Claude Code transcripts of the sessions its steps ran in, tool
+  names and counts only. `parts.py --step` and `--tally` use it. On one transcript it runs on its own:
+  `cost.py <transcript.jsonl>` says what that run cost;
 - `sim_project.py`: the simulation project a design implies, written by `check_spine.py`'s simulation stage.
 
 ## The data
@@ -158,14 +162,20 @@ spark's own scripts:
    `header_order`, `width_mm`, `height_mm`), and the footprint is made from it unchanged, so measure it again from the
    vendor's drawing.
 2. **`boards.py --validate --project .`** checks every board definition against the contract: facts, never decisions.
+   The `id` matches the file name and is a plain key: lower-case letters, digits and `-`. The `pins` keys, the
+   `power_pads` keys and their rails, and `physical.footprint_export` are names — letters, digits and `_` — because the
+   board is written with them as code, and `physical.header.drill_mm` is a number. Anything else is refused, as
+   `pins key 'D 3' is not a name — letters, digits and _ (D3, SDA, A0): the board is written with it as code`.
 3. **`emit_footprint.py --board <id> --project .`** makes the footprint, or names each field it still needs. With no
    header geometry at all, it names only `physical.header`.
 4. **`check_vendor_pins.py boards/<id>.json`** compares the pin map with the vendor's header that
    `vendor.arduino_variant` names, fetched through the GitHub CLI `gh`.
 5. **Name the id as `board`** in the requirements file. The chain takes the project's definition before the library's.
 
-No check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has none
-([P121](https://github.com/xmejkal/spark/issues/55)). Nothing compares copied geometry with the new board either.
+No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has
+none ([P121](https://github.com/xmejkal/spark/issues/55)); `boards.py --list`, `init_project.py --board`, and
+`parts.py --audit`, `--match`, `--pick` and `--requirements` say such a board stops at the footprint stage. Nothing
+compares copied geometry with the new board either.
 
 ## Your store
 
@@ -175,8 +185,17 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
 - the documents research kept;
 - the catalog of parts research read and did not choose;
 - your drawer;
-- your shelf: the records a drawer entry linked from another of your projects, which every project then finds (a
-  shelf for every part you choose is [P91](https://github.com/xmejkal/spark/issues/22));
+- your shelf: records that every project then finds. One gets there when a drawer entry links a record from another of
+  your projects, or when `parts.py --requirements` writes a file for a pick that came from the catalog or from another
+  of your projects (a shelf for every part you choose is [P91](https://github.com/xmejkal/spark/issues/22));
+- your history, `history.jsonl`: one line for each event, appended, and private to you (0600 files in 0700 folders,
+  refused inside a git work tree). The events are `step` (a project's step started, with the Claude Code session it
+  ran in), `reused` (a pick taken from the library, your store or another project), `passed_over` (a part you passed
+  over, with your reason) and `built` (a board that built end to end, with a digest of some of the facts the build read
+  from the board and from each part: their pins, power and footprint, and each part's host parts; not a part's size or
+  simulation stand-in, nor the board's pin roles). It keeps ids, project names, your reasons, and session ids; URLs and
+  prices in their usual forms are taken out of a reason. `parts.py --tally` reads the Claude Code transcripts of those
+  sessions (`~/.claude/projects`, tool names and counts only) for the cost line;
 - the list of your projects;
 - your tools list;
 - the tools `/spark:setup` downloads (`downloads/`);

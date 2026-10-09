@@ -148,10 +148,13 @@ for two sprints, enforced by nothing.
 
 ### The budget
 
-`scripts/` must stay under a stated ceiling of **code** lines — docstrings, comments and blanks do
-not count, because in this repository the prose is the product. When it pinches the order is
-fixed: **refactor, then delete, then raise with a reason** (W15b). Raising it is allowed; raising
-it silently is not.
+The size of `scripts/`, counted in **code** lines — docstrings, comments and blanks do not count,
+because in this repository the prose is the product. It is a number, not a cap (W15b, P99; the PO,
+2026-10-04). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
+item, each time to whatever had been measured, and it prompted one refactor of two lines. Now the
+pre-push gate prints the size with its growth since `origin/main` (`scripts/: N code lines (+M since
+origin/main)`), and an item's Done line says how many lines it added and why. When an item grows a
+lot, the first question is whether the same behaviour fits in less code: **refactor before growing**.
 
 ### Orphan
 
@@ -168,11 +171,16 @@ built because it would be nice. `tools/check_backlog.py` fails a push on an open
 
 ## Parts and records
 
-### Record — and the three places one lives
+### Record — and the four places one lives
 
-A part or board is a JSON file of facts with sources. The same name can live in three places and
-the nearest wins: the **project's** own `parts/`, then the plugin's **library**, then the
-**catalog**.
+A part or board is a JSON file of facts with sources. A part's record can live in four places and
+the nearest wins: the **project's** own `parts/`, then the **shelf**, then the plugin's **library**,
+then the **catalog**, which is read only when drafts are asked for. A board's record has two places:
+the project's own `boards/`, then the library (`layers` in `scripts/store.py`).
+Its `id` is its file's name and a plain key — lower-case letters, digits and `-`, like `led-red-5mm`; `--skeleton`
+writes no record under another. A part's rails and signals, and a board's pin labels, pad names, their rails and its
+footprint export, are names — letters, digits and `_` — because the board, the pin map and the firmware are written
+with them; `parts.py --validate` and `boards.py --validate` refuse anything else.
 
 ### The catalog
 
@@ -180,6 +188,16 @@ Everything research has ever read, chosen or not — a record per candidate, its
 photo kept in the person's own store (`~/.local/share/spark/sources`, never in the plugin) and
 pointed at from the record's `documents`, because links rot. Passing a part over does not throw the work away;
 the record stays and names itself as an alternative.
+
+### The shelf
+
+Parts you chose before, copied from wherever they lived so that every project finds them: a `shelf/`
+folder in [your store](#the-store), read after the project's own `parts/` and before the library.
+A record gets there when a drawer entry links a record that lives only in another of your projects,
+and when `parts.py --requirements` writes a file for a pick from the catalog or from another project.
+It leaves behind on the way what is one person's story of the part — `owned`, `photo`, `photos`,
+`sourcing` and `alternatives` (`SHELF_DROPS` in `scripts/parts.py`) — and, when it came from a
+project, says which one and the record's digest (`based_on`). Parts only; a board has no shelf.
 
 ### `verified`
 
@@ -202,6 +220,74 @@ a pull-down here, a pull-up there, with resistance and reason — and the genera
 them. `host_requirements` is the prose half, printed under the board for a human. The split
 matters: it is how the tool knows an I2C bus is *this* board's to pull up rather than one the
 module already handles itself.
+
+### Owed, and broken
+
+The two ways a record falls short, counted for each place by `parts.py --audit`. A record is **owed**
+when it lacks a key every record needs or a fact the chain reads — `footprint`, `pin_order`,
+`pin_order_proof`, `body_mm` or `simulation` (null, empty, or for `body_mm` without a numeric width
+and height). It is **broken** when a value is present and wrong. A record grows when a stage needs a
+fact, not before (W21), so owing is normal for a part nobody has built with yet. What it stops: a pick
+that owes anything but `body_mm` stops `parts.py --requirements`, which names where to fill it
+(`--fact-set` in the record's own home; spark's library is changed in spark's repository); a pick that
+owes only `body_mm` is written with a placeholder-outline warning.
+
+---
+
+## What you own, and what a project picks
+
+### The store
+
+Everything spark keeps for you, in one folder outside every repository: `SPARK_HOME`, else
+`XDG_DATA_HOME/spark`, else `~/.local/share/spark` ([what is in it](docs/guide/how-it-works.md#your-store)).
+**The failure behind the one place:** its path was spelled out in two scripts and read once at import,
+so the tests kept away from the real store only by patching sixteen constants by hand, and a test that
+forgot one would have written into the person's store (P88). Now it is read on every call, and a
+process running the tests gets a scratch one.
+
+### The drawer
+
+What you own: one small file per item in the store's `drawer/` folder, and a label is enough. It is an
+index, not a place records are read from. An entry points at a record (`is`) when spark knows the part
+by an exact part number, or when you say which record it is — a near number, two matches or a name
+alone is a question for you, never a link — and at nothing otherwise. Owning never triggers research,
+and every write sets a value the agent worked out and the dry run showed, so a retried write changes
+nothing (`scripts/drawer.py`).
+A record carries no `owned` and no `photo`: owning one is your fact, not the part's, and the contract
+check refuses a record that holds either (`RETIRED` in `scripts/parts.py`).
+
+### Pick, and reserve
+
+A **pick** is the part, board or drawer entry a project chose for a need, written to its
+`.spark/needs.json` and set only by `parts.py --pick`. To **reserve** is to mark how many of an owned
+item the project uses (`used_in` on its drawer entry). Every `--pick` works the project's reservations
+out again from all its picks, one piece for each, so a re-pick frees what it no longer picks, and it
+never reserves past what you own or what another project holds, which it names. A pick you do not own
+is "to get"; a pick that is a drawer entry with no record (a speaker, a battery) is reserved and not
+placed on the board.
+
+### History
+
+`history.jsonl` in your store: one line for each event, appended and never shared, and an event whose
+key is already there is not written again. The events are `step` (a project's step started, with the
+Claude Code session it ran in), `reused` (a pick taken from your store, spark's library or another
+project — not one from the project's own `parts/` or `boards/`), `passed_over` (a part you passed over,
+with your reason, URLs and prices in their usual forms taken out) and `built` (a board of a project
+on your list that built end to end, with a digest of some of the facts the build read: each part's
+needs, power, unused pins, pin order, footprint and host parts, and the board's pins, power pads and
+`physical`. A part's size, simulation stand-in and other facts, and the board's pin roles and GPIO
+capabilities, are not in it, so changing them leaves the digest as it was). It is there so that a
+project shows what it cost and what came from reuse ([the tally](#tally)).
+
+### Tally
+
+`parts.py --tally <project>`: the cost line at the end of a project's run. How many picks, how many
+came **from the store** (known to spark before the project — its library, your store, your projects;
+that is not "owned", which is counted beside it), and the requests, documents and minutes the steps
+cost, read from the Claude Code transcripts of the sessions they ran in, tool names and counts only.
+**The failure behind it:** `cost.py`, given a transcript that named no time at all, once printed
+`minutes 0` and exited 0 (fixed in f6a8e4d). The tally never turns what it could not read into a 0:
+with no transcript of a step's session it says the cost was not counted, and exits 2.
 
 ---
 
@@ -255,5 +341,5 @@ with its need named. This is not ceremony: the v1 close audit made 33 claims and
 ### The requirements file
 
 The input to the whole chain: a board, a list of parts, and what the design has to do. Everything
-downstream is derived from it, which is why `spark init` guesses nothing — a guessed number would
+downstream is derived from it, which is why `/spark:init` guesses nothing — a guessed number would
 poison the one check that does arithmetic.

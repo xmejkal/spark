@@ -107,8 +107,12 @@ class ChipsAreStagedAndCompiledTest(unittest.TestCase):
         self.assertNotEqual((root / "sim2" / "chips" / "probe.chip.wasm").read_bytes(), b"old", "a stale binary is recompiled")
 
     def test_no_compiler_is_could_not_run_with_the_install_hint(self):
+        # Both halves patched: with only find_wokwi_cli, simulator_problem asked the machine's own tools list, so this
+        # passed where wokwi-cli is installed and failed under a scratch HOME (the re-check). The list's sentence has
+        # its own test below (test_no_wokwi_cli_is_none_with_the_reason_kept).
         root, chip = a_project()
-        with mock.patch.object(sim_project, "find_wokwi_cli", return_value=None):
+        with mock.patch.object(sim_project, "find_wokwi_cli", return_value=None), \
+                mock.patch.object(sim_project, "simulator_problem", return_value=None):
             staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim")
         self.assertEqual(staged, {})
         self.assertIn("wokwi-cli was not found", problems[0])
@@ -126,6 +130,25 @@ class TheProjectFileTest(unittest.TestCase):
         self.assertIn('firmware = "flash-with-firmware.bin"', toml)
         self.assertIn('name = "probe"', toml)
         self.assertIn('binary = "chips/flow-meter.chip.wasm"', toml)
+
+    def test_a_quote_or_a_line_break_in_the_firmware_cannot_change_the_file(self):
+        # the person's own --firmware, written as a TOML string: escaped, so it stays one value on one line
+        crafted = 'x.bin"\n[[chip]]\nname = "evil'
+        toml = sim_project.wokwi_toml([], firmware=crafted)
+        self.assertIn("firmware = %s\nelf = %s\n" % (json.dumps(crafted), json.dumps(crafted)), toml)
+        self.assertNotIn("\n[[chip]]", toml)
+
+    def test_a_chip_s_name_is_written_as_one_string(self):
+        crafted = 'probe"\n[[chip]]\nname = "evil'
+        toml = sim_project.wokwi_toml([crafted])
+        self.assertIn("\nname = %s\n" % json.dumps(crafted), toml)
+        self.assertEqual(toml.count("\n[[chip]]"), 1)
+
+    def test_a_chip_s_binary_is_written_as_one_string(self):
+        crafted = 'probe"\nfirmware = "evil'
+        toml = sim_project.wokwi_toml([crafted])
+        self.assertIn("\nbinary = %s\n" % json.dumps("chips/%s.chip.wasm" % crafted), toml)
+        self.assertEqual([line for line in toml.splitlines() if line.startswith("firmware")], [])
 
     def test_without_a_firmware_it_says_none_was_named(self):
         toml = sim_project.wokwi_toml([])

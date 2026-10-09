@@ -9,13 +9,13 @@ log proves. **An open backlog item sits on one slice below, or it is parked or d
 
 | # | step | spark today | gap |
 | --- | --- | --- | --- |
-| 0 | **Shape the idea** — a conversation: what it must do, which *kinds* of module do it, what else it could do; a block diagram with no part numbers yet | nothing: `/spark:build` starts from a requirements file | **all of it** (P76) |
-| 1 | Install, start a project | README; `/spark:init` (`init_project.py`) | public since 2026-10-03; `/spark:setup` installs what is missing with one yes (P82), and the simulation needs only Node (B10) |
-| 2 | Know what you own | `/spark:identify` (a module from a photo) | never pointed at the bin's drawer (B1) |
-| 3 | Choose parts | `/spark:research`, `parts.py --need/--kept`, the catalog | `--need measure distance` misses the rangefinder (P39) |
+| 0 | **Shape the idea** — a conversation: what it must do, which *kinds* of module do it, what else it could do; a block diagram with no part numbers yet | `/spark:idea` (S): a goal in words becomes needs — a verb and a few words each, no part numbers, at most three questions, one at a time — written to the project's `.spark/needs.json` | brainstorming what else it could do and which *kinds* of module; a block diagram; the ways in beyond goal first (P76) |
+| 1 | Install, start a project | README; `/spark:init` (`init_project.py`) | public since 2026-10-03; `/spark:setup` installs what is missing in one go after the person's yes (P82), and the simulation needs only Node (B10) |
+| 2 | Know what you own | `/spark:drawer` (your drawer, in your store: what you say in plain words and what your DFRobot orders held, linked to the record spark has for the part by its exact part number), `/spark:identify` (a module from a photo) | DFRobot's is the only order importer; AliExpress orders come later (the store spec, §7) |
+| 3 | Choose parts | `/spark:idea`: M matches each need against your drawer and spark's records, store first (`parts.py --match`); C picks a part per need, reserves what you own and refuses a pick another project holds, naming it (`--pick`); L writes the picks as `requirements.json`; T ends with one cost line (`--tally`). `/spark:research` for a gap, `parts.py --need/--kept`, the catalog | `--need measure distance` misses the rangefinder (P39) |
 | 4 | Assign pins | `assign_pins.py`, `--emit-pins` | — |
 | 5 | Generate, build | `emit_board.py`, `check_spine.py` | no capacitors (P38) |
-| 6 | Check, review | `check_all.py` (5 checks), `/spark:review` | the agent loses `fix` (P43) |
+| 6 | Check, review | `check_all.py` (5 checks), the `spark-review` skill | the agent loses `fix` (P43) |
 | 7 | See it | `tsci dev`, Wokwi for VS Code (P65, P67) | — |
 | 8 | Simulate | `check_spine` → Wokwi (paid minutes) | — |
 | 9 | Firmware | `pins.py` only | nothing tests firmware against the board (P59, P74) |
@@ -31,15 +31,15 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
 | **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71, P44, P75, B10, P82 (done); **P104** (#33), the README |
-| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | *not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5), **P100** (#6) |
+| **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | goal first runs today: `/spark:drawer`, then `/spark:idea` from a goal in words to a requirements file that `/spark:build` turns into a board (store 1a–1c, done 2026-10-04 to 2026-10-08). *Not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5) — the brainstorm, the block diagram and the ways in beyond goal first; **P100** (#6) — a new idea and an existing project, each walked through with the person |
 | **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | P81 (done), **B1** (bin #1), **P58** (bin #5), **P73** (bin #2), **B8** (bin #3), **B5** (bin #4), B11 (done) |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59** (#7), **P74** (#8) |
-| **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; no `!!`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
+| **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; `check_all` shows no `[FAIL]`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6** (#15), then F3 and F4 as they pull |
 | **7** | **Breadboard or wires → perfboard → PCB** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard; a soldered perfboard build as an optional step; a PCB offered only after | **P79** (#16) |
 | **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
 | **9** | **An enclosure** | hobbyist | *not designed yet* — the overview: 3D export, Fusion 360, printed parts | pulled by the first design that wants one |
-| **10** | **The store, sound — then shared** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | P85 (done); **P94** (#17) (the design); then store 1a P95 (done 2026-10-04 — my drawer, with P88 (done), **P91** (#22)'s shelf, **P92** (#23)'s envelope, P93 (done)'s first importers), 1b P96 (done 2026-10-05 — a goal matched — with **P89** (#20)), 1c **P97** (#18) (picks to a building list — with **P90** (#21)); **P87** (#19) before any shared record; then P84 (parked) (pulled by the first outside researcher), P86 (parked) |
+| **10** | **The store, sound — then shared** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | P85 (done); **P94** (#17) (the design); then store 1a P95 (done 2026-10-04 — my drawer, with P88 (done), **P91** (#22)'s shelf, **P92** (#23)'s envelope, P93 (done)'s first importers), 1b P96 (done 2026-10-05 — a goal matched — with **P89** (#20)), 1c P97 (done 2026-10-08 — picks to a building list, tallied); **P90** (#21) and **P89** (#20) stay their own items; **P87** (#19) before any shared record; then P84 (parked) (pulled by the first outside researcher), P86 (parked) |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b** (bin #6), P64b (parked), P64c (parked), B12 (done) |
 
 **The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
@@ -66,8 +66,8 @@ P102b to draw.
 | 2.4 | the firmware gate · run 200 times under load · no failure, or a named one | the runs, kept whole | **partly** — one failure named in 60 |
 | 3.1 | irrigation's firmware · imported with a fake `machine` · it does not start running | an import | **no** — `main()` runs at import |
 | 3.2 | requirements that ask for Valve4 and a mode button · the firmware is checked against `pins.py` · both reported | P74's check | **no** — no such check |
-| 4.1 | an empty directory and the documented example · init → `check_spine` → `check_all` · exit 0, no `!!` | the commands | **yes, by record** (P51, P57) |
-| 4.2 | irrigation · `check_all` · no `!!`; each `????` names what to state | the command | **yes** |
+| 4.1 | an empty directory and the documented example · init → `check_spine` → `check_all` · exit 0, no `[FAIL]` | the commands | **yes, by record** (P51, P57) |
+| 4.2 | irrigation · `check_all` · no `[FAIL]`; each `????` names what to state | the command | **yes** |
 | 4.3 | "something to measure distance" · `parts.py --need` · the rangefinder | the command | **no** (P39) |
 | 4.4 | a record with `verified: true` and only a prose source · `--validate` · refused | the command | **no** (P64a) |
 | 5.1 | a domain the PO picks · a real outsider follows the docs · a checked board and running firmware; scored by someone else | the diary | **no** |

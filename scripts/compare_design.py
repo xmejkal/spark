@@ -253,7 +253,7 @@ def compare(circuit_path, rules_path):
         # implement it, and nothing comparing the two". Comparing nothing is not agreement.
         return could_not_run(
             "the rules file states no rule to compare: i2c_buses and must_not_float are both "
-            "empty, which is what `spark init` writes and where they have stayed",
+            "empty, which is what `/spark:init` writes and where they have stayed",
             design=circuit_path.name, checked=0,
             fix="name the I2C lines and the pins that must never float — a netlist records "
                 "neither, which is why this file exists")

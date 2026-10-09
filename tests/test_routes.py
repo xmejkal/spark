@@ -10,13 +10,19 @@ and it reads only the text that a user is routed by.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
+import io
+import json
 import re
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+
+import parts  # noqa: E402
 
 #: The chain, in order. A document that routes to the chain names every link.
 CHAIN = ("parts.py", "assign_pins.py", "emit_board.py", "emit_footprint.py", "check_spine.py")
@@ -271,6 +277,102 @@ class TextIsDataTest(unittest.TestCase):
         allowed = re.search(r"allowed-tools:(.*)", front).group(1)
         self.assertNotIn("chrome", allowed.lower())
         self.assertNotIn("WebFetch", allowed)
+
+
+class TheNetworkIsThePersonsYesTest(unittest.TestCase):
+    """
+    §6.4.5, C-5 (the council on PR #98): spark's network operations are left out of every command's and skill's
+    `allowed-tools`, so Claude Code's permission prompt is the person's yes. Five commands and a skill pre-approved
+    `parts.py *`, which covers `--fetch` and `--sources`, and the test that was to pin the rule read two other strings.
+
+    ASSUMPTION, documented — Claude Code's matcher cannot be run here: `Bash(<text>)` pre-approves a command line the text
+    matches whole, each `*` standing for any run of characters, and a trailing `:*` the same as ` *`. Were the harness to
+    match more widely, this test would prove less than it says. A line that names a network operation after an allowed one
+    is refused by the script's own parser before anything runs: that is tested below, not assumed.
+    """
+
+    PARTS = "${CLAUDE_PLUGIN_ROOT}/scripts/parts.py"
+    TOOLS = "${CLAUDE_PLUGIN_ROOT}/scripts/tools.py"
+    #: tools.py has no `--describe`: its operations that download, read off its own code (`--on` installs what it turns on).
+    TOOLS_NETWORK = ("--install", "--on")
+
+    @staticmethod
+    def allowed():
+        """(page, pattern) for every Bash pattern a command or a skill pre-approves in its frontmatter."""
+        for page in sorted((ROOT / "commands").glob("*.md")) + sorted((ROOT / "skills").glob("*/SKILL.md")):
+            text = page.read_text()
+            front = text.split("---")[1] if text.startswith("---") else ""
+            for line in front.splitlines():
+                if line.startswith("allowed-tools:"):
+                    for pattern in re.findall(r"Bash\(([^)]*)\)", line):
+                        yield str(page.relative_to(ROOT)), pattern
+
+    @staticmethod
+    def pre_approves(pattern, command):
+        """The documented assumption: the whole command line matches the pattern, each `*` any run of characters."""
+        pattern = pattern[:-2] + " *" if pattern.endswith(":*") else pattern
+        return re.fullmatch(".*".join(re.escape(part) for part in pattern.split("*")), command, re.DOTALL) is not None
+
+    @staticmethod
+    def described():
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--describe", "--json"])
+        return json.loads(out.getvalue())["data"]
+
+    def network_lines(self):
+        """Command lines whose operation reaches the network: each network row of --describe — alone, with an argument, after
+        each option, with or without a value — and tools.py's downloads."""
+        described = self.described()
+        network = [op["flag"] for op in described["operations"] if "network" in op["effects"]]
+        options = [option["flag"] for option in described["options"]]
+        lines = []
+        for flag in network:
+            lines += ["%s %s" % (self.PARTS, flag), "%s %s x-part" % (self.PARTS, flag), "%s %s x-part --project ." % (self.PARTS, flag)]
+            lines += ["%s %s %s x-part" % (self.PARTS, option, flag) for option in options]
+            lines += ["%s %s . %s x-part" % (self.PARTS, option, flag) for option in options]
+        for flag in self.TOOLS_NETWORK:
+            lines += ["%s %s x-tool" % (self.TOOLS, flag), "%s --project . %s x-tool" % (self.TOOLS, flag)]
+        return network, lines
+
+    def test_the_model_of_the_matcher(self):
+        self.assertTrue(self.pre_approves("a.py *", "a.py --fetch x"))
+        self.assertTrue(self.pre_approves("a.py:*", "a.py --fetch x"))
+        self.assertTrue(self.pre_approves("a.py --pick *", "a.py --pick p a=b --dry-run"))
+        self.assertFalse(self.pre_approves("a.py --pick *", "a.py --json --pick p a=b"))
+        self.assertFalse(self.pre_approves("a.py --drawer", "a.py --drawer-set x"))
+
+    def test_describe_names_the_network_operations_this_test_guards(self):
+        self.assertEqual(sorted(self.network_lines()[0]), ["--fetch", "--sources"])
+
+    def test_no_command_or_skill_pre_approves_a_network_operation(self):
+        _, lines = self.network_lines()
+        allowed = list(self.allowed())
+        self.assertTrue(allowed, "no allowed-tools read at all: the test would pass on nothing")
+        self.assertEqual(sorted({(page, pattern, line) for page, pattern in allowed for line in lines
+                                 if self.pre_approves(pattern, line)}), [])
+
+    def test_each_parts_py_pattern_names_one_operation_that_stays_on_the_machine(self):
+        local = {op["flag"] for op in self.described()["operations"] if "network" not in op["effects"]}
+        patterns = [(page, pattern) for page, pattern in self.allowed() if pattern.startswith(self.PARTS)]
+        self.assertTrue(patterns)
+        for page, pattern in patterns:
+            with self.subTest(page=page, pattern=pattern):
+                words = pattern[len(self.PARTS):].split()
+                self.assertIn(words[0] if words else None, local, "never parts.py *: one operation per pattern")
+                self.assertIn(words[1:], ([], ["*"]))
+
+    def test_a_line_naming_a_network_operation_after_an_allowed_one_runs_neither(self):
+        import store
+        import tools
+        out = io.StringIO()
+        with mock.patch.object(store, "fetch", side_effect=AssertionError("the network was reached")), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = parts.main(["--pick", "p", "a=b", "--fetch", "x-part", "--json"])
+        self.assertEqual((code, json.loads(out.getvalue())["status"]), (2, "could-not-run"))
+        with mock.patch.object(tools, "install", side_effect=AssertionError("an install ran")), \
+                contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            tools.main(["--status", "--install", "x-tool"])
 
 
 if __name__ == "__main__":

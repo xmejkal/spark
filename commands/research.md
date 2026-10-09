@@ -1,6 +1,6 @@
 ---
 description: Research a part or module the library lacks — reuse first, then find the exact part, then read only the datasheet pages a decision needs — and write it down as a record with every fact cited, so the chain can use it and the next project finds it.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --keep *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --read *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --promote *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog *)
 ---
 
 # spark:research
@@ -43,9 +43,19 @@ completely. Two small agents, in turn:
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton <id> --kind <kind> --vendor <maker> --project .
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fetch <id> --project .        # or --keep <file> --url <url>
    ```
+   The id is a plain key — lower-case letters, digits and `-`, like `led-red-5mm` — because files are named by it and
+   the board names the part after it in code. `--skeleton` refuses any other, dry run or not, and writes nothing:
+   `id is 'my_sensor', but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by it,
+   and the board names the part after it in code`.
+   `--fetch` downloads the datasheet, so it reaches the network. No command's `allowed-tools` lets it run unasked, so
+   Claude Code asks before it does (unless the person's own settings already let it run: an allow rule of theirs, or
+   auto mode): the person's answer there is the yes. `--keep` puts a file you already have into the store and does not
+   reach the network.
 3. Launch **`datasheet-reader`** with the record's path, the kept datasheet and the facts for its
    kind (below). It reads with `parts.py --read`, page by page, stopping where the facts are.
    A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then launching the reader again (`/spark:setup` does the same for everything at once).
+   `--install` downloads, so no command's `allowed-tools` lists it: Claude Code asks before it runs (unless the person's
+   own settings already let it run: an allow rule of theirs, or auto mode), and the person's answer there is the yes.
 
 **A module, or a part identified from a photo** (`/spark:identify`) — variants, a chip inside, a
 schematic to read: launch **`parts-researcher`** with the need, the vendor order (the brief's `prefer`,
@@ -75,8 +85,16 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --sources <id> --project .      # every c
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified <id> --project .   # what nobody has checked
 ```
 
+`--sources` asks every cited URL whether it answers, so it reaches the network: no command's `allowed-tools` lets it run
+unasked, and Claude Code asks before it does (unless the person's own settings already let it run: an allow rule of
+theirs, or auto mode). `--validate` and `--unverified` stay on the machine.
+
 The contract refuses a pin order without its proof and a citation of a document the record does not
-hold. `--unverified` is the list to hand a person: each item, and what depends on it.
+hold. It also refuses an id that is no plain key, and a rail (`power[].rail`) or a signal (`needs[].signal`) that is no
+name — letters, digits and `_` — since the board is written with a rail as code, and the pin map, the board and the
+firmware name a signal: `power[0] rail is 'gnd rail', but a rail is a name — letters, digits and _ (ground, logic,
+motor, 5v): the board is written with it as code`.
+`--unverified` is the list to hand a person: each item, and what depends on it.
 
 Then `/spark:build`. `parts.py --promote <id> --project .` copies a verified record into the plugin's
 library, and the next project finds it with `--need`.

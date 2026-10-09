@@ -173,6 +173,83 @@ class TheSilkscreenSurvivesTest(unittest.TestCase):
         self.assertNotIn("silkscreen:", self._emit(plain))
 
 
+#: A record's text with a comment's end in it: the review's probe (F11), whose `console.log` `tsci build` ran.
+INJECTED = 'A soil probe */ console.log("REVIEW-INJECTED-" + 6*7) /* end'
+
+
+def outside_comments(tsx):
+    """The emitted file as JavaScript runs it: every `/* … */` taken out, each ending at its first `*/`."""
+    return re.sub(r"/\*.*?\*/", "", tsx, flags=re.DOTALL)
+
+
+class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
+    """
+    F11 (P87's emitter half): the board keeps a record's words in `{/* … */}` comments and in its header's doc
+    comment — a name, a signal, a passive's why, a power pin's note, a footprint note, a host requirement — and a
+    `*/` in any of them ended the comment, so `tsci build` ran what followed. They are kept, with `*/` written `* /`.
+    """
+
+    #: Where the probe goes, and how: one place at a time, in a copy of the library LED.
+    PLACES = {
+        "the name": lambda led, board: led.update(name=INJECTED),
+        "the name of a part nobody measured": lambda led, board: (led.update(name=INJECTED), led.pop("body_mm")),
+        "a signal": lambda led, board: led["needs"][0].update(signal=INJECTED),
+        "the silkscreen": lambda led, board: led["needs"][0].update(printed=INJECTED),
+        "a passive's why": lambda led, board: led["host_parts"][0].update(why=INJECTED),
+        "a power pin's note": lambda led, board: led["power"][0].update(note=INJECTED),
+        "a footprint note": lambda led, board: led.update(footprint_placeholder=True, footprint_note=INJECTED),
+        "a host requirement": lambda led, board: led["host_requirements"].append(INJECTED),
+        "the board's name": lambda led, board: board.update(name=INJECTED),
+    }
+
+    @staticmethod
+    def emitted(place):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        led = parts.load("led-red-5mm")
+        place(led, board)
+        signals = [{"name": need["signal"], "needs": need.get("needs", []), "from": led["id"]} for need in led["needs"]]
+        assignments, _ = assign_pins.assign(board, signals)
+        placements, width, height = emit_board.place(board, [led])
+        return emit_board.emit(board, [led], assignments, placements, width, height, {})
+
+    def test_text_with_a_comment_s_end_in_it_never_reaches_code(self):
+        for where, place in self.PLACES.items():
+            with self.subTest(where=where):
+                tsx = self.emitted(place)
+                self.assertEqual([line.strip() for line in outside_comments(tsx).splitlines() if "REVIEW-INJECTED" in line], [],
+                                 "what JavaScript would run")
+                self.assertTrue('A soil probe * / console.log("REVIEW-INJECTED-" + 6*7) /* end' in tsx, "kept, and inert")
+
+    def test_a_comment_s_end_is_the_only_text_changed(self):
+        # a `"` is only text inside a comment, and product names carry inch marks: nothing but `*/` is touched
+        self.assertEqual(emit_board.inert('a 1/4" jack */ and **/ twice'), 'a 1/4" jack * / and ** / twice')
+        self.assertEqual(emit_board.inert(5), "5")
+
+
+class ARecordsIdNamesItsComponentTest(unittest.TestCase):
+    """P87's attribute half: `component_name` capitalises the words of an id and strips nothing, so what keeps
+    `<chip name="…">` a name is the rule upstream — `parts.validate` holds every id to `store.PLAIN`."""
+
+    def test_a_plain_id_becomes_letters_and_digits_and_nothing_else_is_stripped(self):
+        for part_id in ("led-red-5mm", "jst-ph-2-power-inlet", "max98357a-dfr0954", "a", "0603-r"):
+            with self.subTest(id=part_id):
+                self.assertRegex(emit_board.component_name({"id": part_id}), r"^[A-Za-z0-9]+$")
+        self.assertEqual(emit_board.component_name({"id": 'x"y'}), 'X"y', "the conversion keeps a quote: the rule is upstream")
+
+    def test_a_record_whose_id_is_no_plain_key_never_reaches_the_board(self):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "parts").mkdir()
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        (root / "parts" / 'x"y.json').write_text(json.dumps(dict(led, id='x"y')))
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ['x"y']}))
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = emit_board.main([str(root / "requirements.json")])
+        self.assertEqual((code, out.getvalue()), (emit_board.EXIT_COULD_NOT_RUN, ""))
+        self.assertIn("id is 'x\"y', but an id is a plain key", err.getvalue())
+
+
 class PlaceholderFootprintsAreNamedTest(unittest.TestCase):
     """
     The generator is where a placeholder gets the name the netlist will carry, so it is where the
@@ -632,6 +709,53 @@ class RailsWithoutASourceTest(unittest.TestCase):
         self.assertIn("MOTOR6V", emit_board.rails_without_a_source(part_list))
 
 
+class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
+    """
+    C-3 (the council on PR #98): an amplifier's two outputs each drove a net with one member, so every amplifier ended
+    "the chain is broken" — a speaker is not a module and nobody lists one. The terminal its wires go to is a record now, and
+    its two pins receive the pair: an input that names a side of a pair (`polarity`) joins that side's net.
+    """
+
+    def test_an_input_naming_a_side_of_a_pair_joins_that_side_s_net(self):
+        for polarity, net in (("+", "SPEAKER_P"), ("-", "SPEAKER_N")):
+            with self.subTest(polarity=polarity):
+                self.assertEqual(emit_board.net_for({"pin": "X", "rail": "speaker", "direction": "in", "polarity": polarity}), net)
+        self.assertEqual(emit_board.net_for({"pin": "X", "rail": "speaker", "direction": "in"}), "SPEAKER")
+
+    def test_the_terminal_receives_both_outputs_and_nothing_is_left_unrouted(self):
+        part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal")]
+        self.assertEqual([emit_board.net_for(supply) for supply in part_list[1]["power"]], ["SPEAKER_P", "SPEAKER_N"])
+        self.assertEqual((emit_board.outputs_with_nothing_on_them(part_list), emit_board.rails_without_a_source(part_list)), ([], []))
+
+    def test_the_terminal_alone_is_a_rail_nothing_drives(self):
+        self.assertEqual(emit_board.rails_without_a_source([parts.load("speaker-terminal")]), ["SPEAKER_N", "SPEAKER_P"])
+
+    def test_the_terminal_alone_is_told_to_add_what_drives_the_pair_never_a_supply(self):
+        # F15's follow-up: --requirements said "never a supply", while the board's comment and emit_board's own note still
+        # said to add "whatever supplies this rail (a connector, a regulator, a battery)" — into a bridged amplifier output
+        said = "\n".join(emit_board.power_note_lines([parts.load("speaker-terminal")]))
+        self.assertIn("    {/* NOTHING ON THIS BOARD DRIVES net.SPEAKER_P, one side of a driven pair. Add what\n"
+                      "        drives the pair (the amplifier this terminal hangs off), never a supply,\n"
+                      "        or the net has one member and will not route. */}", said)
+        self.assertNotIn("supplies this rail", said)
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["speaker-terminal"]}))
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = emit_board.main([str(root / "requirements.json")])
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertIn("note: nothing drives net.SPEAKER_P, one side of a driven pair — add what drives the pair (the amplifier "
+                      "this terminal hangs off), never a supply, or that net has one member and the board will not route\n",
+                      err.getvalue())
+        self.assertNotIn("add whatever supplies it", err.getvalue())
+
+    def test_a_load_across_a_pair_is_named_so_the_island_check_asks_it_no_ground(self):
+        part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal"), parts.load("l9110s-module"),
+                     parts.load("jst-ph-2-power-inlet")]
+        self.assertEqual(emit_board.loads_across_a_pair(part_list), ["SpeakerTerminal"])
+
+
 class PlacementTest(unittest.TestCase):
     def test_nothing_is_placed_on_top_of_anything_else(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
@@ -791,6 +915,27 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         code, _, err = self._main(["requirements.json"], root)
         self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
         self.assertIn("parts[0]", err)
+
+    def test_a_resistor_the_board_gives_no_voltage_for_is_could_not_run_naming_the_fact(self):
+        # F9: series_ohms' refusal was a traceback and exit 1, which check_spine read as a defect in the design
+        root = self._project()
+        (root / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}))
+        code, tsx, err = self._main(["requirements.json"], root)
+        self.assertEqual((code, tsx), (emit_board.EXIT_COULD_NOT_RUN, ""))
+        self.assertIn("cannot emit a board: led-red-5mm asks for 5 mA through a series resistor, but the board states no "
+                      "power.io_volts — nothing to compute it from", err)
+
+    def test_an_led_the_pin_cannot_light_is_could_not_run_too(self):
+        # F9: the input asks the impossible, which is could-not-run like every refusal of the input here — not "problems"
+        root = self._project()
+        led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
+        led["facts"]["forward_voltage_v"]["value"] = 3.4
+        (root / "parts").mkdir()
+        (root / "parts" / "led-red-5mm.json").write_text(json.dumps(led))
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]}))
+        code, tsx, err = self._main(["requirements.json"], root)
+        self.assertEqual((code, tsx), (emit_board.EXIT_COULD_NOT_RUN, ""))
+        self.assertIn("cannot emit a board: led-red-5mm needs 3.4 V forward, and a 3.3 V pin cannot push current through it", err)
 
 
 class EachSectionStandsAloneTest(unittest.TestCase):

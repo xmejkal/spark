@@ -10,7 +10,7 @@
  {"file": "scripts/emit_board.py", "name": "the value is rounded down, so the LED gets more current than asked",
   "find": "if step * decade >= exact - 1e-9", "replace": "if step * decade >= exact / 1.2"},
  {"file": "scripts/emit_board.py", "name": "the arithmetic is computed and never printed",
-  "find": "                                                                     \" — %s\" % arithmetic if arithmetic else \"\"))", "replace": "                                                                     \"\"))"},
+  "find": "                    module, pad, host_part[\"why\"], \" — %s\" % arithmetic if arithmetic else \"\")))", "replace": "                    module, pad, host_part[\"why\"], \"\")))"},
  {"file": "scripts/emit_board.py", "name": "an LED the pin cannot light gets a resistor anyway",
   "find": "    if forward >= supply:", "replace": "    if False:"},
  {"file": "scripts/sim_project.py", "name": "the diagram's resistor has no value when it was computed",

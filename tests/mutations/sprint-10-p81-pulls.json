@@ -8,5 +8,5 @@
  {"file": "scripts/parts.py", "name": "--show keeps the conflict to itself",
   "find": "        lines.append(\"\\n  CONFLICT: %s\" % conflict)", "replace": "        pass"},
  {"file": "scripts/emit_board.py", "name": "the board file keeps the conflict to itself",
-  "find": "            lines.append(\"          - CONFLICT %s: %s\" % (part[\"name\"], conflict))", "replace": "            pass"}
+  "find": "            lines.append(\"          - CONFLICT %s\" % inert(\"%s: %s\" % (part[\"name\"], conflict)))", "replace": "            pass"}
 ]

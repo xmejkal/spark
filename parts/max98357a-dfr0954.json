@@ -184,5 +184,20 @@
   ],
   "simulation": {
     "skip": "no Wokwi part for the I2S amplifier; cues are visible in the serial log"
-  }
+  },
+  "sources": [
+    "https://dfimg.dfrobot.com/wiki/20560/DFR0954_max98357a-i2s_dimension_1.0.pdf"
+  ],
+  "documents": {
+    "dfr0954-max98357a-i2s-dimension-1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/20560/DFR0954_max98357a-i2s_dimension_1.0.pdf",
+      "sha256": "61639cfc4682bf4289400d61e04c570f26d324f7c73c37ecd07971a27a4ce7ff",
+      "file": "DFR0954_max98357a-i2s_dimension_1.0.pdf",
+      "retrieved": "2026-10-08",
+      "title": null,
+      "version": null
+    }
+  },
+  "footprint": "dip12_w15.24mm",
+  "//footprint": "Two rows of six holes, 0.9 mm, at 2.54 mm pitch, the rows 15.24 mm apart, on the 18 x 18 mm body: the DIP-12 footprinter with a 15.24 mm row spacing. Pin 1 is SPK+ at the top right and the numbering runs counter-clockwise, which is the order pin_order gives (DFRobot's P1 right-to-left, then P2 left-to-right). Read off DFRobot's dimension drawing, page 1 (document dfr0954-max98357a-i2s-dimension-1-0, fetched 2026-10-08). The bin draws the same twelve holes by hand at 1.0 mm (Dfr0954I2sAmp.tsx), since the module plugs in on a 2.54 mm header."
 }

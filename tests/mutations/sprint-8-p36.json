@@ -2,8 +2,8 @@
  {
   "file": "scripts/assign_pins.py",
   "name": "the map is written as const(), which CPython cannot import",
-  "find": "        lines.append(\"%s = %d  # %s\" % (entry[\"signal\"], entry[\"gpio\"], \"; \".join(said)))",
-  "replace": "        lines.append(\"%s = const(%d)  # %s\" % (entry[\"signal\"], entry[\"gpio\"], \"; \".join(said)))"
+  "find": "        lines.append(\"%s = %d  # %s\" % (entry[\"signal\"], entry[\"gpio\"], parts_library.one_line(\"; \".join(said))))",
+  "replace": "        lines.append(\"%s = const(%d)  # %s\" % (entry[\"signal\"], entry[\"gpio\"], parts_library.one_line(\"; \".join(said))))"
  },
  {
   "file": "scripts/assign_pins.py",
@@ -32,8 +32,8 @@
  {
   "file": "scripts/assign_pins.py",
   "name": "the file no longer says it is generated",
-  "find": "             \"# for the %s. Regenerate it; do not edit it.\" % board[\"name\"], \"\"]",
-  "replace": "             \"# for the %s.\" % board[\"name\"], \"\"]"
+  "find": "             \"# for the %s. Regenerate it; do not edit it.\" % parts_library.one_line(board[\"name\"]), \"\"]",
+  "replace": "             \"# for the %s.\" % parts_library.one_line(board[\"name\"]), \"\"]"
  },
  {
   "file": "scripts/assign_pins.py",

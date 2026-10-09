@@ -59,7 +59,8 @@ KNOWN_RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker
 
 def net_name_for_rail(rail):
     """
-    The net a rail's name means. ANY rail name is allowed.
+    The net a rail's name means. ANY rail name is allowed — a name, of letters, digits and _, which `parts.validate`,
+    `boards.validate` and `design` hold a rail to: the board is written with it as code (P87's attribute half).
 
     This was a closed dictionary of four, and a rail outside it returned None — which the power
     loops turned into `continue`, so the connection was silently not emitted. An RC car with a 5 V
@@ -124,6 +125,19 @@ RAILS_THE_MODULE_PROVIDES = ("V33", "GND")
 GROUND_NETS = ("GND", "AGND", "DGND", "GROUND")
 
 
+def inert(text):
+    """
+    Words the file keeps in a comment, with every `*/` written `* /` (F11, P87's emitter half).
+
+    The file keeps a record's name, a signal, a passive's why, a power pin's note, a footprint note and a host
+    requirement in `{/* … */}` comments and in its header's doc comment, and a `*/` in any of them ended the comment:
+    `tsci build` ran what followed, with Node's `require` and `process` in reach. Every value a comment here carries
+    goes through this one rule. Nothing else is touched: inside a comment a `"` is only text, and product names carry
+    inch marks.
+    """
+    return str(text).replace("*/", "* /")
+
+
 def power_trace(component, pin, net, rules, note="", unjustified=None):
     """
     One power connection, sized by what its rail carries.
@@ -141,7 +155,7 @@ def power_trace(component, pin, net, rules, note="", unjustified=None):
         thickness = ""
     else:
         thickness = ' thickness="%.2fmm"' % needed
-    suffix = ("  {/* %s */}" % note) if note else ""
+    suffix = ("  {/* %s */}" % inert(note)) if note else ""
     return '    <trace from=".%s > .%s" to="net.%s"%s />%s' % (
         component, pin, net, thickness, suffix)
 
@@ -198,11 +212,29 @@ def net_for(supply):
     `"rail": "speaker"`, both were mapped to `net.SPEAKER`, and the generated board wired them
     together — printing the part file's own warning, "never ground either side", on the trace
     that did it.
+
+    An input that names a side of a pair (`polarity`) takes that side's net, which the pair's
+    output drives: the speaker terminal's SPK+ is on net.SPEAKER_P, its SPK- on net.SPEAKER_N
+    (C-3). Without it the amplifier's two outputs each ended on a net with one member.
     """
     net = net_name_for_rail(supply.get("rail"))
-    if net and supply.get("direction") == "out":
+    if net and (supply.get("direction") == "out" or supply.get("polarity") in POLARITY_SUFFIX):
         return net + POLARITY_SUFFIX.get(supply.get("polarity"), "")
     return net
+
+
+def loads_across_a_pair(part_list):
+    """
+    The components that sit across a driven pair and have no ground of their own, by the name the
+    emitted file gives them (C-3): a part that asks for no signal and whose every power pin is an
+    input on one side of a pair — the terminal a speaker's two wires go to. Its return is the
+    pair's other side, and a ground would short the amplifier, so `check_spine` asks of it what it
+    asks of a two-terminal passive: that neither end dangles.
+    """
+    return sorted(component_name(part) for part in part_list
+                  if not part.get("needs") and part.get("power")
+                  and all(supply.get("direction", "in") == "in" and supply.get("polarity") in POLARITY_SUFFIX
+                          for supply in part["power"]))
 
 
 def body_of(part):
@@ -367,6 +399,21 @@ def rails_without_a_source(part_list):
     return sorted(consumed - provided)
 
 
+def pair_sides_without_a_driver(part_list):
+    """
+    The rails `rails_without_a_source` names that are one side of a driven pair (F15): every pin on one is an input naming
+    a `polarity` — a speaker terminal's SPK+ on SPEAKER_P. What feeds such a net is an amplifier's output, never a supply:
+    told to pick a power inlet, a person would plug a supply into what the terminal's own record calls destructive. Decided
+    by the pins, not by a `_P`/`_N` suffix, so a pair the design moves onto rails of its own is still one.
+    """
+    on = {}
+    for _, supply, net in power_connections(part_list):
+        if supply.get("direction") != "out":
+            on.setdefault(net, []).append(supply)
+    return [net for net in rails_without_a_source(part_list)
+            if all(supply.get("polarity") in POLARITY_SUFFIX for supply in on[net])]
+
+
 def outputs_in_contention(part_list):
     """
     Nets driven by more than one supply, or by a supply onto a rail the module itself provides.
@@ -516,7 +563,7 @@ def header_lines(board, part_list, placements, width, height):
         "import { %s } from \"./%s\"" % ((board["physical"]["footprint_export"],) * 2),
         "",
         "/**",
-        " * %s — generated from a module list." % board["name"],
+        " * %s — generated from a module list." % inert(board["name"]),
         " *",
         " * The CONNECTIONS are derived and checked: every trace comes from a pin assignment",
         " * validated against this board's own wake, ADC and strapping constraints, and every",
@@ -537,7 +584,7 @@ def header_lines(board, part_list, placements, width, height):
     if unsized:
         lines += [
             " *",
-            " * NOBODY HAS MEASURED: %s." % ", ".join(unsized),
+            " * NOBODY HAS MEASURED: %s." % inert(", ".join(unsized)),
             " * Each is drawn as a placeholder %g x %g mm and everything else is arranged around"
             % DEFAULT_BODY_MM,
             " * that, so 'nothing overlaps' here is evidence of nothing at all. Measure them, put",
@@ -653,7 +700,7 @@ def host_part_lines(part_list, placements, board=None):
             names = host_part_names(part, host_part)
             if kind == "divider":
                 top, bottom = names
-                lines.append("    {/* %s.%s through a divider: %s */}" % (module, pad, host_part["why"]))
+                lines.append("    {/* %s */}" % inert("%s.%s through a divider: %s" % (module, pad, host_part["why"])))
                 for name, ohms in ((top, host_part["top_ohms"]), (bottom, host_part["bottom_ohms"])):
                     lines.append('    <resistor name="%s" resistance="%s" footprint="0603" pcbX={%g} pcbY={%g} />'
                                  % (name, ohms_label(ohms), *placements[name]))
@@ -664,14 +711,14 @@ def host_part_lines(part_list, placements, board=None):
             name, = names
             if kind == "series":
                 ohms, arithmetic = series_ohms(part, host_part, board)
-                lines.append("    {/* in series with %s.%s: %s%s */}" % (module, pad, host_part["why"],
-                                                                     " — %s" % arithmetic if arithmetic else ""))
+                lines.append("    {/* %s */}" % inert("in series with %s.%s: %s%s" % (
+                    module, pad, host_part["why"], " — %s" % arithmetic if arithmetic else "")))
                 lines.append('    <resistor name="%s" resistance="%s" footprint="0603" pcbX={%g} pcbY={%g} />'
                              % (name, ohms_label(ohms), *placements[name]))
                 lines.append('    <trace from=".%s > .pin2" to=".%s > .%s" />' % (name, module, pad))
                 continue
             net = "GND" if kind == "pulldown" else supply_net_of(part)
-            lines.append("    {/* %s on %s.%s: %s */}" % (kind, module, pad, host_part["why"]))
+            lines.append("    {/* %s */}" % inert("%s on %s.%s: %s" % (kind, module, pad, host_part["why"])))
             lines.append('    <resistor name="%s" resistance="%s" footprint="0603" pcbX={%g} pcbY={%g} />'
                          % (name, ohms_label(host_part["ohms"]), *placements[name]))
             lines.append('    <trace from=".%s > .pin1" to=".%s > .%s" />' % (name, module, pad))
@@ -692,14 +739,14 @@ def component_lines(part_list, placements):
         pin_labels = ", ".join('pin%d: "%s"' % (position, pad)
                                for position, pad in enumerate(part.get("pin_order") or [], 1)
                                if pad is not None)
-        lines.append("    {/* %s */}" % part["name"])
+        lines.append("    {/* %s */}" % inert(part["name"]))
         printed = parts_library.printed_names(part)
         if printed:
             # The silkscreen, kept where a person wiring the module will read it. `pin` is what
             # a selector can parse; `printed` is what is actually on the part, and losing the
             # second to satisfy the first is how an MP1584's IN+ became VIN with no record of it.
-            lines.append("    {/* silkscreen: %s */}" % ", ".join(
-                "%s is printed %s" % (wiring, label) for wiring, label in sorted(printed.items())))
+            lines.append("    {/* silkscreen: %s */}" % inert(", ".join(
+                "%s is printed %s" % (wiring, label) for wiring, label in sorted(printed.items()))))
         lines.append('    <chip name="%s" footprint="%s" pcbX={%g} pcbY={%g}'
                      % (name, part["footprint"], *placements[name]))
         lines.append("      pinLabels={{ %s }} />" % pin_labels)
@@ -731,8 +778,8 @@ def signal_lines(part_list, assignments):
         # The signal's own name, not just the module pin it lands on. Without it the file says
         # `.Mcu > .D3 -> .L9110sModule > .AIA` and nothing connects that back to MOTOR_IA or to
         # the reason the assigner chose D3.
-        lines.append('    <trace from=".Mcu > .%s" to=".%s > .%s" />  {/* %s: %s */}'
-                     % (entry["pin"], target[0], target[1], entry["signal"], entry["why"]))
+        lines.append('    <trace from=".Mcu > .%s" to=".%s > .%s" />  {/* %s */}'
+                     % (entry["pin"], target[0], target[1], inert("%s: %s" % (entry["signal"], entry["why"]))))
 
     if unclaimed:
         lines += ["",
@@ -740,8 +787,8 @@ def signal_lines(part_list, assignments):
                   "        no part in the module list claims them, so this file cannot say what",
                   "        they reach. They are not optional — the design asked for them:"]
         for entry in unclaimed:
-            lines.append("          - %s on %s (GPIO%s): %s"
-                         % (entry["signal"], entry["pin"], entry["gpio"], entry["why"]))
+            lines.append("          - %s" % inert("%s on %s (GPIO%s): %s"
+                                                  % (entry["signal"], entry["pin"], entry["gpio"], entry["why"])))
         lines += ["        Add a part record for whatever each one drives, or wire it by hand.",
                   "        A schematic missing half its signals builds and routes cleanly. */}"]
     lines.append("")
@@ -809,13 +856,13 @@ def mcu_power_lines(board, part_list, rules, unjustified):
             # Said, not skipped. This was `continue` — the silent drop G2 removed for module
             # pins, kept for the processor's own pads. The board contract now refuses a pad
             # with no rail; this is the generator refusing to hide one that reaches it anyway.
-            lines.append("    {/* Mcu.%s NAMES NO RAIL in the board file's power_pads, so it is" % pad)
+            lines.append("    {/* Mcu.%s NAMES NO RAIL in the board file's power_pads, so it is" % inert(pad))
             lines.append("        wired to nothing. Add a rail to that entry. */}")
             continue
         if not wired:
             # Also said, not skipped, and for the same reason: an absent trace reads the same
             # whether it was reasoned about or forgotten, and one of those two is a fault.
-            lines.append("    {/* Mcu.%s receives net.%s and NOTHING ON THIS BOARD DRIVES that" % (pad, net))
+            lines.append("    {/* Mcu.%s receives net.%s and NOTHING ON THIS BOARD DRIVES that" % (inert(pad), inert(net)))
             lines.append("        rail, so it is left open — on this module that pad is then a")
             lines.append("        source, carrying USB power out. Add a regulator or an inlet")
             lines.append("        whose record declares an output on that rail to feed it. */}")
@@ -834,17 +881,17 @@ def power_note_lines(part_list):
     lines = []
     for net, part_name, pin in outputs_with_nothing_on_them(part_list):
         lines.append("    {/* net.%s is driven by %s.%s and NOTHING ON THIS BOARD RECEIVES IT."
-                     % (net, part_name, pin))
+                     % (inert(net), inert(part_name), inert(pin)))
         lines.append("        A speaker, a motor or a connector is not a module, so nobody lists")
         lines.append("        one — whatever this drives has to be added, or the net has one")
         lines.append("        member and will not route. */}")
     for net, who in outputs_in_contention(part_list):
-        lines.append("    {/* net.%s IS DRIVEN BY MORE THAN ONE SUPPLY: %s." % (net, ", ".join(who)))
+        lines.append("    {/* net.%s IS DRIVEN BY MORE THAN ONE SUPPLY: %s." % (inert(net), inert(", ".join(who))))
         lines.append("        Two supplies on one rail short into each other unless one is designed")
         lines.append("        to back-feed, which a part record cannot say. Move one to its own")
         lines.append("        rail, or state the arrangement in the design. */}")
     for pin in power_pins_with_no_rail(part_list):
-        lines.append("    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no" % pin)
+        lines.append("    {/* %s NAMES NO RAIL, so nothing can place it. A power pin with no" % inert(pin))
         lines.append("        rail is not a pin on some default rail — it is a connection the part")
         lines.append("        file never stated. Add a `rail` to that entry. */}")
     invented = rails_not_established(part_list)
@@ -853,10 +900,16 @@ def power_note_lines(part_list):
         lines.append("        as easily as a new rail does — GROUDN is a fine net name and a")
         lines.append("        terrible ground. Check each one is intended:")
         for invented_net, pins in invented.items():
-            lines.append("          net.%-12s from %s" % (invented_net, ", ".join(pins)))
+            lines.append("          net.%-12s from %s" % (inert(invented_net), inert(", ".join(pins))))
         lines.append("     */}")
+    pair_sides = pair_sides_without_a_driver(part_list)  # F15: an amplifier drives these, never a supply
     for net in rails_without_a_source(part_list):
-        lines.append("    {/* NOTHING ON THIS BOARD SOURCES net.%s. A module list is a list of" % net)
+        if net in pair_sides:
+            lines.append("    {/* NOTHING ON THIS BOARD DRIVES net.%s, one side of a driven pair. Add what" % inert(net))
+            lines.append("        drives the pair (the amplifier this terminal hangs off), never a supply,")
+            lines.append("        or the net has one member and will not route. */}")
+            continue
+        lines.append("    {/* NOTHING ON THIS BOARD SOURCES net.%s. A module list is a list of" % inert(net))
         lines.append("        consumers — whatever supplies this rail (a connector, a regulator,")
         lines.append("        a battery) has to be added, or the net has one member and will not")
         lines.append("        route. */}" )
@@ -875,7 +928,7 @@ def unjustified_lines(unjustified):
     if not unjustified:
         return []
     return ["    {/* THE WIDTH OF THE TRACES ABOVE ON %s IS UNJUSTIFIED."
-            % ", ".join("net." + net for net in sorted(unjustified)),
+            % inert(", ".join("net." + net for net in sorted(unjustified))),
             "        They take the router's default, which is about 0.15 mm and good",
             "        for roughly 0.6 A. Nobody has stated what these rails carry, so",
             "        nothing here could size them. Name each load's figure in its part",
@@ -921,8 +974,8 @@ def stand_in_lines(part_list):
     lines = ["", "    {/* FOOTPRINTS THAT ARE PLACEHOLDERS. The netlist is right and the geometry",
              "        is not; every check that measures copper is told to skip these:"]
     for part in stand_ins:
-        lines.append("          %s drawn as %s — %s"
-                     % (component_name(part), part.get("footprint"), part.get("footprint_note")))
+        lines.append("          %s" % inert("%s drawn as %s — %s"
+                                            % (component_name(part), part.get("footprint"), part.get("footprint_note"))))
     lines.append("     */}")
     return lines
 
@@ -941,10 +994,10 @@ def host_requirement_lines(part_list):
              ("        Beyond the %d passive(s) placed above, none of it is done here — each one is a design decision:" % done)
              if done else "        None of it is done here — each one is a design decision:"]
     for part_name, text in requirements:
-        lines.append("          - %s: %s" % (part_name, text))
+        lines.append("          - %s" % inert("%s: %s" % (part_name, text)))
     for part in part_list:  # P81: a pull this board adds that the part's own defeats, with the arithmetic
         for conflict in parts_library.pull_conflicts(part):
-            lines.append("          - CONFLICT %s: %s" % (part["name"], conflict))
+            lines.append("          - CONFLICT %s" % inert("%s: %s" % (part["name"], conflict)))
     lines.append("     */}")
     return lines
 
@@ -1048,8 +1101,14 @@ def main(argv=None):
     # The rules come with the design, from the project it was resolved to. They were looked up
     # by the raw `--project` flag instead: None without the flag, so the documented invocation
     # emitted every power trace unsized, exit 0, and called the widths unjustified.
-    sys.stdout.write(emit(board, part_list, assignments, placements, width, height,
-                          design.rules))
+    try:
+        text = emit(board, part_list, assignments, placements, width, height, design.rules)
+    except ValueError as refused:
+        # `series_ohms`: a number the resistor needs is missing, or the pin cannot light the part. The input's, so
+        # could-not-run like every refusal above — it was a traceback and exit 1, which the chain read as a defect (F9).
+        print("cannot emit a board: %s" % refused, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    sys.stdout.write(text)
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
     placed = {entry["signal"] for entry in assignments}
@@ -1062,7 +1121,13 @@ def main(argv=None):
         print("note: %s.%s drives net.%s and nothing on this board receives it — add whatever it "
               "drives, or that net has one member and will not route" % (part_name, pin, net),
               file=sys.stderr)
+    pair_sides = pair_sides_without_a_driver(part_list)
     for net in rails_without_a_source(part_list):
+        if net in pair_sides:  # F15: what drives a side of a pair is an amplifier, and a supply into it destroys it
+            print("note: nothing drives net.%s, one side of a driven pair — add what drives the pair (the amplifier this "
+                  "terminal hangs off), never a supply, or that net has one member and the board will not route" % net,
+                  file=sys.stderr)
+            continue
         print("note: nothing sources net.%s — add whatever supplies it, or that net has one "
               "member and the board will not route" % net, file=sys.stderr)
     for net, who in outputs_in_contention(part_list):

@@ -164,10 +164,14 @@ had been built because it was designed, not because a design needed it.
 ## W15 — An orphan fails the suite
 
 Every script is named by a command, a skill, an agent, the README or a project's Makefile, or is
-imported by another script; every skill and agent is named where a user looks; `scripts/` stays
-within a line budget that a change may not exceed without deleting something. `tests/test_orphans.py`
-holds all of it, so dead code cannot accumulate silently again — every piece cut on 09-29 had
-tests, and looked alive.
+imported by another script; every skill and agent is named where a user looks.
+`tests/test_orphans.py` holds all of it, so dead code cannot accumulate silently again — every piece
+cut on 09-29 had tests, and looked alive.
+
+**Amended 2026-10-08:** the line budget this paragraph used to promise is gone. P99 (the PO,
+2026-10-04) made the size a number, not a cap (W15b): `tests/test_orphans.py` holds no budget, and the
+pre-push gate prints the size of `scripts/` with its growth at every push. The two orphan rules above
+are unchanged.
 
 ## W15b — The size is said at every push, with its reason; refactor before growing
 

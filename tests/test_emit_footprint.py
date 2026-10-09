@@ -76,6 +76,32 @@ class TheHoleIsSizedForThePinTest(unittest.TestCase):
         self.assertIn("NOT the 0.9 mm on the vendor drawing", text)
 
 
+class APadsLabelIsWrittenAsTextTest(unittest.TestCase):
+    def test_a_label_with_a_quote_stays_inside_its_string(self):
+        # P87's attribute half: each header label is written into `portHints={["…"]}`, and a label no pin of the board
+        # names (D-, D+, RST) is held to no name rule — the FireBeetle's own D- and D+ are no names — so it is written as a
+        # string literal, escaped, the one way a quote in it cannot end the string
+        board = firebeetle()
+        crafted = 'RST"]} onClick={() => globalThis.x = 1} portHints={["'
+        for row, labels in board["physical"]["header_order"].items():
+            if not row.startswith("//"):
+                board["physical"]["header_order"][row] = [crafted if label == "RST" else label for label in labels]
+        text = emit_footprint.render(board)
+        self.assertIn("portHints={[%s]}" % json.dumps(crafted), text)
+        self.assertNotIn('portHints={["%s"]}' % crafted, text)
+        self.assertIn('portHints={["D-"]}', text, "an ordinary label is written as it always was")
+
+
+class TheFootprintsCommentsStayCommentsTest(unittest.TestCase):
+    def test_a_line_break_in_the_board_s_id_never_leaves_the_comment(self):
+        # concern 1: the footprint's first line names the board file in a `//` comment, which a line break ends
+        board = firebeetle()
+        board["id"] = 'firebeetle2-esp32s3\nexport const injected = "FOOTPRINT-INJECTED" //'
+        text = emit_footprint.render(board)
+        self.assertIn("FOOTPRINT-INJECTED", text)
+        self.assertEqual([line for line in text.splitlines() if "FOOTPRINT-INJECTED" in line and not line.startswith("//")], [])
+
+
 class ItMatchesAnIndependentlyMadeFootprintTest(unittest.TestCase):
     @unittest.skipUnless(REFERENCE.is_file(), "the hand-checked reference is not on this machine")
     def test_every_pad_agrees_with_the_hand_checked_footprint(self):

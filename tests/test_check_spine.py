@@ -14,11 +14,14 @@ raise?" calls it a pass.
 """
 
 import contextlib
+import hashlib
 import io
 import json
 import os
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -27,7 +30,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
+import design  # noqa: E402
 import emit_board  # noqa: E402
+import parts  # noqa: E402
+import store  # noqa: E402
 
 
 def stage(name, status):
@@ -644,6 +650,39 @@ class NothingToBuildIsNotAPassTest(unittest.TestCase):
         self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
 
 
+class AnEmitBoardCrashIsNotADesignFaultTest(unittest.TestCase):
+    def test_a_crash_of_the_generator_is_could_not_run_with_its_last_words(self):
+        # F5: emit_board exits 0 or 2 on purpose, so any other exit is a crash — and it read as `[!!  ] schematic`, problems,
+        # "the chain is broken", for a design nobody had examined. A real one here: a Python that raises, in its place.
+        import subprocess
+        real_run = subprocess.run
+        for crash, said in (("raise ValueError('a fault of its own')", "emit_board.py crashed: ValueError: a fault of its own"),
+                            ("import sys; sys.exit(3)", "emit_board.py crashed: exit 3, and nothing said")):
+            with self.subTest(crash=crash):
+                workdir = Path(tempfile.mkdtemp())
+                requirements = dict(check_spine.REFERENCE)
+                (workdir / "requirements.json").write_text(json.dumps(requirements))
+
+                def emit_board_crashes(command, *args, **kwargs):
+                    if any(str(word).endswith("emit_board.py") for word in command):
+                        command = [sys.executable, "-c", crash]
+                    return real_run(command, *args, **kwargs)
+
+                with mock.patch.object(subprocess, "run", side_effect=emit_board_crashes):
+                    stages = check_spine.run(requirements, workdir, from_library=True)
+                self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail), ("schematic", check_spine.COULD_NOT_RUN, said))
+                self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+
+    def test_a_refusal_of_the_generator_is_could_not_run_in_its_own_words(self):
+        # the control: exit 2 is emit_board refusing the input, and its sentence is the stage's detail, whole
+        workdir = Path(tempfile.mkdtemp())
+        requirements = {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        stages = check_spine.run(requirements, workdir, from_library=True)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("schematic", check_spine.COULD_NOT_RUN))
+        self.assertTrue(stages[-1].detail.startswith("cannot emit a board: led-red-5mm asks for 5 mA"), stages[-1].detail)
+
+
 class AConverterLimitIsNotADesignFaultTest(unittest.TestCase):
     def test_a_component_the_converter_cannot_map_is_could_not_look(self):
         # The RC car builds (13 traces) and the converter has no Wokwi part for its servo, buck
@@ -810,6 +849,221 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
         import tools
         self.assertEqual(tools.find("diagram-converter", None, Path(tempfile.mkdtemp()) / "absent.json").command,
                          [str(self.BUNDLE)])
+
+
+class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
+    """P97 (§5.7, §8 T): when the chain runs end to end for a project on the person's list, the history says it was built."""
+
+    def setUp(self):
+        self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
+        (self.project / ".spark").mkdir(parents=True)
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def spine(self, last):
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build")] + [stage("simulation", last)]
+        with mock.patch.object(check_spine, "run", return_value=stages), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(self.project / "requirements.json")])
+        path = self.home / "history.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()] if path.is_file() else []
+
+    def answer(self, argv=None):
+        """What `check_spine.main` returned and said, stdout then stderr, for a chain whose every stage ended ok."""
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(check_spine, "run", return_value=stages), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = check_spine.main([str(self.project / "requirements.json")] if argv is None else argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def meanwhile(self, happens):
+        """The history after `check_spine.main` on the person's file, whose chain ends ok and, while it builds, has `happens()` happen."""
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+
+        def build(*_, **__):
+            happens()
+            return stages
+        with mock.patch.object(check_spine, "run", side_effect=build), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(self.project / "requirements.json")])
+        path = self.home / "history.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()] if path.is_file() else []
+
+    @staticmethod
+    def digest_of(record, facts):
+        """The sha256 of the facts of a record, written out here as the history means it (§5.7) rather than asked of parts.py."""
+        shown = {key: record[key] for key in facts if key in record}
+        return hashlib.sha256(json.dumps(shown, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+    def test_a_chain_that_runs_end_to_end_is_recorded_once_with_each_digest(self):
+        self.spine(check_spine.OK)
+        built = self.spine(check_spine.OK)
+        self.assertEqual([(e["event"], e["project"], e["board"]["id"], [p["id"] for p in e["parts"]]) for e in built],
+                         [("built", "plant-alarm", "firebeetle2-esp32s3", ["tactile-button"])])
+        self.assertEqual((len(built[0]["board"]["digest"]), len(built[0]["parts"][0]["digest"])), (64, 64))
+
+    def test_a_chain_that_did_not_run_end_to_end_records_nothing(self):
+        self.assertEqual(self.spine(check_spine.COULD_NOT_RUN), [])
+
+    def test_each_digest_is_of_the_facts_a_build_reads(self):
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        built = self.spine(check_spine.OK)[0]
+        self.assertEqual((built["board"]["digest"], built["parts"][0]["digest"]),
+                         (self.digest_of(board, ("pins", "power_pads", "physical")),
+                          self.digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))))
+
+    def test_what_the_chain_was_handed_is_what_is_recorded_not_what_the_file_became_meanwhile(self):
+        def the_person_edits_the_file():
+            (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}))
+        built = self.meanwhile(the_person_edits_the_file)
+        self.assertEqual([[p["id"] for p in e["parts"]] for e in built], [["tactile-button"]])
+
+    def test_the_facts_recorded_are_those_the_chain_was_handed_not_those_a_record_became_meanwhile(self):
+        def the_person_edits_a_record():
+            record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+            record["host_parts"][0]["ohms"] = 4700
+            (self.project / "parts").mkdir()
+            (self.project / "parts" / "tactile-button.json").write_text(json.dumps(record))
+        built = self.meanwhile(the_person_edits_a_record)
+        button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        self.assertEqual([e["parts"][0]["digest"] for e in built],
+                         [self.digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))])
+
+    def test_a_design_that_cannot_be_loaded_records_nothing_and_breaks_nothing(self):
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}))
+        code, said, _ = self.answer()
+        self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        with mock.patch.object(check_spine.design, "load", side_effect=TypeError("a record of a shape nobody foresaw")):
+            code, said, _ = self.answer()
+        self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
+
+    def test_a_project_that_is_not_on_the_list_keeps_no_history(self):
+        (self.home / "projects.json").write_text("{}")
+        self.assertEqual(self.spine(check_spine.OK), [])
+
+    def test_the_reference_design_has_no_project_and_records_nothing(self):
+        # even when the person listed the plugin's own folder, which a design with no file is built from
+        (self.home / "projects.json").write_text(json.dumps({"spark": str(ROOT)}))
+        code, said, _ = self.answer(argv=[])
+        self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
+
+    def test_a_design_built_from_the_plugin_s_library_is_recorded_for_no_project(self):
+        # even when the person listed the plugin's own folder: a file in no project is built from it, and belongs to nobody
+        alone = Path(tempfile.mkdtemp()) / "requirements.json"
+        alone.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        (self.home / "projects.json").write_text(json.dumps({"spark": str(ROOT)}))
+        code, _, _ = self.answer(argv=[str(alone)])
+        self.assertEqual((code, (self.home / "history.jsonl").exists()), (0, False))
+
+    def test_the_line_waits_while_another_holds_the_store(self):
+        loaded = design.load(self.project / "requirements.json", self.project)
+        recorder = threading.Thread(target=parts.note_built, args=(loaded,))
+        with store.locked():
+            recorder.start()
+            time.sleep(0.5)
+            self.assertFalse((self.home / "history.jsonl").exists(), "it wrote while another held the store")
+        recorder.join(timeout=60)
+        self.assertEqual(len((self.home / "history.jsonl").read_text().splitlines()), 1)
+
+    def test_a_history_that_cannot_be_kept_does_not_hide_the_verdict(self):
+        (self.home / "history.jsonl").write_text("this is not an event\n")
+        code, said, complained = self.answer()
+        self.assertEqual((code, "the chain runs end to end" in said), (0, True))
+        self.assertIn("history.jsonl line 1 is not a history event", complained)
+
+    def test_whatever_stops_the_recording_the_verdict_stands_and_the_reason_is_said(self):
+        for refusal in (store.StoreProblem("the projects list is not JSON"), OSError("the disk is full")):
+            with self.subTest(refusal=refusal), mock.patch.object(check_spine.parts, "note_built", side_effect=refusal):
+                code, said, complained = self.answer()
+                self.assertEqual((code, "the chain runs end to end" in said), (0, True))
+                self.assertIn(str(refusal), complained)
+
+
+class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
+    """
+    C-3 (the council on PR #98): a speaker terminal sits across the amplifier's bridged output — its return is the pair's
+    other side, and a ground on either pin would short the amplifier. It is asked what a two-terminal passive is asked, that
+    neither end dangles, and not whether it reaches ground.
+    """
+
+    @staticmethod
+    def circuit(*, both_ends=True):
+        elements = [
+            {"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+            {"type": "source_net", "source_net_id": "n_p", "name": "SPEAKER_P"},
+            {"type": "source_net", "source_net_id": "n_n", "name": "SPEAKER_N"},
+            {"type": "source_component", "source_component_id": "c_amp", "name": "Amp"},
+            {"type": "source_component", "source_component_id": "c_spk", "name": "SpeakerTerminal"},
+            {"type": "source_port", "source_port_id": "p_amp_gnd", "source_component_id": "c_amp", "name": "GND"},
+            {"type": "source_port", "source_port_id": "p_amp_p", "source_component_id": "c_amp", "name": "SPK_P"},
+            {"type": "source_port", "source_port_id": "p_amp_n", "source_component_id": "c_amp", "name": "SPK_N"},
+            {"type": "source_port", "source_port_id": "p_spk_p", "source_component_id": "c_spk", "name": "SPK_P"},
+            {"type": "source_port", "source_port_id": "p_spk_n", "source_component_id": "c_spk", "name": "SPK_N"},
+            {"type": "source_trace", "source_trace_id": "t1", "connected_source_port_ids": ["p_amp_gnd"], "connected_source_net_ids": ["n_gnd"]},
+            {"type": "source_trace", "source_trace_id": "t2", "connected_source_port_ids": ["p_amp_p", "p_spk_p"], "connected_source_net_ids": ["n_p"]},
+            {"type": "source_trace", "source_trace_id": "t3", "connected_source_port_ids": ["p_amp_n"], "connected_source_net_ids": ["n_n"]}]
+        if both_ends:
+            elements.append({"type": "source_trace", "source_trace_id": "t4", "connected_source_port_ids": ["p_spk_n"],
+                             "connected_source_net_ids": ["n_n"]})
+        return elements
+
+    def test_a_terminal_across_a_pair_is_asked_only_whether_an_end_dangles(self):
+        self.assertEqual(check_spine.islands_in(self.circuit()), ["SpeakerTerminal reaches no ground"])
+        self.assertEqual(check_spine.islands_in(self.circuit(), across=("SpeakerTerminal",)), [])
+        self.assertEqual(check_spine.islands_in(self.circuit(both_ends=False), across=("SpeakerTerminal",)),
+                         ["SpeakerTerminal.SPK_N (a terminal connected to nothing)"])
+
+    def test_the_build_stage_hands_the_loads_across_a_pair_to_the_island_check(self):
+        root = Path(tempfile.mkdtemp())
+        workdir = root / "work"
+        workdir.mkdir()
+        requirements = {"board": "firebeetle2-esp32s3", "parts": ["max98357a-dfr0954", "speaker-terminal"]}
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        with mock.patch.object(check_spine, "islands_in", return_value=[]) as islands:
+            check_spine.run(requirements, workdir, toolchain=fake_tsci(root, "true"), from_library=True)
+        self.assertEqual(islands.call_args.kwargs["across"], ["SpeakerTerminal"])
+
+
+class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
+    """C-2 (the PO, 2026-10-08): "the chain runs end to end" never stands alone over needs the requirements file left off the
+    board — `--requirements` writes them into the file (`unserved`), and the closing line reads them from there."""
+
+    UNSERVED = [{"need": "soil", "why": "no pick", "picks": []}, {"need": "smell", "why": "a gap", "picks": []},
+                {"need": "battery", "why": "no record", "picks": ["lipo", "spare-lipo"]}]
+
+    def answer(self, requirements, *flags):
+        path = Path(tempfile.mkdtemp()) / "requirements.json"
+        path.write_text(json.dumps(requirements))
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+        out = io.StringIO()
+        with mock.patch.object(check_spine, "run", return_value=stages), contextlib.redirect_stdout(out), \
+                contextlib.redirect_stderr(io.StringIO()):
+            code = check_spine.main([str(path)] + list(flags))
+        return code, out.getvalue()
+
+    def test_needs_the_file_leaves_off_the_board_are_said_on_the_verdict_s_line(self):
+        code, said = self.answer({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": self.UNSERVED})
+        self.assertEqual(code, 0)
+        self.assertTrue(said.endswith("  the chain runs end to end — but not every need is on the board: soil (no pick), smell (a gap), "
+                                      "battery (no record: lipo, spare-lipo)\n"), said)
+
+    def test_with_json_the_needs_left_off_are_part_of_the_answer(self):
+        code, said = self.answer({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": self.UNSERVED}, "--json")
+        self.assertEqual((code, json.loads(said)["unserved"]), (0, self.UNSERVED))
+
+    def test_a_file_that_leaves_nothing_off_says_the_verdict_alone(self):
+        for requirements in ({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]},
+                             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": []}):
+            with self.subTest(requirements=requirements):
+                code, said = self.answer(requirements)
+                self.assertTrue(said.endswith("\n  the chain runs end to end\n"), said)
+                self.assertNotIn("unserved", json.loads(self.answer(requirements, "--json")[1]))
+
 
 if __name__ == "__main__":
     unittest.main()

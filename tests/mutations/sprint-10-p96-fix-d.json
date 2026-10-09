@@ -3,7 +3,7 @@
   "find": "    written = not (problems or args.dry_run)\n    if written and changes:\n        needs.write",
   "replace": "    written = bool(changes) and not (problems or args.dry_run)\n    if written and changes:\n        needs.write"},
  {"file": "scripts/parts.py", "name": "a refusal also says nothing to change",
-  "find": "or ([] if problems else [\"  nothing to change\"])", "replace": "or [\"  nothing to change\"]"},
+  "find": "    return lines or [\"  nothing to change\"]\n", "replace": "    return lines + [\"  nothing to change\"]\n"},
  {"file": "scripts/needs.py", "name": "any verb is one", "find": "\"does\": (lambda v: v in parts.VERBS,", "replace": "\"does\": (lambda v: True,"},
  {"file": "scripts/needs.py", "name": "an empty condition is words",
   "find": "\"condition\": (lambda v: v is None or drawer._words(v),", "replace": "\"condition\": (lambda v: v is None or isinstance(v, str),"},

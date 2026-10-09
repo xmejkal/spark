@@ -15,6 +15,12 @@ The person types a `/spark:` command, and you follow that command's page in [`co
 (`part-finder`, `datasheet-reader`, `parts-researcher`, `design-reviewer`) are launched by the commands and skills that
 name them.
 
+A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch` and
+`--sources`, and `tools.py --install` and `--on`, reach the network and are on no command's or skill's list, so Claude
+Code asks the person before any of them runs, and their answer is the yes. Their own settings can answer first: an allow
+rule of theirs, or auto mode, can let it run without asking, which is a yes given in advance, and auto mode can also
+refuse it. You do not work around either. `parts.py --describe --json` marks the network operations of `parts.py`.
+
 A new project starts with `/spark:init`, then `/spark:setup`. The [journey guide](journey.md) shows each step on real
 runs.
 
@@ -79,6 +85,12 @@ spark keeps the person's drawer, catalog, tools list and projects list in their 
 ([how it works](how-it-works.md#your-store) says where); `SPARK_HOME` overrides it. When you check someone else's
 project, use a scratch `SPARK_HOME`.
 
+Every `parts.py` operation that writes holds the store's lock from its plan to its last byte (`store.locked()`), so two
+writes at once take turns instead of each writing what the other never read. The drawer, its imports, the shelf, the
+projects list and the history are the places only the person should see (`PRIVATE` in `scripts/store.py`): spark writes
+them 0600 in folders 0700 and never inside a git work tree, and you never put them into a URL, a web search, a research
+agent's prompt or a commit.
+
 A scratch store hides three things, so tell the person:
 
 - **The shelf.** Part records then come from the library only, so physics, CONFLICT lines and `--unverified` can differ
@@ -96,20 +108,23 @@ These only read:
 - `check_all.py`, `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
 - `assign_pins.py` without `--emit-pins`;
 - `tools.py --status`, `boards.py --list`;
-- `parts.py --list`, `--show`, `--unverified` and `--validate`.
+- `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
+  `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
+  the network.
 
 These write:
 
 - `init_project.py`: four project files, plus the store's projects list.
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
   reads, and creates `.tscircuit/cache/`. It may also compile a chip beside its record, which for a library part is
-  inside the plugin. Its input, the requirements file, is described on
+  inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
+  history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
 - `check_vendor_pins.py` without `--offline`: the header cache.
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
-  - `--drawer-set`, `--needs-set`, `--function-set`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
+  - `--drawer-set`, `--needs-set`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
     also uses the network.
 - `tools.py --install`, `--on`, `--off`, `--pin`, `--use` and `--new`.
 
@@ -232,13 +247,13 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, each entry `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
-| `check_spine.py` | `check`, `stages`, `status`. `stages` names the one that stopped it |
+| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it |
 | `parts.py` | the envelope: `data`, `envelope`, `next`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
 **`parts.py`'s envelope:**
 
-- `next` holds suggested next commands, with their effects, and `truncated.next` the command for the rest of a long
-  answer.
+- `next` is where suggested next commands, with their effects, would go. It is empty today: no operation fills it. Only
+  `truncated.next` is filled, with the command for the rest of a long answer.
 - Run every write with `--dry-run` first.
 - `--unverified` puts its open items in `data.questions` (`part`, `fact`, `assumed`, `why_it_matters`, `source`); its
   `status` ok means only that the listing ran.
@@ -287,15 +302,22 @@ count.
      (`check_bom.py`);
    - an `init_project.py --circuit` that is not JSON.
 
-   Three more crash too:
+   Two more crash too:
    - `check_vendor_pins.py` without `gh`, unless given `--offline` ([P119](https://github.com/xmejkal/spark/issues/53));
    - `check_physics.py` on a bus named by nets that carries a pull-up, when `i2c_hz` is stated and
-     `i2c_bus_capacitance_pf` is null ([P107](https://github.com/xmejkal/spark/issues/41));
-   - `emit_board.py` with a library LED on the XIAO ([P121](https://github.com/xmejkal/spark/issues/55)).
+     `i2c_bus_capacitance_pf` is null ([P107](https://github.com/xmejkal/spark/issues/41)).
 
    `compare_design.py`, `assign_pins.py` and `check_spine.py` answer 2 instead. So exit 1 with an empty stdout is a
-   crash, not problems; check_all reports each as could-not-run.
-3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout. That is not a
+   crash, not problems; check_all reports each as could-not-run. `emit_board.py` with the library LED on the XIAO is a
+   refusal, not a crash: exit 2, nothing on stdout, and on stderr `cannot emit a board: led-red-5mm asks for 5 mA
+   through a series resistor, but the board states no power.io_volts — nothing to compute it from`. `check_spine.py`
+   shows it as `[????] schematic` with that sentence, then `the chain was NOT exercised — this is not a pass`, exit 2
+   ([P121](https://github.com/xmejkal/spark/issues/55)). An `emit_board.py` that crashes inside `check_spine.py` is
+   could-not-run too: the `schematic` stage's detail is `emit_board.py crashed: ` and the traceback's last line. A stage
+   detail that starts `Traceback (most recent call last):` is a crash, not a defect in the design.
+3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout, except that
+   `parts.py --json` answers an argument it cannot run with in its envelope (`status` is `could-not-run`). With
+   `CLAUDE_PLUGIN_ROOT` unset, Python never starts the script, so even that prints nothing. A bad command line is not a
    check that could not look, so with `--json`, parse stdout before trusting the code.
 4. **`init_project.py`'s exits.**
    - Without `--board`, it exits 1 when every file exists ("nothing to do").

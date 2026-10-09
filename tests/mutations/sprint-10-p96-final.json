@@ -56,8 +56,8 @@
  {
   "file": "scripts/parts.py",
   "name": "text mode hides a refused needs-set",
-  "find": "    lines += [\"  refused, so nothing was written: %s — %s\" % (p[\"subject\"], p[\"sentence\"]) for p in problems]\n    return Answer({\"changes\": changes, \"written\": written}",
-  "replace": "    return Answer({\"changes\": changes, \"written\": written}"
+  "find": "    lines += [\"  refused, so nothing was written: %s — %s\" % (p[\"subject\"], p[\"sentence\"]) for p in problems]\n    return lines or [\"  nothing to change\"]",
+  "replace": "    return lines or [\"  nothing to change\"]"
  },
  {
   "file": "scripts/parts.py",

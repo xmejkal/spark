@@ -5,8 +5,8 @@ Which pin should each signal go on, and why?
     assign_pins.py requirements.json
     assign_pins.py requirements.json --board firebeetle2-esp32s3 --json
 
-`check_design.py` tells you a pin assignment is wrong. This works out a right one, and — the part
-that matters more — says what each choice cost, so a person can disagree with it.
+A check on a finished pin assignment can tell you it is wrong. This works out a right one, and — the
+part that matters more — says what each choice cost, so a person can disagree with it.
 
 WHY THIS IS A SCRIPT
 Because it is a constraint problem with one right family of answers, and because doing it by hand
@@ -398,8 +398,8 @@ def pin_module(board, assignments, source):
     (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
     refused, not mangled: a renamed constant is a pin the firmware silently stops finding.
     """
-    lines = ["# The pin map: written by spark's assign_pins.py from %s" % source,
-             "# for the %s. Regenerate it; do not edit it." % board["name"], ""]
+    lines = ["# The pin map: written by spark's assign_pins.py from %s" % parts_library.one_line(source),
+             "# for the %s. Regenerate it; do not edit it." % parts_library.one_line(board["name"]), ""]
     for entry in assignments:
         if not entry["signal"].isidentifier():
             raise Impossible("signal %r is not a Python name, so no firmware could import it"
@@ -407,7 +407,7 @@ def pin_module(board, assignments, source):
         pad = ((board.get("physical") or {}).get("pad_aliases") or {}).get(entry["pin"], entry["pin"])
         said = ["pad %s" % pad, entry["why"]] + [role_note(board, role)
                                                           for role in entry["roles"]]
-        lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], "; ".join(said)))
+        lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], parts_library.one_line("; ".join(said))))
     return "\n".join(lines) + "\n"
 
 
@@ -415,7 +415,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="assign_pins.py",
         description="Work out which pin each signal should go on, and say why.")
-    parser.add_argument("requirements", help="JSON naming the signals and what each pin must do")
+    parser.add_argument("requirements", help="the requirements file (a board and a list of parts)")
     parser.add_argument("--board", help="board id (default: the project's active board)")
     parser.add_argument("--project", help="the project to resolve the board from")
     parser.add_argument("--json", action="store_true")

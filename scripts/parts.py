@@ -28,6 +28,7 @@ every document quietly assumed.
 """
 
 import argparse
+import contextlib
 import datetime
 import hashlib
 import json
@@ -36,7 +37,6 @@ import shlex
 import struct
 import sys
 import urllib.parse
-import urllib.request
 from collections import namedtuple
 from pathlib import Path
 
@@ -87,6 +87,13 @@ def function_problems(record):
         return []
     return ['function is [{"does": one of %s, "what": words}]' % ", ".join(VERBS)]
 
+
+def aliases(record):
+    """A record's other names (`also_known_as`) — only those that are words; a value that is no list names nothing (§5.5)."""
+    said = record.get("also_known_as")
+    return [alias for alias in said if isinstance(alias, str)] if isinstance(said, list) else []
+
+
 #: The facts the chain reads from a part record (§5.4): absent, the record owes them, and no build can place it.
 CHAIN_FACTS = ("footprint", "pin_order", "pin_order_proof", "body_mm", "simulation")
 
@@ -128,10 +135,12 @@ def audit(project=None):
     """
     Every record in every layer — the catalog included — every drawer link, and each record a link reaches in the person's
     other projects, walked once (§5.4, P89): per layer how many are current, owe facts, or are broken; which say nothing
-    of what they do (spark's layers and this project only); which entries point at nothing.
+    of what they do (spark's layers and this project only); which entries point at nothing; which boards stop the chain at
+    the footprint stage, their files holding no header geometry (C-7, P121).
     """
     import boards
     import drawer
+    import emit_footprint
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
     walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
     known, mine, seen = drawer.linkable(project), store.projects(), {row[3].resolve() for row in walked}
@@ -145,7 +154,7 @@ def audit(project=None):
         elif where in mine and path.resolve() not in seen:
             seen.add(path.resolve())
             linked.append((next(iter(said["is"])), path.stem, where, path))
-    counts, owed, broken, silent = {}, [], [], []
+    counts, owed, broken, silent, stops = {}, [], [], [], []
     for kind, found, layer, path in walked + linked:
         row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
         record = _parse(path)
@@ -157,9 +166,11 @@ def audit(project=None):
             broken.append({"id": found, "layer": layer, "problems": wrong})
         elif owing:
             owed.append({"id": found, "layer": layer, "owes": owing})
+        elif kind == "board" and emit_footprint.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain
+            stops.append({"id": found, "layer": layer})
         if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
             silent.append(found)
-    return counts, owed, broken, silent, dangling
+    return counts, owed, broken, silent, dangling, stops
 
 
 #: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
@@ -172,6 +183,32 @@ def audit(project=None):
 #: So an entry has a `pin` (what selectors use, restricted to this) and optionally `printed`
 #: (what is silkscreened, unrestricted). The generated file shows both where they differ.
 SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
+
+#: What a footprint may be (C-1, the council on PR #98): a footprinter's name — lower-case letters, digits, `_` and `.`, so
+#: `pinrow5`, `jst_ph_3`, `0603`, `dip12_w15.24mm` — or a JLCPCB part, `jlcpcb:C2040`. The board is written with it as an
+#: attribute's text, unescaped (P87, #19): a quote, a brace or a space in it would be code in `board.tsx`.
+FOOTPRINT_NAME = re.compile(r"[a-z0-9][a-z0-9_.]*|jlcpcb:C[0-9]+")
+#: What a silkscreen may not hold (C-1): the board keeps it in a `{/* … */}` comment, which `*/` ends, and `"` ends a string.
+ENDS_THE_COMMENT = ("*/", '"')
+
+#: Why a record's id must be a plain key (`store.PLAIN`; P87): `validate` refuses a record named otherwise, and `--skeleton`
+#: refuses to write one, so nobody is handed a file every reader refuses.
+NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by it, "
+                  "and the board names the part after it in code")
+
+#: What ends a line comment in a generated file: a line break — `\n` and `\r` end Python's `#`, and JavaScript's `//` ends
+#: at U+2028 and U+2029 too — and U+0085, which editors read as one.
+LINE_BREAKS = re.compile(r"[\r\n\u0085\u2028\u2029]")
+
+
+def one_line(text):
+    """
+    Words a generated file keeps in a `#` or `//` line comment, on that one line (concern 1, P87's line-comment half): every
+    line break a space. The pin map the firmware imports and the footprint the board imports carry a board's name, a role's
+    note, a pad's alias, a board's id; a line break in one ended the comment, and what followed was code.
+    """
+    return LINE_BREAKS.sub(" ", str(text))
+
 
 #: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
 #: here rather than keeping its own, because it had its own and the two disagreed: a servo part
@@ -477,6 +514,11 @@ def simulation_problems(part: dict, path: Path) -> list:
         for pad in sorted(wired - set(pins)):
             problems.append("simulation.wokwi.pins does not say where the wired pad %r goes on the "
                             "stand-in; name its pin, or null when it has none" % pad)
+    if chip and not (isinstance(chip, str) and re.fullmatch(SELECTOR_SAFE, chip)):
+        # the re-check's probes: a chip's name names its files (`../escape` reached outside the chip folder, and
+        # stage_chips copied from there) and is written into wokwi.toml (`x"⏎[[chip]]` was a table of its own)
+        return problems + ["simulation.wokwi.chip is %r, but a chip's name is a name — letters, digits and _ (vl6180x, "
+                           "l9110s): its files beside the record are named by it, and wokwi.toml is written with it" % (chip,)]
     if chip:
         folder = chip_folder(part, path)
         for suffix in CHIP_SOURCE_SUFFIXES:
@@ -522,6 +564,10 @@ def validate(part: dict, path: Path) -> list:
     if part.get("id") != path.stem:
         problems.append("id is %r but the file is named %r; they must match"
                         % (part.get("id"), path.stem))
+    elif isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
+        # P87's attribute half: `emit_board.component_name` capitalises the id's words and strips nothing, so the id is
+        # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
+        problems.append(NOT_A_PLAIN_ID % part["id"])
     for key, now in RETIRED.items():
         if key in part:
             problems.append("%r is retired: %s — delete the key (W16)" % (key, now))
@@ -570,7 +616,7 @@ def validate(part: dict, path: Path) -> list:
     for group in PIN_LISTS:
         for index, entry in enumerate(part.get(group) or []):
             pin = entry.get("pin")
-            if pin and not re.match(SELECTOR_SAFE, str(pin)):
+            if pin and not re.fullmatch(SELECTOR_SAFE, str(pin)):  # whole: `$` alone lets a trailing newline through
                 problems.append(
                     "%s[%d] pin %r cannot be a selector — letters, digits and _ only. If that is "
                     "what the silkscreen says, keep it in `printed` and give `pin` a wiring name"
@@ -579,6 +625,24 @@ def validate(part: dict, path: Path) -> list:
             if printed is not None and not isinstance(printed, str):
                 problems.append("%s[%d] printed is %r; it is the silkscreen text, a string"
                                 % (group, index, printed))
+            elif printed is not None and any(mark in printed for mark in ENDS_THE_COMMENT):
+                problems.append("%s[%d] printed %r holds %s — the generated board keeps the silkscreen in a comment, "
+                                "which that would end; write it without" % (group, index, printed, " and ".join(
+                                    mark for mark in ENDS_THE_COMMENT if mark in printed)))
+
+    # A rail and a signal are names, as a pin is (P87's attribute half, after F11): a rail becomes the net the board is written
+    # with — `to="net.<RAIL>"`, upper-cased — so a crafted one was code in board.tsx; a signal is what the pin map and the
+    # firmware call a pin's job. Whole-string: `$` alone would let a trailing newline through.
+    for index, supply in enumerate(part.get("power") or []):
+        rail = supply.get("rail") if isinstance(supply, dict) else None
+        if rail and not (isinstance(rail, str) and re.fullmatch(SELECTOR_SAFE, rail)):
+            problems.append("power[%d] rail is %r, but a rail is a name — letters, digits and _ (ground, logic, motor, 5v): "
+                            "the board is written with it as code" % (index, rail))
+    for index, need in enumerate(part.get("needs") or []):
+        signal = need.get("signal") if isinstance(need, dict) else None
+        if signal and not (isinstance(signal, str) and re.fullmatch(SELECTOR_SAFE, signal)):
+            problems.append("needs[%d] signal is %r, but a signal is a name — letters, digits and _ (MOTOR_IA, STATUS_LED): "
+                            "the pin map and the board name it, and firmware is written against it" % (index, signal))
 
     # Dimensions are a real schema, not an open fact, because every part has an outline and a
     # generator reads them structurally to decide where things go. They sat OUTSIDE the
@@ -612,6 +676,16 @@ def validate(part: dict, path: Path) -> list:
         if not part.get("footprint_note"):
             problems.append("footprint_placeholder is set with no footprint_note — say what the "
                             "real footprint is and why this one stands in, or nobody can finish it")
+
+    # A footprint is the NAME of one: the board is written with it as the text of an attribute, so a number or
+    # `true` would reach tscircuit as the footprint "5" or "True" — and a string with a quote in it would be code
+    # (C-1). An absent one (`_absent`: null, no key, empty) is owed, not wrong, so only a value that is there is
+    # checked; whether a name names a real footprint is a build's to say.
+    footprint = part.get("footprint")
+    if not (_absent("footprint", footprint) or (isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))):
+        problems.append("footprint is %r, but a footprint is the name of one — a footprinter's, in lower-case letters, "
+                        "digits, _ and . (pinrow5, jst_ph_3, dip12_w15.24mm), or a JLCPCB part, jlcpcb:C<number>: the "
+                        "board is written with it as code" % (footprint,))
 
     # Which pad is pin 1. The generator numbered `pinLabels` from the order the pins happened to
     # appear in this file — so an L9110S whose header reads BIA BIB GND VCC AIA AIB was emitted
@@ -824,34 +898,60 @@ def catalog_matches(words):
 #: the options one project weighed. The shelf keeps the part, not one project's story of it.
 SHELF_DROPS = ("owned", "photo", "photos", "sourcing", "alternatives")
 
-#: The facts a build reads from a part record (§5.7): a digest of these vouches for a record until one changes.
+#: Some of the facts a build reads from a part record (§5.7) — not its outline (`body_mm`) or its simulation stand-in: a
+#: digest of these vouches for a record until one of them changes.
 BUILD_FACTS = ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts")
+#: Some of the facts a build reads from a board (§5.7) — not its pin roles or GPIO capabilities (`pin_roles`, `adc_gpio`,
+#: `wake_capable_gpio`, which assign_pins reads).
+BOARD_FACTS = ("pins", "power_pads", "physical")
 
 
-def digest(record):
-    """The sha256 of the facts a build reads from a part record — rewriting anything else keeps it (§5.7)."""
-    facts = {key: record[key] for key in BUILD_FACTS if key in record}
-    return hashlib.sha256(json.dumps(facts, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+def digest(record, facts=BUILD_FACTS):
+    """
+    The sha256 of some of the facts a build reads (BUILD_FACTS / BOARD_FACTS: not a part's outline or simulation stand-in,
+    nor a board's pin roles) — a part's by default, a board's with BOARD_FACTS (§5.7).
+    """
+    shown = {key: record[key] for key in facts if key in record}
+    return hashlib.sha256(json.dumps(shown, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def _shelf_copy(path, project_name):
-    """What the shelf would hold of a project's record: filtered, and saying which project it came from and its digest."""
-    record = json.loads(Path(path).read_text())
+def note_built(design):
+    """
+    A `built` line in the history when a listed project's board runs end to end (§5.7, §8 T): the board's and each part's
+    digest, so a proof of an old pin order never vouches for a corrected one. A project not on the list keeps no history.
+    """
+    name = store.project_name(design.project)
+    if name is None:
+        return False
+    with store.locked():
+        return store.append_event({"event": "built", "project": name,
+                                   "board": {"id": design.board["id"], "digest": digest(design.board, BOARD_FACTS)},
+                                   "parts": [{"id": part["id"], "digest": digest(part)} for part in design.parts]})
+
+
+def _shelf_copy(path, project_name=None, record=None):
+    """
+    What the shelf would hold of a record: filtered — and when it came from a project, which one and its digest (§5.5).
+    `record` is the record as it would be written, when that is not yet what its file says (a dry run).
+    """
+    record = json.loads(Path(path).read_text()) if record is None else record
     copy = {key: value for key, value in record.items() if key not in SHELF_DROPS}
-    copy["based_on"] = {"project": project_name, "digest": digest(record)}
+    if project_name:
+        copy["based_on"] = {"project": project_name, "digest": digest(record)}
     return copy
 
 
-def shelvable(path, project_name):
-    """Whether a project's record may go onto the shelf: only one whose shelf copy meets the contract, or `--list` breaks in every project."""
+def shelvable(path, project_name=None):
+    """Whether a record may go onto the shelf: only one whose shelf copy meets the contract, or `--list` breaks in every project."""
     return not validate(_shelf_copy(path, project_name), Path(path))
 
 
-def shelve(path, project_name):
+def shelve(path, project_name=None):
     """
-    Put a record that lives in one project onto the person's shelf, so every project finds it (§5.5): a filtered
-    copy that says which project it came from and that record's digest; its folder (a simulation chip) travels
-    with it. Returns whether the shelf changed — or None when the record does not meet the contract (a draft stays in its project).
+    Put a record onto the person's shelf, so every project finds it (§5.5): a filtered copy — that says which project
+    it came from and that record's digest, when it came from one; a catalog record names none, since nothing reads it.
+    Its folder (a simulation chip) travels with it. Returns whether the shelf changed — or None when the record does
+    not meet the contract (a draft stays where it is).
     """
     path = Path(path)
     copy = _shelf_copy(path, project_name)
@@ -921,14 +1021,18 @@ def without_location(payload):
 
 
 def keep_in_store(payload, name, dry_run=False):
-    """Put a file in the store under its checksum and return the checksum (P62a) — a photo without its location (P75)."""
+    """
+    Put a file in the store under its checksum, checked (§6.2), and return the checksum (P62a) — a photo without its
+    location (P75). A dry run asks the name rule the real run enforces, so it refuses what the real run would refuse.
+    """
     if name.lower().endswith((".jpg", ".jpeg")):
         payload = without_location(payload)[0]
-    digest = hashlib.sha256(payload).hexdigest()
     if not dry_run:
-        (store.place("sources") / digest).mkdir(parents=True, exist_ok=True)
-        (store.place("sources") / digest / name).write_bytes(payload)
-    return digest
+        return store.keep(payload, name)
+    problem = store.file_name_problem(name)
+    if problem:
+        raise store.StoreProblem(problem)
+    return hashlib.sha256(payload).hexdigest()
 
 
 #: The unit a fact's name ends in, as a datasheet prints it.
@@ -1118,12 +1222,33 @@ def to_fetch(record):
     return [url for url in cited_urls(record) if url.split("?")[0].lower().endswith(KEEPABLE) and url not in known]
 
 
+def document_name(url):
+    """The file name a cited URL is kept under: the last segment of its path, decoded — never its query."""
+    return urllib.parse.unquote(url.split("?")[0].rsplit("/", 1)[-1]) or "document"
+
+
+def fetch_plan(record):
+    """
+    [(url, file name)] for every document `--fetch` would keep, or a StoreProblem naming the first one the store would
+    refuse by name. All or nothing (§6.4): the names come from the URLs, so every one is known before any download, and a
+    refusal stops the whole fetch — not halfway, with the documents before it kept and no record pointing at them.
+    `store.keep` still refuses such a name itself, as the last line of defence.
+    """
+    plan = [(url, document_name(url)) for url in to_fetch(record)]
+    for url, name in plan:
+        problem = store.file_name_problem(name)
+        if problem:
+            raise store.StoreProblem("%s: %s — nothing was fetched" % (url, problem))
+    return plan
+
+
 def fetch_documents(part_id, project=None, fetch=None):
     """
     Download every cited datasheet or image into the store and point at each from the record's
     `documents`: its URL, checksum, file name and the date it was fetched — `title` and `version`
     stay null until someone reads them, because a version is what the document PRINTS, not a
-    guess (P61). `fetch(url) -> bytes or None` is a parameter for the tests.
+    guess (P61). A document the store would refuse by name stops the whole fetch before any
+    download (`fetch_plan`). `fetch(url) -> bytes or None` is a parameter for the tests.
     """
     home = record_home(part_id, project)
     if home is None:
@@ -1131,16 +1256,14 @@ def fetch_documents(part_id, project=None, fetch=None):
     path = home / (part_id + DEFINITION_SUFFIX)
     record = json.loads(path.read_text())
     documents = dict(record.get("documents") or {})
-    for url in to_fetch(record):
-        bare = url.split("?")[0]
+    for url, name in fetch_plan(record):
         payload = (fetch or _download)(url)
         if payload is not None:
-            name = urllib.parse.unquote(bare.rsplit("/", 1)[-1]) or "document"
             documents[document_key(name, documents)] = {
                 "url": url, "sha256": keep_in_store(payload, name), "file": name,
                 "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
     record["documents"] = documents
-    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
+    _write_record(path, record)
     return documents
 
 
@@ -1152,9 +1275,10 @@ def _parse(path):
 
 
 def _download(url):
+    """One cited document through spark's one door to the network (§6.5) — None when it does not answer, so it is not kept."""
     try:
-        return urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "spark"}), timeout=30).read()
-    except Exception:  # noqa: BLE001 — a source that does not answer is simply not kept
+        return store.fetch(url)
+    except store.StoreProblem:
         return None
 
 
@@ -1201,7 +1325,7 @@ def sellers(project=None):
 
 def _matches(words, part_id, record):
     haystack = " ".join([part_id, record.get("name") or "", record.get("kind") or "",
-                         " ".join(record.get("also_known_as") or [])]).lower()
+                         " ".join(aliases(record))]).lower()
     return all(word.lower() in haystack for word in words)
 
 
@@ -1266,14 +1390,12 @@ def cited_urls(record):
 
 
 def reachable(url):
-    """Whether a URL answers at all. A hallucinated source is the one lie research tells easily."""
-    import urllib.request
+    """Whether a URL answers at all, asked through spark's one door (§6.5). A hallucinated source is the one lie research tells easily."""
     try:
-        request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "spark"})
-        with urllib.request.urlopen(request, timeout=10) as answer:
-            return 200 <= answer.status < 400
-    except Exception:  # noqa: BLE001 — any failure to reach it is the same answer here
+        store.fetch(url, method="HEAD")
+    except store.StoreProblem:
         return False
+    return True
 
 
 def sources_resolve(record, fetch=reachable):
@@ -1377,15 +1499,31 @@ OPERATIONS = (
      ("writes",), ("changes", "questions", "shelved", "smaller")),
     ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
-     ("writes",), ("part", "path", "was", "now", "written")),
+     ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
+    ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
+     "fill what a record owes — a JSON object of the facts the chain reads, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
-     (), ("layers", "owed", "broken", "no_function", "dangling")),
+     (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),
     ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
     ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
      "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
      ("changes", "written")),
     ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
      (), ("needs",)),
+    ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
+     "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds",
+     ("writes",), ("project", "picks", "reserved", "released", "written")),
+    ("requirements", {"metavar": "PROJECT"},
+     "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays",
+     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "no_supply",
+                   "no_driver", "no_receiver", "written")),
+    ("step", {"nargs": 2, "metavar": ("PROJECT", "STEP")},
+     "a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here",
+     ("writes",), ("step", "written")),
+    ("tally", {"metavar": "PROJECT"},
+     "the cost line: the picks, how many came from the store (known to spark before the project: its library, your store, your projects) and how many you own, and what the project's steps cost",
+     (), ("picks", "from_store", "owned", "cost", "built", "line", "needs", "needs_picked")),
     ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
      ("operations", "options", "exits")),
 )
@@ -1404,6 +1542,7 @@ OPTIONS = (
     ("url", {}, "with --keep: where the file came from, if anyone knows"),
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
+    ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
@@ -1501,6 +1640,8 @@ def _op_need(args, project):
 def _op_skeleton(args, project):
     if not project or not args.kind:
         return Answer(unchecked=[_cannot("--skeleton needs --project (the record belongs to a project's parts/) and --kind")])
+    if not store.PLAIN.fullmatch(args.skeleton):  # P87: a file every reader would refuse is never written
+        return Answer(problems=[_problem(args.skeleton, NOT_A_PLAIN_ID % args.skeleton)])
     target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
     if target.exists():
         return Answer(problems=[_problem(args.skeleton, "%s exists; fill it in, do not overwrite it" % target)])
@@ -1531,7 +1672,7 @@ def _op_fetch(args, project):
         home = record_home(args.fetch, project)
         if home is None:
             raise PartError("no record called %r to fetch for" % args.fetch)
-        wanted = to_fetch(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))
+        wanted = [url for url, _ in fetch_plan(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))]
         return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
                       or ["  %s cites no datasheet or image URL to keep" % args.fetch])
     kept = fetch_documents(args.fetch, project)
@@ -1581,14 +1722,30 @@ def _read_json_input(name):
 
 
 def _change_line(change, dry_run):
-    """'  new soil-probe: soil probe × 8 — is part sen0193-soil-moisture', or '  set dfrobot-dfr0954: count 2 → 4'."""
-    if change["new"]:
+    """
+    One set-only write's change (§5.2), the drawer's and the needs file's alike: '  new soil-probe: soil probe × 8 — is
+    part sen0193-soil-moisture' for a new drawer entry (× ? when its count was left out), else '  set soil: mark null →
+    "have"', every value from what it was.
+    """
+    if change["new"] and "entry" in change:
         now, linked = change["now"], change["now"].get("is")
-        return "  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count"),
+        return "  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count", "?"),
                                          " — is %s %s" % next(iter(linked.items())) if linked else "")
-    return "  %s %s: %s" % ("would set" if dry_run else "set", change["entry"], "; ".join(
+    return "  %s %s: %s" % ("would set" if dry_run else "set", change.get("entry") or change.get("need"), "; ".join(
         "%s %s → %s" % (key, json.dumps(change["was"].get(key), ensure_ascii=False), json.dumps(value, ensure_ascii=False))
         for key, value in change["now"].items()))
+
+
+def _write_lines(changes, problems, dry_run, said=()):
+    """
+    What a set-only write did or would do (§5.2), said one way for the drawer and the needs file: each change — marked
+    when anything was refused, because then nothing is written — what else the write has to say, then each refusal; or
+    that nothing changes.
+    """
+    lines = [("  refused, not written: " + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run)
+             for change in changes] + list(said)
+    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
+    return lines or ["  nothing to change"]
 
 
 def _drawer_answer(changes, questions, problems, dry_run):
@@ -1600,21 +1757,20 @@ def _drawer_answer(changes, questions, problems, dry_run):
     wanted = [change["shelve"] for change in made if change["shelve"]]
     shelved = [Path(path).stem for path, project in wanted if shelvable(path, project)]
     left = [Path(path).stem for path, project in wanted if not shelvable(path, project)]
-    lines = [(("  refused, not written: " + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run))
-             for change in made] + ["  ? %s" % q["sentence"] for q in questions]
-    lines += ["  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it" % stem
-              for stem in left]
-    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
+    said = ["  ? %s" % q["sentence"] for q in questions] + [
+        "  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it"
+        % stem for stem in left]
     return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],
                    "questions": questions, "shelved": shelved, "not_shelved": left, "written": not (problems or dry_run)},
-                  lines or ["  nothing to change"], problems=problems)
+                  _write_lines(made, problems, dry_run, said), problems=problems)
 
 
 def _op_drawer(args, project):
     import drawer
     entries = drawer.listing()
     shown, truncated = page(entries, args.start, "drawer", ["--drawer"])
-    lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], e["count"], "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
+    lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], "?" if e["count"] is None else e["count"],
+                                         "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
                                          "maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""))
              for e in entries]
     lines.append("  %d entr%s" % (len(entries), "y" if len(entries) == 1 else "ies"))
@@ -1642,18 +1798,89 @@ def _op_drawer_import(args, project):
     return answer._replace(data=dict(answer.data, smaller=smaller), lines=list(answer.lines) + ["  %s" % s for s in smaller])
 
 
+def _shelved_from(path):
+    """The project a shelf copy says it was shelved from (its `based_on`, §5.5) — None for a catalog's copy, or no copy."""
+    record = _parse(path) if Path(path).is_file() else None
+    based_on = record.get("based_on") if isinstance(record, dict) else None
+    named = based_on.get("project") if isinstance(based_on, dict) else None
+    return named if isinstance(named, str) else None
+
+
 def _record_path(part_id, project):
-    """A part record's own file: the nearest layer that has it, the catalog included, else a project on the person's list."""
+    """
+    A part record's own file, and the project whose shelf copy follows it (§5.4, §5.5): the nearest layer that has it, the
+    catalog included, else a project on the person's list — except that a shelf copy of a listed project's record is not a
+    home: that project's record is. A record found in the project given names that project too, when the shelf holds a copy
+    of it shelved from there: the copy follows its record, however the record was reached.
+    """
     import drawer
-    return next((path for kind, found, _, path in drawer.linkable(project) if (kind, found) == ("part", part_id)), None)
+    path, where = next(((path, where) for kind, found, where, path in drawer.linkable(project) if (kind, found) == ("part", part_id)),
+                       (None, None))
+    if path is not None and path.parent == store.place("shelf"):
+        named = _shelved_from(path)
+        folder = store.projects().get(named) if named else None
+        home = folder / "parts" / path.name if folder is not None else None
+        return (home, named) if home is not None and home.is_file() else (path, None)
+    named = store.project_name(project) if where == "project" else None
+    return path, named if named and _shelved_from(store.place("shelf") / path.name) == named else None
+
+
+def _refresh_shelf_copy(path, record, project_name, dry_run):
+    """
+    The shelf copy of a project's record made current again (§5.5) — after a write, and when an earlier write left it behind
+    (the record filled in its project while the copy stayed, so every retry said "nothing to change") — said in words:
+    current, refreshed, would refresh, or not refreshed and why: a copy that would not meet the contract is not written.
+    """
+    copy = _shelf_copy(path, project_name, record)
+    if _parse(store.place("shelf") / path.name) == copy:
+        return "current"
+    wrong = validate(copy, path)
+    if wrong:
+        return "shelf copy not refreshed: %s" % "; ".join(wrong)
+    if dry_run:
+        return "would refresh the shelf copy"
+    shelve(path, project_name)
+    return "shelf copy refreshed"
 
 
 def _write_record(path, record):
-    """A record back to its own home: through the store when it lives there (contained, atomic), else to its file."""
+    """A record back to its own home, whole (§6.1): through the store when it lives there (contained, private), else to its file."""
     for name in ("shelf", "catalog"):
         if path.parent == store.place(name):
             return store.write_json(name, path.stem, record)
-    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + "\n")
+
+
+def _set_in_home(part_id, project, values, dry_run, refuse):
+    """
+    Set fields of a part record in its own home (§5.4) — the catalog's, a project's, or a listed project's behind a shelf
+    copy — never spark's library, which is changed in spark's repository. A shelf copy that follows the record is made
+    current whether or not this write changed anything (`_refresh_shelf_copy`), and the answer says what became of it.
+    `refuse(record, after, path)` says what is wrong with the result, and anything it says refuses the write.
+    """
+    path, source = _record_path(part_id, project)
+    if path is None:
+        raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
+    if path.parent.resolve() == LIBRARY.resolve():
+        return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
+                                                  "not by parts.py" % part_id)])
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(record, dict):
+        return Answer(problems=[_problem(part_id, "%s is not a JSON object (%s) — repair the file by hand first" % (part_id, path))])
+    after = dict(record, **values)
+    wrong = refuse(record, after, path)
+    if wrong:
+        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
+    was, changes = {key: record.get(key) for key in values}, after != record
+    if changes and not dry_run:
+        _write_record(path, after)
+    shelf_copy = _refresh_shelf_copy(path, after, source, dry_run) if source else None
+    said = ("  %s %s (%s): %s" % ("would set" if dry_run else "set", part_id, path, "; ".join(
+                "%s %s → %s" % (key, json.dumps(was[key], ensure_ascii=False), json.dumps(value, ensure_ascii=False))
+                for key, value in values.items()))
+            if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
+    return Answer({"part": part_id, "path": str(path), "was": was, "now": values, "written": not dry_run, "shelf_copy": shelf_copy},
+                  [said] + (["  " + shelf_copy] if shelf_copy not in (None, "current") else []))
 
 
 def _op_function_set(args, project):
@@ -1661,24 +1888,21 @@ def _op_function_set(args, project):
     function, unreadable = _read_json_input(name)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    path = _record_path(part_id, project)
-    if path is None:
-        raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
-    if path.parent.resolve() == LIBRARY.resolve():
-        return Answer(problems=[_problem(part_id, "is in spark's own library, which is changed in spark's repository, "
-                                                  "not by --function-set")])
-    wrong = function_problems({"function": function}) if function else ["a function is a non-empty list [{does, what}]"]
-    if wrong:
-        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-    record = json.loads(path.read_text(encoding="utf-8"))
-    was, changes = record.get("function"), record.get("function") != function
-    if changes and not args.dry_run:
-        record["function"] = function
-        _write_record(path, record)
-    said = ("  %s %s (%s): function %s → %s" % ("would set" if args.dry_run else "set", part_id, path,
-                                                json.dumps(was, ensure_ascii=False), json.dumps(function, ensure_ascii=False))
-            if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
-    return Answer({"part": part_id, "path": str(path), "was": was, "now": function, "written": not args.dry_run}, [said])
+    answer = _set_in_home(part_id, project, {"function": function}, args.dry_run, lambda record, after, path:
+                          function_problems(after) if function else ["a function is a non-empty list [{does, what}]"])
+    return answer._replace(data=dict(answer.data, was=answer.data["was"]["function"], now=function)) if answer.data else answer
+
+
+def _op_fact_set(args, project):
+    part_id, name = args.fact_set
+    facts, unreadable = _read_json_input(name)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS)):
+        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s" % ", ".join(CHAIN_FACTS))])
+    return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: (
+        ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
+        + sorted(set(broken_problems(after, path)) - set(broken_problems(record, path)))))
 
 
 def _op_catalog(args, project):
@@ -1692,8 +1916,12 @@ def _op_catalog(args, project):
                   problems=[_problem(name.split(" — ")[0], "a broken catalog record: %s" % name) for name in broken])
 
 
+#: What `--audit` says of a board whose file has no header geometry (C-7): the chain stops there, whatever else it passes.
+STOPS_AT_FOOTPRINT = "stops at the footprint stage (P121) — no header geometry in its board file"
+
+
 def _op_audit(args, project):
-    counts, owed, broken, silent, dangling = audit(project)
+    counts, owed, broken, silent, dangling, stops = audit(project)
     shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project))
     lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
              for layer, row in counts.items()]
@@ -1702,7 +1930,9 @@ def _op_audit(args, project):
     lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
               % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
     lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
-    return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling}, lines,
+    lines += ["  %s (%s) %s" % (s["id"], s["layer"], STOPS_AT_FOOTPRINT) for s in stops]
+    return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling,
+                   "stops_at_footprint": stops}, lines,
                   truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]
                   + [_problem(entry, "points at a record nobody has") for entry in dangling])
 
@@ -1732,7 +1962,8 @@ def _op_match(args, project):
         lines += ["      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
                                         "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
                                                                 "free %s" % c["free"] if c["owned"] else "",
-                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else ""])))
+                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else "",
+                                                                "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
                   + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
                   for c in need["candidates"]]
         lines += ["      … %d more, none with the need's words" % need["more"]] if need["more"] else []
@@ -1751,11 +1982,178 @@ def _op_needs_set(args, project):
     written = not (problems or args.dry_run)
     if written and changes:
         needs.write(target, after)
-    lines = ["  %s%s %s: %s" % ("refused, not written: " if problems else "", "would set" if args.dry_run else "set",
-                                c["need"], ", ".join("%s → %s" % (k, json.dumps(v, ensure_ascii=False)) for k, v in c["now"].items()))
-             for c in changes] or ([] if problems else ["  nothing to change"])
-    lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
-    return Answer({"changes": changes, "written": written}, lines, problems=problems)
+    return Answer({"changes": changes, "written": written}, _write_lines(changes, problems, args.dry_run), problems=problems)
+
+
+def _op_pick(args, project):
+    import drawer
+    import needs
+    target, given = args.pick[0], args.pick[1:]
+    pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
+    if not pairs or len(pairs) != len(given):
+        return Answer(unchecked=[_cannot("--pick takes the project, then NEED=ID for each pick: light=led-red-5mm",
+                                         "parts.py --match <project> lists each need's candidates and their ids")])
+    reasons, unreadable = _read_json_input(args.passed_over) if args.passed_over else ([], None)
+    if unreadable:
+        return Answer(unchecked=[_cannot(unreadable)])
+    history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
+    listed, keys_before = store.project_name(target) is not None, needs.entry_keys(needs.read(target))
+    after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
+    if not problems and not args.dry_run:
+        store.add_project(target)
+        drawer.apply(changes)
+        for event in events:
+            store.append_event(event)
+        # the project's own file last: a store that refuses leaves it as it was, and the same pick, retried, finishes the rest
+        needs.write(target, after)
+    asked, name = dict(pairs), store.add_project(target, dry_run=True)
+    picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
+    said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]
+    released = _released(changes, name)
+    said += [] if problems else ["  %s%s: %s — no pick of this project explains it" % (
+        "would release" if args.dry_run else "released", "" if hold["now"] == 0 else " %d of %d" % (hold["was"] - hold["now"], hold["was"]),
+        hold["entry"]) for hold in released]
+    wrote = [] if problems else _what_a_pick_wrote(name, listed, history, events, needs.entry_keys(after) - keys_before, args.dry_run)
+    return Answer({"project": name, "picks": picks,
+                   "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
+                   "released": released, "written": not problems and not args.dry_run},
+                  _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes] + wrote), problems=problems)
+
+
+def _what_a_pick_wrote(name, listed, history, events, new_keys, dry_run):
+    """
+    What a pick writes beyond the drawer, said in its answer (C-17; the PO, 2026-10-08): the project put on the person's list,
+    the `reused` lines its history gains, each reason noted — or already noted, and not changed, since the history keeps a
+    need's first reason for a part — and a drawer entry's key that the project's own needs.json names from now on, said once.
+    """
+    seen, new = list(history), []
+    for event in events:
+        if not store.recorded(event, seen):
+            new.append(event)
+            seen.append(event)
+    reused = sum(1 for event in new if event["event"] == "reused")
+    lines = [] if listed else ["  %s %s on your projects" % ("would list" if dry_run else "listed", name)]
+    lines += ["  %s to your history: %d reused" % ("would write" if dry_run else "wrote", reused)] if reused else []
+    for event in (event for event in events if event["event"] == "passed_over"):
+        passed = "%s (%s)" % (next(event[kind] for kind in ("part", "board", "entry") if kind in event), event["need"])
+        lines.append("  %s why you passed over %s" % ("would note" if dry_run else "noted", passed) if event in new else
+                     "  already noted, not changed: why you passed over %s — your history keeps the first reason" % passed)
+    return lines + _names_your_entries("needs.json", new_keys, dry_run)
+
+
+def _names_your_entries(file_name, new_keys, dry_run):
+    """
+    What a write says once when a project file starts naming drawer entries by their keys — each a key made from the person's
+    label (C-17; F16): needs.json for --pick, requirements.json for --requirements, worded alike. Nothing when no key is new.
+    """
+    return ["  %s %s your drawer entr%s %s — a key made from your label, in the project's own file" % (file_name, "would name" if dry_run else
+        "names", "y" if len(new_keys) == 1 else "ies", ", ".join(sorted(new_keys)))] if new_keys else []
+
+
+def _released(changes, name):
+    """
+    The holds of project `name` a pick lets go (C-4): each drawer entry whose reservation for it goes down, because no pick of
+    the project explains it any more — a re-pick, or a hold given by hand — as {"entry", "was", "now"}. A pick rebuilds the
+    project's holds from its picks (§8 C), and what it drops is said, never left to a bare `used_in … → {}`.
+    """
+    return [{"entry": change["entry"], "was": was, "now": now} for change in changes
+            for was, now in [((change["was"].get("used_in") or {}).get(name, 0), change["now"]["used_in"].get(name, 0))] if now < was]
+
+
+#: What `--requirements` says of a need nothing on the board serves (C-2), by why: plainly, and what the person can do.
+NOT_ON_THE_BOARD = {"no pick": "no pick; --match lists its candidates",
+                    "a gap": "marked a gap: nothing like it is in the store yet; research it before it can be built",
+                    "no record": "{picks} has no record: fine for what is wired off the board (a speaker, a battery); what sits on the "
+                                 "board needs one — link its drawer entry to a record with `is`, or research one"}
+
+
+def _op_requirements(args, project):
+    import boards
+    import needs
+    content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = needs.requirements(
+        args.requirements)
+    path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
+    # F16: the drawer keys the file names before this write — needs.requirements has read it as JSON already
+    named = needs.unserved_keys(json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {})
+    if not problems and not args.dry_run:
+        for record, source in shelving:
+            shelve(record, source)
+        changed = store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + "\n")
+    said = [] if problems else ["  %s %s: board %s; parts %s" % (
+        "would write" if args.dry_run else "wrote" if changed else "unchanged", path, content["board"],
+        ", ".join(needs.entry_label(entry) for entry in content["parts"]) or "none")]
+    said += ["  board: %s → %s" % (json.dumps(board_was), json.dumps(content["board"]))] if board_was not in (None, content["board"]) and not problems else []
+    stop = "" if problems else boards.footprint_stop(content["board"], Path(args.requirements))  # F12 (C-7): said, never refused
+    said += ["  board %s %s" % (content["board"], stop)] if stop else []
+    said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
+    said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
+             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.emit_board.DEFAULT_BODY_MM + (how,))
+             for part_id, how in ([] if problems else placeholder)]
+    said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
+    said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []
+    said += ["  rail %s has no supply — pick a power inlet or a supply (%s draw%s from it)"
+             % (gap["rail"], ", ".join(gap["drawn_by"]), "s" if len(gap["drawn_by"]) == 1 else "") for gap in ([] if problems else no_supply)]
+    said += ["  net %s is driven by %s and nothing listed receives it — pick what it drives (a speaker terminal, a motor, a connector)"
+             % (gap["net"], gap["driven_by"]) for gap in ([] if problems else no_receiver)]
+    said += ["  net %s is one side of a driven pair and nothing listed drives it — pick what drives the pair (the amplifier this "
+             "terminal hangs off), never a supply (%s %s on it)" % (gap["net"], ", ".join(gap["received_by"]),
+                                                                    "is" if len(gap["received_by"]) == 1 else "are")
+             for gap in ([] if problems else no_driver)]
+    said += ["  not on the board: %s — %s" % (item["need"], NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
+             for item in ([] if problems else unserved)]
+    said += [] if problems else _names_your_entries(needs.REQUIREMENTS, needs.unserved_keys(content) - named, args.dry_run)
+    return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
+                   "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
+                   "unserved": unserved, "no_supply": no_supply, "no_driver": no_driver,
+                   "no_receiver": no_receiver, "written": not problems and not args.dry_run},
+                  _write_lines([], problems, args.dry_run, said), problems=problems)
+
+
+def _op_step(args, project):
+    import cost
+    target, step = args.step
+    if step not in cost.STEPS:
+        return Answer(unchecked=[_cannot("a step is one of %s (the spine, §2 of the store design)" % ", ".join(cost.STEPS))])
+    listed = store.project_name(target) is not None
+    event = cost.step_event(store.add_project(target, dry_run=args.dry_run), step)
+    if not args.dry_run:
+        store.append_event(event)
+    # C-17: what a step writes is said — a line in the person's history, with the session's id, and the project on their list
+    return Answer({"step": event, "written": not args.dry_run},
+                  ["  %s step %s of %s — a line in your history%s" % (
+                      "would start" if args.dry_run else "started", step, event["project"],
+                      ", with this Claude Code session's id" if event["session"] else cost.session_note())]
+                  + ([] if listed else ["  %s %s on your projects" % ("would list" if args.dry_run else "listed", event["project"])]))
+
+
+def _op_tally(args, project):
+    import cost
+    import drawer
+    import needs
+    name = store.project_name(args.tally)
+    if name is None:
+        return Answer(unchecked=[_cannot("%s is not on your list of projects, so no step of it was marked" % args.tally,
+                                         "mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list")])
+    history, entries, listed = store.events(), drawer.entries(), needs.read(args.tally)
+    picks = [(need["id"], pick) for need in listed for pick in need.get("pick") or []]
+    unpicked = [need["id"] for need in listed if not need.get("pick")]  # C-2: the picks are counted against the needs they serve
+    reused = [event for event in history if event.get("event") == "reused" and event.get("project") == name]
+    from_store = sum(1 for need_id, pick in picks if dict({"event": "reused", "project": name, "need": need_id}, **pick) in reused)
+    owned = sum(1 for _, pick in picks if needs.owned(pick, entries))
+    try:
+        counted, unchecked = cost.cost([event for event in history if event.get("event") == "step"], name), []
+    except cost.NoTranscript as missing:
+        counted, unchecked = None, [_cannot(str(missing), "mark each step with parts.py --step <project> <step> in a Claude Code session")]
+    said, unreadable = cost.line(len(picks), from_store, owned, counted), cost.unreadable_note(counted)
+    built = any(event.get("event") == "built" and event.get("project") == name for event in history)
+    needs_said = "%d of %d needs picked%s" % (len(listed) - len(unpicked), len(listed),
+                                              " — not picked: %s" % ", ".join(unpicked) if unpicked else "")
+    return Answer({"picks": len(picks), "from_store": from_store, "owned": owned, "cost": counted, "built": built, "line": said,
+                   "needs": len(listed), "needs_picked": len(listed) - len(unpicked)},
+                  ["  " + said, "  " + needs_said] + ["  " + glossed for glossed in cost.gloss(counted)]
+                  + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
+                  + ([] if built else ["  not built yet — check_spine records it when the chain runs end to end"]),
+                  unchecked=unchecked)
 
 
 def _op_describe(args, project):
@@ -1797,8 +2195,10 @@ def main(argv=None):
                     "--json" in argv)
     op = next(name for name, *_ in OPERATIONS if getattr(args, name.replace("-", "_")) not in (None, False))
     project = args.project.resolve() if args.project else None
+    writes = "writes" in next(effects for name, _, _, effects, _ in OPERATIONS if name == op)
     try:
-        answer = globals()["_op_" + op.replace("-", "_")](args, project)
+        with store.locked() if writes else contextlib.nullcontext():
+            answer = globals()["_op_" + op.replace("-", "_")](args, project)
     except (OSError, json.JSONDecodeError) as unreadable:
         answer = Answer(unchecked=[_cannot("--%s: %s" % (op, unreadable))])
     except PartError as broken:

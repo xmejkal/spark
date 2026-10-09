@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/tools.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
 ---
 
 # spark:build
@@ -38,7 +38,14 @@ two I2C sensors both land on SDA/SCL — and a bus line named the vendor's way (
 on the board's MOSI, SCK, SS; a line the bus does not have is refused by name, never placed
 somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
-*assigned, and connected to nothing*, for you to wire by hand, and the spine flags that.
+*assigned, and connected to nothing*, for you to wire by hand, and the spine flags that. An instance's `name`, a rail in
+`rails` and a signal's `name` are names — letters, digits and `_` — and the chain refuses the file otherwise, as
+`parts[0] calls its instance 'Btn Open', but an instance's name is a name — letters, digits and _ (BtnOpen): the board is
+written with it as code`.
+
+`parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, the
+parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack, and keeps every other
+key you added by hand (`signals`).
 
 The project is found up from the requirements file's own directory, so this works from anywhere —
 and from nowhere: a file inside no project is built from the plugin's own library, with no rules,
@@ -48,7 +55,8 @@ design's own parts, boards and rules live.
 ## The one command
 
 It needs the board engine — tscircuit, in the project (`/spark:init` writes the package file) — and
-Node for the simulation. `/spark:setup` shows what is missing and installs it with one yes.
+Node for the simulation. `/spark:setup` shows what is missing and installs it in one go once the person has seen the
+commands and said yes.
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --keep .
@@ -62,6 +70,10 @@ a board that built perfectly (backlog P51). An existing `.tsx` is left alone and
 not; delete it to have it regenerated. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.
+
+When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
+that were built, each with a digest of some of the facts the build read from it (the pins, power and footprint; not a
+part's size or simulation stand-in, nor the board's pin roles).
 
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
@@ -77,6 +89,12 @@ your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check 
 
 19 routed traces carry the 22 written connections: a group of N connected pins needs N−1 traces.
 
+The last line can say more. A requirements file that `parts.py --requirements` wrote carries a note, `unserved`, for a need
+the board does not serve: it has no pick, it is marked a gap, or every pick of it is a drawer entry with no record. When
+the chain runs end to end all the same, the verdict ends `the chain runs end to end — but not every need is on the board:`
+followed by each need and why, as `soil (no pick)`, `soil (a gap)` or `battery (no record: lipo-battery)`. With `--json`,
+the answer gains an `unserved` key. Say it to the person: a green build says nothing about those needs.
+
 Three outcomes, never two. `ok` means copper reached the board — traces counted, no error
 element, every component on a ground. `!!` is a defect in the design, named. `????` is
 **could-not-run**: the stage was not exercised — no `tsci`, a tool that cannot build even a
@@ -84,7 +102,7 @@ trivial board, a requirements file that is not JSON, an empty parts list — and
 says so. A chain that could not be exercised has not been proven; the difference is the whole
 point.
 
-A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
+A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs (unless the person's own settings already let it run: an allow rule of theirs, or auto mode), and the person's answer there is the yes. If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
 
 ## The steps, when one is wanted on its own
 
@@ -121,6 +139,7 @@ The generator refuses rather than guess, and each refusal says what to record:
 | no `pin_order` recorded | pads would be numbered from the order pins appear in a file, which is not a fact about the module |
 | no outline recorded | every placement would be arranged around an invented size; `--assume-missing-sizes` proceeds with the guess declared in the file. The one command always passes `--assume-missing-sizes`, so `/spark:build` goes ahead and declares the guess only in the header of `board.tsx` ([P115](https://github.com/xmejkal/spark/issues/49)) |
 | two components of one name | tscircuit keeps one and wires every other instance's pins to it |
+| a series resistor it cannot size — a part asks for a current (`for_current_ma`) and the board file states no `power.io_volts` | the resistor's value comes from the board's I/O voltage; the schematic stage refuses (`cannot emit a board: … — nothing to compute it from`, exit 2) rather than guess one. The library's XIAO file states none, so with the library LED it stops there |
 | a part that is not in the library | `parts.py --need <words>` says what exists; `/spark:research` writes the record from the vendor's own pages, vendor by vendor in the project's order — never a pinout from memory |
 
 A rail nothing sources (a motor rail with no connector) is not a refusal: the file says so and the

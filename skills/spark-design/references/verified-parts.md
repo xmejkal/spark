@@ -1,5 +1,9 @@
 # Verified parts library
 
+> **Older than spark's library, and not what the generator reads:** `parts/*.json` and `boards/*.json` are (`parts.py --list`,
+> `boards.py --list`). This list was written when the smart bin was built around the Seeed XIAO ESP32-C6. The bin's board is now the
+> DFRobot FireBeetle 2 ESP32-S3, whose LiPo plugs into the module's own socket, so the bin has no VBAT rail: read "VBAT" below as that older design's.
+
 One entry per part. A part with `verified: true` and a datasheet link can be reused
 directly; anything else must be confirmed before it goes near a fabricated board. Store
 the symbolic label -> physical pin/GPIO indirection explicitly — that mapping is what
@@ -109,7 +113,7 @@ higher-voltage motor pack (e.g. 6V AA) shares only GND.
 ## Identify the ESP32 board BEFORE designing (Seeed XIAO vs DFRobot)
 The pin map depends entirely on the exact board. Check the silkscreen + pad count:
 - **Seeed XIAO ESP32-C6**: 14 pads (7/side), 11 GPIO, 21x17.8 mm, pads labelled D0-D10 / **5V** /
-  GND / 3V3, Seeed silk. (This is the board the current smart-bin design assumes.)
+  GND / 3V3, Seeed silk. (The smart bin's earlier boards used it; its board is now the FireBeetle 2 ESP32-S3.)
 - **DFRobot FireBeetle 2 ESP32-C6 (DFR1075)**: much larger 60x25.4 mm, dual-row 2.54 mm, ~19 IO,
   pads labelled both IOxx and Dxx, onboard LiPo charge. DFRobot silk.
 - **DFRobot Beetle ESP32 V2.0**: hexagon/octagon board, **ESP32-WROOM-32D (classic ESP32)**, CH340C

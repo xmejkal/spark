@@ -99,7 +99,9 @@ Every item is an issue on [spark's board](https://github.com/users/xmejkal/proje
 limits, and the cadences are in [`scrum/README.md`](../../scrum/README.md). The words the team uses its own way are
 in the [glossary](../../GLOSSARY.md).
 
-The team's own tools sit beside the gate:
+One more team tool sits beside the gate: [`tools/board.py`](../../tools/board.py), the state of the work at every session
+start, and the day-close.
 
-- [`tools/board.py`](../../tools/board.py): the state of the work at every session start, and the day-close;
-- [`tools/research_cost.py`](../../tools/research_cost.py): the cost of one research run, read from its transcript.
+[`scripts/cost.py`](../../scripts/cost.py) is not a team tool. It ships with the plugin: `parts.py --step` and `--tally`
+import it to count what a project's run cost, and on one transcript it says what that run cost
+([how it works](how-it-works.md#the-libraries)).

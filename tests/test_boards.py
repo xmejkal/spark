@@ -162,6 +162,61 @@ class TheContractTest(unittest.TestCase):
         self.assertFalse(any("power_pads" in p for p in
                              self._problems(power_pads={"GND1": {"rail": "ground"}})))
 
+    def test_a_power_pad_rail_that_is_no_name_is_refused(self):
+        # P87's attribute half: the pad's rail is the net its trace is written to, `to="net.<RAIL>"`
+        problems = self._problems(power_pads={"GND1": {"rail": "ground"}, "VCC": {"rail": 'motor" pcbX={(globalThis.x = 1, 0)} y="'}})
+        self.assertEqual([p for p in problems if "power_pads" in p], [
+            "power_pads.VCC rail is 'motor\" pcbX={(globalThis.x = 1, 0)} y=\"', but a rail is a name — letters, digits and _ "
+            "(ground, logic, motor): the board is written with it as code"])
+
+    def test_a_label_a_pad_an_export_or_an_id_that_is_no_name_is_refused(self):
+        # P87's attribute half: board.tsx is written with `.Mcu > .<label>`, `.Mcu > .<pad>`, `import { <export> }` and
+        # `<export name="Mcu">`; the id names the board's file and heads the footprint generated from it
+        crafted = 'D3" pcbX={(globalThis.x = 1, 0)} y="'
+        for overrides, said in (
+                ({"pins": {crafted: 0}}, "pins key %r is not a name — letters, digits and _ (D3, SDA, A0): the board is written "
+                                         "with it as code" % crafted),
+                ({"power_pads": {crafted: {"rail": "ground"}}}, "power_pads key %r is not a name — letters, digits and _ (3V3, "
+                                                                "GND1, VCC): the board is written with it as code" % crafted),
+                ({"physical": {"footprint_module": "X", "footprint_export": crafted}},
+                 "physical.footprint_export is %r, but it is a name — letters, digits and _ (FireBeetle2Esp32S3): the board is "
+                 "written with it as code" % crafted)):
+            with self.subTest(said=said):
+                self.assertIn(said, self._problems(**overrides))
+        for board_id in ('x"y', "Bad_Board", "XIAO"):
+            with self.subTest(id=board_id):
+                self.assertIn("id is %r, but an id is a plain key — lower-case letters, digits and - (firebeetle2-esp32s3): "
+                              "files are named by it, and it is written into the footprint generated from it" % board_id,
+                              self._problems(board_id=board_id))
+
+    def test_a_crafted_label_carried_through_the_whole_file_is_refused_by_the_name_rule_itself(self):
+        # it was refused only when it sat on no pad (header_order) or had no simulator name (wokwi_power_pins); carried
+        # consistently through all of them it passed, and the rule that refuses it now is the name's own
+        crafted = 'D3" pcbX={(globalThis.x = 1, 0)} y="'
+        path = ROOT / "boards" / "firebeetle2-esp32s3.json"
+        for key, old in (("pins", "D3"), ("power_pads", "VCC")):
+            with self.subTest(key=key):
+                board = json.loads(path.read_text())
+                board[key][crafted] = board[key].pop(old)
+                if key == "power_pads":
+                    board["wokwi_power_pins"][crafted] = board["wokwi_power_pins"].pop(old)
+                for row, labels in board["physical"]["header_order"].items():
+                    if not row.startswith("//"):
+                        board["physical"]["header_order"][row] = [crafted if label == old else label for label in labels]
+                self.assertEqual([p for p in boards.validate(board, path) if crafted in p],
+                                 ["%s key %r is not a name — letters, digits and _ (%s): the board is written with it as code"
+                                  % (key, crafted, "D3, SDA, A0" if key == "pins" else "3V3, GND1, VCC")])
+
+    def test_a_drill_that_is_no_number_is_refused(self):
+        # concern 1: the footprint's comment quotes the drawing's drill, `NOT the <drill_mm> mm`; it is a number, never text
+        physical = {"footprint_module": "X", "footprint_export": "X"}
+        crafted = '0.9\nexport const injected = 1 //'
+        self.assertIn("physical.header.drill_mm is %r, but it is a number of millimetres (0.9): the footprint generated from "
+                      "it is written with it" % crafted, self._problems(physical=dict(physical, header={"drill_mm": crafted})))
+        for drill in (0.9, 1):
+            with self.subTest(drill=drill):
+                self.assertEqual([p for p in self._problems(physical=dict(physical, header={"drill_mm": drill})) if "drill" in p], [])
+
     def test_a_wrong_schema_version_is_refused_rather_than_read_hopefully(self):
         problems = self._problems(schema=99)
         self.assertTrue(any("schema" in p for p in problems))
@@ -323,6 +378,34 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
                 code, said, err = self._run(*argv)
                 self.assertIn(code, (0, 1), err)
                 self.assertTrue(said or err, "it must say something either way")
+
+class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
+    """
+    F12 (C-7): /spark:init shows this list and asks the person to choose, and the XIAO — whose file records no header
+    geometry, so the chain stops at its footprint stage — was offered unmarked. It is marked, in the words --audit uses,
+    and never hidden: it is still a choice for pin-map work. The `  * id (layer)` start of each line is unchanged.
+    """
+
+    def listed(self, root):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = boards.main(["--list", "--project", str(root)])
+        return code, out.getvalue().splitlines()
+
+    def test_a_board_that_stops_is_listed_saying_so_and_one_that_builds_is_not(self):
+        code, lines = self.listed(project())
+        self.assertEqual(code, 0)
+        self.assertIn("    xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file", lines)
+        self.assertIn("  * firebeetle2-esp32s3 (library)", lines)
+
+    def test_a_board_file_that_cannot_be_read_is_still_listed(self):
+        root = project()
+        (root / "boards" / "half-board.json").write_text("{not json")
+        code, lines = self.listed(root)
+        self.assertEqual((code, "    half-board (project)" in lines), (0, True), lines)
+
 
 class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
     """

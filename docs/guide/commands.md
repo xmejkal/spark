@@ -8,9 +8,18 @@ A **skill** is a longer procedure that Claude picks up when your words match it.
 An **agent** is a focused helper that a command or a skill launches. It has its own model and its own short list of
 tools.
 
-Every command treats text read from a [record](../../GLOSSARY.md#record--and-the-three-places-one-lives), a drawer
+Every command treats text read from a [record](../../GLOSSARY.md#record--and-the-four-places-one-lives), a drawer
 entry, a web or shop page or a datasheet as data about a part. It is never an instruction: if such text asks Claude to
 run or change something, Claude quotes it to you and carries on. (Each command page says so in its first paragraph.)
+
+A command page's header, `allowed-tools`, lists the operations Claude may run without asking you, each by name. Four
+operations that reach the network are on no command's or skill's list: `parts.py --fetch` and `--sources`, and
+`tools.py --install` and `--on`. The first downloads a datasheet, the second asks every URL a record cites whether it
+answers, and the other two install a tool. So Claude Code asks you before any of them runs, and your answer there is
+the yes, unless your own settings answer first: an allow rule of yours, or auto mode, can let it run without asking. A
+test holds every list to this rule (`tests/test_routes.py`); how Claude Code matches a pattern to a command line is an
+assumption it states, because the test cannot run Claude Code. `parts.py --describe --json` marks the network
+operations of `parts.py`.
 
 The [journey guide](journey.md) shows these commands on real runs.
 
@@ -47,8 +56,8 @@ answered ([P114](https://github.com/xmejkal/spark/issues/48)). Not every check r
 
 ### `/spark:setup`
 
-Shows which tools spark needs and which are missing, and installs them with one yes. Run it after `/spark:init`:
-without a `package.json` in the project, npm installs into a parent folder
+Shows which tools spark needs and which are missing, and installs them in one go once you have seen the commands and
+said yes. Run it after `/spark:init`: without a `package.json` in the project, npm installs into a parent folder
 ([P113](https://github.com/xmejkal/spark/issues/47)). First it shows exactly what installing would run:
 
 ```sh
@@ -80,7 +89,8 @@ What you own, in your own store, never in a repository:
 - **Add to it:** say more in plain words, through `--drawer-set` with `--dry-run` first.
 - **Import your DFRobot order history** from your logged-in browser.
 
-An entry needs only a label and a count, and adding a part to the drawer never starts research on it.
+An entry needs only a label; with no count it is owned, count unknown, and adding a part to the drawer never starts
+research on it.
 
 How the import works:
 
@@ -98,11 +108,20 @@ Turns a goal in your words into needs, asking at most three questions, one at a 
 against your drawer and spark's records, owned parts first ([journey: Idea](journey.md#idea)). The needs are written
 to the project's `.spark/needs.json`.
 
-It stops after matching each need. Not built yet:
+Then it picks a part per need and reserves what you own of it, and the picks become a requirements file
+([P97](https://github.com/xmejkal/spark/issues/18)). The run ends with one cost line, from `parts.py --tally`. Its words,
+as the code defines them:
 
-- choosing a part per need, and reserving the parts you own
-  ([P97](https://github.com/xmejkal/spark/issues/18));
-- turning needs into a requirements file ([P76](https://github.com/xmejkal/spark/issues/5)).
+- **from the store**: known to spark before this project — its library, your store, your projects;
+- **owned**: your drawer holds it;
+- **requests**: tool calls that reach the network, every MCP call among them;
+- **documents**: the distinct PDFs and images read, with the Read tool or `parts.py --read`;
+- **min**: wall-clock minutes of the session between the steps.
+
+`--tally` reads the Claude Code transcripts of the sessions the steps ran in, for tool names and counts only. With no
+transcript the line ends `its cost was not counted` and the command exits 2, could-not-run: a missing cost is never a
+cost of 0. [A recorded run](journey.md#a-recorded-run-a-button-and-an-led) shows every step with the output it printed,
+and [owed facts and gaps](journey.md#owed-facts-and-gaps) says what a record can owe and what follows a gap.
 
 Page: [`commands/idea.md`](../../commands/idea.md).
 
@@ -133,7 +152,9 @@ It does not:
 - track prices.
 
 **What research has cost.** The agents run on your account, so you pay for their tokens and time. Measured from their
-transcripts on 2026-10-03 with `tools/research_cost.py`
+transcripts on 2026-10-03 as tool calls, tokens processed and time (`scripts/cost.py <transcript>` measures one run
+today, but counts network requests, documents read, new tokens apart from cache reads and minutes, so its numbers for the
+same run differ)
 ([P80 in the backlog's archive](../../scrum/PRODUCT_BACKLOG.md#p80--parts-research-is-lean-and-professional--slice-4-the-pos-request-of-2026-10-03--done-2026-10-03-581fa8a)):
 
 - the full research protocol P80 replaced: a median of 78 tool calls, about 5.0 M tokens processed and about 25 minutes;

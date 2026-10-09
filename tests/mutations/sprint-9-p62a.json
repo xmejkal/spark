@@ -18,10 +18,10 @@
   "replace": "    while False:"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/store.py",
   "name": "a file is kept under its name, not its checksum",
-  "find": "(store.place(\"sources\") / digest / name).write_bytes(payload)",
-  "replace": "(store.place(\"sources\") / name).write_bytes(payload)"
+  "find": "    folder = place(\"sources\") / digest\n",
+  "replace": "    folder = place(\"sources\")\n"
  },
  {
   "file": "scripts/parts.py",

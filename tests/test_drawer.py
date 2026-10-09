@@ -64,6 +64,39 @@ class TheDrawerTest(unittest.TestCase):
         self.assertEqual((code, said["status"]), (0, "ok"))
         self.assertEqual(self.entry("a-cjmcu-111"), {"schema": 1, "label": "a CJMCU-111", "count": 1})
 
+    def test_an_entry_with_no_count_is_owned_count_unknown(self):
+        said, code = run(["--drawer-set", a_file([{"label": "some resistors"}])])
+        self.assertEqual((code, self.entry("some-resistors")), (0, {"schema": 1, "label": "some resistors"}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--drawer"])
+        self.assertEqual(next(line for line in out.getvalue().splitlines() if "some resistors" in line).split()[2], "?")
+
+    def test_the_write_of_an_entry_with_no_count_says_a_question_mark_for_it(self):
+        write = a_file([{"label": "some resistors"}])
+        for extra, line in ((["--dry-run"], "  would add some-resistors: some resistors × ?"),
+                            ([], "  new some-resistors: some resistors × ?")):
+            with self.subTest(extra=extra):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    parts.main(["--drawer-set", write] + extra)
+                self.assertEqual(out.getvalue().splitlines(), [line])
+
+    def test_a_count_of_zero_is_listed_as_0_and_only_a_count_left_out_as_a_question_mark(self):
+        run(["--drawer-set", a_file([{"label": "burnt buzzers", "count": 0}, {"label": "some resistors"}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--drawer"])
+        lines = out.getvalue().splitlines()
+        self.assertEqual([next(line for line in lines if label in line).split()[2] for label in ("burnt buzzers", "some resistors")],
+                         ["0", "?"])
+
+    def test_a_new_entry_with_a_count_and_no_label_is_still_refused(self):
+        said, code = run(["--drawer-set", a_file([{"entry": "some-resistors", "count": 50}])])
+        self.assertEqual((said["status"], code), ("problems", 1))
+        self.assertIn("needs a label", said["problems"][0]["sentence"])
+        self.assertFalse((self.home / "drawer").exists())
+
     def test_a_dry_run_says_what_would_change_and_changes_nothing(self):
         run(["--drawer-set", a_file([{"entry": "dfrobot-dfr0954", "label": "I2S amplifier", "count": 2}])])
         said, code = run(["--drawer-set", a_file([{"entry": "dfrobot-dfr0954", "count": 4}]), "--dry-run"])
@@ -243,6 +276,19 @@ class TheDrawerTest(unittest.TestCase):
         self.assertNotIn("is", self.entry("b"))
         self.assertEqual(said["data"]["questions"], [])
 
+    def test_an_alias_that_is_no_list_names_nothing(self):
+        self.assertEqual(drawer.numbers({"sku": "X1", "also_known_as": "DFR0954"}, "x-part"), ({"x1"}, set()))
+        self.assertEqual(drawer.numbers({"sku": "X1", "also_known_as": 7}, "x-part"), ({"x1"}, set()))
+        (self.home / "catalog" / "x-odd.json").write_text(json.dumps(
+            {"schema": 1, "id": "x-odd", "name": "Odd", "kind": "sensor", "also_known_as": 7}))
+        said, code = run(["--drawer-set", a_file([{"label": "probe", "count": 1, "part_number": {"number": "SEN0193"}}])])
+        self.assertEqual((code, self.entry("probe")["is"]), (0, {"part": "sen0193-soil-moisture"}),
+                         "one odd record in the catalog takes no drawer write down")
+
+    def test_an_alias_that_is_no_word_names_nothing(self):
+        self.assertEqual(drawer.numbers({"sku": "X1", "also_known_as": ["DFR0954", 7, None]}, "x-part"), ({"x1", "dfr0954"}, {"dfr0954"}),
+                         "the words in the list name it; the 7 and the null beside them are passed over")
+
     def test_a_different_maker_makes_an_exact_number_a_question(self):
         said, _ = run(["--drawer-set", a_file([{"label": "p", "count": 1, "part_number": {"maker": "adafruit", "number": "SEN0193"}}])])
         self.assertNotIn("is", self.entry("p"))
@@ -332,6 +378,16 @@ class TheDfrobotImportTest(unittest.TestCase):
         self.bring(orders(("FIT0096", "buttons", 4)))
         self.assertEqual(self.entry("dfrobot-fit0096")["count"], "many")
 
+    def test_a_count_left_out_stays_left_out_and_a_re_import_only_learns_what_was_bought(self):
+        tied = {"seller": "dfrobot", "product": "DFR0954"}
+        run(["--drawer-set", a_file([{"label": "my amplifiers", "from": tied}])])
+        self.bring(orders(("DFR0954", "amp", 2)))
+        self.assertEqual(self.entry("my-amplifiers"), {"schema": 1, "label": "my amplifiers", "from": tied, "bought": {"dfrobot": 2}})
+        said, _ = self.bring(orders(("DFR0954", "amp", 5)))
+        self.assertEqual(said["data"]["changes"], [{"entry": "my-amplifiers", "new": False, "was": {"bought": {"dfrobot": 2}},
+                                                    "now": {"bought": {"dfrobot": 5}}}], "three more bought: not three owned")
+        self.assertEqual(self.entry("my-amplifiers"), {"schema": 1, "label": "my amplifiers", "from": tied, "bought": {"dfrobot": 5}})
+
     def test_an_import_confirms_an_unsure_entry(self):
         run(["--drawer-set", a_file([{"label": "MP3 mini module", "count": 1, "unsure": True,
                                       "from": {"seller": "dfrobot", "product": "DFR0768"}}])])
@@ -339,6 +395,18 @@ class TheDfrobotImportTest(unittest.TestCase):
         entry = self.entry("mp3-mini-module")
         self.assertEqual((entry["count"], entry["unsure"]), (2, False))
         self.assertFalse((self.home / "drawer" / "dfrobot-dfr0768.json").exists(), "the same item, not a second entry")
+
+    def test_an_import_that_confirms_an_unsure_entry_with_no_count_gives_it_the_shop_s_count(self):
+        tied = {"seller": "dfrobot", "product": "DFR0768"}
+        run(["--drawer-set", a_file([{"label": "MP3 mini module", "unsure": True, "from": tied}])])
+        self.bring(orders(("DFR0768", "DFPlayer Pro", 2)))
+        self.assertEqual(self.entry("mp3-mini-module"), {"schema": 1, "label": "MP3 mini module", "count": 2, "from": tied,
+                                                         "bought": {"dfrobot": 2}, "unsure": False})
+
+    def test_the_drawer_page_says_which_entry_with_no_count_a_re_import_counts(self):
+        page = " ".join((ROOT / "commands" / "drawer.md").read_text().split())
+        self.assertIn("leaves an entry with no count without one (owned, count unknown) — unless the entry was `unsure`: the "
+                      "import confirms it, and its count becomes the shop's total", page)
 
     def test_a_sku_whose_record_an_entry_said_in_words_already_is_is_asked_not_written(self):
         run(["--drawer-set", a_file([{"label": "the FireBeetle 2 ESP32-S3", "count": 1, "is": {"board": "firebeetle2-esp32s3"}}])])

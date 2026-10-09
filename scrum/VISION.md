@@ -49,7 +49,7 @@ ahead of everything after it.
 
 | | done when | proved by |
 | --- | --- | --- |
-| **v1 — a stranger's checked board** | from an empty directory and the docs alone, on **the documented example and irrigation** | `check_spine.py` exits 0, and `check_all.py` shows no `!!`, every `????` naming the fact to state |
+| **v1 — a stranger's checked board** | from an empty directory and the docs alone, on **the documented example and irrigation** | `check_spine.py` exits 0, and `check_all.py` shows no `[FAIL]`, every `????` naming the fact to state |
 | **Next — firmware tested before hardware, then on it** | the firmware fails on a Mac when it misses a pin it should drive; then the first bench run anywhere | a command that exits 1 on irrigation today and 0 after its fix; the bin's bring-up 01–06 logged with a verdict per step |
 
 ## Not goals

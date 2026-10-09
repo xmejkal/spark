@@ -62,7 +62,9 @@ import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
 import netlist  # noqa: E402
+import parts  # noqa: E402
 import sim_project  # noqa: E402
+import store  # noqa: E402
 import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
@@ -237,9 +239,11 @@ GROUND_NETS = emit_board.GROUND_NETS
 PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "simple_diode")
 
 
-def islands_in(circuit, claims=()):
+def islands_in(circuit, claims=(), across=()):
     """
-    Every component the board leaves on an island, said in its own words.
+    Every component the board leaves on an island, said in its own words. `across` names the
+    components that sit across a driven pair (`emit_board.loads_across_a_pair`: a speaker
+    terminal, C-3) — asked, as a passive is, whether an end dangles, never whether they reach ground.
 
     Three questions, because a component can be stranded in three ways and a board builds,
     routes and reports no error for any of them:
@@ -269,7 +273,7 @@ def islands_in(circuit, claims=()):
                   if (net.get("name") or "").upper() in GROUND_NETS}
     names = {cid: element.get("name") or "?" for cid, element in board.components.items()}
     passives = {cid for cid, element in board.components.items()
-                if element.get("ftype") in PASSIVE_FTYPES}
+                if element.get("ftype") in PASSIVE_FTYPES or element.get("name") in across}
     grounded, present = set(), set()
     for port_id, net_ids in board.nets_of_port.items():
         owner = board.ports[port_id].get("source_component_id")
@@ -355,12 +359,15 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         [sys.executable, str(SCRIPTS / "emit_board.py"), str(workdir / "requirements.json"),
          "--project", str(project), "--assume-missing-sizes"],
         capture_output=True, text=True)
+    if emitted.returncode == emit_board.EXIT_COULD_NOT_RUN:
+        # It refused the input — a part with no measured outline, a resistor nothing sizes — in its own words.
+        return stages + [Stage("schematic", COULD_NOT_RUN, emitted.stderr.strip())]
     if emitted.returncode != 0:
-        # emit_board distinguishes the two, and so must this. "It refused because a part has no
-        # measured outline" and "it produced a broken design" send a person to different places.
-        refused = emitted.returncode == emit_board.EXIT_COULD_NOT_RUN
-        return stages + [Stage("schematic", COULD_NOT_RUN if refused else PROBLEMS,
-                               emitted.stderr.strip())]
+        # emit_board exits 0 or 2 on purpose, so anything else is a crash: could-not-run, as `main` says of anything
+        # unforeseen, with the traceback's last line. Read as problems, it sent people to debug a design nobody examined (F5).
+        said = emitted.stderr.strip().splitlines()
+        return stages + [Stage("schematic", COULD_NOT_RUN, "emit_board.py crashed: %s" % (
+            said[-1] if said else "exit %d, and nothing said" % emitted.returncode))]
     board_file.write_text(emitted.stdout)
     traces_asked = emitted.stdout.count("<trace ")
     stages.append(Stage("schematic", OK, "%d trace(s) written" % traces_asked))
@@ -421,7 +428,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # routed and reported zero errors, while every module around it was correctly wired to a
     # ground the processor was not on.
     islands = islands_in(json.loads(circuit_path.read_text()),
-                         emit_board.supply_inputs(board, part_list))
+                         emit_board.supply_inputs(board, part_list),
+                         across=emit_board.loads_across_a_pair(part_list))
     if islands:
         return stages + [Stage("build", PROBLEMS,
                                "%s. A board builds, routes and reports no error with a component "
@@ -522,7 +530,18 @@ def verdict(stages):
         unchecked=[s for s in stages if s.status == COULD_NOT_RUN])]
 
 
-def render(stages, code):
+def left_off(requirements):
+    """
+    The needs the requirements file says it leaves off the board (C-2: the note `parts.py --requirements` writes, `unserved`),
+    each as `soil (no pick)` or `battery (no record: lipo)` — so "the chain runs end to end" never stands alone over a goal the
+    board does not serve. A note in no shape spark writes says nothing, as a file with no note does.
+    """
+    note = requirements.get("unserved") if isinstance(requirements, dict) else None
+    return ["%s (%s%s)" % (item["need"], item.get("why"), ": " + ", ".join(map(str, item["picks"])) if item.get("picks") else "")
+            for item in (note if isinstance(note, list) else []) if isinstance(item, dict) and isinstance(item.get("need"), str)]
+
+
+def render(stages, code, unserved=()):
     mark = {OK: "ok  ", PROBLEMS: "!!  ", COULD_NOT_RUN: "????"}
     lines = ["", "  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation", ""]
     for stage in stages:
@@ -532,8 +551,21 @@ def render(stages, code):
         EXIT_OK: "  the chain runs end to end",
         EXIT_PROBLEMS: "  the chain is broken",
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
-    }[code])
+    }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))
     return "\n".join(lines) + "\n"
+
+
+def design_handed_to(workdir, project):
+    """
+    The design the chain is about to be handed (§5.7): the work folder's copy of the requirements, with the board and the
+    part records they name, loaded once, now. `built` names this — what the chain ran on — and not what the person's files
+    say by the time the build has finished, minutes later. None when it cannot be loaded: `run` says why, as a stage, and a
+    chain that did not run end to end records nothing.
+    """
+    try:
+        return design.load(workdir / "requirements.json", project)
+    except Exception:  # noqa: BLE001 — whatever is wrong with the input, `run` names it; only the record of the build goes without
+        return None
 
 
 def main(argv=None):
@@ -573,6 +605,9 @@ def main(argv=None):
     if modules is not None and not (workdir / "node_modules").exists():
         os.symlink(modules, workdir / "node_modules")
 
+    # What `built` will name is loaded now, once, before anything can change under it.
+    handed = design_handed_to(workdir, project) if source and not from_library else None
+
     try:
         stages = run(requirements, workdir, toolchain, project, from_library, firmware=args.firmware)
     except subprocess.TimeoutExpired:
@@ -585,10 +620,18 @@ def main(argv=None):
         stages = [Stage("check_spine", COULD_NOT_RUN,
                         "%s: %s" % (type(exc).__name__, exc))]
 
+    # The history says a build ran end to end (§5.7) — written here, by the chain itself, never on anyone's say-so.
+    # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.
+    if handed is not None and verdict(stages) == EXIT_OK:
+        try:
+            parts.note_built(handed)
+        except (store.StoreProblem, OSError) as unrecorded:
+            print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
+
     if args.sim_dir and (workdir / "sim").is_dir():
         shutil.copytree(workdir / "sim", args.sim_dir, dirs_exist_ok=True)
         print("simulation project kept in %s" % args.sim_dir, file=sys.stderr)
-    return report(stages, args, workdir)
+    return report(stages, args, workdir, requirements)
 
 
 def keep_into(workdir, destination):
@@ -622,15 +665,18 @@ def keep_into(workdir, destination):
     return said
 
 
-def report(stages, args, workdir=None):
-    """The verdict, rendered the way it was asked for; the working directory kept or removed."""
+def report(stages, args, workdir=None, requirements=None):
+    """
+    The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
+    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed.
+    """
     code = verdict(stages)
     if args.json:
-        print(json.dumps({"check": "spine", "status": STATUS_FOR[code],
-                          "stages": [{"name": s.name, "status": s.status, "detail": s.detail}
-                                     for s in stages]}))
+        said = {"check": "spine", "status": STATUS_FOR[code],
+                "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
+        print(json.dumps(dict(said, unserved=requirements["unserved"]) if left_off(requirements) else said))
     else:
-        sys.stdout.write(render(stages, code))
+        sys.stdout.write(render(stages, code, left_off(requirements)))
     if workdir is None:
         return code
     if args.keep:

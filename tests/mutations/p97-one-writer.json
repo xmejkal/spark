@@ -1,0 +1,20 @@
+[
+ {"file": "scripts/store.py", "name": "a write is made in place", "find": "        part.replace(path)\n    except BaseException:",
+  "replace": "        path.write_text(text, encoding=\"utf-8\")\n    except BaseException:"},
+ {"file": "scripts/store.py", "name": "the store is never locked", "find": "            fcntl.flock(held, fcntl.LOCK_EX)",
+  "replace": "            pass"},
+ {"file": "scripts/parts.py", "name": "a write takes no lock",
+  "find": "        with store.locked() if writes else contextlib.nullcontext():", "replace": "        with contextlib.nullcontext():"},
+ {"file": "scripts/parts.py", "name": "a project's record is written in place",
+  "find": "    return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")",
+  "replace": "    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")"},
+ {"file": "scripts/needs.py", "name": "the needs file is written in place",
+  "find": "    store.write_file(path, json.dumps({\"schema\": 1, \"needs\": needs}", "replace": "    path.write_text(json.dumps({\"schema\": 1, \"needs\": needs}"},
+ {"file": "scripts/parts.py", "name": "a fetched record is written in place",
+  "find": "    record[\"documents\"] = documents\n    _write_record(path, record)",
+  "replace": "    record[\"documents\"] = documents\n    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")"},
+ {"file": "scripts/parts.py", "name": "a read waits for a writer too",
+  "find": "        with store.locked() if writes else contextlib.nullcontext():", "replace": "        with store.locked():"},
+ {"file": "scripts/store.py", "name": "every store shares one lock",
+  "find": "    named = hashlib.sha256(str(home().resolve()).encode()).hexdigest()[:16]", "replace": "    named = \"one\""}
+]

@@ -70,7 +70,8 @@ class WhatItWritesTest(unittest.TestCase):
         self.assertNotIn("SDA", self.rules["physics"]["rails"])
 
     def test_the_brief_is_written_too(self):
-        # No script reads it; every reviewer does, and it is what consequence is judged against.
+        # parts.py reads its prefer and sellers, and the review skill hands the reviewers its must list: it is
+        # what consequence is judged against.
         brief = json.loads((self.root / ".spark" / "project.json").read_text())
         self.assertIn("must", brief)
 
@@ -218,6 +219,30 @@ class WithoutABuiltDesignTest(unittest.TestCase):
         self.assertEqual(init_project.main(["--project", str(root), "--board", "no-such-board"]),
                          init_project.EXIT_COULD_NOT_RUN)
         self.assertFalse((root / "boards" / "active.json").exists())
+
+    def test_a_board_that_stops_at_the_footprint_is_written_saying_so(self):
+        # F12's follow-up: `--board xiao-esp32-c6` wrote active.json without a word — /spark:idea's L runs this; never refused
+        said = {}
+        for board in ("xiao-esp32-c6", "firebeetle2-esp32s3"):
+            root, out = a_project(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = init_project.main(["--project", str(root), "--board", board])
+            self.assertEqual((code, json.loads((root / "boards" / "active.json").read_text())["board"]), (init_project.EXIT_OK, board))
+            said[board] = out.getvalue()
+        self.assertIn("\n  wrote active.json\n  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its "
+                      "board file\n", said["xiao-esp32-c6"])
+        self.assertNotIn("stops at", said["firebeetle2-esp32s3"])
+
+    def test_the_boards_offered_are_those_that_build_then_each_that_stops_said_as_such(self):
+        # F12 (C-7): both "Available:" lines offered the XIAO unmarked — /spark:idea's L runs this first; never hidden
+        offered = ("Available: firebeetle2-esp32s3; xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry "
+                   "in its board file")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            init_project.main(["--project", str(a_project())])
+            init_project.main(["--project", str(a_project()), "--board", "no-such-board"])
+        self.assertIn("  no board chosen. %s\n" % offered, out.getvalue())
+        self.assertIn("no board called 'no-such-board'. %s\n" % offered, err.getvalue())
 
 
 class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):

@@ -1,11 +1,12 @@
 """
 What the person owns: the drawer (P93, P95; docs/2026-10-04-store-design.md §5.2, §5.5, §8 D).
 
-An entry is light — a label and a count are enough, and owning never triggers research. It points at a record
-when one exists (`is`), found by an exact part number only: a near number, two matches or a name alone is a
-question for the person, never a link. Every write SETS values the agent worked out and the dry run showed
-("count 2 → 4"), so a retried write changes nothing, and nothing is deleted — gone is count 0. When an entry
-links a part that lives only in another project, the record goes onto the shelf, so every project finds it.
+An entry is light — a label is enough (with no count it is owned, count unknown), and owning never triggers
+research. It points at a record when one exists (`is`), found by an exact part number only: a near number, two
+matches or a name alone is a question for the person, never a link. Every write SETS values the agent worked out
+and the dry run showed ("count 2 → 4"), so a retried write changes nothing, and nothing is deleted — gone is count 0.
+When an entry links a part that lives only in another project, the record goes onto the shelf, so every project
+finds it.
 """
 
 import json
@@ -126,7 +127,7 @@ def numbers(record, record_id):
     word like "button" is never a number.
     """
     sku = record.get("sku")
-    aliases = [alias for alias in record.get("also_known_as") or [] if isinstance(alias, str)]
+    aliases = parts.aliases(record)
     stated = {s.lower() for s in (sku if isinstance(sku, list) else [sku]) + aliases if isinstance(s, str)}
     words = (token for word in [record_id] + aliases for token in re.split(r"[^a-z0-9]+", word.lower()))
     return stated, {w for w in words if re.search(r"[a-z]", w) and re.search(r"\d", w)}
@@ -204,8 +205,8 @@ def settle(entry_id, before, values, known):
     problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (key, ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
     problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]
-    if before is None and not {"label", "count"} <= set(values):
-        problems.append(parts._problem(entry_id, "a new entry needs a label and a count"))
+    if before is None and "label" not in values:
+        problems.append(parts._problem(entry_id, "a new entry needs a label — with no count it is owned, count unknown"))
     if problems:
         return None, [], problems
     after, questions, shelve = dict(before or {"schema": 1}, **values), [], None
@@ -323,9 +324,10 @@ def plan_import(source, payload):
     What applying an importer's payload would do (§5.2): (changes, questions, problems, smaller). A SKU the drawer
     has not seen becomes an entry, counted as owned — the person corrects. One seen before follows the re-import rule:
     when its total T grew, `count += T − bought` and `bought` becomes T — but a count the person corrected away from
-    `bought` is a question, not arithmetic (a pack of 10 is not one more piece); an `unsure` entry it
-    confirms takes T and is sure; a smaller T changes nothing and is said. A new SKU whose record an entry said in
-    words already is, is a question — not written until the person answers.
+    `bought` is a question, not arithmetic (a pack of 10 is not one more piece); an entry with no count keeps none —
+    only `bought` moves, as `many` stays many (owned, count unknown: the PO, 2026-10-06); an `unsure` entry it confirms
+    takes T and is sure; a smaller T changes nothing and is said. A new SKU whose record an entry said in words
+    already is, is a question — not written until the person answers.
     """
     refused = payload_problems(source, payload)
     if refused:
@@ -371,8 +373,8 @@ def plan_import(source, payload):
                                   "now? Set it with --drawer-set, with `bought` %s." % (entry_id, total - seen, source, before["count"], seen,
                                                                                       json.dumps({source: total}))})
                 continue
-            elif before.get("count") != "many" and seen is not None:  # no total seen yet: the count is the person's own
-                values["count"] = before.get("count", 0) + total - seen
+            elif "count" in before and before["count"] != "many" and seen is not None:  # no total seen yet: the count is the person's own
+                values["count"] = before["count"] + total - seen
         change, asked, refused = settle(entry_id, before, values, known)
         questions += asked
         problems += refused

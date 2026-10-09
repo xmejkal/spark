@@ -6,7 +6,7 @@ spark is a Claude Code plugin, meant for a hobbyist building a gadget from an ES
 DFRobot FireBeetle 2 ESP32-S3) and off-the-shelf modules, not for chip-down boards made in volume
 ([the vision](scrum/VISION.md)). You describe the gadget, and spark helps turn it into needs, which it matches against
 the parts you own and the ones it knows. It researches a missing part from the vendor's own documents and writes it as
-a [record](GLOSSARY.md#record--and-the-three-places-one-lives): its facts, each with a source and whether anyone
+a [record](GLOSSARY.md#record--and-the-four-places-one-lives): its facts, each with a source and whether anyone
 checked it.
 
 From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark generates the
@@ -17,14 +17,16 @@ From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and
   [P116](https://github.com/xmejkal/spark/issues/50)).
 - spark's checks read it.
 
-Its placement is a first draft, which you lay out before ordering. Today
-[the chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from that requirements file; nothing yet
-writes one from a vague idea with no parts named ([P76](https://github.com/xmejkal/spark/issues/5)). `--board`, and a
-requirements file's `board`, name the dev board.
+Its placement is a first draft, which you lay out before ordering.
+[The chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from that requirements file, which you
+write, or which `parts.py --requirements` writes from the parts you picked for your needs
+([P97](https://github.com/xmejkal/spark/issues/18)). `--board`, and a requirements file's `board`, name the dev board.
 
-On 2026-10-06 the library defined two dev boards and held 7 parts (`boards.py --list`, `parts.py --list`). Only the
+On 2026-10-08 the library defined two dev boards and held 8 parts (`boards.py --list`, `parts.py --list`). Only the
 FireBeetle 2 ESP32-S3 builds: the Seeed XIAO ESP32-C6 is defined for the pin map only, and its file records no header
-geometry, so `/spark:build` stops at the footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)).
+geometry, so `/spark:build` stops at the footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). With the
+library LED, whose series resistor is computed from the board's `power.io_volts`, which the XIAO's file does not state,
+the schematic stage refuses first (`cannot emit a board: …`), so the build stops a stage earlier.
 
 Where a fact is missing, spark refuses, or it goes on with a [stand-in](GLOSSARY.md#stand-in-placeholder) that it
 names in `board.tsx`: a placeholder outline in its header, the router's default trace width under the power traces it
@@ -58,15 +60,15 @@ flowchart LR
 ```
 
 The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
-`docs/guide/`, on 2026-10-05 and 2026-10-06; [the journey guide](docs/guide/journey.md) shows the output of each step
-it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops before its goal,
-or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**: nothing does it yet;
-the linked issue plans it.
+`docs/guide/`, on 2026-10-05, 2026-10-06 and 2026-10-08; [the journey guide](docs/guide/journey.md) shows the output
+of each step it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops
+before its goal, or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**:
+nothing does it yet; the linked issue plans it.
 
 | step | today | with |
 | --- | --- | --- |
 | [Drawer](docs/guide/journey.md#drawer) | **partly**: what you own, kept in your own store; the scripts that list and write entries ran. Turning your words into entries, and the DFRobot import, were not run here | `/spark:drawer` |
-| [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; the conversation was not run here. Not built yet: choosing and reserving parts ([P97](https://github.com/xmejkal/spark/issues/18)), and turning needs into a requirements file ([P76](https://github.com/xmejkal/spark/issues/5)) | `/spark:idea` |
+| [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; a part is picked per need, what you own is reserved, and the picks become a requirements file ([P97](https://github.com/xmejkal/spark/issues/18)). Its scripts ran here, from the needs to the requirements file, in [a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led) that went on to a board that builds and the tally; the conversation was not run, and with no Claude Code transcript there the tally could not count the cost | `/spark:idea` |
 | [Research](docs/guide/journey.md#research) | **partly**: the library search runs. Research of a new part is done by agents, not run here | `/spark:research`, `/spark:identify` |
 | [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it, or the stage that stopped it | `/spark:build` |
 | [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |
@@ -81,12 +83,14 @@ names the rails, then `check_all.py --project .` (not run here; a project's own
 ## Before you start
 
 Claude Code for the commands, Python 3.9 or newer, and Node 20 or newer: on macOS, spark's install lines get Node and
-pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest with one yes: bun, tscircuit (into
-the project), `wokwi-cli`, MicroPython and `littlefs-python`. The runs here were on macOS. On Linux, `data/tools.json`
-has apt lines only for pdftotext and `sigrok-cli` (not run here), so Node and bun are yours to install; it has none
-for Windows.
+pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest in one go, once you have seen the
+commands and said yes: bun, tscircuit (into the project), `wokwi-cli`, MicroPython and `littlefs-python`. The runs here
+were on macOS. On Linux, `data/tools.json` has apt lines only for pdftotext and `sigrok-cli`, so Node is yours to
+install. bun then comes from `/spark:setup` itself, with `npm install -g bun`, when Node's global folder is yours, as
+with nvm. With a Node from apt, whose global folder belongs to root, that line fails, `tools.py` says so and exits 2,
+and bun is yours to install too. None of this was run on Linux here. `data/tools.json` has no lines for Windows.
 
-## Install, and a first run
+## Install
 
 In Claude Code:
 
@@ -96,28 +100,62 @@ In Claude Code:
 ```
 
 The marketplace is named `petr-local`, so Claude Code may show the plugin as `spark@petr-local`. This install path was
-not run for these docs.
-
-Then, in a project folder:
-
-1. `/spark:init` writes the project's files without guessing, including the `package.json` that tscircuit, the engine
-   that builds the board, installs into.
-2. `/spark:setup` shows the tools spark needs, and installs what is missing with one yes.
-3. Put a `requirements.json` in the folder: the dev board and a list of parts, by the ids `parts.py --list` prints.
-   Copy the example on [`/spark:build`'s page](commands/build.md#the-requirements-file), or ask Claude to design the
-   board; the `spark-design` skill writes the file with you (not run here).
-4. `/spark:build` turns it into a board.
-5. `/spark:init` again. After a build its page runs init with `--force`, which names the rails from the built board and
-   keeps your answers; its last step runs `check_all.py --project .`.
-
-On the documented example every stage of the build reads `[ok  ]` and it ends "the chain runs end to end": 19 routed
-traces carry the 22 written connections ([the full output](docs/guide/journey.md#build), with tscircuit linked in from
-an existing install, not installed by `/spark:setup`). All green, yet the conflict above shows only in `parts.py --show`
-and in `board.tsx`'s closing comment. To look at the board, [see it](commands/build.md#see-it) in tscircuit's viewer.
+not run for these docs. Then, in a project folder, `/spark:init` writes the project's files without guessing,
+including the `package.json` that tscircuit, the engine that builds the board, installs into; `/spark:setup` shows the
+tools spark needs, and installs what is missing in one go once you have seen the commands and said yes.
 
 An update replaces the plugin, not your files. Your store and a project's own `boards/`, `parts/` and `.spark/` are
 outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record copied into the plugin's own library with
 `parts.py --promote` lives inside the plugin.
+
+## Two roads to a board
+
+**From what you own.** Type `/spark:drawer` and say what you own (*a FireBeetle 2 ESP32-S3 and a pack of ten red
+LEDs*), then `/spark:idea` and say what you want to make (*a button that lights an LED*). Claude turns it into needs,
+matched against your drawer and spark's records, and asks whether the LED pack is spark's `led-red-5mm`, linking it on
+your yes; you pick a part per need, and what you own is reserved. The picks become a requirements file, `/spark:build`
+builds the board, and the tally ends the run with one cost line. The conversation was not run for these docs; the
+scripts were, each with its output in
+[a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led). `/spark:idea` writes the needs to a file
+outside any repository, here `../button-needs.json` with the recorded run's three (a button, a light, a board), and
+sets them with the first line below. It also marks each step as it begins, with `parts.py --step <project> S` (then
+`M`, `C`, `L`): S once the folder is chosen, the others before `--match`, `--pick` and `--requirements`. Those marks
+are what let the tally count the cost. The block leaves them out, so its last line exits 2: no step is in the history.
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../button-needs.json
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --requirements .
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --tally .
+```
+
+`$CLAUDE_PLUGIN_ROOT` is where spark is installed. A shell does not set it, so to type these lines yourself, clone spark
+and `export CLAUDE_PLUGIN_ROOT=<the clone's folder>` first, as [Set up](docs/guide/agents.md#set-up) shows.
+
+An AI agent adds `--json`, and runs each `parts.py` write with `--dry-run` first:
+`parts.py --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3 --dry-run --json` answers in one
+envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`.
+
+**From a requirements file you write.** Name the dev board and the parts by the ids `boards.py --list` and
+`parts.py --list` print. The recorded run's picks wrote this one:
+
+```json
+{"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "led-red-5mm"]}
+```
+
+Save it as `requirements.json` in the project and type `/spark:build`. It runs the chain,
+`check_spine.py requirements.json --keep .`; an AI agent adds `--json` and reads `status`, and `stages`, which names
+any stage that stopped it. [`/spark:build`'s page](commands/build.md#the-requirements-file) says what else the file
+takes, and the `spark-design` skill writes one with you (not run here). On the journey's larger example the build is
+all green, yet the conflict above shows only in `parts.py --show` and in `board.tsx`'s closing comment
+([Build](docs/guide/journey.md#build)).
+
+After either road, run `/spark:init` again: its page runs init with `--force`, which names the rails from the built
+board and keeps your answers, and its last step runs `check_all.py --project .`. Every build for these docs used an
+existing tscircuit install, not one `/spark:setup` made. To look at a board, [see it](commands/build.md#see-it) in
+tscircuit's viewer.
 
 ## Commands, skills and agents
 
@@ -126,7 +164,7 @@ outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record cop
 - `/spark:init`: a project;
 - `/spark:setup`: the tools;
 - `/spark:drawer`: what you own;
-- `/spark:idea`: a goal to needs;
+- `/spark:idea`: a goal to needs, a part picked per need, and a requirements file;
 - `/spark:research`: a missing part;
 - `/spark:identify`: a module from a photo;
 - `/spark:build`: a requirements file to a board.
@@ -156,9 +194,11 @@ image of [MicroPython](https://micropython.org) and the project's files, needs a
 CI minutes. Node and bun run the tools. For the research agents spark declares two MCP servers, both started unpinned
 with `npx -y` ([P112](https://github.com/xmejkal/spark/issues/46)): `@jlcpcb/mcp`, an unofficial community package
 ([l3wi/jlc-cli](https://github.com/l3wi/jlc-cli)), and `mcp-remote` to Espressif's hosted documentation. The DFRobot
-order import uses Claude in Chrome. Your store, `~/.local/share/spark`, sits outside every repository.
-[KiCad](https://www.kicad.org)'s `kicad-cli` is optional, for the skills' electrical-rule and design-rule checks. Each,
-with what it needs: [how spark works underneath](docs/guide/how-it-works.md#the-tools-spark-calls).
+order import uses Claude in Chrome. Your store, `~/.local/share/spark`, sits outside every repository. It keeps a
+history, `history.jsonl`, whose line for each step of a project names the Claude Code session the step ran in;
+`parts.py --tally` reads Claude Code's transcripts of those sessions, under `~/.claude/projects`, for tool names and
+counts only. [KiCad](https://www.kicad.org)'s `kicad-cli` is optional, for the skills' electrical-rule and design-rule
+checks. Each, with what it needs: [how spark works underneath](docs/guide/how-it-works.md#the-tools-spark-calls).
 
 ## Before ordering
 
@@ -188,4 +228,4 @@ it out, run the `spark-review` skill and its fabrication gate, a KiCad design-ru
 
 ---
 
-v0.6.0 · [MIT](LICENSE) · built with the tscircuit engine.
+v0.7.0 · [MIT](LICENSE) · built with the tscircuit engine.

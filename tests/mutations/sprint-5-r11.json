@@ -2,7 +2,7 @@
  {
   "file": "scripts/parts.py",
   "name": "need stops reading aliases and kinds",
-  "find": "    haystack = \" \".join([part_id, record.get(\"name\") or \"\", record.get(\"kind\") or \"\",\n                         \" \".join(record.get(\"also_known_as\") or [])]).lower()",
+  "find": "    haystack = \" \".join([part_id, record.get(\"name\") or \"\", record.get(\"kind\") or \"\",\n                         \" \".join(aliases(record))]).lower()",
   "replace": "    haystack = \" \".join([part_id, record.get(\"name\") or \"\"]).lower()"
  },
  {
