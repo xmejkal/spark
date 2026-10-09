@@ -389,6 +389,8 @@ class TheFinalReviewTest(unittest.TestCase):
                            check=True, capture_output=True, env=dict(own, **dated))
         git("init", "-q")
         git("commit", "-q", "--allow-empty", "-m", "before", when="2026-09-20T12:00:00")
+        # A date alone means "this time of day" to git, so a commit in the first minute of the first day was lost.
+        git("commit", "-q", "--allow-empty", "-m", "first minute of the first day", when="2026-10-01T00:00:30")
         git("commit", "-q", "--allow-empty", "-m", "on main", when="2026-10-03T12:00:00")
         git("checkout", "-q", "-b", "work")
         git("commit", "-q", "--allow-empty", "-m", "on a branch only", when="2026-10-05T12:00:00")
@@ -396,7 +398,7 @@ class TheFinalReviewTest(unittest.TestCase):
         # A hook's GIT_DIR must not steer the read to another repository (the P105 leak).
         with mock.patch.dict(os.environ, {"GIT_DIR": tempfile.mkdtemp()}):
             days = board.work_days([str(root), tempfile.mkdtemp()], dt.date(2026, 10, 1))
-        self.assertEqual(days, {dt.date(2026, 10, 3), dt.date(2026, 10, 5)})
+        self.assertEqual(days, {dt.date(2026, 10, 1), dt.date(2026, 10, 3), dt.date(2026, 10, 5)})
 
     def test_status_says_skipped_whatever_breaks(self):
         out = io.StringIO()

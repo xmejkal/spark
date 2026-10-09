@@ -171,12 +171,13 @@ def unread(name, project):
 def work_days(dirs, since):
     """
     The days since `since` with a commit on any branch in the git folders among dirs — a branch-only day is a working
-    day too, and local git answers offline (the PO, 2026-10-05). A hook's GIT_* variables would point git at another
-    repository, so they are left out.
+    day too, and local git answers offline (the PO, 2026-10-05). A date alone means that date at the current time of day
+    to git, which would lose the first day's morning, so the window opens at midnight. A hook's GIT_* variables would
+    point git at another repository, so they are left out.
     """
     own, days = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}, set()
     for folder in dirs:
-        listed = subprocess.run(["git", "-C", str(Path(folder).expanduser()), "log", "--all", "--since=%s" % since.isoformat(),
+        listed = subprocess.run(["git", "-C", str(Path(folder).expanduser()), "log", "--all", "--since=%s 00:00" % since.isoformat(),
                                  "--format=%cd", "--date=format-local:%Y-%m-%d"],
                                 capture_output=True, text=True, timeout=STATUS_TIMEOUT, env=own)
         if not listed.returncode:
