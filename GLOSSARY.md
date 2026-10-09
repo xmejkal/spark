@@ -321,7 +321,10 @@ after work came in that it never planned — so "what are we doing now" had no a
 §9).
 The entry and exit of each stage are [the flow's table](scrum/README.md#the-flow--an-items-stages) too, and the merge
 is the PO's. `tools/check_backlog.py` fails a push that breaks a limit on both boards: spark's stages and limits, and
-the bin's cards in the same flight total (when online); the Markdown backlog is the frozen archive.
+the bin's cards in the same flight total (when online). It reads a board whole or judges nothing, and knows the seven
+stages above: spark's board handed over by `gh` in part, or a card in a stage it does not know, is could-not-run naming
+it; a card with no Status stands in Idea and is said; the bin's board read in part, or with no Status on any card, is set
+aside and said, spark's cards counted alone (P168, P167). The Markdown backlog is the frozen archive.
 
 ### Epic, story, task
 

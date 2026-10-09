@@ -191,7 +191,7 @@ class TheCoreTest(unittest.TestCase):
         out = io.StringIO()
         shown = types.SimpleNamespace(date=FixedToday, timedelta=dt.timedelta)
         with mock.patch.object(board, "dt", shown), \
-                mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], closes, "P", [])), \
+                mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], closes, "P", None)), \
                 mock.patch.object(board, "work_days", side_effect=lambda dirs, since: {d for d in days if d >= since}) as git, \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
@@ -261,6 +261,9 @@ class TheCoreTest(unittest.TestCase):
     def test_the_status_says_when_the_bin_board_was_not_given(self):
         lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY)
         self.assertIn("  ! the bin's board could not be read (no bin board was given) — its cards were not counted or checked", lines)
+        # gather() says why it set the bin's board aside, and the line carries that cause instead.
+        lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY, bin_why="it holds 25 items, 2 were read")
+        self.assertIn("  ! the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not counted or checked", lines)
         both = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [], set(), TODAY)
         self.assertFalse(any("could not be read" in line for line in both))
 
@@ -328,7 +331,7 @@ class TheCoreTest(unittest.TestCase):
 
     def test_close_dry_run_posts_nothing(self):
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", [])), \
+        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", None)), \
                 mock.patch.object(board, "_gh") as gh, contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["close", "P102c built", "--dry-run"]), 0)
         self.assertFalse(gh.called)
@@ -349,12 +352,9 @@ class TheFinalReviewTest(unittest.TestCase):
     def test_a_board_read_short_says_how_many_it_holds(self):
         held = project(node(1, "P1 — x", "Ready"))
         held["items"]["totalCount"] = 130
-        self.assertEqual(board.unread("spark", held), "the spark board holds 130 items; status read the first 1")
-        self.assertIsNone(board.unread("spark", project(node(1, "P1 — x", "Ready"))))
-
-    def test_the_status_names_what_it_could_not_read(self):
-        lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY, ["the spark board holds 130 items"])
-        self.assertIn("  ! the spark board holds 130 items", lines)
+        self.assertEqual(board.unread("the spark board", held), "the spark board holds 130 items, 1 were read")
+        self.assertEqual(board.unread("it", held), "it holds 130 items, 1 were read")
+        self.assertIsNone(board.unread("the spark board", project(node(1, "P1 — x", "Ready"))))
 
     def test_a_silent_network_gives_up_on_the_status_in_seconds(self):
         out = io.StringIO()
@@ -388,11 +388,193 @@ class TheFinalReviewTest(unittest.TestCase):
 
     def test_status_says_could_not_run_whatever_breaks(self):
         out = io.StringIO()
-        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", [])), \
+        with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", None)), \
                 mock.patch.object(board, "status_lines", side_effect=AttributeError("'NoneType' object has no attribute 'get'")), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
         self.assertEqual(out.getvalue(), "board: could-not-run — 'NoneType' object has no attribute 'get'\n")
+
+
+class TheWholeBoardTest(unittest.TestCase):
+    """
+    P168 (#106): the status reads the whole board. GitHub hands a project's items over 100 a page, so the query pages
+    with `after` until the last page, and a board whose pages held fewer items than it says it holds is could-not-run —
+    the verdict line, never "the limits hold" over part of a board (W1). The numbers are written out here (W2).
+    """
+
+    def paged_gh(self, held, says=None, bin_cards=(), bin_says=None):
+        """
+        A gh whose spark board (number 2) holds `held` cards in Idea and the bin's (number 1) `bin_cards`, handed over
+        100 a page with the cursor the next page is asked `after`; `says` and `bin_says` are the totalCounts it claims
+        when those are not the cards it holds. Returns it with every (project number, after) it was asked. Pull
+        requests: none.
+        """
+        asked = []
+        boards = {2: ([node(n, "P%d — x" % n, "Idea") for n in range(1, held + 1)], says), 1: (list(bin_cards), bin_says)}
+
+        def gh(*args, timeout=None):
+            if "graphql" not in args:
+                return []
+            number = int(next(a for a in args if a.startswith("number=")).split("=")[1])
+            after = next((a.split("=", 1)[1] for a in args if a.startswith("after=")), None)
+            asked.append((number, after))
+            held_here, claimed = boards[number]
+            start = int(after) if after else 0
+            items = {"totalCount": len(held_here) if claimed is None else claimed, "nodes": held_here[start:start + 100],
+                     "pageInfo": {"hasNextPage": start + 100 < len(held_here), "endCursor": str(start + 100)}}
+            return {"data": {"user": {"projectV2": {"id": "P", "items": items, "statusUpdates": {"nodes": []}}}}}
+        return gh, asked
+
+    def test_a_page_that_never_ends_is_turned_fifty_times_and_the_board_is_said_short(self):
+        # GitHub could answer an empty page whose hasNextPage stays true: the status turns 50 pages, no more, and says
+        # the two numbers — a session start never hangs on it.
+        asked = []
+
+        def gh(*args, timeout=None):
+            if "graphql" not in args:
+                return []
+            asked.append(args)
+            if len(asked) > 60:
+                raise AssertionError("the page loop did not stop")
+            items = {"totalCount": 130, "nodes": [], "pageInfo": {"hasNextPage": True, "endCursor": "x"}}
+            return {"data": {"user": {"projectV2": {"id": "P", "items": items, "statusUpdates": {"nodes": []}}}}}
+        out = io.StringIO()
+        with mock.patch.object(board, "_gh", gh), contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), "board: could-not-run — the spark board holds 130 items, 0 were read\n")
+        self.assertEqual(len(asked), 50)
+
+    def test_the_bin_s_board_read_in_part_is_set_aside_with_its_cause_and_spark_is_judged_alone(self):
+        # The gate's convention for the bin's failing (check_backlog.fetch), read by the status too: spark's cards are
+        # counted alone and the bin's unread line says why, in the gate's words.
+        gh, asked = self.paged_gh(101, bin_cards=[node(19, "B19 — e", "Build"), node(20, "B20 — f", "Build")], bin_says=25)
+        with mock.patch.object(board, "_gh", gh):
+            boards, _, _, _, bin_why = board.gather()
+        self.assertEqual(([name for name, _ in boards], bin_why), (["spark"], "it holds 25 items, 2 were read"))
+        out = io.StringIO()
+        with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue().splitlines()[:3], [
+            "spark — 101 open, the limits hold · trial check 2026-11-02",
+            "  ! the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not counted or checked",
+            "  in flight: nothing"])
+
+    def test_the_query_pages_the_items(self):
+        self.assertIn("items(first:100,after:$after){totalCount pageInfo{hasNextPage endCursor}", board.QUERY)
+        self.assertIn("$after:String", board.QUERY)
+
+    def test_a_board_of_101_items_is_read_whole_in_two_pages(self):
+        gh, asked = self.paged_gh(101)
+        with mock.patch.object(board, "_gh", gh):
+            boards, _, _, _, _ = board.gather()
+        self.assertEqual(len(dict(boards)["spark"]), 101)
+        self.assertEqual([after for number, after in asked if number == 2], [None, "100"])
+
+    def test_a_board_of_501_items_is_read_whole_in_six_pages_and_the_bin_s_in_one(self):
+        gh, asked = self.paged_gh(501)
+        with mock.patch.object(board, "_gh", gh):
+            boards, _, _, _, _ = board.gather()
+        self.assertEqual(len(dict(boards)["spark"]), 501)
+        self.assertEqual([after for number, after in asked if number == 2], [None, "100", "200", "300", "400", "500"])
+        self.assertEqual([after for number, after in asked if number == 1], [None])
+
+    def test_the_status_counts_the_whole_board_as_open(self):
+        gh, _ = self.paged_gh(101)
+        out = io.StringIO()
+        with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue().splitlines()[0], "spark — 101 open, the limits hold · trial check 2026-11-02")
+
+    def test_a_board_whose_pages_held_fewer_than_it_holds_is_could_not_run_not_the_limits(self):
+        # The last page came and 130 were promised: nothing of what was read is judged, and the status says the two numbers.
+        gh, _ = self.paged_gh(1, says=130)
+        out = io.StringIO()
+        with mock.patch.object(board, "_gh", gh), contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), "board: could-not-run — the spark board holds 130 items, 1 were read\n")
+
+    def test_a_close_over_a_board_read_in_part_is_could_not_run_and_posts_nothing(self):
+        gh, asked = self.paged_gh(1, says=130)
+        out = io.StringIO()
+        with mock.patch.object(board, "_gh", gh), contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["close", "x"]), 1)
+        self.assertEqual(out.getvalue(), "board: could-not-run — the spark board holds 130 items, 1 were read\n")
+        self.assertEqual(len(asked), 1)
+
+
+def unstaged(number, title):
+    """A board item in GitHub's "No status" column: a new item, whose field values carry no Status at all."""
+    card = node(number, title, "Idea")
+    card["fieldValues"]["nodes"] = [value for value in card["fieldValues"]["nodes"] if (value.get("field") or {}).get("name") != "Status"]
+    return card
+
+
+class TheStageTest(unittest.TestCase):
+    """
+    P167 (#105): the status reads where a card stands by the gate's one rule (check_backlog.stage_of). A card in a stage
+    the gate does not know makes the status, and the close, could-not-run naming it — the verdict is never "the limits
+    hold" over a board whose shape was not understood. A card with no Status is Idea: open, in no stage, and said in a line.
+    """
+
+    def test_a_card_in_a_stage_the_gate_does_not_know_makes_the_status_could_not_run_naming_it(self):
+        items = board.to_items(project(node(1, "P1 — a", "Build"), node(7, "P7 — b", "Doing")))
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), 'board: could-not-run — #7 P7 — b is in a stage the gate does not know: "Doing"\n')
+
+    def test_a_bin_card_in_an_unknown_stage_is_named_by_its_board(self):
+        bin_items = board.to_items(project(node(19, "B19 — e", "Doing")))
+        with self.assertRaisesRegex(board.check_backlog.UnknownStage, '^bin #19 B19 — e is in a stage the gate does not know: "Doing"$'):
+            board.status_lines([("spark", SPARK), ("bin", bin_items)], [], [], set(), TODAY)
+
+    def test_a_close_over_a_card_in_an_unknown_stage_is_could_not_run_and_posts_nothing(self):
+        items = board.to_items(project(node(7, "P7 — b", "Doing")))
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
+                mock.patch.object(board, "_gh") as gh, contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["close", "x"]), 1)
+        self.assertFalse(gh.called)
+        self.assertEqual(out.getvalue(), 'board: could-not-run — #7 P7 — b is in a stage the gate does not know: "Doing"\n')
+
+    def test_cards_with_no_stage_are_open_in_no_stage_and_said(self):
+        items = board.to_items(project(node(1, "P1 — a", "Build"), unstaged(2, "P2 — b"), unstaged(5, "P5 — c")))
+        self.assertEqual([i.get("status") for i in items], ["Build", None, None])
+        lines = board.status_lines([("spark", items), ("bin", board.to_items(project(unstaged(20, "B20 — d"), node(21, "B21 — e", "Idea"))))],
+                                   [], [], set(), TODAY)
+        self.assertEqual(lines[:3], ["spark — 3 open, the limits hold · trial check 2026-11-02",
+                                     "  ! 3 card(s) have no stage: #2, #5, bin #20",
+                                     "  in flight: Build P1 (#1) 2 d"])
+
+    def test_a_board_whose_every_card_has_no_stage_is_could_not_run_naming_the_shape(self):
+        items = board.to_items(project(unstaged(2, "P2 — b"), unstaged(5, "P5 — c")))
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), "board: could-not-run — no card of the 2 on the spark board has a Status — the field's keys may "
+                                         "have changed, or every card is new\n")
+
+    def test_the_bin_s_board_with_no_status_on_any_card_is_set_aside_by_gather_and_said(self):
+        # The gate's convention for the bin's failing, read by the status too: the bin's unread line with its cause.
+        gh, _ = TheWholeBoardTest.paged_gh(self, 1, bin_cards=[unstaged(20, "B20 — d"), unstaged(21, "B21 — e")])
+        with mock.patch.object(board, "_gh", gh):
+            boards, _, _, _, bin_why = board.gather()
+        self.assertEqual(([name for name, _ in boards], bin_why), (["spark"], "no card of its 2 has a Status"))
+        out = io.StringIO()
+        with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue().splitlines()[:2], [
+            "spark — 1 open, the limits hold · trial check 2026-11-02",
+            "  ! the bin's board could not be read (no card of its 2 has a Status) — its cards were not counted or checked"])
+
+    def test_a_board_with_every_card_staged_says_nothing_of_stages(self):
+        lines = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [], set(), TODAY)
+        self.assertEqual([line for line in lines if "no stage" in line], [])
 
 
 class TheHelpTest(unittest.TestCase):
@@ -422,12 +604,14 @@ class TheHelpTest(unittest.TestCase):
         self.assert_says(self.help_of("status"), (
             "print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), every "
             "wait oldest first ('!' past three days), Ready", "open PRs, the last close",
-            "always exits 0", "could-not-run", "--when-in"))
+            "always exits 0", "could-not-run", "a card in a stage the gate does not know", "cards with no Status are said",
+            "the bin's board read in part, or with no Status on any card, is set aside and said", "--when-in"))
 
     def test_the_close_help_says_what_it_posts_when_it_is_at_risk_and_what_it_refuses(self):
         self.assert_says(self.help_of("close"), (
             "post the day's one status update to spark's board", "at risk when the gate finds a problem or a wait is older "
-            "than three days", "refuses a day already closed (exit 1)", "--dry-run print the update and post nothing",
+            "than three days", "refuses a day already closed (exit 1)", "or a card is in a stage the gate does not know",
+            "--dry-run print the update and post nothing",
             "--date DATE the day to close, YYYY-MM-DD", "(default: today)"))
 
     def test_the_top_help_names_both_verbs_with_what_they_do(self):

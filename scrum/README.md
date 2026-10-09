@@ -76,7 +76,10 @@ choice after a three-lens council).
 - **The session start** is P102c's hook, in the PO's own settings; it prints nothing outside his project folders. It
   also gives the gate's verdict and the open PRs, marks the `expedite` and `bench` cards in flight, lists every wait on
   both boards (one on someone other than the PO says who), marks a wait older than three days with `!`, and says
-  *"Ready is down to N"* at one or two.
+  *"Ready is down to N"* at one or two. It reads each board whole, page by page, and *"N open"* counts all of it;
+  spark's board read in part, or a card in a stage the gate does not know, makes the whole status one could-not-run
+  line naming it; a card with no Status is said and stands in Idea; and the bin's board read in part, or with no Status
+  on any card, is set aside and said, spark's cards counted alone — as the gate does it (P168, P167).
 - **The day-close** posts Claude's line, then what is in flight and every wait, as a status update on the spark board —
   at risk when the gate finds a problem (a broken limit, a missing *Needed by* or slice, an undated wait, a second
   expedite) or a wait is older than three days. A day has one close; a second for the same day is refused. A session

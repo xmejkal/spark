@@ -11,8 +11,8 @@ test_self_confirmation).
 P146 (docs/2026-10-06-process-design.md, the skeptic pass's item 6): a card is asked for its Needed by and its slice
 from Ready on — the commitment — not in Idea, Discovery or Design, which decide whether to build. Pinned from both
 sides, with the stages written out: a card in Idea, Discovery or Design with neither passes, and a card in Ready, Build
-or Review without one is named — an epic that holds no place in a limit (counts()) among them. A card with no Status,
-or a stage the gate does not know, is treated like Idea.
+or Review without one is named — an epic that holds no place in a limit (counts()) among them. A card with no Status is
+treated like Idea and said; a stage the gate does not know is could-not-run (P167, TheStageTest).
 
 P146 (docs/2026-10-06-process-design.md, "Asks to you"): a card that waits on someone carries Waiting on and Waiting
 since, and a Waiting on with no Waiting since is named — in any open stage, Idea included, since a wait is no
@@ -100,11 +100,9 @@ class TheBacklogCheckTest(unittest.TestCase):
             with self.subTest(stage=stage):
                 self.assertEqual(check_backlog.problems([item(3, stage, slice_="", needed="")]), [])
 
-    def test_a_card_with_no_status_or_an_unknown_stage_is_not_judged_like_an_idea_card(self):
-        # Only a stage from the commitment on is asked; a card the board places nowhere the gate knows is not named.
-        for status in (None, "Parked"):
-            with self.subTest(status=status):
-                self.assertEqual(check_backlog.problems([item(3, status, slice_="", needed="")]), [])
+    def test_a_card_with_no_status_is_not_judged_like_an_idea_card(self):
+        # Only a stage from the commitment on is asked; a card GitHub's "No status" column holds is a new item, not a commitment.
+        self.assertEqual(check_backlog.problems([item(1, "Idea"), item(3, None, slice_="", needed="")]), [])
 
     def test_a_ready_card_with_no_slice_is_named(self):
         self.assertEqual(check_backlog.problems([item(3, "Ready", slice_="")]), ["#3 P3 — x: on no slice of the story map"])
@@ -325,11 +323,11 @@ class TheBacklogCheckTest(unittest.TestCase):
                                 "bin #19 P19 — x: waits on the PO since nobody knows — set Waiting since"])
 
     def test_the_bin_s_undated_wait_is_named_in_every_open_stage(self):
-        # As on spark's board a wait is no commitment-stage question: a card with no Status, or a stage the gate does not
-        # know, is named like the rest.
-        for status in (None, "Idea", "Discovery", "Design", "Ready", "Build", "Review", "Parked"):
+        # As on spark's board a wait is no commitment-stage question: a card with no Status is named like the rest (a
+        # staged card beside it, or the board would have no stage at all: TheStageTest).
+        for status in (None, "Idea", "Discovery", "Design", "Ready", "Build", "Review"):
             with self.subTest(status=status):
-                self.assertEqual(check_backlog.problems([], bin_items=[item(19, status, waiting="the PO")]),
+                self.assertEqual(check_backlog.problems([], bin_items=[item(18, "Idea"), item(19, status, waiting="the PO")]),
                                  ["bin #19 P19 — x: waits on the PO since nobody knows — set Waiting since"])
 
     def test_a_dated_wait_on_the_bin_passes_and_a_done_card_s_wait_is_not_judged(self):
@@ -413,10 +411,10 @@ class TheBacklogCheckTest(unittest.TestCase):
 
     def test_an_undated_wait_is_named_in_every_open_stage_not_only_from_ready_on(self):
         # Unlike Needed by and the slice, a wait is no commitment-stage question: the recorded board's one wait (#15)
-        # sits in Idea. A card with no Status, or a stage the gate does not know, is named like the rest.
-        for status in (None, "Idea", "Discovery", "Design", "Ready", "Build", "Review", "Parked"):
+        # sits in Idea. A card with no Status is named like the rest (a staged card beside it: TheStageTest).
+        for status in (None, "Idea", "Discovery", "Design", "Ready", "Build", "Review"):
             with self.subTest(status=status):
-                self.assertEqual(check_backlog.problems([item(3, status, waiting="the PO")]),
+                self.assertEqual(check_backlog.problems([item(1, "Idea"), item(3, status, waiting="the PO")]),
                                  ["#3 P3 — x: waits on the PO since nobody knows — set Waiting since"])
 
     def test_parents_asks_each_task_s_own_repository_in_one_call(self):
@@ -499,7 +497,7 @@ class TheBacklogCheckTest(unittest.TestCase):
             elif "item-list" in args:
                 cards = items if args[args.index("item-list") + 1] == "2" else bin_cards
                 answer = cards if isinstance(cards, Exception) else {"items": [{k: v for k, v in e.items() if k != "parent"}
-                                                                               for e in cards]}
+                                                                               for e in cards], "totalCount": len(cards)}
             else:
                 answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
             if isinstance(answer, Exception):
@@ -609,7 +607,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         """A gh whose project list holds spark's project and not the bin's."""
         def run(args, **kwargs):
             if "item-list" in args:
-                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")]}))
+                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")], "totalCount": 1}))
             return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}]}))
         return run
 
@@ -750,6 +748,229 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog._cause(subprocess.TimeoutExpired("gh", 60, stderr=b"gh: slow network\n")), "gh: slow network")
 
 
+class TheWholeBoardTest(unittest.TestCase):
+    """
+    P168 (#106): the gate reads the whole board, or says it could not. gh's item-list answers `--limit N` with at most N
+    items and the board's totalCount; the gate asks for 500 first, asks again with the board's own count when that was
+    short (5000 at most), and a board still short after that is a partial read: could-not-run, said with both numbers,
+    never "the limits hold". The bin's board the same way, as the bin's unread line (its cards not counted or checked).
+    The numbers here are written out, never read from the module (W2).
+    """
+
+    def listing(self, spark_cards, bin_cards=(), says=None, serves=None):
+        """
+        A gh whose spark board (number 2) holds `spark_cards` and the bin's (number 1) `bin_cards`, answering each
+        `--limit N` with the first N of them — or the first `serves` when that is fewer, and a totalCount of `says` when
+        given, so a board can be made to look larger than what gh hands over. Returns it with the commands it was asked.
+        """
+        asked = []
+
+        def run(args, **kwargs):
+            asked.append(" ".join(args))
+            if "graphql" in args:
+                answer = {"data": {}}
+            elif "item-list" in args:
+                cards = list(spark_cards if args[args.index("item-list") + 1] == "2" else bin_cards)
+                limit = int(args[args.index("--limit") + 1])
+                answer = {"items": cards[:min(limit, serves if serves is not None else limit)],
+                          "totalCount": len(cards) if says is None else says}
+            else:
+                answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
+            return mock.Mock(stdout=json.dumps(answer))
+        return run, asked
+
+    def said(self, run):
+        with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
+            code = check_backlog.main()
+        return code, "".join(call.args[0] for call in out.write.call_args_list)
+
+    def listings_of(self, asked, number):
+        """The `--limit` of each item-list call made for project `number`, in order."""
+        return [int(command.split("--limit ")[1].split()[0]) for command in asked
+                if "item-list %d " % number in command]
+
+    def test_a_board_of_101_items_is_read_whole_in_one_ask(self):
+        run, asked = self.listing([item(n, "Idea") for n in range(1, 102)])
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 101 open, the limits hold; the bin: 0 open\n", printed)
+        self.assertEqual(self.listings_of(asked, 2), [500])
+
+    def test_a_board_of_501_items_is_asked_again_with_its_own_count_and_read_whole(self):
+        run, asked = self.listing([item(n, "Idea") for n in range(1, 502)])
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 501 open, the limits hold; the bin: 0 open\n", printed)
+        self.assertEqual(self.listings_of(asked, 2), [500, 501])
+        self.assertNotIn("could-not-run", printed)
+
+    def test_the_bin_s_board_of_501_items_is_read_whole_too(self):
+        run, asked = self.listing([item(1, "Idea")], [item(n, "Idea") for n in range(1, 502)])
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 1 open, the limits hold; the bin: 501 open\n", printed)
+        self.assertEqual(self.listings_of(asked, 1), [500, 501])
+
+    def test_a_spark_board_still_short_after_the_second_ask_is_could_not_run_and_judges_nothing(self):
+        # Three cards in Build would be named — but the gate never saw the whole board, so it says that instead (W1).
+        cards = [item(1, "Build"), item(2, "Build"), item(3, "Build")] + [item(n, "Idea") for n in range(4, 11)]
+        run, asked = self.listing(cards, says=12)
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertEqual(printed, "  backlog: could-not-run — the spark board holds 12 items, 10 were read; the limits were not checked\n")
+        self.assertEqual(self.listings_of(asked, 2), [500, 12])
+
+    def test_a_board_larger_than_the_cap_is_asked_for_the_cap_and_said_short(self):
+        run, asked = self.listing([item(n, "Idea") for n in range(1, 11)], says=6000)
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: could-not-run — the spark board holds 6000 items, 10 were read; the limits were not checked", printed)
+        self.assertEqual(self.listings_of(asked, 2), [500, 5000])
+
+    def test_a_bin_board_read_in_part_is_the_bin_s_unread_line_and_spark_is_judged_alone(self):
+        spark = [item(1, "Build"), item(2, "Build"), item(3, "Build")]
+        run, asked = self.bin_short(spark, [item(19, "Build"), item(20, "Build")], bin_says=25)
+        code, printed = self.said(run)
+        self.assertEqual(code, 1)
+        self.assertIn("  backlog: 3 open, 1 problem(s)\n", printed)
+        self.assertIn("    Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another\n", printed)
+        self.assertIn("  backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not "
+                      "counted or checked\n", printed)
+        self.assertEqual(self.listings_of(asked, 1), [500, 25])
+        self.assertNotIn("the limits hold", printed)
+
+    def bin_short(self, spark_cards, bin_cards, bin_says):
+        """A gh that lists spark's board whole and the bin's with a totalCount of `bin_says`, handing over all of `bin_cards`."""
+        asked = []
+
+        def run(args, **kwargs):
+            asked.append(" ".join(args))
+            if "graphql" in args:
+                answer = {"data": {}}
+            elif "item-list" in args:
+                if args[args.index("item-list") + 1] == "2":
+                    answer = {"items": list(spark_cards), "totalCount": len(spark_cards)}
+                else:
+                    answer = {"items": list(bin_cards), "totalCount": bin_says}
+            else:
+                answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
+            return mock.Mock(stdout=json.dumps(answer))
+        return run, asked
+
+    def test_a_listing_with_no_total_count_is_could_not_run_with_its_cause(self):
+        # An answer the gate cannot size is a look it could not make, said with the key it missed — never a traceback.
+        def run(args, **kwargs):
+            if "item-list" in args:
+                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")]}))
+            return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}]}))
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: could-not-run — gh or the network could not be reached (KeyError); the limits were not checked", printed)
+
+
+class TheStageTest(unittest.TestCase):
+    """
+    P167 (#105): one rule for where a card stands, check_backlog.stage_of, read by the gate and the status. The stages
+    the gate knows are written out here (W2): Idea, Discovery, Design, Ready, Build, Review, Done. A card in any other
+    stage is could-not-run naming the card and the stage — a renamed stage is a decision, not a silent skip — and the
+    gate judges nothing. A card with no Status (GitHub's "No status" column) is Idea: not counted, not judged, and said in
+    one line. A board whose every card lacks a Status is not new items but a changed field: could-not-run naming the shape.
+    """
+
+    def test_stage_of_is_the_status_the_gate_knows_and_idea_for_none(self):
+        for stage in ("Idea", "Discovery", "Design", "Ready", "Build", "Review", "Done"):
+            with self.subTest(stage=stage):
+                self.assertEqual(check_backlog.stage_of(item(1, stage)), stage)
+        self.assertEqual(check_backlog.stage_of(item(1, None)), "Idea")
+        self.assertEqual(check_backlog.stage_of(item(1, "")), "Idea")
+        self.assertEqual(check_backlog.stage_of({"content": {"number": 1, "title": "x"}}), "Idea")
+
+    def test_a_stage_the_gate_does_not_know_names_the_card_and_the_stage(self):
+        with self.assertRaises(check_backlog.UnknownStage) as caught:
+            check_backlog.stage_of(item(3, "Doing"))
+        self.assertEqual(str(caught.exception), '#3 P3 — x is in a stage the gate does not know: "Doing"')
+
+    def test_problems_judges_nothing_over_a_card_in_an_unknown_stage_on_either_board(self):
+        # Build holds three — and the gate must not say so: it never saw the whole board's shape.
+        crowded = [item(1, "Build"), item(2, "Build"), item(3, "Build")]
+        with self.assertRaisesRegex(check_backlog.UnknownStage, '^#4 P4 — x is in a stage the gate does not know: "Parked"$'):
+            check_backlog.problems(crowded + [item(4, "Parked")])
+        with self.assertRaisesRegex(check_backlog.UnknownStage, '^bin #19 P19 — x is in a stage the gate does not know: "Doing"$'):
+            check_backlog.problems(crowded, bin_items=[item(19, "Doing")])
+
+    def test_no_stage_names_the_cards_with_none_on_either_board_and_is_silent_when_every_card_has_one(self):
+        self.assertEqual(check_backlog.no_stage([item(1, "Idea"), item(2, None), item(5, None)], bin_items=[item(20, None), item(21, "Ready")]),
+                         "3 card(s) have no stage: #2, #5, bin #20")
+        self.assertIsNone(check_backlog.no_stage([item(1, "Idea")], bin_items=[item(21, "Ready")]))
+        self.assertIsNone(check_backlog.no_stage([], bin_items=None))
+
+    def test_a_board_whose_every_card_has_no_stage_is_could_not_run_naming_the_shape(self):
+        shape = "^no card of the 2 on the spark board has a Status — the field's keys may have changed, or every card is new$"
+        with self.assertRaisesRegex(check_backlog.UnknownStage, shape):
+            check_backlog.no_stage([item(1, None), item(2, None)])
+        with self.assertRaisesRegex(check_backlog.UnknownStage, shape):
+            check_backlog.problems([item(1, None), item(2, None)])
+        # The bin's board in that shape is fetch()'s to set aside (the bin's unread line); here it is cards in no stage.
+        self.assertEqual(check_backlog.no_stage([item(1, "Idea")], bin_items=[item(19, None)]), "1 card(s) have no stage: bin #19")
+        self.assertEqual(check_backlog.problems([item(1, "Idea")], bin_items=[item(19, None)]), [])
+
+    def test_no_status_on_is_a_board_with_cards_and_none_of_them_staged(self):
+        self.assertTrue(check_backlog.no_status_on([item(1, None), item(2, "")]))
+        self.assertFalse(check_backlog.no_status_on([item(1, None), item(2, "Idea")]))
+        self.assertFalse(check_backlog.no_status_on([]))
+        self.assertFalse(check_backlog.no_status_on(None))
+
+    def test_a_bin_board_with_no_status_on_any_card_is_set_aside_and_spark_is_judged_alone(self):
+        # One convention for the bin's failing: read in part or with no Status on any card, it is the bin's unread line
+        # with its cause, and spark's board is judged alone — here Build holds three, so the gate still fails.
+        code, printed = self.gate([item(1, "Build"), item(2, "Build"), item(3, "Build")], [item(19, None), item(20, None)])
+        self.assertEqual(code, 1)
+        self.assertEqual(printed, "  backlog: 3 open, 1 problem(s)\n"
+                                  "    Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another\n"
+                                  "  backlog: the bin's board could not be read (no card of its 2 has a Status) — its cards were "
+                                  "not counted or checked\n")
+
+    def gate(self, spark_cards, bin_cards=()):
+        """main()'s exit code and what it printed over a gh listing both boards whole, with no task on either."""
+        def run(args, **kwargs):
+            if "item-list" in args:
+                cards = spark_cards if args[args.index("item-list") + 1] == "2" else bin_cards
+                return mock.Mock(stdout=json.dumps({"items": list(cards), "totalCount": len(cards)}))
+            if "graphql" in args:
+                return mock.Mock(stdout=json.dumps({"data": {}}))
+            return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}))
+        with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
+            code = check_backlog.main()
+        return code, "".join(call.args[0] for call in out.write.call_args_list)
+
+    def test_the_gate_is_could_not_run_over_a_card_in_a_stage_it_does_not_know(self):
+        code, printed = self.gate([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Doing")])
+        self.assertEqual(code, 0)
+        self.assertEqual(printed, '  backlog: could-not-run — #4 P4 — x is in a stage the gate does not know: "Doing"; '
+                                  "the limits were not checked\n")
+        code, printed = self.gate([item(1, "Idea")], [item(19, "Doing")])
+        self.assertEqual(code, 0)
+        self.assertEqual(printed, '  backlog: could-not-run — bin #19 P19 — x is in a stage the gate does not know: "Doing"; '
+                                  "the limits were not checked\n")
+
+    def test_the_gate_says_which_cards_have_no_stage_and_counts_them_open_as_idea(self):
+        # Two in Build and two with no stage: the limits hold (a card with no stage is in no stage), and the two are named.
+        code, printed = self.gate([item(1, "Build"), item(2, "Build"), item(3, None), item(5, None)], [item(20, None), item(21, "Idea")])
+        self.assertEqual(code, 0)
+        self.assertEqual(printed, "  backlog: 4 open, the limits hold; the bin: 2 open\n"
+                                  "  backlog: 3 card(s) have no stage: #3, #5, bin #20\n")
+
+    def test_the_gate_is_could_not_run_when_no_card_has_a_stage(self):
+        code, printed = self.gate([item(1, None), item(2, None), item(3, None)])
+        self.assertEqual(code, 0)
+        self.assertEqual(printed, "  backlog: could-not-run — no card of the 3 on the spark board has a Status — the field's keys "
+                                  "may have changed, or every card is new; the limits were not checked\n")
+
+    def test_a_board_with_every_card_staged_says_nothing_of_stages(self):
+        code, printed = self.gate([item(1, "Build"), item(2, "Idea")], [item(19, "Ready")])
+        self.assertEqual((code, printed), (0, "  backlog: 2 open, the limits hold; the bin: 1 open\n"))
+
+
 class TheGateSaysWhatItIsTest(unittest.TestCase):
     """P146 council (C1): `--help` explains the gate and its exit codes instead of running it."""
 
@@ -774,6 +995,7 @@ class TheGateSaysWhatItIsTest(unittest.TestCase):
         self.assertEqual((done.returncode, asked), (0, ""), "--help ran the gate: " + done.stdout)
         for words in ("Discovery 2, Design 2, Ready 5, Build 2, Review 2", "more than 4 cards in flight", "expedite",
                       "Waiting since", "Needed by", "a task with no parent story", "bench",
+                      "The stages it knows: Idea, Discovery, Design, Ready, Build, Review, Done",
                       "exit codes:", "0 the limits hold — or could-not-run", "1 a problem",
                       'no project titled "spark"'):
             with self.subTest(words=words):
