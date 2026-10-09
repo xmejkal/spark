@@ -110,13 +110,18 @@ def stage_of(entry):
     return status
 
 
+def _marked(bin_items):
+    """Copies of the bin's cards marked as its (BIN_BOARD), so a sentence names them `bin #12`; the caller's stay unmarked."""
+    return [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]
+
+
 def no_stage(items, bin_items=()):
     """
     The line naming the cards with no Status — `3 card(s) have no stage: #2, #5, bin #20` — or None when every card has
     one. A board whose EVERY card lacks one is not new items but a changed field, and the gate knows no stage at all:
     UnknownStage naming the shape. problems() reads this first, so it cannot judge such a board.
     """
-    bin_cards = [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]
+    bin_cards = _marked(bin_items)
     for board, cards in (("the spark board", items), ("the bin's board", bin_cards)):
         if cards and not any(entry.get("status") for entry in cards):
             raise UnknownStage("not one of %s's %d cards has a Status, so the field's keys have changed" % (board, len(cards)))
@@ -163,7 +168,7 @@ def problems(items, bin_items=()):
     """
     no_stage(items, bin_items)  # a board with no stage on any card is not judged (UnknownStage); its line is main()'s to say
     said, by_stage = [], {}
-    bin_cards = [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]  # copies: the caller's cards stay unmarked
+    bin_cards = _marked(bin_items)
     for entry in [*items, *bin_cards]:
         status = stage_of(entry)  # UnknownStage for a stage the gate does not know: nothing is judged (P167)
         if status == "Done":
