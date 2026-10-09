@@ -320,13 +320,15 @@ def placeholders(part_list):
 
 def duplicate_component_names(part_list):
     """
-    Names used more than once, which `tsci build` resolves by keeping one component — each clash as the spellings the
-    design wrote, in their order: `BtnLeft` for a copy-pasted entry, `OpenLid / Openlid` for two that differ in capitals.
+    Names used more than once — each clash as the spellings the design wrote, in their order: `BtnLeft` for a
+    copy-pasted entry, `OpenLid / Openlid` for two that differ in capitals.
 
     The independent safety net for the defect above: whatever route a design takes to two components of one name, this
-    catches it before anything is emitted. Compared as the build tells names apart (`design.one_name`): `signal_name`
-    puts the instance in capitals, so `OpenLid` and `Openlid` were one signal, placed twice, and two GPIOs were traced to
-    one pad with exit 0 while this compare, exact, saw two names (P163, #100).
+    catches it before anything is emitted. Two ways to be one name, two merges: an exact repeat is merged by
+    `tsci build`, which keeps one component; two spellings are merged by spark's own `design.signal_name`, which puts
+    the instance in capitals, so `OpenLid` and `Openlid` were one signal, placed twice, and the generator traced two
+    GPIOs to one pad — both chips emitted, exit 0 — while this compare, exact, saw two names (P163, #100). Compared as
+    the build tells names apart, `design.one_name`.
     """
     written, repeated = {}, set()  # {one name: [each spelling, once, as the design wrote it]}; the one names used twice
     for part in part_list:
@@ -1066,10 +1068,11 @@ def main(argv=None):
     repeated = duplicate_component_names(part_list)
     if repeated:
         print("two or more components would be called: %s\n"
-              "  `tsci build` resolves that by keeping ONE of them, so every pin assigned to the "
+              "  A name written twice: `tsci build` keeps ONE of them, so every pin assigned to the "
               "others is wired to the survivor — five identical buttons became one component with "
-              "five GPIOs shorted to a single port, and nothing said so. Capitals do not make two "
-              "names: the build puts an instance's name in capitals before its signals.\n"
+              "five GPIOs shorted to a single port, and nothing said so. Two spellings (OpenLid / "
+              "Openlid): spark's own naming puts an instance in capitals before its signals, so they "
+              "are one signal, placed twice and traced to one pad from two GPIOs.\n"
               "  Name each instance in the requirements file: "
               "{\"part\": \"tactile-button\", \"name\": \"BtnForward\"}."
               % ", ".join(repeated), file=sys.stderr)

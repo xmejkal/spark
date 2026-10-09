@@ -358,14 +358,50 @@ class CapitalsDoNotMakeTwoNamesTest(unittest.TestCase):
             design.read(self.entries("MODE", "Mode"))
         self.assertIn("parts[0] is called MODE and parts[1] Mode", str(caught.exception))
 
-    def test_one_name_written_twice_is_refused_by_the_same_rule(self):
+    def test_one_name_written_twice_is_refused_by_the_same_rule_without_the_capitals_rider(self):
+        # The rule is the same; the sentence about capitals is for two spellings, and BtnLeft twice has one.
         with self.assertRaises(design.DesignError) as caught:
             design.read(self.entries("BtnLeft", "BtnLeft"))
-        self.assertIn("parts[0] is called BtnLeft and parts[1] BtnLeft", str(caught.exception))
+        self.assertIn("parts[0] is called BtnLeft and parts[1] BtnLeft — the build refuses two components of one name; "
+                      "give one of them", str(caught.exception))
+        self.assertNotIn("capitals", str(caught.exception))
 
     def test_names_that_differ_by_more_than_capitals_pass(self):
         self.assertEqual([entry["name"] for entry in design.read(self.entries("BtnOpen", "BtnMode", "Btn_Open"))["parts"]],
                          ["BtnOpen", "BtnMode", "Btn_Open"])
+
+    def test_a_signal_written_by_hand_under_an_instances_signal_name_is_refused_where_the_signals_are_derived(self):
+        # The route the names compare does not see: `signals` holds OPENLID_BUTTON beside an instance called OpenLid. One
+        # signal to the assigner and the generator — placed twice, both pins traced to one pad, "the chain runs end to end".
+        root, path = project(requirements={"board": "firebeetle2-esp32s3",
+                                           "parts": [{"part": "tactile-button", "name": "OpenLid"}],
+                                           "signals": [{"name": "OPENLID_BUTTON", "needs": []}]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertEqual(str(caught.exception), "OpenLid's BUTTON and signals[0] are both OPENLID_BUTTON — one signal, which "
+                                                 "the pin assigner would place twice and the generator trace to one pad from two "
+                                                 "pins; give one of them a name of its own")
+
+    def test_two_unnamed_parts_asking_for_one_signal_are_refused_by_the_same_compare(self):
+        # Not the component-name rule (that is `read`'s and the generator's): two parts, named or not, whose signals land on
+        # one name. Here the same part twice, unnamed, so both ask for BUTTON.
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "tactile-button"]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertIn("tactile-button's BUTTON and tactile-button's BUTTON are both BUTTON", str(caught.exception))
+
+    def test_two_hand_written_signals_of_one_name_are_refused_naming_both_entries(self):
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": [],
+                                           "signals": [{"name": "LED", "needs": []}, {"name": "LED", "needs": []}]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertIn("signals[0] and signals[1] are both LED", str(caught.exception))
+
+    def test_a_hand_written_signal_of_its_own_name_passes_beside_an_instance(self):
+        root, path = project(requirements={"board": "firebeetle2-esp32s3",
+                                           "parts": [{"part": "tactile-button", "name": "OpenLid"}],
+                                           "signals": [{"name": "LED_STATUS", "needs": []}]})
+        self.assertEqual([signal["name"] for signal in design.load(path).signals], ["OPENLID_BUTTON", "LED_STATUS"])
 
     def test_an_entry_with_no_name_or_no_shape_is_left_to_the_parts_reader(self):
         # The compare is on the names the file gives; what is wrong with an entry's shape is `requested_parts`' sentence.

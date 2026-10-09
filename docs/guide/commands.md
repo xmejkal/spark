@@ -190,7 +190,8 @@ It refuses rather than guess, and says what to record
 
 - a part with no footprint or no `pin_order` recorded, or one not in the library;
 - one part listed twice without a `name` for each (five unnamed buttons would become one button with five of the dev
-  board's pins wired to it);
+  board's pins wired to it) — and two names that differ only in capitals are one name (`OpenLid`, `Openlid`), refused
+  at the requirements stage, naming both, before anything is emitted;
 - a pin the part does not have, or a bus line the bus does not have.
 
 A part with no outline is not refused: it is drawn at a declared placeholder size

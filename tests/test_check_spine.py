@@ -537,6 +537,23 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         for stage_run in ("] board", "] schematic", "] build"):
             self.assertNotIn(stage_run, out, "nothing ran, nothing was emitted")
 
+    def test_a_hand_written_signal_under_an_instances_signal_name_stops_at_the_requirements_stage(self):
+        # P163's other route: with `signals` holding OPENLID_BUTTON beside an instance called OpenLid, the generator traced
+        # D3 and A5 to one pad, `tsci build` passed and the spine said "the chain runs end to end", exit 0. Refused where
+        # the signals are derived — the schematic stage, the first with the part records that say OpenLid asks for
+        # BUTTON; the requirements stage reads the file alone — so nothing is emitted and no later stage runs.
+        path = Path(tempfile.mkdtemp()) / "bin.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3",
+                                    "parts": [{"part": "tactile-button", "name": "OpenLid"}],
+                                    "signals": [{"name": "OPENLID_BUTTON", "needs": []}]}))
+        code, out = self._main([str(path)], tempfile.mkdtemp())
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        self.assertIn("[????] schematic", out)
+        self.assertIn("cannot emit a board: OpenLid's BUTTON and signals[0] are both OPENLID_BUTTON", out)
+        self.assertIn("NOT exercised", out)
+        for stage_run in ("] footprint", "] build", "] simulation"):
+            self.assertNotIn(stage_run, out, "nothing was emitted, nothing built")
+
     def test_the_project_is_the_files_not_the_current_directory(self):
         # A project with a part of its own, run from elsewhere. The schematic stage has to find
         # the part; the build stage is could-not-run because no toolchain is offered, which is

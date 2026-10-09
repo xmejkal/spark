@@ -19,11 +19,13 @@ nearest project up from the file's own directory — not from wherever the comma
 Everything that can be wrong with the input is a `DesignError`, which callers turn into
 `could-not-run`; nothing here raises anything else on bad input.
 
-This module resolves and reads. It does not name components or signals for the netlist — that is
-`emit_board`'s, because the name is decided by what the emitted file needs — and it does not
-assign pins, because only the generator needs that. It does say which names are ONE name
-(`one_name`), because `signal_name` is what makes them one, and it refuses a file that gives two
-parts one name before any stage runs on it.
+This module resolves and reads. It names a SIGNAL for its instance (`signal_name`), because that
+name is decided when the instance is, and so it is the one that says which instance names are ONE
+name (`one_name`): `signal_name` is what makes them one. It does not name COMPONENTS for the
+netlist — that is `emit_board`'s, because the name is decided by what the emitted file needs —
+and it does not assign pins, because only the generator needs that. It refuses a file that gives
+two parts one name before any stage runs on it (`read`), and a design whose signals land on one
+name where the signals are derived (`signals_of`, which is the first to hold the part records).
 """
 
 import json
@@ -55,9 +57,10 @@ class DesignError(Exception):
     """The input cannot be loaded, and this is why. Always a sentence, never a traceback."""
 
 
-#: Why two parts cannot share a name in any capitals — said by this reader and by `needs` for the picks it writes, in
-#: the same words, because it is one rule (P163).
-ONE_NAME_RULE = "the build refuses two components of one name, and capitals do not make two names"
+#: Why two parts cannot share a name — said by this reader and by `needs` for the picks it writes, in the same words,
+#: because it is one rule (P163). The rider about capitals is for two spellings; a name written twice gets the rule alone.
+SAME_NAME_RULE = "the build refuses two components of one name"
+ONE_NAME_RULE = "%s, and capitals do not make two names" % SAME_NAME_RULE
 
 
 def one_name(name):
@@ -119,8 +122,9 @@ def read(path):
         # Refused HERE, so the chain's first stage says so and nothing is emitted; both spellings, as the person wrote them.
         first, first_name, second, second_name = clash
         part = (wanted["parts"][second].get("part") if isinstance(wanted["parts"][second], dict) else None) or "…"
+        rule = ONE_NAME_RULE if first_name != second_name else SAME_NAME_RULE  # BtnLeft twice is not about capitals
         raise DesignError('%s: parts[%d] is called %s and parts[%d] %s — %s; give one of them a name of its own, '
-                          '{"part": "%s", "name": …}' % (path, first, first_name, second, second_name, ONE_NAME_RULE, part))
+                          '{"part": "%s", "name": …}' % (path, first, first_name, second, second_name, rule, part))
     return wanted
 
 
@@ -284,7 +288,7 @@ def signals_of(part_list, wanted, project):
     the `{part, name}` form every document shows (audit B1), and the two mains could have
     disagreed about which signals a design has.
     """
-    signals = []
+    signals, sources = [], []  # sources[i] says where signals[i] came from, for the refusal below
     for part in part_list:
         try:
             asked = parts_library.signals_for([part["id"]], project)
@@ -295,7 +299,23 @@ def signals_of(part_list, wanted, project):
             # five signals of one name, which `assign_pins` placed on five pins and every
             # downstream lookup keyed by name then collapsed to whichever came last.
             signals.append(dict(signal, name=signal_name(part, {"signal": signal["name"]})))
-    return signals + list(wanted.get("signals") or [])
+            sources.append("%s's %s" % (part.get("_instance") or part["id"], signal["name"]))
+    own = list(wanted.get("signals") or [])
+    signals += own
+    sources += ["signals[%d]" % index for index in range(len(own))]
+    # P163 (#100), the route the names compare above does not see: a `signals` entry written as OPENLID_BUTTON beside
+    # an instance called OpenLid — or two unnamed parts asking for BUTTON — is ONE signal to the assigner and the
+    # generator, which look a signal up by its exact name. The assigner placed it twice, the generator traced both
+    # pins to one pad, the build passed and the chain said "runs end to end". Refused here, where the signals are
+    # derived — `read` cannot, it has no part records — naming both sources; exact, because every lookup downstream is.
+    placed = {}
+    for source, signal in zip(sources, signals):
+        if signal["name"] in placed:
+            raise DesignError("%s and %s are both %s — one signal, which the pin assigner would place twice and the "
+                              "generator trace to one pad from two pins; give one of them a name of its own"
+                              % (placed[signal["name"]], source, signal["name"]))
+        placed[signal["name"]] = source
+    return signals
 
 
 def rules_in(project):
