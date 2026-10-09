@@ -134,8 +134,8 @@ def _boards_join(boards, each, today):
 def status_lines(boards, prs, closes, worked, today, notes=()):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
-    worked {date}, notes [what could not be read]. The bin's cards in flight count in the verdict's total, as at the
-    gate; with no bin among the boards that is said, and spark's cards are counted alone.
+    worked {date}, notes [what could not be read]. The bin's cards count in the verdict as at the gate (the flight total,
+    the lane, an undated wait); with no bin among the boards that is said, and spark's cards are counted alone.
     """
     spark = dict(boards)["spark"]
     verdict = check_backlog.problems(spark, bin_items=dict(boards).get("bin"))

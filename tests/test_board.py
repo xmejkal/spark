@@ -134,6 +134,14 @@ class TheCoreTest(unittest.TestCase):
         both = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [], set(), TODAY)
         self.assertFalse(any("could not be read" in line for line in both))
 
+    def test_the_bin_s_undated_wait_reaches_the_status_and_puts_the_close_at_risk(self):
+        undated = board.to_items(project(node(16, "B16 — A wait nobody dated", "Idea", waiting="the PO")))
+        lines = board.status_lines([("spark", SPARK), ("bin", undated)], [], [], set(), TODAY)
+        self.assertEqual(lines[0], "spark — 5 open, 1 problem(s) · trial check 2026-11-02")
+        self.assertIn("  ! bin #16 B16 — A wait nobody dated: waits on the PO since nobody knows — set Waiting since", lines)
+        state, _ = board.close_update("x", [("spark", SPARK), ("bin", undated)], set(), TODAY, TODAY)
+        self.assertEqual(state, "AT_RISK")
+
     def test_closes_skip_an_update_made_by_hand_with_no_start_date(self):
         made = {"statusUpdates": {"nodes": [{"startDate": "2026-10-05", "status": "ON_TRACK", "body": "P102a merged\n\nin flight: …"},
                                            {"startDate": None, "status": "AT_RISK", "body": "by hand"}]}}

@@ -7,13 +7,15 @@ A card that waits on someone is asked since when, in any open stage: a Waiting o
 One card at a time may carry the label `expedite`, the PO's lane past a limit: it lets its working stage, and the flight,
 hold one over, and Ready none — it enters Build; two open cards labelled so are named (P146, decision 4 of
 docs/2026-10-06-process-design.md).
-The bin's board is read too, for two things only: its cards in a working stage fly in the same total as spark's, and the
-lane is one lane across both boards (the spec, §1: "The bin's desk cards count in the same three"). They fill none of
-spark's stages and are asked for no Needed by or slice (P146).
+The bin's board is read too, for three things: its cards in a working stage fly in the same total as spark's (a session
+labelled `bench` sits outside it), the lane is one lane across both boards, and a card of its that waits on someone is
+asked since when like any (the spec, §1: "The bin's desk cards count in the same three. A bench session is your hands, so
+it sits outside them"). They fill none of spark's stages and are asked for no Needed by or slice (P146).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories (every task
 is counted as riding on its story) or not the bin's board (spark's cards are counted alone): a line says so with the
-cause, and the push goes through (W1: said, never read as checked).
+cause, and the push goes through (W1: said, never read as checked). A bin board that was read is said too: the summary
+line carries its open count.
 """
 
 import json
@@ -44,9 +46,12 @@ UPSTREAM = ("Discovery", "Design")
 #: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
 #: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
 MOST_IN_FLIGHT = 4
-#: The one lane past a limit, on the PO's word only (decision 4): a card labelled so may take its stage, and the flight,
-#: one over its limit. One card at a time — the gate fails on two (P146).
+#: The one lane past a limit, on the PO's word only (decision 4): a card labelled so may take its working stage, and the
+#: flight, one over its limit. One card at a time — the gate fails on two (P146).
 EXPEDITE = "expedite"
+#: The bin's label for a bench session — the PO's own hands at the bench, which sits outside the limits (the spec, §1: "A
+#: bench session is your hands, so it sits outside them"). A bin card labelled so does not fly in the total (P146).
+BENCH = "bench"
 #: What fetch() puts in a task's "parent" when GitHub could not be asked who it is. It is not None, so counts() and
 #: problems() let the task ride on a story they cannot name — a check must not count a card whose parent it could not see
 #: — and main() says so, with the cause (P146).
@@ -60,13 +65,13 @@ def _section(body, name):
     return "" if text == "_No response_" else text
 
 
-def _name(entry):
-    return "#%s %s" % (entry["content"].get("number"), entry["content"].get("title", ""))
-
-
 def _ref(entry):
     """A card as a sentence names it: `#12`, or `bin #12` for one of the bin's (problems() marks those, BIN_BOARD)."""
     return "%s#%s" % (BIN_BOARD + " " if entry.get("board") == BIN_BOARD else "", entry["content"].get("number"))
+
+
+def _name(entry):
+    return "%s %s" % (_ref(entry), entry["content"].get("title", ""))
 
 
 def counts(entry):
@@ -92,19 +97,22 @@ def problems(items, bin_items=()):
     sub-issue of its story) rides on its story and is not judged on its own — unless it has no parent story, when it is
     a card like any other (counts()). A Done card is not judged at all.
     `bin_items` is the bin's board, or None when it could not be read (main() says so; nothing is said here). Its cards
-    in a working stage that count (counts()) fly in the same total as spark's, and its expedite is the same lane; they
-    fill none of spark's stages and are asked for no Needed by or slice. A sentence names them `bin #12`.
+    in a working stage that count (counts()) fly in the same total as spark's — all but a `bench` session, which sits
+    outside the limits — and its expedite is the same lane; a card of its that waits on someone is asked since when, like
+    any. They fill none of spark's stages and are asked for no Needed by or slice. A sentence names them `bin #12`.
     """
     said, by_stage = [], {}
     bin_cards = [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]  # copies: the caller's cards stay unmarked
-    for entry in items:
+    for entry in [*items, *bin_cards]:
         status = entry.get("status")
         rides = "task" in (entry.get("labels") or []) and entry.get("parent") is not None
         if status == "Done" or rides:
             continue  # a riding task is its story's; a parentless one is judged like any card
-        if counts(entry):
+        # The bin's cards fill none of spark's stages and are asked for no Needed by or slice; the wait is asked of both.
+        from_spark = entry.get("board") != BIN_BOARD
+        if from_spark and counts(entry):
             by_stage.setdefault(status, []).append(entry)
-        if status in JUDGED:
+        if from_spark and status in JUDGED:
             if not _section(entry["content"].get("body"), "Needed by"):
                 said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
             if not entry.get("slice"):
@@ -129,7 +137,8 @@ def problems(items, bin_items=()):
                         % (stage, len(held), ", ".join(_ref(e) for e in held), limit,
                            "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
     flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
-    flying += [e for e in bin_cards if e.get("status") in IN_FLIGHT and counts(e)]
+    # A bench session is the PO's hands and sits outside the limits (the spec, §1): a bin card labelled so does not fly.
+    flying += [e for e in bin_cards if e.get("status") in IN_FLIGHT and counts(e) and BENCH not in (e.get("labels") or [])]
     if over(flying, MOST_IN_FLIGHT):
         said.append("%d in flight (%s) — at most %d: finish one before starting another"
                     % (len(flying), ", ".join(_ref(e) for e in flying), MOST_IN_FLIGHT))
@@ -223,8 +232,11 @@ def main():
         print("  backlog: skipped — gh or the network could not be reached (%s)" % why)
         return 0
     said = problems(items, bin_items)
-    print("  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
-                                      "the limits hold" if not said else "%d problem(s)" % len(said)))
+    summary = "  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
+                                         "the limits hold" if not said else "%d problem(s)" % len(said))
+    if bin_items is not None:
+        summary += "; the bin: %d open" % sum(1 for e in bin_items if e.get("status") != "Done")
+    print(summary)
     for sentence in said:
         print("    " + sentence)
     if why:

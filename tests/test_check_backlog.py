@@ -25,12 +25,14 @@ named and get no extra place; a Done card keeps its label and is not counted; th
 a card with no labels key is no lane and no crash; an expedite epic in Build, which holds no place there (counts()),
 lends nothing; and a Ready that holds one over its limit is named, expedite or not.
 
-P146 (docs/2026-10-06-process-design.md, §1: "The bin's desk cards count in the same three"): the bin's board is read for
-two things. Its cards in a working stage fly in the same total as spark's — a task under its story rides on it, an epic
-counts only in Discovery and Design, a Done card is out — and the expedite lane is one lane across both boards. They fill
-none of spark's stages and are asked for no Needed by or slice, and a sentence names them `bin #12`, apart from spark's #12.
-A bin board that could not be read is said, with its cause, and spark's cards are counted alone: never a silent pass and
-never a failed push.
+P146 (docs/2026-10-06-process-design.md, §1: "The bin's desk cards count in the same three. A bench session is your
+hands, so it sits outside them"): the bin's board is read for three things. Its cards in a working stage fly in the same
+total as spark's — a task under its story rides on it, an epic counts only in Discovery and Design, a Done card is out,
+and a card labelled `bench` sits outside — the expedite lane is one lane across both boards, and a card that waits on
+someone is asked since when there too, as on spark's. They fill none of spark's stages and are asked for no Needed by or
+slice, and a sentence names them `bin #12`, apart from spark's #12. A bin board that could not be read is said, with its
+cause, and spark's cards are counted alone: never a silent pass and never a failed push. One that was read is said too,
+in the summary line, with its open count.
 """
 
 import json
@@ -276,6 +278,41 @@ class TheBacklogCheckTest(unittest.TestCase):
         finished = item(19, "Done", labels=("story", "expedite"))
         self.assertEqual(check_backlog.problems([item(1, "Build", labels=("story", "expedite"))], bin_items=[finished]), [])
 
+    def test_the_bin_s_fifth_card_flies_in_every_working_stage_and_so_does_an_epic_in_discovery(self):
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+        fifths = [item(19, "Discovery"), item(19, "Design"), item(19, "Build"), item(19, "Review"),
+                  item(19, "Discovery", labels=("epic",))]
+        for fifth in fifths:
+            with self.subTest(status=fifth["status"], labels=fifth["labels"]):
+                self.assertEqual(check_backlog.problems(spark, bin_items=[fifth]),
+                                 ["5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before starting another"])
+
+    def test_a_bench_card_of_the_bin_sits_outside_the_flight_total(self):
+        # The spec §1: "A bench session is your hands, so it sits outside them" — the labelled card alone, not the bin's others.
+        spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
+        bench = item(19, "Build", labels=("story", "bench"))
+        self.assertEqual(check_backlog.problems(spark, bin_items=[bench]), [])
+        self.assertEqual(check_backlog.problems(spark, bin_items=[bench, item(20, "Build")]),
+                         ["5 in flight (#1, #2, #3, #4, bin #20) — at most 4: finish one before starting another"])
+
+    def test_the_bin_s_undated_wait_is_named_apart_from_spark_s(self):
+        said = check_backlog.problems([item(3, "Discovery", waiting="the PO")], bin_items=[item(19, "Idea", waiting="the PO")])
+        self.assertEqual(said, ["#3 P3 — x: waits on the PO since nobody knows — set Waiting since",
+                                "bin #19 P19 — x: waits on the PO since nobody knows — set Waiting since"])
+
+    def test_the_bin_s_undated_wait_is_named_in_every_open_stage(self):
+        # As on spark's board a wait is no commitment-stage question: a card with no Status, or a stage the gate does not
+        # know, is named like the rest.
+        for status in (None, "Idea", "Discovery", "Design", "Ready", "Build", "Review", "Parked"):
+            with self.subTest(status=status):
+                self.assertEqual(check_backlog.problems([], bin_items=[item(19, status, waiting="the PO")]),
+                                 ["bin #19 P19 — x: waits on the PO since nobody knows — set Waiting since"])
+
+    def test_a_dated_wait_on_the_bin_passes_and_a_done_or_riding_card_s_wait_is_not_judged(self):
+        bin_cards = [item(19, "Idea", waiting="the PO", since="2026-10-06"), item(20, "Done", waiting="the PO"),
+                     item(21, "Build", labels=("task",), parent=19, waiting="the PO")]
+        self.assertEqual(check_backlog.problems([], bin_items=bin_cards), [])
+
     def test_a_done_item_is_not_judged_again(self):
         self.assertEqual(check_backlog.problems([item(5, "Done", needed="", slice_=None)]), [])
 
@@ -431,7 +468,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         run, asked = self.board_answering(items, {"data": {"r0": {"t9": {"parent": {"number": 1}}}}})
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: 3 open, the limits hold", printed)
+        self.assertIn("  backlog: 3 open, the limits hold; the bin: 0 open", printed)
         self.assertNotIn("could not be read", printed)
         questions = [command for command in asked if "graphql" in command]
         self.assertEqual(len(questions), 1)
@@ -464,7 +501,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         run, _ = self.board_answering(items, subprocess.TimeoutExpired("gh", 60))
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: 3 open, the limits hold", printed)
+        self.assertIn("  backlog: 3 open, the limits hold; the bin: 0 open", printed)
         self.assertIn("  backlog: tasks' parent stories could not be read (TimeoutExpired) — every task counted as riding on a story",
                       printed)
 
@@ -481,7 +518,7 @@ class TheBacklogCheckTest(unittest.TestCase):
                 run, _ = self.board_answering([item(1, "Build"), item(2, "Build"), task], {"data": {}})
                 code, printed = self.said(run)
                 self.assertEqual(code, 0)
-                self.assertIn("  backlog: 3 open, the limits hold", printed)
+                self.assertIn("  backlog: 3 open, the limits hold; the bin: 0 open", printed)
                 self.assertIn("tasks' parent stories could not be read (%s) — every task counted as riding on a story" % cause, printed)
 
     def test_unread_parents_do_not_hide_a_broken_limit(self):
@@ -532,21 +569,29 @@ class TheBacklogCheckTest(unittest.TestCase):
         run, _ = self.board_answering([item(1, "Build")], {"data": {}}, subprocess.TimeoutExpired("gh", 60))
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: 1 open, the limits hold", printed)
+        self.assertIn("  backlog: 1 open, the limits hold\n", printed)
         self.assertIn("  backlog: the bin's board could not be read (TimeoutExpired) — its cards in flight were not counted",
                       printed)
 
     def test_main_says_when_the_project_list_has_no_bin_project(self):
         code, printed = self.said(self.listing_only_spark())
         self.assertEqual(code, 0)
+        self.assertIn("  backlog: 1 open, the limits hold\n", printed)
         self.assertIn("  backlog: the bin's board could not be read (no project titled 'the bin' under xmejkal) — "
                       "its cards in flight were not counted", printed)
+
+    def test_the_summary_says_how_many_of_the_bin_s_cards_are_open(self):
+        # Said when the bin was read, as the note is said when it was not: a Done card is no open card.
+        run, _ = self.board_answering([item(1, "Build")], {"data": {}}, [item(19, "Build"), item(20, "Idea"), item(21, "Done")])
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 1 open, the limits hold; the bin: 2 open\n", printed)
 
     def test_main_says_nothing_of_the_bin_when_its_board_was_read(self):
         run, _ = self.board_answering([item(1, "Build")], {"data": {}}, [item(19, "Build")])
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: 1 open, the limits hold", printed)
+        self.assertIn("  backlog: 1 open, the limits hold; the bin: 1 open", printed)
         self.assertNotIn("could not be read", printed)
 
     def test_an_unread_bin_board_does_not_hide_a_broken_limit(self):
@@ -564,7 +609,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         run, _ = self.board_answering(spark_cards, {"data": {"r0": {"t20": {"parent": {"number": 19}}}}}, bin_cards)
         code, printed = self.said(run)
         self.assertEqual(code, 1)
-        self.assertIn("  backlog: 4 open, 1 problem(s)", printed)
+        self.assertIn("  backlog: 4 open, 1 problem(s); the bin: 2 open", printed)
         self.assertIn("    5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before starting another", printed)
         self.assertNotIn("could not be read", printed)
 
@@ -574,7 +619,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         run, _ = self.board_answering(spark_cards, subprocess.TimeoutExpired("gh", 60), bin_cards)
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: 4 open, the limits hold", printed)
+        self.assertIn("  backlog: 4 open, the limits hold; the bin: 1 open", printed)
         self.assertIn("tasks' parent stories could not be read (TimeoutExpired)", printed)
 
     def test_a_spark_board_that_cannot_be_listed_skips_the_look_and_passes(self):
