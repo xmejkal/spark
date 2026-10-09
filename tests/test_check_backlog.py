@@ -17,6 +17,12 @@ or a stage the gate does not know, is treated like Idea.
 P146 (docs/2026-10-06-process-design.md, "Asks to you"): a card that waits on someone carries Waiting on and Waiting
 since, and a Waiting on with no Waiting since is named — in any open stage, Idea included, since a wait is no
 commitment-stage question, and whoever is waited on (the PO, Petr). A Done card's stale wait is not judged.
+
+P146 (docs/2026-10-06-process-design.md, decision 4): the expedite lane — on the PO's word only, one card at a time,
+labelled `expedite`. It lets a stage, and the flight, hold one over their limit, and the gate fails on two. Pinned from
+both sides: one over passes and two over is named; two labelled cards are named and get no extra place; a Done card keeps
+its label and is not counted; the extra place is its own stage's alone; a card with no labels key is no lane and no
+crash; and an expedite epic in Build, which holds no place there (counts()), lends nothing.
 """
 
 import json
@@ -160,6 +166,52 @@ class TheBacklogCheckTest(unittest.TestCase):
                                                             item(2, "Build", labels=("epic",)),
                                                             item(3, "Build", labels=("task",), parent=1), item(4, "Build"))],
                          [True, False, False, True])
+
+    def test_one_expedite_may_take_a_stage_one_over_its_limit(self):
+        rushed = item(9, "Build", labels=("story", "expedite"))
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), rushed]), [])
+
+    def test_a_stage_two_over_its_limit_fails_even_with_an_expedite(self):
+        rushed = item(9, "Build", labels=("story", "expedite"))
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), rushed])
+        self.assertEqual(said, ["Build holds 4 (#1, #2, #3, #9) — its limit is 2: finish one before starting another"])
+
+    def test_two_expedites_are_named(self):
+        said = check_backlog.problems([item(1, "Build", labels=("story", "expedite")), item(2, "Review", labels=("story", "expedite"))])
+        self.assertEqual(said, ["2 cards labelled expedite (#1, #2) — one at a time, on the PO's word"])
+
+    def test_an_expedite_lets_five_fly(self):
+        cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review"), item(9, "Build", labels=("story", "expedite"))]
+        self.assertEqual(check_backlog.problems(cards), [])
+
+    def test_an_expedite_epic_in_build_is_not_the_work_and_allows_nothing(self):
+        epic = item(9, "Build", labels=("epic", "expedite"))
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(3, "Build"), epic])
+        self.assertEqual(said, ["Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+
+    def test_two_expedites_in_one_stage_get_no_extra_place(self):
+        # The allowance is for exactly one: with two the gate names the lane AND holds the stage to its limit.
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build", labels=("story", "expedite")),
+                                       item(3, "Build", labels=("story", "expedite"))])
+        self.assertEqual(said, ["2 cards labelled expedite (#2, #3) — one at a time, on the PO's word",
+                                "Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+
+    def test_an_expedite_lends_its_own_stage_the_extra_place_and_no_other(self):
+        # The expedite sits in Build; Review, with three, is still over its limit of 2.
+        said = check_backlog.problems([item(1, "Review"), item(2, "Review"), item(3, "Review"),
+                                       item(9, "Build", labels=("story", "expedite"))])
+        self.assertEqual(said, ["Review holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+
+    def test_a_done_card_keeps_its_label_and_is_not_counted_as_an_expedite(self):
+        # A label stays on a card when it is Done: the lane must free up, or the second expedite would fail for good.
+        finished = item(1, "Done", labels=("story", "expedite"))
+        self.assertEqual(check_backlog.problems([finished, item(2, "Build", labels=("story", "expedite"))]), [])
+
+    def test_a_card_with_no_labels_key_is_not_an_expedite_and_not_a_crash(self):
+        # counts() reads a missing "labels" as none; the lane must too, or one unlabelled card stops every push.
+        bare = item(1, "Build")
+        del bare["labels"]
+        self.assertEqual(check_backlog.problems([bare, item(2, "Build")]), [])
 
     def test_a_done_item_is_not_judged_again(self):
         self.assertEqual(check_backlog.problems([item(5, "Done", needed="", slice_=None)]), [])

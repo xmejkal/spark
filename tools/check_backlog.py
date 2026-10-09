@@ -4,6 +4,8 @@ W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05
 §8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
 A card is asked for its Needed by and slice from Ready on — the commitment — not in Idea, Discovery or Design (P146).
 A card that waits on someone is asked since when, in any open stage: a Waiting on with no Waiting since is named (P146).
+One card at a time may carry the label `expedite`, the PO's lane past a limit: it lets its stage, and the flight, hold
+one over; two open cards labelled so are named (P146, decision 4 of docs/2026-10-06-process-design.md).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories: every task
 is counted as riding on its story, a line says so with the cause, and the push goes through (W1: said, never read as
@@ -30,6 +32,9 @@ UPSTREAM = ("Discovery", "Design")
 #: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
 #: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
 MOST_IN_FLIGHT = 4
+#: The one lane past a limit, on the PO's word only (decision 4): a card labelled so may take its stage, and the flight,
+#: one over its limit. One card at a time — the gate fails on two (P146).
+EXPEDITE = "expedite"
 #: What fetch() puts in a task's "parent" when GitHub could not be asked who it is. It is not None, so counts() and
 #: problems() let the task ride on a story they cannot name — a check must not count a card whose parent it could not see
 #: — and main() says so, with the cause (P146).
@@ -64,10 +69,11 @@ def problems(items, bin_items=()):
     """
     Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on, the commitment
     (JUDGED), not in Idea, Discovery or Design — a card that waits on someone (any name) with no Waiting since, in any
-    open stage, and a broken WIP limit. An epic counts only in Discovery and Design; a task (a plan's step, a sub-issue
-    of its story) rides on its story and is not judged on its own — unless it has no parent story, when it is a card
-    like any other (counts()). A Done card is not judged at all. `bin_items` is the bin's board, accepted and not read
-    yet.
+    open stage, two open cards labelled expedite (whatever their stage), and a broken WIP limit. A stage, or the flight,
+    may hold one over its limit while exactly one of the cards it holds is the expedite. An epic counts only in
+    Discovery and Design; a task (a plan's step, a sub-issue of its story) rides on its story and is not judged on its
+    own — unless it has no parent story, when it is a card like any other (counts()). A Done card is not judged at all.
+    `bin_items` is the bin's board, accepted and not read yet.
     """
     said, by_stage = [], {}
     for entry in items:
@@ -84,14 +90,24 @@ def problems(items, bin_items=()):
                 said.append("%s: on no slice of the story map" % _name(entry))
         if entry.get("waiting on") and not entry.get("waiting since"):
             said.append("%s: waits on %s since nobody knows — set Waiting since" % (_name(entry), entry["waiting on"]))
+    rushed = [e for e in items if e.get("status") != "Done" and EXPEDITE in (e.get("labels") or [])]
+    if len(rushed) > 1:
+        said.append("%d cards labelled expedite (%s) — one at a time, on the PO's word"
+                    % (len(rushed), ", ".join("#%s" % e["content"].get("number") for e in rushed)))
+
+    def over(held, limit):
+        """Whether `held` breaks `limit`: one over is allowed while exactly one of its cards is the expedite."""
+        allowance = 1 if sum(1 for e in held if EXPEDITE in (e.get("labels") or [])) == 1 else 0
+        return len(held) > limit + allowance
+
     for stage, limit in LIMITS.items():
         held = by_stage.get(stage, [])
-        if len(held) > limit:
+        if over(held, limit):
             said.append("%s holds %d (%s) — its limit is %d: %s"
                         % (stage, len(held), ", ".join("#%s" % e["content"].get("number") for e in held), limit,
                            "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
     flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
-    if len(flying) > MOST_IN_FLIGHT:
+    if over(flying, MOST_IN_FLIGHT):
         said.append("%d in flight (%s) — at most %d: finish one before starting another"
                     % (len(flying), ", ".join("#%s" % e["content"].get("number") for e in flying), MOST_IN_FLIGHT))
     return said

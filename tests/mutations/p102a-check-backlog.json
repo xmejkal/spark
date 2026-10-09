@@ -20,13 +20,13 @@
  {
   "file": "tools/check_backlog.py",
   "name": "a stage's limit is ignored",
-  "find": "        if len(held) > limit:\n",
+  "find": "        if over(held, limit):\n",
   "replace": "        if False:\n"
  },
  {
   "file": "tools/check_backlog.py",
   "name": "in flight has no cap",
-  "find": "    if len(flying) > MOST_IN_FLIGHT:\n",
+  "find": "    if over(flying, MOST_IN_FLIGHT):\n",
   "replace": "    if False:\n"
  },
  {
