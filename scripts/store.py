@@ -38,8 +38,8 @@ PLUGIN = Path(__file__).resolve().parent.parent
 #: No script imports unittest — tests/test_store.py proves it — so a real run never takes this branch.
 #: The scratch store goes when the process exits (P172): the one made here, never the SPARK_HOME it replaced.
 if "unittest" in sys.modules:
-    os.environ["SPARK_HOME"] = tempfile.mkdtemp(prefix="spark-suite-")
-    atexit.register(shutil.rmtree, os.environ["SPARK_HOME"], True)
+    os.environ["SPARK_HOME"] = _suite_home = tempfile.mkdtemp(prefix="spark-suite-")
+    atexit.register(shutil.rmtree, _suite_home, True)
     os.environ["CLAUDE_CODE_SESSION_ID"] = "spark-suite"  # P97: a test's steps never name the person's own session
 
 

@@ -11,7 +11,7 @@
  {"file": "tests/suite_temp.py", "name": "P172: tempfile is not pointed at the helper's folder", "find": "tempfile.tempdir = ROOT", "replace": "None"},
  {"file": "tests/suite_temp.py", "name": "P172: the helper removes any folder it is handed", "find": "if folder != _MADE or os.getpid() != _MADE_BY:", "replace": "if os.getpid() != _MADE_BY:"},
  {"file": "tests/suite_temp.py", "name": "P172: a forked child removes its parent's folder", "find": "if folder != _MADE or os.getpid() != _MADE_BY:", "replace": "if folder != _MADE:"},
- {"file": "scripts/store.py", "name": "P172: store's scratch home is not removed at exit", "find": "    atexit.register(shutil.rmtree, os.environ[\"SPARK_HOME\"], True)\n", "replace": "    pass\n"},
+ {"file": "scripts/store.py", "name": "P172: store's scratch home is not removed at exit", "find": "    atexit.register(shutil.rmtree, _suite_home, True)\n", "replace": "    pass\n"},
  {"file": "tools/mutate.py", "name": "P172: mutate keeps each run's folder, its pycache and its temp", "find": "        shutil.rmtree(run, ignore_errors=True)", "replace": "        None"},
  {"file": "tools/mutate.py", "name": "P172: the suite mutate runs writes to mutate's own temp folder", "find": ",\n                           TMPDIR=str(run / \"tmp\"))", "replace": ")"},
  {"file": "tools/mutate.py", "name": "P172: the run's temp folder is never made, so TMPDIR falls back elsewhere", "find": "        (run / \"tmp\").mkdir()", "replace": "        pass"}
