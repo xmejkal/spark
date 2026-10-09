@@ -9,7 +9,7 @@ team's working agreements are part of its definition of workflow.
 Nothing lives only in an agent's head or in a conversation that scrolls away — if a rule, a goal or a decision is not
 written here, it is not in force. The design behind this page:
 [`docs/2026-10-06-process-design.md`](../docs/2026-10-06-process-design.md) (accepted by the PO on 2026-10-06). **(D)**
-marks what he had decided on the morning of 2026-10-06, before the design.
+marks what he had decided on the morning of 2026-10-06, before he accepted the design (12:21).
 
 Two repositories, one team, a board for each (the PO orders both):
 
@@ -20,8 +20,9 @@ Two repositories, one team, a board for each (the PO orders both):
 
 ## The people
 
-Three roles: **the Product Owner** (Petr), **Claude** (developer and orchestrator) and **the agents** Claude launches.
-What each decides, proposes, does and may not is on their role cards in [`TEAM.md`](TEAM.md).
+Three roles: **the Product Owner** (Petr), **Claude** (developer and orchestrator) and **the agents** Claude launches;
+the tech lead and the PO assistant (the PO, 2026-10-06) are roles a council's lenses play. What each decides, proposes,
+does and may not is on their role cards in [`TEAM.md`](TEAM.md).
 
 Petr is the Product Owner and that is not decorative. Proposals for ordering come to him ranked with reasons; the
 ranking is a recommendation until he says otherwise. An agent never decides that something is valuable — it can only
@@ -31,12 +32,12 @@ report what something costs and what it would prove.
 
 | file | what it is for |
 | --- | --- |
-| **the spark project** (https://github.com/users/xmejkal/projects/2) | **the board, since 2026-10-05 (P102a).** Every item is an issue, with its *Needed by* and *Value proven by*; Kanban stages and limits (`docs/2026-10-05-backlog-in-github-design.md` §3); the Ready column's order is the PO's. The bin's own board: https://github.com/users/xmejkal/projects/1 |
+| **the spark project** (https://github.com/users/xmejkal/projects/2) | **the board, since 2026-10-05 (P102a).** Every item is an issue, with its *Needed by* and *Value proven by*; Kanban stages and limits ([the flow](#the-flow--an-items-stages), below); the Ready column's order is the PO's. The bin's own board: https://github.com/users/xmejkal/projects/1 |
 | [`PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) | **the archive, frozen 2026-10-05.** Every heading says where its item went (MOVED to an issue) or how it ended |
 | [`SPRINT.md`](SPRINT.md) | the history of Sprints 1–10 |
 | [`RETROSPECTIVES.md`](RETROSPECTIVES.md) | every retro, the change it produced, and **whether that change stuck** |
 | [`WORKING_AGREEMENTS.md`](WORKING_AGREEMENTS.md) | the rules, and where each one came from |
-| [`TEAM.md`](TEAM.md) | the roster and the test each member has to pass to exist |
+| [`TEAM.md`](TEAM.md) | the role cards, the roster and the test each member has to pass to exist |
 
 The work lives on the boards and nowhere else: spark's (https://github.com/users/xmejkal/projects/2) and the bin's
 (/projects/1), each card an issue in its repository. `docs/observations/INDEX.md` is **raw observation intake**, not a
@@ -62,8 +63,14 @@ choice after a three-lens council).
   both boards (one on someone other than the PO says who), marks a wait older than three days with `!`, and says
   *"Ready is down to N"* at one or two.
 - **The day-close** posts Claude's line, then what is in flight and every wait, as a status update on the spark board —
-  at risk when a limit breaks or a wait is older than three days. A day has one close; a second for the same day is
-  refused. A session that opens with *"! the day of … has no close"* writes that day's close first, with `--date`.
+  at risk when the gate finds a problem (a broken limit, a missing *Needed by* or slice, an undated wait, a second
+  expedite) or a wait is older than three days. A day has one close; a second for the same day is refused. A session
+  that opens with *"! the day of … has no close"* writes that day's close first, with `--date`.
+- **The weekly look** has no command: `tools/board.py` posts only the day-close, and reads every status update that
+  carries a start date as a day's close. So the weekly look's update is posted by hand with no start date.
+- **The service level**, one best guess (the design's measures, accepted with it on 2026-10-06): *"a card leaves Build
+  and Review within 2 working days, 8 times in 10."* The status prints each card's days in its stage, but nothing flags
+  one past the service level yet (card C3 of the design, not built); the trial on 2026-11-02 corrects the guess.
 - **The appetite** (decision 5 (a)): when an epic enters Discovery, the PO gives it an appetite in working days. The
   status flags a spark epic in a working stage whose appetite is spent, counted in working days since its stage last
   changed: *"ship what is Done, bet again, or drop it"*. It reads the board's Appetite number field, which the board
@@ -85,11 +92,12 @@ PO's order into Ready commits.
 | **Review** | 2 | a fresh final review on the most capable model | the council before the PR (the PO assistant, the user's journey, the tech lead, a documentation expert, then the refuter) has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
-Each working stage takes two cards, Ready five, and at most four cards are in flight — Discovery to Review — at once:
-the PO's call of 2026-10-06 evening, after the first day at the cap of three (*"2 everywhere, cap 4"*). What counts
-(P146, the PO, 2026-10-06):
+Ready takes five (D); each working stage two, and at most four cards in flight — Discovery to Review — at once: the
+PO's call of 2026-10-06 evening, after the first day at the cap of three (*"2 everywhere, cap 4"*). What counts (P146,
+the PO, 2026-10-06):
 
-- an epic counts where it is the work itself, in Discovery and Design; from Build on its stories carry the limit;
+- an epic counts only in Discovery and Design, where it is the work itself; in Ready and after, its stories carry the
+  limit;
 - a card is in its working stage while any work runs on it, a background read included; a read that only answers a
   question puts its card back in Idea when the answer is posted;
 - every card counts: a card that one PR closes together with another still counts on its own, so a pair that one PR
@@ -153,7 +161,7 @@ skipped twice, do epics start and finish? If not, one-day sprints replace it (th
 - **Inside the PO's allowance** a run starts. Above it, Claude asks first, with the estimate. The allowance is decision
   2 (a), his choice of 2026-10-06: *"with no question asked, one run per card in flight, sized to its question, and at
   most one full council a day. Anything bigger is asked first, with its estimate."*
-- **Reported daily.** The day-close states the day's agent tokens.
+- **Reported daily.** The day-close states the day's agent tokens (no tool counts them yet; card C1).
 - **Capped by the limits.** One run per in-flight card means at most four at once, five while the expedite lane is in
   use.
 
