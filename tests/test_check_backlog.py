@@ -626,15 +626,16 @@ class TheBacklogCheckTest(unittest.TestCase):
         run, _ = self.board_answering(subprocess.TimeoutExpired("gh", 60), {"data": {}})
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: skipped — gh or the network could not be reached (TimeoutExpired)", printed)
+        self.assertIn("  backlog: could-not-run — gh or the network could not be reached (TimeoutExpired); the limits were not checked", printed)
+        self.assertNotIn("skipped", printed)
 
-    def test_offline_the_gate_says_why_and_passes(self):
+    def test_offline_the_gate_says_could_not_run_and_passes(self):
         def run(*args, **kwargs):
             raise FileNotFoundError("gh")
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("skipped", printed)
-        self.assertIn("FileNotFoundError", printed)
+        self.assertIn("backlog: could-not-run — gh or the network could not be reached (FileNotFoundError); the limits were not checked", printed)
+        self.assertNotIn("skipped", printed)
 
     def test_a_missing_project_fails_the_gate_and_says_so(self):
         def run(*args, **kwargs):

@@ -44,13 +44,13 @@
  {
   "file": "tools/check_backlog.py",
   "name": "offline hides why",
-  "find": "could not be reached (%s)\" % why)",
-  "replace": "could not be reached\")"
+  "find": "could not be reached (%s); the limits were not checked\" % why)",
+  "replace": "could not be reached; the limits were not checked\")"
  },
  {
   "file": "tools/check_backlog.py",
   "name": "offline fails the gate",
-  "find": "        print(\"  backlog: skipped — gh or the network could not be reached (%s)\" % why)\n        return 0\n",
+  "find": "        print(\"  backlog: could-not-run — gh or the network could not be reached (%s); the limits were not checked\" % why)\n        return 0\n",
   "replace": "        return 1\n"
  },
  {

@@ -229,7 +229,7 @@ def main():
         print("  backlog: %s" % gone)
         return 1
     if items is None:
-        print("  backlog: skipped — gh or the network could not be reached (%s)" % why)
+        print("  backlog: could-not-run — gh or the network could not be reached (%s); the limits were not checked" % why)
         return 0
     said = problems(items, bin_items)
     summary = "  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
