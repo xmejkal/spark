@@ -174,7 +174,7 @@ command checks a *Value proven by*.
 already does it; if it exists and works, lift or wrap it. Petr's rule, vindicated at once: a plan to import KiCad
 footprints was killed when 18 of 27 were shown to convert to geometry identical to what already existed. Its other
 edge: the bin's `circuit-to-wokwi` was tested TypeScript that spark did not have, and it was moved, not rewritten — its
-1,307 lines of core came into spark as `tools/circuit-to-wokwi` (P32a), while the bin's knowledge of its own board
+~1,307 lines of core (the firmware lens's count) came into spark as `tools/circuit-to-wokwi` (P32a), while the bin's knowledge of its own board
 stayed in the bin.
 
 **Origin:** 2026-09-29, when a third of the repository was deleted as unused. Every piece of it

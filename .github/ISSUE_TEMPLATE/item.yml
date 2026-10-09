@@ -13,7 +13,7 @@ body:
     id: value
     attributes:
       label: Value proven by
-      description: What will be true when it is done, readable by the Product Owner.
+      description: The command whose output shows it is true, readable by the Product Owner (or what will be true, until a command exists).
     validations:
       required: true
   - type: input
