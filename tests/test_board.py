@@ -107,16 +107,16 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(board.in_flight(items, dt.date(2026, 10, 9)), ["Build T10 (#10) 4 d"])
 
     def test_waiting_on_the_po_says_since_when_and_marks_more_than_three_days(self):
-        self.assertEqual(board.waiting(BIN, TODAY), ["B1 (#1) since 2026-09-25, 12 d !"])
-        self.assertEqual(board.waiting(SPARK, TODAY), ["R2.6 (#15) since 2026-10-05, 2 d"])
+        self.assertEqual(board.all_waiting([("spark", BIN)], TODAY), ["B1 (#1) since 2026-09-25, 12 d !"])
+        self.assertEqual(board.all_waiting([("spark", SPARK)], TODAY), ["R2.6 (#15) since 2026-10-05, 2 d"])
         undated = board.to_items(project(node(16, "R2.7 — A wait nobody dated", "Idea", waiting="the PO")))
-        self.assertEqual(board.waiting(undated, TODAY), ["R2.7 (#16)"])
+        self.assertEqual(board.all_waiting([("spark", undated)], TODAY), ["R2.7 (#16)"])
 
     def test_waits_are_listed_oldest_first_and_an_undated_one_last(self):
         items = board.to_items(project(node(1, "A — x", "Discovery", waiting="the PO", since="2026-10-07"),
                                        node(2, "B — y", "Idea", waiting="the PO", since="2026-10-01"),
                                        node(3, "C — z", "Idea", waiting="the PO")))
-        self.assertEqual(board.waiting(items, dt.date(2026, 10, 9)),
+        self.assertEqual(board.all_waiting([("spark", items)], dt.date(2026, 10, 9)),
                          ["B (#2) since 2026-10-01, 8 d !", "A (#1) since 2026-10-07, 2 d", "C (#3)"])
 
     def test_a_wait_on_anyone_is_listed_and_a_finished_card_s_is_not(self):

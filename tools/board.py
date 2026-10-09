@@ -107,11 +107,6 @@ def _waits(items, today):
     return said
 
 
-def waiting(items, today):
-    """One board's cards waiting on someone, oldest first, with since when; an undated wait last."""
-    return [text for _, text in sorted(_waits(items, today))]
-
-
 def all_waiting(boards, today):
     """Every wait on either board, oldest first (the spec, §1), an undated one last; the bin's are named by their board."""
     said = sorted((since, _on_board(name, text)) for name, items in boards for since, text in _waits(items, today))
