@@ -262,7 +262,7 @@ git commit -m "P146: a task with no parent story counts as a card, and the gate 
 
 **Interfaces:**
 - Consumes: `problems(items, …)` from Task 2.
-- Produces: the constant `JUDGED = ("Ready",) + IN_FLIGHT` — the stages where a card must carry *Needed by* and a slice.
+- Produces: the constant `JUDGED = ("Ready", "Build", "Review")` — the stages from the commitment on, where a card must carry *Needed by* and a slice (**ruled at review, 2026-10-09:** the spec's skeptic item 6 says "from Ready on, not from Discovery on", and Idea, Discovery and Design decide whether to build; the brief's first text, `("Ready",) + IN_FLIGHT`, is superseded).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -273,8 +273,8 @@ git commit -m "P146: a task with no parent story counts as a card, and the gate 
     def test_a_ready_card_with_no_slice_is_named(self):
         self.assertEqual(check_backlog.problems([item(3, "Ready", slice_="")]), ["#3 P3 — x: on no slice of the story map"])
 
-    def test_a_card_in_every_working_stage_is_judged(self):
-        for stage in ("Discovery", "Design", "Build", "Review"):
+    def test_a_card_in_build_or_review_is_judged(self):
+        for stage in ("Build", "Review"):
             with self.subTest(stage=stage):
                 self.assertEqual(check_backlog.problems([item(3, stage, needed="")]),
                                  ["#3 P3 — x: no `Needed by` — W14: an item names the design that needs it"])
@@ -289,7 +289,7 @@ Expected: `FAILED` — the Idea card is named twice.
 
 - [ ] **Step 3: Implement**
 
-Add `JUDGED = ("Ready",) + IN_FLIGHT  #: from Ready on a card carries its Needed by and slice; in Idea it is the PO's words, nothing more (P146, the spec §1)` under `IN_FLIGHT`, and in `problems()` wrap the two sentences: `if counts(entry) and status in JUDGED:` (the stage count `by_stage` still takes every counting entry).
+Add `JUDGED = ("Ready", "Build", "Review")  #: from the commitment on a card carries its Needed by and slice; in Idea, Discovery and Design it decides whether to build (P146, the spec's skeptic item 6)` under `IN_FLIGHT`, and in `problems()` wrap the two sentences: `if status in JUDGED:` — not `counts(entry) and …`, which would stop judging an epic in Ready, Build or Review (the stage count `by_stage` still takes every counting entry). A card with no Status or an unknown stage is not judged, like Idea; a test pins it.
 
 - [ ] **Step 4: Run the tests, then the suite**
 
@@ -298,8 +298,9 @@ Expected: `OK`.
 - [ ] **Step 5: Mutation rows** (append to `tests/mutations/p146-process.json`)
 
 ```json
-  {"file": "tools/check_backlog.py", "name": "P146: an Idea card must have a slice again", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = (\"Idea\", \"Ready\") + IN_FLIGHT"},
-  {"file": "tools/check_backlog.py", "name": "P146: Ready is not judged", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = IN_FLIGHT"}
+  {"file": "tools/check_backlog.py", "name": "P146: an Idea card must have a slice again", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Idea\", \"Ready\", \"Build\", \"Review\")"},
+  {"file": "tools/check_backlog.py", "name": "P146: Ready is not judged", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Build\", \"Review\")"},
+  {"file": "tools/check_backlog.py", "name": "P146: Discovery is judged again", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Discovery\", \"Ready\", \"Build\", \"Review\")"}
 ```
 
 Run the table; expected: every mutation caught.
@@ -343,7 +344,7 @@ Extend `item()` with `waiting=None, since=None`, adding `"waiting on": waiting, 
 
 Expected: `FAILED` — nothing is said.
 
-- [ ] **Step 3: Implement** — in `problems()`'s loop, after the slice check (inside the `status != "Done"` part, for every entry whether it counts or not):
+- [ ] **Step 3: Implement** — in `problems()`'s loop, at the loop's own indent, AFTER the whole `if status in JUDGED:` block (so an Idea card's wait is named too; Done and riding cards were skipped at the loop's top):
 
 ```python
         if entry.get("waiting on") and not entry.get("waiting since"):
@@ -352,7 +353,7 @@ Expected: `FAILED` — nothing is said.
 
 - [ ] **Step 4: Run the tests and the suite** — expected `OK`.
 
-- [ ] **Step 5: Mutation rows**
+- [ ] **Step 5: Mutation rows** — the two below, plus RESTORE verbatim the row "P146: a Done item is judged again" that Task 3 deleted as then-equivalent (`git show bbd8410:tests/mutations/p146-process.json` holds it); with the waiting check at the loop's indent, a Done card's stale wait would be named under that mutant, so `test_a_done_card_s_stale_wait_is_not_judged` catches it.
 
 ```json
   {"file": "tools/check_backlog.py", "name": "P146: an undated wait passes", "find": "        if entry.get(\"waiting on\") and not entry.get(\"waiting since\"):\n", "replace": "        if False:\n"},
@@ -700,7 +701,7 @@ The spec's §3 table is the instruction, row by row. **Every heading stays** (44
 **Files:** Modify `DECISIONS.md`, `GLOSSARY.md`, `docs/2026-10-05-backlog-in-github-design.md`, `docs/guide/developing.md`, `.github/ISSUE_TEMPLATE/item.yml`.
 
 - [ ] **Step 1 — `DECISIONS.md`:** a new section **"Product rules"** takes W5 (state the scope of an assertion) and W21 (keep a datum only if a decision rests on it), each with its origin line; the Ws it restates become one-line pointers to `scrum/WORKING_AGREEMENTS.md`. **Lines 53–56** ("`make check` in smartbin-local is deliberately RED…", "Six fab blockers stand…", "Simulation minutes … 21 of 50", "The Wokwi token…", "Pads 14/16…") and **line 69** (the spine table's "**blocked**" row): verify each against today's state before touching it (`make check` in the bin, the bin's STATUS.md blocker table, the chain's proof run); delete what is false, date what is kept. W17 applies: say in the commit what each line's check showed.
-- [ ] **Step 2 — `GLOSSARY.md`:** "The budget" (147–154) — after #98 it says "a number, not a cap"; make sure it does, and point at W15. "Working agreement — W1, W2, … W21" (220) becomes "Working agreement — ten of them, W1…W19 by their numbers; two habits, two role rules, two product rules (`scrum/WORKING_AGREEMENTS.md`, P146)". "The board" (232–237) adds: the entry and exit of each stage are the README's table; the merge is the PO's. "Epic, story, task" (231–232): a task "rides on its story, with no slice or limit of its own" holds only for a task under a story — one with no parent story counts as a card (Task 2); say so. "Needed by" (162–168): the gate fails a push on an open item whose Needed by is empty — from Ready on, since Task 3; in Idea a card is the PO's words; say so.
+- [ ] **Step 2 — `GLOSSARY.md`:** "The budget" (147–154) — after #98 it says "a number, not a cap"; make sure it does, and point at W15. "Working agreement — W1, W2, … W21" (220) becomes "Working agreement — ten of them, W1…W19 by their numbers; two habits, two role rules, two product rules (`scrum/WORKING_AGREEMENTS.md`, P146)". "The board" (232–237) adds: the entry and exit of each stage are the README's table; the merge is the PO's. "Epic, story, task" (231–232): a task "rides on its story, with no slice or limit of its own" holds only for a task under a story — one with no parent story counts as a card (Task 2); say so. "Needed by" (162–168): the gate fails a push on an open item whose Needed by is empty — from Ready on (the commitment), since Task 3; in Idea, Discovery and Design a card decides whether to build; say so. The same sentence lives in `docs/guide/developing.md:62` ("every open item has a Needed by and a slice") and in the backlog design's §8 (:145, "an open item has an empty Needed by section or no Slice") — both become "every card from Ready on".
 - [ ] **Step 3 — the backlog design:** §3 (48–56): the Build row's "the PO's yes" → "(decision 6, 2026-10-06: no plan yes unless the plan widens scope or goes past the allowance)"; the limits already read 2/5/2; §8 (136–140) adds "`STORY_MAP.md` rows say what each slice does today (P97, 2026-10-08)"; §9 (176–186) adds a dated paragraph: "P146 (2026-10-06, accepted; built 2026-10-09) gave the stages their entry and exit, the expedite lane, the appetite, the counting rules and the token allowance — `docs/2026-10-06-process-design.md`"; §11 gets a dated entry listing the six decisions with their dates.
 - [ ] **Step 4 — `docs/guide/developing.md:61`:** the sentence on the board's limits links the README's table (it does) and adds "and the counting rules, the expedite lane and the bin's cards in flight (P146)".
 - [ ] **Step 5 — `.github/ISSUE_TEMPLATE/item.yml`:** remove the `proof` textarea (lines 19–24: "Proof — The command that proves it (from P102d on)…"); it is empty on every open card because proofs live in comments (the spec §4). Check `tests/` for a test reading the template (`/usr/bin/grep -rn "item.yml" tests/`), and adjust it.
