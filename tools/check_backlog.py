@@ -3,9 +3,9 @@
 W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §3 and
 §8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
-must work offline. A board it reads but whose tasks' parent stories it cannot is not offline: it counts every task as
-riding on its story and says so in a sentence, which fails the push — a look that was only partial must not read as a
-pass (W1).
+must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories: every task
+is counted as riding on its story, a line says so with the cause, and the push goes through (W1: said, never read as
+checked).
 """
 
 import json
@@ -23,9 +23,10 @@ UPSTREAM = ("Discovery", "Design")
 #: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
 #: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
 MOST_IN_FLIGHT = 4
-#: What fetch() puts before an error's name in its second value when the items were read and only their parents were
-#: not; main() hears it and tells problems() (P146).
-PARENTS_UNREAD = "parents:"
+#: What fetch() puts in a task's "parent" when GitHub could not be asked who it is. It is not None, so counts() and
+#: problems() let the task ride on a story they cannot name — a check must not count a card whose parent it could not see
+#: — and main() says so, with the cause (P146).
+PARENT_UNREAD = "unread"
 
 
 def _section(body, name):
@@ -42,8 +43,9 @@ def _name(entry):
 def counts(entry):
     """
     Whether an open card counts against the limits: a task rides on its story, so it does not count — unless it has no
-    parent story at all, when it is a card of its own (P146); an epic counts only in Discovery and Design, where it is
-    the work itself — from Build on, its stories carry the limit. board.py reads the same rule.
+    parent story at all, when it is a card of its own (P146), and one whose parent could not be asked (PARENT_UNREAD)
+    rides; an epic counts only in Discovery and Design, where it is the work itself — from Build on, its stories carry
+    the limit. board.py reads the same rule.
     """
     labels = entry.get("labels") or []
     if "task" in labels:
@@ -51,18 +53,17 @@ def counts(entry):
     return "epic" not in labels or entry.get("status") in UPSTREAM
 
 
-def problems(items, bin_items=(), parents_read=True):
+def problems(items, bin_items=()):
     """
     Every sentence the gate fails on: an item with no Needed by or no slice, and a broken WIP limit. An epic counts only
     in Discovery and Design; a task (a plan's step, a sub-issue of its story) rides on its story and is not judged on
-    its own — unless it has no parent story, when it is a card like any other (counts()). `parents_read` is False when
-    the tasks' parents could not be looked up: every task then rides, and the first sentence says so instead of
-    guessing. `bin_items` is the bin's board, accepted and not read yet.
+    its own — unless it has no parent story, when it is a card like any other (counts()). `bin_items` is the bin's
+    board, accepted and not read yet.
     """
     said, by_stage = [], {}
     for entry in items:
         status = entry.get("status")
-        rides = "task" in (entry.get("labels") or []) and (entry.get("parent") is not None or not parents_read)
+        rides = "task" in (entry.get("labels") or []) and entry.get("parent") is not None
         if status == "Done" or rides:
             continue  # a riding task is its story's; a parentless one is judged like any card
         if counts(entry):
@@ -81,8 +82,6 @@ def problems(items, bin_items=(), parents_read=True):
     if len(flying) > MOST_IN_FLIGHT:
         said.append("%d in flight (%s) — at most %d: finish one before starting another"
                     % (len(flying), ", ".join("#%s" % e["content"].get("number") for e in flying), MOST_IN_FLIGHT))
-    if not parents_read and any("task" in (e.get("labels") or []) for e in items if e.get("status") != "Done"):
-        said.insert(0, "tasks' parent stories could not be read — every task counted as riding on a story")
     return said
 
 
@@ -90,32 +89,38 @@ def _gh(*args):
     return json.loads(subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60, check=True).stdout)
 
 
-PARENTS_QUERY = "query { repository(owner: \"%s\", name: \"%s\") { %s } }"
-
-
-def parents(numbers):
+def parents(tasks):
     """
-    ({task number: its parent issue's number or None}, None), or ({}, why) when GitHub could not be asked. One call for
-    all the tasks.
+    ({(repository, number): its parent issue's number or None}, None), or ({}, why) when GitHub could not be asked, or
+    gave no answer for a task. `tasks` are (repository "owner/name", issue number) pairs: a project may hold issues of
+    several repositories, and a number means nothing without its repository. One call for all of them — a selection
+    per repository (aliased r0, r1, … in the order they first appear), a field per issue (t<number>) inside it.
     """
-    if not numbers:
+    if not tasks:
         return {}, None
-    fields = " ".join("t%d: issue(number: %d) { parent { number } }" % (n, n) for n in numbers)
+    asked = {}
+    for repository, number in tasks:
+        asked.setdefault(repository, []).append(number)
     try:
-        answer = _gh("api", "graphql", "-f", "query=" + PARENTS_QUERY % (OWNER, TITLE, fields))
-        found = answer["data"]["repository"]
+        selections = []
+        for index, (repository, numbers) in enumerate(asked.items()):
+            owner, name = repository.split("/", 1)
+            fields = " ".join("t%d: issue(number: %d) { parent { number } }" % (n, n) for n in numbers)
+            selections.append("r%d: repository(owner: %s, name: %s) { %s }" % (index, json.dumps(owner), json.dumps(name), fields))
+        found = _gh("api", "graphql", "-f", "query=query { %s }" % " ".join(selections))["data"]
+        return {(repository, number): (found["r%d" % index]["t%d" % number]["parent"] or {}).get("number")
+                for index, (repository, numbers) in enumerate(asked.items()) for number in numbers}, None
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as unreachable:
         return {}, type(unreachable).__name__
-    return {n: ((found.get("t%d" % n) or {}).get("parent") or {}).get("number") for n in numbers}, None
 
 
 def fetch():
     """
     (the spark project's items, None), or (None, why) when gh or the network could not be reached. A project that gh
     can list but cannot find is a LookupError: the check must never quietly stop looking. Each item carries "parent",
-    the number of the story it is a sub-issue of, asked for the open tasks alone — the one kind of card a parent changes
-    the counting of. When only that question fails, the items come back whole with PARENTS_UNREAD and the error's name
-    as the second value, and every parent is None.
+    the number of the story it is a sub-issue of — asked for the open tasks alone, the one kind of card a parent changes
+    the counting of. When only that question fails the items still come back, as (items, why), with every open task's
+    parent PARENT_UNREAD: a why that comes with items is the parents', one that comes without is the whole look's.
     """
     try:
         projects = _gh("project", "list", "--owner", OWNER, "--format", "json")["projects"]
@@ -128,11 +133,14 @@ def fetch():
         items = _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", "500")["items"]
     except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
         return None, type(unreachable).__name__
-    tasks = [e["content"]["number"] for e in items if "task" in (e.get("labels") or []) and e.get("status") != "Done"]
-    found, why = parents(tasks)
+    open_tasks = [(e["content"]["repository"], e["content"]["number"]) for e in items
+                  if "task" in (e.get("labels") or []) and e.get("status") != "Done"]
+    found, why = parents(open_tasks)
+    if why:
+        found = {task: PARENT_UNREAD for task in open_tasks}
     for entry in items:
-        entry["parent"] = found.get(entry["content"].get("number"))
-    return items, None if why is None else PARENTS_UNREAD + why
+        entry["parent"] = found.get((entry["content"].get("repository"), entry["content"].get("number")))
+    return items, why
 
 
 def main():
@@ -144,11 +152,13 @@ def main():
     if items is None:
         print("  backlog: skipped — gh or the network could not be reached (%s)" % why)
         return 0
-    said = problems(items, parents_read=not (why or "").startswith(PARENTS_UNREAD))
+    said = problems(items)
     print("  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
                                       "the limits hold" if not said else "%d problem(s)" % len(said)))
     for sentence in said:
         print("    " + sentence)
+    if why:
+        print("  backlog: tasks' parent stories could not be read (%s) — every task counted as riding on a story" % why)
     return 1 if said else 0
 
 
