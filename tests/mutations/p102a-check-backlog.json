@@ -14,8 +14,8 @@
  {
   "file": "tools/check_backlog.py",
   "name": "the slice is not checked",
-  "find": "        if not entry.get(\"slice\"):\n",
-  "replace": "        if False:\n"
+  "find": "            if not entry.get(\"slice\"):\n",
+  "replace": "            if False:\n"
  },
  {
   "file": "tools/check_backlog.py",

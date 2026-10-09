@@ -6,7 +6,6 @@
   {"file": "tools/check_backlog.py", "name": "P146: a task under its story counts against the limits", "find": "        return entry.get(\"parent\") is None\n", "replace": "        return True\n"},
   {"file": "tools/check_backlog.py", "name": "P146: an epic in Discovery or Design rides free", "find": "    return \"epic\" not in labels or entry.get(\"status\") in UPSTREAM\n", "replace": "    return \"epic\" not in labels\n"},
   {"file": "tools/check_backlog.py", "name": "P146: an epic counts in every stage", "find": "    return \"epic\" not in labels or entry.get(\"status\") in UPSTREAM\n", "replace": "    return True\n"},
-  {"file": "tools/check_backlog.py", "name": "P146: a Done item is judged again", "find": "        if status == \"Done\" or rides:\n", "replace": "        if rides:\n"},
   {"file": "tools/check_backlog.py", "name": "P146: a riding task is judged on its own", "find": "        if status == \"Done\" or rides:\n", "replace": "        if status == \"Done\":\n"},
   {"file": "tools/check_backlog.py", "name": "P146: a parentless task rides in the gate", "find": "        rides = \"task\" in (entry.get(\"labels\") or []) and entry.get(\"parent\") is not None\n", "replace": "        rides = \"task\" in (entry.get(\"labels\") or [])\n"},
   {"file": "tools/check_backlog.py", "name": "P146: a story under an epic rides in the gate", "find": "        rides = \"task\" in (entry.get(\"labels\") or []) and entry.get(\"parent\") is not None\n", "replace": "        rides = entry.get(\"parent\") is not None\n"},
@@ -30,5 +29,9 @@
   {"file": "tools/check_backlog.py", "name": "P146: the unread line hides its cause", "find": "could not be read (%s) — every task counted as riding on a story\" % why)", "replace": "could not be read — every task counted as riding on a story\")"},
   {"file": "tools/check_backlog.py", "name": "P146: unread parents fail the push", "find": "    return 1 if said else 0\n", "replace": "    return 1 if said or why else 0\n"},
   {"file": "tools/check_backlog.py", "name": "P146: unread parents hide a broken limit", "find": "    return 1 if said else 0\n", "replace": "    return 1 if said and not why else 0\n"},
-  {"file": "tools/board.py", "name": "P146: the status query forgets the parent", "find": "labels(first:10){nodes{name}} parent{number}}}", "replace": "labels(first:10){nodes{name}}}}"}
+  {"file": "tools/board.py", "name": "P146: the status query forgets the parent", "find": "labels(first:10){nodes{name}} parent{number}}}", "replace": "labels(first:10){nodes{name}}}}"},
+  {"file": "tools/check_backlog.py", "name": "P146: an Idea card must have a slice again", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = (\"Idea\", \"Ready\") + IN_FLIGHT"},
+  {"file": "tools/check_backlog.py", "name": "P146: Ready is not judged", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = IN_FLIGHT"},
+  {"file": "tools/check_backlog.py", "name": "P146: the working stages are not judged", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = (\"Ready\",)"},
+  {"file": "tools/check_backlog.py", "name": "P146: an epic that holds no place in a limit is not judged", "find": "        if status in JUDGED:\n", "replace": "        if status in JUDGED and counts(entry):\n"}
 ]

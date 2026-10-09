@@ -2,6 +2,7 @@
 """
 W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05-backlog-in-github-design.md §3 and
 §8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
+A card is asked for its Needed by and slice from Ready on (JUDGED, P146); in Idea it is the PO's words, nothing more.
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories: every task
 is counted as riding on its story, a line says so with the cause, and the push goes through (W1: said, never read as
@@ -18,6 +19,9 @@ OWNER, TITLE = "xmejkal", "spark"
 #: 2026-10-06 evening (P146); Ready is a queue, not work, and stays at 5.
 LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 2, "Review": 2}
 IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
+#: From Ready on a card carries its Needed by and slice; in Idea it is the PO's words, nothing more (P146,
+#: docs/2026-10-06-process-design.md §1, the stages table).
+JUDGED = ("Ready",) + IN_FLIGHT
 #: Where an epic is the work itself; from Build on, its stories carry the limit.
 UPSTREAM = ("Discovery", "Design")
 #: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
@@ -55,10 +59,11 @@ def counts(entry):
 
 def problems(items, bin_items=()):
     """
-    Every sentence the gate fails on: an item with no Needed by or no slice, and a broken WIP limit. An epic counts only
-    in Discovery and Design; a task (a plan's step, a sub-issue of its story) rides on its story and is not judged on
-    its own — unless it has no parent story, when it is a card like any other (counts()). `bin_items` is the bin's
-    board, accepted and not read yet.
+    Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on (JUDGED); in Idea it is
+    the PO's words and is asked for neither — and a broken WIP limit. An epic counts only in Discovery and Design; a
+    task (a plan's step, a sub-issue of its story) rides on its story and is not judged on its own — unless it has no
+    parent story, when it is a card like any other (counts()). `bin_items` is the bin's board, accepted and not read
+    yet.
     """
     said, by_stage = [], {}
     for entry in items:
@@ -68,10 +73,11 @@ def problems(items, bin_items=()):
             continue  # a riding task is its story's; a parentless one is judged like any card
         if counts(entry):
             by_stage.setdefault(status, []).append(entry)
-        if not _section(entry["content"].get("body"), "Needed by"):
-            said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
-        if not entry.get("slice"):
-            said.append("%s: on no slice of the story map" % _name(entry))
+        if status in JUDGED:
+            if not _section(entry["content"].get("body"), "Needed by"):
+                said.append("%s: no `Needed by` — W14: an item names the design that needs it" % _name(entry))
+            if not entry.get("slice"):
+                said.append("%s: on no slice of the story map" % _name(entry))
     for stage, limit in LIMITS.items():
         held = by_stage.get(stage, [])
         if len(held) > limit:

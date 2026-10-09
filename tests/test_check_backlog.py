@@ -7,6 +7,11 @@ Design, where it is the work itself, and from Build on its stories carry the lim
 and a task with no parent story is a card of its own. Each limit is pinned from both sides: a board at the limit
 passes, and one card over it is named. The numbers are written out here, never read from the module (W2,
 test_self_confirmation).
+
+P146 (docs/2026-10-06-process-design.md §1): a card is asked for its Needed by and its slice from Ready on, and in each
+working stage; in Idea it is the PO's words, nothing more. Pinned from both sides, with the stages written out: an Idea
+card with neither passes, and a card in Ready, Discovery, Design, Build or Review without one is named — an epic that
+holds no place in a limit (counts()) among them.
 """
 
 import json
@@ -50,6 +55,27 @@ class TheBacklogCheckTest(unittest.TestCase):
 
     def test_an_item_on_no_slice_is_named(self):
         self.assertEqual(check_backlog.problems([item(8, slice_=None)]), ["#8 P8 — x: on no slice of the story map"])
+
+    def test_an_idea_card_needs_no_slice_and_no_needed_by_yet(self):
+        self.assertEqual(check_backlog.problems([item(3, "Idea", slice_="", needed="")]), [])
+
+    def test_a_ready_card_with_no_slice_is_named(self):
+        self.assertEqual(check_backlog.problems([item(3, "Ready", slice_="")]), ["#3 P3 — x: on no slice of the story map"])
+
+    def test_a_card_in_every_working_stage_is_judged(self):
+        for stage in ("Discovery", "Design", "Build", "Review"):
+            with self.subTest(stage=stage):
+                self.assertEqual(check_backlog.problems([item(3, stage, needed="")]),
+                                 ["#3 P3 — x: no `Needed by` — W14: an item names the design that needs it"])
+
+    def test_an_epic_that_holds_no_place_in_a_limit_is_still_asked_for_a_needed_by_and_a_slice(self):
+        # counts() says what a limit holds, not whom the two sentences are asked of: an epic in Ready or in Build
+        # holds no place, and is asked for both like every card from Ready on.
+        for stage in ("Ready", "Build"):
+            with self.subTest(stage=stage):
+                self.assertEqual(check_backlog.problems([item(6, stage, labels=("epic",), slice_="", needed="")]),
+                                 ["#6 P6 — x: no `Needed by` — W14: an item names the design that needs it",
+                                  "#6 P6 — x: on no slice of the story map"])
 
     def test_a_second_item_in_build_passes_and_a_third_is_named_with_all_three(self):
         self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build")]), [])
