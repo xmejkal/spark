@@ -86,5 +86,4 @@ Claude pulls the top card of Ready when Build is free, or into Design if the sto
 - **The agents** read; run read-only commands, and probes in a clone or worktree; write to their own output folder; an
   implementer commits on its task branch, never `main`, when a plan runs subagent-driven.
 
-An implementer commits on its task branch when a plan runs subagent-driven, never on `main`; the main session pushes,
-and the PO merges.
+The main session pushes, and the PO merges.
