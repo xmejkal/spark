@@ -127,13 +127,14 @@ def missing_close(work_days, close_days, today):
     return None
 
 
-def unread(name, project):
+def unread(subject, project):
     """
-    Why the board was read only in part — its pages held fewer items than its totalCount says it holds — or None when
-    every item came. gather() raises it: a status over part of a board is could-not-run, never "the limits hold" (W1).
+    How the board was read only in part — `subject` and the gate's words (check_backlog.SHORT): "the spark board holds
+    130 items, 1 were read", "it holds 25 items, 2 were read" — or None when every item came. gather() raises it over
+    spark's board, could-not-run (W1), and sets the bin's aside with it as the bin's unread line's cause.
     """
     held, read = project["items"]["totalCount"], len(project["items"]["nodes"])
-    return "the %s board holds %d items, %d were read" % (name, held, read) if held > read else None
+    return "%s %s" % (subject, check_backlog.SHORT % (held, read)) if held > read else None
 
 
 def work_days(dirs, since):
@@ -168,19 +169,20 @@ def _boards_join(boards, each, today):
     return [_on_board(name, said) for name, items in boards for said in each(items, today)]
 
 
-def status_lines(boards, prs, closes, worked, today):
+def status_lines(boards, prs, closes, worked, today, bin_why="no bin board was given"):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
     worked {date}. The bin's cards count in the verdict as at the gate (the flight total, the lane, an undated wait);
-    with no bin among the boards that is said, and spark's cards are counted alone. UnknownStage (check_backlog) for a
-    card in a stage the gate does not know or a board with no Status on any card: the caller says could-not-run (P167).
+    with no bin among the boards that is said with `bin_why` — gather()'s cause for setting it aside — and spark's cards
+    are counted alone. UnknownStage (check_backlog) for a card in a stage the gate does not know or a spark board with
+    no Status on any card: the caller says could-not-run (P167).
     """
     spark = dict(boards)["spark"]
     # Where a card stands is the gate's one rule (check_backlog.stage_of): a stage it does not know, or a board with no
     # Status on any card, is UnknownStage out of here — main() prints could-not-run — and a card with no Status is said.
     unstaged = check_backlog.no_stage(spark, dict(boards).get("bin"))
     verdict = check_backlog.problems(spark, bin_items=dict(boards).get("bin"))
-    unread_bin = [] if dict(boards).get("bin") is not None else [check_backlog.BIN_UNREAD % "no bin board was given"]
+    unread_bin = [] if dict(boards).get("bin") is not None else [check_backlog.BIN_UNREAD % bin_why]
     lines = ["spark — %d open, %s · trial check %s" % (sum(1 for i in spark if i.get("status") != "Done"),
                                                         "the limits hold" if not verdict else "%d problem(s)" % len(verdict),
                                                         TRIAL_CHECK)]
@@ -246,22 +248,26 @@ def _gh(*args, timeout=CLOSE_TIMEOUT):
     return json.loads(done.stdout) if done.stdout.strip() else None
 
 
-#: The most pages read_board() turns: 50 of 100 is the gate's MOST_ITEMS, and a hasNextPage that never falls cannot
-#: hold a session start forever — the board is then read in part, and unread() says so.
+#: The most pages read_board() turns, counted as pages asked, not items read: 50 pages of QUERY's 100 is the gate's
+#: MOST_ITEMS, and a hasNextPage that never falls — an empty page with a cursor — cannot hold a session start forever.
+#: The board is then read in part, and gather() says so (unread()). Each page may take STATUS_TIMEOUT, so a session
+#: start waits at most MOST_PAGES times that over one board before it gives up.
 MOST_PAGES = 50
 
 
 def read_board(number, timeout):
     """
     The project numbered `number` under OWNER, whole: its first page's id and status updates, and every page's items
-    joined under "items" (P168). Each page is one QUERY, asked `after` the cursor the last one ended on; a board whose
-    pages held fewer items than its totalCount — MOST_PAGES turned, or a page GitHub cut — is RuntimeError, unread()'s line.
+    joined under "items" (P168). Each page is one QUERY, asked `after` the cursor the last one ended on, MOST_PAGES at
+    most. A board whose pages held fewer items than its totalCount — MOST_PAGES turned, or a page GitHub cut — comes back
+    short, and gather() raises unread()'s line over spark's board or sets the bin's aside with it.
     """
     first = page = _page(number, None, timeout)
-    nodes = list(page["items"]["nodes"])
-    while page["items"]["pageInfo"]["hasNextPage"] and len(nodes) < MOST_PAGES * 100:
+    nodes, pages = list(page["items"]["nodes"]), 1
+    while page["items"]["pageInfo"]["hasNextPage"] and pages < MOST_PAGES:
         page = _page(number, page["items"]["pageInfo"]["endCursor"], timeout)
         nodes += page["items"]["nodes"]
+        pages += 1
     first["items"]["nodes"] = nodes
     return first
 
@@ -275,33 +281,45 @@ def _page(number, after, timeout):
 
 def gather(timeout=CLOSE_TIMEOUT):
     """
-    Both boards, their open PRs, the spark board's closes and id. A board read only in part (unread()) is RuntimeError:
-    the status and the close say could-not-run over it, and judge nothing (W1).
+    (both boards, their open PRs, the spark board's closes, its id, why the bin's board was set aside or None). The spark
+    board read only in part (unread()) is RuntimeError: the status and the close say could-not-run over it, and judge
+    nothing (W1). The bin's board is read for the flight total, the lane and its waits alone, so one read in part, or
+    with no Status on any card (check_backlog.no_status_on), is left out of the boards and its cause handed back —
+    spark's cards are counted alone and the bin's unread line says why, as the gate does it (check_backlog.fetch):
+    one convention for the bin's failing, so the two readers cannot disagree over it.
     """
-    boards, prs, closes, project_id = [], [], [], None
+    boards, prs, closes, project_id, bin_why = [], [], [], None, None
     for name, number, repo in BOARDS:
         project = read_board(number, timeout)
-        short = unread(name, project)
-        if short:
-            raise RuntimeError(short)
-        boards.append((name, to_items(project)))
+        items = to_items(project)
         if name == "spark":
+            short = unread("the spark board", project)
+            if short:
+                raise RuntimeError(short)
             project_id, closes = project["id"], closes_from(project)
+        else:
+            bin_why = unread("it", project)
+            if bin_why is None and check_backlog.no_status_on(items):
+                bin_why = check_backlog.BIN_NO_STATUS % len(items)
+        if name == "spark" or bin_why is None:
+            boards.append((name, items))
         prs += [(name, pr["number"], pr["title"], pr["draft"])
                 for pr in _gh("api", "repos/%s/%s/pulls?state=open" % (OWNER, repo), timeout=timeout)]
-    return boards, prs, closes, project_id
+    return boards, prs, closes, project_id, bin_why
 
 
 #: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what
 #: the status prints, close_update() for when a close is at risk and the day it refuses, main() for the exit codes.
 STATUS_HELP = ("print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), "
                "every wait oldest first ('!' past three days), Ready in the PO's order (a warning when down to one or "
-               "two), open PRs, the last close and a working day left without one. A board it could not read makes the "
-               "whole status one line, could-not-run with its cause; it always exits 0, since a session "
-               "start must never fail")
+               "two), open PRs, the last close and a working day left without one. A board it could not read, or a card "
+               "in a stage the gate does not know, makes the whole status one line, could-not-run with its cause; cards "
+               "with no Status are said; the bin's board read in part, or with no Status on any card, is set aside and "
+               "said, and spark's cards are counted alone. It always exits 0, since a session start must never fail")
 CLOSE_HELP = ("post the day's one status update to spark's board: the line, then what is in flight and what waits on the "
               "PO. It is at risk when the gate finds a problem or a wait is older than three days, else on track. It "
-              "refuses a day already closed (exit 1), and exits 1 with could-not-run when the boards could not be read")
+              "refuses a day already closed (exit 1), and exits 1 with could-not-run when the boards could not be read "
+              "or a card is in a stage the gate does not know")
 
 
 def main(argv=None):
@@ -324,14 +342,15 @@ def main(argv=None):
     today = dt.date.today()
     if args.verb == "status":
         try:
-            boards, prs, closes, _ = gather(STATUS_TIMEOUT)
+            boards, prs, closes, _, bin_why = gather(STATUS_TIMEOUT)
             since = max((day for day, _ in closes), default=today - dt.timedelta(days=14))
-            print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today)))
+            print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today,
+                                         bin_why=bin_why or "no bin board was given")))
         except Exception as broken:  # a session start must never fail (the spec, §2); W1: a look not made is could-not-run
             print("board: could-not-run — %s" % (broken or type(broken).__name__))
         return 0
     try:
-        boards, prs, closes, project_id = gather()
+        boards, prs, closes, project_id, _ = gather()
     except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
         print("board: could-not-run — %s" % unreachable)
         return 1

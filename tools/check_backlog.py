@@ -18,7 +18,10 @@ is counted as riding on its story) or not the bin's board (spark's cards are cou
 cause, and the push goes through (W1: said, never read as checked). A bin board that was read is said too: the summary
 line carries its open count. The whole board is read, or nothing is judged (P168): gh's item-list stops at its --limit,
 so a board that holds more than the first ask is asked again with its own count, and one still short after that is
-could-not-run with both numbers — spark's as the gate's one line, the bin's as its unread line.
+could-not-run with both numbers — spark's as the gate's one line, the bin's as its unread line. Where a card stands is one
+rule for both readers, stage_of() (P167): a Status among KNOWN is its stage, a card with no Status is in Idea and said in
+one line, a Status the gate does not know is could-not-run naming the card and the stage, and a board with no Status on
+any card is could-not-run naming the shape — spark's; the bin's in that shape is set aside like one read in part.
 """
 
 import argparse
@@ -48,12 +51,21 @@ IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
 JUDGED = ("Ready", "Build", "Review")
 #: Where an epic is the work itself; from Build on, its stories carry the limit.
 UPSTREAM = ("Discovery", "Design")
-#: Every stage the gate knows (P167): the limited ones, Idea before them and Done after. A card whose Status is any other
+#: Every stage the gate knows (P167), in the board's order: Idea, the limited ones, Done. A card whose Status is any other
 #: word stands in a stage somebody renamed or added on the board, and the gate judges nothing until that is a decision.
-KNOWN = (*LIMITS, "Idea", "Done")
+#: `--help` lists these, so the two cannot drift.
+KNOWN = ("Idea", *LIMITS, "Done")
 #: Where a card with no Status stands: GitHub's "No status" column holds a new item, which is the board's own state —
 #: not counted, not judged, and said (no_stage()).
 NO_STAGE_IS = "Idea"
+#: What no_stage() says of the spark board when no card of it has a Status: not new items but the field's keys changed,
+#: or every card is new — either way the gate knows no stage, and judges nothing (could-not-run, P167).
+NO_STATUS = "no card of the %d on the spark board has a Status — the field's keys may have changed, or every card is new"
+#: The bin's why in BIN_UNREAD for the same shape: the bin's board is set aside with its cause and spark's cards are
+#: counted alone, as when it was read in part — one convention for the bin's failing, in fetch() and board.gather().
+BIN_NO_STATUS = "no card of its %d has a Status"
+#: How both readers say a board read in part (PartialRead, board.unread): "holds 12 items, 10 were read".
+SHORT = "holds %d items, %d were read"
 #: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
 #: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
 MOST_IN_FLIGHT = 4
@@ -115,17 +127,25 @@ def _marked(bin_items):
     return [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]
 
 
+def no_status_on(cards):
+    """
+    Whether `cards` are a board with cards and no Status on any of them (P167): not new items in the "No status" column
+    but a changed field, or every card new — a shape the gate cannot place. The one rule for both readers, which set the
+    bin's board aside over it (fetch(), board.gather()) and say could-not-run over spark's (no_stage()).
+    """
+    return bool(cards) and not any(entry.get("status") for entry in cards)
+
+
 def no_stage(items, bin_items=()):
     """
     The line naming the cards with no Status — `3 card(s) have no stage: #2, #5, bin #20` — or None when every card has
-    one. A board whose EVERY card lacks one is not new items but a changed field, and the gate knows no stage at all:
-    UnknownStage naming the shape. problems() reads this first, so it cannot judge such a board.
+    one. The spark board with no Status on any card (no_status_on) is UnknownStage naming the shape, NO_STATUS;
+    problems() reads this first, so it cannot judge such a board. The bin's board in that shape never reaches here: fetch()
+    and board.gather() set it aside first, as the bin's unread line.
     """
-    bin_cards = _marked(bin_items)
-    for board, cards in (("the spark board", items), ("the bin's board", bin_cards)):
-        if cards and not any(entry.get("status") for entry in cards):
-            raise UnknownStage("not one of %s's %d cards has a Status, so the field's keys have changed" % (board, len(cards)))
-    unstaged = [_ref(entry) for entry in [*items, *bin_cards] if not entry.get("status")]
+    if no_status_on(items):
+        raise UnknownStage(NO_STATUS % len(items))
+    unstaged = [_ref(entry) for entry in [*items, *_marked(bin_items)] if not entry.get("status")]
     return "%d card(s) have no stage: %s" % (len(unstaged), ", ".join(unstaged)) if unstaged else None
 
 
@@ -277,7 +297,7 @@ class PartialRead(Exception):
     """
 
     def __init__(self, held, read):
-        super().__init__("holds %d items, %d were read" % (held, read))
+        super().__init__(SHORT % (held, read))
         self.held, self.read = held, read
 
 
@@ -309,8 +329,9 @@ def fetch():
     network could not be reached. A spark project that gh can list but cannot find is a LookupError: the check must never
     quietly stop looking. A spark board gh listed only in part is a PartialRead, left to main(): nothing of it is judged
     (P168). The bin's board is read for the flight total, the lane and its waits alone, so its failing — no project
-    titled BIN_TITLE, a listing that errors, or one read in part — costs nothing else: bin_items is None and the bin's
-    why says what went wrong, for main() to say. An open task of either board carries "parent", the number of the story it is a sub-issue of
+    titled BIN_TITLE, a listing that errors, one read in part, or one with no Status on any card (no_status_on) — costs
+    nothing else: bin_items is None and the bin's why says what went wrong, for main() to say. board.gather() sets it
+    aside the same way, so the two readers cannot disagree over the bin. An open task of either board carries "parent", the number of the story it is a sub-issue of
     (None when it has none or it is closed, open_parent()), asked in ONE call for both boards. The gate asks for no other item's parent — a parent
     changes how a task counts and nothing else — so theirs is None here, unlike board.to_items(), which gives every issue
     its parent. When only that question fails the items still come back, with every open task's parent PARENT_UNREAD:
@@ -336,6 +357,8 @@ def fetch():
             bin_why = "it " + str(short)
         except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
             bin_why = _cause(unreachable)
+        if no_status_on(bin_items):  # read whole, but a shape the gate cannot place: set aside like one read in part
+            bin_items, bin_why = None, BIN_NO_STATUS % len(bin_items)
     cards = items + (bin_items or [])
     open_tasks = [(e["content"].get("repository"), e["content"].get("number")) for e in cards
                   if "task" in (e.get("labels") or []) and e.get("status") != "Done"]
@@ -347,8 +370,8 @@ def fetch():
     return items, bin_items, why, bin_why
 
 
-#: What `--help` says the gate checks; the limits are filled in from LIMITS and MOST_IN_FLIGHT, so the help cannot drift
-#: from the numbers the gate holds a board to.
+#: What `--help` says the gate checks; the limits are filled in from LIMITS and MOST_IN_FLIGHT, and the stages from
+#: KNOWN, so the help cannot drift from the numbers the gate holds a board to or the stages it knows.
 CHECKS = """\
 The pre-push gate over the two GitHub Projects boards, spark's and the bin's, read through the
 PO's own gh login. tools/check_commit.py runs it at every push; it takes no arguments.
@@ -364,8 +387,10 @@ It fails on:
   - a card of spark's in Ready, Build or Review with no `Needed by` section or on no slice: the
     commitment starts at Ready, so Idea, Discovery and Design are not asked.
 
-The stages it knows: Idea, Discovery, Design, Ready, Build, Review, Done. A card in any other stage
-is could-not-run naming it, and nothing is judged; a card with no Status is in Idea, and said.
+The stages it knows: %(known)s. A card in any other stage
+is could-not-run naming it, and nothing is judged; a card with no Status is in Idea, and said. The
+bin's board read in part, or with no Status on any card, is set aside and said, and spark's cards
+are counted alone.
 
 How cards count: an epic counts in Discovery and Design only, where it is the work itself; from
 Build on its stories carry the limit. A task under an open story rides on it and counts nowhere;
@@ -389,7 +414,8 @@ def _parser():
     """The gate's command line: no arguments; `--help` says what it checks and what its exit codes mean, and asks gh nothing."""
     return argparse.ArgumentParser(
         prog="check_backlog.py", formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=CHECKS % {"limits": ", ".join("%s %d" % limit for limit in LIMITS.items()), "most": MOST_IN_FLIGHT},
+        description=CHECKS % {"limits": ", ".join("%s %d" % limit for limit in LIMITS.items()), "most": MOST_IN_FLIGHT,
+                              "known": ", ".join(KNOWN)},
         epilog=EXIT_CODES % {"owner": OWNER})
 
 

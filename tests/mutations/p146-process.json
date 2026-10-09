@@ -78,7 +78,7 @@
   {"file": "tools/check_backlog.py", "name": "P146: an unread bin board hides a broken limit", "find": "    return 1 if said else 0\n", "replace": "    return 1 if said and bin_items is not None else 0\n"},
   {"file": "tools/board.py", "name": "P146: the status counts spark alone", "find": "verdict = check_backlog.problems(spark, bin_items=dict(boards).get(\"bin\"))", "replace": "verdict = check_backlog.problems(spark)"},
   {"file": "tools/board.py", "name": "P146: the close counts spark alone", "find": "risky = bool(check_backlog.problems(spark, bin_items=dict(boards).get(\"bin\"))) or", "replace": "risky = bool(check_backlog.problems(spark)) or"},
-  {"file": "tools/board.py", "name": "P146: the status never says the bin was not read", "find": "    unread_bin = [] if dict(boards).get(\"bin\") is not None else [check_backlog.BIN_UNREAD % \"no bin board was given\"]\n", "replace": "    unread_bin = []\n"},
+  {"file": "tools/board.py", "name": "P146: the status never says the bin was not read", "find": "    unread_bin = [] if dict(boards).get(\"bin\") is not None else [check_backlog.BIN_UNREAD % bin_why]\n", "replace": "    unread_bin = []\n"},
   {"file": "tools/board.py", "name": "P146: the status says the bin was not read when it was", "find": "if dict(boards).get(\"bin\") is not None else [check_backlog.BIN_UNREAD", "replace": "if dict(boards).get(\"bin\") is None else [check_backlog.BIN_UNREAD"},
   {"file": "tools/check_backlog.py", "name": "P146: the gate counts spark alone", "find": "    said = problems(items, bin_items)\n", "replace": "    said = problems(items)\n"},
   {"file": "tools/check_backlog.py", "name": "P146: an unread bin board breaks the count", "find": "for entry in (bin_items or ())]", "replace": "for entry in bin_items]"},
@@ -141,7 +141,7 @@
   {"file": "tools/board.py", "name": "P146 council (C4): the close says skipped again for a board it could not read", "find": "        print(\"board: could-not-run — %s\" % unreachable)\n", "replace": "        print(\"board: skipped — %s\" % unreachable)\n"},
   {"file": "tools/board.py", "name": "P146 council (C3): status --help says nothing of what it prints", "find": "    verbs.add_parser(\"status\", help=STATUS_HELP, description=STATUS_HELP).add_argument(\n", "replace": "    verbs.add_parser(\"status\", help=STATUS_HELP).add_argument(\n"},
   {"file": "tools/board.py", "name": "P146 council (C3): close --help says nothing of what it posts or refuses", "find": "    close = verbs.add_parser(\"close\", help=CLOSE_HELP, description=CLOSE_HELP)\n", "replace": "    close = verbs.add_parser(\"close\", help=CLOSE_HELP)\n"},
-  {"file": "tools/board.py", "name": "P146 council (C3): the status help claims a failed read fails the session", "find": "it always exits 0, since a session \"\n", "replace": "it exits 1, since a session \"\n"},
+  {"file": "tools/board.py", "name": "P146 council (C3): the status help claims a failed read fails the session", "find": "It always exits 0, since a session start must never fail\")\n", "replace": "It exits 1, since a session start must never fail\")\n"},
   {"file": "tools/board.py", "name": "P146 council (C3): --dry-run says nothing", "find": "                       help=\"print the update and post nothing (a day already closed is still refused)\")\n", "replace": "                       help=None)\n"},
   {"file": "tools/board.py", "name": "P146 council (C3): the top help lists the status verb bare", "find": "\"status\", help=STATUS_HELP, description=STATUS_HELP)", "replace": "\"status\", description=STATUS_HELP)"}
 ]

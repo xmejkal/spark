@@ -905,13 +905,30 @@ class TheStageTest(unittest.TestCase):
         self.assertIsNone(check_backlog.no_stage([], bin_items=None))
 
     def test_a_board_whose_every_card_has_no_stage_is_could_not_run_naming_the_shape(self):
-        shape = "^not one of the spark board's 2 cards has a Status, so the field's keys have changed$"
+        shape = "^no card of the 2 on the spark board has a Status — the field's keys may have changed, or every card is new$"
         with self.assertRaisesRegex(check_backlog.UnknownStage, shape):
             check_backlog.no_stage([item(1, None), item(2, None)])
         with self.assertRaisesRegex(check_backlog.UnknownStage, shape):
             check_backlog.problems([item(1, None), item(2, None)])
-        with self.assertRaisesRegex(check_backlog.UnknownStage, "^not one of the bin's board's 1 cards has a Status"):
-            check_backlog.problems([item(1, "Idea")], bin_items=[item(19, None)])
+        # The bin's board in that shape is fetch()'s to set aside (the bin's unread line); here it is cards in no stage.
+        self.assertEqual(check_backlog.no_stage([item(1, "Idea")], bin_items=[item(19, None)]), "1 card(s) have no stage: bin #19")
+        self.assertEqual(check_backlog.problems([item(1, "Idea")], bin_items=[item(19, None)]), [])
+
+    def test_no_status_on_is_a_board_with_cards_and_none_of_them_staged(self):
+        self.assertTrue(check_backlog.no_status_on([item(1, None), item(2, "")]))
+        self.assertFalse(check_backlog.no_status_on([item(1, None), item(2, "Idea")]))
+        self.assertFalse(check_backlog.no_status_on([]))
+        self.assertFalse(check_backlog.no_status_on(None))
+
+    def test_a_bin_board_with_no_status_on_any_card_is_set_aside_and_spark_is_judged_alone(self):
+        # One convention for the bin's failing: read in part or with no Status on any card, it is the bin's unread line
+        # with its cause, and spark's board is judged alone — here Build holds three, so the gate still fails.
+        code, printed = self.gate([item(1, "Build"), item(2, "Build"), item(3, "Build")], [item(19, None), item(20, None)])
+        self.assertEqual(code, 1)
+        self.assertEqual(printed, "  backlog: 3 open, 1 problem(s)\n"
+                                  "    Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another\n"
+                                  "  backlog: the bin's board could not be read (no card of its 2 has a Status) — its cards were "
+                                  "not counted or checked\n")
 
     def gate(self, spark_cards, bin_cards=()):
         """main()'s exit code and what it printed over a gh listing both boards whole, with no task on either."""
@@ -946,8 +963,8 @@ class TheStageTest(unittest.TestCase):
     def test_the_gate_is_could_not_run_when_no_card_has_a_stage(self):
         code, printed = self.gate([item(1, None), item(2, None), item(3, None)])
         self.assertEqual(code, 0)
-        self.assertEqual(printed, "  backlog: could-not-run — not one of the spark board's 3 cards has a Status, so the field's "
-                                  "keys have changed; the limits were not checked\n")
+        self.assertEqual(printed, "  backlog: could-not-run — no card of the 3 on the spark board has a Status — the field's keys "
+                                  "may have changed, or every card is new; the limits were not checked\n")
 
     def test_a_board_with_every_card_staged_says_nothing_of_stages(self):
         code, printed = self.gate([item(1, "Build"), item(2, "Idea")], [item(19, "Ready")])
@@ -978,6 +995,7 @@ class TheGateSaysWhatItIsTest(unittest.TestCase):
         self.assertEqual((done.returncode, asked), (0, ""), "--help ran the gate: " + done.stdout)
         for words in ("Discovery 2, Design 2, Ready 5, Build 2, Review 2", "more than 4 cards in flight", "expedite",
                       "Waiting since", "Needed by", "a task with no parent story", "bench",
+                      "The stages it knows: Idea, Discovery, Design, Ready, Build, Review, Done",
                       "exit codes:", "0 the limits hold — or could-not-run", "1 a problem",
                       'no project titled "spark"'):
             with self.subTest(words=words):
