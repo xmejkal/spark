@@ -19,8 +19,12 @@ in a second is.
 import ast
 import json
 import re
+import sys
 import unittest
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
+import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = {path.stem for path in (ROOT / "scripts").glob("*.py")}
