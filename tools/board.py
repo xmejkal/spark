@@ -81,8 +81,9 @@ def _lane_marks(item):
 def in_flight(items, today):
     """
     The cards in a working stage, with their stage and days there, counted as the check counts them (one rule) — with
-    one difference the line itself says: a card labelled `bench` is listed and marked, though the gate leaves it out of
-    its total (a bench session is the PO's hands); the card labelled `expedite` is marked, so the lane's holder shows.
+    one difference the line itself says: a card labelled `bench` is listed and marked, though the gate leaves a bin's
+    bench card out of its total (a bench session is the PO's hands); the card labelled `expedite` is marked, so the
+    lane's holder shows.
     """
     return ["%s %s %d d%s" % (i["status"], _short(i), age(i["status_changed"], today), _lane_marks(i)) for i in items
             if i.get("status") in check_backlog.IN_FLIGHT and check_backlog.counts(i)]
