@@ -444,8 +444,8 @@ git commit -m "P146: one expedite at a time, on the PO's word — it may take a 
 - Test: `tests/test_check_backlog.py`, `tests/test_board.py`; rows
 
 **Interfaces:**
-- Consumes: `problems(items, bin_items=(), parents_read=True)` from Task 2; `BOARDS` in `board.py` names the bin's project (number 1).
-- Produces: `check_backlog.BIN_TITLE = "the bin"`; `fetch()` returns `(items, bin_items, why)` where `bin_items` is `None` when the bin's board could not be read; the flight sentence names the bin's cards as `bin #N`; the sentence `"the bin's board could not be read (%s) — its cards in flight were not counted"`.
+- Consumes, AS TASK 2 SHIPPED THEM (the brief's earlier text is superseded): `problems(items, bin_items=())` — no `parents_read`; `fetch()` returns `(items, why)` where `why`, when `items` came, is the parents' cause (the lookup failed and every open task's `parent` is the sentinel `PARENT_UNREAD`, the string `"unread"` — never read `parent` as a number); `parents(pairs)` takes `(repository, number)` pairs from each task's own `content["repository"]`, grouped per repository in ONE call; `main()` prints the parents note itself. `BOARDS` in `board.py` names the bin's project (number 1).
+- Produces: `check_backlog.BIN_TITLE = "the bin"`; `fetch()` returns `(items, bin_items, why, bin_why)` — `bin_items` is `None` and `bin_why` the cause when the bin's board could not be read; **the bin's open tasks go into the SAME `parents()` call as spark's** (their `content["repository"]` is `xmejkal/sisuo-brain-transplant`), so a bin task under its story rides and does not inflate the flight total; the flight sentence names the bin's cards as `bin #N`; `main()` prints `"  backlog: the bin's board could not be read (%s) — its cards in flight were not counted" % bin_why`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -479,13 +479,13 @@ git commit -m "P146: one expedite at a time, on the PO's word — it may take a 
         self.assertIn("  backlog: the bin's board could not be read (TimeoutExpired) — its cards in flight were not counted", printed)
 ```
 
-For `fetch()`, extend `test_offline_the_gate_says_why_and_passes`'s neighbour with a run that answers the project list `[{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]` and both item lists, and asserts `fetch()` returns two lists; and one where the bin's `item-list` call raises `subprocess.TimeoutExpired("gh", 60)` → `bin_items is None`.
+For `fetch()`, add a run that answers the project list `[{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]`, both item lists (spark's with a `task` under #1, the bin's with a `task` under bin #19) and ONE graphql answer that carries both repositories' aliases, and asserts `fetch()` returns both lists with the bin task's `parent` set and exactly one graphql call made; and one where the bin's `item-list` call raises `subprocess.TimeoutExpired("gh", 60)` → `bin_items is None`, `bin_why == "TimeoutExpired"`, spark's items still returned.
 
 - [ ] **Step 2: Run them to see them fail** — expected `FAILED` (`TypeError` on `bin_items`, the two-list `fetch`).
 
 - [ ] **Step 3: Implement**
 
-In `check_backlog.py`: `BIN_TITLE = "the bin"  #: the bin's project; its working cards fly in the same total (the spec §1: "The bin's desk cards count in the same three")`. `fetch()` finds both project numbers from the one `project list` call and returns `(items, bin_items, why)`; a failure listing the bin's items yields `bin_items = None` (spark's items still returned). In `problems()`, `flying` becomes spark's counting in-flight cards plus `[e for e in (bin_items or []) if e.get("status") in IN_FLIGHT and counts(e)]`, named `"bin #%s"` in the sentence for the bin's entries (give each bin entry `entry["board"] = "bin"` in `fetch()`, and name by `("bin #%s" if e.get("board") == "bin" else "#%s") % number`). When `bin_items is None`, `problems()` counts spark's cards alone and says nothing — the saying is `main()`'s: `fetch()` returns the bin's failure as `bin_why`, and `main()` prints `"  backlog: the bin's board could not be read (%s) — its cards in flight were not counted" % bin_why` as an extra line, with the exit code unchanged (W1: said, never read as checked). `status_lines()` passes the same sentence in `notes` when the bin board was not read.
+In `check_backlog.py`: `BIN_TITLE = "the bin"  #: the bin's project; its working cards fly in the same total (the spec §1: "The bin's desk cards count in the same three")`. `fetch()` finds both project numbers from the one `project list` call and returns `(items, bin_items, why)`; a failure listing the bin's items yields `bin_items = None` (spark's items still returned). In `problems()`, `flying` becomes spark's counting in-flight cards plus `[e for e in (bin_items or []) if e.get("status") in IN_FLIGHT and counts(e)]`, named `"bin #%s"` in the sentence for the bin's entries (give each bin entry `entry["board"] = "bin"` in `fetch()`, and name by `("bin #%s" if e.get("board") == "bin" else "#%s") % number`). When `bin_items is None`, `problems()` counts spark's cards alone and says nothing — the saying is `main()`'s (as it already is for the parents note): `fetch()` returns the bin's failure as `bin_why`, and `main()` prints `"  backlog: the bin's board could not be read (%s) — its cards in flight were not counted" % bin_why` as an extra line, with the exit code unchanged (W1: said, never read as checked). `status_lines()` passes the same sentence in `notes` when the bin board was not read.
 
 In `board.py`'s `status_lines()`: `verdict = check_backlog.problems(spark, bin_items=dict(boards).get("bin"))`.
 
@@ -551,7 +551,7 @@ git commit -m "P146: offline, the gate says could-not-run — never that the lim
 - Test: `tests/test_board.py`; rows
 
 **Interfaces:**
-- Consumes: the board field **Appetite** (a number field, working days, set by the PO on an epic when it enters Discovery — created in Part C, item 4; until it exists, `item.get("appetite")` is `None` and nothing is flagged). `QUERY` gains `... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}` in `fieldValues`, and `to_items()` reads `value.get("name", value.get("date", value.get("number")))`.
+- Consumes: `item["parent"]` from Task 2 — in the status it is an int or None (the gate's sentinel `"unread"` never reaches `board.py`); the board field **Appetite** (a number field, working days, set by the PO on an epic when it enters Discovery — created in Part C, item 4; until it exists, `item.get("appetite")` is `None` and nothing is flagged). `QUERY` gains `... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}` in `fieldValues`, and `to_items()` reads `value.get("name", value.get("date", value.get("number")))`.
 - Produces: `READY_LOW = 2`; `appetite_spent(items, work_days, today) -> [str]`: for each epic with an appetite whose working days since its Status last changed into a working stage are ≥ the appetite, `"! <epic> appetite spent: N working days of M — ship what is Done, bet again, or drop it"`.
 
 - [ ] **Step 1: Write the failing tests**
