@@ -230,6 +230,13 @@ Every one of these, for every item. No exceptions, no "mostly".
    *What works today* in the same change (P104, the PO 2026-10-05). Nothing mechanical checks it: `tools/check_docs.py`
    cannot tell whether a status is still current, so the council reads it.
 9. Before the PR: the council with a documentation expert, and its fixes (the PO, 2026-10-08).
+10. **A version bump is a release.** The PR that changes the version in `.claude-plugin/plugin.json` (and README's
+   footer, which `tools/check_docs.py` ties to it) is tagged `vX.Y.Z` on its merge and gets a GitHub release whose
+   notes say what new functionality and which bug fixes came in; the PR's body names the release. Major when a
+   journey or a command changes shape, minor for new functionality, patch for fixes. `gh release list -R xmejkal/spark`
+   and `git log vX.Y.Z..main --first-parent` answer "what has been added since the last release". The PO, 2026-10-09
+   (P169): *"lets'use git tags and releases, and we can always fill in the version /release content, what new
+   functionality and bug fixes etc have been added"*.
 
 **When an epic is done** (P98; P102a moved it from the sprint's close): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
 prints its time. An escape is a missing test, opened as a backlog item the same day.
