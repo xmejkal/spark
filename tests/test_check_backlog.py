@@ -499,7 +499,7 @@ class TheBacklogCheckTest(unittest.TestCase):
             elif "item-list" in args:
                 cards = items if args[args.index("item-list") + 1] == "2" else bin_cards
                 answer = cards if isinstance(cards, Exception) else {"items": [{k: v for k, v in e.items() if k != "parent"}
-                                                                               for e in cards]}
+                                                                               for e in cards], "totalCount": len(cards)}
             else:
                 answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
             if isinstance(answer, Exception):
@@ -609,7 +609,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         """A gh whose project list holds spark's project and not the bin's."""
         def run(args, **kwargs):
             if "item-list" in args:
-                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")]}))
+                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")], "totalCount": 1}))
             return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}]}))
         return run
 
@@ -748,6 +748,126 @@ class TheBacklogCheckTest(unittest.TestCase):
     def test_a_timeout_s_stderr_in_bytes_is_read_as_text(self):
         # subprocess hands a timed-out run's output back as bytes whatever text= said.
         self.assertEqual(check_backlog._cause(subprocess.TimeoutExpired("gh", 60, stderr=b"gh: slow network\n")), "gh: slow network")
+
+
+class TheWholeBoardTest(unittest.TestCase):
+    """
+    P168 (#106): the gate reads the whole board, or says it could not. gh's item-list answers `--limit N` with at most N
+    items and the board's totalCount; the gate asks for 500 first, asks again with the board's own count when that was
+    short (5000 at most), and a board still short after that is a partial read: could-not-run, said with both numbers,
+    never "the limits hold". The bin's board the same way, as the bin's unread line (its cards not counted or checked).
+    The numbers here are written out, never read from the module (W2).
+    """
+
+    def listing(self, spark_cards, bin_cards=(), says=None, serves=None):
+        """
+        A gh whose spark board (number 2) holds `spark_cards` and the bin's (number 1) `bin_cards`, answering each
+        `--limit N` with the first N of them — or the first `serves` when that is fewer, and a totalCount of `says` when
+        given, so a board can be made to look larger than what gh hands over. Returns it with the commands it was asked.
+        """
+        asked = []
+
+        def run(args, **kwargs):
+            asked.append(" ".join(args))
+            if "graphql" in args:
+                answer = {"data": {}}
+            elif "item-list" in args:
+                cards = list(spark_cards if args[args.index("item-list") + 1] == "2" else bin_cards)
+                limit = int(args[args.index("--limit") + 1])
+                answer = {"items": cards[:min(limit, serves if serves is not None else limit)],
+                          "totalCount": len(cards) if says is None else says}
+            else:
+                answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
+            return mock.Mock(stdout=json.dumps(answer))
+        return run, asked
+
+    def said(self, run):
+        with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
+            code = check_backlog.main()
+        return code, "".join(call.args[0] for call in out.write.call_args_list)
+
+    def listings_of(self, asked, number):
+        """The `--limit` of each item-list call made for project `number`, in order."""
+        return [int(command.split("--limit ")[1].split()[0]) for command in asked
+                if "item-list %d " % number in command]
+
+    def test_a_board_of_101_items_is_read_whole_in_one_ask(self):
+        run, asked = self.listing([item(n, "Idea") for n in range(1, 102)])
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 101 open, the limits hold; the bin: 0 open\n", printed)
+        self.assertEqual(self.listings_of(asked, 2), [500])
+
+    def test_a_board_of_501_items_is_asked_again_with_its_own_count_and_read_whole(self):
+        run, asked = self.listing([item(n, "Idea") for n in range(1, 502)])
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 501 open, the limits hold; the bin: 0 open\n", printed)
+        self.assertEqual(self.listings_of(asked, 2), [500, 501])
+        self.assertNotIn("could-not-run", printed)
+
+    def test_the_bin_s_board_of_501_items_is_read_whole_too(self):
+        run, asked = self.listing([item(1, "Idea")], [item(n, "Idea") for n in range(1, 502)])
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 1 open, the limits hold; the bin: 501 open\n", printed)
+        self.assertEqual(self.listings_of(asked, 1), [500, 501])
+
+    def test_a_spark_board_still_short_after_the_second_ask_is_could_not_run_and_judges_nothing(self):
+        # Three cards in Build would be named — but the gate never saw the whole board, so it says that instead (W1).
+        cards = [item(1, "Build"), item(2, "Build"), item(3, "Build")] + [item(n, "Idea") for n in range(4, 11)]
+        run, asked = self.listing(cards, says=12)
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertEqual(printed, "  backlog: could-not-run — the spark board holds 12 items, 10 were read; the limits were not checked\n")
+        self.assertEqual(self.listings_of(asked, 2), [500, 12])
+
+    def test_a_board_larger_than_the_cap_is_asked_for_the_cap_and_said_short(self):
+        run, asked = self.listing([item(n, "Idea") for n in range(1, 11)], says=6000)
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: could-not-run — the spark board holds 6000 items, 10 were read; the limits were not checked", printed)
+        self.assertEqual(self.listings_of(asked, 2), [500, 5000])
+
+    def test_a_bin_board_read_in_part_is_the_bin_s_unread_line_and_spark_is_judged_alone(self):
+        spark = [item(1, "Build"), item(2, "Build"), item(3, "Build")]
+        run, asked = self.bin_short(spark, [item(19, "Build"), item(20, "Build")], bin_says=25)
+        code, printed = self.said(run)
+        self.assertEqual(code, 1)
+        self.assertIn("  backlog: 3 open, 1 problem(s)\n", printed)
+        self.assertIn("    Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another\n", printed)
+        self.assertIn("  backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not "
+                      "counted or checked\n", printed)
+        self.assertEqual(self.listings_of(asked, 1), [500, 25])
+        self.assertNotIn("the limits hold", printed)
+
+    def bin_short(self, spark_cards, bin_cards, bin_says):
+        """A gh that lists spark's board whole and the bin's with a totalCount of `bin_says`, handing over all of `bin_cards`."""
+        asked = []
+
+        def run(args, **kwargs):
+            asked.append(" ".join(args))
+            if "graphql" in args:
+                answer = {"data": {}}
+            elif "item-list" in args:
+                if args[args.index("item-list") + 1] == "2":
+                    answer = {"items": list(spark_cards), "totalCount": len(spark_cards)}
+                else:
+                    answer = {"items": list(bin_cards), "totalCount": bin_says}
+            else:
+                answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
+            return mock.Mock(stdout=json.dumps(answer))
+        return run, asked
+
+    def test_a_listing_with_no_total_count_is_could_not_run_with_its_cause(self):
+        # An answer the gate cannot size is a look it could not make, said with the key it missed — never a traceback.
+        def run(args, **kwargs):
+            if "item-list" in args:
+                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")]}))
+            return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}]}))
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: could-not-run — gh or the network could not be reached (KeyError); the limits were not checked", printed)
 
 
 class TheGateSaysWhatItIsTest(unittest.TestCase):

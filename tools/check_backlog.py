@@ -16,7 +16,9 @@ Run by tools/check_commit.py at every push. With no network or no gh it says it 
 must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories (every task
 is counted as riding on its story) or not the bin's board (spark's cards are counted alone): a line says so with the
 cause, and the push goes through (W1: said, never read as checked). A bin board that was read is said too: the summary
-line carries its open count.
+line carries its open count. The whole board is read, or nothing is judged (P168): gh's item-list stops at its --limit,
+so a board that holds more than the first ask is asked again with its own count, and one still short after that is
+could-not-run with both numbers — spark's as the gate's one line, the bin's as its unread line.
 """
 
 import argparse
@@ -55,6 +57,10 @@ EXPEDITE = "expedite"
 #: The bin's label for a bench session — the PO's own hands at the bench, which sits outside the limits (the spec, §1: "A
 #: bench session is your hands, so it sits outside them"). A bin card labelled so does not fly in the total (P146).
 BENCH = "bench"
+#: How many items one `gh project item-list` is asked for first (P168); a board whose totalCount says more is asked again
+#: with its own count as the limit, MOST_ITEMS at most — gh pages internally, so the limit is the one knob there is.
+FIRST_LIMIT = 500
+MOST_ITEMS = 5000
 #: What fetch() puts in a task's "parent" when GitHub could not be asked who it is. It is not None, so counts() and
 #: problems() let the task ride on a story they cannot name — a check must not count a card whose parent it could not see
 #: — and main() says so, with the cause (P146).
@@ -216,18 +222,47 @@ def parents(tasks):
         return {}, _cause(unreachable)
 
 
+class PartialRead(Exception):
+    """
+    A board gh listed in part (P168): it holds `held` items and `read` came back, after the second ask. The gate never
+    judges part of a board — W1: a look that was only partial says so, and is not read as "the limits hold".
+    """
+
+    def __init__(self, held, read):
+        super().__init__("holds %d items, %d were read" % (held, read))
+        self.held, self.read = held, read
+
+
+def _listing(number, limit):
+    """One `gh project item-list` of the project numbered `number` under OWNER: {"items": [...], "totalCount": N}."""
+    return _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", str(limit))
+
+
 def _items(number):
-    """The items of the project numbered `number` under OWNER, as gh prints them."""
-    return _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", "500")["items"]
+    """
+    Every item of the project numbered `number` under OWNER, as gh prints them — or PartialRead when gh handed over
+    fewer than the board holds. gh pages internally and stops at `--limit`, so the board is asked for FIRST_LIMIT, and
+    when its totalCount says more, asked again with that count as the limit (MOST_ITEMS at most). The spark board held
+    97 items on 2026-10-09 and the first ask covers it; the second ask is for the day it does not.
+    """
+    listed = _listing(number, FIRST_LIMIT)
+    items, held = listed["items"], listed["totalCount"]
+    if len(items) < held:
+        listed = _listing(number, min(held, MOST_ITEMS))
+        items, held = listed["items"], listed["totalCount"]
+    if len(items) < held:
+        raise PartialRead(held, len(items))
+    return items
 
 
 def fetch():
     """
     (the spark project's items, the bin project's items, why, the bin's why), or (None, None, why, None) when gh or the
     network could not be reached. A spark project that gh can list but cannot find is a LookupError: the check must never
-    quietly stop looking. The bin's board is read for the flight total, the lane and its waits alone, so its failing — no project
-    titled BIN_TITLE, or a listing that errors — costs nothing else: bin_items is None and the bin's why says what went
-    wrong, for main() to say. An open task of either board carries "parent", the number of the story it is a sub-issue of
+    quietly stop looking. A spark board gh listed only in part is a PartialRead, left to main(): nothing of it is judged
+    (P168). The bin's board is read for the flight total, the lane and its waits alone, so its failing — no project
+    titled BIN_TITLE, a listing that errors, or one read in part — costs nothing else: bin_items is None and the bin's
+    why says what went wrong, for main() to say. An open task of either board carries "parent", the number of the story it is a sub-issue of
     (None when it has none or it is closed, open_parent()), asked in ONE call for both boards. The gate asks for no other item's parent — a parent
     changes how a task counts and nothing else — so theirs is None here, unlike board.to_items(), which gives every issue
     its parent. When only that question fails the items still come back, with every open task's parent PARENT_UNREAD:
@@ -249,6 +284,8 @@ def fetch():
     if bin_number is not None:
         try:
             bin_items, bin_why = _items(bin_number), None
+        except PartialRead as short:
+            bin_why = "it " + str(short)
         except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
             bin_why = _cause(unreachable)
     cards = items + (bin_items or [])
@@ -288,9 +325,9 @@ fill none of spark's stages.
 #: The exit codes `--help` names (W1: a look that could not run says so, and is never read as checked).
 EXIT_CODES = """\
 exit codes:
-  0  the limits hold — or could-not-run: gh or the network could not be reached, said with its
-     cause, and the limits were not checked. A partial look (the tasks' parent stories or the
-     bin's board unread) is said with its cause too.
+  0  the limits hold — or could-not-run: gh or the network could not be reached, or gh handed over
+     part of the spark board, said with its cause, and the limits were not checked. A partial look
+     (the tasks' parent stories or the bin's board unread, or read in part) is said with its cause too.
   1  a problem, each named on a line of its own — or no project titled "spark" under %(owner)s.
   2  an argument the gate does not take.
 """
@@ -315,6 +352,9 @@ def main(argv=()):
     except LookupError as gone:
         print("  backlog: %s" % gone)
         return 1
+    except PartialRead as short:
+        print("  backlog: could-not-run — the spark board %s; the limits were not checked" % short)
+        return 0
     if items is None:
         print("  backlog: could-not-run — gh or the network could not be reached (%s); the limits were not checked" % why)
         return 0
