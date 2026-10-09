@@ -1,4 +1,4 @@
 [
- {"file": "tools/check_commit.py", "name": "the measured suite inherits the hook's git", "find": "capture_output=True, text=True, env=without_git_variables())", "replace": "capture_output=True, text=True)"},
+ {"file": "tools/check_commit.py", "name": "the measured suite inherits the hook's git", "find": "env=dict(without_git_variables(), TMPDIR=temp))", "replace": "env=dict(os.environ, TMPDIR=temp))"},
  {"file": "tools/check_commit.py", "name": "the scrub keeps the GIT_ variables", "find": "if not name.startswith(\"GIT_\")}", "replace": "if True}"}
 ]
