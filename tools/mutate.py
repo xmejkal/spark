@@ -67,7 +67,8 @@ def suite_is_green(root, tests, only=(), failfast=False):
 
     `-B` writes no bytecode and a fresh `PYTHONPYCACHEPREFIX` means none pre-existing is read.
     Without both, a same-size mutation restored within a second is scored against stale `.pyc`.
-    The empty cache goes with the run (P172): one run of the suite left 87 of them behind.
+    Each run gets one folder for that empty cache and for its temp files (TMPDIR), and the folder goes with
+    the run (P172): one run of the suite left 87 caches behind, and a sweep left its tests' folders.
     """
     import os
     import shutil
@@ -75,12 +76,14 @@ def suite_is_green(root, tests, only=(), failfast=False):
     stop = ["-f"] if failfast else []
     command, where = (([sys.executable, "-B", "-m", "unittest"] + stop + list(only), Path(root) / tests) if only else
                       ([sys.executable, "-B", "-m", "unittest", "discover", "-s", tests] + stop, Path(root)))
-    cache = tempfile.mkdtemp(prefix="mutate-pycache-")
+    run = Path(tempfile.mkdtemp(prefix="mutate-run-"))
     try:
-        environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=cache)
+        (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
+        environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"),
+                           TMPDIR=str(run / "tmp"))
         result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
     finally:
-        shutil.rmtree(cache, ignore_errors=True)
+        shutil.rmtree(run, ignore_errors=True)
     verdict = (result.stderr or "") + (result.stdout or "")
     return result.returncode == 0 and "\nOK" in verdict
 

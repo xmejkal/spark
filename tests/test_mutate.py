@@ -99,6 +99,24 @@ class StaleBytecodeTest(unittest.TestCase):
             self.assertTrue(mutate.suite_is_green(root, "tests"))
         self.assertEqual(os.listdir(fresh), [])
 
+    def test_each_run_s_temp_files_go_with_the_run(self):
+        # P172: the suite under mutation wrote into mutate's own temp folder — a sweep left its tests' folders behind.
+        import os
+        from unittest import mock
+        root, fresh = tiny_project(), tempfile.mkdtemp()
+        (root / "tests" / "test_leak.py").write_text(
+            "import tempfile, unittest\nclass L(unittest.TestCase):\n    def test_leaves_a_folder(self):\n"
+            "        with open(%r, 'a') as where: where.write(tempfile.gettempdir() + '\\n')\n"
+            "        tempfile.mkdtemp(prefix='left-')\n" % str(root / "where.txt"))
+        # TEMP too: a TMPDIR that does not exist falls back to it, so a run without its folder lands here, not in /tmp.
+        with mock.patch.object(tempfile, "tempdir", fresh), mock.patch.dict(os.environ, {"TMPDIR": fresh, "TEMP": fresh}):
+            self.assertTrue(mutate.suite_is_green(root, "tests"), "the whole suite, from the root")
+            self.assertTrue(mutate.suite_is_green(root, "tests", only=("test_leak",)), "named modules, from tests/")
+        self.assertEqual(os.listdir(fresh), [])
+        where = [Path(line) for line in (root / "where.txt").read_text().splitlines()]
+        self.assertEqual([(place.name, place.parent.parent) for place in where], [("tmp", Path(fresh))] * 2,
+                         "each run's temp files went into that run's own folder, not wherever TMPDIR fell back to")
+
     def test_ten_back_to_back_mutations_all_score_correctly(self):
         # The realistic case: a table of many mutations run inside one second between them.
         root = tiny_project()
