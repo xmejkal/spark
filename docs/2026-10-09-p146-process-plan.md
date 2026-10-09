@@ -446,7 +446,7 @@ git commit -m "P146: one expedite at a time, on the PO's word — it may take a 
 
 **Interfaces:**
 - Consumes, AS TASK 2 SHIPPED THEM (the brief's earlier text is superseded): `problems(items, bin_items=())` — no `parents_read`; `fetch()` returns `(items, why)` where `why`, when `items` came, is the parents' cause (the lookup failed and every open task's `parent` is the sentinel `PARENT_UNREAD`, the string `"unread"` — never read `parent` as a number); `parents(pairs)` takes `(repository, number)` pairs from each task's own `content["repository"]`, grouped per repository in ONE call; `main()` prints the parents note itself. `BOARDS` in `board.py` names the bin's project (number 1).
-- Produces: `check_backlog.BIN_TITLE = "the bin"`; `fetch()` returns `(items, bin_items, why, bin_why)` — `bin_items` is `None` and `bin_why` the cause when the bin's board could not be read; **the bin's open tasks go into the SAME `parents()` call as spark's** (their `content["repository"]` is `xmejkal/sisuo-brain-transplant`), so a bin task under its story rides and does not inflate the flight total; the flight sentence names the bin's cards as `bin #N`; `main()` prints `"  backlog: the bin's board could not be read (%s) — its cards in flight were not counted" % bin_why`.
+- Produces: `check_backlog.BIN_TITLE = "the bin"`; `fetch()` returns `(items, bin_items, why, bin_why)` — `bin_items` is `None` and `bin_why` the cause when the bin's board could not be read; **the bin's open tasks go into the SAME `parents()` call as spark's** (their `content["repository"]` is `xmejkal/sisuo-brain-transplant`), so a bin task under its story rides and does not inflate the flight total; **the expedite count (`rushed`, Task 5) spans both boards** — "one at a time, on the PO's word" holds across spark and the bin, and a bin card labelled `expedite` lends the flight its one extra place like a spark card does (a test: one expedite on each board → the "2 cards labelled expedite" sentence names `#N` and `bin #M`); the flight sentence names the bin's cards as `bin #N`; `main()` prints `"  backlog: the bin's board could not be read (%s) — its cards in flight were not counted" % bin_why`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -578,6 +578,14 @@ git commit -m "P146: offline, the gate says could-not-run — never that the lim
         self.assertIn("  Ready: empty — the PO refills it", lines)
         self.assertFalse(any("Ready is down" in line for line in lines))
 
+    def test_an_undated_wait_reaches_the_status_and_puts_the_close_at_risk(self):
+        items = board.to_items(project(node(16, "R2.7 — A wait nobody dated", "Idea", waiting="the PO")))
+        lines = board.status_lines([("spark", items), ("bin", [])], [], [], set(), dt.date(2026, 10, 9))
+        self.assertIn("spark — 1 open, 1 problem(s) · trial check 2026-11-02", lines)
+        self.assertIn("  ! #16 R2.7 — A wait nobody dated: waits on the PO since nobody knows — set Waiting since", lines)
+        status, _ = board.close_update("x", [("spark", items), ("bin", [])], set(), dt.date(2026, 10, 9), dt.date(2026, 10, 9))
+        self.assertEqual(status, "AT_RISK")
+
     def test_a_spent_appetite_is_flagged_in_working_days(self):
         epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
         worked = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 3), dt.date(2026, 10, 6)}
@@ -626,7 +634,7 @@ def appetite_spent(items, work_days, today):
     return flags
 ```
 
-In `status_lines()`, after the in-flight line: `lines += ["  " + flag for flag in appetite_spent(spark, worked, today)]`; after the Ready line: `if 0 < len(ready(spark)) <= READY_LOW: lines.append("  ! Ready is down to %d — propose an order for the PO" % len(ready(spark)))`. (`waiting()` today lists only `"the PO"`; the spec's *Waiting on* is always the PO, so listing any non-empty value changes nothing for his board and matches Task 4's rule.)
+In `in_flight()`, a card labelled `expedite` is marked: `"%s %s %d d%s" % (…, " (expedite)" if "expedite" in i.get("labels", []) else "")` — the status says who holds the lane (a test with one expedite card; a row dropping the mark). In `status_lines()`, after the in-flight line: `lines += ["  " + flag for flag in appetite_spent(spark, worked, today)]`; after the Ready line: `if 0 < len(ready(spark)) <= READY_LOW: lines.append("  ! Ready is down to %d — propose an order for the PO" % len(ready(spark)))`. (`waiting()` today lists only `"the PO"`; the spec's *Waiting on* is always the PO, so listing any non-empty value changes nothing for his board and matches Task 4's rule.)
 
 - [ ] **Step 4: Run the tests and the suite** — expected `OK`.
 
