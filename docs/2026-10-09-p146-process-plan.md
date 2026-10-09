@@ -20,7 +20,7 @@
 - **W16:** a replacement deletes what it replaces, in the same commit; a moved or merged agreement leaves a dated one-line pointer under its old heading (the spec §3: "The numbers stay as they are, because 44 files cite them").
 - **W1:** a check that could not look says so and never reads as passed — the offline gate prints could-not-run and lets the push through, which the spec names as the written exception.
 - **The commit gate** before every push: `python3 tools/check_commit.py` (the suite, the anchors, the size line, the board) — run it with `TMPDIR=<the session's scratchpad>/commit-tmp` inline; the pre-push hook runs it again.
-- **Documents:** `tools/check_docs.py` reads README, AGENTS and `docs/guide/` (anchors, names, the three forbidden strings `/Users/`, `/private/` and `smartbin-local`); `python3 -m unittest tests.test_orphans` reads `scrum/`; every page edited here passes both. No local path or session id in any committed file. The spec keeps dated amendments beside the original sentence, as it already does.
+- **Documents:** `tools/check_docs.py` reads README, AGENTS and `docs/guide/` (anchors, names, the three forbidden strings: a macOS home-directory path, `/private/` and `smartbin-local`); `python3 -m unittest tests.test_orphans` reads `scrum/`; every page edited here passes both. No local path or session id in any committed file. The spec keeps dated amendments beside the original sentence, as it already does.
 - **One PR closes #80** (Part A + Part B), after a council (the PO assistant, the user's journey, the tech lead, a documentation expert, then a refuter) and its fixes — the PO's rule of 2026-10-08. **The merge is the PO's**: Claude's `gh pr merge` is refused by the classifier (observed 2026-10-07 and 2026-10-08); the PR ends with a "ready to merge" comment.
 - **The spec's numbers that the PO changed later** (2 per working stage, Ready 5, 4 in flight) replace the proposal's 1/5/3 wherever a page states them; the (D) marks and his words are quoted, never paraphrased.
 - **Part B starts after PR #98 (P97) merges**, and begins with `git rebase origin/main` of `p146-process`: #98 touches `GLOSSARY.md`, `scrum/STORY_MAP.md`, `scrum/WORKING_AGREEMENTS.md` (W15's amendment), `docs/guide/*.md` and `README.md`, and Part B edits four of those files. Part A conflicts with nothing in #98.
@@ -83,7 +83,7 @@ In the §1 stage table, the `Discovery`, `Design`, `Build` and `Review` rows' li
 
 - [ ] **Step 4: Check the docs tests still pass with the new file**
 
-Run: `cd /Users/petr/Development/spark-p146 && python3 -m unittest tests.test_orphans tests.test_docs 2>&1 | tail -3`
+Run: `python3 -m unittest tests.test_orphans tests.test_docs 2>&1 | tail -3`
 Expected: `OK` (the spec is in `docs/`, which the orphan test does not require to be linked; Task 10 links it from `scrum/README.md`).
 
 - [ ] **Step 5: Commit**
@@ -161,7 +161,7 @@ In `tests/test_board.py`, add to `node()` a `parent=None` parameter that puts `"
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `cd /Users/petr/Development/spark-p146 && python3 -m unittest tests.test_check_backlog tests.test_board 2>&1 | tail -3`
+Run: `python3 -m unittest tests.test_check_backlog tests.test_board 2>&1 | tail -3`
 Expected: `FAILED` — `counts()` returns False for every task; `problems()` takes no `parents_read`; `check_backlog.parents` does not exist; `to_items` sets no `parent`.
 
 - [ ] **Step 3: Implement**
@@ -228,7 +228,7 @@ In `tools/board.py`, `QUERY`'s Issue fragment gains `parent{number}` after `labe
 
 - [ ] **Step 4: Run the tests**
 
-Run: `cd /Users/petr/Development/spark-p146 && python3 -m unittest tests.test_check_backlog tests.test_board 2>&1 | tail -3`
+Run: `python3 -m unittest tests.test_check_backlog tests.test_board 2>&1 | tail -3`
 Expected: `OK`. Then the whole suite: `TMPDIR=<scratchpad>/docs-tmp python3 -m unittest discover -s tests -t tests 2>&1 | tail -3` → `OK`.
 
 - [ ] **Step 5: Mutation rows**
@@ -244,7 +244,7 @@ Create `tests/mutations/p146-process.json` with:
 ]
 ```
 
-Run: `cd /Users/petr/Development/spark-p146 && TMPDIR=<scratchpad>/docs-tmp python3 tools/mutate.py tests/mutations/p146-process.json 2>&1 | tail -3`
+Run: `TMPDIR=<scratchpad>/docs-tmp python3 tools/mutate.py tests/mutations/p146-process.json 2>&1 | tail -3`
 Expected: `every mutation was caught, and the suite is green with the files restored`. Then `python3 tools/mutate.py --anchors tests/mutations/*.json` → every anchor present, once (the P102a row "an epic counts" in `tests/mutations/p102a-check-backlog.json` is DELETED in this task if it anchors the old `counts()` line — W16: not re-anchored — check with the anchors run and say so in the commit).
 
 - [ ] **Step 6: Commit**
@@ -284,7 +284,7 @@ The existing `test_an_item_with_no_needed_by_is_named` and `test_an_item_on_no_s
 
 - [ ] **Step 2: Run them to see the first one fail**
 
-Run: `cd /Users/petr/Development/spark-p146 && python3 -m unittest tests.test_check_backlog -k idea_card 2>&1 | tail -3`
+Run: `python3 -m unittest tests.test_check_backlog -k idea_card 2>&1 | tail -3`
 Expected: `FAILED` — the Idea card is named twice.
 
 - [ ] **Step 3: Implement**
@@ -659,7 +659,7 @@ git commit -m "P146: the status lists waits oldest first, says when Ready is dow
 
 ### Task 9: Part A's gate and push
 
-- [ ] Run `cd /Users/petr/Development/spark-p146 && TMPDIR=<scratchpad>/commit-tmp python3 tools/check_commit.py` and read its three lines (the suite, the anchors, the size, the board).
+- [ ] Run `TMPDIR=<scratchpad>/commit-tmp python3 tools/check_commit.py` and read its three lines (the suite, the anchors, the size, the board).
 - [ ] The controller pushes `p146-process` (the pre-push hook runs the gate again) and opens a **draft** PR "P146: the process fits how we work — the gate's rules, the status's lines, the process documents" (Closes #80), body to be completed in Task 17.
 
 ---
@@ -702,7 +702,7 @@ The spec's §3 table is the instruction, row by row. **Every heading stays** (44
 - [ ] **Step 1:** Keep and rewrite as the table says: **W1** (binds gates and agents' reports; the offline gate as the written exception — could-not-run, push allowed; fix the stale `answer()` pointer by grepping for the function it names), **W3** (absorbs W12; drop "no tooling, no hook" and "scrum master"), **W6** (the decided limits, counting rules, the expedite lane, both boards — one paragraph pointing at `tools/check_backlog.py`), **W8** ("every change reaches `main` by a PR that closes its card"; branch protection, decision 1 — "once set", with Part C's state), **W13** (absorbs W17 and W20's estimate clause), **W14** (Ready's entry policy; absorbs W7: "build only what is pulled, and reuse first"), **W15** (absorbs W15b: the size line in the closing comment; drop the retired budget clause — already amended in #98, check), **W19** (the card stands in its working stage before any agent starts; the launch hook — decision 1). **W2** and **W16** keep their text.
 - [ ] **Step 2:** Move: **W5** and **W21** → `DECISIONS.md` (Task 13); **W10** and **W11** → the role cards (Task 11: the PO's card gets "paid minutes and the token allowance are the PO's" and "only the PO orders; an answer covers only what its option showed"). Merge: **W7**→W14, **W12**→W3, **W15b**→W15, **W17**→W13, **W20**→W9 and Ready's row, **W18**→the Design and Ready rows (its "one sitting" becomes the service level in the README's cadences). Habits: **W4** and **W9** move to a new final section **"Habits — no command judges these"** with their text; their headings get the dated pointer.
 - [ ] **Step 3:** Append the section **"How a rule changes"**: *"By a PR whose card quotes the PO's yes, with a dated line on the rule. This replaces 'retired in `RETROSPECTIVES.md`', which was skipped twice in the week of 2026-10-06."*
-- [ ] **Step 4:** Check no link to a heading breaks: `cd /Users/petr/Development/spark-p146 && /usr/bin/grep -rn -o -E "WORKING_AGREEMENTS\.md#w[0-9a-z-]+" --include=*.md . | sort -u` — every anchor still exists (the headings stay). Run `python3 tools/check_docs.py && python3 -m unittest tests.test_orphans 2>&1 | tail -2`. Commit: `P146: the working agreements are ten — the rest moved, merged or made habits, each leaving its dated pointer`.
+- [ ] **Step 4:** Check no link to a heading breaks: `/usr/bin/grep -rn -o -E "WORKING_AGREEMENTS\.md#w[0-9a-z-]+" --include=*.md . | sort -u` — every anchor still exists (the headings stay). Run `python3 tools/check_docs.py && python3 -m unittest tests.test_orphans 2>&1 | tail -2`. Commit: `P146: the working agreements are ten — the rest moved, merged or made habits, each leaving its dated pointer`.
 
 ### Task 13: `DECISIONS.md`, `GLOSSARY.md`, the backlog design, the developing guide, the issue form
 
@@ -738,7 +738,7 @@ These are prepared as exact snippets and commands. The controller presents them 
 
 - [ ] **(1) The agent-launch hook** (decision 1a; W19). A `PreToolUse` hook on the `Agent` and `Workflow` tools in `~/.claude/settings.json` that refuses a launch whose `description` and `prompt` name no card: the script `tools/hooks/launch_names_a_card.py` (in spark, with tests) reads the hook's JSON from stdin, searches `tool_input.description + tool_input.prompt` for `#\d+` or `\b[PB]\d{1,3}\b`, and exits 2 with `"the launch names no card — W19: the card stands in its working stage before any agent starts"` when none is found; exits 0 otherwise. It does not check the stage (that needs the network at every launch); the status and the day-close catch a card in Idea with a run on it. Settings snippet:
   ```json
-  "hooks": {"PreToolUse": [{"matcher": "Agent|Workflow", "hooks": [{"type": "command", "command": "python3 /Users/petr/Development/spark/tools/hooks/launch_names_a_card.py"}]}]}
+  "hooks": {"PreToolUse": [{"matcher": "Agent|Workflow", "hooks": [{"type": "command", "command": "python3 $HOME/Development/spark/tools/hooks/launch_names_a_card.py"}]}]}
   ```
   (merged into the existing `hooks` object, which holds one `SessionStart` hook today.) The spec's stated limit stands: the hook cannot see agents inside a workflow.
 - [ ] **(2) Branch protection on `main`, both repositories, enforced for admins** (decision 1a; W8). Neither `main` is protected today (checked 2026-10-09: `gh api repos/<r>/branches/main/protection` → 404 on both). A repository **ruleset** (not the legacy protection API, whose review count cannot be 0) — for each repo:
