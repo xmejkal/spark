@@ -30,8 +30,16 @@ The suite still reads source for rules about the code itself:
 - only `tools.py` names a tool's executable;
 - no script restates a number that `data/fabrication.json` holds;
 - every script a command runs starts with its shebang;
-- every test module imports `tests/suite_temp.py` before anything else: it gives the test process one temp folder
-  and removes it when the process exits, so a test's `tempfile.mkdtemp()` needs no cleanup of its own (P172).
+- every test module has, after its standard-library imports and before anything else, these two lines
+  ([P172](https://github.com/xmejkal/spark/issues/112)):
+
+  ```python
+  sys.path.insert(0, str(Path(__file__).resolve().parent))
+  import suite_temp
+  ```
+
+  `tests/suite_temp.py` gives the test process one temp folder and removes it when the process exits, so a test's
+  `tempfile.mkdtemp()` needs no cleanup of its own. The first line lets `python3 -m unittest tests.test_x` find it.
 
 `test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
@@ -59,9 +67,11 @@ ln -sf ../../tools/pre-push .git/hooks/pre-push
 It reports:
 
 - the suite and every mutation anchor, as committed;
-- what the suite left behind: the suite runs with an empty temp folder of the gate's own, and anything left in it
-  fails the push with one line, `temp: the suite left N entries behind (…) — P172`; a folder it cannot list is
-  could-not-run. One run of the suite had left 2,291 entries, 26 MB, at every push;
+- what the suite left behind ([P172](https://github.com/xmejkal/spark/issues/112)): the suite runs with an empty temp
+  folder of the gate's own, and anything left in it fails the push with one line,
+  `temp: the suite left N entries behind (…) — P172`. A folder the gate cannot list is could-not-run, which exits 2
+  and stops the push, unlike the board's could-not-run below. One run of the suite had left 2,291 entries, 26 MB, and
+  the hook ran it at every push. The gate also removes its own archive of the commit, 6.2 MB, when it ends;
 - the size of `scripts/`;
 - the work board — spark's and the bin's, through your `gh` login ([the board](../../GLOSSARY.md#the-board)). It fails
   the push on:

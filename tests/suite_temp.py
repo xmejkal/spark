@@ -2,16 +2,21 @@
 One temp folder per test process, removed when the process exits (P172).
 
 One run of the suite on main c49a17e left 2,291 entries, 26 MB, in an empty temp folder, and the pre-push
-hook runs the suite at every push: 254 `tempfile.mkdtemp()` calls in 28 test files, many in helpers
-outside any test, a lock file per scratch store, a scratch store per process. Removing each where it
-is made would be 254 edits, and the next test written would leak again. Instead every test module
-imports this first: it makes ONE folder under whatever temp folder the process inherited, points
-`tempfile` at it — and TMPDIR too, so every script a test starts writes there as well — and removes
-it at exit. `tests/test_suite_temp.py` pins that every test module asks for it before anything else.
+hook runs the suite at every push: 281 `tempfile.mkdtemp()` calls in 28 test files (an AST count at
+c49a17e), many in helpers outside any test, a lock file per scratch store, a scratch store per process.
+Removing each where it is made would be 281 edits, and the next test written would leak again. Instead
+every test module imports this first: it makes ONE folder under whatever temp folder the process
+inherited, points `tempfile` at it — and TMPDIR too, so every script a test starts writes there as well —
+and removes it at exit. `tests/test_suite_temp.py` pins that every test module has, after its
+standard-library imports and before anything else, the two lines
 
-It is not named `test_*.py`, so the suite never loads it as tests; every way the suite is run imports
-it under this one name — `discover -s tests` and `tools/mutate.py` (which runs from `tests/`) find it
-on the path already, and `python3 -m unittest tests.test_x` through the `sys.path` line each test module has.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import suite_temp
+
+It is not named `test_*.py`, so the suite never loads it as tests. Every way the suite is run imports it
+under this one name: `discover -s tests` puts tests/ on the path itself; `tools/mutate.py` runs from
+`tests/` when it names test modules and runs `discover -s tests` from the root when it does not; and
+`python3 -m unittest tests.test_x` from the root finds it only through that `sys.path` line.
 """
 
 import atexit
