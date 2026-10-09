@@ -345,13 +345,23 @@ class TheCoreTest(unittest.TestCase):
         out = io.StringIO()
         with mock.patch.object(board, "gather", side_effect=RuntimeError("could not resolve host")), contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue(), "board: skipped — could not resolve host\n")
+        # W1: a look that could not be made is could-not-run; `skipped` is a check nobody asked for (P146 council, C4).
+        self.assertEqual(out.getvalue(), "board: could-not-run — could not resolve host\n")
 
     def test_status_outside_the_named_folders_prints_nothing(self):
         out = io.StringIO()
         with mock.patch.object(board, "gather") as gather, contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status", "--when-in", tempfile.mkdtemp()]), 0)
         self.assertEqual((out.getvalue(), gather.called), ("", False))
+
+    def test_a_close_that_cannot_read_the_boards_says_could_not_run_posts_nothing_and_fails(self):
+        out = io.StringIO()
+        logged_out = RuntimeError("gh: To get started with GitHub CLI, please run: gh auth login")
+        with mock.patch.object(board, "gather", side_effect=logged_out), mock.patch.object(board, "_gh") as gh, \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["close", "P102c built"]), 1)
+        self.assertFalse(gh.called)
+        self.assertEqual(out.getvalue(), "board: could-not-run — gh: To get started with GitHub CLI, please run: gh auth login\n")
 
     def test_close_dry_run_posts_nothing(self):
         out = io.StringIO()
@@ -386,14 +396,14 @@ class TheFinalReviewTest(unittest.TestCase):
         lines = board.status_lines([("spark", SPARK)], [], [], set(), TODAY, ["the spark board holds 130 items"])
         self.assertIn("  ! the spark board holds 130 items", lines)
 
-    def test_a_silent_network_skips_the_status_in_seconds(self):
+    def test_a_silent_network_gives_up_on_the_status_in_seconds(self):
         out = io.StringIO()
         stalled = subprocess.TimeoutExpired(["gh"], board.STATUS_TIMEOUT)
         with mock.patch.object(board.subprocess, "run", side_effect=stalled) as run, contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
         self.assertEqual(run.call_args.kwargs["timeout"], board.STATUS_TIMEOUT)
         self.assertLessEqual(board.STATUS_TIMEOUT, 10)
-        self.assertEqual(out.getvalue(), "board: skipped — gh did not answer in %d s\n" % board.STATUS_TIMEOUT)
+        self.assertEqual(out.getvalue(), "board: could-not-run — gh did not answer in %d s\n" % board.STATUS_TIMEOUT)
 
     def test_working_days_are_commits_on_any_branch_in_the_named_folders(self):
         root = Path(tempfile.mkdtemp())
@@ -416,13 +426,13 @@ class TheFinalReviewTest(unittest.TestCase):
             days = board.work_days([str(root), tempfile.mkdtemp()], dt.date(2026, 10, 1))
         self.assertEqual(days, {dt.date(2026, 10, 1), dt.date(2026, 10, 3), dt.date(2026, 10, 5)})
 
-    def test_status_says_skipped_whatever_breaks(self):
+    def test_status_says_could_not_run_whatever_breaks(self):
         out = io.StringIO()
         with mock.patch.object(board, "gather", return_value=([("spark", SPARK)], [], [], "P", [])), \
                 mock.patch.object(board, "status_lines", side_effect=AttributeError("'NoneType' object has no attribute 'get'")), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue(), "board: skipped — 'NoneType' object has no attribute 'get'\n")
+        self.assertEqual(out.getvalue(), "board: could-not-run — 'NoneType' object has no attribute 'get'\n")
 
 
 if __name__ == "__main__":

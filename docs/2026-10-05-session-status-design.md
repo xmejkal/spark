@@ -64,6 +64,7 @@ spark — 28 open, the limits hold · trial check 2026-11-02
   directories. The folders are named in the PO's settings, not in the repository, so no personal path ships.
 - **Offline,** or when `gh` is logged out, it prints one line: `board: skipped — <why>`. A session start must never
   fail. Each `gh` call at a session start gives up after 8 seconds, so a stalled network costs seconds, not minutes.
+  2026-10-09 (P146 council): the word is could-not-run, W1 — the line reads `board: could-not-run — <why>`.
 
 ### `board.py close [--date D] [--dry-run] LINE|-`
 

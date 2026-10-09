@@ -310,13 +310,13 @@ def main(argv=None):
             # An appetite counts working days from its epic's last stage change, which can lie before the last close.
             since = min(since, appetite_since(dict(boards)["spark"], since))
             print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today, notes)))
-        except Exception as broken:  # a session start must never fail (the spec, §2)
-            print("board: skipped — %s" % (broken or type(broken).__name__))
+        except Exception as broken:  # a session start must never fail (the spec, §2); W1: a look not made is could-not-run
+            print("board: could-not-run — %s" % (broken or type(broken).__name__))
         return 0
     try:
         boards, prs, closes, project_id, _ = gather()
     except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
-        print("board: skipped — %s" % unreachable)
+        print("board: could-not-run — %s" % unreachable)
         return 1
     day = dt.date.fromisoformat(args.date) if args.date else today
     try:
