@@ -41,7 +41,7 @@ Its corollaries, each learned from a real defect:
 | **The pill-hole gap is a reader gap, not a source gap** | Pill holes carry `hole_width`/`hole_height`; the rules read `hole_diameter`. ~10 lines in `check_footprints`, not a new pipeline. | `INDEX.md` C2 |
 | **CLI over MCP** | An MCP server loads its tool schema into context every session; a CLI costs nothing until called. | user, explicit |
 | **Don't reinvent KiCad/Wokwi/tscircuit** | They already have shapes, boards, 3D, simulation. spark's value is the judgement between them. | user, explicit |
-| **Audio is I²S (MAX98357A / DFR0954)** | Petr chose it over the DFR0534 UART module. The module is identified: B1 (the bin's #1) closed 2026-10-06 — the DFR0954, owned ×2; no DFR0534 was ever bought. | `parts/max98357a-dfr0954.json` |
+| **Audio is I²S (MAX98357A / DFR0954)** | Petr chose it over the DFR0534 UART module. The module is identified: B1 (the bin's #1) closed 2026-10-06 — the DFR0954, owned ×2, identified from the DFRobot order history; no DFR0534 is in any DFRobot order. | `parts/max98357a-dfr0954.json` |
 | **`assign_pins` output is authoritative in `emit_board`** | The generator looped over parts and their `needs`, so any signal for a part with no record (button, LED, connector, shunt) vanished — 6 of 12 gone, exit 0, under a banner claiming completeness. Now assignments drive, and unclaimed ones are printed loudly. | `emit_board.py` |
 | **The vendor's drill is not our drill** | The board file's `drill_mm: 0.9` is DFRobot's finished hole for their own pad. A hole that accepts their 0.64 mm square pin needs ≥1.0. Generating from the vendor number produces a board that will not mate. | `check_footprints` rejects it — spark caught spark |
 | **Observers write to `docs/observations/`** | Every serious defect found here came from someone who was not doing the work. Findings must outlive the context that found them. | memory: `background-observers` |
@@ -86,12 +86,12 @@ validator refuses what the principle forbids as P80, P81 and P83 make it mechani
 Each line below was checked on 2026-10-09 against the bin (`sisuo-brain-transplant`, read-only) and
 dated; what the check found false is gone.
 
-- **The board is not being ordered, and that is the goal's word, not a blocker count.** The bin's
-  `STATUS.md` (updated 2026-10-01) says five of its seven blockers are closed and the seventh (annular
-  rings) is an advisory; the one it still calls open — which audio module is in the drawer — closed on
-  2026-10-06 on the bin's board (B1, #1: the DFR0954, owned ×2), which the page has yet to follow. The bin's `CLAUDE.md`:
-  the goal is a circuit that is good and working, so a fabrication-process limit is parked while a
-  circuit fault is not.
+- **The bin's PCB is not being ordered, and that is the goal's word, not a blocker count:** the goal
+  is a circuit that is good and working, so a fabrication-process limit is parked while a circuit fault
+  is not. Of the bin's seven original fab blockers, six are closed and the seventh (the annular rings)
+  is an advisory. The last to close was the audio module: B1 (the bin's #1) closed on 2026-10-06 — the
+  DFR0954, owned ×2, identified from the DFRobot order history; no DFR0534 is in any DFRobot order.
+  Newer circuit faults are open cards on the bin's board, in Idea: B25 (#19), B26 (#20) and B28 (#22).
 - **No Wokwi token is committed in either repository** (2026-10-09: a search for `wok_` followed by
   eight or more characters finds none in spark or in the bin; both repositories name only the
   variable, `WOKWI_CLI_TOKEN`, and the bin's Makefile tells its owner to put the token in their own
