@@ -38,8 +38,7 @@ def to_items(project):
     """
     The board's issues in the shape check_backlog reads, with when each card's Status last changed and the number of the
     story each is a sub-issue of (None for an issue with no parent story, or whose parent story is closed:
-    check_backlog.open_parent). A number field (the epic's Appetite) is read like a select or a date: by the
-    lower-cased name of its field.
+    check_backlog.open_parent).
     """
     items = []
     for node in project["items"]["nodes"]:
@@ -53,7 +52,7 @@ def to_items(project):
         for value in node["fieldValues"]["nodes"]:
             name = ((value or {}).get("field") or {}).get("name", "").lower()
             if name:
-                item[name] = value.get("name", value.get("date", value.get("number")))
+                item[name] = value.get("name", value.get("date"))
                 if name == "status":
                     item["status_changed"] = value.get("updatedAt")
         items.append(item)
@@ -112,42 +111,6 @@ def all_waiting(boards, today):
     """Every wait on either board, oldest first (the spec, §1), an undated one last; the bin's are named by their board."""
     said = sorted((since, _on_board(name, text)) for name, items in boards for since, text in _waits(items, today))
     return [text for _, text in said]
-
-
-def _appetite_clock(item):
-    """
-    (appetite in working days, the day its stage began) for an epic in a working stage that carries an appetite, else
-    None: a story has no appetite, and an epic that is Done or not begun has no clock running.
-    """
-    appetite, changed = item.get("appetite"), item.get("status_changed")
-    if "epic" not in item.get("labels", []) or not isinstance(appetite, (int, float)) or not changed:
-        return None
-    if item.get("status") not in check_backlog.IN_FLIGHT:
-        return None
-    return appetite, dt.date.fromisoformat(changed[:10])
-
-
-def appetite_since(items, default):
-    """The day the oldest running appetite began — the working days must be read from there — else `default`."""
-    started = [clock[1] for clock in map(_appetite_clock, items) if clock]
-    return min(started, default=default)
-
-
-def appetite_spent(items, work_days, today):
-    """
-    One flag per epic in a working stage whose appetite (working days, the board's Appetite field) is spent since its
-    stage last changed. An epic that is Done, or not begun, is not flagged: its clock is not running.
-    """
-    flags = []
-    for i in items:
-        clock = _appetite_clock(i)
-        if clock is None:
-            continue
-        appetite, start = clock
-        spent = len({d for d in work_days if start <= d <= today})
-        if spent >= appetite:
-            flags.append("! %s appetite spent: %d working days of %g — ship what is Done, bet again, or drop it" % (_short(i), spent, appetite))
-    return flags
 
 
 def ready(items):
@@ -215,7 +178,6 @@ def status_lines(boards, prs, closes, worked, today, notes=()):
                                                         TRIAL_CHECK)]
     lines += ["  ! " + sentence for sentence in [*verdict, *notes, *unread_bin]]
     lines.append("  in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"))
-    lines += ["  " + flag for flag in appetite_spent(spark, worked, today)]
     lines.append("  waits on the PO: " + (", ".join(all_waiting(boards, today)) or "nothing"))
     lines.append("  Ready: " + (", ".join(ready(spark)) or "empty — the PO refills it"))
     if 0 < len(ready(spark)) <= READY_LOW:
@@ -235,8 +197,7 @@ QUERY = """query($login:String!,$number:Int!){user(login:$login){projectV2(numbe
  items(first:100){totalCount nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number closed}}}
   fieldValues(first:20){nodes{
    ... on ProjectV2ItemFieldSingleSelectValue{name updatedAt field{... on ProjectV2FieldCommon{name}}}
-   ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}
-   ... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}}}}}
+   ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}}}}}
  statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC}){nodes{startDate status body}}}}}"""
 POST = ("mutation($p:ID!,$d:Date!,$s:ProjectV2StatusUpdateStatus!,$b:String!){createProjectV2StatusUpdate("
         "input:{projectId:$p,startDate:$d,status:$s,body:$b}){statusUpdate{id}}}")
@@ -291,10 +252,10 @@ def gather(timeout=CLOSE_TIMEOUT):
 
 #: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what
 #: the status prints, close_update() for when a close is at risk and the day it refuses, main() for the exit codes.
-STATUS_HELP = ("print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), a "
-               "spent appetite, every wait oldest first ('!' past three days), Ready in the PO's order (a warning when "
-               "down to one or two), open PRs, the last close and a working day left without one. A board it could not "
-               "read makes the whole status one line, could-not-run with its cause; it always exits 0, since a session "
+STATUS_HELP = ("print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), "
+               "every wait oldest first ('!' past three days), Ready in the PO's order (a warning when down to one or "
+               "two), open PRs, the last close and a working day left without one. A board it could not read makes the "
+               "whole status one line, could-not-run with its cause; it always exits 0, since a session "
                "start must never fail")
 CLOSE_HELP = ("post the day's one status update to spark's board: the line, then what is in flight and what waits on the "
               "PO. It is at risk when the gate finds a problem or a wait is older than three days, else on track. It "
@@ -323,8 +284,6 @@ def main(argv=None):
         try:
             boards, prs, closes, _, notes = gather(STATUS_TIMEOUT)
             since = max((day for day, _ in closes), default=today - dt.timedelta(days=14))
-            # An appetite counts working days from its epic's last stage change, which can lie before the last close.
-            since = min(since, appetite_since(dict(boards)["spark"], since))
             print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today, notes)))
         except Exception as broken:  # a session start must never fail (the spec, §2); W1: a look not made is could-not-run
             print("board: could-not-run — %s" % (broken or type(broken).__name__))

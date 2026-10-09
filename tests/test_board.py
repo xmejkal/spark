@@ -22,15 +22,13 @@ BODY = "### Needed by\n\nthe PO\n\n### Value proven by\n\nx\n"
 
 
 def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",), waiting=None, since=None, slice_="team tools",
-         parent=None, appetite=None, parent_closed=False):
+         parent=None, parent_closed=False):
     values = [{"name": status, "updatedAt": changed, "field": {"name": "Status"}},
               {"name": slice_, "updatedAt": changed, "field": {"name": "Slice"}}, {}]
     if waiting:
         values.append({"name": waiting, "updatedAt": changed, "field": {"name": "Waiting on"}})
     if since:
         values.append({"date": since, "field": {"name": "Waiting since"}})
-    if appetite is not None:
-        values.append({"number": appetite, "field": {"name": "Appetite"}})
     return {"content": {"number": number, "title": title, "body": BODY, "repository": {"name": "spark"},
                         "labels": {"nodes": [{"name": label} for label in labels]},
                         "parent": {"number": parent, "closed": parent_closed} if parent else None},
@@ -155,41 +153,6 @@ class TheCoreTest(unittest.TestCase):
         status, _ = board.close_update("x", [("spark", items), ("bin", [])], set(), dt.date(2026, 10, 9), dt.date(2026, 10, 9))
         self.assertEqual(status, "AT_RISK")
 
-    def test_a_spent_appetite_is_flagged_in_working_days(self):
-        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
-        worked = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 3), dt.date(2026, 10, 6)}
-        self.assertEqual(board.appetite_spent(epic, worked, dt.date(2026, 10, 9)),
-                         ["! E (#5) appetite spent: 4 working days of 3 — ship what is Done, bet again, or drop it"])
-        self.assertEqual(board.appetite_spent(epic, {dt.date(2026, 10, 1)}, dt.date(2026, 10, 9)), [])
-
-    def test_an_appetite_is_spent_on_the_working_day_that_reaches_it(self):
-        epic = board.to_items(project(node(5, "E — x", "Design", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
-        days = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 6), dt.date(2026, 9, 30), dt.date(2026, 10, 12)}
-        # Three of the five days fall from the day the stage began to today; the day before and the day after do not count.
-        self.assertEqual(board.appetite_spent(epic, days, dt.date(2026, 10, 9)),
-                         ["! E (#5) appetite spent: 3 working days of 3 — ship what is Done, bet again, or drop it"])
-
-    def test_an_epic_with_no_time_on_its_stage_is_not_flagged_rather_than_a_traceback(self):
-        epic = board.to_items(project(node(5, "E — x", "Design", changed=None, labels=("epic",), appetite=3)))
-        self.assertEqual(board.appetite_spent(epic, {dt.date(2026, 10, 1)}, dt.date(2026, 10, 9)), [])
-
-    def test_only_an_epic_in_a_working_stage_with_an_appetite_is_flagged(self):
-        worked = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 3), dt.date(2026, 10, 6)}
-        today = dt.date(2026, 10, 9)
-        spent = dict(changed="2026-10-01T09:00:00Z", appetite=3)
-        cards = board.to_items(project(node(5, "E — x", "Done", labels=("epic",), **spent),
-                                       node(6, "F — y", "Idea", labels=("epic",), **spent),
-                                       node(7, "G — z", "Build", labels=("story",), **spent),
-                                       node(8, "H — w", "Build", labels=("epic",), changed="2026-10-01T09:00:00Z")))
-        self.assertEqual(board.appetite_spent(cards, worked, today), [])
-
-    def test_the_status_flags_a_spent_appetite_after_the_flight_line(self):
-        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
-        worked = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 3), dt.date(2026, 10, 6)}
-        lines = board.status_lines([("spark", epic), ("bin", [])], [], [], worked, dt.date(2026, 10, 9))
-        flag = "  ! E (#5) appetite spent: 4 working days of 3 — ship what is Done, bet again, or drop it"
-        self.assertEqual(lines[lines.index("  in flight: Discovery E (#5) 8 d") + 1], flag)
-
     def test_the_flight_line_names_the_card_that_holds_the_expedite_lane(self):
         spark = board.to_items(project(node(1, "P1 — a", "Build", labels=("story", "expedite")), node(2, "P2 — b", "Design")))
         self.assertEqual(board.in_flight(spark, TODAY), ["Build P1 (#1) 2 d (expedite)", "Design P2 (#2) 2 d"])
@@ -220,17 +183,6 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(body.split("\n\n")[2],
                          "waits on the PO: bin B1 (#1) since 2026-09-25, 12 d !, R2.6 (#15) since 2026-10-05, 2 d")
 
-    def test_the_oldest_running_appetite_gives_the_day_to_count_working_days_from(self):
-        epics = board.to_items(project(
-            node(1, "E1 — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3),
-            node(2, "E2 — y", "Design", changed="2026-09-28T09:00:00Z", labels=("epic",), appetite=5),
-            node(3, "E3 — done", "Done", changed="2026-09-01T09:00:00Z", labels=("epic",), appetite=3),
-            node(4, "S4 — a story", "Build", changed="2026-09-02T09:00:00Z", labels=("story",), appetite=3),
-            node(5, "E5 — no appetite", "Build", changed="2026-09-03T09:00:00Z", labels=("epic",))))
-        self.assertEqual(board.appetite_since(epics, dt.date(2026, 10, 8)), dt.date(2026, 9, 28))
-        self.assertEqual(board.appetite_since(epics[2:], dt.date(2026, 10, 8)), dt.date(2026, 10, 8))
-        self.assertEqual(board.appetite_since([], dt.date(2026, 10, 8)), dt.date(2026, 10, 8))
-
     def status_from_main(self, items, closes, days):
         """What `status` prints on 2026-10-09 for spark's `items`, and the work_days mock; `days` are the days with a commit."""
         out = io.StringIO()
@@ -242,22 +194,30 @@ class TheCoreTest(unittest.TestCase):
             self.assertEqual(board.main(["status"]), 0)
         return out.getvalue().splitlines(), git
 
-    def test_the_status_counts_an_appetite_from_before_the_last_close(self):
-        # The epic's stage changed on 10-01 and the last close was 10-08: counting only the days since the close
-        # would never see a three-day appetite spent.
-        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-01T09:00:00Z", labels=("epic",), appetite=3)))
-        days = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 6), dt.date(2026, 10, 8), dt.date(2026, 10, 9)}
-        lines, git = self.status_from_main(epic, [(dt.date(2026, 10, 8), "closed")], days)
-        self.assertIn("  ! E (#5) appetite spent: 5 working days of 3 — ship what is Done, bet again, or drop it", lines)
-        self.assertEqual(git.call_args.args[1], dt.date(2026, 10, 1))
+    def epic_with_an_appetite(self, changed):
+        """An epic in Discovery whose card carries an Appetite of 3 — a number field the board holds as process data."""
+        epic = node(5, "E — x", "Discovery", changed=changed, labels=("epic",))
+        epic["fieldValues"]["nodes"].append({"number": 3, "field": {"name": "Appetite"}})
+        return board.to_items(project(epic))
 
-    def test_an_appetite_that_began_after_the_last_close_does_not_hide_a_day_with_no_close(self):
-        # The working days are read from the earlier of the two days, so 10-06 (after the last close, before the
-        # epic's stage change) is still found and still asked for a close.
-        epic = board.to_items(project(node(5, "E — x", "Discovery", changed="2026-10-08T09:00:00Z", labels=("epic",), appetite=3)))
-        lines, git = self.status_from_main(epic, [(dt.date(2026, 10, 5), "closed")], {dt.date(2026, 10, 6), dt.date(2026, 10, 9)})
+    def test_the_status_says_nothing_of_an_appetite(self):
+        # The PO, 2026-10-09 (Q5 on #80): the appetite is process data he sets and reads on the board — spark does not
+        # read it. Five working days since the epic's stage began, against an Appetite of 3, and no line names it.
+        days = {dt.date(2026, 10, 1), dt.date(2026, 10, 2), dt.date(2026, 10, 6), dt.date(2026, 10, 8), dt.date(2026, 10, 9)}
+        lines, _ = self.status_from_main(self.epic_with_an_appetite("2026-10-01T09:00:00Z"), [(dt.date(2026, 10, 8), "closed")], days)
+        self.assertIn("  in flight: Discovery E (#5) 8 d", lines)
+        self.assertEqual([line for line in lines if "appetite" in line.lower()], [])
+
+    def test_the_working_days_are_read_from_the_last_close(self):
+        # Only a day with no close needs the working days, and it lies after the newest close: an epic's stage that began
+        # before it, Appetite or not, does not widen the read; with no close yet, two weeks are read.
+        epic = self.epic_with_an_appetite("2026-10-01T09:00:00Z")
+        closes = [(dt.date(2026, 10, 1), "older"), (dt.date(2026, 10, 5), "closed")]
+        lines, git = self.status_from_main(epic, closes, {dt.date(2026, 10, 2), dt.date(2026, 10, 6), dt.date(2026, 10, 9)})
         self.assertIn("  ! the day of 2026-10-06 has no close — write it first", lines)
         self.assertEqual(git.call_args.args[1], dt.date(2026, 10, 5))
+        _, git = self.status_from_main(epic, [], set())
+        self.assertEqual(git.call_args.args[1], dt.date(2026, 9, 25))
 
     def test_ready_keeps_the_board_s_order(self):
         self.assertEqual(board.ready(SPARK), ["P103 (#32)", "P97 (#18)"])
@@ -383,9 +343,6 @@ class TheFinalReviewTest(unittest.TestCase):
         # A task with no parent story is a card of its own (P146): the status must be told whose sub-issue each one is.
         self.assertIn("parent{number closed}", board.QUERY)
 
-    def test_the_query_reads_a_number_field_for_the_appetite(self):
-        self.assertIn("... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}", board.QUERY)
-
     def test_a_board_read_short_says_how_many_it_holds(self):
         held = project(node(1, "P1 — x", "Ready"))
         held["items"]["totalCount"] = 130
@@ -438,8 +395,8 @@ class TheFinalReviewTest(unittest.TestCase):
 class TheHelpTest(unittest.TestCase):
     """
     P146 council (C3): each verb's --help says what it prints or posts and how it exits — each claim read off the code:
-    status prints the gate's verdict, the flight with its marks, a spent appetite, the waits oldest first, Ready, the
-    open PRs and the last close, and exits 0 whatever happens; close posts the day's one update, at risk on a problem or
+    status prints the gate's verdict, the flight with its marks, the waits oldest first, Ready, the open PRs and the
+    last close, and exits 0 whatever happens; close posts the day's one update, at risk on a problem or
     a wait past three days, and refuses a day already closed with exit 1.
     """
 
@@ -460,8 +417,8 @@ class TheHelpTest(unittest.TestCase):
 
     def test_the_status_help_says_what_it_prints_and_that_it_always_exits_zero(self):
         self.assert_says(self.help_of("status"), (
-            "print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), a spent "
-            "appetite, every wait oldest first ('!' past three days), Ready", "open PRs, the last close",
+            "print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), every "
+            "wait oldest first ('!' past three days), Ready", "open PRs, the last close",
             "always exits 0", "could-not-run", "--when-in"))
 
     def test_the_close_help_says_what_it_posts_when_it_is_at_risk_and_what_it_refuses(self):
