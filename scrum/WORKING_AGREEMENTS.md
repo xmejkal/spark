@@ -105,8 +105,8 @@ updates straight to `main`. The pull request says `Closes #N` (W19), the council
 PO merges on Claude's "ready to merge" ([the flow](README.md#the-flow--an-items-stages), Review).
 
 **Branch protection** on the `main` of both repositories, enforced for admins, is decision 1 (a), the PO's of
-2026-10-06. Once set, GitHub refuses a direct push to either `main`. It is not set today (checked 2026-10-09: neither
-repository's `main` has a ruleset); it is set on the PO's yes — Part C of
+2026-10-06. Once set, GitHub refuses a direct push to either `main`. It is not set today (checked 2026-10-09 with `gh api`: neither
+repository's `main` has a ruleset or branch protection); it is set on the PO's yes — Part C of
 [P146's plan](../docs/2026-10-09-p146-process-plan.md#part-c--the-three-guards-and-the-board-field-the-pos-settings-nothing-changes-without-his-yes).
 Until then the rule holds by practice, not by a setting.
 
