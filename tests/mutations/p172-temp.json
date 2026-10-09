@@ -1,0 +1,21 @@
+[
+ {"file": "tools/check_commit.py", "name": "P172: the gate ignores what the suite left behind", "find": "problems=not ok or backlog != 0 or bool(left),", "replace": "problems=not ok or backlog != 0,"},
+ {"file": "tools/check_commit.py", "name": "P172: a count not taken reads as nothing left", "find": "unchecked=left is None)", "replace": "unchecked=False)"},
+ {"file": "tools/check_commit.py", "name": "P172: a folder that cannot be listed counts as empty", "find": "    except OSError:\n        return None\n", "replace": "    except OSError:\n        return []\n"},
+ {"file": "tools/check_commit.py", "name": "P172: the gate's line about what was left is never said", "find": "    if left != []:\n        print(\"  \" + temp_line(left))\n", "replace": "    if False:\n        print(\"  \" + temp_line(left))\n"},
+ {"file": "tools/check_commit.py", "name": "P172: the suite writes to the hook's temp folder, not the gate's", "find": "env=dict(without_git_variables(), TMPDIR=temp))", "replace": "env=without_git_variables())"},
+ {"file": "tools/check_commit.py", "name": "P172: the gate keeps the suite's temp folder", "find": "        shutil.rmtree(temp, ignore_errors=True)", "replace": "        None"},
+ {"file": "tools/check_commit.py", "name": "P172: the gate keeps its archive", "find": "        shutil.rmtree(scratch, ignore_errors=True)", "replace": "        None"},
+ {"file": "tests/suite_temp.py", "name": "P172: the helper's atexit is not registered", "find": "atexit.register(remove, ROOT)", "replace": "None"},
+ {"file": "tests/suite_temp.py", "name": "P172: the helper's TMPDIR export is dropped", "find": "os.environ[\"TMPDIR\"] = ROOT", "replace": "None"},
+ {"file": "tests/suite_temp.py", "name": "P172: tempfile is not pointed at the helper's folder", "find": "tempfile.tempdir = ROOT", "replace": "None"},
+ {"file": "tests/suite_temp.py", "name": "P172: the helper removes any folder it is handed", "find": "if folder != _MADE or os.getpid() != _MADE_BY:", "replace": "if os.getpid() != _MADE_BY:"},
+ {"file": "tests/suite_temp.py", "name": "P172: a forked child removes its parent's folder", "find": "if folder != _MADE or os.getpid() != _MADE_BY:", "replace": "if folder != _MADE:"},
+ {"file": "tests/test_suite_temp.py", "name": "P172: the scan takes `import suite_temp` with no path line before it", "find": "            return on_path\n", "replace": "            return True\n"},
+ {"file": "tests/test_suite_temp.py", "name": "P172: the scan takes any sys.path.insert for the path line", "find": "on_path = on_path or ast.unparse(node.value) == PATH_LINE", "replace": "on_path = True"},
+ {"file": "tests/test_suite_temp.py", "name": "P172: the scan lets a spark module be imported before suite_temp", "find": "if not any(is_sparks(name.split(\".\")[0]) for name in names):", "replace": "if True:"},
+ {"file": "scripts/store.py", "name": "P172: store's scratch home is not removed at exit", "find": "    atexit.register(shutil.rmtree, _suite_home, True)\n", "replace": "    pass\n"},
+ {"file": "tools/mutate.py", "name": "P172: mutate keeps each run's folder, its pycache and its temp", "find": "        shutil.rmtree(run, ignore_errors=True)", "replace": "        None"},
+ {"file": "tools/mutate.py", "name": "P172: the suite mutate runs writes to mutate's own temp folder", "find": ",\n                           TMPDIR=str(run / \"tmp\"))", "replace": ")"},
+ {"file": "tools/mutate.py", "name": "P172: the run's temp folder is never made, so TMPDIR falls back elsewhere", "find": "        (run / \"tmp\").mkdir()", "replace": "        pass"}
+]

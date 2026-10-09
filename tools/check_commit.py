@@ -9,9 +9,13 @@ A commit's message said "Ran 589 tests, OK" while the commit as committed ran 56
 run was on the working tree, and the file it imported was staged one commit later (sprint-4 close
 audit, C3). A number a message carries must be measured on what the message describes, so this
 archives the commit into a scratch directory and measures there. Run before every push.
+
+The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
+left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,7 +25,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_FOR, EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
+
+#: How many of the names left behind the gate's line shows; the count says the rest.
+NAMES_SHOWN = 3
 
 
 def archive(root, commit, into):
@@ -101,11 +108,35 @@ def without_git_variables():
     return {name: value for name, value in os.environ.items() if not name.startswith("GIT_")}
 
 
+def leftovers(folder):
+    """The names in `folder`, sorted; None when it cannot be listed — a count not taken is never a count of none."""
+    try:
+        return sorted(os.listdir(folder))
+    except OSError:
+        return None
+
+
+def temp_line(left):
+    """The gate's line about what the suite left in its temp folder (P172); `left` None means it could not be counted."""
+    if left is None:
+        return "temp: what the suite left behind could not be counted — P172"
+    shown = ", ".join(left[:NAMES_SHOWN]) + (", …" if len(left) > NAMES_SHOWN else "")
+    return "temp: the suite left {:,} {} behind ({}) — P172".format(len(left), "entry" if len(left) == 1 else "entries", shown)
+
+
 def measure(tree):
-    """(suite verdict line, anchors verdict line, ok) for the tree at `tree`."""
+    """
+    (suite verdict line, anchors verdict line, ok, left) for the tree at `tree`. `left` is what the suite left in
+    the empty temp folder it was given (P172), None when that could not be listed; the folder goes once counted.
+    """
     lend_node_modules(tree)
-    suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"],
-                           cwd=str(tree), capture_output=True, text=True, env=without_git_variables())
+    temp = tempfile.mkdtemp(prefix="spark-commit-temp-")
+    try:
+        suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"],
+                               cwd=str(tree), capture_output=True, text=True, env=dict(without_git_variables(), TMPDIR=temp))
+        left = leftovers(temp)
+    finally:
+        shutil.rmtree(temp, ignore_errors=True)  # a plain rmtree: it never chmods and never follows a link
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines()
                   if line.startswith(("Ran ", "OK", "FAILED"))]
     tables = sorted((tree / "tests" / "mutations").glob("*.json"))
@@ -114,27 +145,36 @@ def measure(tree):
                              cwd=str(tree), capture_output=True, text=True)
     anchors_said = anchors.stdout.strip().splitlines()[-1:] if anchors.stdout.strip() else ["(no output)"]
     ok = suite.returncode == 0 and anchors.returncode == 0
-    return " / ".join(suite_said), anchors_said[-1].strip(), ok
+    return " / ".join(suite_said), anchors_said[-1].strip(), ok, left
 
 
 def main(argv=None):
     commit = (argv or sys.argv[1:] or ["HEAD"])[0]
-    root = ROOT
     scratch = Path(tempfile.mkdtemp(prefix="spark-commit-"))
+    try:
+        return gate(ROOT, commit, scratch)
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)  # the archive, 6.2 MB a push (P172); a link in it is unlinked, never followed
+
+
+def gate(root, commit, scratch):
+    """Archive `commit` into `scratch`, measure it, say the lines; the exit code."""
     try:
         archive(root, commit, scratch)
     except (ValueError, subprocess.CalledProcessError) as broken:
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    suite, anchors, ok = measure(scratch)
+    suite, anchors, ok, left = measure(scratch)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
     print("%s as committed: %s; %s" % (short, suite, anchors))
+    if left != []:
+        print("  " + temp_line(left))
     print("  " + size_line(root, commit))
     sys.path.insert(0, str(ROOT / "tools"))
     import check_backlog
     backlog = check_backlog.main()
-    return EXIT_OK if ok and backlog == 0 else EXIT_PROBLEMS
+    return EXIT_FOR[status_of(problems=not ok or backlog != 0 or bool(left), unchecked=left is None)]
 
 
 if __name__ == "__main__":

@@ -56,8 +56,8 @@
  {
   "file": "tools/check_commit.py",
   "name": "the gate ignores the board",
-  "find": "return EXIT_OK if ok and backlog == 0 else EXIT_PROBLEMS",
-  "replace": "return EXIT_OK if ok else EXIT_PROBLEMS"
+  "find": "problems=not ok or backlog != 0 or bool(left)",
+  "replace": "problems=not ok or bool(left)"
  },
  {
   "file": "tools/check_backlog.py",
