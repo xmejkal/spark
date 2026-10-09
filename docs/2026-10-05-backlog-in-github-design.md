@@ -203,8 +203,10 @@ and the token allowance — [`docs/2026-10-06-process-design.md`](2026-10-06-pro
 made a command: the gate (the limits and counting rules on both boards, the expedite lane, the undated wait, *Needed
 by* and the slice from Ready on) and the status's lines. A spent-appetite flag was built too, and removed on the PO's
 decision of 2026-10-09 ([Q5 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6077488115)): the board's
-Appetite field is process data he reads, and nothing in spark reads it. What waits on the PO's yes
-([Q2–Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6071367154)): the three guards of decision 1. The token
+Appetite field is process data he reads, and nothing in spark reads it. The three guards of decision 1 went to the
+PO as [Q2–Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6071367154);
+on [his answers of 2026-10-09](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370), two are set, branch protection and the
+`ask` rule, and the launch hook is not: he answered *"Not yet"* (§11, decision 12). The token
 allowance is a rule with no tool: nothing counts the day's tokens yet (card C1 of the design).
 
 ## 10. Not in this spec
@@ -268,9 +270,14 @@ decisions (a) all three guards, (a), (a), (a), (a), (a); the decision numbers ar
 
 12. **Process decision 1, 2026-10-06: three guards in the PO's settings** — a hook that refuses an agent launch unless
     its description names a card standing in a working stage (W19), branch protection on the `main` of both
-    repositories (W8), and an `ask` rule for `wokwi-cli` and `make simulate` (W10). *Built: no* — each waits on the
-    PO's yes (Q2–Q4 on #80); none is set (checked 2026-10-09: no ruleset or branch protection on either `main`, no
-    `PreToolUse` hook or `ask` rule in his settings).
+    repositories (W8), and an `ask` rule for `wokwi-cli` and `make simulate` (W10). Before the PO's answers none was
+    set (checked 2026-10-09). His answers of 2026-10-09 to Q2–Q4 ([on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)):
+    - **Branch protection** — *Built: yes* (Q3, *"Ruleset + auto-delete (Recommended)"*): a ruleset, "main by PR
+      only", on both repositories refuses a direct push to `main`, and GitHub deletes a merged pull request's
+      branch (W8).
+    - **The `ask` rule** — *Built: yes* (Q4, *"Yes, always ask (Recommended)"*): in his settings, for `wokwi-cli`,
+      `make simulate` and `make simulate-all` (W10).
+    - **The launch hook** — *Built: no* (Q2, *"Not yet"*): nothing refuses a launch, and W19 holds by practice.
 13. **Process decision 2, 2026-10-06: the token allowance** — with no question asked, one run per card in flight, sized
     to its question, and at most one full council a day; anything bigger is asked first, with its estimate. *A rule,
     with no tool:* nothing counts tokens yet (card C1 of the design).
