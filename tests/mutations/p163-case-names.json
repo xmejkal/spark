@@ -1,0 +1,9 @@
+[
+ {"file": "scripts/emit_board.py", "name": "P163: the generator's compare is exact again, so OpenLid and Openlid are two names", "find": "        one = design_library.one_name(name)\n", "replace": "        one = name\n"},
+ {"file": "scripts/design.py", "name": "P163: one_name is identity, so capitals make two names everywhere", "find": "    return name.upper()\n", "replace": "    return name\n"},
+ {"file": "scripts/design.py", "name": "P163: the reader's refusal is removed, so the file reaches the generator", "find": "    clash = names_that_are_one(wanted)\n    if clash:\n", "replace": "    clash = names_that_are_one(wanted)\n    if False:\n"},
+ {"file": "scripts/design.py", "name": "P163: the reader's compare is exact again", "find": "        if one_name(name) in seen:\n            return seen[one_name(name)] + (index, name)\n        seen[one_name(name)] = (index, name)\n", "replace": "        if name in seen:\n            return seen[name] + (index, name)\n        seen[name] = (index, name)\n"},
+ {"file": "scripts/design.py", "name": "P163: the reader's message loses the second spelling", "find": "% (path, first, first_name, second, second_name, ONE_NAME_RULE, part))", "replace": "% (path, first, first_name, second, first_name, ONE_NAME_RULE, part))"},
+ {"file": "scripts/emit_board.py", "name": "P163: the generator reports one spelling, not both", "find": "            if name not in written[one]:\n                written[one].append(name)\n", "replace": "            pass\n"},
+ {"file": "scripts/needs.py", "name": "P163: needs grows its own copy of the rule back (W16)", "find": "_one_name = design.one_name\n", "replace": "_one_name = lambda name: name\n"}
+]
