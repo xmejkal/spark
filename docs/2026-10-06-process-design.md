@@ -126,7 +126,7 @@ by*. There are no sprints, no Scrum Master and no ceremonies."
 | each session start | the existing hook | what is in flight and its age, the waits oldest first, Ready, the last close |
 | when you stop | the day-close | one status update: what moved, what was proven, what is aging, the runs and their tokens, the next card. A later close the same day amends it |
 | Ready is down to two | ordering Ready | Claude proposes in a batch, and you order. When you name "next" in conversation, the card moves that turn, with your words quoted |
-| an epic's last story is Done, or its appetite is spent (decision 5) | value check, outside audit, retro | your verdict; the audit's report in `docs/observations/`; a retro of at most two changes, each with the command that checks it, plus a look at the limits |
+| an epic's last story is Done, or its appetite is spent (decision 5; *2026-10-09: the PO reads the Appetite field on the board — see the note at decision 5*) | value check, outside audit, retro | your verdict; the audit's report in `docs/observations/`; a retro of at most two changes, each with the command that checks it, plus a look at the limits |
 | once a week | the weekly look | one status update: cards done; in flight and the oldest; waits and the oldest; Idea in and out. Plus a list of Idea cards to close, which you strike or confirm |
 | 2026-11-02 | the trial check (kept) | its first question now counts work on cards the board showed in Idea. It notes "limits raised 2026-10-06, the trial's second day" |
 
