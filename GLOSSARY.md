@@ -348,9 +348,9 @@ hands, so it sits outside them."
 
 ### Appetite
 
-The working days the PO gives an epic when it enters Discovery (decision 5 (a)). When they are spent — counted since
-the epic's stage last changed — the status flags it: *"ship what is Done, bet again, or drop it"*. The board has no
-Appetite field yet; adding it waits on his yes, so nothing is flagged today
+The working days the PO gives an epic when it enters Discovery (decision 5 (a)), recorded in the Appetite number field
+on spark's board. When they are spent: *"ship what is Done, bet again, or drop it"*. The field is process data he sets
+and reads on the board; nothing in spark reads it
 ([the cadences](scrum/README.md#the-cadences-and-what-each-one-leaves)). **The failure behind it:** the trial asks "do
 epics finish?" and nothing made them: on 2026-10-06 P102 had 3 of 8 sub-issues done, and no epic had closed under
 Kanban (the process design, §2).

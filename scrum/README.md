@@ -69,7 +69,7 @@ choice after a three-lens council).
 | each session start | `tools/board.py status`, the existing hook | what is in flight and its age, the waits oldest first, Ready, the last close |
 | when the PO stops | the day-close, `tools/board.py close` | one status update: what moved, what was proven, what is aging, the runs and their tokens, the next card |
 | Ready is down to two | ordering Ready | Claude proposes in a batch, and the PO orders. When he names "next" in conversation, the card moves that turn, with his words quoted |
-| an epic's last story is Done, or its appetite is spent (decision 5) | value check, outside audit, retro | the PO's verdict; the audit's report in `docs/observations/`; a retro of at most two changes, each with the command that checks it, plus a look at the limits |
+| an epic's last story is Done, or its appetite is spent (decision 5; the PO reads it on the board) | value check, outside audit, retro | the PO's verdict; the audit's report in `docs/observations/`; a retro of at most two changes, each with the command that checks it, plus a look at the limits |
 | once a week | the weekly look | one status update: cards done; in flight and the oldest; waits and the oldest; Idea in and out. Plus a list of Idea cards to close, which the PO strikes or confirms |
 | 2026-11-02 | the trial check (kept) | its first question now counts work on cards the board showed in Idea. It notes "limits raised 2026-10-06, the trial's second day" |
 
@@ -86,10 +86,10 @@ choice after a three-lens council).
 - **The service level**, one best guess (the design's measures, accepted with it on 2026-10-06): *"a card leaves Build
   and Review within 2 working days, 8 times in 10."* The status prints each card's days in its stage, but nothing flags
   one past the service level yet (card C3 of the design, not built); the trial on 2026-11-02 corrects the guess.
-- **The appetite** (decision 5 (a)): when an epic enters Discovery, the PO gives it an appetite in working days. The
-  status flags a spark epic in a working stage whose appetite is spent, counted in working days since its stage last
-  changed: *"ship what is Done, bet again, or drop it"*. It reads the board's Appetite number field, which the board
-  does not have yet: adding it waits on the PO's yes.
+- **The appetite** (decision 5 (a)): when an epic enters Discovery, the PO gives it an appetite in working days, in
+  the Appetite number field on spark's board. When it is spent: *"ship what is Done, bet again, or drop it"*. The field
+  is process data the PO sets and reads on the board; nothing in spark reads it, and the status says nothing of it
+  (the PO, 2026-10-09, [question 5 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6077488115)).
 
 ## The flow — an item's stages
 

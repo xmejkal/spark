@@ -201,10 +201,11 @@ board.
 and the token allowance — [`docs/2026-10-06-process-design.md`](2026-10-06-process-design.md); the flow's table in
 [`scrum/README.md`](../scrum/README.md#the-flow--an-items-stages) is where they now live. What its build of 2026-10-09
 made a command: the gate (the limits and counting rules on both boards, the expedite lane, the undated wait, *Needed
-by* and the slice from Ready on) and the status's lines, the spent-appetite flag's code among them. What waits on the
-PO's yes ([Q2–Q5 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6071367154)): the board's Appetite
-field, without which the flag never shows, and the three guards of decision 1. The token allowance is a rule with no
-tool: nothing counts the day's tokens yet (card C1 of the design).
+by* and the slice from Ready on) and the status's lines. A spent-appetite flag was built too, and removed on the PO's
+decision of 2026-10-09 ([Q5 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6077488115)): the board's
+Appetite field is process data he reads, and nothing in spark reads it. What waits on the PO's yes
+([Q2–Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6071367154)): the three guards of decision 1. The token
+allowance is a rule with no tool: nothing counts the day's tokens yet (card C1 of the design).
 
 ## 10. Not in this spec
 
@@ -278,8 +279,8 @@ decisions (a) all three guards, (a), (a), (a), (a), (a); the decision numbers ar
 15. **Process decision 4, 2026-10-06: an expedite lane** — only on the PO's word, one at a time, labelled `expedite`; it
     may take a stage one over its limit, and the gate fails on two. *Built:* the gate.
 16. **Process decision 5, 2026-10-06: an appetite per epic** — given in working days when an epic enters Discovery; the
-    status flags it when it is spent. *Built: the flag's code;* the board's Appetite field it reads waits on the
-    PO's yes (Q5 on #80), so nothing is flagged yet.
+    PO reads the field; the flag was built and removed on his decision of 2026-10-09
+    ([Q5 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6077488115)). *A board field, the Appetite number, with no tool.*
 17. **Process decision 6, 2026-10-06: fewer yeses per card** — a story needs the PO's yes once, on its spec; its plan
     runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes.
     *A rule, with no tool.*

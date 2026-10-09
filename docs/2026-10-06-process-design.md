@@ -275,7 +275,8 @@ or moved rule leaves a dated one-line pointer.
   - the service-level "!";
   - a same-day close that amends;
   - "no weekly look in 7 days";
-  - each epic's progress (done of total) and its appetite (decision 5).
+  - each epic's progress (done of total) and its appetite (decision 5). *Noted 2026-10-09: the status will not show
+    the appetite — the note at decision 5.*
 - **C4.** Wider checks:
   - `tools/` in the orphan, self-confirmation and size checks;
   - the retired-words check;
@@ -331,6 +332,10 @@ or moved rule leaves a dated one-line pointer.
    - **(a) Recommended:** when an epic enters Discovery, you give it an appetite in working days. The status flags it
      when the appetite is spent, and you then ship what is Done, bet again, or drop it.
    - (b) No appetite. "Do epics finish?" stays a question for the trial.
+
+   *Noted 2026-10-09: the PO decided the flag is process data, not spark's
+   ([Q5 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6077488115)): the Appetite field exists on the board,
+   and the status does not read it.*
 6. **Your yeses per card.**
    - **(a) Recommended:** a story needs your yes once, on its spec. Its plan runs with no second yes, unless the plan
      widens the scope or goes past the allowance. Chores and bugs need no plan yes. A plan council runs only for a plan
