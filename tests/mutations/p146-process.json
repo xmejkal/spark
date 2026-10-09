@@ -30,8 +30,11 @@
   {"file": "tools/check_backlog.py", "name": "P146: unread parents fail the push", "find": "    return 1 if said else 0\n", "replace": "    return 1 if said or why else 0\n"},
   {"file": "tools/check_backlog.py", "name": "P146: unread parents hide a broken limit", "find": "    return 1 if said else 0\n", "replace": "    return 1 if said and not why else 0\n"},
   {"file": "tools/board.py", "name": "P146: the status query forgets the parent", "find": "labels(first:10){nodes{name}} parent{number}}}", "replace": "labels(first:10){nodes{name}}}}"},
-  {"file": "tools/check_backlog.py", "name": "P146: an Idea card must have a slice again", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = (\"Idea\", \"Ready\") + IN_FLIGHT"},
-  {"file": "tools/check_backlog.py", "name": "P146: Ready is not judged", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = IN_FLIGHT"},
-  {"file": "tools/check_backlog.py", "name": "P146: the working stages are not judged", "find": "JUDGED = (\"Ready\",) + IN_FLIGHT", "replace": "JUDGED = (\"Ready\",)"},
-  {"file": "tools/check_backlog.py", "name": "P146: an epic that holds no place in a limit is not judged", "find": "        if status in JUDGED:\n", "replace": "        if status in JUDGED and counts(entry):\n"}
+  {"file": "tools/check_backlog.py", "name": "P146: an Idea card must have a slice again", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Idea\", \"Ready\", \"Build\", \"Review\")"},
+  {"file": "tools/check_backlog.py", "name": "P146: Ready is not judged", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Build\", \"Review\")"},
+  {"file": "tools/check_backlog.py", "name": "P146: Build and Review are not judged", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Ready\",)"},
+  {"file": "tools/check_backlog.py", "name": "P146: Discovery is judged again", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Discovery\", \"Ready\", \"Build\", \"Review\")"},
+  {"file": "tools/check_backlog.py", "name": "P146: Design is judged again", "find": "JUDGED = (\"Ready\", \"Build\", \"Review\")", "replace": "JUDGED = (\"Design\", \"Ready\", \"Build\", \"Review\")"},
+  {"file": "tools/check_backlog.py", "name": "P146: an epic that holds no place in a limit is not judged", "find": "        if status in JUDGED:\n", "replace": "        if status in JUDGED and counts(entry):\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: a card with no Status or an unknown stage is judged", "find": "        if status in JUDGED:\n", "replace": "        if status not in (\"Idea\", \"Discovery\", \"Design\"):\n"}
 ]

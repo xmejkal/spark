@@ -8,10 +8,11 @@ and a task with no parent story is a card of its own. Each limit is pinned from 
 passes, and one card over it is named. The numbers are written out here, never read from the module (W2,
 test_self_confirmation).
 
-P146 (docs/2026-10-06-process-design.md §1): a card is asked for its Needed by and its slice from Ready on, and in each
-working stage; in Idea it is the PO's words, nothing more. Pinned from both sides, with the stages written out: an Idea
-card with neither passes, and a card in Ready, Discovery, Design, Build or Review without one is named — an epic that
-holds no place in a limit (counts()) among them.
+P146 (docs/2026-10-06-process-design.md, the skeptic pass's item 6): a card is asked for its Needed by and its slice
+from Ready on — the commitment — not in Idea, Discovery or Design, which decide whether to build. Pinned from both
+sides, with the stages written out: a card in Idea, Discovery or Design with neither passes, and a card in Ready, Build
+or Review without one is named — an epic that holds no place in a limit (counts()) among them. A card with no Status,
+or a stage the gate does not know, is treated like Idea.
 """
 
 import json
@@ -59,19 +60,31 @@ class TheBacklogCheckTest(unittest.TestCase):
     def test_an_idea_card_needs_no_slice_and_no_needed_by_yet(self):
         self.assertEqual(check_backlog.problems([item(3, "Idea", slice_="", needed="")]), [])
 
+    def test_a_card_in_discovery_or_design_needs_no_slice_and_no_needed_by_yet(self):
+        # Idea, Discovery and Design decide whether to build; the PO's order into Ready is what commits (the spec).
+        for stage in ("Discovery", "Design"):
+            with self.subTest(stage=stage):
+                self.assertEqual(check_backlog.problems([item(3, stage, slice_="", needed="")]), [])
+
+    def test_a_card_with_no_status_or_an_unknown_stage_is_not_judged_like_an_idea_card(self):
+        # Only a stage from the commitment on is asked; a card the board places nowhere the gate knows is not named.
+        for status in (None, "Parked"):
+            with self.subTest(status=status):
+                self.assertEqual(check_backlog.problems([item(3, status, slice_="", needed="")]), [])
+
     def test_a_ready_card_with_no_slice_is_named(self):
         self.assertEqual(check_backlog.problems([item(3, "Ready", slice_="")]), ["#3 P3 — x: on no slice of the story map"])
 
-    def test_a_card_in_every_working_stage_is_judged(self):
-        for stage in ("Discovery", "Design", "Build", "Review"):
+    def test_a_card_in_build_or_review_is_judged(self):
+        for stage in ("Build", "Review"):
             with self.subTest(stage=stage):
                 self.assertEqual(check_backlog.problems([item(3, stage, needed="")]),
                                  ["#3 P3 — x: no `Needed by` — W14: an item names the design that needs it"])
 
     def test_an_epic_that_holds_no_place_in_a_limit_is_still_asked_for_a_needed_by_and_a_slice(self):
-        # counts() says what a limit holds, not whom the two sentences are asked of: an epic in Ready or in Build
+        # counts() says what a limit holds, not whom the two sentences are asked of: an epic in Ready, Build or Review
         # holds no place, and is asked for both like every card from Ready on.
-        for stage in ("Ready", "Build"):
+        for stage in ("Ready", "Build", "Review"):
             with self.subTest(stage=stage):
                 self.assertEqual(check_backlog.problems([item(6, stage, labels=("epic",), slice_="", needed="")]),
                                  ["#6 P6 — x: no `Needed by` — W14: an item names the design that needs it",
