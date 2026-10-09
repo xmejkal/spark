@@ -319,5 +319,97 @@ class TheInputIsCheckedWhereItIsReadTest(unittest.TestCase):
         with self.assertRaises(design.DesignError):
             design.read(path)
 
+
+class CapitalsDoNotMakeTwoNamesTest(unittest.TestCase):
+    """
+    P163 (#100): `OpenLid` and `Openlid` passed the generator's exact compare, `signal_name` put both in capitals as
+    OPENLID_BUTTON, and two GPIOs were traced to one pad, exit 0. The build's view of a name is ONE function, and the
+    requirements file is refused where it is read — before any stage runs.
+    """
+
+    def entries(self, *names):
+        path = Path(tempfile.mkdtemp()) / "r.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3",
+                                    "parts": [{"part": "tactile-button", "name": name} for name in names]}))
+        return path
+
+    def test_one_name_is_the_builds_view_of_a_name(self):
+        # `signal_name` prefixes an instance's signals with its name in capitals, so that is what tells names apart.
+        self.assertEqual(design.one_name("OpenLid"), design.one_name("Openlid"))
+        self.assertEqual(design.one_name("OpenLid"), design.signal_name({"_instance": "OpenLid"}, {"signal": "X"})[:-2])
+        self.assertNotEqual(design.one_name("Btn_Open"), design.one_name("BtnOpen"))
+
+    def test_needs_tells_names_apart_the_same_way(self):
+        # W16: `needs._one_name` was a second copy of the rule for the picks it writes; now it is a pointer.
+        import needs
+        self.assertIs(needs._one_name, design.one_name)
+
+    def test_two_entries_whose_names_differ_only_in_capitals_are_refused_where_the_file_is_read(self):
+        path = self.entries("OpenLid", "Openlid")
+        with self.assertRaises(design.DesignError) as caught:
+            design.read(path)
+        self.assertEqual(str(caught.exception), "%s: parts[0] is called OpenLid and parts[1] Openlid — the build refuses two "
+                                                 "components of one name, and capitals do not make two names; give one of them a "
+                                                 'name of its own, {"part": "tactile-button", "name": …}' % path)
+
+    def test_a_name_given_by_hand_beside_one_a_need_wrote_in_other_capitals_is_refused_too(self):
+        # MODE by hand, Mode written by `needs --requirements` after its need: one name, the same refusal.
+        with self.assertRaises(design.DesignError) as caught:
+            design.read(self.entries("MODE", "Mode"))
+        self.assertIn("parts[0] is called MODE and parts[1] Mode", str(caught.exception))
+
+    def test_one_name_written_twice_is_refused_by_the_same_rule_without_the_capitals_rider(self):
+        # The rule is the same; the sentence about capitals is for two spellings, and BtnLeft twice has one.
+        with self.assertRaises(design.DesignError) as caught:
+            design.read(self.entries("BtnLeft", "BtnLeft"))
+        self.assertIn("parts[0] is called BtnLeft and parts[1] BtnLeft — the build refuses two components of one name; "
+                      "give one of them", str(caught.exception))
+        self.assertNotIn("capitals", str(caught.exception))
+
+    def test_names_that_differ_by_more_than_capitals_pass(self):
+        self.assertEqual([entry["name"] for entry in design.read(self.entries("BtnOpen", "BtnMode", "Btn_Open"))["parts"]],
+                         ["BtnOpen", "BtnMode", "Btn_Open"])
+
+    def test_a_signal_written_by_hand_under_an_instances_signal_name_is_refused_where_the_signals_are_derived(self):
+        # The route the names compare does not see: `signals` holds OPENLID_BUTTON beside an instance called OpenLid. One
+        # signal to the assigner and the generator — placed twice, both pins traced to one pad, "the chain runs end to end".
+        root, path = project(requirements={"board": "firebeetle2-esp32s3",
+                                           "parts": [{"part": "tactile-button", "name": "OpenLid"}],
+                                           "signals": [{"name": "OPENLID_BUTTON", "needs": []}]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertEqual(str(caught.exception), "OpenLid's BUTTON and signals[0] are both OPENLID_BUTTON — one signal, which "
+                                                 "the pin assigner would place twice and the generator trace to one pad from two "
+                                                 "pins; give one of them a name of its own")
+
+    def test_two_unnamed_parts_asking_for_one_signal_are_refused_by_the_same_compare(self):
+        # Not the component-name rule (that is `read`'s and the generator's): two parts, named or not, whose signals land on
+        # one name. Here the same part twice, unnamed, so both ask for BUTTON.
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "tactile-button"]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertIn("tactile-button's BUTTON and tactile-button's BUTTON are both BUTTON", str(caught.exception))
+
+    def test_two_hand_written_signals_of_one_name_are_refused_naming_both_entries(self):
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": [],
+                                           "signals": [{"name": "LED", "needs": []}, {"name": "LED", "needs": []}]})
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(path)
+        self.assertIn("signals[0] and signals[1] are both LED", str(caught.exception))
+
+    def test_a_hand_written_signal_of_its_own_name_passes_beside_an_instance(self):
+        root, path = project(requirements={"board": "firebeetle2-esp32s3",
+                                           "parts": [{"part": "tactile-button", "name": "OpenLid"}],
+                                           "signals": [{"name": "LED_STATUS", "needs": []}]})
+        self.assertEqual([signal["name"] for signal in design.load(path).signals], ["OPENLID_BUTTON", "LED_STATUS"])
+
+    def test_an_entry_with_no_name_or_no_shape_is_left_to_the_parts_reader(self):
+        # The compare is on the names the file gives; what is wrong with an entry's shape is `requested_parts`' sentence.
+        path = Path(tempfile.mkdtemp()) / "r.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3",
+                                    "parts": ["tactile-button", {"part": "tactile-button"}, {"name": 7}, 42]}))
+        self.assertEqual(len(design.read(path)["parts"]), 4)
+
+
 if __name__ == "__main__":
     unittest.main()

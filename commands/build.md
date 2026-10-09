@@ -28,7 +28,9 @@ write the board file by hand. Now it is one command.
 `board` is an id from `boards.py --list`. Each entry in `parts` is a record id from
 `parts.py --list` — the shipped library plus the project's own `parts/*.json`, which win by name —
 or `{part, name}` when the same part appears more than once: five buttons with no names are one
-component with five GPIOs shorted to it, and the generator refuses that. The inlet is there
+component with five GPIOs shorted to it, and the generator refuses that. Two names that differ only in
+capitals (`OpenLid`, `Openlid`) are one name — the build puts an instance's name in capitals before its
+signals — and the requirements stage refuses the file, naming both, before anything is emitted. The inlet is there
 because a module list is a list of *consumers*: the motor driver's rail needs a source, and
 without one the generator says so and the build stops on a net with one member — which is what
 the first version of this very example did. Which rail a part's power pin sits on is the design's to say, not the record's: `{"part":
@@ -138,7 +140,7 @@ The generator refuses rather than guess, and each refusal says what to record:
 | no footprint recorded for a part | a twelve-pad module on a four-pad guess has no positions past the fourth, and the board comes out with no copper at all |
 | no `pin_order` recorded | pads would be numbered from the order pins appear in a file, which is not a fact about the module |
 | no outline recorded | every placement would be arranged around an invented size; `--assume-missing-sizes` proceeds with the guess declared in the file. The one command always passes `--assume-missing-sizes`, so `/spark:build` goes ahead and declares the guess only in the header of `board.tsx` ([P115](https://github.com/xmejkal/spark/issues/49)) |
-| two components of one name | tscircuit keeps one and wires every other instance's pins to it |
+| two components of one name | a name written twice: tscircuit keeps one and wires every other instance's pins to it. Two spellings differing only in capitals (`OpenLid`, `Openlid`): spark's naming makes them one signal, placed twice and traced to one pad — so the requirements stage refuses the file, naming both, before anything is emitted. A `signals` entry written under an instance's signal name (`OPENLID_BUTTON` beside `OpenLid`) is one signal the same way, and the schematic stage refuses it, naming both |
 | a series resistor it cannot size — a part asks for a current (`for_current_ma`) and the board file states no `power.io_volts` | the resistor's value comes from the board's I/O voltage; the schematic stage refuses (`cannot emit a board: … — nothing to compute it from`, exit 2) rather than guess one. The library's XIAO file states none, so with the library LED it stops there |
 | a part that is not in the library | `parts.py --need <words>` says what exists; `/spark:research` writes the record from the vendor's own pages, vendor by vendor in the project's order — never a pinout from memory |
 

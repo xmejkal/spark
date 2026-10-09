@@ -397,6 +397,15 @@ class ManyOfOnePartTest(unittest.TestCase):
         self.assertEqual(emit_board.duplicate_component_names(
             [self.button("BtnLeft"), self.button("BtnLeft")]), ["BtnLeft"])
 
+    def test_two_names_that_differ_only_in_capitals_are_one_name_and_both_spellings_are_said(self):
+        # P163: `design.signal_name` puts the instance in capitals, so OpenLid and Openlid are one signal — two GPIOs were
+        # traced to one pad, exit 0. The refusal names what the person wrote, both ways.
+        self.assertEqual(emit_board.duplicate_component_names(
+            [self.button("OpenLid"), self.button("Openlid"), self.button("BtnMode")]), ["OpenLid / Openlid"])
+        self.assertEqual(emit_board.duplicate_component_names(
+            [self.button("OpenLid"), self.button("Openlid"), self.button("OPENLID"), self.button("OpenLid")]),
+            ["OpenLid / Openlid / OPENLID"], "each spelling once, in the order written")
+
     def test_each_instance_asks_for_its_own_signal(self):
         # Five buttons asking for `BUTTON` produced five signals of one name, which every lookup
         # keyed by name then collapsed to whichever came last.
