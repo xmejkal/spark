@@ -91,36 +91,39 @@ def _gh(*args):
 
 def parents(tasks):
     """
-    ({(repository, number): its parent issue's number or None}, None), or ({}, why) when GitHub could not be asked, or
-    gave no answer for a task. `tasks` are (repository "owner/name", issue number) pairs: a project may hold issues of
-    several repositories, and a number means nothing without its repository. One call for all of them — a selection
-    per repository (aliased r0, r1, … in the order they first appear), a field per issue (t<number>) inside it.
+    ({(repository, number): its parent issue's number or None}, None), or ({}, why) when it could not be asked: gh failed
+    or printed no JSON, the answer has nothing for a task, or a task has no usable repository or number to be asked by.
+    `tasks` are (repository "owner/name", issue number) pairs: a project may hold issues of several repositories, and a
+    number means nothing without its repository. One call for all of them — a selection per repository (aliased r0, r1,
+    … in the order they first appear), a field per issue (t<number>) inside it.
     """
     if not tasks:
         return {}, None
     asked = {}
     for repository, number in tasks:
         asked.setdefault(repository, []).append(number)
+    groups = [("r%d" % index, repository, numbers) for index, (repository, numbers) in enumerate(asked.items())]
     try:
         selections = []
-        for index, (repository, numbers) in enumerate(asked.items()):
+        for alias, repository, numbers in groups:
             owner, name = repository.split("/", 1)
             fields = " ".join("t%d: issue(number: %d) { parent { number } }" % (n, n) for n in numbers)
-            selections.append("r%d: repository(owner: %s, name: %s) { %s }" % (index, json.dumps(owner), json.dumps(name), fields))
+            selections.append("%s: repository(owner: %s, name: %s) { %s }" % (alias, json.dumps(owner), json.dumps(name), fields))
         found = _gh("api", "graphql", "-f", "query=query { %s }" % " ".join(selections))["data"]
-        return {(repository, number): (found["r%d" % index]["t%d" % number]["parent"] or {}).get("number")
-                for index, (repository, numbers) in enumerate(asked.items()) for number in numbers}, None
-    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as unreachable:
+        return {(repository, number): (found[alias]["t%d" % number]["parent"] or {}).get("number")
+                for alias, repository, numbers in groups for number in numbers}, None
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError) as unreachable:
         return {}, type(unreachable).__name__
 
 
 def fetch():
     """
     (the spark project's items, None), or (None, why) when gh or the network could not be reached. A project that gh
-    can list but cannot find is a LookupError: the check must never quietly stop looking. Each item carries "parent",
-    the number of the story it is a sub-issue of — asked for the open tasks alone, the one kind of card a parent changes
-    the counting of. When only that question fails the items still come back, as (items, why), with every open task's
-    parent PARENT_UNREAD: a why that comes with items is the parents', one that comes without is the whole look's.
+    can list but cannot find is a LookupError: the check must never quietly stop looking. An open task carries "parent",
+    the number of the story it is a sub-issue of (None when it has none). The gate asks for no other item's parent — a
+    parent changes how a task counts and nothing else — so theirs is None here, unlike board.to_items(), which gives
+    every issue its parent. When only that question fails the items still come back, as (items, why), with every open
+    task's parent PARENT_UNREAD: a why that comes with items is the parents', one that comes without is the whole look's.
     """
     try:
         projects = _gh("project", "list", "--owner", OWNER, "--format", "json")["projects"]
@@ -133,7 +136,7 @@ def fetch():
         items = _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", "500")["items"]
     except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
         return None, type(unreachable).__name__
-    open_tasks = [(e["content"]["repository"], e["content"]["number"]) for e in items
+    open_tasks = [(e["content"].get("repository"), e["content"].get("number")) for e in items
                   if "task" in (e.get("labels") or []) and e.get("status") != "Done"]
     found, why = parents(open_tasks)
     if why:

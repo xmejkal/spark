@@ -62,11 +62,12 @@ class TheCoreTest(unittest.TestCase):
         self.assertEqual(board.in_flight(SPARK, TODAY), ["Build P102c (#26) 2 d"])
 
     def test_in_flight_shows_an_epic_in_discovery_or_design_but_not_in_build_and_never_a_task_under_its_story(self):
-        # P146: the status counts as the check does (check_backlog.counts), so it cannot hide what the gate counts.
+        # P146: the status counts as the check does (check_backlog.counts), so it cannot hide what the gate counts. The
+        # story sits under its epic (parent 24) and still counts: a parent changes how a task counts, and nothing else.
         crowded = board.to_items(project(node(70, "P136 — Full circuit checks", "Discovery", labels=("epic",)),
                                          node(71, "P100 — The flows", "Design", labels=("epic",)),
                                          node(24, "P102 — The tools chore", "Build", labels=("epic",)),
-                                         node(29, "P102e — A discovery skill", "Build"),
+                                         node(29, "P102e — A discovery skill", "Build", parent=24),
                                          node(31, "P102e step one", "Build", labels=("task",), parent=29)))
         self.assertEqual(board.in_flight(crowded, TODAY),
                          ["Discovery P136 (#70) 2 d", "Design P100 (#71) 2 d", "Build P102e (#29) 2 d"])

@@ -147,6 +147,16 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertFalse(check_backlog.counts(item(9, "Build", labels=("task",), parent=1)))
         self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",), parent=1)]), [])
 
+    def test_a_parent_matters_for_tasks_only_a_story_under_its_epic_still_counts(self):
+        stories = [item(n, "Build", parent=24) for n in (1, 2, 3)]
+        self.assertEqual([check_backlog.counts(story) for story in stories], [True, True, True])
+        self.assertEqual(check_backlog.problems(stories),
+                         ["Build holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
+
+    def test_a_story_under_its_epic_is_still_judged_on_needed_by(self):
+        self.assertEqual(check_backlog.problems([item(4, parent=24, needed="")]),
+                         ["#4 P4 — x: no `Needed by` — W14: an item names the design that needs it"])
+
     def test_a_parentless_task_is_judged_on_needed_by_and_slice_like_a_card(self):
         said = check_backlog.problems([item(9, "Ready", labels=("task",), parent=None, slice_="", needed="")])
         self.assertEqual(said, ["#9 P9 — x: no `Needed by` — W14: an item names the design that needs it",
@@ -180,6 +190,12 @@ class TheBacklogCheckTest(unittest.TestCase):
             raise FileNotFoundError("gh")
         with mock.patch.object(check_backlog.subprocess, "run", run):
             self.assertEqual(check_backlog.parents([("xmejkal/spark", 9)]), ({}, "FileNotFoundError"))
+
+    def test_parents_that_gh_printed_as_non_json_says_why(self):
+        def run(args, **kwargs):
+            return mock.Mock(stdout="gh: HTTP 502 Bad Gateway")
+        with mock.patch.object(check_backlog.subprocess, "run", run):
+            self.assertEqual(check_backlog.parents([("xmejkal/spark", 9)]), ({}, "JSONDecodeError"))
 
     def test_parents_answered_with_errors_and_no_data_says_why(self):
         def run(args, **kwargs):
@@ -261,6 +277,22 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertIn("  backlog: 3 open, the limits hold", printed)
         self.assertIn("  backlog: tasks' parent stories could not be read (TimeoutExpired) — every task counted as riding on a story",
                       printed)
+
+    def test_a_task_item_missing_its_repository_or_number_is_unread_not_a_traceback(self):
+        # The gate must never stop a push by failing itself: data it cannot use is a could-not-look, said with its cause.
+        cases = (("no repository", lambda content: content.pop("repository"), "AttributeError"),
+                 ("a None repository", lambda content: content.update(repository=None), "AttributeError"),
+                 ("a repository with no owner", lambda content: content.update(repository="spark"), "ValueError"),
+                 ("no number", lambda content: content.pop("number"), "TypeError"))
+        for name, damage, cause in cases:
+            with self.subTest(name):
+                task = item(9, "Build", labels=("task",))
+                damage(task["content"])
+                run, _ = self.board_answering([item(1, "Build"), item(2, "Build"), task], {"data": {}})
+                code, printed = self.said(run)
+                self.assertEqual(code, 0)
+                self.assertIn("  backlog: 3 open, the limits hold", printed)
+                self.assertIn("tasks' parent stories could not be read (%s) — every task counted as riding on a story" % cause, printed)
 
     def test_unread_parents_do_not_hide_a_broken_limit(self):
         items = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(9, "Build", labels=("task",))]
