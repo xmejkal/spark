@@ -132,6 +132,7 @@ class RulesVsNetlist(Check):
 class Physics(Check):
     def call(self, inputs):
         import check_physics
+        from check_physics import PROBLEM, NEEDS_MEASUREMENT, COULD_NOT_RUN
         circuit = circuit_of(inputs)
         loads, notes = rail_loads_in(inputs.get("project"), circuit)
         findings = check_physics.run(circuit, json.loads(Path(inputs["rules"]).read_text()), loads)
@@ -143,9 +144,9 @@ class Physics(Check):
         # `could-not-run` findings were dropped on the floor here — an unknown I2C bus speed made
         # the rise-time rule unanswerable and the check still printed a tick with no note at all.
         # A rail the records could not be summed for is unchecked, and says why (P52).
-        return answer(problems=of("problem"),
-                      unchecked=of("could-not-run") + ([] if loads is not None else notes),
-                      unmeasured=of("needs-measurement"))
+        return answer(problems=of(PROBLEM),
+                      unchecked=of(COULD_NOT_RUN) + ([] if loads is not None else notes),
+                      unmeasured=of(NEEDS_MEASUREMENT))
 
 
 def placeholder_components_in(project):
