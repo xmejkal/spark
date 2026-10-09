@@ -15,6 +15,12 @@ PO's, not Claude's (observed 2026-10-07 and 2026-10-08: the classifier refuses `
 Done, *Value proven by* and the retro. There are no sprints, no Scrum Master and no ceremonies. The Kanban Guide allows
 this: a team's working agreements are part of its definition of workflow.
 
+**Note 2026-10-09** (P146's council, the documentation lens): of the four, Scrum's are the Product Owner, the
+Definition of Done and the retrospective — one of its events, not a commitment — while *Value proven by* is this team's
+own, and the Kanban Guide sentence was written with no source. [`scrum/README.md`](../scrum/README.md) now says: "We
+run Kanban and keep from Scrum the Product Owner, the Definition of Done and the retrospective, and add *Value proven
+by*. There are no sprints, no Scrum Master and no ceremonies."
+
 ### Who does what
 
 | | **the PO (Petr)** | **Claude**, developer and orchestrator | **the agents** Claude launches |
@@ -73,6 +79,21 @@ this: a team's working agreements are part of its definition of workflow.
   and that the help for agents and for humans (`--help`, `--describe`, the command pages, the guides) is right and
   complete — gaps, missing parts, changed things, wrong information, unclear text, **hallucinations above all**. Its
   findings are fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08.
+
+  **Note 2026-10-09** (P146's council): the paragraph above paraphrases the PO; it drops "make sure its well tested
+  too" and hardens his "maybe". His words, as #80 records them (typos corrected) —
+  [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
+  [the addition](https://github.com/xmejkal/spark/issues/80#issuecomment-6058297081):
+
+  > make sure to always add a documentation expert into this council that I want you to run before any bigger PR, or
+  > even smaller and make sure its well tested too, as well as documented both technically correct but also well
+  > readable, teaser on the front page, maybe usage and code and agent calling examples and a link to a separate
+  > detailed page and that all the current documentation is also still up to date and fix gaps, missing parts, changed
+  > things, wrong information, unclear texts, hallucinations most of all. Then lets plan the fixes and implement them
+  > before merging
+
+  > the documentation expert also makes sure and updates if wrong or missing help for both agents and humans and that
+  > there are no hallucinations and is always up to date
 
 ### The token budget
 

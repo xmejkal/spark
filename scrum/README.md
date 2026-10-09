@@ -2,9 +2,8 @@
 
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
 
-We run a Kanban system that keeps Scrum's roles and commitments: the Product Owner, the Definition of Done, *Value
-proven by* and the retro. There are no sprints, no Scrum Master and no ceremonies. The Kanban Guide allows this: a
-team's working agreements are part of its definition of workflow.
+We run Kanban and keep from Scrum the Product Owner, the Definition of Done and the retrospective, and add *Value
+proven by*. There are no sprints, no Scrum Master and no ceremonies.
 
 Nothing lives only in an agent's head or in a conversation that scrolls away — if a rule, a goal or a decision is not
 written here, it is not in force. The design behind this page:
@@ -144,13 +143,21 @@ skipped twice, do epics start and finish? If not, one-day sprints replace it (th
     report is.
 - **Found work** goes into that comment as one checklist. At most 3 items become cards — those that block the card's
   proof or break W1 — filed in Idea with no slice; the rest are filed when a design pulls them (decision 3 (a)).
-- **Added 2026-10-08 (the PO, on P97's PR):** before ANY pull request, bigger or smaller, a council runs on the open
-  PR — the PO assistant, the user's journey and the tech lead, **plus a documentation expert**, then the refuter. The
-  documentation lens checks that the pages are technically correct and readable, that the front page has a teaser with
-  usage, code and agent-calling examples and a link to the detailed page, that every current page is still up to date,
-  and that the help for agents and for humans (`--help`, `--describe`, the command pages, the guides) is right and
-  complete — gaps, missing parts, changed things, wrong information, unclear text, **hallucinations above all**. Its
-  findings are fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08.
+- **The council before every pull request, bigger or smaller:** the PO assistant, the user's journey and the tech
+  lead, **plus a documentation expert**, then the refuter; its findings are fixed before the merge, not only reported.
+  First run: P158's council on PR #98, 2026-10-08. The PO's words of 2026-10-08, as #80 records them (typos
+  corrected) — [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
+  [the addition](https://github.com/xmejkal/spark/issues/80#issuecomment-6058297081):
+
+  > make sure to always add a documentation expert into this council that I want you to run before any bigger PR, or
+  > even smaller and make sure its well tested too, as well as documented both technically correct but also well
+  > readable, teaser on the front page, maybe usage and code and agent calling examples and a link to a separate
+  > detailed page and that all the current documentation is also still up to date and fix gaps, missing parts, changed
+  > things, wrong information, unclear texts, hallucinations most of all. Then lets plan the fixes and implement them
+  > before merging
+
+  > the documentation expert also makes sure and updates if wrong or missing help for both agents and humans and that
+  > there are no hallucinations and is always up to date
 
 ## The token budget
 
