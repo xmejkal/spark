@@ -70,13 +70,17 @@ def suite_is_green(root, tests, only=(), failfast=False):
     The empty cache goes with the run (P172): one run of the suite left 87 of them behind.
     """
     import os
+    import shutil
     import tempfile
     stop = ["-f"] if failfast else []
     command, where = (([sys.executable, "-B", "-m", "unittest"] + stop + list(only), Path(root) / tests) if only else
                       ([sys.executable, "-B", "-m", "unittest", "discover", "-s", tests] + stop, Path(root)))
-    with tempfile.TemporaryDirectory(prefix="mutate-pycache-", ignore_cleanup_errors=True) as cache:
+    cache = tempfile.mkdtemp(prefix="mutate-pycache-")
+    try:
         environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=cache)
         result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
+    finally:
+        shutil.rmtree(cache, ignore_errors=True)
     verdict = (result.stderr or "") + (result.stdout or "")
     return result.returncode == 0 and "\nOK" in verdict
 

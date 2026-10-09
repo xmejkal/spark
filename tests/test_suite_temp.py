@@ -26,17 +26,22 @@ import suite_temp  # noqa: E402  P172: this process's temp folder, removed at ex
 TESTS = Path(__file__).resolve().parent
 
 
+def is_sparks(name):
+    """Whether a top-level module name is spark's own: `scripts/`, `tools/` or `tests/` holds `<name>.py`."""
+    return any((TESTS.parent / folder / (name + ".py")).is_file() for folder in ("scripts", "tools", "tests"))
+
+
 def asks_first(source):
     """
-    Whether `import suite_temp` comes before anything but the docstring, standard-library imports and a
-    `sys.path.insert`: a spark module imported first, or a helper run first, would make its temp files elsewhere.
+    Whether `import suite_temp` comes before anything but the docstring, imports of modules that are not spark's and
+    a `sys.path.insert`: a spark module imported first, or a helper run first, would make its temp files elsewhere.
     """
     for node in ast.parse(source).body:
         if isinstance(node, ast.Import) and any(alias.name == "suite_temp" for alias in node.names):
             return True
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             names = [alias.name for alias in node.names] if isinstance(node, ast.Import) else [node.module or ""]
-            if all(name.split(".")[0] in sys.stdlib_module_names for name in names):
+            if not any(is_sparks(name.split(".")[0]) for name in names):
                 continue
         elif isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
             continue

@@ -130,10 +130,13 @@ def measure(tree):
     the empty temp folder it was given (P172), None when that could not be listed; the folder goes once counted.
     """
     lend_node_modules(tree)
-    with tempfile.TemporaryDirectory(prefix="spark-commit-temp-", ignore_cleanup_errors=True) as temp:
+    temp = tempfile.mkdtemp(prefix="spark-commit-temp-")
+    try:
         suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"],
                                cwd=str(tree), capture_output=True, text=True, env=dict(without_git_variables(), TMPDIR=temp))
         left = leftovers(temp)
+    finally:
+        shutil.rmtree(temp, ignore_errors=True)  # a plain rmtree: it never chmods and never follows a link
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines()
                   if line.startswith(("Ran ", "OK", "FAILED"))]
     tables = sorted((tree / "tests" / "mutations").glob("*.json"))
