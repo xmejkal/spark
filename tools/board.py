@@ -5,8 +5,9 @@ The state of the work at every session start, and the day-close (P102c; docs/202
     board.py status [--when-in DIR ...]          # both boards in a dozen lines; nothing outside the named folders
     board.py close [--date D] [--dry-run] LINE|- # the day-close, as a status update on the spark board
 
-It reads the boards through the PO's own gh login and stores nothing: one GraphQL query per board (GitHub allows 5,000
-GraphQL points an hour, shared with everything else), REST for pull requests. The working days come from local git, so
+It reads the boards through the PO's own gh login and stores nothing: one GraphQL query per 100 items of a board, page
+after page until the whole board is read (GitHub allows 5,000 GraphQL points an hour, shared with everything else),
+REST for pull requests. The working days come from local git, so
 being offline costs the status, never the session: every call gives up after STATUS_TIMEOUT seconds.
 """
 
@@ -127,9 +128,12 @@ def missing_close(work_days, close_days, today):
 
 
 def unread(name, project):
-    """A line when the board holds more cards than its one page read (GraphQL pages stop at 100), or None."""
+    """
+    Why the board was read only in part — its pages held fewer items than its totalCount says it holds — or None when
+    every item came. gather() raises it: a status over part of a board is could-not-run, never "the limits hold" (W1).
+    """
     held, read = project["items"]["totalCount"], len(project["items"]["nodes"])
-    return "the %s board holds %d items; status read the first %d" % (name, held, read) if held > read else None
+    return "the %s board holds %d items, %d were read" % (name, held, read) if held > read else None
 
 
 def work_days(dirs, since):
@@ -164,11 +168,11 @@ def _boards_join(boards, each, today):
     return [_on_board(name, said) for name, items in boards for said in each(items, today)]
 
 
-def status_lines(boards, prs, closes, worked, today, notes=()):
+def status_lines(boards, prs, closes, worked, today):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
-    worked {date}, notes [what could not be read]. The bin's cards count in the verdict as at the gate (the flight total,
-    the lane, an undated wait); with no bin among the boards that is said, and spark's cards are counted alone.
+    worked {date}. The bin's cards count in the verdict as at the gate (the flight total, the lane, an undated wait);
+    with no bin among the boards that is said, and spark's cards are counted alone.
     """
     spark = dict(boards)["spark"]
     verdict = check_backlog.problems(spark, bin_items=dict(boards).get("bin"))
@@ -176,7 +180,7 @@ def status_lines(boards, prs, closes, worked, today, notes=()):
     lines = ["spark — %d open, %s · trial check %s" % (sum(1 for i in spark if i.get("status") != "Done"),
                                                         "the limits hold" if not verdict else "%d problem(s)" % len(verdict),
                                                         TRIAL_CHECK)]
-    lines += ["  ! " + sentence for sentence in [*verdict, *notes, *unread_bin]]
+    lines += ["  ! " + sentence for sentence in [*verdict, *unread_bin]]
     lines.append("  in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"))
     lines.append("  waits on the PO: " + (", ".join(all_waiting(boards, today)) or "nothing"))
     lines.append("  Ready: " + (", ".join(ready(spark)) or "empty — the PO refills it"))
@@ -193,8 +197,11 @@ def status_lines(boards, prs, closes, worked, today, notes=()):
     return lines
 
 
-QUERY = """query($login:String!,$number:Int!){user(login:$login){projectV2(number:$number){id
- items(first:100){totalCount nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number closed}}}
+#: One page of a board: GitHub hands a project's items over 100 at a time, so read_board() asks page after page with
+#: `after` set to the last page's endCursor until hasNextPage is false (P168). The id and status updates come with every
+#: page; the first page's are kept.
+QUERY = """query($login:String!,$number:Int!,$after:String){user(login:$login){projectV2(number:$number){id
+ items(first:100,after:$after){totalCount pageInfo{hasNextPage endCursor} nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number closed}}}
   fieldValues(first:20){nodes{
    ... on ProjectV2ItemFieldSingleSelectValue{name updatedAt field{... on ProjectV2FieldCommon{name}}}
    ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}}}}}
@@ -235,19 +242,50 @@ def _gh(*args, timeout=CLOSE_TIMEOUT):
     return json.loads(done.stdout) if done.stdout.strip() else None
 
 
+#: The most pages read_board() turns: 50 of 100 is the gate's MOST_ITEMS, and a hasNextPage that never falls cannot
+#: hold a session start forever — the board is then read in part, and unread() says so.
+MOST_PAGES = 50
+
+
+def read_board(number, timeout):
+    """
+    The project numbered `number` under OWNER, whole: its first page's id and status updates, and every page's items
+    joined under "items" (P168). Each page is one QUERY, asked `after` the cursor the last one ended on; a board whose
+    pages held fewer items than its totalCount — MOST_PAGES turned, or a page GitHub cut — is RuntimeError, unread()'s line.
+    """
+    first = page = _page(number, None, timeout)
+    nodes = list(page["items"]["nodes"])
+    while page["items"]["pageInfo"]["hasNextPage"] and len(nodes) < MOST_PAGES * 100:
+        page = _page(number, page["items"]["pageInfo"]["endCursor"], timeout)
+        nodes += page["items"]["nodes"]
+    first["items"]["nodes"] = nodes
+    return first
+
+
+def _page(number, after, timeout):
+    """One page of the project numbered `number`: the first when `after` is None, else the one after that cursor."""
+    cursor = ["-f", "after=" + after] if after else []
+    return _gh("api", "graphql", "-f", "query=" + QUERY, "-F", "login=" + OWNER, "-F", "number=%d" % number, *cursor,
+               timeout=timeout)["data"]["user"]["projectV2"]
+
+
 def gather(timeout=CLOSE_TIMEOUT):
-    """Both boards, their open PRs, the spark board's closes and id, and what could not be read."""
-    boards, prs, closes, project_id, notes = [], [], [], None, []
+    """
+    Both boards, their open PRs, the spark board's closes and id. A board read only in part (unread()) is RuntimeError:
+    the status and the close say could-not-run over it, and judge nothing (W1).
+    """
+    boards, prs, closes, project_id = [], [], [], None
     for name, number, repo in BOARDS:
-        project = _gh("api", "graphql", "-f", "query=" + QUERY, "-F", "login=" + OWNER, "-F", "number=%d" % number,
-                      timeout=timeout)["data"]["user"]["projectV2"]
+        project = read_board(number, timeout)
+        short = unread(name, project)
+        if short:
+            raise RuntimeError(short)
         boards.append((name, to_items(project)))
-        notes += [note for note in [unread(name, project)] if note]
         if name == "spark":
             project_id, closes = project["id"], closes_from(project)
         prs += [(name, pr["number"], pr["title"], pr["draft"])
                 for pr in _gh("api", "repos/%s/%s/pulls?state=open" % (OWNER, repo), timeout=timeout)]
-    return boards, prs, closes, project_id, notes
+    return boards, prs, closes, project_id
 
 
 #: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what
@@ -282,14 +320,14 @@ def main(argv=None):
     today = dt.date.today()
     if args.verb == "status":
         try:
-            boards, prs, closes, _, notes = gather(STATUS_TIMEOUT)
+            boards, prs, closes, _ = gather(STATUS_TIMEOUT)
             since = max((day for day, _ in closes), default=today - dt.timedelta(days=14))
-            print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today, notes)))
+            print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today)))
         except Exception as broken:  # a session start must never fail (the spec, §2); W1: a look not made is could-not-run
             print("board: could-not-run — %s" % (broken or type(broken).__name__))
         return 0
     try:
-        boards, prs, closes, project_id, _ = gather()
+        boards, prs, closes, project_id = gather()
     except (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, TypeError) as unreachable:
         print("board: could-not-run — %s" % unreachable)
         return 1
