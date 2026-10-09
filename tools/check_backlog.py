@@ -179,7 +179,7 @@ def _gh(*args):
 def _cause(error):
     """
     Why gh could not be asked, as a could-not-run line says it: the first line gh wrote on stderr that says anything
-    ("gh: To get started with GitHub CLI, please run: gh auth login"), else the exception's name — a missing gh, a timeout
+    ("To get started with GitHub CLI, please run:  gh auth login" — gh's own line, as it prints it), else the exception's name — a missing gh, a timeout
     with nothing said, an answer that was no JSON. board.py's _gh says gh's first line the same way (P146 council, C2).
     """
     said = getattr(error, "stderr", None) or ""

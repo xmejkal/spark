@@ -82,7 +82,7 @@ spark — 28 open, the limits hold · trial check 2026-11-02
 - One `SessionStart` hook in `~/.claude/settings.json`:
 
   ```
-  python3 ~/Development/spark/tools/board.py status --when-in ~/Development/spark ~/Development/smartbin-local
+  python3 ~/Development/spark/tools/board.py status --when-in ~/Development/spark <the bin's folder>
   ```
 
   The folder list is the PO's to extend; irrigation can join when its demo moves (P102f).
@@ -110,7 +110,7 @@ spark — 28 open, the limits hold · trial check 2026-11-02
 - **Mutation table:** the missing-close rule and the close's refusal, the two verdicts this tool gives. The status
   text is a report (P72's cut: mutation tables only for verdict code).
 - **Proof:**
-  - one live `status` in smartbin-local;
+  - one live `status` in the bin's folder;
   - one `close --dry-run`;
   - then, with the PO's yes, one real close of today, seen on the spark board.
 

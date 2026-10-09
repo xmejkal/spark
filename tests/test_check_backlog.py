@@ -704,15 +704,16 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("backlog: could-not-run", printed)
 
-    #: What gh prints when nobody is logged in, after a blank line: the cause is its first line that says anything.
-    NOT_LOGGED_IN = "\ngh: To get started with GitHub CLI, please run: gh auth login\nAlternatively, populate the GH_TOKEN env\n"
+    #: gh's own line when nobody is logged in (seen 2026-10-09), behind a blank line this test adds on purpose: the cause
+    #: is the first line that says anything.
+    NOT_LOGGED_IN = "\nTo get started with GitHub CLI, please run:  gh auth login\nAlternatively, populate the GH_TOKEN env\n"
 
     def refused(self, stderr):
         return subprocess.CalledProcessError(4, ["gh"], output="", stderr=stderr)
 
     def test_a_look_gh_refused_says_gh_s_own_first_line(self):
         unread = ("  backlog: could-not-run — gh or the network could not be reached "
-                  "(gh: To get started with GitHub CLI, please run: gh auth login); the limits were not checked\n")
+                  "(To get started with GitHub CLI, please run:  gh auth login); the limits were not checked\n")
 
         def refuse_everything(*args, **kwargs):
             raise self.refused(self.NOT_LOGGED_IN)
