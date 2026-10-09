@@ -132,7 +132,7 @@ class RulesVsNetlist(Check):
 class Physics(Check):
     def call(self, inputs):
         import check_physics
-        from check_physics import PROBLEM, NEEDS_MEASUREMENT, COULD_NOT_RUN
+        from check_physics import PROBLEM, NEEDS_MEASUREMENT
         circuit = circuit_of(inputs)
         loads, notes = rail_loads_in(inputs.get("project"), circuit)
         findings = check_physics.run(circuit, json.loads(Path(inputs["rules"]).read_text()), loads)
@@ -217,6 +217,7 @@ def rail_loads_in(project, circuit):
 class Buildability(Check):
     def call(self, inputs):
         import check_footprints
+        from check_footprints import PROBLEM, ADVISORY
         placeholders, notes = placeholder_components_in(inputs.get("project"))
         # The project's own process, so a board house that can do less than this plugin's
         # default judges by ITS numbers rather than by these (P46).
@@ -226,7 +227,6 @@ class Buildability(Check):
         stated = inputs.get("rules")
         rules = json.loads(Path(stated).read_text()) if stated else None
         findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)
-        from check_footprints import PROBLEM, ADVISORY
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)

@@ -90,8 +90,8 @@ class Finding:
 
     def __init__(self, rule, subject, detail, severity=PROBLEM, fix=None):
         if severity not in SEVERITIES:
-            detail = ("rule %s wrote severity %r, not one of %s — the rule is unchecked until it "
-                      "is fixed (it said: %s)" % (rule, severity, " / ".join(SEVERITIES), detail))
+            detail = ("rule %s wrote severity %r, not one of %s — a bug in spark, so the rule is "
+                      "unchecked (it said: %s)" % (rule, severity, " / ".join(SEVERITIES), detail))
             severity = COULD_NOT_RUN
         self.rule, self.subject, self.detail = rule, subject, detail
         self.severity, self.fix = severity, fix

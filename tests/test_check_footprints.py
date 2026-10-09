@@ -557,7 +557,7 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
         self.assertEqual(result["status"], "could-not-run", result)
         self.assertIn("drill-fit", json.dumps(result["unchecked"]))
 
-    def test_every_severity_written_at_a_call_site_is_one_of_the_four(self):
+    def test_every_severity_written_at_a_call_site_is_one_of_the_three(self):
         import re
         source = (ROOT / "scripts" / "check_footprints.py").read_text()
         written = [m.group(2) for m in re.finditer(r"""severity=(["'])(.*?)\1""", source)]
