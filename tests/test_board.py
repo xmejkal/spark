@@ -124,7 +124,15 @@ class TheCoreTest(unittest.TestCase):
         items = board.to_items(project(node(1, "A — x", "Idea", waiting="Anna", since="2026-10-07"),
                                        node(2, "B — y", "Done", waiting="the PO", since="2026-10-01"),
                                        node(3, "C — z", "Idea")))
-        self.assertEqual(board.waiting(items, dt.date(2026, 10, 9)), ["A (#1) since 2026-10-07, 2 d"])
+        self.assertEqual(board.all_waiting([("spark", items)], dt.date(2026, 10, 9)), ["A (#1) on Anna since 2026-10-07, 2 d"])
+
+    def test_a_wait_on_someone_other_than_the_po_says_who_dated_or_not(self):
+        # The line is headed "waits on the PO:" and lists every open wait; a wait on Anna must not read as the PO's.
+        items = board.to_items(project(node(1, "A — x", "Idea", waiting="Anna", since="2026-10-01"),
+                                       node(2, "B — y", "Idea", waiting="the PO", since="2026-10-01"),
+                                       node(16, "R2.7 — A wait nobody dated", "Idea", waiting="Anna")))
+        self.assertEqual(board.all_waiting([("spark", items)], dt.date(2026, 10, 9)),
+                         ["A (#1) on Anna since 2026-10-01, 8 d !", "B (#2) since 2026-10-01, 8 d !", "R2.7 (#16) on Anna"])
 
     def test_ready_down_to_two_is_said_and_three_is_not(self):
         two = board.to_items(project(node(1, "A — x", "Ready"), node(2, "B — y", "Ready")))

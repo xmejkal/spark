@@ -89,17 +89,21 @@ def in_flight(items, today):
 
 
 def _waits(items, today):
-    """(Waiting since, sentence) for each open card waiting on someone; more than WAIT_TOO_LONG days is marked."""
+    """
+    (Waiting since, sentence) for each open card waiting on someone; more than WAIT_TOO_LONG days is marked. The status
+    heads the list "waits on the PO", so a wait on anyone else says who: `A (#1) on Anna since …`.
+    """
     said = []
     for i in items:
         if not i.get("waiting on") or i.get("status") == "Done":
             continue
+        on = "" if i["waiting on"] == "the PO" else " on %s" % i["waiting on"]
         since = i.get("waiting since")
         if since:
             days = age(since, today)
-            said.append((since, "%s since %s, %d d%s" % (_short(i), since, days, " !" if days > WAIT_TOO_LONG else "")))
+            said.append((since, "%s%s since %s, %d d%s" % (_short(i), on, since, days, " !" if days > WAIT_TOO_LONG else "")))
         else:
-            said.append((UNDATED, _short(i)))
+            said.append((UNDATED, _short(i) + on))
     return said
 
 

@@ -98,7 +98,7 @@
   {"file": "tools/check_backlog.py", "name": "P146: offline reads as checked", "find": "could-not-run — gh or the network could not be reached", "replace": "the limits hold — gh or the network could not be reached"},
   {"file": "tools/board.py", "name": "P146: waits lose their order", "find": "    return [text for _, text in sorted(_waits(items, today))]\n", "replace": "    return [text for _, text in _waits(items, today)]\n"},
   {"file": "tools/board.py", "name": "P146: an undated wait sorts first", "find": "UNDATED = \"9999-12-31\"", "replace": "UNDATED = \"0000-01-01\""},
-  {"file": "tools/board.py", "name": "P146: an undated wait is dropped from the list", "find": "            said.append((UNDATED, _short(i)))\n", "replace": "            pass\n"},
+  {"file": "tools/board.py", "name": "P146: an undated wait is dropped from the list", "find": "            said.append((UNDATED, _short(i) + on))\n", "replace": "            pass\n"},
   {"file": "tools/board.py", "name": "P146: a wait on anyone but the PO is not listed", "find": "        if not i.get(\"waiting on\") or i.get(\"status\") == \"Done\":\n", "replace": "        if i.get(\"waiting on\") != \"the PO\" or i.get(\"status\") == \"Done\":\n"},
   {"file": "tools/board.py", "name": "P146: a finished card's wait is listed", "find": "        if not i.get(\"waiting on\") or i.get(\"status\") == \"Done\":\n", "replace": "        if not i.get(\"waiting on\"):\n"},
   {"file": "tools/board.py", "name": "P146: Ready low at three", "find": "READY_LOW = 2", "replace": "READY_LOW = 3"},
@@ -136,5 +136,8 @@
   {"file": "tools/check_backlog.py", "name": "P146: a task under a closed story rides on it still", "find": "    if not parent or parent.get(\"closed\"):\n        return None\n", "replace": "    if not parent:\n        return None\n"},
   {"file": "tools/board.py", "name": "P146: the status reads a closed story as its task's parent", "find": "check_backlog.open_parent(content.get(\"parent\"))", "replace": "(content.get(\"parent\") or {}).get(\"number\")"},
   {"file": "tools/check_backlog.py", "name": "P146: the gate does not ask whether a parent is closed", "find": "{ parent { number closed } }\" % (n, n) for n in numbers)", "replace": "{ parent { number } }\" % (n, n) for n in numbers)"},
-  {"file": "tools/board.py", "name": "P146: the status query does not ask whether a parent is closed", "find": "labels(first:10){nodes{name}} parent{number closed}}}", "replace": "labels(first:10){nodes{name}} parent{number}}}"}
+  {"file": "tools/board.py", "name": "P146: the status query does not ask whether a parent is closed", "find": "labels(first:10){nodes{name}} parent{number closed}}}", "replace": "labels(first:10){nodes{name}} parent{number}}}"},
+  {"file": "tools/board.py", "name": "P146: a dated wait on someone else does not say who", "find": "\"%s%s since %s, %d d%s\" % (_short(i), on, since, days,", "replace": "\"%s%s since %s, %d d%s\" % (_short(i), \"\", since, days,"},
+  {"file": "tools/board.py", "name": "P146: an undated wait on someone else does not say who", "find": "said.append((UNDATED, _short(i) + on))", "replace": "said.append((UNDATED, _short(i)))"},
+  {"file": "tools/board.py", "name": "P146: a wait on the PO says it is on the PO", "find": "on = \"\" if i[\"waiting on\"] == \"the PO\" else \" on %s\" % i[\"waiting on\"]", "replace": "on = \" on %s\" % i[\"waiting on\"]"}
 ]
