@@ -1,0 +1,23 @@
+[
+  {"file": "tools/check_backlog.py", "name": "P146: a parentless task rides again", "find": "        return entry.get(\"parent\") is None\n", "replace": "        return False\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: unread parents pass in silence", "find": "        said.insert(0, \"tasks' parent stories could not be read — every task counted as riding on a story\")\n", "replace": "        pass\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: parents are asked one by one", "find": "    fields = \" \".join(\"t%d: issue(number: %d) { parent { number } }\" % (n, n) for n in numbers)\n", "replace": "    fields = \"t%d: issue(number: %d) { parent { number } }\" % (numbers[0], numbers[0])\n"},
+  {"file": "tools/board.py", "name": "P146: the status forgets a task's parent", "find": "\"parent\": (content.get(\"parent\") or {}).get(\"number\")", "replace": "\"parent\": None"},
+  {"file": "tools/check_backlog.py", "name": "P146: a task under its story counts against the limits", "find": "        return entry.get(\"parent\") is None\n", "replace": "        return True\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: an epic in Discovery or Design rides free", "find": "    return \"epic\" not in labels or entry.get(\"status\") in UPSTREAM\n", "replace": "    return \"epic\" not in labels\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: an epic counts in every stage", "find": "    return \"epic\" not in labels or entry.get(\"status\") in UPSTREAM\n", "replace": "    return True\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: a Done item is judged again", "find": "        if status == \"Done\" or rides:\n", "replace": "        if rides:\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: a riding task is judged on its own", "find": "        if status == \"Done\" or rides:\n", "replace": "        if status == \"Done\":\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: a parentless task rides in the gate", "find": "(entry.get(\"parent\") is not None or not parents_read)", "replace": "True"},
+  {"file": "tools/check_backlog.py", "name": "P146: unread parents count the tasks as cards", "find": "(entry.get(\"parent\") is not None or not parents_read)", "replace": "entry.get(\"parent\") is not None"},
+  {"file": "tools/check_backlog.py", "name": "P146: unread parents are said with no task to be wrong about", "find": "if not parents_read and any(\"task\" in (e.get(\"labels\") or []) for e in items if e.get(\"status\") != \"Done\"):", "replace": "if not parents_read:"},
+  {"file": "tools/check_backlog.py", "name": "P146: a Done task's unread parent is said", "find": "for e in items if e.get(\"status\") != \"Done\"):", "replace": "for e in items):"},
+  {"file": "tools/check_backlog.py", "name": "P146: parents asks GitHub about no tasks", "find": "    if not numbers:\n        return {}, None\n", "replace": "    if False:\n        return {}, None\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: an unreachable parents lookup reads as read", "find": "        return {}, type(unreachable).__name__\n", "replace": "        return {}, None\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: an answer with no data is not caught", "find": "except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as unreachable:", "replace": "except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:"},
+  {"file": "tools/check_backlog.py", "name": "P146: fetch forgets to attach the parents", "find": "        entry[\"parent\"] = found.get(entry[\"content\"].get(\"number\"))\n", "replace": "        entry[\"parent\"] = None\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: fetch swallows a failed parents lookup", "find": "    return items, None if why is None else PARENTS_UNREAD + why\n", "replace": "    return items, None\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: fetch asks about a Done task's parent", "find": " and e.get(\"status\") != \"Done\"]\n", "replace": "]\n"},
+  {"file": "tools/check_backlog.py", "name": "P146: the gate reads an unread lookup as read", "find": "parents_read=not (why or \"\").startswith(PARENTS_UNREAD)", "replace": "parents_read=True"},
+  {"file": "tools/board.py", "name": "P146: the status query forgets the parent", "find": "labels(first:10){nodes{name}} parent{number}}}", "replace": "labels(first:10){nodes{name}}}}"}
+]

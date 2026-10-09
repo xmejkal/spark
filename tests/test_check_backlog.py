@@ -3,12 +3,14 @@ P102a: the spark project's open items name what needs them, sit on a slice, and 
 
 P146 (the PO, 2026-10-06 evening, after the first day at the cap of 3): every working stage takes 2 — Discovery 2,
 Design 2, Build 2 and Review 2 — Ready stays at 5, and at most 4 cards are in flight; an epic counts in Discovery and
-Design, where it is the work itself, and from Build on its stories carry the limit; a task never counts. Each limit is
-pinned from both sides: a board at the limit passes, and one card over it is named. The numbers are written out here,
-never read from the module (W2, test_self_confirmation).
+Design, where it is the work itself, and from Build on its stories carry the limit; a task under its story never counts,
+and a task with no parent story is a card of its own. Each limit is pinned from both sides: a board at the limit
+passes, and one card over it is named. The numbers are written out here, never read from the module (W2,
+test_self_confirmation).
 """
 
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -23,8 +25,8 @@ BODY = "### Needed by\n\n%s\n\n### Value proven by\n\nx\n\n### Proof\n\n_No resp
 IN_FLIGHT_SAYS = "at most 4: finish one before starting another"
 
 
-def item(number, status="Ready", slice_="10 The store", needed="the PO's walking skeleton", labels=("story",)):
-    return {"status": status, "slice": slice_, "labels": list(labels),
+def item(number, status="Ready", slice_="10 The store", needed="the PO's walking skeleton", labels=("story",), parent=None):
+    return {"status": status, "slice": slice_, "labels": list(labels), "parent": parent,
             "content": {"number": number, "title": "P%d — x" % number, "body": BODY % needed}}
 
 
@@ -111,7 +113,7 @@ class TheBacklogCheckTest(unittest.TestCase):
     def test_counts_is_the_one_rule_the_status_shares(self):
         self.assertEqual([check_backlog.counts(e) for e in (item(1, "Discovery", labels=("epic",)),
                                                             item(2, "Build", labels=("epic",)),
-                                                            item(3, "Build", labels=("task",)), item(4, "Build"))],
+                                                            item(3, "Build", labels=("task",), parent=1), item(4, "Build"))],
                          [True, False, False, True])
 
     def test_a_done_item_is_not_judged_again(self):
@@ -131,14 +133,111 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual(check_backlog.problems([crlf]), [])
 
     def test_a_task_rides_on_its_story(self):
-        task = item(2, "Build", needed="", slice_=None, labels=("task",))
+        task = item(2, "Build", needed="", slice_=None, labels=("task",), parent=1)
         self.assertEqual(check_backlog.problems([item(1, "Build"), task]), [])
+
+    def test_a_task_with_no_parent_story_counts_as_a_card(self):
+        orphan = item(9, "Build", labels=("task",), parent=None)
+        self.assertTrue(check_backlog.counts(orphan))
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), orphan])
+        self.assertEqual(said, ["Build holds 3 (#1, #2, #9) — its limit is 2: finish one before starting another"])
+
+    def test_a_task_under_its_story_rides_on_it(self):
+        self.assertFalse(check_backlog.counts(item(9, "Build", labels=("task",), parent=1)))
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",), parent=1)]), [])
+
+    def test_a_parentless_task_is_judged_on_needed_by_and_slice_like_a_card(self):
+        said = check_backlog.problems([item(9, "Ready", labels=("task",), parent=None, slice_="", needed="")])
+        self.assertEqual(said, ["#9 P9 — x: no `Needed by` — W14: an item names the design that needs it",
+                                "#9 P9 — x: on no slice of the story map"])
+
+    def test_parents_unread_counts_tasks_as_riding_and_says_so(self):
+        said = check_backlog.problems([item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",))], parents_read=False)
+        self.assertEqual(said, ["tasks' parent stories could not be read — every task counted as riding on a story"])
+
+    def test_parents_unread_say_nothing_when_no_open_task_waits_on_them(self):
+        # A Done task is nobody's open work: with no open task there is nothing the missing parents could have changed.
+        self.assertEqual(check_backlog.problems([item(1, "Build"), item(9, "Done", labels=("task",))], parents_read=False), [])
+
+    def test_parents_asks_github_once_for_all_tasks(self):
+        asked = []
+        def run(args, **kwargs):
+            asked.append(args)
+            return mock.Mock(stdout=json.dumps({"data": {"repository": {"t9": {"parent": {"number": 1}}, "t10": {"parent": None}}}}))
+        with mock.patch.object(check_backlog.subprocess, "run", run):
+            found, why = check_backlog.parents([9, 10])
+        self.assertEqual((found, why), ({9: 1, 10: None}, None))
+        self.assertEqual(len(asked), 1)
+        self.assertIn("t9: issue(number: 9) { parent { number } }", " ".join(asked[0]))
+        self.assertIn("t10: issue(number: 10) { parent { number } }", " ".join(asked[0]))
+
+    def test_parents_asks_nobody_when_there_are_no_tasks(self):
+        def run(args, **kwargs):
+            raise AssertionError("gh was asked about no tasks at all")
+        with mock.patch.object(check_backlog.subprocess, "run", run):
+            self.assertEqual(check_backlog.parents([]), ({}, None))
+
+    def test_parents_offline_says_why(self):
+        def run(args, **kwargs):
+            raise FileNotFoundError("gh")
+        with mock.patch.object(check_backlog.subprocess, "run", run):
+            self.assertEqual(check_backlog.parents([9]), ({}, "FileNotFoundError"))
+
+    def test_parents_answered_with_errors_and_no_data_says_why(self):
+        def run(args, **kwargs):
+            return mock.Mock(stdout=json.dumps({"data": None, "errors": [{"message": "Could not resolve to an Issue"}]}))
+        with mock.patch.object(check_backlog.subprocess, "run", run):
+            self.assertEqual(check_backlog.parents([9]), ({}, "TypeError"))
 
     def said(self, run):
         """main()'s exit code and what it printed, with gh answered by `run`."""
         with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
             code = check_backlog.main()
         return code, "".join(call.args[0] for call in out.write.call_args_list)
+
+    def board_answering(self, items, parents):
+        """
+        A gh that lists the spark project holding `items` — as gh prints them, with no `parent` — and answers the parents
+        query with `parents` (raised when it is an exception). Returns it with the commands it was asked, as text.
+        """
+        asked = []
+
+        def run(args, **kwargs):
+            asked.append(" ".join(args))
+            if "graphql" in args:
+                if isinstance(parents, Exception):
+                    raise parents
+                return mock.Mock(stdout=json.dumps(parents))
+            if "item-list" in args:
+                return mock.Mock(stdout=json.dumps({"items": [{k: v for k, v in e.items() if k != "parent"} for e in items]}))
+            return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}]}))
+        return run, asked
+
+    def test_main_asks_for_each_open_task_s_parent_and_a_task_under_its_story_rides_on_it(self):
+        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",)), item(8, "Done", labels=("task",))]
+        run, asked = self.board_answering(items, {"data": {"repository": {"t9": {"parent": {"number": 1}}}}})
+        code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("  backlog: 3 open, the limits hold", printed)
+        questions = [command for command in asked if "graphql" in command]
+        self.assertEqual(len(questions), 1)
+        self.assertIn("t9: issue(number: 9)", questions[0])
+        self.assertNotIn("t8:", questions[0])
+
+    def test_main_counts_a_task_the_answer_gives_no_parent_as_a_card(self):
+        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",))]
+        run, _ = self.board_answering(items, {"data": {"repository": {"t9": {"parent": None}}}})
+        code, printed = self.said(run)
+        self.assertEqual(code, 1)
+        self.assertIn("    Build holds 3 (#1, #2, #9) — its limit is 2: finish one before starting another", printed)
+
+    def test_main_says_when_the_parents_could_not_be_read_and_counts_no_task(self):
+        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",))]
+        run, _ = self.board_answering(items, subprocess.TimeoutExpired("gh", 60))
+        code, printed = self.said(run)
+        self.assertEqual(code, 1)
+        self.assertIn("    tasks' parent stories could not be read — every task counted as riding on a story", printed)
+        self.assertNotIn("Build holds", printed)
 
     def test_offline_the_gate_says_why_and_passes(self):
         def run(*args, **kwargs):

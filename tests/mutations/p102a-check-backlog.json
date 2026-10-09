@@ -1,18 +1,6 @@
 [
  {
   "file": "tools/check_backlog.py",
-  "name": "Done items are checked",
-  "find": "if status == \"Done\" or \"task\" in",
-  "replace": "if \"task\" in"
- },
- {
-  "file": "tools/check_backlog.py",
-  "name": "a task is judged on its own",
-  "find": "if status == \"Done\" or \"task\" in (entry.get(\"labels\") or []):",
-  "replace": "if status == \"Done\":"
- },
- {
-  "file": "tools/check_backlog.py",
   "name": "a CRLF body reads as empty",
   "find": "    body = (body or \"\").replace(\"\\r\\n\", \"\\n\")",
   "replace": "    body = body or \"\""

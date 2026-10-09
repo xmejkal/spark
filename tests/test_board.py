@@ -20,7 +20,8 @@ TODAY = dt.date(2026, 10, 7)
 BODY = "### Needed by\n\nthe PO\n\n### Value proven by\n\nx\n"
 
 
-def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",), waiting=None, since=None, slice_="team tools"):
+def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",), waiting=None, since=None, slice_="team tools",
+         parent=None):
     values = [{"name": status, "updatedAt": changed, "field": {"name": "Status"}},
               {"name": slice_, "updatedAt": changed, "field": {"name": "Slice"}}, {}]
     if waiting:
@@ -28,7 +29,8 @@ def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",
     if since:
         values.append({"date": since, "field": {"name": "Waiting since"}})
     return {"content": {"number": number, "title": title, "body": BODY, "repository": {"name": "spark"},
-                        "labels": {"nodes": [{"name": label} for label in labels]}},
+                        "labels": {"nodes": [{"name": label} for label in labels]},
+                        "parent": {"number": parent} if parent else None},
             "fieldValues": {"nodes": values}}
 
 
@@ -59,15 +61,23 @@ class TheCoreTest(unittest.TestCase):
     def test_in_flight_names_stage_item_and_age_and_leaves_an_epic_in_build_out(self):
         self.assertEqual(board.in_flight(SPARK, TODAY), ["Build P102c (#26) 2 d"])
 
-    def test_in_flight_shows_an_epic_in_discovery_or_design_but_not_in_build_and_never_a_task(self):
+    def test_in_flight_shows_an_epic_in_discovery_or_design_but_not_in_build_and_never_a_task_under_its_story(self):
         # P146: the status counts as the check does (check_backlog.counts), so it cannot hide what the gate counts.
         crowded = board.to_items(project(node(70, "P136 — Full circuit checks", "Discovery", labels=("epic",)),
                                          node(71, "P100 — The flows", "Design", labels=("epic",)),
                                          node(24, "P102 — The tools chore", "Build", labels=("epic",)),
                                          node(29, "P102e — A discovery skill", "Build"),
-                                         node(31, "P102e step one", "Build", labels=("task",))))
+                                         node(31, "P102e step one", "Build", labels=("task",), parent=29)))
         self.assertEqual(board.in_flight(crowded, TODAY),
                          ["Discovery P136 (#70) 2 d", "Design P100 (#71) 2 d", "Build P102e (#29) 2 d"])
+
+    def test_items_carry_a_task_s_parent_story(self):
+        items = board.to_items(project(node(9, "T9 — x", "Build", labels=("task",), parent=1), node(10, "T10 — y", "Build", labels=("task",))))
+        self.assertEqual([i.get("parent") for i in items], [1, None])
+
+    def test_in_flight_counts_a_parentless_task_as_a_card(self):
+        items = board.to_items(project(node(10, "T10 — y", "Build", labels=("task",))))
+        self.assertEqual(board.in_flight(items, dt.date(2026, 10, 9)), ["Build T10 (#10) 4 d"])
 
     def test_waiting_on_the_po_says_since_when_and_marks_more_than_three_days(self):
         self.assertEqual(board.waiting(BIN, TODAY), ["B1 (#1) since 2026-09-25, 12 d !"])
@@ -153,6 +163,10 @@ class TheFinalReviewTest(unittest.TestCase):
     def test_the_query_reads_the_newest_status_updates(self):
         # GitHub lists status updates newest first, so last:N would read the oldest N (C1).
         self.assertIn("statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC})", board.QUERY)
+
+    def test_the_query_reads_each_issue_s_parent_story(self):
+        # A task with no parent story is a card of its own (P146): the status must be told whose sub-issue each one is.
+        self.assertIn("parent{number}", board.QUERY)
 
     def test_a_board_read_short_says_how_many_it_holds(self):
         held = project(node(1, "P1 — x", "Ready"))

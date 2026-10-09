@@ -33,13 +33,17 @@ CLOSE_TIMEOUT = 60
 
 
 def to_items(project):
-    """The board's issues in the shape check_backlog reads, with when each card's Status last changed."""
+    """
+    The board's issues in the shape check_backlog reads, with when each card's Status last changed and the number of the
+    story each is a sub-issue of (None for an issue with no parent story).
+    """
     items = []
     for node in project["items"]["nodes"]:
         content = node.get("content") or {}
         if "number" not in content or "repository" not in content:
             continue  # a draft or a pull request on the board is no backlog item
         item = {"labels": [label["name"] for label in content["labels"]["nodes"]],
+                "parent": (content.get("parent") or {}).get("number"),
                 "content": {"number": content["number"], "title": content["title"], "body": content.get("body") or "",
                             "repo": content["repository"]["name"]}}
         for value in node["fieldValues"]["nodes"]:
@@ -153,7 +157,7 @@ def status_lines(boards, prs, closes, worked, today, notes=()):
 
 
 QUERY = """query($login:String!,$number:Int!){user(login:$login){projectV2(number:$number){id
- items(first:100){totalCount nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}}}}
+ items(first:100){totalCount nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number}}}
   fieldValues(first:20){nodes{
    ... on ProjectV2ItemFieldSingleSelectValue{name updatedAt field{... on ProjectV2FieldCommon{name}}}
    ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}}}}}
