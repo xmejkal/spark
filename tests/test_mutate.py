@@ -90,6 +90,15 @@ class StaleBytecodeTest(unittest.TestCase):
         self.assertEqual(results[0]["status"], mutate.CAUGHT)
         self.assertTrue(restored, "the restored suite ran stale bytecode")
 
+    def test_each_run_s_empty_cache_goes_with_the_run(self):
+        # P172: a fresh cache prefix per run, never removed — 87 mutate-pycache-* folders from one run of this suite.
+        import os
+        from unittest import mock
+        root, fresh = tiny_project(), tempfile.mkdtemp()
+        with mock.patch.object(tempfile, "tempdir", fresh):
+            self.assertTrue(mutate.suite_is_green(root, "tests"))
+        self.assertEqual(os.listdir(fresh), [])
+
     def test_ten_back_to_back_mutations_all_score_correctly(self):
         # The realistic case: a table of many mutations run inside one second between them.
         root = tiny_project()

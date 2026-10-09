@@ -58,6 +58,19 @@ class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):
         self.assertNotEqual(store.home(), PERSONS)
         self.assertTrue(os.environ.get("SPARK_HOME"), "store.py gives a process running unittest a scratch store")
 
+    def test_the_scratch_store_goes_when_the_process_exits_and_nothing_else_does(self):
+        # P172: every process running unittest made a spark-suite-* home and left it behind. A test module that
+        # forgets tests/suite_temp.py must still leave no store, so store.py removes the one it made — only that one.
+        fresh, inherited = tempfile.mkdtemp(), Path(tempfile.mkdtemp())
+        (inherited / "kept").write_text("an inherited store\n")
+        done = subprocess.run([sys.executable, "-c", "import unittest, sys; sys.path.insert(0, %r); import store; print(store.home())"
+                               % str(SCRIPTS)], env=dict(os.environ, TMPDIR=fresh, SPARK_HOME=str(inherited)),
+                              capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(Path(done.stdout.strip()).parent, Path(fresh), "the scratch store was made in the temp folder")
+        self.assertEqual(os.listdir(fresh), [])
+        self.assertEqual((inherited / "kept").read_text(), "an inherited store\n")
+
     def test_a_script_the_suite_starts_gets_the_same_scratch_store(self):
         self.assertEqual(home_in(dict(os.environ)), store.home())
 
