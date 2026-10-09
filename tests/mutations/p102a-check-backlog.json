@@ -20,7 +20,7 @@
  {
   "file": "tools/check_backlog.py",
   "name": "a stage's limit is ignored",
-  "find": "        if over(held, limit):\n",
+  "find": "        if (over(held, limit) if stage in IN_FLIGHT else len(held) > limit):\n",
   "replace": "        if False:\n"
  },
  {
@@ -39,7 +39,7 @@
   "file": "tools/check_backlog.py",
   "name": "a missing project quietly stops the check",
   "find": "raise LookupError(\"no project titled %r under %s — the board cannot be checked\" % (TITLE, OWNER))",
-  "replace": "return None, \"gone\""
+  "replace": "return None, None, \"gone\", None"
  },
  {
   "file": "tools/check_backlog.py",

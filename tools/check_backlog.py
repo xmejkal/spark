@@ -4,12 +4,16 @@ W14 and the WIP limits on the spark project's open items (P102a; docs/2026-10-05
 §8; raised on 2026-10-06 at the PO's word, P146, and again that evening to two per working stage and four in flight).
 A card is asked for its Needed by and slice from Ready on — the commitment — not in Idea, Discovery or Design (P146).
 A card that waits on someone is asked since when, in any open stage: a Waiting on with no Waiting since is named (P146).
-One card at a time may carry the label `expedite`, the PO's lane past a limit: it lets its stage, and the flight, hold
-one over; two open cards labelled so are named (P146, decision 4 of docs/2026-10-06-process-design.md).
+One card at a time may carry the label `expedite`, the PO's lane past a limit: it lets its working stage, and the flight,
+hold one over, and Ready none — it enters Build; two open cards labelled so are named (P146, decision 4 of
+docs/2026-10-06-process-design.md).
+The bin's board is read too, for two things only: its cards in a working stage fly in the same total as spark's, and the
+lane is one lane across both boards (the spec, §1: "The bin's desk cards count in the same three"). They fill none of
+spark's stages and are asked for no Needed by or slice (P146).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
-must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories: every task
-is counted as riding on its story, a line says so with the cause, and the push goes through (W1: said, never read as
-checked).
+must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories (every task
+is counted as riding on its story) or not the bin's board (spark's cards are counted alone): a line says so with the
+cause, and the push goes through (W1: said, never read as checked).
 """
 
 import json
@@ -18,6 +22,14 @@ import subprocess
 import sys
 
 OWNER, TITLE = "xmejkal", "spark"
+#: The bin's project. Its cards in a working stage fly in the same total as spark's, and the expedite lane is one lane
+#: across both boards (the spec §1: "The bin's desk cards count in the same three"); they fill none of spark's stages.
+BIN_TITLE = "the bin"
+#: What problems() marks a card of the bin's board with, so a sentence names it apart from spark's: `bin #12`, not `#12`.
+BIN_BOARD = "bin"
+#: What main() and the status say when the bin's board could not be read: spark's cards were counted alone. A
+#: could-not-look, not a failure — said with its cause, and the push goes through (W1).
+BIN_UNREAD = "the bin's board could not be read (%s) — its cards in flight were not counted"
 #: The stages that carry a limit (§3); Idea and Done carry none. Every working stage takes 2, the PO's call of
 #: 2026-10-06 evening (P146); Ready is a queue, not work, and stays at 5.
 LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 2, "Review": 2}
@@ -52,6 +64,11 @@ def _name(entry):
     return "#%s %s" % (entry["content"].get("number"), entry["content"].get("title", ""))
 
 
+def _ref(entry):
+    """A card as a sentence names it: `#12`, or `bin #12` for one of the bin's (problems() marks those, BIN_BOARD)."""
+    return "%s#%s" % (BIN_BOARD + " " if entry.get("board") == BIN_BOARD else "", entry["content"].get("number"))
+
+
 def counts(entry):
     """
     Whether an open card counts against the limits: a task rides on its story, so it does not count — unless it has no
@@ -69,13 +86,17 @@ def problems(items, bin_items=()):
     """
     Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on, the commitment
     (JUDGED), not in Idea, Discovery or Design — a card that waits on someone (any name) with no Waiting since, in any
-    open stage, two open cards labelled expedite (whatever their stage), and a broken WIP limit. A stage, or the flight,
-    may hold one over its limit while exactly one of the cards it holds is the expedite. An epic counts only in
-    Discovery and Design; a task (a plan's step, a sub-issue of its story) rides on its story and is not judged on its
-    own — unless it has no parent story, when it is a card like any other (counts()). A Done card is not judged at all.
-    `bin_items` is the bin's board, accepted and not read yet.
+    open stage, two open cards labelled expedite (whatever their stage or board), and a broken WIP limit. A working
+    stage, or the flight, may hold one over its limit while exactly one of the cards it holds is the expedite; Ready, a
+    queue the expedite never enters, may not. An epic counts only in Discovery and Design; a task (a plan's step, a
+    sub-issue of its story) rides on its story and is not judged on its own — unless it has no parent story, when it is
+    a card like any other (counts()). A Done card is not judged at all.
+    `bin_items` is the bin's board, or None when it could not be read (main() says so; nothing is said here). Its cards
+    in a working stage that count (counts()) fly in the same total as spark's, and its expedite is the same lane; they
+    fill none of spark's stages and are asked for no Needed by or slice. A sentence names them `bin #12`.
     """
     said, by_stage = [], {}
+    bin_cards = [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]  # copies: the caller's cards stay unmarked
     for entry in items:
         status = entry.get("status")
         rides = "task" in (entry.get("labels") or []) and entry.get("parent") is not None
@@ -90,10 +111,10 @@ def problems(items, bin_items=()):
                 said.append("%s: on no slice of the story map" % _name(entry))
         if entry.get("waiting on") and not entry.get("waiting since"):
             said.append("%s: waits on %s since nobody knows — set Waiting since" % (_name(entry), entry["waiting on"]))
-    rushed = [e for e in items if e.get("status") != "Done" and EXPEDITE in (e.get("labels") or [])]
+    rushed = [e for e in [*items, *bin_cards] if e.get("status") != "Done" and EXPEDITE in (e.get("labels") or [])]
     if len(rushed) > 1:
         said.append("%d cards labelled expedite (%s) — one at a time, on the PO's word"
-                    % (len(rushed), ", ".join("#%s" % e["content"].get("number") for e in rushed)))
+                    % (len(rushed), ", ".join(_ref(e) for e in rushed)))
 
     def over(held, limit):
         """Whether `held` breaks `limit`: one over is allowed while exactly one of its cards is the expedite."""
@@ -102,14 +123,16 @@ def problems(items, bin_items=()):
 
     for stage, limit in LIMITS.items():
         held = by_stage.get(stage, [])
-        if over(held, limit):
+        # The expedite enters Build, so it lends a working stage a place; Ready is a queue it never enters: none.
+        if (over(held, limit) if stage in IN_FLIGHT else len(held) > limit):
             said.append("%s holds %d (%s) — its limit is %d: %s"
-                        % (stage, len(held), ", ".join("#%s" % e["content"].get("number") for e in held), limit,
+                        % (stage, len(held), ", ".join(_ref(e) for e in held), limit,
                            "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
     flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
+    flying += [e for e in bin_cards if e.get("status") in IN_FLIGHT and counts(e)]
     if over(flying, MOST_IN_FLIGHT):
         said.append("%d in flight (%s) — at most %d: finish one before starting another"
-                    % (len(flying), ", ".join("#%s" % e["content"].get("number") for e in flying), MOST_IN_FLIGHT))
+                    % (len(flying), ", ".join(_ref(e) for e in flying), MOST_IN_FLIGHT))
     return said
 
 
@@ -144,52 +167,70 @@ def parents(tasks):
         return {}, type(unreachable).__name__
 
 
+def _items(number):
+    """The items of the project numbered `number` under OWNER, as gh prints them."""
+    return _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", "500")["items"]
+
+
 def fetch():
     """
-    (the spark project's items, None), or (None, why) when gh or the network could not be reached. A project that gh
-    can list but cannot find is a LookupError: the check must never quietly stop looking. An open task carries "parent",
-    the number of the story it is a sub-issue of (None when it has none). The gate asks for no other item's parent — a
-    parent changes how a task counts and nothing else — so theirs is None here, unlike board.to_items(), which gives
-    every issue its parent. When only that question fails the items still come back, as (items, why), with every open
-    task's parent PARENT_UNREAD: a why that comes with items is the parents', one that comes without is the whole look's.
+    (the spark project's items, the bin project's items, why, the bin's why), or (None, None, why, None) when gh or the
+    network could not be reached. A spark project that gh can list but cannot find is a LookupError: the check must never
+    quietly stop looking. The bin's board is read for the flight total and the lane alone, so its failing — no project
+    titled BIN_TITLE, or a listing that errors — costs nothing else: bin_items is None and the bin's why says what went
+    wrong, for main() to say. An open task of either board carries "parent", the number of the story it is a sub-issue of
+    (None when it has none), asked in ONE call for both boards. The gate asks for no other item's parent — a parent
+    changes how a task counts and nothing else — so theirs is None here, unlike board.to_items(), which gives every issue
+    its parent. When only that question fails the items still come back, with every open task's parent PARENT_UNREAD:
+    the why that comes with items is the parents', one that comes without is the whole look's.
     """
     try:
         projects = _gh("project", "list", "--owner", OWNER, "--format", "json")["projects"]
     except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-        return None, type(unreachable).__name__
+        return None, None, type(unreachable).__name__, None
     number = next((p["number"] for p in projects if p["title"] == TITLE), None)
     if number is None:
         raise LookupError("no project titled %r under %s — the board cannot be checked" % (TITLE, OWNER))
     try:
-        items = _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", "500")["items"]
+        items = _items(number)
     except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-        return None, type(unreachable).__name__
-    open_tasks = [(e["content"].get("repository"), e["content"].get("number")) for e in items
+        return None, None, type(unreachable).__name__, None
+    bin_items, bin_why = None, "no project titled %r under %s" % (BIN_TITLE, OWNER)
+    bin_number = next((p["number"] for p in projects if p["title"] == BIN_TITLE), None)
+    if bin_number is not None:
+        try:
+            bin_items, bin_why = _items(bin_number), None
+        except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
+            bin_why = type(unreachable).__name__
+    cards = items + (bin_items or [])
+    open_tasks = [(e["content"].get("repository"), e["content"].get("number")) for e in cards
                   if "task" in (e.get("labels") or []) and e.get("status") != "Done"]
     found, why = parents(open_tasks)
     if why:
         found = {task: PARENT_UNREAD for task in open_tasks}
-    for entry in items:
+    for entry in cards:
         entry["parent"] = found.get((entry["content"].get("repository"), entry["content"].get("number")))
-    return items, why
+    return items, bin_items, why, bin_why
 
 
 def main():
     try:
-        items, why = fetch()
+        items, bin_items, why, bin_why = fetch()
     except LookupError as gone:
         print("  backlog: %s" % gone)
         return 1
     if items is None:
         print("  backlog: skipped — gh or the network could not be reached (%s)" % why)
         return 0
-    said = problems(items)
+    said = problems(items, bin_items)
     print("  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
                                       "the limits hold" if not said else "%d problem(s)" % len(said)))
     for sentence in said:
         print("    " + sentence)
     if why:
         print("  backlog: tasks' parent stories could not be read (%s) — every task counted as riding on a story" % why)
+    if bin_items is None:
+        print("  backlog: " + BIN_UNREAD % bin_why)
     return 1 if said else 0
 
 

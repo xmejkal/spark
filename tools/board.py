@@ -134,14 +134,16 @@ def _boards_join(boards, each, today):
 def status_lines(boards, prs, closes, worked, today, notes=()):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
-    worked {date}, notes [what could not be read].
+    worked {date}, notes [what could not be read]. The bin's cards in flight count in the verdict's total, as at the
+    gate; with no bin among the boards that is said, and spark's cards are counted alone.
     """
     spark = dict(boards)["spark"]
-    verdict = check_backlog.problems(spark)
+    verdict = check_backlog.problems(spark, bin_items=dict(boards).get("bin"))
+    unread_bin = [] if dict(boards).get("bin") is not None else [check_backlog.BIN_UNREAD % "no bin board was given"]
     lines = ["spark — %d open, %s · trial check %s" % (sum(1 for i in spark if i.get("status") != "Done"),
                                                         "the limits hold" if not verdict else "%d problem(s)" % len(verdict),
                                                         TRIAL_CHECK)]
-    lines += ["  ! " + sentence for sentence in [*verdict, *notes]]
+    lines += ["  ! " + sentence for sentence in [*verdict, *notes, *unread_bin]]
     lines.append("  in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"))
     lines.append("  waits on the PO: " + (", ".join(_boards_join(boards, waiting, today)) or "nothing"))
     lines.append("  Ready: " + (", ".join(ready(spark)) or "empty — the PO refills it"))
@@ -182,7 +184,7 @@ def close_update(line, boards, close_days, day, today):
         raise ValueError("%s is closed already — one close a day" % day.isoformat())
     spark = dict(boards)["spark"]
     waits = _boards_join(boards, waiting, today)
-    risky = bool(check_backlog.problems(spark)) or any(w.endswith("!") for w in waits)
+    risky = bool(check_backlog.problems(spark, bin_items=dict(boards).get("bin"))) or any(w.endswith("!") for w in waits)
     body = "\n\n".join([line.strip(), "in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"),
                         "waits on the PO: " + (", ".join(waits) or "nothing")])
     return ("AT_RISK" if risky else "ON_TRACK"), body
