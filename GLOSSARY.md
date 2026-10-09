@@ -143,6 +143,9 @@ line quoted in every commit:
 bec7b88 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once
 ```
 
+The suite runs there with an empty temp folder of its own, and anything it leaves in it fails the
+push (P172): one run had left 2,291 entries, 26 MB, and the hook ran it at every push.
+
 `ln -sf ../../tools/pre-push .git/hooks/pre-push`. It exists because "runs at every commit" was,
 for two sprints, enforced by nothing.
 
