@@ -19,6 +19,7 @@ cause, and the push goes through (W1: said, never read as checked). A bin board 
 line carries its open count.
 """
 
+import argparse
 import json
 import re
 import subprocess
@@ -249,7 +250,54 @@ def fetch():
     return items, bin_items, why, bin_why
 
 
-def main():
+#: What `--help` says the gate checks; the limits are filled in from LIMITS and MOST_IN_FLIGHT, so the help cannot drift
+#: from the numbers the gate holds a board to.
+CHECKS = """\
+The pre-push gate over the two GitHub Projects boards, spark's and the bin's, read through the
+PO's own gh login. tools/check_commit.py runs it at every push; it takes no arguments.
+
+It fails on:
+  - a stage over its WIP limit: %(limits)s;
+  - more than %(most)d cards in flight: Discovery, Design, Build and Review together, across both
+    boards;
+  - two open cards labelled `expedite`. One card at a time may carry it, on the PO's word: its
+    working stage, and the flight, may then hold one over their limit. Ready never;
+  - a card that waits on someone (Waiting on) with no Waiting since, in any open stage, on either
+    board, a task riding on its story included;
+  - a card of spark's in Ready, Build or Review with no `Needed by` section or on no slice: the
+    commitment starts at Ready, so Idea, Discovery and Design are not asked.
+
+How cards count: an epic counts in Discovery and Design only, where it is the work itself; from
+Build on its stories carry the limit. A task under an open story rides on it and counts nowhere;
+a task with no parent story, or only a closed one, is a card of its own. The bin's cards in a
+working stage fly in the same total as spark's (a bin card labelled `bench` sits outside it) and
+fill none of spark's stages.
+"""
+#: The exit codes `--help` names (W1: a look that could not run says so, and is never read as checked).
+EXIT_CODES = """\
+exit codes:
+  0  the limits hold — or could-not-run: gh or the network could not be reached, said with its
+     cause, and the limits were not checked. A partial look (the tasks' parent stories or the
+     bin's board unread) is said with its cause too.
+  1  a problem, each named on a line of its own — or no project titled "spark" under %(owner)s.
+  2  an argument the gate does not take.
+"""
+
+
+def _parser():
+    """The gate's command line: no arguments; `--help` says what it checks and what its exit codes mean, and asks gh nothing."""
+    return argparse.ArgumentParser(
+        prog="check_backlog.py", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=CHECKS % {"limits": ", ".join("%s %d" % limit for limit in LIMITS.items()), "most": MOST_IN_FLIGHT},
+        epilog=EXIT_CODES % {"owner": OWNER})
+
+
+def main(argv=()):
+    """
+    The gate, printed; its exit code. `argv` is the command line's arguments — none by default, so check_commit.py, which
+    imports this and calls main() with a commit in its own sys.argv, is never read as asking the gate anything.
+    """
+    _parser().parse_args(list(argv))
     try:
         items, bin_items, why, bin_why = fetch()
     except LookupError as gone:
@@ -274,4 +322,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

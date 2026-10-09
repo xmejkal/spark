@@ -141,5 +141,9 @@
   {"file": "tools/board.py", "name": "P146: an undated wait on someone else does not say who", "find": "said.append((UNDATED, _short(i) + on))", "replace": "said.append((UNDATED, _short(i)))"},
   {"file": "tools/board.py", "name": "P146: a wait on the PO says it is on the PO", "find": "on = \"\" if i[\"waiting on\"] == \"the PO\" else \" on %s\" % i[\"waiting on\"]", "replace": "on = \" on %s\" % i[\"waiting on\"]"},
   {"file": "tools/check_backlog.py", "name": "P146: a riding task's wait is not asked", "find": "        if entry.get(\"waiting on\") and not entry.get(\"waiting since\"):\n", "replace": "        if entry.get(\"waiting on\") and not entry.get(\"waiting since\") and entry.get(\"parent\") is None:\n"},
-  {"file": "tools/check_backlog.py", "name": "P146: a task riding on a labelled story is a second expedite", "find": "e.get(\"status\") != \"Done\" and not rides(e) and EXPEDITE in", "replace": "e.get(\"status\") != \"Done\" and EXPEDITE in"}
+  {"file": "tools/check_backlog.py", "name": "P146: a task riding on a labelled story is a second expedite", "find": "e.get(\"status\") != \"Done\" and not rides(e) and EXPEDITE in", "replace": "e.get(\"status\") != \"Done\" and EXPEDITE in"},
+  {"file": "tools/check_backlog.py", "name": "P146 council (C1): --help falls through to the gate", "find": "    sys.exit(main(sys.argv[1:]))\n", "replace": "    sys.exit(main())\n"},
+  {"file": "tools/check_backlog.py", "name": "P146 council (C1): the help names no exit codes", "find": "        epilog=EXIT_CODES % {\"owner\": OWNER})\n", "replace": "        epilog=None)\n"},
+  {"file": "tools/check_backlog.py", "name": "P146 council (C1): the gate takes any argument and runs", "find": "    _parser().parse_args(list(argv))\n", "replace": "    _parser().parse_known_args(list(argv))\n"},
+  {"file": "tools/check_backlog.py", "name": "P146 council (C1): main() reads check_commit's arguments as the gate's", "find": "    _parser().parse_args(list(argv))\n", "replace": "    _parser().parse_args(None)\n"}
 ]

@@ -33,11 +33,17 @@ someone is asked since when there too, as on spark's. They fill none of spark's 
 slice, and a sentence names them `bin #12`, apart from spark's #12. A bin board that could not be read is said, with its
 cause, and spark's cards are counted alone: never a silent pass and never a failed push. One that was read is said too,
 in the summary line, with its open count.
+
+P146 council (C1): `check_backlog.py --help` ran the gate — main() parsed no arguments. It now says what the gate checks
+and what each exit code means, and asks gh nothing: the test runs the module with a gh on PATH that writes down every
+call. main() called with no arguments (check_commit's way) reads none of its caller's.
 """
 
 import json
+import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -684,6 +690,50 @@ class TheBacklogCheckTest(unittest.TestCase):
         code, printed = self.said(run)
         self.assertEqual(code, 1)
         self.assertIn("no project titled 'spark'", printed)
+
+    def test_main_called_by_check_commit_reads_none_of_its_caller_s_arguments(self):
+        # check_commit.py imports the gate and calls main() while its own argv holds a commit: that is not the gate's.
+        def run(*args, **kwargs):
+            raise FileNotFoundError("gh")
+        with mock.patch.object(sys, "argv", ["tools/check_commit.py", "fd25f15"]):
+            code, printed = self.said(run)
+        self.assertEqual(code, 0)
+        self.assertIn("backlog: could-not-run", printed)
+
+
+class TheGateSaysWhatItIsTest(unittest.TestCase):
+    """P146 council (C1): `--help` explains the gate and its exit codes instead of running it."""
+
+    def gate(self, *args):
+        """
+        (the finished run of check_backlog.py with `args`, what gh was asked) — with a gh first on PATH that writes down
+        every call it gets and fails, so a run that reached the gate leaves a line and never reads a real board.
+        """
+        fake_bin = Path(tempfile.mkdtemp())
+        calls = fake_bin / "gh-calls"
+        gh = fake_bin / "gh"
+        gh.write_text("#!/bin/sh\necho \"$@\" >> '%s'\nexit 1\n" % calls)
+        gh.chmod(0o755)
+        environment = dict(os.environ, PATH=str(fake_bin) + os.pathsep + os.environ.get("PATH", ""))
+        done = subprocess.run([sys.executable, str(ROOT / "tools" / "check_backlog.py"), *args],
+                              capture_output=True, text=True, env=environment, timeout=60)
+        return done, (calls.read_text() if calls.exists() else "")
+
+    def test_help_names_what_it_checks_and_its_exit_codes_and_asks_gh_nothing(self):
+        done, asked = self.gate("--help")
+        said = " ".join(done.stdout.split())  # argparse wraps to the terminal; the words are what is pinned
+        self.assertEqual((done.returncode, asked), (0, ""), "--help ran the gate: " + done.stdout)
+        for words in ("Discovery 2, Design 2, Ready 5, Build 2, Review 2", "more than 4 cards in flight", "expedite",
+                      "Waiting since", "Needed by", "a task with no parent story", "bench",
+                      "exit codes:", "0 the limits hold — or could-not-run", "1 a problem",
+                      'no project titled "spark"'):
+            with self.subTest(words=words):
+                self.assertIn(words, said)
+
+    def test_the_gate_takes_no_arguments(self):
+        done, asked = self.gate("HEAD")
+        self.assertEqual((done.returncode, asked), (2, ""))
+        self.assertIn("unrecognized arguments: HEAD", done.stderr)
 
 
 if __name__ == "__main__":
