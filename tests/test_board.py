@@ -464,6 +464,64 @@ class TheWholeBoardTest(unittest.TestCase):
         self.assertEqual(len(asked), 1)
 
 
+def unstaged(number, title):
+    """A board item in GitHub's "No status" column: a new item, whose field values carry no Status at all."""
+    card = node(number, title, "Idea")
+    card["fieldValues"]["nodes"] = [value for value in card["fieldValues"]["nodes"] if (value.get("field") or {}).get("name") != "Status"]
+    return card
+
+
+class TheStageTest(unittest.TestCase):
+    """
+    P167 (#105): the status reads where a card stands by the gate's one rule (check_backlog.stage_of). A card in a stage
+    the gate does not know makes the status, and the close, could-not-run naming it — the verdict is never "the limits
+    hold" over a board whose shape was not understood. A card with no Status is Idea: open, in no stage, and said in a line.
+    """
+
+    def test_a_card_in_a_stage_the_gate_does_not_know_makes_the_status_could_not_run_naming_it(self):
+        items = board.to_items(project(node(1, "P1 — a", "Build"), node(7, "P7 — b", "Doing")))
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P")), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), 'board: could-not-run — #7 P7 — b is in a stage the gate does not know: "Doing"\n')
+
+    def test_a_bin_card_in_an_unknown_stage_is_named_by_its_board(self):
+        bin_items = board.to_items(project(node(19, "B19 — e", "Doing")))
+        with self.assertRaisesRegex(board.check_backlog.UnknownStage, '^bin #19 B19 — e is in a stage the gate does not know: "Doing"$'):
+            board.status_lines([("spark", SPARK), ("bin", bin_items)], [], [], set(), TODAY)
+
+    def test_a_close_over_a_card_in_an_unknown_stage_is_could_not_run_and_posts_nothing(self):
+        items = board.to_items(project(node(7, "P7 — b", "Doing")))
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P")), \
+                mock.patch.object(board, "_gh") as gh, contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["close", "x"]), 1)
+        self.assertFalse(gh.called)
+        self.assertEqual(out.getvalue(), 'board: could-not-run — #7 P7 — b is in a stage the gate does not know: "Doing"\n')
+
+    def test_cards_with_no_stage_are_open_in_no_stage_and_said(self):
+        items = board.to_items(project(node(1, "P1 — a", "Build"), unstaged(2, "P2 — b"), unstaged(5, "P5 — c")))
+        self.assertEqual([i.get("status") for i in items], ["Build", None, None])
+        lines = board.status_lines([("spark", items), ("bin", board.to_items(project(unstaged(20, "B20 — d"), node(21, "B21 — e", "Idea"))))],
+                                   [], [], set(), TODAY)
+        self.assertEqual(lines[:3], ["spark — 3 open, the limits hold · trial check 2026-11-02",
+                                     "  ! 3 card(s) have no stage: #2, #5, bin #20",
+                                     "  in flight: Build P1 (#1) 2 d"])
+
+    def test_a_board_whose_every_card_has_no_stage_is_could_not_run_naming_the_shape(self):
+        items = board.to_items(project(unstaged(2, "P2 — b"), unstaged(5, "P5 — c")))
+        out = io.StringIO()
+        with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P")), \
+                contextlib.redirect_stdout(out):
+            self.assertEqual(board.main(["status"]), 0)
+        self.assertEqual(out.getvalue(), "board: could-not-run — not one of the spark board's 2 cards has a Status, so the field's keys have changed\n")
+
+    def test_a_board_with_every_card_staged_says_nothing_of_stages(self):
+        lines = board.status_lines([("spark", SPARK), ("bin", BIN)], [], [], set(), TODAY)
+        self.assertEqual([line for line in lines if "no stage" in line], [])
+
+
 class TheHelpTest(unittest.TestCase):
     """
     P146 council (C3): each verb's --help says what it prints or posts and how it exits — each claim read off the code:

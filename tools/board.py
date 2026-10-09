@@ -172,15 +172,19 @@ def status_lines(boards, prs, closes, worked, today):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
     worked {date}. The bin's cards count in the verdict as at the gate (the flight total, the lane, an undated wait);
-    with no bin among the boards that is said, and spark's cards are counted alone.
+    with no bin among the boards that is said, and spark's cards are counted alone. UnknownStage (check_backlog) for a
+    card in a stage the gate does not know or a board with no Status on any card: the caller says could-not-run (P167).
     """
     spark = dict(boards)["spark"]
+    # Where a card stands is the gate's one rule (check_backlog.stage_of): a stage it does not know, or a board with no
+    # Status on any card, is UnknownStage out of here — main() prints could-not-run — and a card with no Status is said.
+    unstaged = check_backlog.no_stage(spark, dict(boards).get("bin"))
     verdict = check_backlog.problems(spark, bin_items=dict(boards).get("bin"))
     unread_bin = [] if dict(boards).get("bin") is not None else [check_backlog.BIN_UNREAD % "no bin board was given"]
     lines = ["spark — %d open, %s · trial check %s" % (sum(1 for i in spark if i.get("status") != "Done"),
                                                         "the limits hold" if not verdict else "%d problem(s)" % len(verdict),
                                                         TRIAL_CHECK)]
-    lines += ["  ! " + sentence for sentence in [*verdict, *unread_bin]]
+    lines += ["  ! " + sentence for sentence in [*verdict, *([unstaged] if unstaged else []), *unread_bin]]
     lines.append("  in flight: " + (", ".join(_boards_join(boards, in_flight, today)) or "nothing"))
     lines.append("  waits on the PO: " + (", ".join(all_waiting(boards, today)) or "nothing"))
     lines.append("  Ready: " + (", ".join(ready(spark)) or "empty — the PO refills it"))
@@ -337,6 +341,9 @@ def main(argv=None):
                                    {d for d, _ in closes}, day, today)
     except ValueError as refused:
         print("close: refused — %s" % refused)
+        return 1
+    except check_backlog.UnknownStage as unplaced:  # a stage the gate does not know: nothing judged, nothing posted (P167)
+        print("board: could-not-run — %s" % unplaced)
         return 1
     print("close %s (%s):\n%s" % (day.isoformat(), state, body))
     if args.dry_run:

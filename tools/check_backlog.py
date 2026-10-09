@@ -44,10 +44,16 @@ IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
 #: From the commitment on (Ready, Build, Review) a card carries its Needed by and slice; in Idea, Discovery and Design
 #: it decides whether to build, and the PO's order into Ready is what commits. P146, docs/2026-10-06-process-design.md:
 #: the skeptic pass's item 6 ("the gate checks a slice from Ready on, not from Discovery on") and §1 ("Your order into
-#: Ready commits"). A card with no Status, or one the gate does not know, is not asked either, like Idea.
+#: Ready commits"). A card with no Status is not asked either, like Idea (stage_of).
 JUDGED = ("Ready", "Build", "Review")
 #: Where an epic is the work itself; from Build on, its stories carry the limit.
 UPSTREAM = ("Discovery", "Design")
+#: Every stage the gate knows (P167): the limited ones, Idea before them and Done after. A card whose Status is any other
+#: word stands in a stage somebody renamed or added on the board, and the gate judges nothing until that is a decision.
+KNOWN = (*LIMITS, "Idea", "Done")
+#: Where a card with no Status stands: GitHub's "No status" column holds a new item, which is the board's own state —
+#: not counted, not judged, and said (no_stage()).
+NO_STAGE_IS = "Idea"
 #: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
 #: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
 MOST_IN_FLIGHT = 4
@@ -83,6 +89,41 @@ def _name(entry):
     return "%s %s" % (_ref(entry), entry["content"].get("title", ""))
 
 
+class UnknownStage(Exception):
+    """
+    A board whose shape the gate cannot read (P167): a card in a stage it does not know, or no card with a Status at all
+    (the field's keys changed). Both readers say could-not-run with its sentence and judge nothing (W1).
+    """
+
+
+def stage_of(entry):
+    """
+    The stage a card stands in — the one rule both readers follow (P167). Its Status when the gate knows it (KNOWN);
+    NO_STAGE_IS for a card with none, GitHub's "No status" column, where a new item lands; UnknownStage for a Status the
+    gate does not know — a renamed or added stage must be a decision, not a silent skip, so nothing is judged.
+    """
+    status = entry.get("status")
+    if not status:
+        return NO_STAGE_IS
+    if status not in KNOWN:
+        raise UnknownStage('%s is in a stage the gate does not know: "%s"' % (_name(entry), status))
+    return status
+
+
+def no_stage(items, bin_items=()):
+    """
+    The line naming the cards with no Status — `3 card(s) have no stage: #2, #5, bin #20` — or None when every card has
+    one. A board whose EVERY card lacks one is not new items but a changed field, and the gate knows no stage at all:
+    UnknownStage naming the shape. problems() reads this first, so it cannot judge such a board.
+    """
+    bin_cards = [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]
+    for board, cards in (("the spark board", items), ("the bin's board", bin_cards)):
+        if cards and not any(entry.get("status") for entry in cards):
+            raise UnknownStage("not one of %s's %d cards has a Status, so the field's keys have changed" % (board, len(cards)))
+    unstaged = [_ref(entry) for entry in [*items, *bin_cards] if not entry.get("status")]
+    return "%d card(s) have no stage: %s" % (len(unstaged), ", ".join(unstaged)) if unstaged else None
+
+
 def rides(entry):
     """
     Whether a card is a task riding on its story (or on a parent nobody could ask, PARENT_UNREAD): it is counted nowhere
@@ -113,16 +154,18 @@ def problems(items, bin_items=()):
     flight, may hold one over its limit while exactly one of the cards it holds is the expedite; Ready, a queue the
     expedite never enters, may not. An epic counts only in Discovery and Design; a task (a plan's step, a sub-issue of
     its story) rides on its open story and is judged only on its wait — unless it has no open parent story, when it is a card
-    like any other (counts()). A Done card is not judged at all.
+    like any other (counts()). A Done card is not judged at all. Where a card stands is stage_of()'s word: a card in a
+    stage the gate does not know, or a board with no Status on any card, is UnknownStage, and nothing is judged (P167).
     `bin_items` is the bin's board, or None when it could not be read (main() says so; nothing is said here). Its cards
     in a working stage that count (counts()) fly in the same total as spark's — all but a `bench` session, which sits
     outside the limits — and its expedite is the same lane; a card of its that waits on someone is asked since when, like
     any. They fill none of spark's stages and are asked for no Needed by or slice. A sentence names them `bin #12`.
     """
+    no_stage(items, bin_items)  # a board with no stage on any card is not judged (UnknownStage); its line is main()'s to say
     said, by_stage = [], {}
     bin_cards = [dict(entry, board=BIN_BOARD) for entry in (bin_items or ())]  # copies: the caller's cards stay unmarked
     for entry in [*items, *bin_cards]:
-        status = entry.get("status")
+        status = stage_of(entry)  # UnknownStage for a stage the gate does not know: nothing is judged (P167)
         if status == "Done":
             continue
         # The bin's cards fill none of spark's stages and are asked for no Needed by or slice; the wait is asked of both.
@@ -316,6 +359,9 @@ It fails on:
   - a card of spark's in Ready, Build or Review with no `Needed by` section or on no slice: the
     commitment starts at Ready, so Idea, Discovery and Design are not asked.
 
+The stages it knows: Idea, Discovery, Design, Ready, Build, Review, Done. A card in any other stage
+is could-not-run naming it, and nothing is judged; a card with no Status is in Idea, and said.
+
 How cards count: an epic counts in Discovery and Design only, where it is the work itself; from
 Build on its stories carry the limit. A task under an open story rides on it and counts nowhere;
 a task with no parent story, or only a closed one, is a card of its own. The bin's cards in a
@@ -325,9 +371,10 @@ fill none of spark's stages.
 #: The exit codes `--help` names (W1: a look that could not run says so, and is never read as checked).
 EXIT_CODES = """\
 exit codes:
-  0  the limits hold — or could-not-run: gh or the network could not be reached, or gh handed over
-     part of the spark board, said with its cause, and the limits were not checked. A partial look
-     (the tasks' parent stories or the bin's board unread, or read in part) is said with its cause too.
+  0  the limits hold — or could-not-run: gh or the network could not be reached, gh handed over part
+     of the spark board, a card is in a stage the gate does not know, or no card has a Status — said
+     with its cause, and the limits were not checked. A partial look (the tasks' parent stories or the
+     bin's board unread, or read in part) is said with its cause too, and so are cards with no Status.
   1  a problem, each named on a line of its own — or no project titled "spark" under %(owner)s.
   2  an argument the gate does not take.
 """
@@ -358,7 +405,12 @@ def main(argv=()):
     if items is None:
         print("  backlog: could-not-run — gh or the network could not be reached (%s); the limits were not checked" % why)
         return 0
-    said = problems(items, bin_items)
+    try:
+        unstaged = no_stage(items, bin_items)
+        said = problems(items, bin_items)
+    except UnknownStage as unplaced:
+        print("  backlog: could-not-run — %s; the limits were not checked" % unplaced)
+        return 0
     summary = "  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
                                          "the limits hold" if not said else "%d problem(s)" % len(said))
     if bin_items is not None:
@@ -366,6 +418,8 @@ def main(argv=()):
     print(summary)
     for sentence in said:
         print("    " + sentence)
+    if unstaged:
+        print("  backlog: " + unstaged)
     if why:
         print("  backlog: tasks' parent stories could not be read (%s) — every task counted as riding on a story" % why)
     if bin_items is None:
