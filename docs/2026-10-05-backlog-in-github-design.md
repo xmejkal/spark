@@ -153,7 +153,10 @@ because it publishes around 30 public issues. It works through `gh` with the PO'
 - **`tests/test_orphans.py`:** its two backlog checks become one. The archive is frozen when no open heading lacks a
   `MOVED`, `DONE`, `CLOSED`, `PARKED`, `MERGED`, `DELETED` or `SPLIT` marker.
 - **The bin:** it has only three items, so no check is built for its project yet (W14). One is added when an item
-  first lacks *Needed by*.
+  first lacks *Needed by*. **Amended 2026-10-09 (P146):** the gate reads the bin's board too. Its cards in a working
+  stage fly in the same total of four as spark's (a card labelled `bench` sits outside it), the expedite lane is one
+  lane across both boards, and a card of the bin's that waits on someone is asked since when; its cards fill none of
+  spark's stages and are asked for no *Needed by* or slice.
 
 ## 9. What changes in how we work
 
@@ -194,9 +197,14 @@ The check also compares how many days cards waited on the PO before the raises a
 If they fail, the team moves to one-day sprints: a short plan each morning and a close each evening, on the same
 board.
 
-**P146 (2026-10-06, accepted; built 2026-10-09)** gave the stages their entry and exit, the expedite lane, the
-appetite, the counting rules and the token allowance — [`docs/2026-10-06-process-design.md`](2026-10-06-process-design.md);
-the flow's table in [`scrum/README.md`](../scrum/README.md#the-flow--an-items-stages) is where they now live.
+**P146 (accepted 2026-10-06)** defined the stages' entry and exit, the counting rules, the expedite lane, the appetite
+and the token allowance — [`docs/2026-10-06-process-design.md`](2026-10-06-process-design.md); the flow's table in
+[`scrum/README.md`](../scrum/README.md#the-flow--an-items-stages) is where they now live. What its build of 2026-10-09
+made a command: the gate (the limits and counting rules on both boards, the expedite lane, the undated wait, *Needed
+by* and the slice from Ready on) and the status's lines, the spent-appetite flag's code among them. What waits on the
+PO's yes ([Q2–Q5 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6071367154)): the board's Appetite
+field, without which the flag never shows, and the three guards of decision 1. The token allowance is a rule with no
+tool: nothing counts the day's tokens yet (card C1 of the design).
 
 ## 10. Not in this spec
 
@@ -253,20 +261,25 @@ the flow's table in [`scrum/README.md`](../scrum/README.md#the-flow--an-items-st
     - The trial keeps 2026-11-02, with the limits raised to 2 per stage and 4 in flight the same evening. Its tests are
       those of decision 10 (§9).
 
-**Amended on 2026-10-09, when P146 was built (the PO accepted its design on 2026-10-06, 12:21, answering its six
+**Amended on 2026-10-09, in P146's build (the PO accepted its design on 2026-10-06, 12:21 UTC, answering its six
 decisions (a) all three guards, (a), (a), (a), (a), (a); the decision numbers are those of
-[the process design's §5](2026-10-06-process-design.md)):**
+[the process design's §5](2026-10-06-process-design.md#5-decisions-for-the-po)). Beside each, what is built:**
 
 12. **Process decision 1, 2026-10-06: three guards in the PO's settings** — a hook that refuses an agent launch unless
     its description names a card standing in a working stage (W19), branch protection on the `main` of both
-    repositories (W8), and an `ask` rule for `wokwi-cli` and `make simulate` (W10).
+    repositories (W8), and an `ask` rule for `wokwi-cli` and `make simulate` (W10). *Built: no* — each waits on the
+    PO's yes (Q2–Q4 on #80); none is set (checked 2026-10-09: no ruleset or branch protection on either `main`, no
+    `PreToolUse` hook or `ask` rule in his settings).
 13. **Process decision 2, 2026-10-06: the token allowance** — with no question asked, one run per card in flight, sized
-    to its question, and at most one full council a day; anything bigger is asked first, with its estimate.
+    to its question, and at most one full council a day; anything bigger is asked first, with its estimate. *A rule,
+    with no tool:* nothing counts tokens yet (card C1 of the design).
 14. **Process decision 3, 2026-10-06: found work** — a run's findings land as one checklist on its card; at most 3
-    become cards, filed in Idea with no slice.
+    become cards, filed in Idea with no slice. *A rule, with no tool.*
 15. **Process decision 4, 2026-10-06: an expedite lane** — only on the PO's word, one at a time, labelled `expedite`; it
-    may take a stage one over its limit, and the gate fails on two.
+    may take a stage one over its limit, and the gate fails on two. *Built:* the gate.
 16. **Process decision 5, 2026-10-06: an appetite per epic** — given in working days when an epic enters Discovery; the
-    status flags it when it is spent.
+    status flags it when it is spent. *Built: the flag's code;* the board's Appetite field it reads waits on the
+    PO's yes (Q5 on #80), so nothing is flagged yet.
 17. **Process decision 6, 2026-10-06: fewer yeses per card** — a story needs the PO's yes once, on its spec; its plan
     runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes.
+    *A rule, with no tool.*
