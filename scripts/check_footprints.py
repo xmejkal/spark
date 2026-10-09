@@ -45,8 +45,18 @@ MAX_CAPACITANCE_F = fab.part("max_capacitance_f")
 PACKAGE_POWER_W = fab.part("package_power_w")
 
 
+#: The only severities a finding may carry (P143): free text let a misspelling vanish.
+PROBLEM = "problem"
+ADVISORY = "advisory"
+SEVERITIES = (PROBLEM, COULD_NOT_RUN, ADVISORY)
+
+
 class Finding:
-    def __init__(self, rule, subject, detail, fix=None, severity="problem"):
+    def __init__(self, rule, subject, detail, fix=None, severity=PROBLEM):
+        if severity not in SEVERITIES:
+            detail = ("rule %s wrote severity %r, not one of %s — the rule is unchecked until it "
+                      "is fixed (it said: %s)" % (rule, severity, " / ".join(SEVERITIES), detail))
+            severity = COULD_NOT_RUN
         self.rule, self.subject, self.detail, self.fix = rule, subject, detail, fix
         #: "problem" — this would fail at assembly. "could-not-run" — a rule could not read the
         #: element, which is not the same as the element being fine. There was no severity here
@@ -484,16 +494,16 @@ def run(circuit, placeholders=(), rules=None):
 
 
 def problems_in(findings):
-    return [f for f in findings if f.severity == "problem"]
+    return [f for f in findings if f.severity == PROBLEM]
 
 
 def unchecked_in(findings):
-    return [f for f in findings if f.severity == "could-not-run"]
+    return [f for f in findings if f.severity == COULD_NOT_RUN]
 
 
 def advisories_in(findings):
     """Made as drawn, and worth a look: under what the board house recommends (P57)."""
-    return [f for f in findings if f.severity == "advisory"]
+    return [f for f in findings if f.severity == ADVISORY]
 
 
 def render(findings, design):

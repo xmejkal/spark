@@ -38,8 +38,8 @@
  {
   "file": "scripts/check_all.py",
   "name": "the unreadable-file note is dropped by the check",
-  "find": "unchecked=of(\"could-not-run\") + notes,\n                      unmeasured=of(\"advisory\"))",
-  "replace": "unchecked=of(\"could-not-run\"),\n                      unmeasured=of(\"advisory\"))"
+  "find": "unchecked=of(COULD_NOT_RUN) + notes,\n                      unmeasured=of(ADVISORY))",
+  "replace": "unchecked=of(COULD_NOT_RUN),\n                      unmeasured=of(ADVISORY))"
  },
  {
   "file": "scripts/check_spine.py",

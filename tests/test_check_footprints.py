@@ -516,5 +516,55 @@ class TheExitCodeFollowsTheStatusTest(unittest.TestCase):
                 for index in range(4)]
         self.assertEqual(self._exit(fine), check_footprints.EXIT_OK)
 
+
+class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
+    """P143, second half: this file had the same free-text severity, with a fourth word, advisory."""
+
+    def _misspelt(self):
+        return check_footprints.Finding("drill-fit", "J1", "too small", severity="problems")
+
+    def _patched_run(self):
+        original = check_footprints.run
+        check_footprints.run = lambda circuit, placeholders=(), rules=None: [self._misspelt()]
+        self.addCleanup(setattr, check_footprints, "run", original)
+
+    def test_a_misspelt_severity_becomes_could_not_run_naming_the_rule_and_the_word(self):
+        finding = self._misspelt()
+        self.assertEqual(finding.severity, "could-not-run")
+        self.assertIn("drill-fit", finding.detail)
+        self.assertIn("'problems'", finding.detail)
+        self.assertEqual(check_footprints.unchecked_in([finding]), [finding])
+
+    def test_the_status_of_a_run_with_one_misspelt_finding_is_could_not_run_not_ok(self):
+        import tempfile
+        self._patched_run()
+        path = Path(tempfile.mkdtemp()) / "circuit.json"
+        path.write_text("[]")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_footprints.main([str(path), "--json"])
+        self.assertEqual(json.loads(out.getvalue())["status"], "could-not-run")
+        self.assertEqual(code, check_footprints.EXIT_COULD_NOT_RUN)
+
+    def test_check_all_lists_a_misspelt_finding_as_unchecked(self):
+        import tempfile
+        import check_all
+        self._patched_run()
+        path = Path(tempfile.mkdtemp()) / "circuit.json"
+        path.write_text(json.dumps([{"type": "source_net", "source_net_id": "n", "name": "V33"}]))
+        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = check.run({"circuit": str(path)})
+        self.assertEqual(result["status"], "could-not-run", result)
+        self.assertIn("drill-fit", json.dumps(result["unchecked"]))
+
+    def test_every_severity_written_at_a_call_site_is_one_of_the_four(self):
+        import re
+        source = (ROOT / "scripts" / "check_footprints.py").read_text()
+        written = [m.group(2) for m in re.finditer(r"""severity=(["'])(.*?)\1""", source)]
+        self.assertTrue(written, "the scan found no call site, so it checks nothing")
+        for word in written:
+            self.assertIn(word, ("problem", "could-not-run", "advisory"))
+
+
 if __name__ == "__main__":
     unittest.main()

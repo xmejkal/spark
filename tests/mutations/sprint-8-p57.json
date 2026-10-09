@@ -38,7 +38,7 @@
  {
   "file": "scripts/check_all.py",
   "name": "buildability drops the advisory",
-  "find": "                      unmeasured=of(\"advisory\"))",
+  "find": "                      unmeasured=of(ADVISORY))",
   "replace": "                      unmeasured=[])"
  },
  {

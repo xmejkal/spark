@@ -571,7 +571,7 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
     def test_every_severity_written_at_a_call_site_is_one_of_the_three(self):
         import re
         source = (ROOT / "scripts" / "check_physics.py").read_text()
-        written = re.findall(r'severity="([^"]*)"', source)
+        written = [m.group(2) for m in re.finditer(r"""severity=(["'])(.*?)\1""", source)]
         self.assertTrue(written, "the scan found no call site, so it checks nothing")
         for word in written:
             self.assertIn(word, ("problem", "needs-measurement", "could-not-run"))

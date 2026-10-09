@@ -226,6 +226,7 @@ class Buildability(Check):
         stated = inputs.get("rules")
         rules = json.loads(Path(stated).read_text()) if stated else None
         findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)
+        from check_footprints import PROBLEM, ADVISORY
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)
@@ -235,8 +236,8 @@ class Buildability(Check):
         # approved it, and folding the two together is what let 10 of 70 holes go unexamined
         # under a tick. An advisory — made as drawn, under what the board house recommends — is
         # said and does not fail (P57).
-        return answer(problems=of("problem"), unchecked=of("could-not-run") + notes,
-                      unmeasured=of("advisory"))
+        return answer(problems=of(PROBLEM), unchecked=of(COULD_NOT_RUN) + notes,
+                      unmeasured=of(ADVISORY))
 
 
 class VendorTruth(Check):
