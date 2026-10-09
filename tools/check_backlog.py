@@ -77,9 +77,9 @@ def _name(entry):
 def counts(entry):
     """
     Whether an open card counts against the limits: a task rides on its story, so it does not count — unless it has no
-    parent story at all, when it is a card of its own (P146), and one whose parent could not be asked (PARENT_UNREAD)
-    rides; an epic counts only in Discovery and Design, where it is the work itself — from Build on, its stories carry
-    the limit. board.py reads the same rule.
+    parent story at all or only a closed one (open_parent), when it is a card of its own (P146), and one whose parent
+    could not be asked (PARENT_UNREAD) rides; an epic counts only in Discovery and Design, where it is the work itself —
+    from Build on, its stories carry the limit. board.py reads the same rule.
     """
     labels = entry.get("labels") or []
     if "task" in labels:
@@ -145,13 +145,25 @@ def problems(items, bin_items=()):
     return said
 
 
+def open_parent(parent):
+    """
+    The number of the story a task rides on, from GitHub's `parent { number closed }` (None when it has none), else None
+    for a closed parent too: a finished story holds no place in a limit, so its task is the open work and counts as a card
+    of its own (P146). board.py reads the same rule, so the status and the gate cannot disagree about who rides.
+    """
+    if not parent or parent.get("closed"):
+        return None
+    return parent.get("number")
+
+
 def _gh(*args):
     return json.loads(subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60, check=True).stdout)
 
 
 def parents(tasks):
     """
-    ({(repository, number): its parent issue's number or None}, None), or ({}, why) when it could not be asked: gh failed
+    ({(repository, number): its parent issue's number or None, a closed parent being none (open_parent)}, None), or
+    ({}, why) when it could not be asked: gh failed
     or printed no JSON, the answer has nothing for a task, or a task has no usable repository or number to be asked by.
     `tasks` are (repository "owner/name", issue number) pairs: a project may hold issues of several repositories, and a
     number means nothing without its repository. One call for all of them — a selection per repository (aliased r0, r1,
@@ -167,10 +179,10 @@ def parents(tasks):
         selections = []
         for alias, repository, numbers in groups:
             owner, name = repository.split("/", 1)
-            fields = " ".join("t%d: issue(number: %d) { parent { number } }" % (n, n) for n in numbers)
+            fields = " ".join("t%d: issue(number: %d) { parent { number closed } }" % (n, n) for n in numbers)
             selections.append("%s: repository(owner: %s, name: %s) { %s }" % (alias, json.dumps(owner), json.dumps(name), fields))
         found = _gh("api", "graphql", "-f", "query=query { %s }" % " ".join(selections))["data"]
-        return {(repository, number): (found[alias]["t%d" % number]["parent"] or {}).get("number")
+        return {(repository, number): open_parent(found[alias]["t%d" % number]["parent"])
                 for alias, repository, numbers in groups for number in numbers}, None
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError) as unreachable:
         return {}, type(unreachable).__name__

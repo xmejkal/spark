@@ -22,7 +22,7 @@ BODY = "### Needed by\n\nthe PO\n\n### Value proven by\n\nx\n"
 
 
 def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",), waiting=None, since=None, slice_="team tools",
-         parent=None, appetite=None):
+         parent=None, appetite=None, parent_closed=False):
     values = [{"name": status, "updatedAt": changed, "field": {"name": "Status"}},
               {"name": slice_, "updatedAt": changed, "field": {"name": "Slice"}}, {}]
     if waiting:
@@ -33,7 +33,7 @@ def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",
         values.append({"number": appetite, "field": {"name": "Appetite"}})
     return {"content": {"number": number, "title": title, "body": BODY, "repository": {"name": "spark"},
                         "labels": {"nodes": [{"name": label} for label in labels]},
-                        "parent": {"number": parent} if parent else None},
+                        "parent": {"number": parent, "closed": parent_closed} if parent else None},
             "fieldValues": {"nodes": values}}
 
 
@@ -93,6 +93,14 @@ class TheCoreTest(unittest.TestCase):
     def test_items_carry_a_task_s_parent_story(self):
         items = board.to_items(project(node(9, "T9 — x", "Build", labels=("task",), parent=1), node(10, "T10 — y", "Build", labels=("task",))))
         self.assertEqual([i.get("parent") for i in items], [1, None])
+
+    def test_a_task_under_a_closed_story_is_a_card_of_its_own_in_the_flight(self):
+        # The same rule as the gate's (check_backlog.open_parent): a finished story carries nothing, so its task counts.
+        items = board.to_items(project(node(29, "P102e — A story", "Build"),
+                                       node(31, "P102e step one", "Build", labels=("task",), parent=29, parent_closed=True),
+                                       node(32, "P102e step two", "Build", labels=("task",), parent=29)))
+        self.assertEqual([i["parent"] for i in items], [None, None, 29])
+        self.assertEqual(board.in_flight(items, TODAY), ["Build P102e (#29) 2 d", "Build P102e step one (#31) 2 d"])
 
     def test_in_flight_counts_a_parentless_task_as_a_card(self):
         items = board.to_items(project(node(10, "T10 — y", "Build", labels=("task",))))
@@ -355,7 +363,7 @@ class TheFinalReviewTest(unittest.TestCase):
 
     def test_the_query_reads_each_issue_s_parent_story(self):
         # A task with no parent story is a card of its own (P146): the status must be told whose sub-issue each one is.
-        self.assertIn("parent{number}", board.QUERY)
+        self.assertIn("parent{number closed}", board.QUERY)
 
     def test_the_query_reads_a_number_field_for_the_appetite(self):
         self.assertIn("... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}", board.QUERY)

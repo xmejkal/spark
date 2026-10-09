@@ -397,9 +397,18 @@ class TheBacklogCheckTest(unittest.TestCase):
                                          ("xmejkal/sisuo-brain-transplant", 4): 2}, None))
         self.assertEqual(len(asked), 1)
         query = " ".join(asked[0])
-        self.assertIn('r0: repository(owner: "xmejkal", name: "spark") { t9: issue(number: 9) { parent { number } } }', query)
-        self.assertIn('r1: repository(owner: "xmejkal", name: "sisuo-brain-transplant") { t9: issue(number: 9) { parent { number } } '
-                      't4: issue(number: 4) { parent { number } } }', query)
+        self.assertIn('r0: repository(owner: "xmejkal", name: "spark") { t9: issue(number: 9) { parent { number closed } } }', query)
+        self.assertIn('r1: repository(owner: "xmejkal", name: "sisuo-brain-transplant") { t9: issue(number: 9) { parent { number closed } } '
+                      't4: issue(number: 4) { parent { number closed } } }', query)
+
+    def test_a_closed_parent_reads_as_none_and_an_open_one_as_its_number(self):
+        # A finished story holds no place in a limit, so a task under it is a card of its own — not "ridden" and counted nowhere.
+        def run(args, **kwargs):
+            return mock.Mock(stdout=json.dumps({"data": {"r0": {"t9": {"parent": {"number": 1, "closed": True}},
+                                                                "t4": {"parent": {"number": 2, "closed": False}}}}}))
+        with mock.patch.object(check_backlog.subprocess, "run", run):
+            found, why = check_backlog.parents([("xmejkal/spark", 9), ("xmejkal/spark", 4)])
+        self.assertEqual((found, why), ({("xmejkal/spark", 9): None, ("xmejkal/spark", 4): 2}, None))
 
     def test_parents_asks_nobody_when_there_are_no_tasks(self):
         def run(args, **kwargs):
@@ -481,6 +490,16 @@ class TheBacklogCheckTest(unittest.TestCase):
         code, printed = self.said(run)
         self.assertEqual(code, 1)
         self.assertIn("    Build holds 3 (#1, #2, #9) — its limit is 2: finish one before starting another", printed)
+
+    def test_main_counts_a_task_under_a_closed_story_as_a_card(self):
+        # The story was finished: its task is the work still open, and it counts where it stands — Build holds three.
+        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",))]
+        run, _ = self.board_answering(items, {"data": {"r0": {"t9": {"parent": {"number": 1, "closed": True}}}}})
+        code, printed = self.said(run)
+        self.assertEqual(code, 1)
+        self.assertIn("    Build holds 3 (#1, #2, #9) — its limit is 2: finish one before starting another", printed)
+        run, _ = self.board_answering(items, {"data": {"r0": {"t9": {"parent": {"number": 1, "closed": False}}}}})
+        self.assertEqual(self.said(run)[0], 0)
 
     def test_main_asks_each_task_s_own_repository_and_keeps_one_number_in_two_apart(self):
         # Issue numbers are per repository: #9 of spark has a parent and rides, #9 of the bin has none and is a card.
