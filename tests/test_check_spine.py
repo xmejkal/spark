@@ -521,6 +521,22 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         self.assertIn("NOT exercised", out)
         self.assertIn("not JSON", out)
 
+    def test_two_part_names_that_differ_only_in_capitals_stop_at_the_requirements_stage(self):
+        # P163 (#100): the chain built this — two GPIOs on one pad, 0 errors — and the converter's duplicate-id was the only
+        # thing that said anything. A requirements file is refused where it is read, naming both spellings; nothing runs.
+        path = Path(tempfile.mkdtemp()) / "bin.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3",
+                                    "parts": [{"part": "tactile-button", "name": "OpenLid"},
+                                              {"part": "tactile-button", "name": "Openlid"}]}))
+        code, out = self._main([str(path)], tempfile.mkdtemp())
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        self.assertIn("[????] requirements", out)
+        self.assertIn("parts[0] is called OpenLid and parts[1] Openlid", out)
+        self.assertIn("capitals do not make two names", out)
+        self.assertIn("NOT exercised", out)
+        for stage_run in ("] board", "] schematic", "] build"):
+            self.assertNotIn(stage_run, out, "nothing ran, nothing was emitted")
+
     def test_the_project_is_the_files_not_the_current_directory(self):
         # A project with a part of its own, run from elsewhere. The schematic stage has to find
         # the part; the build stage is could-not-run because no toolchain is offered, which is

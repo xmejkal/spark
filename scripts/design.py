@@ -21,7 +21,9 @@ Everything that can be wrong with the input is a `DesignError`, which callers tu
 
 This module resolves and reads. It does not name components or signals for the netlist — that is
 `emit_board`'s, because the name is decided by what the emitted file needs — and it does not
-assign pins, because only the generator needs that.
+assign pins, because only the generator needs that. It does say which names are ONE name
+(`one_name`), because `signal_name` is what makes them one, and it refuses a file that gives two
+parts one name before any stage runs on it.
 """
 
 import json
@@ -53,6 +55,38 @@ class DesignError(Exception):
     """The input cannot be loaded, and this is why. Always a sentence, never a traceback."""
 
 
+#: Why two parts cannot share a name in any capitals — said by this reader and by `needs` for the picks it writes, in
+#: the same words, because it is one rule (P163).
+ONE_NAME_RULE = "the build refuses two components of one name, and capitals do not make two names"
+
+
+def one_name(name):
+    """
+    A name as the build tells names apart: `signal_name` puts an instance's name in capitals before its signals, so
+    OpenLid and Openlid both give OPENLID_BUTTON — one signal, which `assign_pins` placed twice and the generator
+    traced to one pad from two GPIOs, exit 0 (P163, #100). The ONE definition; `needs._one_name` points here.
+    """
+    return name.upper()
+
+
+def names_that_are_one(wanted):
+    """
+    The first pair of `parts` entries whose names are one name, as (index, name, index, name), or None.
+
+    On the names the file GIVES: an entry's shape is `requested_parts`' to refuse, and what an unnamed entry is called
+    is the generator's (`emit_board.component_name`), whose own compare stays as the independent net.
+    """
+    seen = {}
+    for index, entry in enumerate(wanted.get("parts") or []):
+        name = entry.get("name") if isinstance(entry, dict) else None
+        if not isinstance(name, str) or not name:
+            continue
+        if one_name(name) in seen:
+            return seen[one_name(name)] + (index, name)
+        seen[one_name(name)] = (index, name)
+    return None
+
+
 def read(path):
     """The requirements file as a dict, or a DesignError saying what is wrong with it."""
     path = Path(path)
@@ -79,6 +113,14 @@ def read(path):
         if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
             raise DesignError("%s: signals[%d] is named %r, but a signal is a name — letters, digits and _ (LED_STATUS): the "
                               "pin map and the board name it, and firmware is written against it" % (path, index, signal["name"]))
+    clash = names_that_are_one(wanted)
+    if clash:
+        # P163: OpenLid and Openlid are one signal to the build, so the generator traced two GPIOs to one pad with exit 0.
+        # Refused HERE, so the chain's first stage says so and nothing is emitted; both spellings, as the person wrote them.
+        first, first_name, second, second_name = clash
+        part = (wanted["parts"][second].get("part") if isinstance(wanted["parts"][second], dict) else None) or "…"
+        raise DesignError('%s: parts[%d] is called %s and parts[%d] %s — %s; give one of them a name of its own, '
+                          '{"part": "%s", "name": …}' % (path, first, first_name, second, second_name, ONE_NAME_RULE, part))
     return wanted
 
 

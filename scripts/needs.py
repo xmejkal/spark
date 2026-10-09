@@ -432,10 +432,8 @@ def _called(part_id, name):
     return name or "".join(word.capitalize() for word in part_id.replace("_", "-").split("-"))
 
 
-def _one_name(name):
-    """A name as the build tells names apart: `design.signal_name` puts an instance's name in capitals before its signals, so
-    OpenLid and Openlid both give OPENLID_BUTTON — one name, and two GPIOs joined."""
-    return name.upper()
+#: A name as the build tells names apart — `design.one_name`, the one definition (P163, W16); this was a second copy of it.
+_one_name = design.one_name
 
 
 def _serve_picks(existing, picked_by):
@@ -487,10 +485,9 @@ def _merge_parts(existing, wanted):
         called = _called(part_id, name)
         if _one_name(called) in held_by:
             holder, its_name = held_by[_one_name(called)]
-            problems.append(parts._problem(need_id, 'its %s would be called %s, and %s is called %s — the build refuses two components '
-                                           'of one name, and capitals do not make two names; give one of them a name of your own in '
-                                           'requirements.json, {"part": "%s", "name": …}, and run this again'
-                                           % (part_id, called, holder, its_name, part_id)))
+            problems.append(parts._problem(need_id, 'its %s would be called %s, and %s is called %s — %s; give one of them a name of '
+                                           'your own in requirements.json, {"part": "%s", "name": …}, and run this again'
+                                           % (part_id, called, holder, its_name, design.ONE_NAME_RULE, part_id)))
             continue
         held_by[_one_name(called)] = ("need %s's %s" % (need_id, part_id), called)
         added.append(part_id if name is None else {"part": part_id, "name": name})
