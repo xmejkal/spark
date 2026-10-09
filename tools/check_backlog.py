@@ -105,8 +105,8 @@ def problems(items, bin_items=()):
     open cards labelled expedite (whatever their stage or board), and a broken WIP limit. A working stage, or the
     flight, may hold one over its limit while exactly one of the cards it holds is the expedite; Ready, a queue the
     expedite never enters, may not. An epic counts only in Discovery and Design; a task (a plan's step, a sub-issue of
-    its story) rides on its story and is not judged on its own — unless it has no parent story, when it is a card like
-    any other (counts()) — except for its wait. A Done card is not judged at all.
+    its story) rides on its open story and is judged only on its wait — unless it has no open parent story, when it is a card
+    like any other (counts()). A Done card is not judged at all.
     `bin_items` is the bin's board, or None when it could not be read (main() says so; nothing is said here). Its cards
     in a working stage that count (counts()) fly in the same total as spark's — all but a `bench` session, which sits
     outside the limits — and its expedite is the same lane; a card of its that waits on someone is asked since when, like
@@ -212,10 +212,10 @@ def fetch():
     """
     (the spark project's items, the bin project's items, why, the bin's why), or (None, None, why, None) when gh or the
     network could not be reached. A spark project that gh can list but cannot find is a LookupError: the check must never
-    quietly stop looking. The bin's board is read for the flight total and the lane alone, so its failing — no project
+    quietly stop looking. The bin's board is read for the flight total, the lane and its waits alone, so its failing — no project
     titled BIN_TITLE, or a listing that errors — costs nothing else: bin_items is None and the bin's why says what went
     wrong, for main() to say. An open task of either board carries "parent", the number of the story it is a sub-issue of
-    (None when it has none), asked in ONE call for both boards. The gate asks for no other item's parent — a parent
+    (None when it has none or it is closed, open_parent()), asked in ONE call for both boards. The gate asks for no other item's parent — a parent
     changes how a task counts and nothing else — so theirs is None here, unlike board.to_items(), which gives every issue
     its parent. When only that question fails the items still come back, with every open task's parent PARENT_UNREAD:
     the why that comes with items is the parents', one that comes without is the whole look's.
