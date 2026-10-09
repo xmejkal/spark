@@ -104,20 +104,23 @@ pull request's merge. It replaces the PO's rule of 2026-10-04 — big items by p
 updates straight to `main`. The pull request says `Closes #N` (W19), the council runs on it before the merge, and the
 PO merges on Claude's "ready to merge" ([the flow](README.md#the-flow--an-items-stages), Review).
 
-**Branch protection** on the `main` of both repositories is decision 1 (a), the PO's of 2026-10-06. It is set
-since 2026-10-09, by his answer *"Ruleset + auto-delete (Recommended)"*
+**Branch protection** on the `main` of both repositories is decision 1 (a), the PO's of 2026-10-06. It has been
+set since 2026-10-09, on his answer *"Ruleset + auto-delete (Recommended)"*
 ([Q3 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)):
 
 - **Each repository has a ruleset, "main by PR only",** on its default branch. A change needs a pull request
   (no approval is required), `main` cannot be deleted or force-pushed, and nobody may bypass it, the PO included.
-  `gh api repos/xmejkal/<repo>/rules/branches/main` shows its three rules: `pull_request`, `deletion` and
-  `non_fast_forward`.
+  `gh api repos/xmejkal/<repo>/rules/branches/main` (`<repo>` is `spark`, or `sisuo-brain-transplant`, the bin's)
+  shows its three rules: `pull_request`, `deletion` and `non_fast_forward`.
 - **A direct push to `main` is refused.** On spark, the same day, an empty probe commit pushed to `main` got
   `GH013: Repository rule violations found for refs/heads/main` and *"Changes must be made through a pull
-  request"*, and `main` did not change. So every change is a branch and a pull request, and the PO merges it.
+  request"*, and `main` did not change. So every change to `main` goes through a branch and a pull request. The
+  ruleset asks for no approval, so it does not decide who merges: that the PO merges is this agreement, not a
+  setting.
 - **GitHub deletes a merged pull request's branch** on both repositories ("automatically delete head branches").
-  Nobody pushes a deletion, so the push gate does not run for it. The local branch stays until `git branch -d`
-  removes it; doing that by itself is the idea [P171](https://github.com/xmejkal/spark/issues/111).
+  Nobody has to push a deletion (`git push origin --delete`), which would run the pre-push gate's whole suite for
+  nothing. The local branch stays until `git branch -d` removes it; removing it automatically is the idea
+  [P171](https://github.com/xmejkal/spark/issues/111), in Idea.
 
 Before that answer the rule held by practice only: earlier on 2026-10-09, `gh api` showed no ruleset or branch
 protection on either `main`.
@@ -248,8 +251,9 @@ description names a card standing in a working stage. The PO answered *"Not yet"
 ([Q2 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), so there is no hook:
 nothing refuses a launch, and this agreement holds by practice. Part C of
 [P146's plan](../docs/2026-10-09-p146-process-plan.md#part-c--the-three-guards-and-the-board-field-the-pos-settings-nothing-changes-without-his-yes)
-keeps the check it prepared, which only looks for a card's name in the launch. Even set, a hook cannot see agents
-inside a workflow.
+describes the hook as it was proposed: a script, not written, that would look only for a card's name in the launch
+(`#N`, or `P` or `B` and a number), not at the card's stage. Even set, a hook cannot see the agents a workflow
+launches.
 
 Written 2026-09-30, at the PO's word — "whenever we want to do something, let's first make sure
 the PBI is created, so we can keep track, really just like scrum" — after an architecture review

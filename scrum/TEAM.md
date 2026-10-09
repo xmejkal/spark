@@ -20,11 +20,11 @@ Two rules on the PO's card, moved here from the working agreements:
 - **Paid minutes and the token allowance are the PO's.** Simulation minutes are a budget, not a resource: one scenario
   per question, and any path that runs locally comes first. The allowance is the README's
   [token budget](README.md#the-token-budget). Decision 1 (a), his of 2026-10-06, makes the rule a setting too: an
-  `ask` rule for `wokwi-cli`, `make simulate` and `make simulate-all`, so each asks him first. It is set in his
-  settings since 2026-10-09, his answer *"Yes, always ask (Recommended)"*
-  ([Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)). (W10, moved here 2026-10-09
-  by P146.) Its origin, the PO's words, written down on 2026-09-25: *"lets not waste the simulation minutes we already
-  only have 21 of 50 free"*.
+  `ask` rule for `wokwi-cli` and `make simulate`. It has been in his settings since 2026-10-09, on his answer *"Yes,
+  always ask (Recommended)"* ([Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), for `wokwi-cli`,
+  `make simulate` and `make simulate-all`: Claude Code asks him before running any of them. (W10, moved here
+  2026-10-09 by P146.) Its origin, the PO's words, written down on 2026-09-25: *"lets not waste the simulation
+  minutes we already only have 21 of 50 free"*.
 - **Only the PO orders.** Claude and the agents propose, ranked, with reasons and costs; he decides, by the row order
   of the Ready column on the board, and refilling Ready is when he chooses what comes next. A card's slice is his too.
   An agent that reports something is "high priority" is reporting its own opinion and must label it as such. And an
@@ -52,8 +52,8 @@ argues with). This test is why the roster is small. It applies to every lens of 
 | **`parts-researcher`** | fan-out + context budget — pages of datasheet per part | part records, vendor truth, sourcing |
 | **`part-finder`** | restricted tools — searches and the maker's pages only; it writes nothing | the exact part for one commodity need: at most two candidates, each with the maker's datasheet URL |
 | **`datasheet-reader`** | restricted tools + context budget — no web; a datasheet's pages per part | one part record from one kept datasheet, every fact cited to its page |
-| **the tech lead** | it is not one: a role, played by lenses the main session launches | technical feasibility and the technical vision: a lens in every spec council, plan council and final review; proposes technical slices, refactors and the architecture cards; owns the technical lines of [`DECISIONS.md`](../DECISIONS.md). The PO, 2026-10-06: *"a tech lead role, to represent the technical feasibility and vision etc."* These duties stand by his answer of 2026-10-09 to [Q1 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370), *"Full duties (Recommended)"*. |
-| **the PO assistant** | it is not one: a role, played by lenses the main session launches | drafts cards from the PO's words, proposes the Ready order and the slices, triages found work, keeps the day-close and the waits current; never decides value or order. The PO, 2026-10-06: *"the po agent role, like the po assistant, or so"*. These duties stand by his answer of 2026-10-09 to [Q1 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370), *"Full duties (Recommended)"*. |
+| **the tech lead** | it is not one: a role, played by lenses the main session launches | technical feasibility and the technical vision: a lens in every spec council, plan council and final review; proposes technical slices and refactors; owns the technical lines of [`DECISIONS.md`](../DECISIONS.md); never decides value or order. The PO, 2026-10-06: *"a tech lead role, to represent the technical feasibility and vision etc."* He confirmed these duties on 2026-10-09, answering [Q1 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370) with *"Full duties (Recommended)"*. |
+| **the PO assistant** | it is not one: a role, played by lenses the main session launches | drafts cards from the PO's words, proposes the Ready order and the slices, triages found work, keeps the day-close and the waits current; never decides value or order. The PO, 2026-10-06: *"the po agent role, like the po assistant, or so"*. He confirmed these duties on 2026-10-09, answering [Q1 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370) with *"Full duties (Recommended)"*. |
 
 Both role quotes are parts of one sentence of the PO's, 2026-10-06, as
 [#80 records it](https://github.com/xmejkal/spark/issues/80#issuecomment-6021564636) (typos corrected).
