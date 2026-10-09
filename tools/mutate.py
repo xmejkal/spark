@@ -67,15 +67,16 @@ def suite_is_green(root, tests, only=(), failfast=False):
 
     `-B` writes no bytecode and a fresh `PYTHONPYCACHEPREFIX` means none pre-existing is read.
     Without both, a same-size mutation restored within a second is scored against stale `.pyc`.
+    The empty cache goes with the run (P172): one run of the suite left 87 of them behind.
     """
     import os
     import tempfile
-    environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
-                       PYTHONPYCACHEPREFIX=tempfile.mkdtemp(prefix="mutate-pycache-"))
     stop = ["-f"] if failfast else []
     command, where = (([sys.executable, "-B", "-m", "unittest"] + stop + list(only), Path(root) / tests) if only else
                       ([sys.executable, "-B", "-m", "unittest", "discover", "-s", tests] + stop, Path(root)))
-    result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
+    with tempfile.TemporaryDirectory(prefix="mutate-pycache-", ignore_cleanup_errors=True) as cache:
+        environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=cache)
+        result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
     verdict = (result.stderr or "") + (result.stdout or "")
     return result.returncode == 0 and "\nOK" in verdict
 

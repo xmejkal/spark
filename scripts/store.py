@@ -11,6 +11,7 @@ This module owns *where* and *how bytes move*; `parts.py` owns what a record mus
 standard library.
 """
 
+import atexit
 import contextlib
 import hashlib
 import json
@@ -35,8 +36,10 @@ PLUGIN = Path(__file__).resolve().parent.parent
 #: import, whatever SPARK_HOME it inherited (spark's own refusals tell people to set it), and every script it
 #: starts inherits the scratch one. A test needing a store of its own patches the environment after import.
 #: No script imports unittest — tests/test_store.py proves it — so a real run never takes this branch.
+#: The scratch store goes when the process exits (P172): the one made here, never the SPARK_HOME it replaced.
 if "unittest" in sys.modules:
     os.environ["SPARK_HOME"] = tempfile.mkdtemp(prefix="spark-suite-")
+    atexit.register(shutil.rmtree, os.environ["SPARK_HOME"], True)
     os.environ["CLAUDE_CODE_SESSION_ID"] = "spark-suite"  # P97: a test's steps never name the person's own session
 
 
