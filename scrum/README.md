@@ -1,5 +1,17 @@
 # How this team works
 
+**In short**
+
+- [The stages](#the-flow--an-items-stages): Idea → Discovery → Design → Ready → Build → Review → Done. The PO's order
+  into Ready is the commitment.
+- The limits: 2 per working stage, Ready 5, at most 4 cards in flight across both boards.
+- The PO orders Ready and merges; Claude proposes, builds and says "ready to merge".
+- Where things stand: `python3 tools/board.py status`; the push gate by hand: `python3 tools/check_backlog.py`; the
+  day-close, printed and not posted: `python3 tools/board.py close --dry-run "<line>"`.
+- An agent's launch names its card, which stands in its working stage first
+  ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)):
+  `Agent(description="#80 P146: the documentation lens", …)`.
+
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
 
 We run Kanban and keep from Scrum the Product Owner, the Definition of Done and the retrospective, and add *Value
@@ -8,7 +20,9 @@ proven by*. There are no sprints, no Scrum Master and no ceremonies.
 Nothing lives only in an agent's head or in a conversation that scrolls away — if a rule, a goal or a decision is not
 written here, it is not in force. The design behind this page:
 [`docs/2026-10-06-process-design.md`](../docs/2026-10-06-process-design.md) (accepted by the PO on 2026-10-06). **(D)**
-marks what he had decided on the morning of 2026-10-06, before he accepted the design (12:21).
+marks what he had decided earlier on 2026-10-06, before he accepted the design (12:21 UTC). **Decision N** (1 to 6) is
+the numbered decision of the design's [§5](../docs/2026-10-06-process-design.md#5-decisions-for-the-po), each answered
+by the PO on 2026-10-06; **card C1** to **C4** is a card its §4 proposes, filed only on his order.
 
 Two repositories, one team, a board for each (the PO orders both):
 
@@ -37,11 +51,13 @@ report what something costs and what it would prove.
 | [`RETROSPECTIVES.md`](RETROSPECTIVES.md) | every retro, the change it produced, and **whether that change stuck** |
 | [`WORKING_AGREEMENTS.md`](WORKING_AGREEMENTS.md) | the rules, and where each one came from |
 | [`TEAM.md`](TEAM.md) | the role cards, the roster and the test each member has to pass to exist |
+| [`VISION.md`](VISION.md) | what spark is, who it is for, v1 and what it is not (confirmed by the PO on 2026-10-03, P69) |
+| [`STORY_MAP.md`](STORY_MAP.md) | the journey a person takes, and the slices in order — each a milestone a command or a bench log proves; a card's *Slice* field names one (confirmed by the PO on 2026-10-03, P69) |
 
-The work lives on the boards and nowhere else: spark's (https://github.com/users/xmejkal/projects/2) and the bin's
-(/projects/1), each card an issue in its repository. `docs/observations/INDEX.md` is **raw observation intake**, not a
-queue of work: anything in it that should be built is an issue on a board or it is not happening. That consolidation is deliberate: three parallel lists is how 37 observations and 20
-findings reached zero resolved between them.
+The work lives on the two boards and nowhere else, each card an issue in its repository. `docs/observations/INDEX.md`
+is **raw observation intake**, not a queue of work: anything in it that should be built is an issue on a board or it is
+not happening. That consolidation is deliberate: three parallel lists is how 37 observations and 20 findings reached
+zero resolved between them.
 
 ## The cadences, and what each one leaves
 
