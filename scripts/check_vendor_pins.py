@@ -244,12 +244,14 @@ def wrote_note(result: dict) -> str:
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="check_vendor_pins.py",
-        description="Compare a board definition against the vendor's own pin header. Without --offline it "
+        description="Compare a board definition against the vendor's own pin header: the Arduino core's "
+                    "pins_arduino.h for the variant its vendor.arduino_variant names. Without --offline it "
                     "fetches the header with the GitHub CLI gh and keeps it in .spark/cache/ of the project that "
                     "owns the board file (the nearest folder up from it holding boards/active.json or .spark/), and "
-                    "each board's line ends with the file it wrote. A board spark ships is owned by spark, so a live "
-                    "run refreshes spark's own copy: check those with --offline unless asked to refresh them. A live "
-                    "run on a board file no project owns is refused before anything is fetched.")
+                    "a line that kept a header ends with the file it wrote. "
+                    "A board spark ships is owned by spark, so a live run refreshes spark's own copy: check those "
+                    "with --offline unless asked to refresh them. "
+                    "A live run on a board file no project owns is refused before anything is fetched.")
     parser.add_argument("boards", nargs="+", help="board definition files")
     parser.add_argument("--offline", action="store_true",
                         help="never fetch: read the header a live run kept, the project's first, then spark's own; "
@@ -257,7 +259,8 @@ def main(argv=None):
     parser.add_argument("--repo", default=ARDUINO_ESP32_REPO,
                         help="the GitHub repository holding the variant headers (default: %(default)s)")
     parser.add_argument("--json", action="store_true",
-                        help="a JSON list, one entry per board, for a caller that is not a person")
+                        help="a JSON list, one entry per board, for a caller that is not a person; a live run "
+                             "that kept a header adds wrote, the path of that file")
     args = parser.parse_args(argv)
 
     results = [check_board(Path(p), args.offline, args.repo) for p in args.boards]

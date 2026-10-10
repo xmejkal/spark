@@ -17,10 +17,10 @@ name them.
 
 A command page's `allowed-tools` lists the operations Claude Code lets you run without asking. `parts.py --fetch` and
 `--sources`, `tools.py --install` and `--on`, and `check_vendor_pins.py` without `--offline` reach the network and are
-on no command's or skill's list, so Claude
-Code asks the person before any of them runs, and their answer is the yes. Their own settings can answer first: an allow
-rule of theirs, or auto mode, can let it run without asking, which is a yes given in advance, and auto mode can also
-refuse it. You do not work around either. `parts.py --describe --json` marks the network operations of `parts.py`.
+on no command's or skill's list, so Claude Code asks the person before any of them runs, and their answer is the yes.
+Their own settings can answer first: an allow rule of theirs, or auto mode, can let it run without asking, which is a
+yes given in advance, and auto mode can also refuse it. You do not work around either. `parts.py --describe --json`
+marks the network operations of `parts.py`.
 
 A new project starts with `/spark:init`, then `/spark:setup`. The [journey guide](journey.md) shows each step on real
 runs.
@@ -70,7 +70,8 @@ the `[????]` rows.
 
 - **Python 3.9 or newer,** and nothing outside its standard library, except `flash_image.py`, which needs
   `littlefs-python`.
-- **The GitHub CLI `gh`,** for `check_vendor_pins.py` unless it is given `--offline`.
+- **The GitHub CLI `gh`, logged in** (`gh auth login`; `gh auth status` shows it), for `check_vendor_pins.py` unless it
+  is given `--offline`.
 - **tscircuit, to build a board.** npm installs it, and it runs on bun (`tsci` starts with `#!/usr/bin/env bun`); bun
   comes from npm or Homebrew.
 - **Node, for the simulation stage,** plus `wokwi-cli` to compile any chip that has no up-to-date binary. That compile
@@ -123,9 +124,9 @@ These write:
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
 - `check_vendor_pins.py` without `--offline`: the fetched vendor header, into `.spark/cache/` of the project that owns
   the board file (the nearest folder up holding `boards/active.json` or `.spark/`). A board file in no project is
-  refused before any fetch, could-not-run, exit 2 ([P179](https://github.com/xmejkal/spark/issues/124)). For a board spark ships, that project
-  is spark, so its shipped header is refreshed: check a shipped board with `--offline` unless you were asked to
-  refresh it. The line names the file written; `--json` says it as `wrote`.
+  refused before any fetch, could-not-run, exit 2 ([P179](https://github.com/xmejkal/spark/issues/124)). For a board
+  spark ships, that project is spark, so its shipped header is refreshed: check a shipped board with `--offline` unless
+  you were asked to refresh it. The line names the file written; `--json` says it as `wrote`.
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
@@ -250,7 +251,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_footprints.py` | `findings`, `status`, `tool` |
 | `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems` |
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
-| `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: only `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
+| `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
 | `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it |
 | `parts.py` | the envelope: `data`, `envelope`, `next`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |

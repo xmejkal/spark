@@ -403,6 +403,10 @@ class TheHelpSaysWhatItDoes(unittest.TestCase):
     def test_it_says_a_board_no_project_owns_is_refused_live(self):
         self.assertIn("A live run on a board file no project owns is refused", self._help())
 
+    def test_it_tells_an_agent_to_check_shipped_boards_offline(self):
+        # The refuter's X3 (P181): nothing pinned the sentence that keeps a live run off spark's own copies.
+        self.assertIn("check those with --offline unless asked to refresh them", self._help())
+
     def test_it_says_what_owns_means_and_that_spark_owns_its_shipped_boards(self):
         text = self._help()
         self.assertIn("the nearest folder up from it holding boards/active.json or .spark/", text)

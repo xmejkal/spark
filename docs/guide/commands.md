@@ -17,13 +17,14 @@ operations that reach the network are on no command's or skill's list:
 
 - `parts.py --fetch` downloads a datasheet;
 - `parts.py --sources` asks every URL a record cites whether it answers;
-- `tools.py --install` and `--on` install a tool;
+- `tools.py --install` installs a tool;
+- `tools.py --on` turns a tool on and installs it;
 - `check_vendor_pins.py` without `--offline` fetches a vendor's pin header.
 
-So Claude Code asks you before any of them runs, and your answer there is the yes, unless your own settings answer first: an allow rule of yours, or auto mode, can let it run without asking. A
-test holds every list to this rule (`tests/test_routes.py`); how Claude Code matches a pattern to a command line is an
-assumption it states, because the test cannot run Claude Code. `parts.py --describe --json` marks the network
-operations of `parts.py`.
+So Claude Code asks you before any of them runs, and your answer there is the yes, unless your own settings answer
+first: an allow rule of yours, or auto mode, can let it run without asking. A test holds every list to this rule
+(`tests/test_routes.py`); how Claude Code matches a pattern to a command line is an assumption it states, because the
+test cannot run Claude Code. `parts.py --describe --json` marks the network operations of `parts.py`.
 
 The [journey guide](journey.md) shows these commands on real runs.
 

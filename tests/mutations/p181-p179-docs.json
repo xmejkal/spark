@@ -20,8 +20,8 @@
  {
   "file": "scripts/check_vendor_pins.py",
   "name": "--help stops saying spark owns the boards it ships, so a live run refreshes spark's copy (P181, council V-6)",
-  "find": "\"each board's line ends with the file it wrote. A board spark ships is owned by spark, so a live \"",
-  "replace": "\"each board's line ends with the file it wrote. A live \""
+  "find": "\"A board spark ships is owned by spark, so a live run refreshes spark's own copy: check those \"",
+  "replace": "\"A live run refreshes a copy: check those \""
  },
  {
   "file": "commands/build.md",
