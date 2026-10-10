@@ -151,7 +151,11 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         board.write_text(shipped.read_text())
         variant = json.loads(shipped.read_text())["vendor"]["arduino_variant"]
         header = (ROOT / ".spark" / "cache" / ("%s.pins_arduino.h" % variant)).read_text()
-        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=header):
+        # spark's folder is a stand-in too: were the P179 bug back, the write would land there,
+        # not in the real tracked header (the refuter showed this test rewrote it under that mutation).
+        stand_in = Path(tempfile.mkdtemp())
+        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=header), \
+                mock.patch.object(check_vendor_pins, "PLUGIN_ROOT", stand_in):
             code, payload = payload_of(lambda: check_vendor_pins.main(["--json", str(board)]))
         self.assertEqual(sorted(payload[0]),
                          ["board", "compared", "not_recorded", "problems", "source", "status", "wrote"])

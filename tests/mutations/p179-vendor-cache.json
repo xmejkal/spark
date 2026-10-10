@@ -52,5 +52,29 @@
   "name": "spark's copy answers before the project's own (P179, council TL-2b)",
   "find": "    return own if own and own.is_file() else PLUGIN_ROOT / CACHE_DIR / name",
   "replace": "    return PLUGIN_ROOT / CACHE_DIR / name if (PLUGIN_ROOT / CACHE_DIR / name).is_file() else own"
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "the offline refusal stops naming the project's place it looked (P179, refuter B1)",
+  "find": "        return \"--offline but no cached header at %s, nor in spark's own %s\" % (project_header(path, variant), sparks)",
+  "replace": "        return \"--offline but no cached header, nor in spark's own %s\" % sparks"
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "the live refusal for a loose board file stops naming the file (P179, refuter B2)",
+  "find": "            \"(init_project.py makes one); %s\" % (path.resolve(), offline))",
+  "replace": "            \"(init_project.py makes one); %s\" % (path.name, offline))"
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "the live refusal offers --offline even when spark keeps no such header (P179, refuter B8)",
+  "find": "    offline = (\"or use --offline, which reads spark's own %s\" % name if (PLUGIN_ROOT / CACHE_DIR / name).is_file()",
+  "replace": "    offline = (\"or use --offline, which reads spark's own %s\" % name if True"
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "the fetch runs before the project check, spending a network call on a refusal (P179, refuter B9)",
+  "find": "        target = project_header(path, variant)\n    except boards.BoardError:\n        raise CouldNotKeep",
+  "replace": "        fetch_variant_header(variant, repo)\n        target = project_header(path, variant)\n    except boards.BoardError:\n        raise CouldNotKeep"
  }
 ]

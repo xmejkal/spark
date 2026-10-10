@@ -242,12 +242,11 @@ class WhereTheHeaderIsKept(unittest.TestCase):
     def _plugin_files(self):
         return {f.name: f.read_bytes() for f in (self.plugin / ".spark" / "cache").iterdir()}
 
-    def _project(self, contents, owned=True):
-        """A board file in `<project>/boards/`; `owned` makes the folder a project (it holds `.spark/`)."""
+    def _project(self, contents):
+        """A board file in `<project>/boards/`, in a folder that is a project (it holds `.spark/`)."""
         project = Path(tempfile.mkdtemp()).resolve()
         (project / "boards").mkdir()
-        if owned:
-            (project / ".spark").mkdir()
+        (project / ".spark").mkdir()
         path = project / "boards" / "someboard.json"
         path.write_text(json.dumps(contents))
         return project, path
@@ -297,13 +296,21 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         self.assertFalse((project / "boards" / ".spark").exists(), "not two folders up from the path as typed")
         self.assertEqual(result["wrote"], str(self._kept(project, "p179_rel")), "and the file is named whole")
 
-    def test_a_board_file_in_no_project_is_refused_live_and_nothing_is_written(self):
+    def _loose(self, variant):
+        """A board file in a folder no project owns."""
         loose = Path(tempfile.mkdtemp()).resolve()
         path = loose / "someboard.json"
-        path.write_text(json.dumps(self._board("p179_loose")))
-        result = self._live(path)
+        path.write_text(json.dumps(self._board(variant)))
+        return loose, path
+
+    def test_a_board_file_in_no_project_is_refused_live_and_nothing_is_written(self):
+        loose, path = self._loose("p179_loose")
+        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=HEADER) as fetch:
+            result = check_vendor_pins.check_board(path, offline=False, repo="x/y")
+        fetch.assert_not_called()  # no network call is spent on a refusal (refuter B9)
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("no project", result["reason"])
+        self.assertIn(str(path), result["reason"], "and names the board file it could not place")
         self.assertFalse((loose / ".spark").exists() or (loose.parent / ".spark").exists())
         self.assertEqual(self._plugin_files(), self.seeded)
 
@@ -315,6 +322,30 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         result = self._live(path)
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn(str(self._kept(project, "p179_locked")), result["reason"])
+
+    def test_the_live_refusal_offers_offline_only_when_spark_keeps_the_header(self):
+        # Refuter B8: "or use --offline" for a header spark does not keep was a second refusal.
+        _, unshipped = self._loose("p179_unshipped")
+        self.assertIn("--offline would not help", self._live(unshipped)["reason"])
+        shipped = json.loads((ROOT / "boards" / (self.SHIPPED + ".json")).read_text())
+        _, path = self._loose(shipped["vendor"]["arduino_variant"])
+        self.assertIn("or use --offline", self._live(path)["reason"])
+
+    def test_an_offline_refusal_names_both_places_it_looked(self):
+        project, path = self._project(self._board("p179_nowhere"))
+        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        self.assertEqual(result["status"], "could-not-run")
+        self.assertIn(str(self._kept(project, "p179_nowhere")), result["reason"], "the project's place")
+        self.assertIn(str(self.plugin / ".spark" / "cache"), result["reason"], "and spark's")
+
+    def test_an_offline_refusal_for_a_board_in_no_project_says_so(self):
+        loose = Path(tempfile.mkdtemp()).resolve()
+        path = loose / "someboard.json"
+        path.write_text(json.dumps(self._board("p179_nowhere")))
+        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        self.assertEqual(result["status"], "could-not-run")
+        self.assertIn("no project owns %s" % path, result["reason"])
+        self.assertIn(str(self.plugin / ".spark" / "cache"), result["reason"])
 
     def test_the_live_line_says_which_file_it_wrote(self):
         project, path = self._project(self._board("p179_said"))

@@ -38,7 +38,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import boards  # noqa: E402  the one project walk the scripts share (boards.project_root)
+import boards  # the one project walk the scripts share (boards.project_root), and spark's root
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_FOR, EXIT_PROBLEMS as EXIT_MISMATCH, status_of  # noqa: E402
 
@@ -103,8 +103,9 @@ def compare(board: dict, vendor_pins: dict):
     return problems, compared, missing
 
 
-#: The plugin's own cache: the boards it ships come with their vendor headers fetched.
-PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+#: spark's own folder, defined once in boards.py: the boards it ships come with their vendor headers
+#: in its `.spark/cache/`. The tests patch this name to a stand-in.
+PLUGIN_ROOT = boards.PLUGIN_ROOT
 
 
 def header_name(variant: str) -> str:
@@ -119,8 +120,8 @@ def project_header(path: Path, variant: str) -> Path:
     board spark ships, the owning project is spark itself.
 
     Raises `boards.BoardError` when no project owns the file. Counting two folders up from the path
-    as typed, as this did before, put a header checked from inside `boards/` into
-    `boards/.spark/cache/`, and a loose board file's into whatever folder held it (P179).
+    as typed, as the first version of P179's fix did, put a header checked from inside `boards/`
+    into `boards/.spark/cache/`, and a loose board file's into whatever folder held it.
     """
     project = boards.project_root(path.resolve().parent)
     return project / CACHE_DIR / header_name(variant)
@@ -150,28 +151,50 @@ def whose(header: Path) -> str:
     return "spark's" if header.parent.resolve() == (PLUGIN_ROOT / CACHE_DIR).resolve() else "the project's"
 
 
+def no_cached_header(path: Path, variant: str) -> str:
+    """Why `--offline` found no header, naming both places it looked: the owning project's, then spark's."""
+    sparks = PLUGIN_ROOT / CACHE_DIR
+    try:
+        return "--offline but no cached header at %s, nor in spark's own %s" % (project_header(path, variant), sparks)
+    except boards.BoardError:
+        return ("--offline but no project owns %s, and spark's own %s has no cached header %s"
+                % (path.resolve(), sparks, header_name(variant)))
+
+
+def no_project_for_live(path: Path, variant: str) -> str:
+    """Why a live check refused a board file no project owns, and whether `--offline` would help."""
+    name = header_name(variant)
+    offline = ("or use --offline, which reads spark's own %s" % name if (PLUGIN_ROOT / CACHE_DIR / name).is_file()
+               else "--offline would not help: spark keeps no %s" % name)
+    return ("no project owns %s: nothing up from it holds boards/active.json or .spark/, and a live check "
+            "keeps the header it fetches in the board's project. Put the board file in a project's boards/ "
+            "(init_project.py makes one); %s" % (path.resolve(), offline))
+
+
+class CouldNotKeep(Exception):
+    """A live check could not fetch the vendor's header or keep it; the message names the place and the cause."""
+
+
 def keep_live_header(path: Path, variant: str, repo: str):
     """
-    Fetch the vendor's header and keep it in the owning project's cache. Returns
-    `(header text, the file written)`, or `(None, the reason it could not)`: no project owns the
-    board file, the fetch failed, or the file could not be written. Each reason names the place.
+    Fetch the vendor's header and keep it in the owning project's cache. Returns `(header text,
+    the file written)`. Raises `CouldNotKeep` when no project owns the board file, the fetch fails,
+    or the file cannot be written. The project is found first, so a refusal costs no network call.
     """
     try:
         target = project_header(path, variant)
     except boards.BoardError:
-        return None, ("no project owns %s: nothing up from it holds boards/active.json or .spark/, and "
-                      "a live check keeps the header it fetches in the board's project. Put the board "
-                      "file in a project's boards/ (init_project.py makes one), or use --offline"
-                      % path.resolve())
+        raise CouldNotKeep(no_project_for_live(path, variant)) from None
     try:
         header = fetch_variant_header(variant, repo)
     except RuntimeError as broken:
-        return None, str(broken)
+        raise CouldNotKeep(str(broken)) from None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(header)
     except OSError as refused:
-        return None, "fetched the header but could not keep it at %s: %s" % (target, refused.strerror or refused)
+        raise CouldNotKeep("fetched the header but could not keep it at %s: %s"
+                           % (target, refused.strerror or refused)) from None
     return header, target
 
 
@@ -189,15 +212,13 @@ def check_board(path: Path, offline: bool, repo: str):
     if offline:
         header_file = header_to_read(path, variant)
         if not header_file.is_file():
-            return {"board": path.stem, "status": "could-not-run",
-                    "reason": "--offline but no cached header %s, neither in the board's project nor in spark's own %s"
-                              % (header_file.name, PLUGIN_ROOT / CACHE_DIR)}
+            return {"board": path.stem, "status": "could-not-run", "reason": no_cached_header(path, variant)}
         header, source = header_file.read_text(), "%s cache (%s)" % (whose(header_file), header_file.name)
     else:
-        header, kept = keep_live_header(path, variant, repo)
-        if header is None:
-            return {"board": path.stem, "status": "could-not-run", "reason": kept}
-        wrote = kept
+        try:
+            header, wrote = keep_live_header(path, variant, repo)
+        except CouldNotKeep as refused:
+            return {"board": path.stem, "status": "could-not-run", "reason": str(refused)}
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 
     vendor_pins = parse_pins(header)
