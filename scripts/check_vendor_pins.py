@@ -23,6 +23,12 @@ WHAT IT DOES WHEN IT CANNOT REACH THE VENDOR
 It fails. A verification tool that silently degrades to "no news is good news" the moment a
 network call fails is worse than no tool, because it still prints a tick. `--offline` uses a
 cached copy and says so, and an absent cache is an error, not a pass.
+
+WHERE IT KEEPS THE HEADER
+A live run writes the header it fetched into `.spark/cache/` of the project that owns the board
+file, and its line names the file. For a board spark ships, that project is spark itself, so a
+live run refreshes the shipped header. `--offline` reads the project's copy first, then spark's,
+and says whose answered. A board file in no project is refused live, never written beside.
 """
 
 import argparse
@@ -31,6 +37,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+import boards  # noqa: E402  the one project walk the scripts share (boards.project_root)
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_FOR, EXIT_PROBLEMS as EXIT_MISMATCH, status_of  # noqa: E402
 
@@ -99,30 +107,72 @@ def compare(board: dict, vendor_pins: dict):
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 
 
-def own_cache(path: Path, variant: str) -> Path:
-    """
-    Where the board file's own project keeps its vendor header: `.spark/cache/` beside the
-    `boards/` folder the file is in. A live check writes here and nowhere else; for a board the
-    plugin ships, that project is the plugin itself (P179).
-    """
-    return path.parent.parent / CACHE_DIR / ("%s.pins_arduino.h" % variant)
+def header_name(variant: str) -> str:
+    return "%s.pins_arduino.h" % variant
 
 
-def cached_header(path: Path, variant: str) -> Path:
+def project_header(path: Path, variant: str) -> Path:
     """
-    The vendor header to READ for a board file: the board's own project's when it has one, else
-    the plugin's. A project's copy of a shipped board — the documented way to record what you
+    The header's file in the cache of the project that owns the board file: the nearest folder up
+    from it holding `boards/active.json` or `.spark/` (`boards.project_root`, the walk the scripts
+    share). A live check writes here and only here, and an offline check reads here first. For a
+    board spark ships, the owning project is spark itself.
+
+    Raises `boards.BoardError` when no project owns the file. Counting two folders up from the path
+    as typed, as this did before, put a header checked from inside `boards/` into
+    `boards/.spark/cache/`, and a loose board file's into whatever folder held it (P179).
+    """
+    project = boards.project_root(path.resolve().parent)
+    return project / CACHE_DIR / header_name(variant)
+
+
+def header_to_read(path: Path, variant: str) -> Path:
+    """
+    The cached header an `--offline` check reads: the owning project's copy when there is one,
+    else spark's. A project's copy of a shipped board — the documented way to record what you
     verified about it — looked only beside itself, found nothing, and the one check that reads
     the vendor's own header answered "could not run" for exactly the boards it was written to
     check (backlog P10, intake R12).
 
-    Never the place to WRITE a fetched header: that is `own_cache`, always. When the write
-    followed this fallback, the first live check of any new board wrote into the plugin's folder
-    (P179).
+    Only a read falls back to spark's copy. When the live write followed this fallback, the first
+    live check of any new board wrote into spark's own folder (P179).
     """
-    own = own_cache(path, variant)
-    name = own.name
-    return own if own.is_file() else PLUGIN_ROOT / CACHE_DIR / name
+    try:
+        own = project_header(path, variant)
+    except boards.BoardError:
+        own = None  # a board file in no project: only spark's own copy can answer
+    name = header_name(variant)
+    return own if own and own.is_file() else PLUGIN_ROOT / CACHE_DIR / name
+
+
+def whose(header: Path) -> str:
+    """Whose cache a header file is in, in the words `source` uses."""
+    return "spark's" if header.parent.resolve() == (PLUGIN_ROOT / CACHE_DIR).resolve() else "the project's"
+
+
+def keep_live_header(path: Path, variant: str, repo: str):
+    """
+    Fetch the vendor's header and keep it in the owning project's cache. Returns
+    `(header text, the file written)`, or `(None, the reason it could not)`: no project owns the
+    board file, the fetch failed, or the file could not be written. Each reason names the place.
+    """
+    try:
+        target = project_header(path, variant)
+    except boards.BoardError:
+        return None, ("no project owns %s: nothing up from it holds boards/active.json or .spark/, and "
+                      "a live check keeps the header it fetches in the board's project. Put the board "
+                      "file in a project's boards/ (init_project.py makes one), or use --offline"
+                      % path.resolve())
+    try:
+        header = fetch_variant_header(variant, repo)
+    except RuntimeError as broken:
+        return None, str(broken)
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(header)
+    except OSError as refused:
+        return None, "fetched the header but could not keep it at %s: %s" % (target, refused.strerror or refused)
+    return header, target
 
 
 def check_board(path: Path, offline: bool, repo: str):
@@ -135,23 +185,19 @@ def check_board(path: Path, offline: bool, repo: str):
                       "Add it, or say in the file why this board has no vendor header." % path.name,
         }
 
-    written = None  # the file this run wrote, said in the answer so nobody has to guess (P179)
+    wrote = None  # the file this run wrote, said in the answer so nobody has to guess (P179)
     if offline:
-        cache = cached_header(path, variant)
-        if not cache.is_file():
+        header_file = header_to_read(path, variant)
+        if not header_file.is_file():
             return {"board": path.stem, "status": "could-not-run",
-                    "reason": "--offline but no cached header at %s, nor in the plugin's own %s"
-                              % (own_cache(path, variant), PLUGIN_ROOT / CACHE_DIR)}
-        # The whole path: whether the project's copy or the plugin's answered is the point.
-        header, source = cache.read_text(), "cache (%s)" % cache
+                    "reason": "--offline but no cached header %s, neither in the board's project nor in spark's own %s"
+                              % (header_file.name, PLUGIN_ROOT / CACHE_DIR)}
+        header, source = header_file.read_text(), "%s cache (%s)" % (whose(header_file), header_file.name)
     else:
-        try:
-            header = fetch_variant_header(variant, repo)
-        except RuntimeError as broken:
-            return {"board": path.stem, "status": "could-not-run", "reason": str(broken)}
-        written = own_cache(path, variant)
-        written.parent.mkdir(parents=True, exist_ok=True)
-        written.write_text(header)
+        header, kept = keep_live_header(path, variant, repo)
+        if header is None:
+            return {"board": path.stem, "status": "could-not-run", "reason": kept}
+        wrote = kept
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 
     vendor_pins = parse_pins(header)
@@ -163,14 +209,14 @@ def check_board(path: Path, offline: bool, repo: str):
         result = {"board": path.stem, "status": "mismatch" if problems else "ok",
                   "source": source, "compared": compared,
                   "problems": problems, "not_recorded": missing}
-    if written:
-        result["cached"] = str(written)
+    if wrote:
+        result["wrote"] = str(wrote)
     return result
 
 
-def where_kept(result: dict) -> str:
+def wrote_note(result: dict) -> str:
     """The end of a human line: the file this run wrote, when it wrote one (P179)."""
-    return "; cached at %s" % result["cached"] if "cached" in result else ""
+    return "; wrote %s" % result["wrote"] if "wrote" in result else ""
 
 
 def main(argv=None):
@@ -190,12 +236,12 @@ def main(argv=None):
     else:
         for result in results:
             if result["status"] == "could-not-run":
-                print("  %-24s could not run: %s%s" % (result["board"], result["reason"], where_kept(result)))
+                print("  %-24s could not run: %s%s" % (result["board"], result["reason"], wrote_note(result)))
                 continue
             print("  %-24s %s  (%d pins against %s%s)"
                   % (result["board"],
                      "ok" if result["status"] == "ok" else "MISMATCH",
-                     result["compared"], result["source"], where_kept(result)))
+                     result["compared"], result["source"], wrote_note(result)))
             for problem in result.get("problems", []):
                 print("      - %s" % problem)
             if result.get("not_recorded"):

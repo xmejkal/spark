@@ -139,6 +139,24 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         self.assertIn(payload[0]["status"], (outcomes.OK, outcomes.PROBLEMS, outcomes.COULD_NOT_RUN, "mismatch"))
         self.assertIn(code, (outcomes.EXIT_OK, outcomes.EXIT_PROBLEMS, outcomes.EXIT_COULD_NOT_RUN))
 
+    def test_check_vendor_pins_live(self):
+        # P179: a live run adds `wrote`, the file it kept the fetched header in. The board is a copy
+        # in a project of this test's own and the fetch is patched, so nothing reaches the network
+        # or spark's folder.
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / "boards").mkdir()
+        shipped = ROOT / "boards" / (BOARD + ".json")
+        board = project / "boards" / shipped.name
+        board.write_text(shipped.read_text())
+        variant = json.loads(shipped.read_text())["vendor"]["arduino_variant"]
+        header = (ROOT / ".spark" / "cache" / ("%s.pins_arduino.h" % variant)).read_text()
+        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=header):
+            code, payload = payload_of(lambda: check_vendor_pins.main(["--json", str(board)]))
+        self.assertEqual(sorted(payload[0]),
+                         ["board", "compared", "not_recorded", "problems", "source", "status", "wrote"])
+        self.assertEqual(code, outcomes.EXIT_OK)
+
     def test_emit_footprint(self):
         # Says `check`, not `tool`.
         self._check("emit_footprint", lambda: emit_footprint.main(

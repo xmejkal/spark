@@ -18,6 +18,7 @@ together. `D3 = GPIO3` is the canonical instance and is asserted here.
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -214,82 +215,142 @@ class TheExitCodeTellsTheThreeApartTest(unittest.TestCase):
 
 class WhereTheHeaderIsKept(unittest.TestCase):
     """
-    P179. A live check writes the header it fetched beside the board file, in that project's own
-    `.spark/cache/`, and never into spark's: P10's fallback to the plugin's cache is for reading
-    only. Before the fix the write followed the read fallback, so the first live check of any new
-    board wrote into the plugin folder, and a later `--offline` passed from a file in nobody's
-    project (P100 round 0, 2026-10-09). Each test restores whatever the old code wrote into the
-    plugin, so a red run leaves nothing behind.
+    P179. A live check writes the header it fetched into the cache of the project that owns the
+    board file, found by the walk every script shares (`boards.project_root`), and says which file.
+    An offline check reads that copy first and says whose cache answered. Before the fix the
+    write followed P10's read fallback, so the first live check of any new board wrote into
+    spark's own folder, and a later `--offline` passed from a file in nobody's project (P100
+    round 0, 2026-10-09).
+
+    spark's own folder is a stand-in here (`PLUGIN_ROOT` patched to a temporary copy), so no run,
+    red, green or interrupted, can change the real one.
     """
 
-    PLUGIN_CACHE = ROOT / ".spark" / "cache"
+    SHIPPED = "firebeetle2-esp32s3"
 
-    def _project_board(self, contents):
-        project = Path(tempfile.mkdtemp())
+    def setUp(self):
+        self.plugin = Path(tempfile.mkdtemp()).resolve()
+        shipped_cache = ROOT / ".spark" / "cache"
+        (self.plugin / ".spark" / "cache").mkdir(parents=True)
+        for header in shipped_cache.glob("*.pins_arduino.h"):
+            (self.plugin / ".spark" / "cache" / header.name).write_bytes(header.read_bytes())
+        self.seeded = self._plugin_files()
+        patcher = mock.patch.object(check_vendor_pins, "PLUGIN_ROOT", self.plugin)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _plugin_files(self):
+        return {f.name: f.read_bytes() for f in (self.plugin / ".spark" / "cache").iterdir()}
+
+    def _project(self, contents, owned=True):
+        """A board file in `<project>/boards/`; `owned` makes the folder a project (it holds `.spark/`)."""
+        project = Path(tempfile.mkdtemp()).resolve()
         (project / "boards").mkdir()
+        if owned:
+            (project / ".spark").mkdir()
         path = project / "boards" / "someboard.json"
         path.write_text(json.dumps(contents))
         return project, path
 
-    def _keep_the_plugin_cache_as_it_is(self, name):
-        """Put the plugin's file `name` back as it was (or remove it) once the test ends."""
-        plugin_copy = self.PLUGIN_CACHE / name
-        before = plugin_copy.read_bytes() if plugin_copy.is_file() else None
+    def _board(self, variant, d3=38):
+        return {"pins": {"D3": d3}, "vendor": {"arduino_variant": variant}}
 
-        def restore():
-            if before is None:
-                plugin_copy.unlink(missing_ok=True)
-            else:
-                plugin_copy.write_bytes(before)
-        self.addCleanup(restore)
-        return plugin_copy, before
-
-    def _live(self, path, fetched):
+    def _live(self, path, fetched=HEADER):
         with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=fetched):
             return check_vendor_pins.check_board(path, offline=False, repo="x/y")
 
-    def test_a_live_fetch_for_a_new_board_is_cached_beside_the_board_not_in_the_plugin(self):
-        variant = "p179_new_board"
-        project, path = self._project_board({"pins": {"D3": 38}, "vendor": {"arduino_variant": variant}})
-        plugin_copy, _ = self._keep_the_plugin_cache_as_it_is(variant + ".pins_arduino.h")
-
-        result = self._live(path, HEADER)
-
-        own = project / ".spark" / "cache" / (variant + ".pins_arduino.h")
-        self.assertEqual(result["status"], "ok")
-        self.assertFalse(plugin_copy.exists(), "nothing is written into spark's own folder")
-        self.assertEqual(own.read_text(), HEADER, "the fetched header is kept in the board's own project")
-        self.assertEqual(result["cached"], str(own), "and the answer says where it was kept")
-
-    def test_a_live_fetch_for_a_projects_copy_of_a_shipped_board_leaves_the_plugins_header_alone(self):
-        shipped = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        name = shipped["vendor"]["arduino_variant"] + ".pins_arduino.h"
-        project, path = self._project_board(shipped)
-        plugin_copy, before = self._keep_the_plugin_cache_as_it_is(name)
-        fetched = before.decode() + "\n// fetched by P179's test\n"
-
-        self._live(path, fetched)
-
-        self.assertEqual(plugin_copy.read_bytes(), before, "the plugin's tracked header is not overwritten")
-        self.assertEqual((project / ".spark" / "cache" / name).read_text(), fetched)
-
-    def test_the_live_line_says_where_the_header_was_cached(self):
-        variant = "p179_said"
-        project, path = self._project_board({"pins": {"D3": 38}, "vendor": {"arduino_variant": variant}})
-        self._keep_the_plugin_cache_as_it_is(variant + ".pins_arduino.h")
+    def _line(self, path, fetched=HEADER):
         out = io.StringIO()
-        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=HEADER), \
+        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=fetched), \
                 contextlib.redirect_stdout(out):
             check_vendor_pins.main([str(path)])
-        self.assertIn("cached at %s" % (project / ".spark" / "cache" / (variant + ".pins_arduino.h")), out.getvalue())
+        return out.getvalue()
 
-    def test_an_offline_read_names_the_file_it_read(self):
-        # Which of the two places answered, the project's or the plugin's, is what was invisible.
-        shipped = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        _, path = self._project_board(shipped)
+    @staticmethod
+    def _kept(project, variant):
+        return project / ".spark" / "cache" / (variant + ".pins_arduino.h")
+
+    def test_a_live_fetch_for_a_new_board_is_kept_in_its_project_not_in_spark(self):
+        project, path = self._project(self._board("p179_new"))
+        result = self._live(path)
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(self._kept(project, "p179_new").read_text(), HEADER)
+        self.assertEqual(self._plugin_files(), self.seeded, "nothing is written into spark's own folder")
+        self.assertEqual(result["wrote"], str(self._kept(project, "p179_new")), "and the answer says which file")
+
+    def test_a_live_fetch_for_a_projects_copy_of_a_shipped_board_leaves_sparks_header_alone(self):
+        shipped = json.loads((ROOT / "boards" / (self.SHIPPED + ".json")).read_text())
+        variant = shipped["vendor"]["arduino_variant"]
+        project, path = self._project(shipped)
+        fetched = self.seeded[variant + ".pins_arduino.h"].decode() + "\n// fetched by P179's test\n"
+        self._live(path, fetched)
+        self.assertEqual(self._plugin_files(), self.seeded, "spark's shipped header is not overwritten")
+        self.assertEqual(self._kept(project, variant).read_text(), fetched)
+
+    def test_a_relative_path_from_inside_boards_is_kept_in_the_project(self):
+        project, _ = self._project(self._board("p179_rel"))
+        here = os.getcwd()
+        self.addCleanup(os.chdir, here)
+        os.chdir(project / "boards")
+        result = self._live(Path("someboard.json"))
+        self.assertTrue(self._kept(project, "p179_rel").is_file())
+        self.assertFalse((project / "boards" / ".spark").exists(), "not two folders up from the path as typed")
+        self.assertEqual(result["wrote"], str(self._kept(project, "p179_rel")), "and the file is named whole")
+
+    def test_a_board_file_in_no_project_is_refused_live_and_nothing_is_written(self):
+        loose = Path(tempfile.mkdtemp()).resolve()
+        path = loose / "someboard.json"
+        path.write_text(json.dumps(self._board("p179_loose")))
+        result = self._live(path)
+        self.assertEqual(result["status"], "could-not-run")
+        self.assertIn("no project", result["reason"])
+        self.assertFalse((loose / ".spark").exists() or (loose.parent / ".spark").exists())
+        self.assertEqual(self._plugin_files(), self.seeded)
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root writes anywhere")
+    def test_a_cache_that_cannot_be_written_is_could_not_run_and_names_the_file(self):
+        project, path = self._project(self._board("p179_locked"))
+        (project / ".spark").chmod(0o500)
+        self.addCleanup((project / ".spark").chmod, 0o700)
+        result = self._live(path)
+        self.assertEqual(result["status"], "could-not-run")
+        self.assertIn(str(self._kept(project, "p179_locked")), result["reason"])
+
+    def test_the_live_line_says_which_file_it_wrote(self):
+        project, path = self._project(self._board("p179_said"))
+        self.assertIn("wrote %s" % self._kept(project, "p179_said"), self._line(path))
+
+    def test_a_fetch_that_parses_no_pins_still_says_which_file_it_wrote(self):
+        project, path = self._project(self._board("p179_empty"))
+        result = self._live(path, "/* no pins here */")
+        self.assertEqual(result["status"], "could-not-run")
+        self.assertEqual(result["wrote"], str(self._kept(project, "p179_empty")))
+        self.assertIn("wrote %s" % self._kept(project, "p179_empty"), self._line(path, "/* no pins here */"))
+
+    def test_an_offline_read_says_spark_answered_when_the_project_has_no_copy(self):
+        shipped = json.loads((ROOT / "boards" / (self.SHIPPED + ".json")).read_text())
+        _, path = self._project(shipped)
         result = check_vendor_pins.check_board(path, offline=True, repo="")
-        plugin_copy = self.PLUGIN_CACHE / (shipped["vendor"]["arduino_variant"] + ".pins_arduino.h")
-        self.assertIn(str(plugin_copy), result["source"])
+        self.assertEqual(result["status"], "ok", result.get("reason"))
+        self.assertTrue(result["source"].startswith("spark's cache"), result["source"])
+
+    def test_an_offline_read_prefers_the_projects_own_copy(self):
+        # spark's copy says D3 is GPIO3, the project's says GPIO38, the board says 38: only the
+        # project's copy agrees, so an `ok` proves which one answered (TL-2b).
+        (self.plugin / ".spark" / "cache" / "p179_both.pins_arduino.h").write_text(HEADER.replace("D3 = 38", "D3 = 3"))
+        project, path = self._project(self._board("p179_both"))
+        self._kept(project, "p179_both").parent.mkdir(parents=True)
+        self._kept(project, "p179_both").write_text(HEADER)
+        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        self.assertEqual(result["status"], "ok", result.get("problems"))
+        self.assertTrue(result["source"].startswith("the project's cache"), result["source"])
+
+    def test_what_a_live_check_wrote_is_what_a_later_offline_check_reads(self):
+        project, path = self._project(self._board("p179_again"))
+        self._live(path)
+        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        self.assertEqual(result["status"], "ok", result.get("reason"))
+        self.assertTrue(result["source"].startswith("the project's cache"), result["source"])
 
 
 if __name__ == "__main__":

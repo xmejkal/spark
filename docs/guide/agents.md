@@ -120,9 +120,11 @@ These write:
   inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
-- `check_vendor_pins.py` without `--offline`: the vendor header it fetched, into `.spark/cache/` beside the `boards/`
-  folder the board file is in, never into spark's own folder ([P179](https://github.com/xmejkal/spark/issues/124)).
-  Its line ends `cached at <file>`, and `--json` says the same as `cached`.
+- `check_vendor_pins.py` without `--offline`: the vendor header it fetched, into `.spark/cache/` of the project that
+  owns the board file, the nearest folder up from it holding `boards/active.json` or `.spark/`. For a board spark
+  ships, that project is spark, and the shipped header is refreshed (`git status` in spark shows it). A board file in
+  no project is refused ([P179](https://github.com/xmejkal/spark/issues/124)). The line names the file it wrote, and
+  `--json` says it as `wrote`.
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
@@ -247,7 +249,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_footprints.py` | `findings`, `status`, `tool` |
 | `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems` |
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
-| `check_vendor_pins.py` | **a bare list**, each entry `board`, `compared`, `not_recorded`, `problems`, `source`, `status`, and `cached` (the file it wrote) when it fetched without `--offline`. With `--offline`, `source` names the cached file it read, the project's or the plugin's. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
+| `check_vendor_pins.py` | **a bare list**, each entry `board`, `compared`, `not_recorded`, `problems`, `source`, `status`, and `wrote` (the file it kept the fetched header in) when run without `--offline`. With `--offline`, `source` says whose cache answered: `the project's cache (<file>)` or `spark's cache (<file>)`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
 | `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it |
 | `parts.py` | the envelope: `data`, `envelope`, `next`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
