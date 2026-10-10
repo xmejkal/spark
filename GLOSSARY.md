@@ -380,15 +380,15 @@ design); the trial on 2026-11-02 corrects the guess ([the cadences](scrum/README
 
 ### Council, lens, refuter
 
-A **council** is one run of several agents on one question — a spec, a plan, a pull request. Each agent reads it as
-one **lens**, a point of view: the PO assistant, the user's journey, the tech lead, and two documentation experts, one
-for human readers and one for AI. Then a **refuter** tries to knock each finding down, and what stands is fixed or goes
-on the run's checklist. Lenses run on Sonnet and the refuter on Opus
-([the token budget](scrum/README.md#the-token-budget)). Before every pull request the council is those five lenses and
-the refuter, and its findings are fixed before the merge (the PO, 2026-10-08 and 2026-10-10;
-[the council](scrum/README.md#the-council-before-every-pull-request)). **Why
-a refuter:** a lens's finding is a hypothesis until reproduced (W9); the refuters of the design's own reads marked 50
-of 254 findings "partly" (the process design, §2).
+A **council** is one run of several agents on one question — a spec, a plan, a pull request. Each agent reads it as one
+**lens**, a point of view: the PO assistant, the user's journey, the tech lead, and three documentation experts, for
+human readers, for AI, and for examples and help. Then a **refuter** tries to knock each finding down, and what stands
+is fixed or goes on the run's checklist. Lenses run on Sonnet and the refuter on Opus ([the token
+budget](scrum/README.md#the-token-budget)). Before every pull request the council is those six lenses and the refuter,
+and its findings are fixed before the merge (the PO, 2026-10-08 and 2026-10-10; [the
+council](scrum/README.md#the-council-before-every-pull-request)). **Why a refuter:** a lens's finding is a hypothesis
+until reproduced (W9); the refuters of the design's own reads marked 50 of 254 findings "partly" (the process design,
+§2).
 
 ### Day-close
 

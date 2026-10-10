@@ -11,9 +11,9 @@
 - An agent's launch names its card, which stands in its working stage first
   ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)), and its model:
   `Agent(description="#126 P180: the documentation expert for humans", model="sonnet", …)`.
-- Before every pull request, [a council](#the-council-before-every-pull-request): three lenses, two documentation
-  experts (for humans and for AI), then the refuter. Lenses on Sonnet, the rest on Opus, Fable only where the PO names
-  it ([the token budget](#the-token-budget)).
+- Before every pull request, [a council](#the-council-before-every-pull-request): three lenses, three documentation
+  experts (for humans, for AI, and for examples and help), then the refuter. Lenses on Sonnet, the rest on Opus, Fable
+  only where the PO names it ([the token budget](#the-token-budget)).
 
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
 
@@ -110,7 +110,7 @@ PO's order into Ready commits.
 | **Design** | 2, epics count | a story the PO chose has no approved spec, before Ready or when it is pulled from Ready | the spec is in `docs/`, its council has run (full by default, light on request (D)), and the PO says yes | superpowers' brainstorming, then the spec in `docs/` |
 | **Ready** | 5 | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
 | **Build** | 2 | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | superpowers' writing-plans — a plan council only for a plan of several tasks (decision 6) — then executing-plans or subagent-driven-development; the plan's tasks become sub-issues |
-| **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request) (the PO assistant, the user's journey, the tech lead, the two documentation experts, then the refuter) has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
+| **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request) (the PO assistant, the user's journey, the tech lead, the three documentation experts, then the refuter) has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
 Ready takes five (D); each working stage two, and at most four cards in flight — Discovery to Review — at once: the
@@ -169,7 +169,8 @@ skipped twice, do epics start and finish? If not, one-day sprints replace it (th
 ### The council before every pull request
 
 Every pull request, bigger or smaller, gets a council before the PO merges it: the PO assistant, the user's journey
-and the tech lead, two documentation experts (one for human readers, one for AI), then the refuter. Its findings are
+and the tech lead, three documentation experts (for human readers, for AI, and for examples and help), then the
+refuter. Its findings are
 fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08. The PO's words of
 2026-10-08, as #80 records them (typos corrected) —
 [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
@@ -185,7 +186,7 @@ fixed before the merge, not only reported. First run: P158's council on PR #98, 
 > the documentation expert also makes sure and updates if wrong or missing help for both agents and humans and that
 > there are no hallucinations and is always up to date
 
-And the briefs both documentation experts read on every PR, the PO's words of 2026-10-10 (typos corrected,
+And the briefs the documentation experts read on every PR, the PO's words of 2026-10-10 (typos corrected,
 [#126](https://github.com/xmejkal/spark/issues/126)):
 
 > before every PR, I want you to have a documentation expert check the documentation and make sure its up to date,
@@ -200,12 +201,14 @@ And minutes later:
 > by both humans and AI. Also lets make sure there really are examples and good explanations. And also the agents
 > and skills and the whole plugin is well documented, help is good, readme, detail pages, etc.
 
-"More experts" is read here as two, one for each reader. That is Claude's reading, and the PO may add more.
+Asked whether "more experts" means two, one for each reader, the PO answered the same day: *"Add a third: examples
+and help"* ([#126](https://github.com/xmejkal/spark/issues/126)). So three documentation experts sit on the council.
 
 | expert | reads: what the change touches, or makes stale | checks |
 | --- | --- | --- |
-| **for humans** | README.md and every page it links to (GLOSSARY.md, `docs/guide/`, `commands/*.md`, `boards/README.md`, `scrum/VISION.md`); the `--help` of every script `docs/guide/agents.md` names | current, correct, readable; real examples and explanations; the README tempting first (what spark does for you, a short real example), then the details with diagrams and tables, and the specifics on pages it links to |
-| **for AI** | `skills/*/SKILL.md` and the knowledge they load, `skills/*/references/*.md`; `agents/*.md`; `commands/*.md` whole, since the body is Claude's instructions; `.claude-plugin/plugin.json` and `marketplace.json`; AGENTS.md; GLOSSARY.md; `docs/guide/agents.md`; `parts.py --describe --json` and the `--help` of every script `docs/guide/agents.md` names; the process pages in `scrum/` | current and true to the code; each description says when to use it and what it returns; examples of an agent calling it |
+| **for humans** | README.md and every page it links to (GLOSSARY.md, `docs/guide/`, `commands/*.md`, `boards/README.md`, `scrum/VISION.md`) | current, correct, readable; good explanations; the README tempting first (what spark does for you, a short real example), then the details with diagrams and tables, and the specifics on pages it links to |
+| **for AI** | `skills/*/SKILL.md` and the knowledge they load, `skills/*/references/*.md`; `agents/*.md`; `commands/*.md` whole, since the body is Claude's instructions; `.claude-plugin/plugin.json` and `marketplace.json`; AGENTS.md; GLOSSARY.md; `docs/guide/agents.md`; `parts.py --describe --json`; the process pages in `scrum/` | current and true to the code; each description says when to use it and what it returns |
+| **for examples and help** | every example and recorded output on the pages the change touches or the README links to; the `--help` of every script `docs/guide/agents.md` names | each page a reader reaches shows a real example, for a person and for an agent calling it; each example runs as shown and its recorded output matches today's; each `--help` says what the script does, what it writes and what every option is for |
 
 ## The token budget
 
@@ -269,9 +272,9 @@ Every one of these, for every item. No exceptions, no "mostly".
 8. A change to what a step of the journey does updates [the journey guide](../docs/guide/journey.md) and the README's
    *What works today* in the same change (P104, the PO 2026-10-05). Nothing mechanical checks it: `tools/check_docs.py`
    cannot tell whether a status is still current, so the council reads it.
-9. Before the PR: [the council](#the-council-before-every-pull-request) with its two documentation experts, for human
-   readers (the README's shape included) and for AI (skills, agents, descriptions, help), and its fixes (the PO,
-   2026-10-08 and 2026-10-10).
+9. Before the PR: [the council](#the-council-before-every-pull-request) with its three documentation experts, for
+   human readers (the README's shape included), for AI (skills, agents, descriptions) and for examples and help, and
+   its fixes (the PO, 2026-10-08 and 2026-10-10).
 10. **A version bump is a release.** The PR that changes the version in `.claude-plugin/plugin.json` (and README's
    footer, which `tools/check_docs.py` ties to it) is tagged `vX.Y.Z` on its merge and gets a GitHub release whose
    notes say what new functionality and which bug fixes came in; the PR's body names the release. Major when a
