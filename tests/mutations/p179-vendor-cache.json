@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "a live fetch writes where the read fallback points again, into the plugin (P179)",
+  "find": "        written = own_cache(path, variant)",
+  "replace": "        written = cached_header(path, variant)"
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "the answer stops saying which file the live check wrote (P179)",
+  "find": "        result[\"cached\"] = str(written)",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "the human line stops saying where the header was cached (P179)",
+  "find": "    return \"; cached at %s\" % result[\"cached\"] if \"cached\" in result else \"\"",
+  "replace": "    return \"\""
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "an offline read names only the file name, not whose cache answered (P179)",
+  "find": "\"cache (%s)\" % cache",
+  "replace": "\"cache (%s)\" % cache.name"
+ }
+]

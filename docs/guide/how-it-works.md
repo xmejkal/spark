@@ -169,7 +169,8 @@ spark's own scripts:
 3. **`emit_footprint.py --board <id> --project .`** makes the footprint, or names each field it still needs. With no
    header geometry at all, it names only `physical.header`.
 4. **`check_vendor_pins.py boards/<id>.json`** compares the pin map with the vendor's header that
-   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh`.
+   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh`. It keeps the header in your project's
+   `.spark/cache/`, where `--offline` and `check_all.py` read it later, and its line says which file.
 5. **Name the id as `board`** in the requirements file. The chain takes the project's definition before the library's.
 
 No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has

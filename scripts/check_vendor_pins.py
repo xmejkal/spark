@@ -99,16 +99,29 @@ def compare(board: dict, vendor_pins: dict):
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 
 
+def own_cache(path: Path, variant: str) -> Path:
+    """
+    Where the board file's own project keeps its vendor header: `.spark/cache/` beside the
+    `boards/` folder the file is in. A live check writes here and nowhere else; for a board the
+    plugin ships, that project is the plugin itself (P179).
+    """
+    return path.parent.parent / CACHE_DIR / ("%s.pins_arduino.h" % variant)
+
+
 def cached_header(path: Path, variant: str) -> Path:
     """
-    The vendor header for a board file: cached in the board's own project when it is, else in
+    The vendor header to READ for a board file: the board's own project's when it has one, else
     the plugin's. A project's copy of a shipped board — the documented way to record what you
     verified about it — looked only beside itself, found nothing, and the one check that reads
     the vendor's own header answered "could not run" for exactly the boards it was written to
     check (backlog P10, intake R12).
+
+    Never the place to WRITE a fetched header: that is `own_cache`, always. When the write
+    followed this fallback, the first live check of any new board wrote into the plugin's folder
+    (P179).
     """
-    name = "%s.pins_arduino.h" % variant
-    own = path.parent.parent / CACHE_DIR / name
+    own = own_cache(path, variant)
+    name = own.name
     return own if own.is_file() else PLUGIN_ROOT / CACHE_DIR / name
 
 
@@ -122,31 +135,42 @@ def check_board(path: Path, offline: bool, repo: str):
                       "Add it, or say in the file why this board has no vendor header." % path.name,
         }
 
-    cache = cached_header(path, variant)
+    written = None  # the file this run wrote, said in the answer so nobody has to guess (P179)
     if offline:
+        cache = cached_header(path, variant)
         if not cache.is_file():
             return {"board": path.stem, "status": "could-not-run",
                     "reason": "--offline but no cached header at %s, nor in the plugin's own %s"
-                              % (path.parent.parent / CACHE_DIR / cache.name, PLUGIN_ROOT / CACHE_DIR)}
-        header, source = cache.read_text(), "cache (%s)" % cache.name
+                              % (own_cache(path, variant), PLUGIN_ROOT / CACHE_DIR)}
+        # The whole path: whether the project's copy or the plugin's answered is the point.
+        header, source = cache.read_text(), "cache (%s)" % cache
     else:
         try:
             header = fetch_variant_header(variant, repo)
         except RuntimeError as broken:
             return {"board": path.stem, "status": "could-not-run", "reason": str(broken)}
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        cache.write_text(header)
+        written = own_cache(path, variant)
+        written.parent.mkdir(parents=True, exist_ok=True)
+        written.write_text(header)
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 
     vendor_pins = parse_pins(header)
     if not vendor_pins:
-        return {"board": path.stem, "status": "could-not-run",
-                "reason": "parsed no pin definitions out of %s" % source}
+        result = {"board": path.stem, "status": "could-not-run",
+                  "reason": "parsed no pin definitions out of %s" % source}
+    else:
+        problems, compared, missing = compare(board, vendor_pins)
+        result = {"board": path.stem, "status": "mismatch" if problems else "ok",
+                  "source": source, "compared": compared,
+                  "problems": problems, "not_recorded": missing}
+    if written:
+        result["cached"] = str(written)
+    return result
 
-    problems, compared, missing = compare(board, vendor_pins)
-    return {"board": path.stem, "status": "mismatch" if problems else "ok",
-            "source": source, "compared": compared,
-            "problems": problems, "not_recorded": missing}
+
+def where_kept(result: dict) -> str:
+    """The end of a human line: the file this run wrote, when it wrote one (P179)."""
+    return "; cached at %s" % result["cached"] if "cached" in result else ""
 
 
 def main(argv=None):
@@ -166,12 +190,12 @@ def main(argv=None):
     else:
         for result in results:
             if result["status"] == "could-not-run":
-                print("  %-24s could not run: %s" % (result["board"], result["reason"]))
+                print("  %-24s could not run: %s%s" % (result["board"], result["reason"], where_kept(result)))
                 continue
-            print("  %-24s %s  (%d pins against %s)"
+            print("  %-24s %s  (%d pins against %s%s)"
                   % (result["board"],
                      "ok" if result["status"] == "ok" else "MISMATCH",
-                     result["compared"], result["source"]))
+                     result["compared"], result["source"], where_kept(result)))
             for problem in result.get("problems", []):
                 print("      - %s" % problem)
             if result.get("not_recorded"):
