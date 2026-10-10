@@ -106,8 +106,9 @@ tools spark needs, and installs what is missing in one go once you have seen the
 
 An update replaces the plugin, not your files. Your store and a project's own `boards/`, `parts/` and `.spark/` are
 outside it ([how it works](docs/guide/how-it-works.md#your-store)). Three things write inside the plugin
-itself: `parts.py --promote` copies a record into its library, a live `check_vendor_pins.py` on a board spark ships
-refreshes its kept vendor header, and the chain may compile a library part's simulation chip beside its record.
+itself: `parts.py --promote` copies a record into its library, `check_vendor_pins.py` run without `--offline` on a
+board spark ships refreshes the vendor pin header spark keeps for it, and the chain may compile a library part's
+simulation chip beside its record.
 
 ## Two roads to a board
 

@@ -246,8 +246,10 @@ def main(argv=None):
         prog="check_vendor_pins.py",
         description="Compare a board definition against the vendor's own pin header. Without --offline it "
                     "fetches the header with the GitHub CLI gh and keeps it in .spark/cache/ of the project that "
-                    "owns the board file, and its line says which file it wrote; a board file no project owns is "
-                    "refused before anything is fetched.")
+                    "owns the board file (the nearest folder up from it holding boards/active.json or .spark/), and "
+                    "each board's line ends with the file it wrote. A board spark ships is owned by spark, so a live "
+                    "run refreshes spark's own copy: check those with --offline unless asked to refresh them. A live "
+                    "run on a board file no project owns is refused before anything is fetched.")
     parser.add_argument("boards", nargs="+", help="board definition files")
     parser.add_argument("--offline", action="store_true",
                         help="never fetch: read the header a live run kept, the project's first, then spark's own; "

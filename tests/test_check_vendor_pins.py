@@ -400,13 +400,18 @@ class TheHelpSaysWhatItDoes(unittest.TestCase):
     def test_it_says_where_a_live_run_keeps_the_header(self):
         self.assertIn(".spark/cache/ of the project that owns the board file", self._help())
 
-    def test_it_says_a_board_no_project_owns_is_refused(self):
-        self.assertIn("a board file no project owns is refused", self._help())
+    def test_it_says_a_board_no_project_owns_is_refused_live(self):
+        self.assertIn("A live run on a board file no project owns is refused", self._help())
+
+    def test_it_says_what_owns_means_and_that_spark_owns_its_shipped_boards(self):
+        text = self._help()
+        self.assertIn("the nearest folder up from it holding boards/active.json or .spark/", text)
+        self.assertIn("A board spark ships is owned by spark, so a live run refreshes spark's own copy", text)
 
     def test_it_says_which_cache_offline_reads(self):
         self.assertIn("the project's first, then spark's own", self._help())
 
-    def test_every_option_says_what_it_is_for(self):
+    def test_repo_and_json_say_what_they_are_for(self):
         text = self._help()
         for words in ("the GitHub repository holding the variant headers", "a JSON list, one entry per board"):
             with self.subTest(option=words):

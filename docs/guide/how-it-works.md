@@ -55,7 +55,7 @@ The files that join the steps:
 | `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--sim-dir sim` | `wokwi-cli`, and Wokwi for VS Code |
 | `.spark/rules.json` | `init_project.py`, then you | the checks, and the generator, which sizes a rail's traces from its `max_current_a` |
 | `.spark/needs.json` | `parts.py --needs-set`, and `--pick` for a need's pick | `parts.py --match` |
-| `.spark/cache/<variant>.pins_arduino.h`, the vendor's pin header | `check_vendor_pins.py` without `--offline` | `check_vendor_pins.py --offline` and `check_all.py`'s vendor-truth, which fall back to spark's own copy |
+| `.spark/cache/<variant>.pins_arduino.h`, the vendor's pin header | `check_vendor_pins.py` without `--offline` | `check_vendor_pins.py --offline` and `check_all.py`'s vendor-truth, which fall back to spark's own copy for the two boards it ships |
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
 | `firmware/pins.py` | `assign_pins.py --emit-pins` | your firmware |
 
@@ -80,7 +80,8 @@ Each by its name in check_all's answer:
 - **vendor-truth**, `check_vendor_pins.py`: does the board definition match what the vendor says, or only what somebody
   typed? It re-derives the pin map from the vendor's own `pins_arduino.h`.
   - Inside check_all it never fetches. It reads the header a live run kept in the board's project,
-    `.spark/cache/`, else spark's own copy of espressif/arduino-esp32's variant header (committed 2026-09-24).
+    `.spark/cache/`, else spark's own copy of espressif/arduino-esp32's variant header, which spark keeps only for
+    the two boards it ships (committed 2026-09-24); any other board needs its own copy, kept by a live run.
   - Run on its own without `--offline`, it fetches through the GitHub CLI `gh` and keeps the header in the board's
     project ([your own dev board](#your-own-dev-board), step 4).
 - **buildability**, `check_footprints.py`: will this board be buildable, and will the parts go in it? It checks:
@@ -154,8 +155,8 @@ Your board house's numbers go in `.spark/rules.json` under `fabrication`.
 
 ### Your own dev board
 
-spark's library defines the FireBeetle 2 ESP32-S3 and the Seeed XIAO ESP32-C6. Another board needs its own definition, a JSON file in the project's `boards/`; this was
-not run for these docs. [`boards/README.md`](../../boards/README.md) explains the format, but its steps are the smart
+spark's library defines the FireBeetle 2 ESP32-S3 and the Seeed XIAO ESP32-C6. Another board needs its own definition, a JSON file in the project's `boards/`. Steps 1–3 and
+5 were not run for these docs; step 4's line is from a run on a definition spark does not ship. [`boards/README.md`](../../boards/README.md) explains the format, but its steps are the smart
 bin's, and name a Makefile and files spark does not have ([P127](https://github.com/xmejkal/spark/issues/61)). With
 spark's own scripts:
 
@@ -171,10 +172,12 @@ spark's own scripts:
 3. **`emit_footprint.py --board <id> --project .`** makes the footprint, or names each field it still needs. With no
    header geometry at all, it names only `physical.header`.
 4. **`check_vendor_pins.py boards/<id>.json`** compares the pin map with the vendor's header that
-   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh` (logged in once with `gh auth login`). It keeps
-   the header in your project's `.spark/cache/`, where `--offline` and `check_all.py` read it later, and its line
-   names the file it wrote. A run of 2026-10-10 on a FireBeetle 2 ESP32-C6 record:
-   ```
+   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh` ([install it](https://cli.github.com), then log
+   in once with `gh auth login`). It keeps the header in your project's `.spark/cache/`, where `--offline` and
+   `check_all.py` read it later, and its line names the file it wrote. A run on a FireBeetle 2 ESP32-C6 board file:
+
+   <!-- output: run 2026-10-10, spark 0.8.1 -->
+   ```text
      firebeetle2-esp32c6      ok  (20 pins against espressif/arduino-esp32 variants/dfrobot_firebeetle2_esp32c6/pins_arduino.h; wrote <your project>/.spark/cache/dfrobot_firebeetle2_esp32c6.pins_arduino.h)
    ```
    Commit that file with the board file: without it, `--offline` and `check_all.py` answer could-not-run for a board

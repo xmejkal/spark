@@ -327,7 +327,7 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
 
     def network_lines(self):
         """Command lines whose operation reaches the network: each network row of --describe — alone, with an argument, after
-        each option, with or without a value — and tools.py's downloads."""
+        each option, with or without a value — tools.py's downloads, and a live vendor-pin check (P181)."""
         described = self.described()
         network = [op["flag"] for op in described["operations"] if "network" in op["effects"]]
         options = [option["flag"] for option in described["options"]]
@@ -339,7 +339,8 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
         for flag in self.TOOLS_NETWORK:
             lines += ["%s %s x-tool" % (self.TOOLS, flag), "%s --project . %s x-tool" % (self.TOOLS, flag)]
         lines += ["%s boards/x.json" % self.VENDOR, "%s --json boards/x.json" % self.VENDOR,
-                  "%s boards/x.json --json" % self.VENDOR]
+                  "%s boards/x.json --json" % self.VENDOR, "%s --repo o/r boards/x.json" % self.VENDOR,
+                  "%s ${CLAUDE_PLUGIN_ROOT}/boards/x.json" % self.VENDOR]
         return network, lines
 
     def test_the_model_of_the_matcher(self):
@@ -368,6 +369,15 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
                 words = pattern[len(self.PARTS):].split()
                 self.assertIn(words[0] if words else None, local, "never parts.py *: one operation per pattern")
                 self.assertIn(words[1:], ([], ["*"]))
+
+    def test_each_vendor_check_pattern_starts_with_offline(self):
+        # P181, the refuter's R-1: a pattern such as `check_vendor_pins.py ${CLAUDE_PLUGIN_ROOT}/boards/*` matched no
+        # network line above and pre-approved a live fetch all the same. Only `--offline` stays on the machine.
+        for page, pattern in self.allowed():
+            if pattern.startswith(self.VENDOR):
+                with self.subTest(page=page, pattern=pattern):
+                    self.assertTrue(pattern[len(self.VENDOR):].split()[:1] == ["--offline"],
+                                    "a vendor-check pattern pre-approves only `--offline`")
 
     def test_a_line_naming_a_network_operation_after_an_allowed_one_runs_neither(self):
         import store
