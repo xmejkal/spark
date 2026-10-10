@@ -11,9 +11,9 @@
 - An agent's launch names its card, which stands in its working stage first
   ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)), and its model:
   `Agent(description="#126 P180: the documentation expert for humans", model="sonnet", …)`.
-- Before every pull request, [a council](#the-council-before-every-pull-request): three lenses, three documentation
-  experts (for humans, for AI, and for examples and help), then the refuter. Lenses on Sonnet, the rest on Opus, Fable
-  only where the PO names it ([the token budget](#the-token-budget)).
+- Before every pull request, [a council](#the-council-before-every-pull-request): six lenses on Sonnet (the PO
+  assistant, the user's journey, the tech lead, and three documentation experts, for humans, for AI, and for examples
+  and help), then the refuter on Opus. Fable only where the PO names it ([the token budget](#the-token-budget)).
 
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
 
@@ -168,11 +168,10 @@ skipped twice, do epics start and finish? If not, one-day sprints replace it (th
 
 ### The council before every pull request
 
-Every pull request, bigger or smaller, gets a council before the PO merges it: the PO assistant, the user's journey
-and the tech lead, three documentation experts (for human readers, for AI, and for examples and help), then the
-refuter. Its findings are
-fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08. The PO's words of
-2026-10-08, as #80 records them (typos corrected) —
+Every pull request, bigger or smaller, gets a council before the PO merges it: the PO assistant, the user's journey and
+the tech lead, three documentation experts (for human readers, for AI, and for examples and help), then the refuter. Its
+findings are fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08. The PO's words
+of 2026-10-08, as #80 records them (typos corrected) —
 [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
 [the addition](https://github.com/xmejkal/spark/issues/80#issuecomment-6058297081):
 
@@ -204,26 +203,30 @@ And minutes later:
 Asked whether "more experts" means two, one for each reader, the PO answered the same day: *"Add a third: examples
 and help"* ([#126](https://github.com/xmejkal/spark/issues/126)). So three documentation experts sit on the council.
 
-| expert | reads: what the change touches, or makes stale | checks |
+| expert | reads | checks |
 | --- | --- | --- |
-| **for humans** | README.md and every page it links to (GLOSSARY.md, `docs/guide/`, `commands/*.md`, `boards/README.md`, `scrum/VISION.md`) | current, correct, readable; good explanations; the README tempting first (what spark does for you, a short real example), then the details with diagrams and tables, and the specifics on pages it links to |
+| **for humans** | README.md and the pages a reader reaches from it (GLOSSARY.md, `docs/guide/`, `commands/*.md`, `boards/README.md`, `scrum/VISION.md`) | current, correct, readable; good explanations; the README tempting first (what spark does for you, a short real example), then the details with diagrams and tables, and the specifics on pages it links to |
 | **for AI** | `skills/*/SKILL.md` and the knowledge they load, `skills/*/references/*.md`; `agents/*.md`; `commands/*.md` whole, since the body is Claude's instructions; `.claude-plugin/plugin.json` and `marketplace.json`; AGENTS.md; GLOSSARY.md; `docs/guide/agents.md`; `parts.py --describe --json`; the process pages in `scrum/` | current and true to the code; each description says when to use it and what it returns |
-| **for examples and help** | every example and recorded output on the pages the change touches or the README links to; the `--help` of every script `docs/guide/agents.md` names | each page a reader reaches shows a real example, for a person and for an agent calling it; each example runs as shown and its recorded output matches today's; each `--help` says what the script does, what it writes and what every option is for |
+| **for examples and help** | every example and recorded output on the pages a reader reaches from the README; the `--help` of every script `docs/guide/agents.md` names | each page a reader reaches shows a real example, for a person and for an agent calling it; each example runs as shown and its recorded output matches today's; each `--help` says what the script does, what it writes and what every option is for |
+
+A pull request fixes the gaps it makes. Older gaps in the README's shape go to P182
+([#128](https://github.com/xmejkal/spark/issues/128)): the PO's answer of 2026-10-10, *"Keep P182 as its own card"*.
 
 ## The token budget
 
 - **Sized to the question.** A look-up gets one agent; a comparison, a few. A full council (about 90 M input tokens)
   runs only where a council belongs, and councils are full by default (D).
-- **The model, and Fable spared.** Lenses run on Sonnet (decision of 2026-10-06). Refuters, the synthesis and the
-  final review run on Opus. Fable, the most capable model, runs only on a part the PO names
-  ([#126](https://github.com/xmejkal/spark/issues/126)), whatever a skill says about "the most capable model"
-  (superpowers' plans and reviews, product-discovery's refuter). His words of 2026-10-10: *"ok, we really need to
-  make sure Fable is only being used for the most important parts, we're almost out of it. Can you make sure we don't
-  run out of it?"*
+- **The model, and Fable spared.** Lenses run on Sonnet (decision of 2026-10-06). The PO's words of 2026-10-10:
+  *"ok, we really need to make sure Fable is only being used for the most important parts, we're almost out of it.
+  Can you make sure we don't run out of it?"* Claude's reading of them, his to change
+  ([#126](https://github.com/xmejkal/spark/issues/126)): refuters, the synthesis and the final review run on Opus,
+  and Fable, the most capable model, runs only on a part he names, whatever a skill says about the model
+  (superpowers' plans and reviews ask for the most capable one).
 - **Every launch names its model:** `Agent(description="#126 P180: the documentation expert for humans",
   model="sonnet", …)`, or `agent(…, {model: 'opus'})` in a workflow. An agent with no model runs on the session's,
   and a workflow keeps the model it was launched with: on 2026-10-10 one launched under Fable went on starting Fable
-  agents after the session had moved to Opus. spark's own agents (`agents/*.md`) keep the model their file names.
+  agents after the session had moved to Opus. A launch of one of spark's own agents (`agents/*.md`) passes no model,
+  so the model its file names holds.
 - **Inside the PO's allowance** a run starts. Above it, Claude asks first, with the estimate. The allowance is decision
   2 (a), his choice of 2026-10-06: *"with no question asked, one run per card in flight, sized to its question, and at
   most one full council a day. Anything bigger is asked first, with its estimate."*

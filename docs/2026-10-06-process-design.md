@@ -84,6 +84,11 @@ by*. There are no sprints, no Scrum Master and no ceremonies."
   complete — gaps, missing parts, changed things, wrong information, unclear text, **hallucinations above all**. Its
   findings are fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08.
 
+  **Amended 2026-10-10 ([P180](https://github.com/xmejkal/spark/issues/126)):** three documentation experts, for
+  human readers, for AI, and for examples and help, and the model each run uses; see
+  [the council](../scrum/README.md#the-council-before-every-pull-request) and
+  [the token budget](../scrum/README.md#the-token-budget).
+
   **Note 2026-10-09** (P146's council): the paragraph above paraphrases the PO; it drops "make sure its well tested
   too" and hardens his "maybe". His words, as #80 records them (typos corrected) —
   [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
