@@ -1,0 +1,38 @@
+[
+ {
+  "file": "commands/build.md",
+  "name": "a command pre-approves a live vendor-pin check, a network fetch, so Claude Code stops asking (P181)",
+  "find": "allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), ",
+  "replace": "allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_vendor_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), "
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "--help stops saying where a live run keeps the header (P181)",
+  "find": "\"fetches the header with the GitHub CLI gh and keeps it in .spark/cache/ of the project that \"",
+  "replace": "\"fetches the header with the GitHub CLI gh and keeps it \""
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "--help stops saying which cache --offline reads (P181)",
+  "find": "help=\"never fetch: read the header a live run kept, the project's first, then spark's own; \"",
+  "replace": "help=\"never fetch: read a cached header; \""
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "--help stops saying spark owns the boards it ships, so a live run refreshes spark's copy (P181, council V-6)",
+  "find": "\"A board spark ships is owned by spark, so a live run refreshes spark's own copy: check those \"",
+  "replace": "\"A live run refreshes a copy: check those \""
+ },
+ {
+  "file": "commands/build.md",
+  "name": "a command pre-approves a live check on spark's own boards, which named no network line (P181, refuter R-1)",
+  "find": "allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), ",
+  "replace": "allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_vendor_pins.py ${CLAUDE_PLUGIN_ROOT}/boards/*), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), "
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "a live refusal carries a `wrote` key, which the agent guide says it has not (P181, council V-5)",
+  "find": "            return {\"board\": path.stem, \"status\": \"could-not-run\", \"reason\": str(refused)}",
+  "replace": "            return {\"board\": path.stem, \"status\": \"could-not-run\", \"reason\": str(refused), \"wrote\": None}"
+ }
+]

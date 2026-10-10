@@ -159,7 +159,22 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
             code, payload = payload_of(lambda: check_vendor_pins.main(["--json", str(board)]))
         self.assertEqual(sorted(payload[0]),
                          ["board", "compared", "not_recorded", "problems", "source", "status", "wrote"])
+        self.assertTrue(payload[0]["source"].endswith("variants/%s/pins_arduino.h" % variant), payload[0]["source"])
         self.assertEqual(code, outcomes.EXIT_OK)
+
+    def test_check_vendor_pins_could_not_run(self):
+        # P181: the agent guide says a could-not-run entry carries only `board`, `status` and `reason`,
+        # and that a live run refused before it kept a header has no `wrote`. Both refusals, pinned.
+        loose = Path(tempfile.mkdtemp())
+        board = loose / "loose.json"
+        board.write_text(json.dumps({"pins": {"D3": 38}, "vendor": {"arduino_variant": "p181_unshipped"}}))
+        stand_in = Path(tempfile.mkdtemp())
+        for argv in (["--offline", "--json", str(board)], ["--json", str(board)]):
+            with self.subTest(argv=argv), mock.patch.object(check_vendor_pins, "PLUGIN_ROOT", stand_in), \
+                    mock.patch.object(check_vendor_pins, "fetch_variant_header", side_effect=AssertionError("fetched")):
+                code, payload = payload_of(lambda: check_vendor_pins.main(argv))
+            self.assertEqual(sorted(payload[0]), ["board", "reason", "status"])
+            self.assertEqual(code, outcomes.EXIT_COULD_NOT_RUN)
 
     def test_emit_footprint(self):
         # Says `check`, not `tool`.
