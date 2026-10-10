@@ -2,7 +2,7 @@
  {
   "file": "scripts/check_vendor_pins.py",
   "name": "a project's copy of a board switches vendor-truth off again (P10)",
-  "find": "    return own if own.is_file() else PLUGIN_ROOT / CACHE_DIR / name",
+  "find": "    return own if own and own.is_file() else PLUGIN_ROOT / CACHE_DIR / name",
   "replace": "    return own"
  }
 ]

@@ -55,6 +55,7 @@ The files that join the steps:
 | `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--sim-dir sim` | `wokwi-cli`, and Wokwi for VS Code |
 | `.spark/rules.json` | `init_project.py`, then you | the checks, and the generator, which sizes a rail's traces from its `max_current_a` |
 | `.spark/needs.json` | `parts.py --needs-set`, and `--pick` for a need's pick | `parts.py --match` |
+| `.spark/cache/<variant>.pins_arduino.h`, the vendor's pin header | `check_vendor_pins.py` without `--offline` | `check_vendor_pins.py --offline` and `check_all.py`'s vendor-truth, which fall back to spark's own copy |
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
 | `firmware/pins.py` | `assign_pins.py --emit-pins` | your firmware |
 
@@ -169,7 +170,8 @@ spark's own scripts:
 3. **`emit_footprint.py --board <id> --project .`** makes the footprint, or names each field it still needs. With no
    header geometry at all, it names only `physical.header`.
 4. **`check_vendor_pins.py boards/<id>.json`** compares the pin map with the vendor's header that
-   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh`.
+   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh`. It keeps the header in your project's
+   `.spark/cache/`, where `--offline` and `check_all.py` read it later, and its line names the file it wrote.
 5. **Name the id as `board`** in the requirements file. The chain takes the project's definition before the library's.
 
 No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has
