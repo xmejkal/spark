@@ -134,8 +134,8 @@ def walk_up(start: Path):
 
 def project_root(start: Path = None) -> Path:
     """
-    The project this is being run for: the nearest directory up the tree holding `boards/` or
-    `.spark/`. Explicit beats clever, so `--project` overrides it.
+    The project this is being run for: the nearest directory up the tree holding
+    `boards/active.json` or `.spark/`. Explicit beats clever, so `--project` overrides it.
     """
     here = (start or Path.cwd()).resolve()
     for directory in walk_up(here):

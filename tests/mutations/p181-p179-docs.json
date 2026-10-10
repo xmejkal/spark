@@ -1,0 +1,20 @@
+[
+ {
+  "file": "commands/build.md",
+  "name": "a command pre-approves a live vendor-pin check, a network fetch, so Claude Code stops asking (P181)",
+  "find": "allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), ",
+  "replace": "allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_vendor_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), "
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "--help stops saying where a live run keeps the header (P181)",
+  "find": "\"fetches the header with the GitHub CLI gh and keeps it in .spark/cache/ of the project that \"",
+  "replace": "\"fetches the header with the GitHub CLI gh and keeps it \""
+ },
+ {
+  "file": "scripts/check_vendor_pins.py",
+  "name": "--help stops saying which cache --offline reads (P181)",
+  "find": "help=\"never fetch: read the header a live run kept, the project's first, then spark's own; \"",
+  "replace": "help=\"never fetch: read a cached header; \""
+ }
+]

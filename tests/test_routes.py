@@ -298,6 +298,8 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
     TOOLS = "${CLAUDE_PLUGIN_ROOT}/scripts/tools.py"
     #: tools.py has no `--describe`: its operations that download, read off its own code (`--on` installs what it turns on).
     TOOLS_NETWORK = ("--install", "--on")
+    #: P181: a live vendor-pin check fetches a header through gh; only `--offline` stays on the machine.
+    VENDOR = "${CLAUDE_PLUGIN_ROOT}/scripts/check_vendor_pins.py"
 
     @staticmethod
     def allowed():
@@ -336,6 +338,8 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
             lines += ["%s %s . %s x-part" % (self.PARTS, option, flag) for option in options]
         for flag in self.TOOLS_NETWORK:
             lines += ["%s %s x-tool" % (self.TOOLS, flag), "%s --project . %s x-tool" % (self.TOOLS, flag)]
+        lines += ["%s boards/x.json" % self.VENDOR, "%s --json boards/x.json" % self.VENDOR,
+                  "%s boards/x.json --json" % self.VENDOR]
         return network, lines
 
     def test_the_model_of_the_matcher(self):

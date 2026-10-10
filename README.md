@@ -105,8 +105,9 @@ including the `package.json` that tscircuit, the engine that builds the board, i
 tools spark needs, and installs what is missing in one go once you have seen the commands and said yes.
 
 An update replaces the plugin, not your files. Your store and a project's own `boards/`, `parts/` and `.spark/` are
-outside it ([how it works](docs/guide/how-it-works.md#your-store)). A record copied into the plugin's own library with
-`parts.py --promote` lives inside the plugin.
+outside it ([how it works](docs/guide/how-it-works.md#your-store)). Three things write inside the plugin
+itself: `parts.py --promote` copies a record into its library, a live `check_vendor_pins.py` on a board spark ships
+refreshes its kept vendor header, and the chain may compile a library part's simulation chip beside its record.
 
 ## Two roads to a board
 

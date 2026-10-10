@@ -28,7 +28,8 @@ WHERE IT KEEPS THE HEADER
 A live run writes the header it fetched into `.spark/cache/` of the project that owns the board
 file, and its line names the file. For a board spark ships, that project is spark itself, so a
 live run refreshes the shipped header. `--offline` reads the project's copy first, then spark's,
-and says whose answered. A board file in no project is refused live, never written beside.
+and says whose answered. A live run on a board file no project owns is refused before any fetch,
+and nothing is written.
 """
 
 import argparse
@@ -243,12 +244,18 @@ def wrote_note(result: dict) -> str:
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="check_vendor_pins.py",
-        description="Compare a board definition against the vendor's own pin header.")
+        description="Compare a board definition against the vendor's own pin header. Without --offline it "
+                    "fetches the header with the GitHub CLI gh and keeps it in .spark/cache/ of the project that "
+                    "owns the board file, and its line says which file it wrote; a board file no project owns is "
+                    "refused before anything is fetched.")
     parser.add_argument("boards", nargs="+", help="board definition files")
     parser.add_argument("--offline", action="store_true",
-                        help="use the cached header; fail if there is none")
-    parser.add_argument("--repo", default=ARDUINO_ESP32_REPO)
-    parser.add_argument("--json", action="store_true")
+                        help="never fetch: read the header a live run kept, the project's first, then spark's own; "
+                             "could-not-run if neither has it")
+    parser.add_argument("--repo", default=ARDUINO_ESP32_REPO,
+                        help="the GitHub repository holding the variant headers (default: %(default)s)")
+    parser.add_argument("--json", action="store_true",
+                        help="a JSON list, one entry per board, for a caller that is not a person")
     args = parser.parse_args(argv)
 
     results = [check_board(Path(p), args.offline, args.repo) for p in args.boards]

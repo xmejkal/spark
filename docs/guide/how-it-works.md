@@ -79,9 +79,10 @@ Each by its name in check_all's answer:
 
 - **vendor-truth**, `check_vendor_pins.py`: does the board definition match what the vendor says, or only what somebody
   typed? It re-derives the pin map from the vendor's own `pins_arduino.h`.
-  - Inside check_all it reads the plugin's cached copy of espressif/arduino-esp32's variant header (committed
-    2026-09-24), not a live fetch.
-  - Run on its own without `--offline`, it fetches through the GitHub CLI `gh`.
+  - Inside check_all it never fetches. It reads the header a live run kept in the board's project,
+    `.spark/cache/`, else spark's own copy of espressif/arduino-esp32's variant header (committed 2026-09-24).
+  - Run on its own without `--offline`, it fetches through the GitHub CLI `gh` and keeps the header in the board's
+    project ([your own dev board](#your-own-dev-board), step 4).
 - **buildability**, `check_footprints.py`: will this board be buildable, and will the parts go in it? It checks:
   - a drill against the pin that goes in it;
   - an annular ring against what a board house can make;
@@ -170,8 +171,15 @@ spark's own scripts:
 3. **`emit_footprint.py --board <id> --project .`** makes the footprint, or names each field it still needs. With no
    header geometry at all, it names only `physical.header`.
 4. **`check_vendor_pins.py boards/<id>.json`** compares the pin map with the vendor's header that
-   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh`. It keeps the header in your project's
-   `.spark/cache/`, where `--offline` and `check_all.py` read it later, and its line names the file it wrote.
+   `vendor.arduino_variant` names, fetched through the GitHub CLI `gh` (logged in once with `gh auth login`). It keeps
+   the header in your project's `.spark/cache/`, where `--offline` and `check_all.py` read it later, and its line
+   names the file it wrote. A run of 2026-10-10 on a FireBeetle 2 ESP32-C6 record:
+   ```
+     firebeetle2-esp32c6      ok  (20 pins against espressif/arduino-esp32 variants/dfrobot_firebeetle2_esp32c6/pins_arduino.h; wrote <your project>/.spark/cache/dfrobot_firebeetle2_esp32c6.pins_arduino.h)
+   ```
+   Commit that file with the board file: without it, `--offline` and `check_all.py` answer could-not-run for a board
+   spark does not ship. A board file that no project owns (no folder above it holds `.spark/` or
+   `boards/active.json`) is refused before anything is fetched; run `init_project.py` in the project folder first.
 5. **Name the id as `board`** in the requirements file. The chain takes the project's definition before the library's.
 
 No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has

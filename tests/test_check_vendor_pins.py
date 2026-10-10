@@ -384,5 +384,34 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         self.assertTrue(result["source"].startswith("the project's cache"), result["source"])
 
 
+class TheHelpSaysWhatItDoes(unittest.TestCase):
+    """
+    P181: `--help` is what a person and an agent read first, and it did not say that a live run
+    writes a file, or where, or which cache `--offline` reads (the documentation review of P179,
+    2026-10-10).
+    """
+
+    def _help(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            check_vendor_pins.main(["--help"])
+        return " ".join(out.getvalue().split())  # argparse wraps lines; compare the words
+
+    def test_it_says_where_a_live_run_keeps_the_header(self):
+        self.assertIn(".spark/cache/ of the project that owns the board file", self._help())
+
+    def test_it_says_a_board_no_project_owns_is_refused(self):
+        self.assertIn("a board file no project owns is refused", self._help())
+
+    def test_it_says_which_cache_offline_reads(self):
+        self.assertIn("the project's first, then spark's own", self._help())
+
+    def test_every_option_says_what_it_is_for(self):
+        text = self._help()
+        for words in ("the GitHub repository holding the variant headers", "a JSON list, one entry per board"):
+            with self.subTest(option=words):
+                self.assertIn(words, text)
+
+
 if __name__ == "__main__":
     unittest.main()

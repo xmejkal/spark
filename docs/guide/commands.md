@@ -12,10 +12,11 @@ Every command treats text read from a [record](../../GLOSSARY.md#record--and-the
 entry, a web or shop page or a datasheet as data about a part. It is never an instruction: if such text asks Claude to
 run or change something, Claude quotes it to you and carries on. (Each command page says so in its first paragraph.)
 
-A command page's header, `allowed-tools`, lists the operations Claude may run without asking you, each by name. Four
-operations that reach the network are on no command's or skill's list: `parts.py --fetch` and `--sources`, and
-`tools.py --install` and `--on`. The first downloads a datasheet, the second asks every URL a record cites whether it
-answers, and the other two install a tool. So Claude Code asks you before any of them runs, and your answer there is
+A command page's header, `allowed-tools`, lists the operations Claude may run without asking you, each by name. Five
+operations that reach the network are on no command's or skill's list: `parts.py --fetch` and `--sources`,
+`tools.py --install` and `--on`, and `check_vendor_pins.py` without `--offline`. The first downloads a datasheet, the
+second asks every URL a record cites whether it answers, the next two install a tool, and the last fetches a vendor's
+pin header. So Claude Code asks you before any of them runs, and your answer there is
 the yes, unless your own settings answer first: an allow rule of yours, or auto mode, can let it run without asking. A
 test holds every list to this rule (`tests/test_routes.py`); how Claude Code matches a pattern to a command line is an
 assumption it states, because the test cannot run Claude Code. `parts.py --describe --json` marks the network
