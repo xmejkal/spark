@@ -160,5 +160,35 @@
   "name": "P59 F5: a driver kept in firmware/lib is not found",
   "find": ", str(firmware / \"lib\")]",
   "replace": "]"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage passes any firmware",
+  "find": "    # The LED lights while the button is held: imports under the stand-in, then reads 0 released and 1 pressed.\n",
+  "replace": "    return None\n"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage does not look at the LED when released",
+  "find": "    if released != \"0\":",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage does not look at the LED when pressed",
+  "find": "    return None if pressed == \"1\" else \"with the button pressed the LED reads %s, not 1\" % pressed",
+  "replace": "    return None"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage lets a firmware that does not import through to the levels",
+  "find": "    if done.returncode != 0:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage names its own absence when the pin map is missing",
+  "find": "    if not (path.parent / \"pins.py\").is_file():",
+  "replace": "    if False:"
  }
 ]

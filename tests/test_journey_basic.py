@@ -199,6 +199,43 @@ def write_the_firmware(project):
         shutil.copy(source, project / "firmware")
 
 
+class TheFirmwareStageBitesTest(unittest.TestCase):
+    """
+    The firmware stage's own check goes red for a wrong firmware (F3, P59). The journey above only proves the fixture
+    passes, so a `_firmware` that returned None would have kept it green. These run on every machine: no build needed.
+    """
+
+    @staticmethod
+    def light_with(old=None, new=None, pins=True):
+        """The fixture's light.py with one change, beside a pins.py unless told not to; returns the path to light.py."""
+        folder = Path(tempfile.mkdtemp()) / "firmware"
+        folder.mkdir()
+        if pins:
+            (folder / "pins.py").write_text("BUTTON = 4\nSTATUS_LED = 5\n")
+        source = (FIRMWARE_FIXTURE / "light.py").read_text()
+        assert old is None or old in source, "the fixture no longer holds %r" % old
+        (folder / "light.py").write_text(source if old is None else source.replace(old, new))
+        return folder / "light.py"
+
+    def test_the_fixture_firmware_passes(self):
+        self.assertIsNone(_firmware(self.light_with()))
+
+    def test_an_led_lit_with_the_button_released_is_named(self):
+        light = self.light_with("LED_ON, LED_OFF = 1, 0", "LED_ON, LED_OFF = 0, 1")
+        self.assertEqual(_firmware(light), "with the button released the LED reads 1, not 0")
+
+    def test_an_led_that_never_lights_is_named(self):
+        light = self.light_with("    led.value(LED_ON if button.value() == BUTTON_PRESSED else LED_OFF)", "    pass")
+        self.assertEqual(_firmware(light), "with the button pressed the LED reads 0, not 1")
+
+    def test_a_firmware_that_does_not_import_is_named_with_its_exception(self):
+        light = self.light_with("import time\n", "import time\nraise OSError('no bus')\n")
+        self.assertEqual(_firmware(light), "it does not import under the stand-in: OSError: no bus")
+
+    def test_without_the_pin_map_the_pin_map_stage_names_it_and_this_one_says_nothing(self):
+        self.assertIsNone(_firmware(self.light_with(pins=False)))
+
+
 class TheBasicJourneyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
