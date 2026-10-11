@@ -588,11 +588,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("requirements", nargs="?",
                         help="a requirements.json; omit for the reference design")
-    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--json", action="store_true",
+                        help="the verdict as one JSON object: check, status, stages, and kept with --keep")
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
-                             "left alone and named")
+                             "left alone and named; with --json, each file is listed under kept")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
@@ -650,7 +651,7 @@ def main(argv=None):
     return report(stages, args, workdir, requirements)
 
 
-def keep_into(workdir, destination):
+def kept_into(workdir, destination):
     """
     Put the built board where a person — and every check — will look for it.
 
@@ -663,41 +664,59 @@ def keep_into(workdir, destination):
     `dist/` is pure build output and is replaced. A `.tsx` file is NOT: `board.tsx` is the thing a
     person edits — the smart bin's is hand-maintained — so an existing one is left alone and
     named. Delete it to have it regenerated. One behaviour, no flag to get it wrong with.
+
+    Each file is {file, did, why, line}: `did` is `wrote` or `left alone`, and `line` what stderr says. With --json the
+    report carries the rest under `kept` (P124, #58), so an agent reads what a person reads.
     """
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
-    said = []
+    kept = []
     for source in sorted(workdir.glob("*.tsx")):
         target = destination / source.name
         if target.exists():
-            said.append("left alone: %s (delete it to have it regenerated)" % target)
+            kept.append({"file": str(target), "did": "left alone", "why": "delete it to have it regenerated",
+                         "line": "left alone: %s (delete it to have it regenerated)" % target})
         else:
             shutil.copy2(source, target)
-            said.append("wrote %s" % target)
+            kept.append({"file": str(target), "did": "wrote", "why": None, "line": "wrote %s" % target})
     built = workdir / "dist"
     if built.is_dir():
         shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
-        said.append("wrote %s — this is what every check reads" % (destination / "dist"))
-    return said
+        kept.append({"file": str(destination / "dist"), "did": "wrote", "why": "this is what every check reads",
+                     "line": "wrote %s — this is what every check reads" % (destination / "dist")})
+    return kept
+
+
+def _kept(workdir, destination):
+    """`kept_into`, or one entry saying why nothing could be kept: the verdict is printed either way."""
+    try:
+        return kept_into(workdir, destination)
+    except OSError as refused:
+        return [{"file": str(destination), "did": "not kept", "why": str(refused),
+                 "line": "not kept: %s — %s" % (destination, refused)}]
 
 
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
-    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed.
+    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed. What
+    --keep wrote and left alone is said on stderr and, with --json, carried under `kept` (P124).
     """
     code = verdict(stages)
+    kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code],
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
-        print(json.dumps(dict(said, unserved=requirements["unserved"]) if left_off(requirements) else said))
+        said.update({"unserved": requirements["unserved"]} if left_off(requirements) else {})
+        if kept is not None:
+            said["kept"] = [{key: entry[key] for key in ("file", "did", "why")} for entry in kept]
+        print(json.dumps(said))
     else:
         sys.stdout.write(render(stages, code, left_off(requirements)))
     if workdir is None:
         return code
-    if args.keep:
-        for line in keep_into(workdir, args.keep):
-            print("  %s" % line, file=sys.stderr)
+    for entry in kept or []:
+        print("  %s" % entry["line"], file=sys.stderr)
     if workdir.exists():
         shutil.rmtree(workdir, ignore_errors=True)
     return code

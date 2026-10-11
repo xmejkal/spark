@@ -18,6 +18,8 @@ a rule checklist in the loop. Follow it.
 2. **Resolve every part from the parts library.** `${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list`
    shows what exists — the shipped records plus the project's own `parts/*.json`, which win by
    name — and `parts.py --show <id>` what a record asks of the host and what nobody has verified.
+   It exits 1 when the record names a CONFLICT on verified facts: that is the finding, so say it
+   to the person and follow its fix; a `?` CONFLICT rests on facts nobody has verified.
    A part that is not there is **researched**: `parts.py --need <words>` says what exists, and
    `/spark:research` runs the `parts-researcher` agent, vendor by vendor in the project's order,
    to write the record — `references/part-data.md` has the schema and `parts.py --validate
