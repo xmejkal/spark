@@ -30,6 +30,8 @@ Path("written-by-the-command.txt").write_text("x")
 print("args:", " ".join(sys.argv[1:]))
 print("cwd:", os.getcwd())
 print("note:", os.environ.get("FAKE_NOTE", "same"))
+import tempfile
+print("wrote", tempfile.mkdtemp(prefix="spark-spine-") + "/Board.tsx")
 sys.exit(int(os.environ.get("FAKE_EXIT", "0")))
 """
 
@@ -79,6 +81,14 @@ class TheSnapshotIsHonest(unittest.TestCase):
         self.assertEqual(snapshot.report(first, second), [], "the scratch paths are written as placeholders")
         self.assertIn("cwd: <copy>", first["projects"]["proj"]["commands"][0]["stdout"])
 
+    def test_a_random_temp_folder_name_is_not_a_difference(self):
+        # The first real snapshot (2026-10-11): check_spine writes into tempfile's random folder, and three commands
+        # differed between two runs of unchanged spark until the random part was written as a placeholder.
+        first = snapshot.take(self.f.spec(), self.f.out / "1", self.f.spark, self.f.store)
+        second = snapshot.take(self.f.spec(), self.f.out / "2", self.f.spark, self.f.store)
+        self.assertEqual(snapshot.report(first, second), [])
+        self.assertIn("wrote <tmp>/spark-spine-<random>/Board.tsx", first["projects"]["proj"]["commands"][0]["stdout"])
+
     def test_a_changed_line_is_reported_once_with_its_command(self):
         old = snapshot.take(self.f.spec(), self.f.out / "old", self.f.spark, self.f.store)
         new = snapshot.take(self.f.spec(), self.f.out / "new", self.f.spark, self.f.store, env={"FAKE_NOTE": "changed"})
@@ -105,6 +115,20 @@ class TheSnapshotIsHonest(unittest.TestCase):
     def test_the_store_copy_is_dated_and_digested(self):
         taken = snapshot.take(self.f.spec(), self.f.out, self.f.spark, self.f.store)
         self.assertEqual(taken["store"]["sha256"], digest(self.f.store))
+
+
+class TheSparkUnderTest(unittest.TestCase):
+    def test_spark_names_the_tree_whose_answers_are_recorded(self):
+        # The bin's Makefile reads spark from a fixed path (the targeted refuter's fix 1); a snapshot names its own.
+        f = Fixture()
+        from unittest import mock
+        with mock.patch.object(snapshot, "projects", return_value=f.spec()), \
+                mock.patch.object(snapshot, "STORE", f.store), \
+                mock.patch("sys.stdout", new_callable=__import__("io").StringIO):
+            code = snapshot.main(["--out", str(f.out), "--spark", str(f.spark)])
+        taken = __import__("json").loads((f.out / "snapshot.json").read_text())
+        self.assertEqual(code, 0)
+        self.assertIn("args: one", taken["projects"]["proj"]["commands"][0]["stdout"])
 
 
 class TheProjectsItKnows(unittest.TestCase):

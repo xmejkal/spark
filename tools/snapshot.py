@@ -5,6 +5,7 @@ What spark answers today in the projects that use it, recorded on copies, never 
     tools/snapshot.py --out <dir>                        write <dir>/snapshot.json
     tools/snapshot.py --out <dir> --against <old.json>   and print the lines that differ, per command
     tools/snapshot.py --out <dir> --tsci-bin <path>      a toolchain for a project that has no node_modules
+    tools/snapshot.py --out <dir> --spark <tree>         the spark whose answers are recorded (default: this one)
 
 Why: nothing that changes an output may merge before today's outputs are recorded, so that every later change is a
 diff against them (P184; P158's design §10.1 and §12.3, H0a). Each project is cloned into <dir> (APFS clones on
@@ -20,6 +21,7 @@ import datetime
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -82,11 +84,16 @@ def _digest(folder: Path) -> str:
     return h.hexdigest()
 
 
+#: tempfile's random part of a folder name (8 characters of its alphabet), right after a prefix in the temp folder.
+RANDOM_TEMP = re.compile(r"(<tmp>/[A-Za-z][A-Za-z_-]*?)[a-z0-9_]{8}(?=[/\s'\")]|$)", re.M)
+
+
 def _placeholders(text: str, names: dict) -> str:
-    """The scratch folders and the home written as `<copy>`, `<spark>`, `<store>`, `~`, so runs compare."""
+    """The scratch folders and the home written as `<copy>`, `<spark>`, `<store>`, `~`, and tempfile's random part of
+    a folder name as `<random>`, so two runs of unchanged spark compare equal."""
     for path, name in sorted(names.items(), key=lambda kv: -len(kv[0])):
         text = text.replace(path, name)
-    return text
+    return RANDOM_TEMP.sub(r"\1<random>", text)
 
 
 def _git(folder: Path) -> str:
@@ -184,9 +191,10 @@ def main(argv=None):
     parser.add_argument("--out", required=True, help="the folder for the copies and snapshot.json")
     parser.add_argument("--against", help="an older snapshot.json to compare with")
     parser.add_argument("--tsci-bin", help="a node_modules/.bin for projects that have none (never linked into them)")
+    parser.add_argument("--spark", default=str(ROOT), help="the spark tree whose answers are recorded (default: %(default)s)")
     args = parser.parse_args(argv)
     try:
-        record = take(projects(), args.out, tsci_bin=args.tsci_bin)
+        record = take(projects(), args.out, spark=Path(args.spark), store=STORE, tsci_bin=args.tsci_bin)
     except (OSError, subprocess.SubprocessError) as broken:
         print("snapshot.py: could not run — %s" % broken, file=sys.stderr)
         return 2
