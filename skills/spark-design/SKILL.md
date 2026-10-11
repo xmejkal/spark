@@ -96,7 +96,7 @@ a rule checklist in the loop. Follow it.
    subcommands (work-in-progress) — read the circuit.json errors.
 
 6. **Breadboard and firmware first.** `/spark:build --keep .` writes `breadboard.md`, the parts and how to wire
-   them. The firmware does `import pins` (`assign_pins.py requirements.json --emit-pins firmware/pins.py`), and the
+   them. The firmware does `import pins`: the same command writes `firmware/pins.py`, and the
    simulation runs it (`commands/build.md`, *Simulate*). A board is ordered only once these work, and only if the
    person wants one.
 

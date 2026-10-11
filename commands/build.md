@@ -78,6 +78,14 @@ again after a build. `dist/` is still replaced with a build of the freshly gener
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.
 
+The one command also writes `firmware/pins.py`, the pin map that the firmware imports. It is the file that
+`assign_pins.py requirements.json --emit-pins firmware/pins.py` writes. It comes from the requirements alone, so it
+does not need a finished build ([P196](https://github.com/xmejkal/spark/issues/155)). The build writes it again each time. If a
+`pins.py` that spark did not write is there, the build leaves it alone and names it. If the pins cannot be placed, the
+build removes the `pins.py` that it wrote earlier, because that file describes another design. The one command also
+keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR.
+A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another.
+
 When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
 that were built, each with a digest of some of the facts the build read from it (the pins, power and footprint; not a
 part's size or simulation stand-in, nor the board's pin roles).
@@ -117,7 +125,7 @@ A line `… is not installed — install: …` is answered by asking the person 
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list                       # what exists, and where from
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host; exits 1: a pull it asks for is overruled (CONFLICT)
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per signal, with the reason
-${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import
+${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import (the one command writes it too)
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py --board firebeetle2-esp32s3 -o FireBeetle2Esp32S3.tsx
 npm install && npx --no tsci build board.tsx                        # the project's own tscircuit (init writes the package file); tsci runs on bun
@@ -128,7 +136,7 @@ the board file's measured geometry; without that step `tsci build` stops at the 
 one command writes it for you.
 
 `assign_pins` spends scarce pins last — wake-capable, ADC1, the SPI and I2C pins — and prints why
-each signal landed where it did. **Firmware never types a GPIO number:** `--emit-pins` writes the
+each signal landed where it did. **Firmware never types a GPIO number:** `--emit-pins` and the one command write the
 map as plain constants (`VALVE1_VALVE_CTRL = 38`), each commented with its silkscreen pad, why it
 was chosen and what the board record says about that pin (`adc2_unusable_with_wifi: on ADC2, which
 shares hardware with the radio`), and the firmware does `import pins`. Plain integers, so the same
@@ -165,8 +173,8 @@ It rebuilds whenever `board.tsx` changes, so it is the window to keep open while
 worked on. Its interface loads from a CDN, so it needs a network; the server itself is local.
 
 **The simulation, watched rather than asserted** — the Wokwi for VS Code extension opens the files
-the last stage writes into `sim/` when the build runs with `--sim-dir sim`: `wokwi.toml`, `diagram.json`, the chips.
-It needs the flash image too, so make both first: `check_spine.py requirements.json --keep . --sim-dir sim --firmware
+the last stage writes into `sim/`, which the one command keeps: `wokwi.toml`, `diagram.json`, the chips.
+It needs the flash image too, so make both first: `check_spine.py requirements.json --keep . --firmware
 flash-with-firmware.bin`, then `flash_image.py --files firmware -o sim/flash-with-firmware.bin` (below); without them
 the extension has no firmware to run. It runs the flash image live: press the board's buttons, drag a sensor's slider, read its serial port. Open the
 project in VS Code, run **Wokwi: Select Config File** and pick `sim/wokwi.toml`, then **Wokwi: Start
@@ -224,7 +232,7 @@ that runs on Node, with nothing else to install; a project's own `cli.ts` runs w
 
 ## After it builds
 
-With `--keep`, `breadboard.md` lists the parts and how to wire them. The firmware does `import pins`, and the simulation
+With `--keep`, `breadboard.md` lists the parts and how to wire them, and `firmware/pins.py` holds their pins. The firmware does `import pins`, and the simulation
 (above) runs it. `check_all.py --project .` runs the deterministic checks. A board is on request: the `spark-review`
 skill is the full gate before anything is fabricated, and the fab package (the zip of Gerbers and bill of materials a
 board house takes) comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the

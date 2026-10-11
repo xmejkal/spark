@@ -57,6 +57,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
 import design  # noqa: E402
@@ -80,6 +81,9 @@ REFERENCE = {"board": "firebeetle2-esp32s3",
              "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
 
 BUILD_TIMEOUT_S = 300
+
+#: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
+PIN_MODULE = Path("firmware") / "pins.py"
 
 
 class Stage:
@@ -590,16 +594,18 @@ def main(argv=None):
     parser.add_argument("requirements", nargs="?",
                         help="a requirements.json; omit for the reference design")
     parser.add_argument("--json", action="store_true",
-                        help="the verdict as one JSON object: check, status, stages, and kept with --keep")
+                        help="the verdict as one JSON object: check, status, stages, and kept with --keep or --sim-dir")
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
                              "left alone and named; with --json, each file is listed under kept. With a requirements "
-                             "file it also writes breadboard.md: the parts and how to wire them on a breadboard")
+                             "file it also writes breadboard.md, the parts and how to wire them on a breadboard, and "
+                             "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
-                        help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
+                        help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
-                        help="the flash image wokwi.toml names, relative to the sim dir (flash_image.py writes one)")
+                        help="the flash image wokwi.toml names, relative to the sim dir (flash_image.py writes one); "
+                             "without it, the image a kept wokwi.toml names is kept")
     args = parser.parse_args(argv)
 
     # The input is read before anything runs, and read AS input: a malformed file is a stage
@@ -627,8 +633,11 @@ def main(argv=None):
     # What `built` will name is loaded now, once, before anything can change under it.
     handed = design_handed_to(workdir, project) if source and not from_library else None
 
+    # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
+    simulation = simulation_dir(args)
+    firmware = args.firmware or (sim_project.firmware_in(simulation / "wokwi.toml") if simulation else None)
     try:
-        stages = run(requirements, workdir, toolchain, project, from_library, firmware=args.firmware)
+        stages = run(requirements, workdir, toolchain, project, from_library, firmware=firmware)
     except subprocess.TimeoutExpired:
         stages = [Stage("build", COULD_NOT_RUN,
                         "the build did not finish in %ds" % BUILD_TIMEOUT_S)]
@@ -647,9 +656,6 @@ def main(argv=None):
         except (store.StoreProblem, OSError) as unrecorded:
             print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
 
-    if args.sim_dir and (workdir / "sim").is_dir():
-        shutil.copytree(workdir / "sim", args.sim_dir, dirs_exist_ok=True)
-        print("simulation project kept in %s" % args.sim_dir, file=sys.stderr)
     return report(stages, args, workdir, requirements)
 
 
@@ -721,6 +727,64 @@ def keep_breadboard(requirements, destination, stages=()):
     return {"file": str(written), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written, why)}
 
 
+def keep_pins(requirements, destination):
+    """
+    The pin map the firmware imports, beside the kept board (P196, #155), as one kept entry {file, did, why, line}: what
+    `assign_pins.py requirements.json --emit-pins` writes, from the same code, and from the requirements alone, so it
+    needs no finished build. One spark wrote is rewritten, since it says not to edit it, and is removed when the pins
+    cannot be placed: it describes another design. A `pins.py` spark did not write is left alone, as `board.tsx` is.
+    """
+    target = Path(destination) / PIN_MODULE
+    ours = target.is_file() and target.read_bytes().startswith(assign_pins.PIN_MODULE_HEADER.encode())
+    if target.exists() and not ours:
+        why = "spark did not write it; delete it to have it written"
+        return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
+    try:
+        module = assign_pins.pin_module_for(str(requirements))
+    except (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
+        if ours:
+            target.unlink()
+            return {"file": str(target), "did": "removed", "why": "%s, and it described an earlier design" % stopped,
+                    "line": "no pin map: %s; removed %s, which described an earlier design" % (stopped, target)}
+        return {"file": str(target), "did": "not written", "why": str(stopped), "line": "no pin map: %s" % stopped}
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(module)
+    why = "the pins the firmware imports"
+    return {"file": str(target), "did": "wrote", "why": why, "line": "wrote %s — %s" % (target, why)}
+
+
+def _kept_pins(requirements, destination):
+    """`keep_pins`, or one entry saying why the file system refused it: the verdict is printed either way."""
+    try:
+        return keep_pins(requirements, destination)
+    except OSError as refused:
+        target = Path(destination) / PIN_MODULE
+        return {"file": str(target), "did": "not written", "why": str(refused), "line": "no pin map: %s" % refused}
+
+
+def simulation_dir(args):
+    """Where the simulation project is kept: --sim-dir, else DIR/sim under --keep DIR (JB1, P116), else nowhere."""
+    if getattr(args, "sim_dir", None):
+        return Path(args.sim_dir)
+    return Path(args.keep) / "sim" if getattr(args, "keep", None) else None
+
+
+def keep_simulation(workdir, destination):
+    """
+    The simulation project the last stage wrote, copied to `destination` as one kept entry {file, did, why, line}, or None
+    when the stage wrote none. It is merged into what is there, so a person's scenarios stay.
+    """
+    if not (workdir / "sim").is_dir():
+        return None
+    try:
+        shutil.copytree(workdir / "sim", destination, dirs_exist_ok=True)
+    except OSError as refused:  # shutil.Error is one
+        return {"file": str(destination), "did": "not kept", "why": str(refused),
+                "line": "not kept: %s — %s" % (destination, refused)}
+    why = "the simulation project: diagram.json, wokwi.toml and the chips"
+    return {"file": str(destination), "did": "wrote", "why": why, "line": "wrote %s — %s" % (destination, why)}
+
+
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
@@ -731,6 +795,10 @@ def report(stages, args, workdir=None, requirements=None):
     kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
     if kept is not None and getattr(args, "requirements", None):
         kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
+        kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
+    simulation = keep_simulation(workdir, simulation_dir(args)) if workdir is not None and simulation_dir(args) else None
+    if simulation is not None:
+        kept = (kept or []) + [simulation]
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code],
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}

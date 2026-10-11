@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196: the build writes no pin map again",
+  "find": "        kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196: a pins.py spark did not write is overwritten",
+  "find": "    if target.exists() and not ours:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196: spark's pin map from an earlier design stays when the pins cannot be placed",
+  "find": "        if ours:\n            target.unlink()",
+  "replace": "        if False:\n            target.unlink()"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196 refuter: pins no pin can take crash the report again",
+  "find": "    except (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:",
+  "replace": "    except (design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196 refuter: a firmware path that cannot be written crashes the report again",
+  "find": "        return keep_pins(requirements, destination)\n    except OSError as refused:",
+  "replace": "        return keep_pins(requirements, destination)\n    except ZeroDivisionError as refused:"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196 refuter: a pins.py in another encoding crashes the report again",
+  "find": "target.read_bytes().startswith(assign_pins.PIN_MODULE_HEADER.encode())",
+  "replace": "target.read_text().startswith(assign_pins.PIN_MODULE_HEADER)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "JB1/P116: --keep keeps no simulation project again",
+  "find": "    return Path(args.keep) / \"sim\" if getattr(args, \"keep\", None) else None",
+  "replace": "    return None"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196 refuter: a sim/ that cannot be written crashes the report again",
+  "find": "    except OSError as refused:  # shutil.Error is one",
+  "replace": "    except ZeroDivisionError as refused:"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196 refuter: a rebuild drops the flash image the kept wokwi.toml names again",
+  "find": "    firmware = args.firmware or (sim_project.firmware_in(simulation / \"wokwi.toml\") if simulation else None)",
+  "replace": "    firmware = args.firmware"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "P196 refuter: a need that is not a word passes the reader again",
+  "find": "not all(isinstance(need, str) for need in needs)",
+  "replace": "False"
+ }
+]

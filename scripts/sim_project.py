@@ -164,6 +164,19 @@ def stage_chips(chips, sim_dir, compiler=None):
     return staged, problems
 
 
+def firmware_in(toml):
+    """
+    The flash image a kept wokwi.toml names, or None (P196's refuter): a rebuild with no --firmware keeps running it,
+    where it used to rewrite the line commented out. `wokwi_toml` writes the value as a JSON string, so it reads back so.
+    """
+    try:
+        lines = Path(toml).read_text().splitlines()
+        named = [line[len("firmware = "):] for line in lines if line.startswith("firmware = ")]
+        return json.loads(named[0]) if named else None
+    except (OSError, ValueError):
+        return None
+
+
 def wokwi_toml(chips, firmware=None):
     """The simulator's project file: the firmware image, and every chip by name and binary."""
     lines = ["# Written by spark from the part records. The chips stand in for parts Wokwi has no model of.",

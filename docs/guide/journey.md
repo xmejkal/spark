@@ -757,12 +757,12 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
 
 `--keep .` writes the board into the project: `board.tsx`, the board's footprint, `dist/`, where every check
 looks, and `breadboard.md`, the parts and how to wire them ([an example](#a-recorded-run-a-button-and-an-led)). An existing `board.tsx` is left alone, edited or not, and `dist/` is then built from the requirements file, not
-from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). Without `--keep`, the chain builds in a
-temporary folder and deletes it.
+from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). It also writes `firmware/pins.py`, the pins
+that the firmware imports ([P196](https://github.com/xmejkal/spark/issues/155)). Without `--keep`, the chain builds in a temporary
+folder and deletes it.
 
-The simulation stage generates the Wokwi diagram and stages the chips in a temporary folder. It deletes them unless
-`--sim-dir sim` keeps them; `--keep .` does not ([P116](https://github.com/xmejkal/spark/issues/50)). It does not run a
-simulation; see [Simulate](#simulate).
+The simulation stage generates the Wokwi diagram and stages the chips. `--keep .` keeps them in `sim/`, and `--sim-dir DIR`
+keeps them in DIR ([P116](https://github.com/xmejkal/spark/issues/50)). It does not run a simulation; see [Simulate](#simulate).
 
 ## Checks
 
@@ -917,7 +917,8 @@ ordered, the `spark-review` skill runs `check_all`, then reviewer agents, then t
 
 ## Firmware
 
-**Partly.** spark does not write your firmware; you or Claude do. It gives the firmware its pins:
+**Partly.** spark does not write your firmware; you or Claude do. It gives the firmware its pins. The build writes
+them to `firmware/pins.py`, and this command writes the same file on its own:
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/assign_pins.py" requirements.json --emit-pins firmware/pins.py
@@ -947,13 +948,13 @@ Not built yet: checking the firmware on a Mac against the pin map, before any ha
 
 **Partly.** The build's simulation stage generates the Wokwi diagram and stages the chips: hand-written models of
 modules Wokwi has no part for, kept beside a part's record and compiled with `wokwi-cli` only when the binary is
-missing or older than its source. It keeps them in `sim/` only with `--sim-dir sim`
+missing or older than its source. `--keep .` keeps them in `sim/`
 ([P116](https://github.com/xmejkal/spark/issues/50)).
 
 A run is a separate step:
 
 1. **Build with the simulation kept and a firmware image named:**
-   `check_spine.py requirements.json --keep . --sim-dir sim --firmware flash-with-firmware.bin`.
+   `check_spine.py requirements.json --keep . --firmware flash-with-firmware.bin`.
 2. **Make the flash image:** `flash_image.py --files firmware -o sim/flash-with-firmware.bin`. It puts MicroPython and
    the project's files into one image, and needs MicroPython for the S3: `/spark:setup add micropython-esp32s3`.
 3. **Write a scenario.** spark ships none for this example

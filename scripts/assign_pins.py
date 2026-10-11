@@ -398,7 +398,7 @@ def pin_module(board, assignments, source):
     (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
     refused, not mangled: a renamed constant is a pin the firmware silently stops finding.
     """
-    lines = ["# The pin map: written by spark's assign_pins.py from %s" % parts_library.one_line(source),
+    lines = ["%s from %s" % (PIN_MODULE_HEADER, parts_library.one_line(source)),
              "# for the %s. Regenerate it; do not edit it." % parts_library.one_line(board["name"]), ""]
     for entry in assignments:
         if not entry["signal"].isidentifier():
@@ -409,6 +409,20 @@ def pin_module(board, assignments, source):
                                                           for role in entry["roles"]]
         lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], parts_library.one_line("; ".join(said))))
     return "\n".join(lines) + "\n"
+
+
+#: How every pin module begins, so a build can tell one spark wrote from a person's own `pins.py` (P196).
+PIN_MODULE_HEADER = "# The pin map: written by spark's assign_pins.py"
+
+
+def pin_module_for(requirements):
+    """
+    The pin module `--emit-pins` writes for a requirements file, with the project and board resolved as the command
+    resolves them (P196: the build keeps it beside the board). Raises DesignError or Impossible, each saying why.
+    """
+    loaded = design_library.load(requirements, None, None)
+    assignments, _ = assign(loaded.board, loaded.signals)
+    return pin_module(loaded.board, assignments, Path(requirements).name)
 
 
 def main(argv=None):

@@ -3,7 +3,7 @@ The basic journey, end to end (P195, #154): the button-and-LED project through e
 that breaks is named here and not found on the bench.
 
 The stages are the replan's table (docs/2026-10-11-replan.md): the requirements, the build with its board, the Wokwi
-diagram and the breadboard sheet, then the PCB and 3D exports. Each later item of the v1 slice adds its stage to
+diagram, the breadboard sheet and the pin map, then the PCB and 3D exports. Each later item of the v1 slice adds its stage to
 STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
 build stage is could-not-run, and the skip names the stages that ran and the stages that did not.
 
@@ -13,6 +13,7 @@ build stage is could-not-run, and the skip names the stages that ran and the sta
 import json
 import os
 import re
+import runpy
 import shutil
 import subprocess
 import sys
@@ -34,6 +35,9 @@ FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 
 #: The spine's stages before the build: they need no board engine, so they run on every machine.
 BEFORE_THE_BUILD = ("board", "schematic", "footprint")
+
+#: The journey's stages whose files need no board engine: the pin map comes from the requirements alone (P196).
+WITHOUT_THE_BUILD = ("requirements", "pin map")
 
 #: The exports the replan lists as working (stage 8): tsci's format, and the file it writes.
 EXPORTS = (("gerbers", "board-gerbers.zip"), ("glb", "board.glb"))
@@ -76,6 +80,13 @@ def _sheet(path):
     return "no wiring line has an end on %s" % " or ".join(lacking) if lacking else None
 
 
+def _pins(path):
+    # The firmware does `import pins`, so the file must run as Python and give the button and the LED a GPIO each.
+    names = runpy.run_path(str(path))
+    lacking = [name for name in ("BUTTON", "STATUS_LED") if not isinstance(names.get(name), int)]
+    return "no GPIO for %s in it" % " or ".join(lacking) if lacking else None
+
+
 def _gerbers(path):
     with zipfile.ZipFile(path) as fab:
         lacking = {"F_Cu.gbr", "Edge_Cuts.gbr"} - set(fab.namelist())
@@ -87,13 +98,14 @@ def _model(path):
 
 
 #: Each stage the journey reaches today: its name, a file it leaves in the project, and what that file must show.
-#: Items 2-6 of the v1 slice each add a line (`firmware/pins.py` first).
+#: Items 3-6 of the v1 slice each add a line.
 STAGES = (
     ("requirements", "requirements.json", _requirements),
     ("build", "board.tsx", _board_file),
     ("build", "dist/board/circuit.json", _built),
     ("Wokwi diagram", "sim/diagram.json", _diagram),
     ("breadboard sheet", "breadboard.md", _sheet),
+    ("pin map", "firmware/pins.py", _pins),
     ("PCB export", "board-gerbers.zip", _gerbers),
     ("3D export", "board.glb", _model),
 )
@@ -119,13 +131,13 @@ def broken_stages(project):
 
 def walk(project):
     """
-    The journey's commands in `project`, as a person runs them: the one build command, keeping the simulation project
-    (commands/build.md), then each export with the same tsci. The spine's verdict, as its --json prints it, with each
+    The journey's commands in `project`, as a person runs them: the one build command (commands/build.md), which keeps
+    the simulation project too (JB1), then each export with the same tsci. The spine's verdict, as its --json prints it, with each
     export that failed and tsci's last words under `exports failed`.
     """
     spine = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "check_spine.py"), "requirements.json",
-         "--keep", ".", "--sim-dir", "sim", "--json"],
+         "--keep", ".", "--json"],
         cwd=str(project), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
     try:
         verdict = json.loads(spine.stdout)
@@ -164,17 +176,24 @@ class TheBasicJourneyTest(unittest.TestCase):
         if check_spine.find_toolchain(self.project) is not None:
             return
         build = self.stage("build")
-        ran = ["requirements"] + [stage["name"] for stage in self.verdict["stages"] if stage["status"] == check_spine.OK]
-        later = dict.fromkeys(stage for stage, _, _ in STAGES if stage != "requirements")
+        ran = list(WITHOUT_THE_BUILD) + [stage["name"] for stage in self.verdict["stages"] if stage["status"] == check_spine.OK]
+        later = dict.fromkeys(stage for stage, _, _ in STAGES if stage not in WITHOUT_THE_BUILD)
         self.skipTest("build: %s (%s). Ran: %s. Not run: %s"
                       % (build.get("status"), (build.get("detail") or "no build stage").splitlines()[0],
                          ", ".join(ran), ", ".join(later)))
 
     def test_the_stages_before_the_build_run_on_every_machine(self):
-        self.assertEqual([entry for entry in broken_stages(self.project) if entry.startswith("requirements:")], [])
+        self.assertEqual([entry for entry in broken_stages(self.project) if entry.split(":")[0] in WITHOUT_THE_BUILD], [])
         for name in BEFORE_THE_BUILD:
             with self.subTest(stage=name):
                 self.assertEqual(self.stage(name).get("status"), check_spine.OK, self.verdict)
+
+    def test_the_kept_pin_map_is_what_emit_pins_writes(self):
+        # The card's measure (P196): the build's pins.py and `assign_pins.py requirements.json --emit-pins` agree.
+        emitted = Path(tempfile.mkdtemp()) / "pins.py"
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "assign_pins.py"), "requirements.json", "--emit-pins",
+                        str(emitted)], cwd=str(self.project), capture_output=True, timeout=COMMAND_TIMEOUT_S)
+        self.assertEqual((self.project / "firmware" / "pins.py").read_text(), emitted.read_text())
 
     def test_every_stage_leaves_what_the_next_one_reads(self):
         self.skip_without_the_build()
