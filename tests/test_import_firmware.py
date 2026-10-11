@@ -172,6 +172,13 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
         self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"])
         self.assertFalse(list(project.rglob("main-ran")), "main.py ran")
 
+    def test_boot_py_is_left_unrun_too(self):
+        project = a_project(boot="open('boot-ran', 'w').close()\n", light="x = 1\n")
+        code, answer = answer_for(project)
+        self.assertEqual(code, outcomes.EXIT_OK, answer)
+        self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"])
+        self.assertFalse(list(project.rglob("boot-ran")), "boot.py ran")
+
     def test_importing_leaves_no_bytecode_in_the_person_s_folder(self):
         project = a_project(light="x = 1\n")
         with mock.patch.dict(os.environ):  # the suite may run with bytecode off already; the command must not rely on it
@@ -251,6 +258,14 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         code, answer = answer_for(project)
         self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
         self.assertIn("move the code out of main.py", answer["problems"][0])
+
+    def test_a_comment_only_boot_py_does_not_make_a_main_py_with_the_loop_importable(self):
+        # F4, irrigation's exact case: the stock boot.py is comments, and the loop is still in main.py.
+        project = a_project(boot="# boot.py -- run on boot-up\n", pins="BUTTON = 4\n", main="while True:\n    pass\n")
+        code, answer = answer_for(project)
+        self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
+        self.assertIn("move the code out of main.py", answer["problems"][0])
+        self.assertEqual([entry["module"] for entry in answer["modules"]], ["pins"])
 
     def test_an_empty_firmware_folder_is_the_same_problem(self):
         code, answer = answer_for(a_project())

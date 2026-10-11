@@ -35,15 +35,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from outcomes import EXIT_FOR, answer  # noqa: E402
 
 STAND_IN = Path(__file__).resolve().parent / "stand_in"
-#: The boot file, never imported, and the pin map the build writes, which does not count as firmware someone wrote.
+#: The files MicroPython runs at boot, never imported (main.py starts the loop), and the pin map the build writes, which
+#: is not firmware someone wrote.
 BOOT_FILE, PIN_MAP, PIN_MODULE = "main.py", "pins.py", "pins"
+BOOT_FILES = ("boot.py", BOOT_FILE)
 DEFAULT_TIMEOUT_S = 5.0
 IMPORTED, RAISED, TIMED_OUT = "imported", "raised", "timed out"
 #: What each child runs: import the module argv[1], with the folders argv[2:] first on sys.path.
 IMPORT_ONE = "import importlib, sys; sys.path[:0] = sys.argv[2:]; importlib.import_module(sys.argv[1])"
-NOTHING_TO_IMPORT = ("firmware/ holds nothing to import but %s and %s, and %s starts the loop, so the firmware cannot "
-                     "be imported without running it: move the code out of %s into a module that %s calls"
-                     % (BOOT_FILE, PIN_MAP, BOOT_FILE, BOOT_FILE, BOOT_FILE))
+NOTHING_TO_IMPORT = ("firmware/ holds nothing to import but %s, %s and %s. The firmware cannot be imported without "
+                     "running %s: move the code out of %s into a module that %s calls"
+                     % (BOOT_FILES + (PIN_MAP, BOOT_FILE, BOOT_FILE, BOOT_FILE)))
 
 
 def import_one(name, firmware, timeout_s):
@@ -66,7 +68,7 @@ def look(project, timeout_s):
     firmware = (project / "firmware").resolve()  # whole: the child runs inside it, so a relative path would name nothing
     if not firmware.is_dir():
         return [], [], ["no firmware/ folder in %s: there is nothing to import" % project]
-    names = sorted({path.stem for path in firmware.glob("*.py") if path.name != BOOT_FILE}
+    names = sorted({path.stem for path in firmware.glob("*.py") if path.name not in BOOT_FILES}
                    | {path.parent.name for path in firmware.glob("*/__init__.py")})  # a package, the bin's shape
     modules = []
     for name in names:

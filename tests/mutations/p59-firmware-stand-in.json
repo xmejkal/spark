@@ -2,7 +2,7 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P59: main.py is imported too, and so is run",
-  "find": "if path.name != BOOT_FILE}",
+  "find": "if path.name not in BOOT_FILES}",
   "replace": "if path.name}"
  },
  {
@@ -148,5 +148,11 @@
   "name": "P59 F1: a package in firmware/ is never imported",
   "find": "| {path.parent.name for path in firmware.glob(\"*/__init__.py\")})",
   "replace": ")"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F4: boot.py is imported, and so is run, and counts as firmware",
+  "find": "BOOT_FILES = (\"boot.py\", BOOT_FILE)",
+  "replace": "BOOT_FILES = (BOOT_FILE,)"
  }
 ]
