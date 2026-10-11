@@ -42,6 +42,10 @@ PR #98 (`2026-10-08-p97-store-1c-council.md`) and the verification of its fixes
 (`2026-10-08-p97-verification.md`). The four essays of 09-25 that fed the first rows are
 in git history; every claim they made is a row in `INDEX.md`, which is what survives.
 
+`2026-10-11-baseline.json` is not a review. It is a recording: what spark answered on 2026-10-11 in the three projects
+and the five fixtures of `tests/data/snapshot/`, taken by `tools/snapshot.py` (P184, #133). A line in it is not a
+finding. Run a snapshot `--against` it to see what a change changed.
+
 ## What good observations look like over time
 
 Not a pile of essays. The point is that the same gap named by three independent observers on
