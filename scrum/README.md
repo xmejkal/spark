@@ -277,8 +277,9 @@ review runs those commands. If an item cannot name one, it does not enter Ready.
 Every one of these, for every item. No exceptions, no "mostly".
 
 1. `python3 -m unittest discover -s tests` — green.
-2. **Mutation tested.** Re-introduce the defect the change prevents; the suite must go red. A fix
-   with no failing-first test is not a fix.
+2. **Mutation tested, for logic.** Re-introduce the defect the change prevents; the suite must go red. A fix
+   with no failing-first test is not a fix. A change to docs, wiring or process needs no mutation table (the PO,
+   2026-10-11, the replan's question 6).
 3. `python3 scripts/check_spine.py` — exit 0 when `scripts/` changed. With no file named it runs the reference design
    that ships with spark: the chain still runs end to end.
 4. The item's own *Value proven by* command runs and shows what it claims, and its output is posted on the issue — or,
