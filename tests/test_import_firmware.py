@@ -32,7 +32,6 @@ import outcomes  # noqa: E402
 
 STAND_IN = ROOT / "scripts" / "stand_in" / "machine.py"
 SCRIPT = ROOT / "scripts" / "import_firmware.py"
-SCRIPT = ROOT / "scripts" / "import_firmware.py"
 #: Long enough to see a loop is a loop, short enough for the suite.
 LOOP_TIMEOUT_S = "0.5"
 
