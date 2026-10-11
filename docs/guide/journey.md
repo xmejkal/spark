@@ -941,10 +941,10 @@ Each signal gets a pin with its pad and its reason. The rest of the output lists
 about these parts nobody has verified, each with what depends on it. `firmware/pins.py` holds the same map as plain
 integers. The firmware does `import pins`; it never types a GPIO number.
 
-The firmware imports on a Mac before any hardware. `import_firmware.py` imports each file in `firmware/` except
-`main.py`, each in a process of its own ([P59](https://github.com/xmejkal/spark/issues/7)). Every import uses spark's
-stand-in for MicroPython's `machine` module. The stand-in lives in `scripts/stand_in/`. It has a `Pin` that remembers
-its level, and nothing else. A test sets an input, calls the firmware and reads the output pin.
+The firmware imports on a Mac before any hardware ([P59](https://github.com/xmejkal/spark/issues/7)).
+`import_firmware.py` imports each file in `firmware/` except `main.py`, each in a process of its own. Every import uses
+spark's stand-in for MicroPython's `machine` module. The stand-in lives in `scripts/stand_in/`. It has a `Pin` that
+remembers its level, and nothing else. A test sets an input, calls the firmware and reads the output pin.
 
 The command leaves `main.py` unrun, because `main.py` starts the loop. Keep it to two lines that call a module, as the
 button-and-LED firmware does (`import light`, then `light.run()`).
@@ -963,8 +963,7 @@ ok
 Nothing to import is a problem, not a pass. When `firmware/` holds only `main.py` and `pins.py`, the command exits 1.
 That firmware cannot be imported without running it. Move its code out of `main.py` into a module that `main.py` calls.
 
-Not built yet: a check that the firmware drives and reads every signal the design names
-([P74](https://github.com/xmejkal/spark/issues/8)).
+Not built yet: a check that every signal is driven and read ([P74](https://github.com/xmejkal/spark/issues/8)).
 
 ## Simulate
 
