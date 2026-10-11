@@ -941,8 +941,32 @@ Each signal gets a pin with its pad and its reason. The rest of the output lists
 about these parts nobody has verified, each with what depends on it. `firmware/pins.py` holds the same map as plain
 integers. The firmware does `import pins`; it never types a GPIO number.
 
-Not built yet: checking the firmware on a Mac against the pin map, before any hardware
-([P59](https://github.com/xmejkal/spark/issues/7), [P74](https://github.com/xmejkal/spark/issues/8)).
+The firmware imports on a Mac before any hardware ([P59](https://github.com/xmejkal/spark/issues/7)).
+`import_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`.
+Each import is a process of its own. Every import uses spark's stand-in for MicroPython's `machine` module. The
+stand-in lives in `scripts/stand_in/`. It has a `Pin` that remembers its level, and nothing else. A test sets an
+input, calls the firmware and reads the output pin.
+
+The command leaves `main.py` unrun, because `main.py` starts the loop. Keep it to two lines that call a module. The
+button-and-LED firmware does that (`import light`, then `light.run()`). You write your own, or Claude does. To try the
+command first, copy spark's example from `tests/data/breadboard/button-light/firmware/` into your `firmware/`.
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/import_firmware.py"
+```
+
+<!-- output: run 2026-10-12, spark 0.8.1 -->
+```text
+imported  light
+imported  pins
+ok
+```
+
+Nothing to import is a problem, not a pass. When `firmware/` holds only `main.py`, `boot.py` and `pins.py`, the command
+exits 1. That firmware cannot be imported without running `main.py`. Move its code out of `main.py` into a module that
+`main.py` calls.
+
+Not built yet: a check that every signal is driven and read ([P74](https://github.com/xmejkal/spark/issues/8)).
 
 ## Simulate
 

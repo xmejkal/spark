@@ -1,0 +1,194 @@
+[
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: main.py is imported too, and so is run",
+  "find": "if path.name not in BOOT_FILES}",
+  "replace": "if path.name}"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: a module that loops is not cut off",
+  "find": "    except subprocess.TimeoutExpired:",
+  "replace": "    except ZeroDivisionError:"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: the default timeout is too short for any import",
+  "find": "DEFAULT_TIMEOUT_S = 5.0",
+  "replace": "DEFAULT_TIMEOUT_S = 0.0"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: --timeout is ignored",
+  "find": "look(Path(args.project), args.timeout)",
+  "replace": "look(Path(args.project), DEFAULT_TIMEOUT_S)"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: the first line of the traceback is reported, not the exception's",
+  "find": "done.stderr.strip().splitlines()[-1:]",
+  "replace": "done.stderr.strip().splitlines()[:1]"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: a module that raises counts as imported",
+  "find": "    if done.returncode == 0:",
+  "replace": "    if True:"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: bytecode is written into the person's firmware folder",
+  "find": "[sys.executable, \"-B\", \"-c\", IMPORT_ONE,",
+  "replace": "[sys.executable, \"-c\", IMPORT_ONE,"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: the stand-in is not on the path",
+  "find": "name, str(STAND_IN), str(firmware), str(firmware / \"lib\")]",
+  "replace": "name, str(firmware), str(firmware / \"lib\")]"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: modules import from the folder the command was typed in, not the firmware's",
+  "find": "cwd=str(firmware), ",
+  "replace": "cwd=None, "
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: a folder of main.py alone passes",
+  "find": "    if not set(names) - {PIN_MODULE}:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: a folder of main.py and the pin map passes",
+  "find": "    if not set(names) - {PIN_MODULE}:",
+  "replace": "    if not set(names) - set():"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: with no firmware folder the answer is problems, not could-not-run",
+  "find": "    if not firmware.is_dir():",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: a module that did not import is no problem",
+  "find": "for entry in modules if entry[\"status\"] != IMPORTED]",
+  "replace": "for entry in modules if False]"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: every outcome exits 0",
+  "find": "    return EXIT_FOR[result[\"status\"]]",
+  "replace": "    return 0"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: --json prints the text",
+  "find": "print(json.dumps(result, indent=2) if args.json else render(result))",
+  "replace": "print(render(result))"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59: the project is not the current folder when none is named",
+  "find": "default=\".\"",
+  "replace": "default=\"..\""
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P59 stand-in: an input nothing set reads 0 even with a pull-up",
+  "find": "1 if self.pull == self.PULL_UP else 0)",
+  "replace": "0)"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P59 stand-in: a test cannot drive an input",
+  "find": "    _levels[gpio] = 1 if level else 0",
+  "replace": "    pass"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P59 stand-in: a pin nobody wrote reads 0 to the test, as if it had been driven low",
+  "find": "    return _levels.get(gpio)",
+  "replace": "    return _levels.get(gpio, 0)"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P59 stand-in: the level written is not made 0 or 1",
+  "find": "        _levels[self.id] = 1 if x else 0",
+  "replace": "        _levels[self.id] = x"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P59 stand-in: a value given at construction is dropped",
+  "find": "        if value is not None:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P59 stand-in: the import machinery's own lookups break every import of it",
+  "find": "    if name.startswith(\"__\"):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F2: the firmware folder is a relative path, which names nothing to the child",
+  "find": "(project / \"firmware\").resolve()",
+  "replace": "project / \"firmware\""
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F6: a module's input() reads the caller's pipe",
+  "find": "stdin=subprocess.DEVNULL, ",
+  "replace": ""
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F1: a package in firmware/ is never imported",
+  "find": "| {path.parent.name for path in firmware.glob(\"*/__init__.py\")})",
+  "replace": ")"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F4: boot.py is imported, and so is run, and counts as firmware",
+  "find": "BOOT_FILES = (\"boot.py\", BOOT_FILE)",
+  "replace": "BOOT_FILES = (BOOT_FILE,)"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F5: a driver kept in firmware/lib is not found",
+  "find": ", str(firmware / \"lib\")]",
+  "replace": "]"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage passes any firmware",
+  "find": "    # The LED lights while the button is held: imports under the stand-in, then reads 0 released and 1 pressed.\n",
+  "replace": "    return None\n"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage does not look at the LED when released",
+  "find": "    if released != \"0\":",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage does not look at the LED when pressed",
+  "find": "    return None if pressed == \"1\" else \"with the button pressed the LED reads %s, not 1\" % pressed",
+  "replace": "    return None"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage lets a firmware that does not import through to the levels",
+  "find": "    if done.returncode != 0:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "P59 F3: the firmware stage names its own absence when the pin map is missing",
+  "find": "    if not (path.parent / \"pins.py\").is_file():",
+  "replace": "    if False:"
+ }
+]

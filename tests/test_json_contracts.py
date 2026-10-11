@@ -39,6 +39,7 @@ import check_spine  # noqa: E402
 import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
 import emit_footprint  # noqa: E402
+import import_firmware  # noqa: E402
 import outcomes  # noqa: E402
 import parts  # noqa: E402
 
@@ -129,6 +130,11 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         self._check("check_all", lambda: check_all.main(
             ["--project", str(self.project), "--circuit", self.circuit, "--json"]),
             ["resolved", "results", "status", "tool"])
+
+    def test_import_firmware(self):
+        # P59: this project holds no firmware/ folder, so the shape is the could-not-run one, with its `modules` empty.
+        self._check("import_firmware", lambda: import_firmware.main([str(self.project), "--json"]),
+                    ["modules", "problems", "status", "tool", "unchecked"])
 
     def test_check_vendor_pins(self):
         # A BARE LIST, not an envelope: no tool, no overall status, and each entry's status word
