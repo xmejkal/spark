@@ -221,9 +221,21 @@ def simulation_could_not_look(said):
     return CONVERTER_HAS_NO_PART in (said or "")
 
 
+#: Wokwi's serial monitor, as a diagram names it: its two wires are the board's own, never a design's (P190).
+SERIAL_MONITOR = "$serialMonitor"
+
+
 def wires_in(diagram):
-    """How many connections the emitted diagram makes."""
-    return len(diagram.get("connections") or [])
+    """How many connections the emitted diagram makes between parts: the serial monitor's two are not counted, so a
+    diagram where every net failed still counts 0."""
+    return sum(1 for connection in diagram.get("connections") or []
+               if not any(str(end).startswith(SERIAL_MONITOR) for end in connection[:2]))
+
+
+def serial_wired(diagram):
+    """Whether the board's serial port reaches Wokwi's serial monitor, so a scenario hears what the firmware prints."""
+    return any(str(end).startswith(SERIAL_MONITOR) for connection in diagram.get("connections") or []
+               for end in connection[:2])
 
 
 def count_in(circuit):
@@ -488,7 +500,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                    "design, which built\n" + said)]
         return stages + [Stage("simulation", PROBLEMS, "no diagram was produced\n" + said)]
 
-    wires = wires_in(json.loads(diagram_path.read_text()))
+    diagram = json.loads(diagram_path.read_text())
+    wires = wires_in(diagram)
     if wires == 0:
         # The same failure shape as a board with no copper: every part placed, nothing joined.
         return stages + [Stage("simulation", PROBLEMS,
@@ -501,10 +514,10 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # like a bench result (backlog P37). It goes beside the diagram as well, because the terminal
     # gets closed and the sim directory is what somebody opens a week later.
     limits = sim_project.write_limits(sim_dir, loaded)
-    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits))]
+    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)))]
 
 
-def simulation_detail(wires, staged, compiled, limits):
+def simulation_detail(wires, staged, compiled, limits, serial=True):
     """
     What the simulation stage says, including what it cannot show.
 
@@ -516,6 +529,9 @@ def simulation_detail(wires, staged, compiled, limits):
     detail = "%d wire(s) in the diagram%s" % (
         wires, ", %d chip(s): %d compiled, %d reused"
         % (len(staged), compiled, len(staged) - compiled) if staged else "")
+    if not serial:  # P190: no pins named TX and RX, or an older converter of the project's own
+        detail += ("\n           no serial monitor is wired in the diagram (a board part with no pins named TX and RX, or "
+                   "a project's own converter older than P190), so a scenario's wait-serial may hear nothing")
     if limits:
         detail += "\n           what it cannot show, from the records (%d):" % len(limits)
         for component, sentence in limits:
