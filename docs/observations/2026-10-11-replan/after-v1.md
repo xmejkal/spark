@@ -1,6 +1,6 @@
-# After v1: the cards the replan parks
+# After v1: the cards the replan closes into version epics
 
-2026-10-11. Each stays open in Idea and comes back the moment the walk trips it. Chosen when at least two of the three lenses named it for pruning and neither slice uses it, plus P158 (#94) and the two cards that hang on its chip table, P187 (#136) and P189 (#138). Titles as the board read them on 2026-10-11.
+2026-10-11. On the PO's yes (question 2), each closes as not planned into its version epic, linked from it, and reopens the moment the walk needs it. Chosen when at least two of the three lenses named it for pruning and neither slice uses it, plus P158 (#94) and the two cards that hang on its chip table, P187 (#136) and P189 (#138). Titles as the board read them on 2026-10-11.
 
 ## The store's redesign and hardening (one person, one local store is enough for v1)
 
