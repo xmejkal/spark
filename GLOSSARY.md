@@ -160,10 +160,10 @@ A snapshot now writes the scratch folders and the random part as placeholders.
 A git hook, installed once per clone, that runs `tools/check_commit.py` before a push leaves the
 machine. It archives **the committed tree** and runs the suite and every mutation anchor against
 *that*, not against your working copy — so uncommitted files cannot make it pass. It produces the
-line quoted in every commit:
+line quoted in every commit (this one from 2026-09-30):
 
 ```
-bec7b88 as committed (2026-09-30): Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once
+bec7b88 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once
 ```
 
 The suite runs there with an empty temp folder of its own, and anything it leaves in it fails the

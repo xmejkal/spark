@@ -1,8 +1,8 @@
 # The journey
 
 spark takes a gadget from an idea in words to the parts and how to wire them on a breadboard, the pin map its firmware
-imports, and a Wokwi simulation to run that firmware in; a board that builds and is checked, and its 3D model, come
-on request. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
+imports, and a Wokwi simulation to run that firmware in; a board that builds and is checked, and its 3D model (`npx --no tsci export board.tsx -f glb`, not run
+here), come on request. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
 `parts.py --requirements` writes from your picks ([P97](https://github.com/xmejkal/spark/issues/18)). Each step reports
 what it could not look at; [what never to assume](agents.md#what-never-to-assume) lists where that does not hold yet.
 
@@ -21,7 +21,7 @@ The same journey in words:
 1. Your drawer says what you own.
 2. An idea becomes needs, matched against your drawer and spark's records first.
 3. Research fills a real gap.
-4. A requirements file becomes a board that builds, with a Wokwi diagram generated from it.
+4. A requirements file becomes a board that builds, with a breadboard sheet and a Wokwi diagram generated from it.
 5. The checks say what holds.
 6. The firmware imports the pin map.
 7. A simulation runs the firmware on the diagram.

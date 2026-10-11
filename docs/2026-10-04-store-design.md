@@ -1,6 +1,6 @@
 # The store and its ways in — design (P94)
 
-> Status 2026-10-11: store 1a–1c (§4–§6.1, §6.4–§6.7, §8 D S M C L T) are built and the code cites them. §6.2's strategy seams, §6.3 and §8 G are unbuilt: input to the store's later version (P178 #123), not a plan.
+> Status 2026-10-11: store 1a–1c (§4–§6.1, §6.4–§6.7, §8 D S M C L T) are built and the code cites them. §6.2's "later" column, §6.3 and §8 G are unbuilt: input to the store's later version (P178 #123), not a plan.
 
 **Status:** the spec, version 2, for the PO's review (2026-10-04). Designed with the PO one question at a time
 (*"keep asking me and iterating until we have a well designed system … no unnecessary bloat, but … a good and

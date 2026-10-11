@@ -21,8 +21,8 @@ one epic each. The slices below are the board's Slice values.
 | 8 | Simulate | `check_spine` → Wokwi (paid minutes) | — |
 | 9 | Firmware | `pins.py` only | nothing tests firmware against the board (P59, P74) |
 | 10 | **Breadboard** — through-hole parts, wired from a table, the firmware tested on it | `breadboard.md` from `/spark:build --keep` (P191): the parts and how to wire them | flashing the board (P192) and the first walk to a lit LED (P100, round A); the bin's `bringup/01..06` after it (P73) |
-| 11 | PCB and fab — offered once the breadboard works | `emit_board` → tscircuit, `fab.py`, `check_bom`, the review's fab gate | optional, and only after the circuit and the firmware are proven (slice 8) |
-| 12 | Enclosure — 3D export, Fusion 360, printed parts | `tsci export -f glb` only | everything past the board's own model (slice 9) |
+| 11 | PCB and fab — offered once the breadboard works | `emit_board` → tscircuit, `fab.py`, `check_bom`, the review's fab gate | optional, and only after the circuit and the firmware are proven (a later version) |
+| 12 | Enclosure — 3D export, Fusion 360, printed parts | `tsci export -f glb` only | everything past the board's own model (a later version) |
 
 Two halves: the maker uses spark to *check* a hand-written board; only the cold tests used the
 generator. Steps 9–11 hold almost nothing from spark yet.

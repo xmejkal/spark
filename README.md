@@ -11,7 +11,7 @@ checked it.
 
 From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark gives you a
 breadboard sheet (the parts and how to wire them), the pin map your firmware imports, and a simulation to run it in.
-On request it also gives you the *board*, a printed circuit board your dev board and modules plug into, and its 3D model.
+On request it also gives you the *board*, a printed circuit board your dev board and modules plug into, and its 3D model (`npx --no tsci export board.tsx -f glb`).
 
 - Every pin gets a reason, and the connections come from the parts' records.
 - The board builds, with a Wokwi diagram generated from it (kept only with `--sim-dir sim`,

@@ -3,7 +3,9 @@
 Documents whose work is done, or which plan something past v1. They moved here on 2026-10-11, when the PO asked to
 *"shrink and siplify our plans and make sure its all up to date"*. Nothing here is a current rule. Where a document
 feeds a later version, the row says which, and [VISION.md's *Versions*](../../scrum/VISION.md#versions) is the plan.
-Each file kept its name and its history (`git log --follow`).
+Each file kept its name and its history (`git log --follow`). Older text that names a path from before the move — the
+frozen `scrum/PRODUCT_BACKLOG.md`, `SPRINT.md` and `RETROSPECTIVES.md`, and some issues — finds the file here under the
+same name.
 
 | what | why it is here | feeds |
 | --- | --- | --- |
