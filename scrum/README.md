@@ -11,9 +11,10 @@
 - An agent's launch names its card, which stands in its working stage first
   ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)), and its model:
   `Agent(description="#126 P180: the documentation expert for humans", model="sonnet", …)`.
-- Before every pull request, [a council](#the-council-before-every-pull-request): six lenses on Sonnet (the PO
-  assistant, the user's journey, the tech lead, and three documentation experts, for humans, for AI, and for examples
-  and help), then the refuter on Opus. Fable only where the PO names it ([the token budget](#the-token-budget)).
+- Before every pull request, [a council sized to the change](#the-council-before-every-pull-request): up to six lenses
+  on Sonnet (the PO assistant, the user's journey, the tech lead, and three documentation experts, for humans, for AI,
+  and for examples and help), then the refuter on Opus. Fable only where the PO names it ([the token
+  budget](#the-token-budget)).
 
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
 
@@ -212,6 +213,15 @@ and help"* ([#126](https://github.com/xmejkal/spark/issues/126)). So three docum
 A pull request fixes the gaps it makes. Older gaps in the README's shape go to P182
 ([#128](https://github.com/xmejkal/spark/issues/128)): the PO's answer of 2026-10-10, *"Keep P182 as its own card"*.
 
+**Its size follows the change** (the PO, 2026-10-11: *"Size it to the change"*,
+[#131](https://github.com/xmejkal/spark/issues/131)). Every pull request still gets a council and a refuter:
+
+| the change | the council |
+| --- | --- |
+| docs only, or under about 50 changed lines | one reviewer on Sonnet asking all six lenses' questions, then the refuter |
+| code | the six lenses on Sonnet, then the refuter |
+| a design or an epic | the full council |
+
 ## The token budget
 
 - **Sized to the question.** A look-up gets one agent; a comparison, a few. A full council (about 90 M input tokens)
@@ -275,9 +285,9 @@ Every one of these, for every item. No exceptions, no "mostly".
 8. A change to what a step of the journey does updates [the journey guide](../docs/guide/journey.md) and the README's
    *What works today* in the same change (P104, the PO 2026-10-05). Nothing mechanical checks it: `tools/check_docs.py`
    cannot tell whether a status is still current, so the council reads it.
-9. Before the PR: [the council](#the-council-before-every-pull-request) with its three documentation experts, for
-   human readers (the README's shape included), for AI (skills, agents, descriptions) and for examples and help, and
-   its fixes (the PO, 2026-10-08 and 2026-10-10).
+9. Before the PR: [the council](#the-council-before-every-pull-request), sized to the change, with its three
+   documentation questions — for human readers (the README's shape included), for AI (skills, agents, descriptions)
+   and for examples and help — and its fixes (the PO, 2026-10-08, 2026-10-10 and 2026-10-11).
 10. **A version bump is a release.** The PR that changes the version in `.claude-plugin/plugin.json` (and README's
    footer, which `tools/check_docs.py` ties to it) is tagged `vX.Y.Z` on its merge and gets a GitHub release whose
    notes say what new functionality and which bug fixes came in; the PR's body names the release. Major when a
