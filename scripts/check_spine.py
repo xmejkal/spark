@@ -58,6 +58,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import breadboard  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
@@ -593,7 +594,8 @@ def main(argv=None):
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
-                             "left alone and named; with --json, each file is listed under kept")
+                             "left alone and named; with --json, each file is listed under kept. With a requirements "
+                             "file it also writes breadboard.md: the parts and how to wire them on a breadboard")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
@@ -696,6 +698,29 @@ def _kept(workdir, destination):
                  "line": "not kept: %s — %s" % (destination, refused)}]
 
 
+def keep_breadboard(requirements, destination, stages=()):
+    """
+    The breadboard sheet beside the kept board (P191, #143), as one kept entry {file, did, why, line}. Only from a build
+    that finished in this run, which it records (dist/board/built-from.json) for breadboard.py to compare; a sheet left
+    from an earlier build is removed, since it describes another board.
+    """
+    sheet = Path(destination) / breadboard.SHEET
+    if not any(stage.name == "build" and stage.status == OK for stage in stages):
+        why = "the build did not finish in this run"
+        if sheet.exists():
+            sheet.unlink()
+            return {"file": str(sheet), "did": "removed", "why": why + ", and it described an earlier build",
+                    "line": "no breadboard sheet: %s; removed %s, which described an earlier build" % (why, sheet)}
+        return {"file": str(sheet), "did": "not written", "why": why, "line": "no breadboard sheet: %s" % why}
+    try:
+        breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
+        written = breadboard.write(requirements, sheet, Path(destination) / breadboard.CIRCUIT)
+    except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
+        return {"file": str(sheet), "did": "not written", "why": str(stopped), "line": "no breadboard sheet: %s" % stopped}
+    why = "the parts and how to wire them on a breadboard"
+    return {"file": str(written), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written, why)}
+
+
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
@@ -704,6 +729,8 @@ def report(stages, args, workdir=None, requirements=None):
     """
     code = verdict(stages)
     kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
+    if kept is not None and getattr(args, "requirements", None):
+        kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code],
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}

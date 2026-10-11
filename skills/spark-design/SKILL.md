@@ -67,7 +67,9 @@ a rule checklist in the loop. Follow it.
      `npx --no tsci build board.tsx` stops at that import until it exists.
    - `${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json` — the whole chain,
      `idea → parts → pin map → schematic → footprint → build → simulation`, and the stage that
-     stopped it. `????` is could-not-run and never a pass; `!!` is a defect in the design.
+     stopped it. `????` is could-not-run and never a pass; `!!` is a defect in the design. With `--keep .`
+     it also writes `breadboard.md`: the parts and how to wire them on a breadboard, which is what the
+     person builds first. Give it to them, with its *Before you power it* lines.
 
    The project is found up from the requirements file, so this works from anywhere — and from
    nowhere: a file inside no project is built from the plugin's library, with no rules, and the

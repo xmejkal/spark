@@ -1,0 +1,620 @@
+[
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_0",
+  "name": "pin1",
+  "port_hints": [
+   "pin1",
+   "RX",
+   "1"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_1",
+  "name": "pin2",
+  "port_hints": [
+   "pin2",
+   "TX",
+   "2"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_2",
+  "name": "pin3",
+  "port_hints": [
+   "pin3",
+   "D2",
+   "3"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_3",
+  "name": "pin4",
+  "port_hints": [
+   "pin4",
+   "D3",
+   "4"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_4",
+  "name": "pin5",
+  "port_hints": [
+   "pin5",
+   "D5",
+   "5"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_5",
+  "name": "pin6",
+  "port_hints": [
+   "pin6",
+   "D6",
+   "6"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_6",
+  "name": "pin7",
+  "port_hints": [
+   "pin7",
+   "D7",
+   "7"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_7",
+  "name": "pin8",
+  "port_hints": [
+   "pin8",
+   "D9",
+   "8"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_8",
+  "name": "pin9",
+  "port_hints": [
+   "pin9",
+   "SDA",
+   "9"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_9",
+  "name": "pin10",
+  "port_hints": [
+   "pin10",
+   "SCL",
+   "10"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_10",
+  "name": "pin11",
+  "port_hints": [
+   "pin11",
+   "MI",
+   "11"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_11",
+  "name": "pin12",
+  "port_hints": [
+   "pin12",
+   "MO",
+   "12"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_12",
+  "name": "pin13",
+  "port_hints": [
+   "pin13",
+   "SCK",
+   "13"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_13",
+  "name": "pin14",
+  "port_hints": [
+   "pin14",
+   "GND1",
+   "14"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_14",
+  "name": "pin15",
+  "port_hints": [
+   "pin15",
+   "GND2",
+   "15"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_15",
+  "name": "pin16",
+  "port_hints": [
+   "pin16",
+   "GND3",
+   "16"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_16",
+  "name": "pin17",
+  "port_hints": [
+   "pin17",
+   "3V3",
+   "17"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_17",
+  "name": "pin18",
+  "port_hints": [
+   "pin18",
+   "RST",
+   "18"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_18",
+  "name": "pin19",
+  "port_hints": [
+   "pin19",
+   "D10",
+   "19"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_19",
+  "name": "pin20",
+  "port_hints": [
+   "pin20",
+   "D11",
+   "20"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_20",
+  "name": "pin21",
+  "port_hints": [
+   "pin21",
+   "D12",
+   "21"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_21",
+  "name": "pin22",
+  "port_hints": [
+   "pin22",
+   "D13",
+   "22"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_22",
+  "name": "pin23",
+  "port_hints": [
+   "pin23",
+   "A0",
+   "23"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_23",
+  "name": "pin24",
+  "port_hints": [
+   "pin24",
+   "A1",
+   "24"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_24",
+  "name": "pin25",
+  "port_hints": [
+   "pin25",
+   "A2",
+   "25"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_25",
+  "name": "pin26",
+  "port_hints": [
+   "pin26",
+   "A3",
+   "26"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_26",
+  "name": "pin27",
+  "port_hints": [
+   "pin27",
+   "A4",
+   "27"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_27",
+  "name": "pin28",
+  "port_hints": [
+   "pin28",
+   "A5",
+   "28"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_28",
+  "name": "pin29",
+  "port_hints": [
+   "pin29",
+   "D14",
+   "29"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_29",
+  "name": "pin30",
+  "port_hints": [
+   "pin30",
+   "D-",
+   "30"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_30",
+  "name": "pin31",
+  "port_hints": [
+   "pin31",
+   "D+",
+   "31"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_31",
+  "name": "pin32",
+  "port_hints": [
+   "pin32",
+   "VCC",
+   "32"
+  ],
+  "source_component_id": "source_component_0"
+ },
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_0",
+  "ftype": "simple_chip",
+  "name": "Mcu"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_32",
+  "name": "A",
+  "port_hints": [
+   "A",
+   "pin1",
+   "1"
+  ],
+  "source_component_id": "source_component_1"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_33",
+  "name": "B",
+  "port_hints": [
+   "B",
+   "pin2",
+   "2"
+  ],
+  "source_component_id": "source_component_1"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_34",
+  "name": "pin3",
+  "port_hints": [
+   "pin3",
+   "3"
+  ],
+  "source_component_id": "source_component_1"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_35",
+  "name": "pin4",
+  "port_hints": [
+   "pin4",
+   "4"
+  ],
+  "source_component_id": "source_component_1"
+ },
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_1",
+  "ftype": "simple_chip",
+  "name": "TactileButton"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_36",
+  "name": "A",
+  "port_hints": [
+   "A",
+   "pin1",
+   "1"
+  ],
+  "source_component_id": "source_component_2"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_37",
+  "name": "K",
+  "port_hints": [
+   "K",
+   "pin2",
+   "2"
+  ],
+  "source_component_id": "source_component_2"
+ },
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_2",
+  "ftype": "simple_chip",
+  "name": "LedRed5mm"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_38",
+  "name": "pin1",
+  "port_hints": [
+   "pin1",
+   "anode",
+   "pos",
+   "left",
+   "1"
+  ],
+  "source_component_id": "source_component_3"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_39",
+  "name": "pin2",
+  "port_hints": [
+   "pin2",
+   "cathode",
+   "neg",
+   "right",
+   "2"
+  ],
+  "source_component_id": "source_component_3"
+ },
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_3",
+  "ftype": "simple_resistor",
+  "name": "TactileButtonPullupA",
+  "resistance": 10000,
+  "display_resistance": "10k\u03a9"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_40",
+  "name": "pin1",
+  "port_hints": [
+   "pin1",
+   "anode",
+   "pos",
+   "left",
+   "1"
+  ],
+  "source_component_id": "source_component_4"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_41",
+  "name": "pin2",
+  "port_hints": [
+   "pin2",
+   "cathode",
+   "neg",
+   "right",
+   "2"
+  ],
+  "source_component_id": "source_component_4"
+ },
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_4",
+  "ftype": "simple_resistor",
+  "name": "LedRed5mmSeriesA",
+  "resistance": 330,
+  "display_resistance": "330\u03a9"
+ },
+ {
+  "type": "source_net",
+  "source_net_id": "source_net_0",
+  "name": "V33"
+ },
+ {
+  "type": "source_net",
+  "source_net_id": "source_net_1",
+  "name": "GND"
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_0",
+  "connected_source_port_ids": [
+   "source_port_38",
+   "source_port_32"
+  ],
+  "connected_source_net_ids": []
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_1",
+  "connected_source_port_ids": [
+   "source_port_39"
+  ],
+  "connected_source_net_ids": [
+   "source_net_0"
+  ]
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_2",
+  "connected_source_port_ids": [
+   "source_port_41",
+   "source_port_36"
+  ],
+  "connected_source_net_ids": []
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_3",
+  "connected_source_port_ids": [
+   "source_port_3",
+   "source_port_32"
+  ],
+  "connected_source_net_ids": []
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_4",
+  "connected_source_port_ids": [
+   "source_port_27",
+   "source_port_40"
+  ],
+  "connected_source_net_ids": []
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_5",
+  "connected_source_port_ids": [
+   "source_port_16"
+  ],
+  "connected_source_net_ids": [
+   "source_net_0"
+  ]
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_6",
+  "connected_source_port_ids": [
+   "source_port_13"
+  ],
+  "connected_source_net_ids": [
+   "source_net_1"
+  ]
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_7",
+  "connected_source_port_ids": [
+   "source_port_14"
+  ],
+  "connected_source_net_ids": [
+   "source_net_1"
+  ]
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_8",
+  "connected_source_port_ids": [
+   "source_port_15"
+  ],
+  "connected_source_net_ids": [
+   "source_net_1"
+  ]
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_9",
+  "connected_source_port_ids": [
+   "source_port_33"
+  ],
+  "connected_source_net_ids": [
+   "source_net_1"
+  ]
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_10",
+  "connected_source_port_ids": [
+   "source_port_37"
+  ],
+  "connected_source_net_ids": [
+   "source_net_1"
+  ]
+ }
+]

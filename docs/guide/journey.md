@@ -38,8 +38,9 @@ What the three words mean:
 - When: [Drawer](#drawer), [Idea](#idea), the two `--need` lists in [Research](#research) and the library's list in
   [Build](#build) on 2026-10-08, with spark 0.7.0; the Idea section's build used tscircuit 0.0.2621, an existing
   install on the PATH. The rest on 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600,
-  the version spark pins; that tscircuit came from an existing install, linked into the project. The note above each
-  output names its run.
+  the version spark pins; that tscircuit came from an existing install, linked into the project. The builds in
+  [A recorded run](#a-recorded-run-a-button-and-an-led) and [Build](#build), and the breadboard sheet, on 2026-10-11 with
+  spark 0.8.1 and tscircuit 0.0.2621. The note above each output names its run.
 - Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer, `plant-alarm` and
   `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read. The
   `--audit` at the top of [owed facts and gaps](#owed-facts-and-gaps) ran in that store too, and each later example
@@ -338,12 +339,13 @@ With `--dry-run` first it says *would write*. The file it wrote:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
 
-<!-- output: run 2026-10-08, spark 0.7.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
   wrote FireBeetle2Esp32S3.tsx
   wrote board.tsx
   wrote dist — this is what every check reads
+  wrote breadboard.md — the parts and how to wire them on a breadboard
 
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 
@@ -361,6 +363,53 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
 
 This build used tscircuit 0.0.2621, an existing install on the PATH, not the 0.0.2600 spark pins: the build line says
 so, and does not fail for it.
+
+**The breadboard.** With `--keep`, the build also writes `breadboard.md` into the project
+([P191](https://github.com/xmejkal/spark/issues/143)): the parts, the resistors the parts ask for, and every wire,
+named by the board's printed labels and the parts' legs. It comes from the circuit that was built, so it is the board
+the checks and the simulation saw. The FireBeetle reads *yours* because the drawer holds it for this project:
+
+<!-- output: run 2026-10-11, spark 0.8.1 -->
+```text
+# Breadboard: button-light, on a DFRobot FireBeetle 2 ESP32-S3
+
+## Parts
+
+| qty | part | for | have |
+| --- | --- | --- | --- |
+| 1 | DFRobot FireBeetle 2 ESP32-S3 | the board | yours |
+| 1 | 6x6 mm tactile push button | TactileButton | to get |
+| 1 | Kingbright L-7113ID 5 mm red LED | LedRed5mm | to get |
+| 1 | 10kΩ resistor, through-hole | R1 pull-up on TactileButton A | to get |
+| 1 | 330Ω resistor, through-hole | R2 in series with LedRed5mm A | to get |
+| | a breadboard and jumper wires | | to get |
+
+*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · to get = not in your drawer · blank = this project is not on your list (`/spark:init` puts it there)
+
+## Wiring
+
+Each line is one point: put its ends in one breadboard row, or join them with a wire. The board covers the
+rows beside its own pins, so for a line that starts with a board pin, run a jumper from that pin to a free
+row and put the line's other ends in that row.
+
+1. board 3V3 · R1 (10kΩ pull-up on TactileButton A), end 2
+2. board A5 · R2 (330Ω in series with LedRed5mm A), end 1
+3. board D3 · R1 (10kΩ pull-up on TactileButton A), end 1 · TactileButton A (either leg of one joined pair; a meter on continuity shows which legs are joined)
+4. board GND · LedRed5mm K (the cathode, the shorter leg, by the flat of the rim) · TactileButton B (either leg of the other pair)
+5. LedRed5mm A (the anode, the longer leg) · R2 (330Ω in series with LedRed5mm A), end 2
+
+## Before you power it
+
+- 6x6 mm tactile push button: Decide the polarity against deep sleep, not convenience. MicroPython's esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 ('stuck pin', reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.
+- 6x6 mm tactile push button: Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin's first edge is the one that matters and it is not debounced by anything.
+- Kingbright L-7113ID 5 mm red LED: A series resistor between the GPIO and the anode, always: without it the LED's current is set only by the pin's drive strength, and it either runs far past 30 mA or droops the pin's level.
+- Kingbright L-7113ID 5 mm red LED: Keep it off the chip's strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)
+- Kingbright L-7113ID 5 mm red LED: On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.
+
+Each record whole, with what it asks of the board: `parts.py --show led-red-5mm`, `parts.py --show tactile-button`.
+```
+
+`python3 "$CLAUDE_PLUGIN_ROOT/scripts/breadboard.py" requirements.json` writes it again after a build.
 
 **T — the tally.**
 
@@ -680,19 +729,20 @@ Then [`/spark:build`](../../commands/build.md) runs the whole chain on it:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
   wrote FireBeetle2Esp32S3.tsx
   wrote board.tsx
   wrote dist — this is what every check reads
+  wrote breadboard.md — the parts and how to wire them on a breadboard
 
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 
   [ok  ] board            DFRobot FireBeetle 2 ESP32-S3
   [ok  ] schematic        22 trace(s) written
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
-  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2600
+  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2621; the documents were measured on core 0.0.2600
   [ok  ] simulation       17 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
            what it cannot show, from the records (3):
              BtnMode, BtnOpen: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled
@@ -704,8 +754,8 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
 
 19 routed traces carry the 22 written connections: a group of N connected pins needs N−1 traces.
 
-`--keep .` writes the board into the project: `board.tsx`, the board's footprint, and `dist/`, where every check
-looks. An existing `board.tsx` is left alone, edited or not, and `dist/` is then built from the requirements file, not
+`--keep .` writes the board into the project: `board.tsx`, the board's footprint, `dist/`, where every check
+looks, and `breadboard.md`, the parts and how to wire them ([an example](#a-recorded-run-a-button-and-an-led)). An existing `board.tsx` is left alone, edited or not, and `dist/` is then built from the requirements file, not
 from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). Without `--keep`, the chain builds in a
 temporary folder and deletes it.
 

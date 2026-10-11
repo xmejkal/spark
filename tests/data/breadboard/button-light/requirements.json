@@ -1,0 +1,7 @@
+{
+  "board": "firebeetle2-esp32s3",
+  "parts": [
+    "tactile-button",
+    "led-red-5mm"
+  ]
+}

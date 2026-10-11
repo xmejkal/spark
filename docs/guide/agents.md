@@ -117,9 +117,11 @@ These only read:
 These write:
 
 - `init_project.py`: four project files, plus the store's projects list.
+- `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for
+  what you have, and refuses a failed or stale build.
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
-  reads, and creates `.tscircuit/cache/`. It may also compile a chip beside its record, which for a library part is
-  inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
+  reads, writes `breadboard.md` after a build that finished, and creates `.tscircuit/cache/`. It may also compile a
+  chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
 - `check_vendor_pins.py` without `--offline`: the fetched vendor header, into `.spark/cache/` of the project that owns
@@ -342,7 +344,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 
 **Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
 `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py` and `parts.py`. These do not take
-it: `boards.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py` and `tools.py`. `tools.py
+it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
 ## The outcomes and their exit codes

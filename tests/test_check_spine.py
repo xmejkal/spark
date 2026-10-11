@@ -344,6 +344,42 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse(work.exists(), "the temp directory is still cleared away")
         self.assertIn("every check reads", err.getvalue())
 
+    def test_keeping_a_project_s_build_writes_its_breadboard_sheet_beside_it(self):
+        # P191 (#143): the parts and how to wire them, where /spark:build leaves the board.
+        import argparse, contextlib, io, shutil
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        work = self.workdir()
+        shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        into = Path(tempfile.mkdtemp()) / "project"
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        self.assertIn("board D3", (into / "breadboard.md").read_text())
+        self.assertIn("the parts and how to wire them on a breadboard", err.getvalue())
+
+    def test_a_build_that_did_not_finish_writes_no_sheet_and_says_why(self):
+        # P191's council: a failed build wrote a sheet from the earlier dist/, wiring parts the requirements had dropped.
+        import argparse, contextlib, io
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        into = Path(tempfile.mkdtemp()) / "project"
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+        self.assertFalse((into / "breadboard.md").exists())
+        self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
+
+    def test_a_sheet_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
+        # The refuter: it described another board, and sat beside the new requirements.
+        import argparse, contextlib, io
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        into = Path(tempfile.mkdtemp()) / "project"
+        into.mkdir(); (into / "breadboard.md").write_text("# an earlier build's sheet")
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+        self.assertFalse((into / "breadboard.md").exists())
+        self.assertIn("removed", err.getvalue())
+
     def test_kept_files_reach_the_envelope_as_they_reach_the_text(self):
         # P124 (#58), CH-16: with --json the lines of --keep went to stderr only, so an agent never read which files it
         # wrote and which it left alone.

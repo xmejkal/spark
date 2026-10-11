@@ -39,6 +39,9 @@ does not hold yet, [what never to assume](docs/guide/agents.md#what-never-to-ass
 On the documented example (a FireBeetle 2 ESP32-S3, an L9110S motor driver, a power inlet and two buttons), from the
 runs in [the journey guide](docs/guide/journey.md):
 
+- **A breadboard sheet.** After a build, `breadboard.md` lists the parts and every wire by the board's printed labels:
+  `board A5 · R2 (330Ω in series with LedRed5mm A), end 1`, then
+  `LedRed5mm A (the anode, the longer leg) · R2 (330Ω in series with LedRed5mm A), end 2`.
 - **A conflict between two parts.** The board's 10 kΩ pull-downs, against the L9110S module's own 10 kΩ pull-ups, hold
   both motor inputs HIGH at idle on a supply above 5 V. `parts.py --show` reports it; `check_all` does not yet
   ([P109](https://github.com/xmejkal/spark/issues/43)).
@@ -60,7 +63,7 @@ flowchart LR
 ```
 
 The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
-`docs/guide/`, on 2026-10-05, 2026-10-06 and 2026-10-08; [the journey guide](docs/guide/journey.md) shows the output
+`docs/guide/`, on 2026-10-05, 2026-10-06, 2026-10-08 and 2026-10-11; [the journey guide](docs/guide/journey.md) shows the output
 of each step it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops
 before its goal, or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**:
 nothing does it yet; the linked issue plans it.
@@ -70,7 +73,7 @@ nothing does it yet; the linked issue plans it.
 | [Drawer](docs/guide/journey.md#drawer) | **partly**: what you own, kept in your own store; the scripts that list and write entries ran. Turning your words into entries, and the DFRobot import, were not run here | `/spark:drawer` |
 | [Idea](docs/guide/journey.md#idea) | **partly**: a goal becomes needs, matched against what you own and what spark knows; a part is picked per need, what you own is reserved, and the picks become a requirements file ([P97](https://github.com/xmejkal/spark/issues/18)). Its scripts ran here, from the needs to the requirements file, in [a recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led) that went on to a board that builds and the tally; the conversation was not run, and with no Claude Code transcript there the tally could not count the cost | `/spark:idea` |
 | [Research](docs/guide/journey.md#research) | **partly**: the library search runs. Research of a new part is done by agents, not run here | `/spark:research`, `/spark:identify` |
-| [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it, or the stage that stopped it | `/spark:build` |
+| [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it and, with `--keep`, a breadboard sheet (the parts and how to wire them), or the stage that stopped it | `/spark:build` |
 | [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |
 | [Firmware](docs/guide/journey.md#firmware) | **partly**: the pin map is exported for the firmware to import. Not built yet: checking the firmware on a Mac against it ([P59](https://github.com/xmejkal/spark/issues/7), [P74](https://github.com/xmejkal/spark/issues/8)) | `assign_pins.py --emit-pins` |
 | [Simulate](docs/guide/journey.md#simulate) | **partly**: the build generates the Wokwi diagram and stages the chips, kept only with `--sim-dir sim` ([P116](https://github.com/xmejkal/spark/issues/50)). A run needs a flash image, a scenario you write, `wokwi-cli` and a Wokwi account's CI token, and it spends Wokwi CI minutes; none was run here | `/spark:build`, then `wokwi-cli` |

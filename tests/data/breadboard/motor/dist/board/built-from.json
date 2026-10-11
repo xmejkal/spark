@@ -1,0 +1,17 @@
+{
+ "requirements": {
+  "board": "firebeetle2-esp32s3",
+  "parts": [
+   "l9110s-module",
+   "jst-ph-2-power-inlet",
+   {
+    "part": "tactile-button",
+    "name": "BtnOpen"
+   },
+   {
+    "part": "tactile-button",
+    "name": "BtnMode"
+   }
+  ]
+ }
+}
