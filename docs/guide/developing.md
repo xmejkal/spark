@@ -177,7 +177,7 @@ against the baseline ended like this:
 
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
-spark: 852e296 → 87b5d34
+spark: 3d79dd7 → 76f4536
 nothing differs from docs/observations/2026-10-11-baseline.json
 ```
 
@@ -185,7 +185,7 @@ With one word changed in what `boards.py --validate` prints, it exits 1 and list
 
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
-a3-run1-placeholder-board: boards.py --validate --project . — differs from the snapshot of 2026-10-11T10:22:08+02:00
+a3-run1-placeholder-board: boards.py --validate --project . — differs from the snapshot of 2026-10-11T10:44:09+02:00
   stdout:
     -          firebeetle2-esp32s3 (library): ok
     -   active  generic-esp32s3 (project): ok
