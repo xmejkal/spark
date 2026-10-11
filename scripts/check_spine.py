@@ -648,40 +648,50 @@ def keep_into(workdir, destination):
     person edits — the smart bin's is hand-maintained — so an existing one is left alone and
     named. Delete it to have it regenerated. One behaviour, no flag to get it wrong with.
     """
+    return [entry["line"] for entry in kept_into(workdir, destination)]
+
+
+def kept_into(workdir, destination):
+    """`keep_into`'s work, each file as {file, did, line}: `did` is `wrote` or `left alone`, what --json carries (P124)."""
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
-    said = []
+    kept = []
     for source in sorted(workdir.glob("*.tsx")):
         target = destination / source.name
         if target.exists():
-            said.append("left alone: %s (delete it to have it regenerated)" % target)
+            kept.append({"file": str(target), "did": "left alone",
+                         "line": "left alone: %s (delete it to have it regenerated)" % target})
         else:
             shutil.copy2(source, target)
-            said.append("wrote %s" % target)
+            kept.append({"file": str(target), "did": "wrote", "line": "wrote %s" % target})
     built = workdir / "dist"
     if built.is_dir():
         shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
-        said.append("wrote %s — this is what every check reads" % (destination / "dist"))
-    return said
+        kept.append({"file": str(destination / "dist"), "did": "wrote",
+                     "line": "wrote %s — this is what every check reads" % (destination / "dist")})
+    return kept
 
 
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
-    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed.
+    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed. What
+    --keep wrote and left alone is said on stderr and, with --json, carried under `wrote` (P124).
     """
     code = verdict(stages)
+    kept = kept_into(workdir, args.keep) if workdir is not None and args.keep else None
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code],
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
-        print(json.dumps(dict(said, unserved=requirements["unserved"]) if left_off(requirements) else said))
+        said.update({"unserved": requirements["unserved"]} if left_off(requirements) else {})
+        said.update({"wrote": [{"file": k["file"], "did": k["did"]} for k in kept]} if kept is not None else {})
+        print(json.dumps(said))
     else:
         sys.stdout.write(render(stages, code, left_off(requirements)))
     if workdir is None:
         return code
-    if args.keep:
-        for line in keep_into(workdir, args.keep):
-            print("  %s" % line, file=sys.stderr)
+    for entry in kept or []:
+        print("  %s" % entry["line"], file=sys.stderr)
     if workdir.exists():
         shutil.rmtree(workdir, ignore_errors=True)
     return code

@@ -253,8 +253,8 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
-| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it |
-| `parts.py` | the envelope: `data`, `envelope`, `next`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
+| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. With `--keep`, `wrote` lists each file: `file`, and `did` (`wrote` or `left alone`) |
+| `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
 Checking a shipped board's pin map, as an agent does, without the network:
 
@@ -282,10 +282,14 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
 - `next` is where suggested next commands, with their effects, would go. It is empty today: no operation fills it. Only
   `truncated.next` is filled, with the command for the rest of a long answer.
 - Run every write with `--dry-run` first.
-- `--unverified` puts its open items in `data.questions` (`part`, `fact`, `assumed`, `why_it_matters`, `source`); its
-  `status` ok means only that the listing ran.
-- `--show --json` carries the raw record only, and its status is ok even when the text prints CONFLICT. Run it without
-  `--json` to read CONFLICT lines ([P124](https://github.com/xmejkal/spark/issues/58)).
+- `assumptions` is what an answer rests on that nobody has checked. It never changes the status, so read it whenever it
+  is not empty. `--unverified` lists one per open fact: `fact` (`<part>.<fact>`), `basis` `unverified`, `assumed`,
+  `sentence` (what depends on it) and `source`.
+- `--show` carries each CONFLICT line. When every fact it rests on is verified, it is a problem: status `problems`,
+  exit 1. Otherwise it is an assumption with `basis` `unmeasured` and `rests_on`, the facts to verify, and the status
+  stays ok ([P124](https://github.com/xmejkal/spark/issues/58)).
+- `notes` are said and never fail, each `{subject, sentence}`: a pick's notes, for one.
+- In text, every problem's fix and every next step is printed under the answer's lines.
 
 **Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
 `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py` and `parts.py`. These do not take
@@ -452,10 +456,10 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project . --json
 6. **check_all is not the whole answer.** It runs five checks on the last build. It does not run the generator's
    CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)). It does not read the notes in `board.tsx` or
    report tscircuit's warnings. So also:
-   - **Run `parts.py --show <id> --project .`, without `--json`,** for each id in requirements.json's `parts` (a
-     string, or the `part` of `{part, name}`; the dev board is not a part). Read every CONFLICT line; it exits 0 even
-     when it prints one. A generated `board.tsx` also carries these lines in its closing comments, but a `board.tsx`
-     kept by hand may not.
+   - **Run `parts.py --show <id> --project .`** for each id in requirements.json's `parts` (a string, or the `part` of
+     `{part, name}`; the dev board is not a part). Read every CONFLICT line. One on verified facts exits 1; one on
+     unverified facts exits 0, and `--json` lists it under `assumptions` ([P124](https://github.com/xmejkal/spark/issues/58)). A generated `board.tsx` also carries
+     these lines in its closing comments, but a `board.tsx` kept by hand may not.
    - **Read each record's `unused_pins`** (`data.record.unused_pins` in `--show --json`), and check that the board does
      what each note asks. The L9110S record says channel B's BIA and BIB must not float, and the generated board leaves
      them unconnected.
@@ -483,7 +487,8 @@ skill: its design-reviewer agents, then its last step, the fabrication gate.
     the active one. With `--for-fab` it also requires each to name a footprint (`physical.footprint_module` and
     `footprint_export`). It reads nothing of `board.tsx` or the build, and a problem in an unused library board fails
     it too.
-  - `parts.py --unverified` runs for every part. It exits 0 even when items are open, so read its list.
+  - `parts.py --unverified` runs for every part. It exits 0 even when items are open, so read its list (with `--json`,
+    `assumptions`).
   - Neither lists the dev board's own unverified figures: `boards.py --get power --project .` shows them, such as the
     FireBeetle's `regulator_3v3_a` and `deep_sleep_ua` ([P126](https://github.com/xmejkal/spark/issues/60)).
 - **The design-reviewer agents run only in Claude Code.** Outside it, say they were not run.

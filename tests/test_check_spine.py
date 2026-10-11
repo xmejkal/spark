@@ -344,6 +344,20 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse(work.exists(), "the temp directory is still cleared away")
         self.assertIn("every check reads", err.getvalue())
 
+    def test_kept_files_reach_the_envelope_as_they_reach_the_text(self):
+        # P124 (#58), CH-16: with --json the lines of --keep went to stderr only, so an agent never read which files it
+        # wrote and which it left alone.
+        import argparse, contextlib, io
+        into = Path(tempfile.mkdtemp()) / "project"
+        into.mkdir(); (into / "board.tsx").write_text("// MINE")
+        args = argparse.Namespace(json=True, keep=into)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, self.workdir())
+        wrote = json.loads(out.getvalue())["wrote"]
+        self.assertIn({"file": str(into / "board.tsx"), "did": "left alone"}, wrote)
+        self.assertIn({"file": str(into / "dist"), "did": "wrote"}, wrote)
+        self.assertIn("left alone: %s" % (into / "board.tsx"), err.getvalue())
+
     def test_without_it_the_temp_directory_is_still_removed(self):
         import argparse, contextlib, io
         work = self.workdir()

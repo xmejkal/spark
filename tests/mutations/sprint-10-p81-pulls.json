@@ -1,6 +1,6 @@
 [
  {"file": "scripts/parts.py", "name": "a pull-down the module's own pull-up defeats is not seen",
-  "find": "    if not isinstance(pull_up, (int, float)):\n        return []\n    said = []", "replace": "    return []\n    said = []"},
+  "find": "    if not isinstance(pull_up, (int, float)):\n        return []\n    used = ", "replace": "    return []\n    used = "},
  {"file": "scripts/parts.py", "name": "a pull-down strong enough for the whole supply is reported anyway",
   "find": "            if isinstance(supply, list) and len(supply) == 2 and supply[1] < crossover:\n                continue", "replace": ""},
  {"file": "scripts/parts.py", "name": "what is missing to decide is not named",

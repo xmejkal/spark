@@ -1,0 +1,74 @@
+[
+  {
+    "file": "scripts/parts.py",
+    "name": "a CONFLICT on verified facts stays out of the envelope",
+    "find": "            problems.append(_problem(args.show, \"CONFLICT: \" + conflict[\"line\"]))",
+    "replace": "            pass"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "a CONFLICT on unverified facts is a problem",
+    "find": "        if conflict[\"rests_on\"]:",
+    "replace": "        if False:"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "a CONFLICT is said to rest on nothing unverified",
+    "find": "    rests_on = sorted(name for name in used if not facts[name].get(\"verified\"))",
+    "replace": "    rests_on = []"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "--unverified's open facts leave the envelope",
+    "find": "    return Answer({\"parts\": list(args.unverified)}, lines, assumptions=assumptions)",
+    "replace": "    return Answer({\"parts\": list(args.unverified)}, lines)"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "a pick's notes leave the envelope",
+    "find": "                  notes=[_note(note) for note in notes])",
+    "replace": "                  notes=[])"
+  },
+  {
+    "file": "scripts/outcomes.py",
+    "name": "the envelope drops notes and assumptions",
+    "find": "    said.update({key: list(value) for key, value in ((\"notes\", notes), (\"assumptions\", assumptions)) if value is not None})",
+    "replace": "    pass"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "a fix is never printed under the lines",
+    "find": "            if item.get(\"fix\") and not said(item[\"fix\"]):",
+    "replace": "            if False:"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "an item the lines already say is said again",
+    "find": "            if not said(item[\"sentence\"]):",
+    "replace": "            if True:"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "notes never reach the text",
+    "find": "        if not said(note[\"sentence\"]):",
+    "replace": "        if False:"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "assumptions never reach the text",
+    "find": "        if not said(assumption.get(\"sentence\") or assumption[\"fact\"]):",
+    "replace": "        if False:"
+  },
+  {
+    "file": "scripts/parts.py",
+    "name": "next steps never reach the text",
+    "find": "    lines += [\"  next: %s — %s\" % (\" \".join(step[\"argv\"]), step[\"why\"]) for step in answer.next]",
+    "replace": "    lines += []"
+  },
+  {
+    "file": "scripts/check_spine.py",
+    "name": "the files --keep wrote leave the JSON",
+    "find": "        said.update({\"wrote\": [{\"file\": k[\"file\"], \"did\": k[\"did\"]} for k in kept]} if kept is not None else {})",
+    "replace": "        pass"
+  }
+]

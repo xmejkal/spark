@@ -62,16 +62,20 @@ def answer(problems=(), unchecked=(), unmeasured=()):
     return result
 
 
-def envelope(tool, op, data=None, problems=(), unchecked=(), next_steps=(), truncated=None):
+def envelope(tool, op, data=None, problems=(), unchecked=(), next_steps=(), truncated=None, notes=None, assumptions=None):
     """
     The one shape every `--json` run prints (§6.4.1 of docs/2026-10-04-store-design.md), so an agent reads
     `status` and `data` without knowing which command ran. `problems` are {"subject", "sentence", "fix"},
     `unchecked` {"sentence", "fix"}, `next` are `step()`s, `truncated` is {"shown", "total", "next"} or None.
     The status is `status_of`'s, never declared: `ok` stays unreachable while anything went unchecked.
+    `notes` (said, never failing) and `assumptions` (what the answer rests on that nobody has checked) are keys only for a
+    tool that passes them, and change no status (P124, #58: their names are the next envelope's).
     """
     problems, unchecked = list(problems), list(unchecked)
-    return {"envelope": 1, "tool": tool, "op": op, "status": status_of(problems, unchecked), "data": data,
+    said = {"envelope": 1, "tool": tool, "op": op, "status": status_of(problems, unchecked), "data": data,
             "problems": problems, "unchecked": unchecked, "next": list(next_steps), "truncated": truncated}
+    said.update({key: list(value) for key, value in (("notes", notes), ("assumptions", assumptions)) if value is not None})
+    return said
 
 
 def step(op, argv, why, effects=(), needs_yes=False):

@@ -825,7 +825,8 @@ the export. [From draft to order](#from-draft-to-order) makes one, and the-order
 
 **check_all is not the whole answer.** For this board, `parts.py --show` names a CONFLICT on AIA and AIB that no check
 reports ([P109](https://github.com/xmejkal/spark/issues/43)). The board's 10 kΩ pull-downs against the module's own
-10 kΩ pull-ups hold both inputs HIGH at idle on a supply above 5 V. It exits 0 even so:
+10 kΩ pull-ups hold both inputs HIGH at idle on a supply above 5 V. The facts it rests on are verified, so it answers
+`problems`, exit 1 ([P124](https://github.com/xmejkal/spark/issues/58)):
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --show l9110s-module --project .

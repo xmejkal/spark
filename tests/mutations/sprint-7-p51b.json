@@ -2,8 +2,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "the built board is deleted again instead of landing in the project",
-  "find": "        for line in keep_into(workdir, args.keep):\n            print(\"  %s\" % line, file=sys.stderr)",
-  "replace": "        print(\"  working directory: %s\" % workdir, file=sys.stderr)"
+  "find": "    kept = kept_into(workdir, args.keep) if workdir is not None and args.keep else None",
+  "replace": "    kept = None"
  },
  {
   "file": "scripts/check_spine.py",
@@ -14,13 +14,13 @@
  {
   "file": "scripts/check_spine.py",
   "name": "a hand-edited board.tsx is silently overwritten",
-  "find": "        if target.exists():\n            said.append(\"left alone: %s (delete it to have it regenerated)\" % target)\n        else:",
-  "replace": "        if False:\n            said.append(\"left alone: %s (delete it to have it regenerated)\" % target)\n        else:"
+  "find": "        if target.exists():\n            kept.append({\"file\": str(target), \"did\": \"left alone\",",
+  "replace": "        if False:\n            kept.append({\"file\": str(target), \"did\": \"left alone\","
  },
  {
   "file": "scripts/check_spine.py",
   "name": "a file left alone is skipped without saying so",
-  "find": "            said.append(\"left alone: %s (delete it to have it regenerated)\" % target)",
+  "find": "            kept.append({\"file\": str(target), \"did\": \"left alone\",\n                         \"line\": \"left alone: %s (delete it to have it regenerated)\" % target})",
   "replace": "            pass"
  },
  {

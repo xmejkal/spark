@@ -110,7 +110,7 @@ A line `… is not installed — install: …` is answered by asking the person 
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list                       # what exists, and where from
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host; its CONFLICT exits 1
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per signal, with the reason
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx

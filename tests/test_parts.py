@@ -1637,7 +1637,9 @@ class TheCatalogIsThePersonSTest(unittest.TestCase):
         self.assertIn("seller listings", broken[0])
 
 
-ENVELOPE_KEYS = ["data", "envelope", "next", "op", "problems", "status", "tool", "truncated", "unchecked"]
+#: `notes` and `assumptions` joined in P124 (#58): what the text said and the envelope left out.
+ENVELOPE_KEYS = ["assumptions", "data", "envelope", "next", "notes", "op", "problems", "status", "tool", "truncated",
+                 "unchecked"]
 
 
 def run_json(argv):
@@ -1737,6 +1739,93 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         self.assertEqual([r["id"] for r in first["data"]["records"] + rest["data"]["records"]],
                          ["x-%02d" % number for number in range(30)])
         self.assertIsNone(rest["truncated"]["next"])
+
+
+def run_text(argv):
+    """parts.py without --json: (what it printed on stdout, its exit code)."""
+    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+        code = parts.main(argv)
+    return out.getvalue(), code
+
+
+class EveryFieldReachesBothPrintersTest(unittest.TestCase):
+    """
+    P124 (#58), part 1's CH-16: the text and the envelope are printed from one answer, and each printer left something
+    out. A CONFLICT was text only, so `--show --json` answered a clean ok; `--unverified`'s open facts sat in a `data`
+    field no page named; a fix reached the text only when an answer had no lines. Each field now reaches both.
+    """
+
+    #: One item per field of an answer that both printers must carry. A field added to `Answer` fails the first test
+    #: until it has an item here, and so until `_say` prints it.
+    SAMPLES = {
+        "problems": parts._problem("thing", "is wrong in a way the lines never said", "do this to mend it"),
+        "unchecked": parts._cannot("could not read the thing's file", "re-save it"),
+        "notes": {"subject": "thing", "sentence": "is said and does not fail"},
+        "assumptions": {"fact": "thing.pitch_mm", "basis": "unverified", "assumed": 2.0, "sentence": "the socket rests on it"},
+        "next": outcomes.step("show", ["--show", "thing"], "to read the thing"),
+    }
+
+    def say(self, answer, as_json):
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            parts._say("show", answer, as_json)
+        return out.getvalue() + err.getvalue()
+
+    def test_each_answer_field_reaches_both_the_text_and_the_envelope(self):
+        for field in set(parts.Answer._fields) - {"data", "lines", "truncated"}:
+            item = self.SAMPLES[field]
+            with self.subTest(field=field):
+                answer = parts.Answer({"x": 1}, ["  a line of the answer"], **{field: [item]})
+                said = json.loads(self.say(answer, True))
+                self.assertEqual(said[field], [item])
+                text = self.say(answer, False)
+                for words in filter(None, (item.get("sentence"), item.get("fix"), item.get("why"), item.get("fact"))):
+                    self.assertIn(words, text)
+
+    def test_a_line_the_answer_already_says_is_not_said_again(self):
+        note = {"subject": "thing", "sentence": "is said and does not fail"}
+        text = self.say(parts.Answer({"x": 1}, ["  thing: is said and does not fail"], notes=[note]), False)
+        self.assertEqual(text.count("is said and does not fail"), 1, text)
+
+    def project_with(self, verified):
+        project = Path(tempfile.mkdtemp()); (project / "parts").mkdir()
+        fact = lambda value: dict({"value": value, "verified": verified, "source": "a test fixture"},  # noqa: E731
+                                  **({} if verified else {"why_it_matters": "the pull-down's arithmetic rests on it"}))
+        record = part("pulled", facts={"onboard_input_pullups_ohms": fact(10000), "input_high_threshold_v": fact(2.5),
+                                       "supply_range_v": fact([2.5, 12.0])},
+                      host_parts=[{"kind": "pulldown", "pin": "P", "ohms": 10000, "why": "held low"}])
+        (project / "parts" / "pulled.json").write_text(json.dumps(record))
+        return project
+
+    def test_a_conflict_on_verified_facts_is_a_problem_in_both(self):
+        project = self.project_with(verified=True)
+        said, code = run_json(["--show", "pulled", "--project", str(project)])
+        text, text_code = run_text(["--show", "pulled", "--project", str(project)])
+        self.assertEqual((said["status"], code, text_code), ("problems", 1, 1))
+        self.assertEqual(said["problems"][0]["subject"], "pulled")
+        self.assertIn("CONFLICT: P:", said["problems"][0]["sentence"])
+        self.assertEqual(text.count("CONFLICT: P:"), 1, text)
+
+    def test_a_conflict_on_unverified_facts_is_an_assumption_and_the_answer_stays_ok(self):
+        project = self.project_with(verified=False)
+        said, code = run_json(["--show", "pulled", "--project", str(project)])
+        self.assertEqual((said["status"], code, said["problems"]), ("ok", 0, []))
+        self.assertEqual([(a["fact"], a["basis"]) for a in said["assumptions"]], [("pulled.P", "unmeasured")])
+        self.assertEqual(said["assumptions"][0]["rests_on"],
+                         ["input_high_threshold_v", "onboard_input_pullups_ohms", "supply_range_v"])
+        self.assertIn("CONFLICT: P:", said["assumptions"][0]["sentence"])
+        self.assertEqual(run_text(["--show", "pulled", "--project", str(project)])[0].count("CONFLICT: P:"), 1)
+
+    def test_unverified_facts_are_assumptions_and_the_answer_stays_ok(self):
+        project = self.project_with(verified=False)
+        said, code = run_json(["--unverified", "pulled", "--project", str(project)])
+        self.assertEqual((said["status"], code), ("ok", 0))
+        self.assertEqual(sorted(a["fact"] for a in said["assumptions"]),
+                         ["pulled.input_high_threshold_v", "pulled.onboard_input_pullups_ohms", "pulled.supply_range_v"])
+        self.assertEqual({a["basis"] for a in said["assumptions"]}, {"unverified"})
+        self.assertNotIn("questions", said["data"])
+        text, _ = run_text(["--unverified", "pulled", "--project", str(project)])
+        for fact in ("pulled.input_high_threshold_v = 2.5", "pulled.onboard_input_pullups_ohms = 10000"):
+            self.assertEqual(text.count(fact), 1, text)
 
 
 class TheShelfIsALayerTest(unittest.TestCase):
