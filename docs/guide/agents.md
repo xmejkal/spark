@@ -120,7 +120,8 @@ These write:
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for
   what you have, and refuses a failed or stale build.
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
-  reads, writes `breadboard.md` after a build that finished, and creates `.tscircuit/cache/`. It may also compile a
+  reads, writes `breadboard.md` after a build that finished, and creates `.tscircuit/cache/`. It also writes
+  `firmware/pins.py`, but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
@@ -255,7 +256,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
-| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. With `--keep`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone` or `not kept`) and `why` |
+| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. With `--keep` or `--sim-dir`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`, `removed`, `not written` or `not kept`) and `why` |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
 Checking a shipped board's pin map, as an agent does, without the network:
@@ -491,8 +492,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project . --json
    on. (Every command page opens with this rule.)
 4. **A simulation run spends Wokwi CI minutes,** and needs a Wokwi account's token in `WOKWI_CLI_TOKEN`. In
    [`commands/build.md`](../../commands/build.md)'s words, *"Chips compile locally and cost nothing; a scenario run
-   spends Wokwi CI minutes"*. The build's own simulation stage writes the diagram and chips into a temporary folder,
-   deleted unless `--sim-dir DIR` keeps them, and runs no simulation. Ask the person before running one.
+   spends Wokwi CI minutes"*. The build's own simulation stage writes the diagram and chips, kept in `sim/` with
+   `--keep` or in DIR with `--sim-dir DIR`, and runs no simulation. Ask the person before running one.
 5. **An existing `board.tsx` is never overwritten, edited or not; delete it to have it generated again.** But `--keep .`
    still replaces `dist/`, which every check reads, with a build of the freshly generated board
    ([P110](https://github.com/xmejkal/spark/issues/44)). So after you edit `board.tsx` or change `requirements.json`,

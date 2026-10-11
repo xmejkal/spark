@@ -184,12 +184,12 @@ out of the bag. Page: [`commands/identify.md`](../../commands/identify.md).
 A requirements file becomes a board that builds, with a Wokwi diagram generated from it, or it names the stage that
 stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey.md#build)).
 
-With `--keep .` it writes `board.tsx`, its footprint, `dist/` and `breadboard.md`, the parts and how to wire them, into
-the project. An existing `board.tsx` is left
+With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them),
+`firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. An existing `board.tsx` is left
 alone, edited or not, and `dist/` is then built from the requirements file, not from your `board.tsx`
 ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with
-`npx --no tsci build board.tsx`; to regenerate it, delete it. The Wokwi diagram is written to a temporary folder and
-deleted unless `--sim-dir DIR` keeps it ([P116](https://github.com/xmejkal/spark/issues/50)).
+`npx --no tsci build board.tsx`; to regenerate it, delete it. `--sim-dir DIR` keeps the Wokwi project in DIR instead
+of `sim/` ([P116](https://github.com/xmejkal/spark/issues/50)).
 
 It refuses rather than guess, and says what to record
 ([what it refuses](../../commands/build.md#what-it-refuses-and-why)):

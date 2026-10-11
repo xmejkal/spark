@@ -594,16 +594,18 @@ def main(argv=None):
     parser.add_argument("requirements", nargs="?",
                         help="a requirements.json; omit for the reference design")
     parser.add_argument("--json", action="store_true",
-                        help="the verdict as one JSON object: check, status, stages, and kept with --keep")
+                        help="the verdict as one JSON object: check, status, stages, and kept with --keep or --sim-dir")
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
                              "left alone and named; with --json, each file is listed under kept. With a requirements "
-                             "file it also writes breadboard.md: the parts and how to wire them on a breadboard")
+                             "file it also writes breadboard.md, the parts and how to wire them on a breadboard, and "
+                             "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
-                        help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
+                        help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
-                        help="the flash image wokwi.toml names, relative to the sim dir (flash_image.py writes one)")
+                        help="the flash image wokwi.toml names, relative to the sim dir (flash_image.py writes one); "
+                             "without it, the image a kept wokwi.toml names is kept")
     args = parser.parse_args(argv)
 
     # The input is read before anything runs, and read AS input: a malformed file is a stage
