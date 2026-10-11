@@ -1,7 +1,7 @@
 {
-  "taken": "2026-10-11T10:22:08+02:00",
+  "taken": "2026-10-11T10:44:09+02:00",
   "spark": {
-    "pin": "852e296"
+    "pin": "3d79dd7"
   },
   "store": {
     "source": "~/.local/share/spark",
@@ -121,7 +121,7 @@
     "a3-run1-placeholder-board": {
       "source": "tests/data/snapshot/a3-run1-placeholder-board",
       "left_out": {},
-      "pin": "in this repository: sha256 ea243584648d",
+      "pin": "in this repository: sha256 1d55e711bca9",
       "toolchain": "--tsci-bin",
       "commands": [
         {
@@ -147,7 +147,7 @@
     "a3-run2-invented-header": {
       "source": "tests/data/snapshot/a3-run2-invented-header",
       "left_out": {},
-      "pin": "in this repository: sha256 c2b16ab95cb3",
+      "pin": "in this repository: sha256 2555301c9a75",
       "toolchain": "--tsci-bin",
       "commands": [
         {
@@ -173,7 +173,7 @@
     "round0-c6-digit-labels": {
       "source": "tests/data/snapshot/round0-c6-digit-labels",
       "left_out": {},
-      "pin": "in this repository: sha256 c177cebef4cf",
+      "pin": "in this repository: sha256 43b6fb306846",
       "toolchain": "--tsci-bin",
       "commands": [
         {
@@ -199,7 +199,7 @@
     "round0-c6-record": {
       "source": "tests/data/snapshot/round0-c6-record",
       "left_out": {},
-      "pin": "in this repository: sha256 8a120c435390",
+      "pin": "in this repository: sha256 57f5c101612a",
       "toolchain": "--tsci-bin",
       "commands": [
         {
@@ -225,7 +225,7 @@
     "store9-stand-in-of-another-chip": {
       "source": "tests/data/snapshot/store9-stand-in-of-another-chip",
       "left_out": {},
-      "pin": "in this repository: sha256 acd98318481f",
+      "pin": "in this repository: sha256 77a9018f4358",
       "toolchain": "--tsci-bin",
       "commands": [
         {
