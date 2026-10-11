@@ -229,8 +229,10 @@ class PartError(Exception):
 
 
 #: What one operation found (§6.4.1): its `data`, the lines a person reads without --json, and the rest of the
-#: envelope. A handler returns one; `main` prints it either way and exits by its status.
-Answer = namedtuple("Answer", "data lines problems unchecked next truncated", defaults=(None, (), (), (), (), None))
+#: envelope. A handler returns one; `main` prints it either way and exits by its status. `notes` are said and never
+#: fail ({subject, sentence}); `assumptions` are what the answer rests on that nobody has checked ({fact, basis, …}).
+Answer = namedtuple("Answer", "data lines problems unchecked next truncated notes assumptions",
+                    defaults=(None, (), (), (), (), None, (), ()))
 
 
 class BadArgument(Exception):
@@ -243,6 +245,12 @@ def _problem(subject, sentence, fix=None):
 
 def _cannot(sentence, fix=None):
     return {"sentence": sentence, "fix": fix}
+
+
+def _note(line):
+    """A note as a field (P124): `<subject>: <sentence>`, the way a handler prints one, split at its first colon."""
+    subject, _, sentence = line.partition(": ")
+    return {"subject": subject, "sentence": sentence} if sentence else {"subject": None, "sentence": line}
 
 
 def _with_project(project):
@@ -1404,18 +1412,33 @@ def sources_resolve(record, fetch=reachable):
 
 
 def pull_conflicts(part):
+    """Each CONFLICT line of `conflicts_of`, as text: what the generator writes into board.tsx."""
+    return [conflict["line"] for conflict in conflicts_of(part)]
+
+
+def conflicts_of(part):
     """
     A pull-down the board adds against the module's own pull-up, said with its arithmetic (P81, B11).
     The L9110S states 10 k pull-ups to VCC on its inputs and asked the board for 10 k pull-downs "so
     both are held low": a divider at half the supply, above its 2.5 V input threshold on a 6 V pack.
     The record's note said so; no output did. Quiet when the pin stays under the input-high threshold
     across the module's whole supply range.
+
+    Each is {pin, line, rests_on, fix, upgrade}. `rests_on` names, as `<part>.<fact>`, the facts it used that nobody
+    has verified: none, and it is a problem whose `fix` is the arithmetic's answer; any, and it is an assumption, which
+    `upgrade` says how to settle (the PO's rule, 2026-10-05 on #43).
     """
     facts = part.get("facts") or {}
     value = lambda name: (facts.get(name) or {}).get("value")
     pull_up, high, supply = value("onboard_input_pullups_ohms"), value("input_high_threshold_v"), value("supply_range_v")
     if not isinstance(pull_up, (int, float)):
         return []
+    recorded = {"onboard_input_pullups_ohms": True, "input_high_threshold_v": isinstance(high, (int, float)),
+                "supply_range_v": isinstance(supply, list) and len(supply) == 2}
+    rests_on = sorted("%s.%s" % (part.get("id"), name) for name, usable in recorded.items()  # missing is not verified
+                      if not (usable and (facts.get(name) or {}).get("verified")))
+    upgrade = "record or verify %s from the maker's own sources (parts.py --fact-set), then run --show again" % ", ".join(rests_on)
+    fix = _holding_low(facts, pull_up, supply)
     said = []
     for host_part in part.get("host_parts") or []:
         if host_part.get("kind") != "pulldown" or not isinstance(host_part.get("ohms"), (int, float)):
@@ -1433,8 +1456,24 @@ def pull_conflicts(part):
                      % (crossover, high))
         if value("input_low_threshold_v") is None:
             line += "; the module's input-low threshold is not recorded, so below that the level is undefined"
-        said.append(line)
+        said.append({"pin": host_part["pin"], "line": line, "rests_on": rests_on, "fix": fix, "upgrade": upgrade})
     return said
+
+
+def _holding_low(facts, pull_up, supply):
+    """
+    A CONFLICT's fix: the largest pull-down that holds the pin under the module's input-low threshold across its supply
+    range, so it reads low, and what it then draws at rest. Under the input-high threshold alone the level is undefined
+    (the refuter on P124), so without an input-low threshold the fix is to record one.
+    """
+    low = facts.get("input_low_threshold_v") or {}
+    if not (isinstance(low.get("value"), (int, float)) and isinstance(supply, list) and len(supply) == 2):
+        return ("record the module's input_low_threshold_v, the level it reads as low, then run --show again: "
+                "held only under the input-high threshold, the level is undefined")
+    largest = int(pull_up * low["value"] / (supply[1] - low["value"]))
+    return ("a pull-down under %d ohm holds it under its %g V input-low threshold%s up to %g V, so it reads low; it then "
+            "draws up to %.2g mA from the supply at rest" % (largest, low["value"], "" if low.get("verified") else
+                                                             " (not verified)", supply[1], 1000 * supply[1] / (pull_up + largest)))
 
 
 def describe(part):
@@ -1456,8 +1495,11 @@ def describe(part):
 
     for requirement in part.get("host_requirements") or []:
         lines.append("\n  the board must: %s" % requirement)
-    for conflict in pull_conflicts(part):
-        lines.append("\n  CONFLICT: %s" % conflict)
+    for conflict in conflicts_of(part):
+        if conflict["rests_on"]:  # the PO's `?` line: it holds only if facts nobody has verified hold
+            lines.append("\n  ? CONFLICT: %s\n    it rests on facts nobody has verified — %s" % (conflict["line"], conflict["upgrade"]))
+        else:
+            lines.append("\n  CONFLICT: %s" % conflict["line"])
     return "\n".join(lines)
 
 
@@ -1471,10 +1513,12 @@ def _row(part_id, kind, rest):
 #: effect takes --dry-run (§6.4.5).
 OPERATIONS = (
     ("list", {"action": "store_true"}, "every record a project can build with, and where it comes from", (), ("parts",)),
-    ("show", {"metavar": "PART"}, "one record, wherever it lives", (), ("record",)),
+    ("show", {"metavar": "PART"}, "one record, wherever it lives, and its CONFLICT lines: on verified facts a problem "
+     "(exit 1), on unverified ones an assumption", (), ("record",)),
     ("validate", {"action": "store_true"}, "every record a project can build with, against the contract", (), ("checked",)),
     ("signals", {"nargs": "+", "metavar": "PART"}, "the signals these parts ask for, as assign_pins.py input", (), ("signals",)),
-    ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts", (), ("questions",)),
+    ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts, one assumption a fact",
+     (), ("parts",)),
     ("need", {"nargs": "+", "metavar": "WORD"}, "what exists for a need, before researching: words matched in id, name, kind, alias",
      (), ("need", "vendor_order", "found", "drafts", "catalog")),
     ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/", ("writes",), ("path", "record", "written")),
@@ -1512,7 +1556,8 @@ OPERATIONS = (
     ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
      (), ("needs",)),
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
-     "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds",
+     "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
+     "what it notes is under `notes`",
      ("writes",), ("project", "picks", "reserved", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays",
@@ -1546,7 +1591,8 @@ OPTIONS = (
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
-    ("json", {"action": "store_true"}, "answer in one envelope (docs/2026-10-04-store-design.md §6.4.1)"),
+    ("json", {"action": "store_true"}, "answer in one envelope: problems, unchecked, notes, assumptions, next "
+     "(docs/guide/agents.md, \"parts.py's envelope\")"),
 )
 
 
@@ -1579,8 +1625,16 @@ def _op_list(args, project):
 
 
 def _op_show(args, project):
-    part = any_record(args.show, project)
-    return Answer({"record": part}, [describe(part)])
+    """The record, and each CONFLICT it holds: a problem on verified facts, an assumption on unverified ones (P124)."""
+    part, problems, assumptions = any_record(args.show, project), [], []
+    for conflict in conflicts_of(part):
+        where = "%s.%s" % (args.show, conflict["pin"])  # the part and the pin the CONFLICT is about
+        if conflict["rests_on"]:
+            assumptions.append({"fact": where, "basis": "unmeasured", "rests_on": conflict["rests_on"],
+                                "sentence": "CONFLICT: " + conflict["line"], "upgrade": conflict["upgrade"]})
+        else:
+            problems.append(_problem(where, "CONFLICT: " + conflict["line"], conflict["fix"]))
+    return Answer({"record": part}, [describe(part)], problems=problems, assumptions=assumptions)
 
 
 def _op_validate(args, project):
@@ -1614,7 +1668,9 @@ def _op_unverified(args, project):
         lines.append("  %s.%s = %s" % (question["part"], question["fact"], question["assumed"]))
         if question["why_it_matters"]:
             lines.append("      %s" % question["why_it_matters"])
-    return Answer({"questions": questions}, lines)
+    assumptions = [{"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
+                    "sentence": q["why_it_matters"], "source": q["source"]} for q in questions]
+    return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions)
 
 
 def _brief(part):
@@ -1925,7 +1981,7 @@ def _op_audit(args, project):
     shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project))
     lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
              for layer, row in counts.items()]
-    lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"][:3])) for b in broken]
+    lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"])) for b in broken]  # each, once
     lines += ["  %s (%s) owes: %s" % (o["id"], o["layer"], ", ".join(o["owes"])) for o in owed]
     lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
               % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
@@ -2017,7 +2073,8 @@ def _op_pick(args, project):
     return Answer({"project": name, "picks": picks,
                    "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
                    "released": released, "written": not problems and not args.dry_run},
-                  _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes] + wrote), problems=problems)
+                  _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes] + wrote), problems=problems,
+                  notes=[_note(note) for note in notes])
 
 
 def _what_a_pick_wrote(name, listed, history, events, new_keys, dry_run):
@@ -2168,20 +2225,51 @@ def _op_describe(args, project):
     return Answer({"operations": operations, "options": options, "exits": exits}, lines)
 
 
+def _text_of(answer):
+    """
+    The person's lines, then what the answer carries that they do not say yet: each problem and could-not-run item
+    with its fix, each note and assumption, and the next steps (P124, #58). A line already said is not said again, so a
+    handler that prints an item its own way keeps its wording; one that forgets an item no longer drops it.
+    """
+    lines = list(answer.lines)
+    said = lambda words: bool(words) and any(words in line for line in answer.lines)  # noqa: E731 — the handler's own
+    for heading, items in (("", answer.problems), ("could not check: ", answer.unchecked)):
+        for item in items:
+            if not (said(item["sentence"]) or said(item.get("subject"))):  # a handler may word an item its own way
+                lines.append("  %s%s%s" % (heading, "%s: " % item["subject"] if item.get("subject") else "", item["sentence"]))
+            if item.get("fix") and not said(item["fix"]):
+                lines.append("  fix%s: %s" % (" for %s" % item["subject"] if item.get("subject") else "", item["fix"]))
+    for note in answer.notes:
+        shown = "%s: %s" % (note["subject"], note["sentence"]) if note.get("subject") else note["sentence"]
+        if not said(shown):
+            lines.append("  " + shown)
+    for assumption in answer.assumptions:
+        if not (said(assumption["fact"]) or said(assumption.get("sentence"))):
+            lines.append("  ? %s%s%s" % (assumption["fact"], " = %s" % assumption["assumed"] if "assumed" in assumption else "",
+                                         " — " + assumption["sentence"] if assumption.get("sentence") else ""))
+        if assumption.get("upgrade") and not said(assumption["upgrade"]):
+            lines.append("    to settle it: %s" % assumption["upgrade"])
+    lines += ["  next: parts.py %s — %s" % (" ".join(step["argv"]), step["why"]) for step in answer.next]
+    return lines
+
+
 def _say(op, answer, as_json):
     """
     Print one answer and return its exit code (§6.4.1): with --json the envelope, compact, on stdout; without, the
-    person's lines — and when an answer has no lines, its sentences are the answer, on stderr as before.
+    person's lines and whatever the answer carries that they leave out (`_text_of`). An answer with no lines says its
+    problems and could-not-run items on stderr, as before.
     """
-    said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated)
+    said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated,
+                    notes=answer.notes, assumptions=answer.assumptions)
     if as_json:
         print(json.dumps(said, ensure_ascii=False, separators=(",", ":")))
     else:
-        for line in answer.lines:
-            print(line)
         if not answer.lines:
             for item in list(answer.problems) + list(answer.unchecked):
                 print("parts.py: %s%s" % (item["sentence"], " — " + item["fix"] if item.get("fix") else ""), file=sys.stderr)
+            answer = answer._replace(problems=(), unchecked=())
+        for line in _text_of(answer):
+            print(line)
     return EXIT_FOR[said["status"]]
 
 

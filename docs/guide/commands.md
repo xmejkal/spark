@@ -219,6 +219,7 @@ Page: [`commands/build.md`](../../commands/build.md).
 
 `spark-review`'s gate lists what nobody has checked about the parts you name. On the journey's example:
 
+<!-- runs: exit 0 -->
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified l9110s-module jst-ph-2-power-inlet tactile-button
 ```

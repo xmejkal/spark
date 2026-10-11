@@ -788,7 +788,19 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual(self.text(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3"]), "\n".join([
             '  refused, not written: set mp3: used_in null → {"plant-alarm": 1}',
             "  mp3: maybe owned — check the drawer first",
-            "  refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by smartbin-local — 1 picked here", ""]))
+            "  refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by smartbin-local — 1 picked here",
+            '  fix for firebeetle2-esp32s3: free it — a file holding [{"entry": "board", "used_in": …}] without smartbin-local, given to '
+            "--drawer-set <file> after a dry run — or pick another", ""]))  # P124 (#58): its fix, which the text left out
+
+    def test_a_pick_s_notes_reach_the_envelope_as_they_reach_the_text(self):
+        said, code = run(["--pick", str(self.project), "soil=x-soil", "alarm=mp3"])
+        self.assertEqual(code, 0)
+        self.assertIn({"subject": "mp3", "sentence": "maybe owned — check the drawer first"}, said["notes"])
+
+    def test_a_refused_pick_prints_its_fix_in_text(self):
+        said, _ = run(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3", "--dry-run"])
+        text = self.text(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3"])
+        self.assertIn(said["problems"][0]["fix"], text)
 
     def test_a_history_that_cannot_be_read_stops_a_pick_before_anything_is_written(self):
         (self.home / "history.jsonl").write_text("this is not an event\n")
@@ -1594,7 +1606,8 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [
             {"subject": "beetle-c6", "sentence": sentence,
              "fix": 'pick x-lib-board, or write a board file for beetle-c6 first (docs/guide/how-it-works.md, "Your own dev board")'}]))
-        self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n" % sentence)
+        self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n  fix for beetle-c6: %s\n"  # P124: with its fix
+                         % (sentence, said["problems"][0]["fix"]))
         self.assertFalse((project / "requirements.json").exists())
 
     def test_a_board_that_stops_at_the_footprint_is_never_suggested(self):

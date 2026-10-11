@@ -303,9 +303,10 @@ in the same store:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --pick . board=firebeetle2-esp32s3 --dry-run
 ```
 
-<!-- output: run 2026-10-08, spark 0.7.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
   refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by button-light — 1 picked here
+  fix for firebeetle2-esp32s3: free it — a file holding [{"entry": "firebeetle-2-esp32-s3", "used_in": …}] without button-light, given to --drawer-set <file> after a dry run — or pick another
 ```
 
 **L — the requirements file.** First `/spark:init --board firebeetle2-esp32s3` in the project, as in
@@ -379,15 +380,17 @@ the checks and the simulation saw. The FireBeetle reads *yours* because the draw
 | 1 | DFRobot FireBeetle 2 ESP32-S3 | the board | yours |
 | 1 | 6x6 mm tactile push button | TactileButton | to get |
 | 1 | Kingbright L-7113ID 5 mm red LED | LedRed5mm | to get |
-| R1 | 10kΩ resistor, through-hole | pull-up on TactileButton A | |
-| R2 | 330Ω resistor, through-hole | in series with LedRed5mm A | |
-| | a breadboard and jumper wires | | |
+| 1 | 10kΩ resistor, through-hole | R1 pull-up on TactileButton A | to get |
+| 1 | 330Ω resistor, through-hole | R2 in series with LedRed5mm A | to get |
+| | a breadboard and jumper wires | | to get |
 
 *have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · to get = not in your drawer · blank = this project is not on your list (`/spark:init` puts it there)
 
 ## Wiring
 
-Each line is one point: put its ends in one breadboard row, or join them with a wire.
+Each line is one point: put its ends in one breadboard row, or join them with a wire. The board covers the
+rows beside its own pins, so for a line that starts with a board pin, run a jumper from that pin to a free
+row and put the line's other ends in that row.
 
 1. board 3V3 · R1 (10kΩ pull-up on TactileButton A), end 2
 2. board A5 · R2 (330Ω in series with LedRed5mm A), end 1
@@ -873,13 +876,15 @@ the export. [From draft to order](#from-draft-to-order) makes one, and the-order
 
 **check_all is not the whole answer.** For this board, `parts.py --show` names a CONFLICT on AIA and AIB that no check
 reports ([P109](https://github.com/xmejkal/spark/issues/43)). The board's 10 kΩ pull-downs against the module's own
-10 kΩ pull-ups hold both inputs HIGH at idle on a supply above 5 V. It exits 0 even so:
+10 kΩ pull-ups hold both inputs HIGH at idle on a supply above 5 V. The facts it rests on are verified, so it answers
+`problems`, exit 1 ([P124](https://github.com/xmejkal/spark/issues/58)):
 
+<!-- runs: exit 1 -->
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --show l9110s-module --project .
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 L9110S dual motor driver module — motor-driver
 
@@ -902,6 +907,8 @@ L9110S dual motor driver module — motor-driver
   CONFLICT: AIA: the board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at 0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply above 5 V (input-high threshold 2.5 V); the module's input-low threshold is not recorded, so below that the level is undefined
 
   CONFLICT: AIB: the board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at 0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply above 5 V (input-high threshold 2.5 V); the module's input-low threshold is not recorded, so below that the level is undefined
+  fix for l9110s-module.AIA: record the module's input_low_threshold_v, the level it reads as low, then run --show again: held only under the input-high threshold, the level is undefined
+  fix for l9110s-module.AIB: record the module's input_low_threshold_v, the level it reads as low, then run --show again: held only under the input-high threshold, the level is undefined
 ```
 
 The next step is the `spark-review` skill: it runs `check_all`, then reviewer agents, then the fabrication gate. It
@@ -950,7 +957,8 @@ A run is a separate step:
    the project's files into one image, and needs MicroPython for the S3: `/spark:setup add micropython-esp32s3`.
 3. **Write a scenario.** spark ships none for this example
    ([P130](https://github.com/xmejkal/spark/issues/64)).
-4. **Run `wokwi-cli`,** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci).
+4. **Run `wokwi-cli`,** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci). The diagram the build writes wires the board's serial port to Wokwi's serial monitor, so a
+   scenario's `wait-serial` hears the firmware ([P190](https://github.com/xmejkal/spark/issues/142)).
 
 A scenario run spends Wokwi CI minutes; none was run for this page. Watching it live in VS Code needs a Wokwi licence
 that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01). `/spark:build`'s page has both routes

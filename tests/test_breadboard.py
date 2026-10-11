@@ -77,8 +77,9 @@ class TheSheetTest(unittest.TestCase):
 
     def test_the_parts_list_names_the_board_each_part_and_each_resistor_with_its_purpose(self):
         self.assertIn("DFRobot FireBeetle 2 ESP32-S3", self.text)
-        self.assertIn("| R1 | 10kΩ resistor, through-hole | pull-up on TactileButton A |", self.text)
-        self.assertIn("| R2 | 330Ω resistor, through-hole | in series with LedRed5mm A |", self.text)
+        self.assertIn("| 1 | 10kΩ resistor, through-hole | R1 pull-up on TactileButton A |", self.text)
+        self.assertIn("| 1 | 330Ω resistor, through-hole | R2 in series with LedRed5mm A |", self.text)
+        self.assertIn("run a jumper from that pin to a free", self.text, "the board covers the rows beside its pins")
         self.assertIn("a breadboard and jumper wires", self.text)
         self.assertIn("| qty | part | for | have |", self.text)
 
@@ -104,8 +105,21 @@ class TheMotorExampleTest(unittest.TestCase):
                     found = sum(len(re.findall(r"\b%s \([^)]*\), %s\b" % (tag, end), line)) for line in self.wiring)
                     self.assertEqual(found, 1, self.text)
 
+    def test_the_sheet_reads_as_recorded(self):
+        # The refuter: five probe mutations escaped every assertion of a line's parts. The whole sheet, word for word,
+        # read and checked against the built circuit on 2026-10-11; regenerate it only on purpose.
+        self.assertEqual(self.text, (MOTOR / "breadboard.expected.md").read_text())
+
+    def test_a_supply_from_off_the_board_is_named_where_it_is_wired_listed_and_checked_before_power(self):
+        # The refuter's blocker: the inlet's line never said what feeds it, and a 12 V pack is in the module's range.
+        supply = next(line for line in self.wiring if "JstPh2PowerInlet VCC" in line)
+        self.assertIn("the MOTOR6V supply, from off the board", supply)
+        self.assertIn("what feeds MOTOR6V", self.text)
+        self.assertIn("MOTOR6V comes from off the board, and this sheet does not say its voltage", self.text)
+
     def test_identical_parts_are_totalled(self):
         self.assertIn("| 2 | 6x6 mm tactile push button | BtnMode, BtnOpen |", self.text)
+        self.assertIn("| 4 | 10kΩ resistor, through-hole |", self.text)
 
     def test_a_point_with_more_ends_than_a_breadboard_row_says_to_use_a_rail(self):
         ground = next(line for line in self.wiring if "board GND" in line)
@@ -127,6 +141,22 @@ class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
         with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
             breadboard.sheet(project / "requirements.json")
         self.assertIn("build again", str(said.exception))
+
+    def test_a_board_swapped_without_a_rebuild_is_refused(self):
+        # The refuter's probe: XIAO in the requirements, the FireBeetle's build still in dist/, and a sheet came out.
+        project = a_copy()
+        wanted = json.loads((project / "requirements.json").read_text())
+        (project / "requirements.json").write_text(json.dumps(dict(wanted, board="xiao-esp32-c6")))
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
+            breadboard.sheet(project / "requirements.json")
+        self.assertIn("built from other requirements", str(said.exception))
+
+    def test_a_build_that_recorded_nothing_is_refused(self):
+        project = a_copy()
+        (project / "dist" / "board" / "built-from.json").unlink()
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
+            breadboard.sheet(project / "requirements.json")
+        self.assertIn("records no finished build", str(said.exception))
 
     def test_a_failed_build_is_refused(self):
         project = a_copy()
@@ -150,6 +180,16 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
                              (["pin4", "D3", "4"], "D3")):
             with self.subTest(hints=hints):
                 self.assertEqual(breadboard.printed_label(board, {"name": hints[0], "port_hints": hints}), label)
+
+    def test_a_signal_the_requirements_add_is_said_with_its_pin_though_nothing_is_wired(self):
+        # The refuter: irrigation's STATUS_LED got pin MO and the sheet never said it.
+        folder = Path(tempfile.mkdtemp())
+        (folder / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "signals": [{"name": "STATUS_LED", "needs": []}]}))
+        with in_store(Path(tempfile.mkdtemp())):
+            built = breadboard.design.load(folder / "requirements.json")
+            said = breadboard._unwired(built.board, built)
+        self.assertEqual(said, ["- STATUS_LED: board A5, nothing wired to it yet (the requirements add this signal)"])
 
     def test_a_port_alone_on_a_supply_is_a_point_that_names_the_supply(self):
         circuit = [{"type": "source_component", "source_component_id": "c1", "name": "L9110sModule"},
@@ -189,6 +229,7 @@ class WhatYouOwnTest(unittest.TestCase):
         rows = {line.split("|")[2].strip(): line.split("|")[4].strip() for line in text.splitlines() if line.startswith("| ")}
         self.assertEqual(rows["6x6 mm tactile push button"], "in your drawer")
         self.assertEqual(rows["Kingbright L-7113ID 5 mm red LED"], "to get")
+        self.assertEqual(rows["10kΩ resistor, through-hole"], "to get", "the legend's blank means only: not on your list")
 
 
 class TheCommandLineTest(unittest.TestCase):

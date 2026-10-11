@@ -32,6 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import assign_pins  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
 import emit_board  # noqa: E402
@@ -41,11 +42,14 @@ from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: Where the build keeps what it built, relative to the project (`check_spine.py … --keep .`).
 CIRCUIT = Path("dist") / "board" / "circuit.json"
+#: What a build that finished was built from, written beside its circuit by `check_spine --keep` (the refuter, P191).
+BUILT_FROM = CIRCUIT.parent / "built-from.json"
 SHEET = "breadboard.md"
 #: The component every generated design calls its dev board (emit_board, the converter's BOARD mapping).
 BOARD_COMPONENT = "Mcu"
-#: The holes of one breadboard row on one side of the gap: a point with more ends goes on a rail.
-ROW_HOLES = 4
+#: The holes of one breadboard row on one side of the gap: a point with more ends goes on a rail. The board covers the
+#: rows beside its own pins, so a board pin's point is a jumper to a free row, which takes one of its holes.
+ROW_HOLES = 5
 #: What each kind of passive a part asks for does, said the way a person reads it.
 PURPOSE = {"pullup": "pull-up on", "pulldown": "pull-down on", "series": "in series with", "divider": "divider on"}
 LEGEND = ("*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · "
@@ -117,9 +121,27 @@ def _passives(design_parts):
     return found
 
 
+def record_built_from(requirements_path, out):
+    """Write what a build that finished was built from; `check_spine --keep` calls it, and the sheet compares it."""
+    Path(out).write_text(json.dumps({"requirements": json.loads(Path(requirements_path).read_text())}, indent=1) + "\n")
+
+
 def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
-    """Refuse a circuit that is not a build of this design: not a circuit, a failed build, or other parts."""
+    """
+    Refuse a circuit that is not a finished build of this design: not a circuit, a failed build, a build of other
+    requirements (the board swapped, a part added), or one that never recorded what it was built from.
+    """
     again = "build again: `check_spine.py %s --keep .`" % requirements_path.name
+    built_from = circuit_path.parent / BUILT_FROM.name
+    if not built_from.is_file():
+        raise NotBuilt("%s records no finished build (no %s beside it): %s" % (circuit_path, BUILT_FROM.name, again))
+    try:
+        recorded = json.loads(built_from.read_text()).get("requirements")
+        current = json.loads(requirements_path.read_text())
+    except (ValueError, AttributeError) as broken:
+        raise NotBuilt("%s cannot be read (%s): %s" % (built_from, broken, again)) from broken
+    if recorded != current:
+        raise NotBuilt("%s was built from other requirements than %s: %s" % (circuit_path, requirements_path.name, again))
     if not isinstance(circuit, list) or not all(isinstance(element, dict) for element in circuit):
         raise NotBuilt("%s is not a built circuit: %s" % (circuit_path, again))
     failed = sorted({e["type"] for e in circuit if re.fullmatch(r"source_\w+_error", e.get("type") or "")})
@@ -158,8 +180,8 @@ def _natural(text):
     return [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", text)]
 
 
-def _parts_table(board, design_parts, resistors, have):
-    """The parts to buy or take from the drawer, as Markdown rows."""
+def _parts_table(board, design_parts, resistors, supplies, have):
+    """The parts to buy or take from the drawer, as Markdown rows: equal parts and equal resistors totalled."""
     status = (lambda record_id: have.get(record_id, "to get")) if have is not None else (lambda record_id: "")
     rows = ["| qty | part | for | have |", "| --- | --- | --- | --- |",
             "| 1 | %s | the board | %s |" % (board.get("name"), status(board.get("id")))]
@@ -168,8 +190,24 @@ def _parts_table(board, design_parts, resistors, have):
         by_record.setdefault(part["id"], (part, []))[1].append(emit_board.component_name(part))
     rows += ["| %d | %s | %s | %s |" % (len(names), part.get("name"), ", ".join(sorted(names)), status(record_id))
              for record_id, (part, names) in by_record.items()]
-    rows += ["| %s | %s resistor, through-hole | %s | |" % (tag, value, purpose) for tag, value, purpose in resistors.values()]
-    return rows + ["| | a breadboard and jumper wires | | |", "", LEGEND]
+    by_value = collections.OrderedDict()
+    for tag, value, purpose in resistors.values():
+        by_value.setdefault(value, []).append("%s %s" % (tag, purpose))
+    rows += ["| %d | %s resistor, through-hole | %s | %s |" % (len(uses), value, "; ".join(uses), status(None))
+             for value, uses in by_value.items()]
+    rows += ["| | what feeds %s: a supply from off the board, not part of this list | %s | |"
+             % (net, ", ".join(sorted(users))) for net, users in supplies.items()]
+    return rows + ["| | a breadboard and jumper wires | | %s |" % status(None), "", LEGEND]
+
+
+def _supplies(circuit):
+    """{net name: the parts on it} for each point that carries a named net and no board pin: a supply from off the board."""
+    found = {}
+    for point in points(circuit):
+        if point.nets and not any(component["name"] == BOARD_COMPONENT for component, _ in point.members):
+            for net in point.nets:
+                found.setdefault(net, set()).update(component["name"] for component, _ in point.members)
+    return found
 
 
 def _wiring(board, circuit, design_parts, resistors):
@@ -194,20 +232,35 @@ def _wiring(board, circuit, design_parts, resistors):
         ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
         ends.sort(key=lambda one: (not one.startswith("board "), _natural(one)))
         line = " · ".join(ends)
-        if len(point.members) == 1:
-            line += " · the %s supply, from off the board" % " / ".join(point.nets)
-        if len(ends) > ROW_HOLES:
+        on_board = ends[0].startswith("board ")
+        if point.nets and not on_board:
+            line += " · the %s supply, from off the board, not part of the parts list" % " / ".join(point.nets)
+        if len(ends) + (1 if on_board else 0) > ROW_HOLES:  # a board pin's jumper takes a hole of its row
             line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
-                     % ends[0] if ends[0].startswith("board ") else " — put these ends on one rail")
+                     % ends[0] if on_board else " — put these ends on one rail")
         said.append(line)
     said.sort(key=lambda line: (not line.startswith("board "), _natural(line)))
     return ["%d. %s" % (number, line) for number, line in enumerate(said, 1)]
 
 
-def _before_power(design_parts):
+def _unwired(board, design):
+    """A line for each signal the requirements add that no part takes: its pin is spent, and nothing is on it yet."""
+    own = [signal for signal in design.signals if not signal.get("from")]
+    if not own:
+        return []
+    assignments, _ = assign_pins.assign(design.board, design.signals)
+    aliases = (board.get("physical") or {}).get("pad_aliases") or {}
+    return ["- %s: board %s, nothing wired to it yet (the requirements add this signal)"
+            % (a["signal"], aliases.get(a["pin"], a["pin"])) for a in assignments if a["signal"] in {s["name"] for s in own}]
+
+
+def _before_power(design_parts, supplies):
     """What each part's record says must be true before power is applied: its CONFLICTs, its floating pins, its
-    warnings, in the record's own words."""
+    warnings, in the record's own words; and the supplies from off the board, whose voltage this sheet does not set."""
     lines, seen = [], set()
+    lines += ["- %s comes from off the board, and this sheet does not say its voltage: check it against the supply "
+              "range of %s (`parts.py --show`) before you connect it" % (net, ", ".join(sorted(users)))
+              for net, users in supplies.items()]
     for part in design_parts:
         name = emit_board.component_name(part)
         lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in parts.pull_conflicts(part)]
@@ -232,6 +285,7 @@ def sheet(requirements_path, circuit_path=None):
     except ValueError as broken:
         raise NotBuilt("%s is not JSON (%s): build again" % (circuit_path, broken)) from broken
     _check_fresh(circuit, built.parts, circuit_path, requirements_path)
+    supplies = _supplies(circuit)
     passives = _passives(built.parts)
     resistors = collections.OrderedDict(
         (c["name"], ("R%d" % number, c.get("display_resistance") or "", passives.get(c["name"], "")))
@@ -240,10 +294,15 @@ def sheet(requirements_path, circuit_path=None):
     have = _have(requirements_path, {part["id"] for part in built.parts} | {built.board.get("id")})
     lines = ["# Breadboard: %s, on a %s" % (requirements_path.resolve().parent.name, built.board.get("name")), "",
              "## Parts", ""]
-    lines += _parts_table(built.board, built.parts, resistors, have)
-    lines += ["", "## Wiring", "", "Each line is one point: put its ends in one breadboard row, or join them with a wire.", ""]
+    lines += _parts_table(built.board, built.parts, resistors, supplies, have)
+    lines += ["", "## Wiring", "",
+              "Each line is one point: put its ends in one breadboard row, or join them with a wire. The board covers the",
+              "rows beside its own pins, so for a line that starts with a board pin, run a jumper from that pin to a free",
+              "row and put the line's other ends in that row.", ""]
     lines += _wiring(built.board, circuit, built.parts, resistors)
-    lines += ["", "## Before you power it", ""] + _before_power(built.parts)
+    unwired = _unwired(built.board, built)
+    lines += (["", "Not wired:", ""] + unwired) if unwired else []
+    lines += ["", "## Before you power it", ""] + _before_power(built.parts, supplies)
     return "\n".join(lines) + "\n"
 
 

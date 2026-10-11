@@ -211,6 +211,10 @@ class AStrangerCanBuildTest(unittest.TestCase):
         return [re.sub(r"\s+#.*$", "", line).strip() for line in block.splitlines()
                 if line.startswith("${CLAUDE_PLUGIN_ROOT}")]
 
+    #: A documented step that answers problems on purpose (P124, #58): the shipped L9110S record asks the board for
+    #: 10 k pull-downs that its own verified 10 k pull-ups overrule, so `--show` names that CONFLICT and exits 1.
+    ANSWERS_PROBLEMS = {"${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module"}
+
     def test_the_documented_steps_produce_a_board_file_and_its_footprint(self):
         # Audit C10: this test typed the steps itself, so a documented step that no longer worked
         # as written was invisible to it. It runs the document's own lines now.
@@ -222,7 +226,9 @@ class AStrangerCanBuildTest(unittest.TestCase):
         for line in steps:
             result = subprocess.run(line, shell=True, cwd=str(self.here), capture_output=True, text=True, env=environment)
             with self.subTest(step=line):
-                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                self.assertEqual(result.returncode, 1 if line in self.ANSWERS_PROBLEMS else 0, result.stderr + result.stdout)
+                if line in self.ANSWERS_PROBLEMS:
+                    self.assertIn("CONFLICT", result.stdout)
                 if "emit_board.py" in line:
                     self.assertIn("plugin's library", result.stderr, "a design built from nowhere is told so")
         board = (self.here / "board.tsx").read_text()

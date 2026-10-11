@@ -69,9 +69,10 @@ where every check already looks. **Without it the chain builds in a temp directo
 which is right for a check and wrong for the command someone is told to run first — the project
 would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
 a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, edited or
-not; delete it to have it regenerated. After a build that finished, it also writes `breadboard.md`, new each time: the
-parts, the resistors they ask for, every wire by the board's printed labels and the parts' legs, and what each record
-says to check before power ([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. A line
+not; delete it to have it regenerated. With `--json`, each file is listed under `kept`, with what was done to it and
+why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask
+for, every wire by the board's printed labels and the parts' legs, and what each record says to check before power
+([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. A line
 `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
@@ -114,7 +115,7 @@ A line `… is not installed — install: …` is answered by asking the person 
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list                       # what exists, and where from
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host; exits 1: a pull it asks for is overruled (CONFLICT)
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per signal, with the reason
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx
@@ -204,9 +205,12 @@ steps:
 ```
 
 Part ids come from the board's component names (`BtnOpen` becomes `btnopen`). `name:` is the key the smart bin's
-passing scenarios use ([lid-cycle](https://github.com/xmejkal/sisuo-brain-transplant/blob/main/firmware/micropython/sim/lid-cycle.scenario.yaml)),
+scenarios use, which passed on 2026-09-25 ([lid-cycle](https://github.com/xmejkal/sisuo-brain-transplant/blob/main/firmware/micropython/sim/lid-cycle.scenario.yaml)),
 whose notes call `control:` a deprecated alias. `wait-serial` reads the MCU's serial only: a chip's printf never
-reaches it. Two facts about the simulator that
+reaches it. The generated `diagram.json` wires the board's TX and RX to `$serialMonitor`: Wokwi stopped doing that
+by default (CLI 0.28.0, API 2026-10-09), and without it `wait-serial` hears nothing, not even the boot line
+([P190](https://github.com/xmejkal/spark/issues/142)). A board whose Wokwi part has no pins named TX and RX gets no
+such wires, and the build's simulation line says so. Two facts about the simulator that
 a firmware meets here and not on a bench: its ADC is referenced to 5 V whatever the chip, so a
 raw reading must be converted with a 5 V full scale — the flash image's `--config` is the place
 to say so (`{"ADC_REFERENCE_V": 5.0}`); and a chip's control ids are letters and digits only.

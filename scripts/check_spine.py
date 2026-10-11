@@ -222,9 +222,21 @@ def simulation_could_not_look(said):
     return CONVERTER_HAS_NO_PART in (said or "")
 
 
+#: Wokwi's serial monitor, as a diagram names it: its two wires are the board's own, never a design's (P190).
+SERIAL_MONITOR = "$serialMonitor"
+
+
 def wires_in(diagram):
-    """How many connections the emitted diagram makes."""
-    return len(diagram.get("connections") or [])
+    """How many connections the emitted diagram makes between parts: the serial monitor's two are not counted, so a
+    diagram where every net failed still counts 0."""
+    return sum(1 for connection in diagram.get("connections") or []
+               if not any(str(end).startswith(SERIAL_MONITOR) for end in connection[:2]))
+
+
+def serial_wired(diagram):
+    """Whether the board's serial port reaches Wokwi's serial monitor, so a scenario hears what the firmware prints."""
+    return any(str(end).startswith(SERIAL_MONITOR) for connection in diagram.get("connections") or []
+               for end in connection[:2])
 
 
 def count_in(circuit):
@@ -489,7 +501,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                    "design, which built\n" + said)]
         return stages + [Stage("simulation", PROBLEMS, "no diagram was produced\n" + said)]
 
-    wires = wires_in(json.loads(diagram_path.read_text()))
+    diagram = json.loads(diagram_path.read_text())
+    wires = wires_in(diagram)
     if wires == 0:
         # The same failure shape as a board with no copper: every part placed, nothing joined.
         return stages + [Stage("simulation", PROBLEMS,
@@ -502,10 +515,10 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # like a bench result (backlog P37). It goes beside the diagram as well, because the terminal
     # gets closed and the sim directory is what somebody opens a week later.
     limits = sim_project.write_limits(sim_dir, loaded)
-    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits))]
+    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)))]
 
 
-def simulation_detail(wires, staged, compiled, limits):
+def simulation_detail(wires, staged, compiled, limits, serial=True):
     """
     What the simulation stage says, including what it cannot show.
 
@@ -517,6 +530,9 @@ def simulation_detail(wires, staged, compiled, limits):
     detail = "%d wire(s) in the diagram%s" % (
         wires, ", %d chip(s): %d compiled, %d reused"
         % (len(staged), compiled, len(staged) - compiled) if staged else "")
+    if not serial:  # P190: no pins named TX and RX, or an older converter of the project's own
+        detail += ("\n           no serial monitor is wired in the diagram (a board part with no pins named TX and RX, or "
+                   "a project's own converter older than P190), so a scenario's wait-serial may hear nothing")
     if limits:
         detail += "\n           what it cannot show, from the records (%d):" % len(limits)
         for component, sentence in limits:
@@ -573,12 +589,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("requirements", nargs="?",
                         help="a requirements.json; omit for the reference design")
-    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--json", action="store_true",
+                        help="the verdict as one JSON object: check, status, stages, and kept with --keep")
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
-                             "left alone and named. With a requirements file it also writes breadboard.md: the "
-                             "parts and how to wire them on a breadboard")
+                             "left alone and named; with --json, each file is listed under kept. With a requirements "
+                             "file it also writes breadboard.md: the parts and how to wire them on a breadboard")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
@@ -636,7 +653,7 @@ def main(argv=None):
     return report(stages, args, workdir, requirements)
 
 
-def keep_into(workdir, destination):
+def kept_into(workdir, destination):
     """
     Put the built board where a person — and every check — will look for it.
 
@@ -649,58 +666,84 @@ def keep_into(workdir, destination):
     `dist/` is pure build output and is replaced. A `.tsx` file is NOT: `board.tsx` is the thing a
     person edits — the smart bin's is hand-maintained — so an existing one is left alone and
     named. Delete it to have it regenerated. One behaviour, no flag to get it wrong with.
+
+    Each file is {file, did, why, line}: `did` is `wrote` or `left alone`, and `line` what stderr says. With --json the
+    report carries the rest under `kept` (P124, #58), so an agent reads what a person reads.
     """
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
-    said = []
+    kept = []
     for source in sorted(workdir.glob("*.tsx")):
         target = destination / source.name
         if target.exists():
-            said.append("left alone: %s (delete it to have it regenerated)" % target)
+            kept.append({"file": str(target), "did": "left alone", "why": "delete it to have it regenerated",
+                         "line": "left alone: %s (delete it to have it regenerated)" % target})
         else:
             shutil.copy2(source, target)
-            said.append("wrote %s" % target)
+            kept.append({"file": str(target), "did": "wrote", "why": None, "line": "wrote %s" % target})
     built = workdir / "dist"
     if built.is_dir():
         shutil.copytree(built, destination / "dist", dirs_exist_ok=True)
-        said.append("wrote %s — this is what every check reads" % (destination / "dist"))
-    return said
+        kept.append({"file": str(destination / "dist"), "did": "wrote", "why": "this is what every check reads",
+                     "line": "wrote %s — this is what every check reads" % (destination / "dist")})
+    return kept
+
+
+def _kept(workdir, destination):
+    """`kept_into`, or one entry saying why nothing could be kept: the verdict is printed either way."""
+    try:
+        return kept_into(workdir, destination)
+    except OSError as refused:
+        return [{"file": str(destination), "did": "not kept", "why": str(refused),
+                 "line": "not kept: %s — %s" % (destination, refused)}]
 
 
 def keep_breadboard(requirements, destination, stages=()):
     """
-    The breadboard sheet beside the kept board (P191, #143): the parts and how to wire them, or why there is none. Only
-    from a build that finished in this run: an earlier dist/ is another design's wiring.
+    The breadboard sheet beside the kept board (P191, #143), as one kept entry {file, did, why, line}. Only from a build
+    that finished in this run, which it records (dist/board/built-from.json) for breadboard.py to compare; a sheet left
+    from an earlier build is removed, since it describes another board.
     """
+    sheet = Path(destination) / breadboard.SHEET
     if not any(stage.name == "build" and stage.status == OK for stage in stages):
-        return ("no breadboard sheet: the build did not finish in this run, so a breadboard.md beside it is from an "
-                "earlier build")
+        why = "the build did not finish in this run"
+        if sheet.exists():
+            sheet.unlink()
+            return {"file": str(sheet), "did": "removed", "why": why + ", and it described an earlier build",
+                    "line": "no breadboard sheet: %s; removed %s, which described an earlier build" % (why, sheet)}
+        return {"file": str(sheet), "did": "not written", "why": why, "line": "no breadboard sheet: %s" % why}
     try:
-        written = breadboard.write(requirements, destination / breadboard.SHEET, destination / breadboard.CIRCUIT)
+        breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
+        written = breadboard.write(requirements, sheet, Path(destination) / breadboard.CIRCUIT)
     except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
-        return "no breadboard sheet: %s" % stopped
-    return "wrote %s — the parts and how to wire them on a breadboard" % written
+        return {"file": str(sheet), "did": "not written", "why": str(stopped), "line": "no breadboard sheet: %s" % stopped}
+    why = "the parts and how to wire them on a breadboard"
+    return {"file": str(written), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written, why)}
 
 
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
-    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed.
+    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed. What
+    --keep wrote and left alone is said on stderr and, with --json, carried under `kept` (P124).
     """
     code = verdict(stages)
+    kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
+    if kept is not None and getattr(args, "requirements", None):
+        kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code],
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
-        print(json.dumps(dict(said, unserved=requirements["unserved"]) if left_off(requirements) else said))
+        said.update({"unserved": requirements["unserved"]} if left_off(requirements) else {})
+        if kept is not None:
+            said["kept"] = [{key: entry[key] for key in ("file", "did", "why")} for entry in kept]
+        print(json.dumps(said))
     else:
         sys.stdout.write(render(stages, code, left_off(requirements)))
     if workdir is None:
         return code
-    if args.keep:
-        for line in keep_into(workdir, args.keep):
-            print("  %s" % line, file=sys.stderr)
-        if getattr(args, "requirements", None):
-            print("  %s" % keep_breadboard(Path(args.requirements), Path(args.keep), stages), file=sys.stderr)
+    for entry in kept or []:
+        print("  %s" % entry["line"], file=sys.stderr)
     if workdir.exists():
         shutil.rmtree(workdir, ignore_errors=True)
     return code

@@ -45,7 +45,8 @@ import parts  # noqa: E402
 BOARD = "firebeetle2-esp32s3"
 
 #: P95 (§6.4.1 of docs/2026-10-04-store-design.md): every parts.py --json answer is this one envelope.
-ENVELOPE = ["data", "envelope", "next", "op", "problems", "status", "tool", "truncated", "unchecked"]
+#: parts.py's envelope. `notes` and `assumptions` joined in P124 (#58): what its text said and its JSON left out.
+ENVELOPE = ["assumptions", "data", "envelope", "next", "notes", "op", "problems", "status", "tool", "truncated", "unchecked"]
 
 #: A netlist small enough to read, real enough to walk: one component, grounded.
 CIRCUIT = [
