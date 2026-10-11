@@ -26,6 +26,11 @@
     "A",
     "K"
   ],
+  "legs": {
+    "A": "the anode, the longer leg",
+    "K": "the cathode, the shorter leg, by the flat of the rim"
+  },
+  "//legs": "How to tell the legs apart on a breadboard, as pin_order_proof reads them off l-7113id-ver29a's package drawing (page 1): the cathode lead is drawn shorter, and the flat of the rim is on its side.",
   "pin_order_proof": {
     "verified": true,
     "source": "Pad 1 = anode, pad 2 = cathode. Datasheet page 1, Package Dimensions: the lead labelled 'Cathode' is drawn 1.5 (+/-1) mm SHORTER than the other, so the LONGER lead is the anode; the end view draws a flat on the flange rim (diameter 5.9 mm) on the cathode lead's side. The drawing labels the cathode lead and draws the flat but does not label the flat in words.",

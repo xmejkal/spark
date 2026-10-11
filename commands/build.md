@@ -69,7 +69,8 @@ where every check already looks. **Without it the chain builds in a temp directo
 which is right for a check and wrong for the command someone is told to run first — the project
 would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
 a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, edited or
-not; delete it to have it regenerated. `dist/` is still replaced with a build of the freshly generated board, not of
+not; delete it to have it regenerated. It also writes `breadboard.md`: the parts, the resistors they ask for, and every
+wire, by the board's printed labels and the parts' legs ([P191](https://github.com/xmejkal/spark/issues/143)). `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.
 

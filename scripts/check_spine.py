@@ -58,6 +58,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import breadboard  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
@@ -665,6 +666,15 @@ def keep_into(workdir, destination):
     return said
 
 
+def keep_breadboard(requirements, destination):
+    """The breadboard sheet beside the kept board (P191, #143): the parts and how to wire them, or why there is none."""
+    try:
+        written = breadboard.write(requirements, destination / breadboard.SHEET, destination / breadboard.CIRCUIT)
+    except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
+        return "no breadboard sheet: %s" % stopped
+    return "wrote %s — the parts and how to wire them on a breadboard" % written
+
+
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
@@ -682,6 +692,8 @@ def report(stages, args, workdir=None, requirements=None):
     if args.keep:
         for line in keep_into(workdir, args.keep):
             print("  %s" % line, file=sys.stderr)
+        if getattr(args, "requirements", None):
+            print("  %s" % keep_breadboard(Path(args.requirements), Path(args.keep)), file=sys.stderr)
     if workdir.exists():
         shutil.rmtree(workdir, ignore_errors=True)
     return code

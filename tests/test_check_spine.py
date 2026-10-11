@@ -344,6 +344,19 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse(work.exists(), "the temp directory is still cleared away")
         self.assertIn("every check reads", err.getvalue())
 
+    def test_keeping_a_project_s_build_writes_its_breadboard_sheet_beside_it(self):
+        # P191 (#143): the parts and how to wire them, where /spark:build leaves the board.
+        import argparse, contextlib, io, shutil
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        work = self.workdir()
+        shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        into = Path(tempfile.mkdtemp()) / "project"
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        self.assertIn("board D3", (into / "breadboard.md").read_text())
+        self.assertIn("the parts and how to wire them on a breadboard", err.getvalue())
+
     def test_without_it_the_temp_directory_is_still_removed(self):
         import argparse, contextlib, io
         work = self.workdir()

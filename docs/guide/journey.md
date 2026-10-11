@@ -337,12 +337,13 @@ With `--dry-run` first it says *would write*. The file it wrote:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
 
-<!-- output: run 2026-10-08, spark 0.7.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
   wrote FireBeetle2Esp32S3.tsx
   wrote board.tsx
   wrote dist — this is what every check reads
+  wrote breadboard.md — the parts and how to wire them on a breadboard
 
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 
@@ -360,6 +361,39 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
 
 This build used tscircuit 0.0.2621, an existing install on the PATH, not the 0.0.2600 spark pins: the build line says
 so, and does not fail for it.
+
+**The breadboard.** With `--keep`, the build also writes `breadboard.md` into the project
+([P191](https://github.com/xmejkal/spark/issues/143)): the parts, the resistors the parts ask for, and every wire,
+named by the board's printed labels and the parts' legs. It comes from the circuit that was built, so it is the board
+the checks and the simulation saw. The FireBeetle reads *yours* because the drawer holds it for this project:
+
+<!-- output: run 2026-10-11, spark 0.8.1 -->
+```text
+# Breadboard: button-light, on a DFRobot FireBeetle 2 ESP32-S3
+
+## Parts
+
+| | part | for | |
+| --- | --- | --- | --- |
+| 1 | DFRobot FireBeetle 2 ESP32-S3 | the board | yours |
+| 1 | 6x6 mm tactile push button | TactileButton | to get |
+| 1 | Kingbright L-7113ID 5 mm red LED | LedRed5mm | to get |
+| 1 | 10kΩ resistor | pull-up on TactileButton A | |
+| 1 | 330Ω resistor | in series with LedRed5mm A | |
+| | a breadboard and jumper wires | | |
+
+## Wiring
+
+Each line is one point: put its ends in one breadboard row, or join them with a wire.
+
+1. board 3V3 · 10kΩ pull-up, end 2
+2. board A5 · 330Ω, end 1
+3. board D3 · 10kΩ pull-up, end 1 · TactileButton A (either leg of one joined pair)
+4. board GND · LedRed5mm K (the cathode, the shorter leg, by the flat of the rim) · TactileButton B (either leg of the other pair)
+5. 330Ω, end 2 · LedRed5mm A (the anode, the longer leg)
+```
+
+`python3 "$CLAUDE_PLUGIN_ROOT/scripts/breadboard.py" requirements.json` writes it again after a build.
 
 **T — the tally.**
 
@@ -679,19 +713,20 @@ Then [`/spark:build`](../../commands/build.md) runs the whole chain on it:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
   wrote FireBeetle2Esp32S3.tsx
   wrote board.tsx
   wrote dist — this is what every check reads
+  wrote breadboard.md — the parts and how to wire them on a breadboard
 
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 
   [ok  ] board            DFRobot FireBeetle 2 ESP32-S3
   [ok  ] schematic        22 trace(s) written
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
-  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2600
+  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2621; the documents were measured on core 0.0.2600
   [ok  ] simulation       17 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
            what it cannot show, from the records (3):
              BtnMode, BtnOpen: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled

@@ -1,0 +1,9 @@
+[
+ {"file": "scripts/breadboard.py", "name": "a point is not followed through a named net, so ground splits into many lines", "find": "                      + [\"net:\" + n for n in element.get(\"connected_source_net_ids\") or []])", "replace": "                      )"},
+ {"file": "scripts/breadboard.py", "name": "each ground pad is its own point", "find": "    return \"GND\" if re.fullmatch(r\"GND\\d*\", label) else label", "replace": "    return label"},
+ {"file": "scripts/breadboard.py", "name": "a leg the record names is not said", "find": "\" (%s)\" % leg if leg else \"\"", "replace": "\"\""},
+ {"file": "scripts/breadboard.py", "name": "a resistor's end does not say what it is for", "find": "\" \" + word if word else \"\"", "replace": "\"\""},
+ {"file": "scripts/breadboard.py", "name": "nothing your drawer holds reads yours", "find": "            if (entry.get(\"used_in\") or {}).get(name) and record_id in part_ids | {board_id}:", "replace": "            if False:"},
+ {"file": "scripts/breadboard.py", "name": "a project with nothing built gets no word of how to build it", "find": "    if not circuit_path.is_file():", "replace": "    if False:"},
+ {"file": "scripts/check_spine.py", "name": "--keep writes no breadboard sheet", "find": "            print(\"  %s\" % keep_breadboard(Path(args.requirements), Path(args.keep)), file=sys.stderr)", "replace": "            pass"}
+]

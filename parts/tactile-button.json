@@ -24,6 +24,11 @@
     "A",
     "B"
   ],
+  "legs": {
+    "A": "either leg of one joined pair",
+    "B": "either leg of the other pair"
+  },
+  "//legs": "A 6x6 tactile switch joins its four legs in two pairs, and a press joins the pairs. A meter on continuity shows which legs are joined.",
   "pin_order_proof": {
     "verified": false,
     "source": "A 6x6 tactile switch has four legs in two pairs, and each pair is one terminal — so a 2-pin footprint is the electrical truth and a 4-pad footprint is the mechanical one. `pushbutton` in footprinter gives four pads wired as two nets, which is what a board wants; this record describes the two terminals."
