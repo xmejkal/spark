@@ -1,6 +1,6 @@
 # spark
 
-**From an idea to a breadboard with working firmware — and a board, if you want one — for gadgets built from an ESP32 dev board.**
+**From an idea to a breadboard sheet and firmware checked in simulation — and a board, if you want one — for gadgets built from an ESP32 dev board.**
 
 spark is a Claude Code plugin, meant for a hobbyist building a gadget from an ESP32 *dev board* (a module such as the
 DFRobot FireBeetle 2 ESP32-S3) and off-the-shelf modules, not for chip-down boards made in volume
@@ -9,9 +9,10 @@ the parts you own and the ones it knows. It researches a missing part from the v
 a [record](GLOSSARY.md#record--and-the-four-places-one-lives): its facts, each with a source and whether anyone
 checked it.
 
-From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark gives you a
-breadboard sheet (the parts and how to wire them), the pin map your firmware imports, and a simulation to run it in.
-On request it also gives you the *board*, a printed circuit board your dev board and modules plug into, and its 3D model (`npx --no tsci export board.tsx -f glb`).
+From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark builds and checks
+the design and gives you a breadboard sheet (the parts and how to wire them), the pin map your firmware imports, and a
+simulation to run it in. The same build is a *board*, a printed circuit board your dev board and modules plug into;
+its fab package and 3D model (`npx --no tsci export board.tsx -f glb`) are there when you want one.
 
 - Every pin gets a reason, and the connections come from the parts' records.
 - The board builds, with a Wokwi diagram generated from it (kept only with `--sim-dir sim`,

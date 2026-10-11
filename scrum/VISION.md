@@ -36,7 +36,7 @@ on real hardware by a bench protocol.
 | | who | evidence |
 | --- | --- | --- |
 | **Primary** | **The hobbyist.** An idea in words, whatever ESP32 board is in the drawer, some modules. At home in a terminal; no EDA, maybe no meter, no Wokwi licence. Succeeds when `/spark:build` exits 0 on *their* board and then their firmware runs. Quits when their board is not one spark knows, when a paid simulator blocks them, or when `init` asks for values they cannot measure. | **Hypothesis.** The PO's choice. Every "stranger" so far was Claude in one of our sessions, and no person outside the project has installed spark. Slice 5 tests it with a real one. |
-| **The test bench** | **The maker** (Petr). A dead bin and a drawer of modules; directs Claude rather than typing commands; buys from Czech shops. His bin is where spark meets hardware first. | **Evidence.** Its board is hand-written and spark checks it — spark never generated it. Nothing has run on hardware yet. |
+| **The test bench** | **The maker** (Petr). A dead bin and a drawer of modules; directs Claude rather than typing commands; buys from Czech shops. His bin is spark's second bench, after v1's button-and-LED walk. | **Evidence.** Its board is hand-written and spark checks it — spark never generated it. Nothing has run on hardware yet. |
 | **A constraint** | **The agent at the keyboard.** Every logged run was one. It must act on a script's answer without reading the script's source. | **Evidence**: the 09-24 first-time run *"got there by reading Python source, not docs"*. It counts only through the two above. |
 | **Not for** | **A professional ordering chip-down boards in volume.** spark is "a board made of modules"; its autorouter can emit shorts (README); real layout is out. | the PO's v1 line; the README |
 
@@ -50,7 +50,7 @@ ahead of everything after it.
 Refinement decreases with distance (the PO, 2026-10-11: *"only the to of the backlog is really refined t detail and
 the lowe on the backlog the less details"*). v1 is planned item by item on the board. The next version is one epic in
 the PO's words, and each later one a line. Detail moves down only when work moves up. Which version follows v1 is
-decided when v1 is done. This table is the one place versions are written; other pages point here.
+decided when v1 is done. This table is the one place versions are kept current; the replan of 2026-10-11 is where it came from.
 
 | version | done when | how much is planned |
 | --- | --- | --- |

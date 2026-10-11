@@ -971,7 +971,7 @@ that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01). 
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v1](../../scrum/VISION.md#versions)).
 
-A bench session that leaves a verdict a command can read is planned first in a separate project's repository:
+After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32
 brain. That plan is [P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2), first used in the bin's
 bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
@@ -979,13 +979,13 @@ bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
 The `spark-reverse-engineer` skill writes a bench protocol, but for a board reverse-engineered from photos, not for a
 board spark generated.
 
-Until then, every green result in this guide is a build, a generated diagram or a check. No simulation was run, and
-nothing touched hardware.
+Until then, every green result in this guide is a build, a generated diagram, a check or a simulation (button-and-LED
+passed in Wokwi with a hand-written scenario on 2026-10-11, P190); nothing touched hardware.
 
 ## From draft to order
 
-Ordering a board of modules is an optional step of the journey, after the firmware works: slice 8 of
-[the story map](../../scrum/STORY_MAP.md), not designed yet. The generated board is a draft, and the header of
+Ordering a board of modules is an optional step of the journey, after the firmware works: a later version
+([VISION.md's *Versions*](../../scrum/VISION.md#versions)), not designed yet. The generated board is a draft, and the header of
 `board.tsx` says so: its modules sit in a column that does not overlap, it has no mounting holes or connector keying,
 and its traces are not sized for current until each rail's current is stated. What exists today, in order:
 
