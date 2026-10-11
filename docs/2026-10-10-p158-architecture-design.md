@@ -3182,3 +3182,15 @@ One line per change; the finding it answers in brackets.
 - §17.2, §17.6: the unsourced "months of work at today's pace", "one to three per stage" and "one rerun, of seconds" removed (refuter §6).
 - §12.2, §17: CH-2's size is part 1's, S plus machine time, not M (refuter §6; critic, C1).
 - Found on the way: the corrected board-facts line removed; seven new lines.
+
+## Changes after round 2 (targeted, 2026-10-11)
+
+From `docs/discovery/2026-10-10-p158-gaps-and-refactoring/design/refuter-round-2-targeted.md` (no blocker, six fixes; the plan's amendments carry
+the card-level ones):
+- **DP19 is dropped:** the PO decided it on 2026-10-11 (*"Size it to the change"*, #131). §12.1's council estimate is
+  withdrawn with it.
+- **§12.3's date:** the pass lines were set on 2026-10-10 (the plan), not 2026-10-11.
+- **§12.1, H0c:** the cold run is not "no code"; C13's harness is S–M of code.
+- **§0's words already rule out** DP4 (c) and DP15 (b); they are struck. DP12 and DP13 owe a reason; DP21 (b)'s
+  "standard library only" is this design's reading of §0.7, not the PO's words, and is labelled so.
+- **I0's whole** names the spark under test: `make check SPARK=<worktree>`; see the plan's amendment 1.
