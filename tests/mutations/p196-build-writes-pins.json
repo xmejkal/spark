@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196: the build writes no pin map again",
+  "find": "        kept.append(keep_pins(Path(args.requirements), Path(args.keep)))\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196: a pins.py spark did not write is overwritten",
+  "find": "    if target.exists() and not ours:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P196: spark's pin map from an earlier design stays when the pins cannot be placed",
+  "find": "        if ours:\n            target.unlink()",
+  "replace": "        if False:\n            target.unlink()"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "JB1/P116: --keep keeps no simulation project again",
+  "find": "    simulation = args.sim_dir or (args.keep / \"sim\" if args.keep else None)",
+  "replace": "    simulation = args.sim_dir"
+ }
+]
