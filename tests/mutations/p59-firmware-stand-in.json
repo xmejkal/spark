@@ -130,5 +130,11 @@
   "name": "P59 stand-in: the import machinery's own lookups break every import of it",
   "find": "    if name.startswith(\"__\"):",
   "replace": "    if False:"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F2: the firmware folder is a relative path, which names nothing to the child",
+  "find": "(project / \"firmware\").resolve()",
+  "replace": "project / \"firmware\""
  }
 ]

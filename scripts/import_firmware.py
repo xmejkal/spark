@@ -63,7 +63,7 @@ def import_one(name, firmware, timeout_s):
 
 def look(project, timeout_s):
     """Every module of PROJECT/firmware imported: (modules, problems, unchecked)."""
-    firmware = project / "firmware"
+    firmware = (project / "firmware").resolve()  # whole: the child runs inside it, so a relative path would name nothing
     if not firmware.is_dir():
         return [], [], ["no firmware/ folder in %s: there is nothing to import" % project]
     files = sorted(path.name for path in firmware.glob("*.py") if path.name != BOOT_FILE)

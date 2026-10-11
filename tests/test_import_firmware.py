@@ -192,6 +192,16 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
         self.assertEqual((done.returncode, json.loads(done.stdout)["status"]), (outcomes.EXIT_OK, outcomes.OK), done.stderr)
 
 
+class TheCommandRunsFromWhereTheyAreTest(unittest.TestCase):
+    def test_the_default_project_puts_the_firmware_folder_on_the_path_by_its_whole_name(self):
+        # F2: with `.` the folder was a relative path and the child ran inside it, so the entry named nothing. Imports
+        # worked only because `-c` adds '' to the path, and PYTHONSAFEPATH=1 (Python 3.11 and later) takes that away.
+        project = a_project(light="import os, sys\nassert os.getcwd() in sys.path, sys.path\n")
+        done = subprocess.run([sys.executable, str(SCRIPT), "--json"], cwd=str(project), capture_output=True, text=True,
+                              env=dict(os.environ, PYTHONSAFEPATH="1"))
+        self.assertEqual(done.returncode, outcomes.EXIT_OK, done.stdout + done.stderr)
+
+
 class AModuleThatFailsIsAProblemTest(unittest.TestCase):
     def test_a_module_that_raises_says_the_exception_s_last_line(self):
         project = a_project(light="raise ValueError('no such pin')\n", pins="BUTTON = 4\n")
