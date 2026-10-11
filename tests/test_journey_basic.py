@@ -3,8 +3,8 @@ The basic journey, end to end (P195, #154): the button-and-LED project through e
 that breaks is named here and not found on the bench.
 
 The stages are the replan's table (docs/2026-10-11-replan.md): the requirements, the build with its board, the Wokwi
-diagram, the breadboard sheet and the pin map, then the PCB and 3D exports. Each later item of the v1 slice adds its stage to
-STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
+diagram, the breadboard sheet and the pin map, the firmware imported with the `machine` stand-in (P59), then the PCB and 3D
+exports. Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
 build stage is could-not-run, and the skip names the stages that ran and the stages that did not.
 
     python3 -m unittest discover -s tests -p test_journey_basic.py
@@ -32,12 +32,17 @@ import check_spine  # noqa: E402
 import design  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
+#: The firmware a person (or the conversation) writes once the pin map exists (P59): main.py over light.py.
+FIRMWARE_FIXTURE = FIXTURE / "firmware"
+#: The stand-in `machine` the firmware imports under, put first on the path of a process of its own (never this one's).
+STAND_IN = ROOT / "scripts" / "stand_in"
 
 #: The spine's stages before the build: they need no board engine, so they run on every machine.
 BEFORE_THE_BUILD = ("board", "schematic", "footprint")
 
-#: The journey's stages whose files need no board engine: the pin map comes from the requirements alone (P196).
-WITHOUT_THE_BUILD = ("requirements", "pin map")
+#: The journey's stages whose files need no board engine: the pin map comes from the requirements alone (P196), and the
+#: firmware needs only the pin map (P59).
+WITHOUT_THE_BUILD = ("requirements", "pin map", "firmware")
 
 #: The exports the replan lists as working (stage 8): tsci's format, and the file it writes.
 EXPORTS = (("gerbers", "board-gerbers.zip"), ("glb", "board.glb"))
@@ -87,6 +92,33 @@ def _pins(path):
     return "no GPIO for %s in it" % " or ".join(lacking) if lacking else None
 
 
+#: Run in a process of its own: the LED's level with the button released, then pressed. The board holds the button high
+#: through a pull-up and a press joins it to ground, so released is 1 and pressed is 0 (breadboard.md, lines 1 and 3).
+LIGHT_PROBE = """
+import machine, light, pins
+machine.set_level(pins.BUTTON, 1)
+light.update()
+print(machine.level(pins.STATUS_LED))
+machine.set_level(pins.BUTTON, 0)
+light.update()
+print(machine.level(pins.STATUS_LED))
+"""
+
+
+def _firmware(path):
+    # The LED lights while the button is held: imports under the stand-in, then reads 0 released and 1 pressed.
+    if not (path.parent / "pins.py").is_file():
+        return None  # light.py reads the pin map, and the pin map stage names its absence
+    done = subprocess.run([sys.executable, "-B", "-c", "import sys; sys.path[:0] = sys.argv[1:]\n" + LIGHT_PROBE,
+                           str(STAND_IN), str(path.parent)], capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+    if done.returncode != 0:
+        return "it does not import under the stand-in: %s" % (done.stderr.strip().splitlines() or ["no reason given"])[-1]
+    released, pressed = done.stdout.split()
+    if released != "0":
+        return "with the button released the LED reads %s, not 0" % released
+    return None if pressed == "1" else "with the button pressed the LED reads %s, not 1" % pressed
+
+
 def _gerbers(path):
     with zipfile.ZipFile(path) as fab:
         lacking = {"F_Cu.gbr", "Edge_Cuts.gbr"} - set(fab.namelist())
@@ -106,6 +138,7 @@ STAGES = (
     ("Wokwi diagram", "sim/diagram.json", _diagram),
     ("breadboard sheet", "breadboard.md", _sheet),
     ("pin map", "firmware/pins.py", _pins),
+    ("firmware", "firmware/light.py", _firmware),
     ("PCB export", "board-gerbers.zip", _gerbers),
     ("3D export", "board.glb", _model),
 )
@@ -159,6 +192,13 @@ def walk(project):
     return verdict
 
 
+def write_the_firmware(project):
+    """What a person does once the pin map exists: the button-and-LED firmware goes into firmware/ beside pins.py."""
+    (project / "firmware").mkdir(exist_ok=True)
+    for source in sorted(FIRMWARE_FIXTURE.glob("*.py")):
+        shutil.copy(source, project / "firmware")
+
+
 class TheBasicJourneyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -167,6 +207,7 @@ class TheBasicJourneyTest(unittest.TestCase):
         cls.project.mkdir()
         shutil.copy(FIXTURE / "requirements.json", cls.project)
         cls.verdict = walk(cls.project)
+        write_the_firmware(cls.project)
 
     def stage(self, name):
         return next((stage for stage in self.verdict["stages"] if stage["name"] == name), {})
@@ -194,6 +235,13 @@ class TheBasicJourneyTest(unittest.TestCase):
         subprocess.run([sys.executable, str(ROOT / "scripts" / "assign_pins.py"), "requirements.json", "--emit-pins",
                         str(emitted)], cwd=str(self.project), capture_output=True, timeout=COMMAND_TIMEOUT_S)
         self.assertEqual((self.project / "firmware" / "pins.py").read_text(), emitted.read_text())
+
+    def test_the_firmware_imports_with_the_stand_in_and_main_py_is_left_unrun(self):
+        # P59: the one command, as a person runs it, on the project after the walk.
+        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "import_firmware.py"), "--json"],
+                              cwd=str(self.project), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(sorted(entry["module"] for entry in json.loads(done.stdout)["modules"]), ["light", "pins"])
 
     def test_every_stage_leaves_what_the_next_one_reads(self):
         self.skip_without_the_build()
