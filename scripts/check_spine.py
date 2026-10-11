@@ -631,8 +631,11 @@ def main(argv=None):
     # What `built` will name is loaded now, once, before anything can change under it.
     handed = design_handed_to(workdir, project) if source and not from_library else None
 
+    # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
+    simulation = simulation_dir(args)
+    firmware = args.firmware or (sim_project.firmware_in(simulation / "wokwi.toml") if simulation else None)
     try:
-        stages = run(requirements, workdir, toolchain, project, from_library, firmware=args.firmware)
+        stages = run(requirements, workdir, toolchain, project, from_library, firmware=firmware)
     except subprocess.TimeoutExpired:
         stages = [Stage("build", COULD_NOT_RUN,
                         "the build did not finish in %ds" % BUILD_TIMEOUT_S)]
@@ -651,11 +654,6 @@ def main(argv=None):
         except (store.StoreProblem, OSError) as unrecorded:
             print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
 
-    # The one command keeps the simulation project with the rest (JB1); a --sim-dir of the person's own still decides.
-    simulation = args.sim_dir or (args.keep / "sim" if args.keep else None)
-    if simulation and (workdir / "sim").is_dir():
-        shutil.copytree(workdir / "sim", simulation, dirs_exist_ok=True)
-        print("simulation project kept in %s" % simulation, file=sys.stderr)
     return report(stages, args, workdir, requirements)
 
 
@@ -735,7 +733,7 @@ def keep_pins(requirements, destination):
     cannot be placed: it describes another design. A `pins.py` spark did not write is left alone, as `board.tsx` is.
     """
     target = Path(destination) / PIN_MODULE
-    ours = target.is_file() and target.read_text().startswith(assign_pins.PIN_MODULE_HEADER)
+    ours = target.is_file() and target.read_bytes().startswith(assign_pins.PIN_MODULE_HEADER.encode())
     if target.exists() and not ours:
         why = "spark did not write it; delete it to have it written"
         return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
@@ -753,6 +751,38 @@ def keep_pins(requirements, destination):
     return {"file": str(target), "did": "wrote", "why": why, "line": "wrote %s — %s" % (target, why)}
 
 
+def _kept_pins(requirements, destination):
+    """`keep_pins`, or one entry saying why the file system refused it: the verdict is printed either way."""
+    try:
+        return keep_pins(requirements, destination)
+    except OSError as refused:
+        target = Path(destination) / PIN_MODULE
+        return {"file": str(target), "did": "not written", "why": str(refused), "line": "no pin map: %s" % refused}
+
+
+def simulation_dir(args):
+    """Where the simulation project is kept: --sim-dir, else DIR/sim under --keep DIR (JB1, P116), else nowhere."""
+    if getattr(args, "sim_dir", None):
+        return Path(args.sim_dir)
+    return Path(args.keep) / "sim" if getattr(args, "keep", None) else None
+
+
+def keep_simulation(workdir, destination):
+    """
+    The simulation project the last stage wrote, copied to `destination` as one kept entry {file, did, why, line}, or None
+    when the stage wrote none. It is merged into what is there, so a person's scenarios stay.
+    """
+    if not (workdir / "sim").is_dir():
+        return None
+    try:
+        shutil.copytree(workdir / "sim", destination, dirs_exist_ok=True)
+    except OSError as refused:  # shutil.Error is one
+        return {"file": str(destination), "did": "not kept", "why": str(refused),
+                "line": "not kept: %s — %s" % (destination, refused)}
+    why = "the simulation project: diagram.json, wokwi.toml and the chips"
+    return {"file": str(destination), "did": "wrote", "why": why, "line": "wrote %s — %s" % (destination, why)}
+
+
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
@@ -763,7 +793,10 @@ def report(stages, args, workdir=None, requirements=None):
     kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
     if kept is not None and getattr(args, "requirements", None):
         kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
-        kept.append(keep_pins(Path(args.requirements), Path(args.keep)))
+        kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
+    simulation = keep_simulation(workdir, simulation_dir(args)) if workdir is not None and simulation_dir(args) else None
+    if simulation is not None:
+        kept = (kept or []) + [simulation]
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code],
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}

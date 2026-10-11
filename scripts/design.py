@@ -110,7 +110,8 @@ def read(path):
         if not isinstance(signal, dict) or not isinstance(signal.get("name"), str) or not signal["name"]:
             raise DesignError("%s: signals[%d] needs a `name`; a signal is {name, needs, pin?, bus?}"
                               % (path, index))
-        if not isinstance(signal.get("needs", []), list):
+        needs = signal.get("needs", [])
+        if not isinstance(needs, list) or not all(isinstance(need, str) for need in needs):
             raise DesignError("%s: signals[%d].needs must be a list of what the pin must do"
                               % (path, index))
         if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
