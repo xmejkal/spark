@@ -1,9 +1,20 @@
 [
  {"file": "scripts/breadboard.py", "name": "a point is not followed through a named net, so ground splits into many lines", "find": "                      + [\"net:\" + n for n in element.get(\"connected_source_net_ids\") or []])", "replace": "                      )"},
+ {"file": "scripts/breadboard.py", "name": "a part alone on an off-board supply vanishes", "find": "if len(found) > 1 or nets[root]]", "replace": "if len(found) > 1]"},
  {"file": "scripts/breadboard.py", "name": "each ground pad is its own point", "find": "    return \"GND\" if re.fullmatch(r\"GND\\d*\", label) else label", "replace": "    return label"},
  {"file": "scripts/breadboard.py", "name": "a leg the record names is not said", "find": "\" (%s)\" % leg if leg else \"\"", "replace": "\"\""},
- {"file": "scripts/breadboard.py", "name": "a resistor's end does not say what it is for", "find": "\" \" + word if word else \"\"", "replace": "\"\""},
- {"file": "scripts/breadboard.py", "name": "nothing your drawer holds reads yours", "find": "            if (entry.get(\"used_in\") or {}).get(name) and record_id in part_ids | {board_id}:", "replace": "            if False:"},
+ {"file": "scripts/breadboard.py", "name": "a resistor's end does not say which resistor or what it is for", "find": "            return \"%s (%s %s), end %s\" % (tag, value, purpose, number)", "replace": "            return \"%s, end %s\" % (value, number)"},
+ {"file": "scripts/breadboard.py", "name": "a point with more ends than a row holds is not sent to a rail", "find": "        if len(ends) > ROW_HOLES:", "replace": "        if False:"},
+ {"file": "scripts/breadboard.py", "name": "identical parts are not totalled", "find": "    rows += [\"| %d | %s | %s | %s |\" % (len(names),", "replace": "    rows += [\"| %d | %s | %s | %s |\" % (1,"},
+ {"file": "scripts/breadboard.py", "name": "nothing your drawer holds for this project reads yours", "find": "            if (entry.get(\"used_in\") or {}).get(name):", "replace": "            if False:"},
+ {"file": "scripts/breadboard.py", "name": "what you own but have not held here reads to get", "find": "            elif said[record_id] == \"to get\" and entry.get(\"count\", 1):", "replace": "            elif False:"},
+ {"file": "scripts/breadboard.py", "name": "an entry the person set aside still counts", "find": "        if entry.get(\"skip\"):\n            continue", "replace": "        if False:\n            continue"},
  {"file": "scripts/breadboard.py", "name": "a project with nothing built gets no word of how to build it", "find": "    if not circuit_path.is_file():", "replace": "    if False:"},
- {"file": "scripts/check_spine.py", "name": "--keep writes no breadboard sheet", "find": "            print(\"  %s\" % keep_breadboard(Path(args.requirements), Path(args.keep)), file=sys.stderr)", "replace": "            pass"}
+ {"file": "scripts/breadboard.py", "name": "a failed build is read as a good one", "find": "    if failed:", "replace": "    if False:"},
+ {"file": "scripts/breadboard.py", "name": "a build of other requirements is read as this one's", "find": "    if wanted != built:", "replace": "    if False:"},
+ {"file": "scripts/breadboard.py", "name": "a CONFLICT is not said before power", "find": "        lines += [\"- **CONFLICT** on %s: %s\" % (name, conflict) for conflict in parts.pull_conflicts(part)]", "replace": "        lines += []"},
+ {"file": "scripts/breadboard.py", "name": "a pin that must not float is not said", "find": "        lines += [\"- %s %s: %s\" % (name, pin[\"pin\"], pin.get(\"note\", \"\")) for pin in part.get(\"unused_pins\") or []]", "replace": "        lines += []"},
+ {"file": "scripts/breadboard.py", "name": "--out is ignored", "find": "    out = Path(args.out) if args.out else requirements.resolve().parent / SHEET", "replace": "    out = requirements.resolve().parent / SHEET"},
+ {"file": "scripts/check_spine.py", "name": "--keep writes no breadboard sheet", "find": "            print(\"  %s\" % keep_breadboard(Path(args.requirements), Path(args.keep), stages), file=sys.stderr)", "replace": "            pass"},
+ {"file": "scripts/check_spine.py", "name": "a build that did not finish still writes a sheet from an earlier dist", "find": "    if not any(stage.name == \"build\" and stage.status == OK for stage in stages):", "replace": "    if False:"}
 ]

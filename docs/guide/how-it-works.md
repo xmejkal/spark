@@ -58,6 +58,7 @@ The files that join the steps:
 | `.spark/cache/<variant>.pins_arduino.h`, the vendor's pin header | `check_vendor_pins.py` without `--offline` | `check_vendor_pins.py --offline` and `check_all.py`'s vendor-truth, which fall back to spark's own copy for the variants of the two boards it ships (`dfrobot_firebeetle2_esp32s3`, `XIAO_ESP32C6`) |
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
 | `firmware/pins.py` | `assign_pins.py --emit-pins` | your firmware |
+| `breadboard.md`, the parts and how to wire them | `check_spine.py --keep .` after a build that finished, or `breadboard.py` | you, at the bench |
 
 The converter's own [ARCHITECTURE.md](../../tools/circuit-to-wokwi/ARCHITECTURE.md) shows its part of the path.
 
@@ -113,6 +114,8 @@ Each by its name in check_all's answer:
 - `emit_board.py`: a pin map and a module list, as a board file you can build (here, `board.tsx`).
 - `emit_footprint.py`: a board definition, turned into the footprint module its design imports.
 - `flash_image.py`: a flash image with MicroPython and the project's files, for a headless simulation.
+- `breadboard.py`: the built board as a breadboard sheet: the parts, each resistor they ask for, every wire by the
+  board's printed labels and the parts' legs, and what each record says to check before power ([P191](https://github.com/xmejkal/spark/issues/143)).
 
 ### The facts
 

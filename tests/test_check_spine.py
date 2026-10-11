@@ -357,6 +357,17 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("board D3", (into / "breadboard.md").read_text())
         self.assertIn("the parts and how to wire them on a breadboard", err.getvalue())
 
+    def test_a_build_that_did_not_finish_writes_no_sheet_and_says_why(self):
+        # P191's council: a failed build wrote a sheet from the earlier dist/, wiring parts the requirements had dropped.
+        import argparse, contextlib, io
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        into = Path(tempfile.mkdtemp()) / "project"
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+        self.assertFalse((into / "breadboard.md").exists())
+        self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
+
     def test_without_it_the_temp_directory_is_still_removed(self):
         import argparse, contextlib, io
         work = self.workdir()

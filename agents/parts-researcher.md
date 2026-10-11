@@ -90,7 +90,9 @@ under a name is worse than no record.
   names the part instead of summing a zero.
 - `pin_order` — pad 1..N by name, unused pads `null`. **Pads, not pins**: a record saying `pinrow5`
   beside seven names shipped boards with no routing. With it, `pin_order_proof` `{verified, source}`
-  — how and where the order was read; a pin order read wrong reverses a supply (P81).
+  — how and where the order was read; a pin order read wrong reverses a supply (P81). Optionally `legs`,
+  by the same pin names: how a person tells each pin apart on the part (the longer leg, the flat side), read off the
+  same drawing; the breadboard sheet prints it.
 - `footprint` — a footprinter string (`pinrow4`, `headermodule6`, `jst_ph_2`) whose pad count
   matches `pin_order`; a JLCPCB id (`jlcpcb:C…`) when the module has one.
 - `body_mm` — width and height from the vendor's drawing, with the URL; an invented size makes

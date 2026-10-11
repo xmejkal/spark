@@ -1,6 +1,6 @@
 ---
-description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
+description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram and a breadboard sheet (the parts and how to wire them) generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
 ---
 
 # spark:build
@@ -69,8 +69,11 @@ where every check already looks. **Without it the chain builds in a temp directo
 which is right for a check and wrong for the command someone is told to run first — the project
 would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
 a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, edited or
-not; delete it to have it regenerated. It also writes `breadboard.md`: the parts, the resistors they ask for, and every
-wire, by the board's printed labels and the parts' legs ([P191](https://github.com/xmejkal/spark/issues/143)). `dist/` is still replaced with a build of the freshly generated board, not of
+not; delete it to have it regenerated. After a build that finished, it also writes `breadboard.md`, new each time: the
+parts, the resistors they ask for, every wire by the board's printed labels and the parts' legs, and what each record
+says to check before power ([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. A line
+`no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
+again after a build. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.
 

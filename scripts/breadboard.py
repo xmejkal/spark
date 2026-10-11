@@ -5,22 +5,26 @@ The breadboard sheet: from the board that was built, what to put on a breadboard
     breadboard.py requirements.json                 print the sheet and write breadboard.md beside the file
     breadboard.py requirements.json --out FILE      write it there instead
 
-Example, in a project after `/spark:build`:
+Example, in a project after `/spark:build` (`check_spine.py requirements.json --keep .` writes the sheet itself):
 
     python3 "$CLAUDE_PLUGIN_ROOT/scripts/breadboard.py" requirements.json
 
-Why: the build knows every part and every wire, and a person had neither: the resistors a part asks for lived only in
-board.tsx, and the simulation's diagram named a stand-in devkit's GPIO numbers (P191, #143; the breadboard epic, P79).
+What it writes, each time from scratch:
+  - the parts: the board, each part with how many, each resistor a part asks for (R1, R2, …, through-hole) and what
+    it is for, and whether you have each: yours (your drawer holds it for this project), in your drawer (you own it,
+    not held here), to get; blank when the project is not on your list (/spark:init puts it there);
+  - the wiring, one connection point per line: the board's printed label and each part's pin and leg. Put a point's
+    ends in one breadboard row, or join them with a wire; a point with more ends than a row holds goes on a rail;
+  - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
-How: the connections come from the built circuit (dist/board/circuit.json), the same file every check reads, so the
-sheet says what was built. Each connection is one point: the board's printed label, and each part's pin with the leg
-its record names. Put a point's ends in one breadboard row, or join them with a wire. The parts list comes from the
-requirements, with each resistor a part asks for; a part your drawer holds for this project reads "yours".
+It reads the built circuit (dist/board/circuit.json), the same file every check reads, so the sheet is the board that
+was built. A circuit from a failed build, or from another requirements file, is refused: build again.
 
-Exit 0: the sheet was written; 2: it could not be, for example nothing is built yet.
+Exit 0: the sheet was written; 2: it could not be (nothing built, a stale or failed build, a file it cannot write).
 """
 
 import argparse
+import collections
 import json
 import re
 import sys
@@ -31,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import design  # noqa: E402
 import drawer  # noqa: E402
 import emit_board  # noqa: E402
+import parts  # noqa: E402
 import store  # noqa: E402
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
@@ -39,20 +44,26 @@ CIRCUIT = Path("dist") / "board" / "circuit.json"
 SHEET = "breadboard.md"
 #: The component every generated design calls its dev board (emit_board, the converter's BOARD mapping).
 BOARD_COMPONENT = "Mcu"
-#: What each kind of passive a part asks for does: the word on its end, and the phrase in the parts list.
-PURPOSE = {"pullup": ("pull-up", "pull-up on"), "pulldown": ("pull-down", "pull-down on"),
-           "series": ("", "in series with"), "divider": ("divider", "divider on")}
+#: The holes of one breadboard row on one side of the gap: a point with more ends goes on a rail.
+ROW_HOLES = 4
+#: What each kind of passive a part asks for does, said the way a person reads it.
+PURPOSE = {"pullup": "pull-up on", "pulldown": "pull-down on", "series": "in series with", "divider": "divider on"}
+LEGEND = ("*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · "
+          "to get = not in your drawer · blank = this project is not on your list (`/spark:init` puts it there)")
+
+#: One connection point: the (component, port) pairs it joins, and the names of the nets on it.
+Point = collections.namedtuple("Point", "members nets")
 
 
 class NotBuilt(Exception):
-    """There is no built circuit to read."""
+    """There is no built circuit to read, or it is not this design's."""
 
 
 def points(circuit):
     """
-    Every connection point of the built circuit, each a list of (component, port) that share it. Traces join ports and
-    nets; a point is what they join, followed through both (netlist.py keeps a pin-to-pin trace's net apart from a named
-    one on purpose; a breadboard row does not).
+    Every connection point of the built circuit. Traces join ports and nets; a point is what they join, followed through
+    both (netlist.py keeps a pin-to-pin trace's net apart from a named one on purpose; a breadboard row does not). A port
+    alone on a named net is a point too: a supply that comes from off the board.
     """
     parent = {}
 
@@ -70,44 +81,142 @@ def points(circuit):
             for other in joined[1:]:
                 parent[find(other)] = find(joined[0])
     components = {e["source_component_id"]: e for e in circuit if e.get("type") == "source_component"}
-    groups = {}
+    members, nets = collections.defaultdict(list), collections.defaultdict(list)
     for port in (e for e in circuit if e.get("type") == "source_port"):
-        node = "port:" + port["source_port_id"]
-        if node in parent:
-            groups.setdefault(find(node), []).append((components[port["source_component_id"]], port))
-    return [members for members in groups.values() if len(members) > 1]
+        if "port:" + port["source_port_id"] in parent:
+            members[find("port:" + port["source_port_id"])].append((components[port["source_component_id"]], port))
+    for net in (e for e in circuit if e.get("type") == "source_net"):
+        if "net:" + net["source_net_id"] in parent and net.get("name"):
+            nets[find("net:" + net["source_net_id"])].append(net["name"])
+    return [Point(found, sorted(nets[root])) for root, found in members.items() if len(found) > 1 or nets[root]]
 
 
-def _board_label(board, port):
-    """The board's printed label for one of its ports: a pad its file names, every ground pad as one GND."""
-    pads = set(board.get("pins") or {}) | set(board.get("power_pads") or {})
-    label = next((hint for hint in port.get("port_hints") or [] if hint in pads), port.get("name"))
+def printed_label(board, port):
+    """
+    What the board's silkscreen prints beside one of its pads: a label its header rows list, a pad or power pad of its
+    file, or the printed spelling of an alias (MISO is printed MI); never a bare pin number. Every ground pad is GND.
+    """
+    physical = board.get("physical") or {}
+    rows = [label for row in (physical.get("header_order") or {}).values() if isinstance(row, list) for label in row]
+    aliases = physical.get("pad_aliases") or {}
+    known = set(rows) | set(board.get("pins") or {}) | set(board.get("power_pads") or {}) | set(aliases.values())
+    hints = port.get("port_hints") or []
+    label = next((aliases.get(hint, hint) for hint in hints if hint in known or hint in aliases), None) or next(
+        (hint for hint in hints if not re.fullmatch(r"pin\d+|\d+", hint)), port.get("name"))
     return "GND" if re.fullmatch(r"GND\d*", label) else label
 
 
-def _purposes(parts):
-    """{component name of a passive a part asks for: (the word on its end, what it does)}, from the parts' records."""
+def _passives(design_parts):
+    """{component name of a passive a part asks for: what it is for}, from the parts' records."""
     found = {}
-    for part in parts:
+    for part in design_parts:
         for host_part in part.get("host_parts") or []:
-            word, phrase = PURPOSE.get(host_part["kind"], (host_part["kind"], host_part["kind"] + " on"))
+            phrase = PURPOSE.get(host_part["kind"], host_part["kind"] + " on")
             for name in emit_board.host_part_names(part, host_part):
-                found[name] = (word, "%s %s %s" % (phrase, emit_board.component_name(part), host_part["pin"]))
+                found[name] = "%s %s %s" % (phrase, emit_board.component_name(part), host_part["pin"])
     return found
 
 
-def _owned(requirements_path, board_id, part_ids):
-    """{record id: "yours"} for what the drawer holds for this project; None when the project is not on the list."""
+def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
+    """Refuse a circuit that is not a build of this design: not a circuit, a failed build, or other parts."""
+    again = "build again: `check_spine.py %s --keep .`" % requirements_path.name
+    if not isinstance(circuit, list) or not all(isinstance(element, dict) for element in circuit):
+        raise NotBuilt("%s is not a built circuit: %s" % (circuit_path, again))
+    failed = sorted({e["type"] for e in circuit if re.fullmatch(r"source_\w+_error", e.get("type") or "")})
+    if failed:
+        raise NotBuilt("the last build failed (%s): %s" % (", ".join(failed), again))
+    wanted = ({BOARD_COMPONENT} | {emit_board.component_name(part) for part in design_parts}
+              | set(_passives(design_parts)))
+    built = {e["name"] for e in circuit if e.get("type") == "source_component"
+             and e.get("ftype") in ("simple_chip", "simple_resistor")}
+    if wanted != built:
+        raise NotBuilt("%s was built from other requirements (in the build only: %s; in the file only: %s): %s"
+                       % (circuit_path, ", ".join(sorted(built - wanted)) or "nothing",
+                          ", ".join(sorted(wanted - built)) or "nothing", again))
+
+
+def _have(requirements_path, record_ids):
+    """{record id: yours | in your drawer | to get}, from the drawer; None when the project is not on the list."""
     name = store.project_name(requirements_path.resolve().parent)
     if not name:
         return None
-    yours = {}
+    said = {record_id: "to get" for record_id in record_ids}
     for entry in drawer.entries().values():
         target = entry.get("is") if isinstance(entry.get("is"), dict) else {}
-        for record_id in target.values():
-            if (entry.get("used_in") or {}).get(name) and record_id in part_ids | {board_id}:
-                yours[record_id] = "yours"
-    return yours
+        if entry.get("skip"):
+            continue
+        for record_id in (value for value in target.values() if value in said):
+            if (entry.get("used_in") or {}).get(name):
+                said[record_id] = "yours"
+            elif said[record_id] == "to get" and entry.get("count", 1):
+                said[record_id] = "in your drawer"
+    return said
+
+
+def _natural(text):
+    """D3 before D10: digits compared as numbers."""
+    return [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", text)]
+
+
+def _parts_table(board, design_parts, resistors, have):
+    """The parts to buy or take from the drawer, as Markdown rows."""
+    status = (lambda record_id: have.get(record_id, "to get")) if have is not None else (lambda record_id: "")
+    rows = ["| qty | part | for | have |", "| --- | --- | --- | --- |",
+            "| 1 | %s | the board | %s |" % (board.get("name"), status(board.get("id")))]
+    by_record = collections.OrderedDict()
+    for part in design_parts:
+        by_record.setdefault(part["id"], (part, []))[1].append(emit_board.component_name(part))
+    rows += ["| %d | %s | %s | %s |" % (len(names), part.get("name"), ", ".join(sorted(names)), status(record_id))
+             for record_id, (part, names) in by_record.items()]
+    rows += ["| %s | %s resistor, through-hole | %s | |" % (tag, value, purpose) for tag, value, purpose in resistors.values()]
+    return rows + ["| | a breadboard and jumper wires | | |", "", LEGEND]
+
+
+def _wiring(board, circuit, design_parts, resistors):
+    """One numbered line per connection point, board labels first."""
+    records = {emit_board.component_name(part): part for part in design_parts}
+
+    def end(component, port):
+        """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
+        differently (a resistor by its tag), so the board's ground pads are the only ends that read the same, and they
+        are one."""
+        if component["name"] == BOARD_COMPONENT:
+            return "board %s" % printed_label(board, port)
+        if component["name"] in resistors:
+            tag, value, purpose = resistors[component["name"]]
+            number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
+            return "%s (%s %s), end %s" % (tag, value, purpose, number)
+        leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
+        return "%s %s%s" % (component["name"], port.get("name"), " (%s)" % leg if leg else "")
+
+    said = []
+    for point in points(circuit):
+        ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
+        ends.sort(key=lambda one: (not one.startswith("board "), _natural(one)))
+        line = " · ".join(ends)
+        if len(point.members) == 1:
+            line += " · the %s supply, from off the board" % " / ".join(point.nets)
+        if len(ends) > ROW_HOLES:
+            line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
+                     % ends[0] if ends[0].startswith("board ") else " — put these ends on one rail")
+        said.append(line)
+    said.sort(key=lambda line: (not line.startswith("board "), _natural(line)))
+    return ["%d. %s" % (number, line) for number, line in enumerate(said, 1)]
+
+
+def _before_power(design_parts):
+    """What each part's record says must be true before power is applied: its CONFLICTs, its floating pins, its
+    warnings, in the record's own words."""
+    lines, seen = [], set()
+    for part in design_parts:
+        name = emit_board.component_name(part)
+        lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in parts.pull_conflicts(part)]
+        lines += ["- %s %s: %s" % (name, pin["pin"], pin.get("note", "")) for pin in part.get("unused_pins") or []]
+        if part["id"] not in seen:
+            seen.add(part["id"])
+            lines += ["- %s: %s" % (part.get("name"), requirement) for requirement in part.get("host_requirements") or []]
+    shows = ", ".join("`parts.py --show %s`" % record_id for record_id in sorted({part["id"] for part in design_parts}))
+    return lines + ["", "Each record whole, with what it asks of the board: %s." % shows]
 
 
 def sheet(requirements_path, circuit_path=None):
@@ -118,38 +227,23 @@ def sheet(requirements_path, circuit_path=None):
         raise NotBuilt("nothing is built at %s yet: run `check_spine.py %s --keep .` first"
                        % (circuit_path, requirements_path.name))
     built = design.load(requirements_path)
-    circuit = json.loads(circuit_path.read_text())
-    records = {emit_board.component_name(part): part for part in built.parts}
-    purposes = _purposes(built.parts)
-    owned = _owned(requirements_path, built.board.get("id"), {part["id"] for part in built.parts})
-    have = (lambda record_id: owned.get(record_id, "to get")) if owned is not None else (lambda record_id: "")
-
-    def end(component, port):
-        """One end of a connection, as a person finds it on the bench."""
-        if component["name"] == BOARD_COMPONENT:
-            return "board %s" % _board_label(built.board, port)
-        if component.get("ftype") == "simple_resistor":
-            word = purposes.get(component["name"], ("", ""))[0]
-            return "%s%s, end %s" % (component.get("display_resistance") or "a resistor", " " + word if word else "",
-                                     re.sub(r"\D", "", port.get("name") or "") or port.get("name"))
-        leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
-        return "%s %s%s" % (component["name"], port.get("name"), " (%s)" % leg if leg else "")
-
+    try:
+        circuit = json.loads(circuit_path.read_text())
+    except ValueError as broken:
+        raise NotBuilt("%s is not JSON (%s): build again" % (circuit_path, broken)) from broken
+    _check_fresh(circuit, built.parts, circuit_path, requirements_path)
+    passives = _passives(built.parts)
+    resistors = collections.OrderedDict(
+        (c["name"], ("R%d" % number, c.get("display_resistance") or "", passives.get(c["name"], "")))
+        for number, c in enumerate((c for c in circuit if c.get("type") == "source_component"
+                                    and c.get("ftype") == "simple_resistor"), 1))
+    have = _have(requirements_path, {part["id"] for part in built.parts} | {built.board.get("id")})
     lines = ["# Breadboard: %s, on a %s" % (requirements_path.resolve().parent.name, built.board.get("name")), "",
-             "## Parts", "", "| | part | for | |", "| --- | --- | --- | --- |",
-             "| 1 | %s | the board | %s |" % (built.board.get("name"), have(built.board.get("id")))]
-    lines += ["| 1 | %s | %s | %s |" % (part.get("name"), emit_board.component_name(part), have(part["id"]))
-              for part in built.parts]
-    lines += ["| 1 | %s resistor | %s | |" % (c.get("display_resistance"), purposes.get(c["name"], ("", ""))[1])
-              for c in circuit if c.get("type") == "source_component" and c.get("ftype") == "simple_resistor"]
-    lines += ["| | a breadboard and jumper wires | | |", "", "## Wiring", "",
-              "Each line is one point: put its ends in one breadboard row, or join them with a wire.", ""]
-    said = []
-    for members in points(circuit):
-        ends = list(dict.fromkeys(end(component, port) for component, port in members))
-        said.append(" · ".join(sorted(ends, key=lambda one: (not one.startswith("board "), one))))
-    lines += ["%d. %s" % (number, line)
-              for number, line in enumerate(sorted(said, key=lambda line: (not line.startswith("board "), line)), 1)]
+             "## Parts", ""]
+    lines += _parts_table(built.board, built.parts, resistors, have)
+    lines += ["", "## Wiring", "", "Each line is one point: put its ends in one breadboard row, or join them with a wire.", ""]
+    lines += _wiring(built.board, circuit, built.parts, resistors)
+    lines += ["", "## Before you power it", ""] + _before_power(built.parts)
     return "\n".join(lines) + "\n"
 
 
@@ -167,15 +261,14 @@ def main(argv=None):
     parser.add_argument("--out", help="where to write the sheet (default: breadboard.md beside the requirements file)")
     args = parser.parse_args(argv)
     requirements = Path(args.requirements)
+    out = Path(args.out) if args.out else requirements.resolve().parent / SHEET
     try:
-        text = sheet(requirements)
-    except (NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
+        written = write(requirements, out)
+    except (NotBuilt, design.DesignError, store.StoreProblem, OSError) as stopped:
         print("breadboard.py: could not run — %s" % stopped, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    out = Path(args.out) if args.out else requirements.resolve().parent / SHEET
-    out.write_text(text)
-    print(text, end="")
-    print("wrote %s" % out, file=sys.stderr)
+    print(written.read_text(), end="")
+    print("wrote %s" % written, file=sys.stderr)
     return EXIT_OK
 
 

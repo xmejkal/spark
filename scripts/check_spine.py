@@ -577,7 +577,8 @@ def main(argv=None):
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
-                             "left alone and named")
+                             "left alone and named. With a requirements file it also writes breadboard.md: the "
+                             "parts and how to wire them on a breadboard")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
@@ -666,8 +667,14 @@ def keep_into(workdir, destination):
     return said
 
 
-def keep_breadboard(requirements, destination):
-    """The breadboard sheet beside the kept board (P191, #143): the parts and how to wire them, or why there is none."""
+def keep_breadboard(requirements, destination, stages=()):
+    """
+    The breadboard sheet beside the kept board (P191, #143): the parts and how to wire them, or why there is none. Only
+    from a build that finished in this run: an earlier dist/ is another design's wiring.
+    """
+    if not any(stage.name == "build" and stage.status == OK for stage in stages):
+        return ("no breadboard sheet: the build did not finish in this run, so a breadboard.md beside it is from an "
+                "earlier build")
     try:
         written = breadboard.write(requirements, destination / breadboard.SHEET, destination / breadboard.CIRCUIT)
     except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
@@ -693,7 +700,7 @@ def report(stages, args, workdir=None, requirements=None):
         for line in keep_into(workdir, args.keep):
             print("  %s" % line, file=sys.stderr)
         if getattr(args, "requirements", None):
-            print("  %s" % keep_breadboard(Path(args.requirements), Path(args.keep)), file=sys.stderr)
+            print("  %s" % keep_breadboard(Path(args.requirements), Path(args.keep), stages), file=sys.stderr)
     if workdir.exists():
         shutil.rmtree(workdir, ignore_errors=True)
     return code

@@ -31,7 +31,8 @@ Use `--label FACT=word|word` when the maker names a fact its own way.
 
 ## The pin order and the warnings
 
-The pin order comes from the package drawing: fill `pin_order_proof` with how it was read and the
+The pin order comes from the package drawing (and, when the drawing shows it, `legs`: how a person tells each pin
+apart on the part): fill `pin_order_proof` with how it was read and the
 page — `verified: true` only when the drawing in the kept datasheet settles it. Every hazard a person
 must see — polarity, which lead is which, what reversing it does — goes into `host_requirements`,
 which spark prints. Never leave a warning only in a `//` note.

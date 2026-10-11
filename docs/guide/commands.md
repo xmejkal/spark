@@ -184,7 +184,8 @@ out of the bag. Page: [`commands/identify.md`](../../commands/identify.md).
 A requirements file becomes a board that builds, with a Wokwi diagram generated from it, or it names the stage that
 stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey.md#build)).
 
-With `--keep .` it writes `board.tsx`, its footprint and `dist/` into the project. An existing `board.tsx` is left
+With `--keep .` it writes `board.tsx`, its footprint, `dist/` and `breadboard.md`, the parts and how to wire them, into
+the project. An existing `board.tsx` is left
 alone, edited or not, and `dist/` is then built from the requirements file, not from your `board.tsx`
 ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`; to regenerate it, delete it. The Wokwi diagram is written to a temporary folder and
