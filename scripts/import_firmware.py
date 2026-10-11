@@ -36,7 +36,7 @@ from outcomes import EXIT_FOR, answer  # noqa: E402
 
 STAND_IN = Path(__file__).resolve().parent / "stand_in"
 #: The boot file, never imported, and the pin map the build writes, which does not count as firmware someone wrote.
-BOOT_FILE, PIN_MAP = "main.py", "pins.py"
+BOOT_FILE, PIN_MAP, PIN_MODULE = "main.py", "pins.py", "pins"
 DEFAULT_TIMEOUT_S = 5.0
 IMPORTED, RAISED, TIMED_OUT = "imported", "raised", "timed out"
 #: What each child runs: import the module argv[1], with the folders argv[2:] first on sys.path.
@@ -66,14 +66,15 @@ def look(project, timeout_s):
     firmware = (project / "firmware").resolve()  # whole: the child runs inside it, so a relative path would name nothing
     if not firmware.is_dir():
         return [], [], ["no firmware/ folder in %s: there is nothing to import" % project]
-    files = sorted(path.name for path in firmware.glob("*.py") if path.name != BOOT_FILE)
+    names = sorted({path.stem for path in firmware.glob("*.py") if path.name != BOOT_FILE}
+                   | {path.parent.name for path in firmware.glob("*/__init__.py")})  # a package, the bin's shape
     modules = []
-    for file in files:
-        status, detail = import_one(Path(file).stem, firmware, timeout_s)
-        modules.append({"module": Path(file).stem, "status": status, "detail": detail})
+    for name in names:
+        status, detail = import_one(name, firmware, timeout_s)
+        modules.append({"module": name, "status": status, "detail": detail})
     problems = ["%s %s: %s" % (entry["module"], entry["status"], entry["detail"])
                 for entry in modules if entry["status"] != IMPORTED]
-    if not set(files) - {PIN_MAP}:
+    if not set(names) - {PIN_MODULE}:
         problems.append(NOTHING_TO_IMPORT)
     return modules, problems, []
 

@@ -2,8 +2,8 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P59: main.py is imported too, and so is run",
-  "find": "if path.name != BOOT_FILE)",
-  "replace": "if path.name)"
+  "find": "if path.name != BOOT_FILE}",
+  "replace": "if path.name}"
  },
  {
   "file": "scripts/import_firmware.py",
@@ -56,14 +56,14 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P59: a folder of main.py alone passes",
-  "find": "    if not set(files) - {PIN_MAP}:",
+  "find": "    if not set(names) - {PIN_MODULE}:",
   "replace": "    if False:"
  },
  {
   "file": "scripts/import_firmware.py",
   "name": "P59: a folder of main.py and the pin map passes",
-  "find": "    if not set(files) - {PIN_MAP}:",
-  "replace": "    if not set(files) - set():"
+  "find": "    if not set(names) - {PIN_MODULE}:",
+  "replace": "    if not set(names) - set():"
  },
  {
   "file": "scripts/import_firmware.py",
@@ -142,5 +142,11 @@
   "name": "P59 F6: a module's input() reads the caller's pipe",
   "find": "stdin=subprocess.DEVNULL, ",
   "replace": ""
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F1: a package in firmware/ is never imported",
+  "find": "| {path.parent.name for path in firmware.glob(\"*/__init__.py\")})",
+  "replace": ")"
  }
 ]

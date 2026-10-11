@@ -257,6 +257,35 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
 
 
+def with_package(project, name, init="x = 1\n"):
+    """firmware/NAME/__init__.py: the shape of the bin's firmware, a two-line main.py over a package."""
+    (project / "firmware" / name).mkdir()
+    (project / "firmware" / name / "__init__.py").write_text(init)
+    return project
+
+
+class APackageIsFirmwareToo(unittest.TestCase):
+    def test_a_package_is_imported_by_its_folder_name(self):
+        project = with_package(a_project(main="import smartbin\n", pins="BUTTON = 4\n"), "smartbin")
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+        self.assertEqual(module_named(answer, "smartbin")["status"], "imported")
+
+    def test_a_package_that_raises_is_a_problem_beside_flat_modules_that_import(self):
+        project = with_package(a_project(light="x = 1\n"), "smartbin", init="raise OSError('no bus')\n")
+        code, answer = answer_for(project)
+        self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
+        self.assertEqual(module_named(answer, "smartbin")["detail"], "OSError: no bus")
+        self.assertEqual(module_named(answer, "light")["status"], "imported")
+
+    def test_a_folder_with_no_init_is_not_firmware(self):
+        project = a_project(light="x = 1\n")
+        (project / "firmware" / "data").mkdir()
+        (project / "firmware" / "data" / "table.py").write_text("raise ValueError\n")
+        _, answer = answer_for(project)
+        self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"])
+
+
 class WhenItCannotLookTest(unittest.TestCase):
     def test_no_firmware_folder_is_could_not_run_not_a_pass(self):
         empty = Path(tempfile.mkdtemp())
