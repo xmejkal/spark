@@ -45,7 +45,7 @@ var __export = (target, all) => {
     });
 };
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/applyToPoint.js
+// node_modules/transformation-matrix/build-commonjs/applyToPoint.js
 var require_applyToPoint = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -63,7 +63,7 @@ var require_applyToPoint = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/fromObject.js
+// node_modules/transformation-matrix/build-commonjs/fromObject.js
 var require_fromObject = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -81,7 +81,7 @@ var require_fromObject = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/fromString.js
+// node_modules/transformation-matrix/build-commonjs/fromString.js
 var require_fromString = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -127,7 +127,7 @@ var require_fromString = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/identity.js
+// node_modules/transformation-matrix/build-commonjs/identity.js
 var require_identity = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -145,7 +145,7 @@ var require_identity = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/inverse.js
+// node_modules/transformation-matrix/build-commonjs/inverse.js
 var require_inverse = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -172,7 +172,7 @@ var require_inverse = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/utils.js
+// node_modules/transformation-matrix/build-commonjs/utils.js
 var require_utils = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -195,7 +195,7 @@ var require_utils = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/isAffineMatrix.js
+// node_modules/transformation-matrix/build-commonjs/isAffineMatrix.js
 var require_isAffineMatrix = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -207,7 +207,7 @@ var require_isAffineMatrix = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/translate.js
+// node_modules/transformation-matrix/build-commonjs/translate.js
 var require_translate = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -225,7 +225,7 @@ var require_translate = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/transform.js
+// node_modules/transformation-matrix/build-commonjs/transform.js
 var require_transform = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -263,7 +263,7 @@ var require_transform = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/rotate.js
+// node_modules/transformation-matrix/build-commonjs/rotate.js
 var require_rotate = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -299,7 +299,7 @@ var require_rotate = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/scale.js
+// node_modules/transformation-matrix/build-commonjs/scale.js
 var require_scale = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -326,7 +326,7 @@ var require_scale = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/shear.js
+// node_modules/transformation-matrix/build-commonjs/shear.js
 var require_shear = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -344,7 +344,7 @@ var require_shear = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/skew.js
+// node_modules/transformation-matrix/build-commonjs/skew.js
 var require_skew = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -369,7 +369,7 @@ var require_skew = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/toString.js
+// node_modules/transformation-matrix/build-commonjs/toString.js
 var require_toString = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -388,7 +388,7 @@ var require_toString = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/smoothMatrix.js
+// node_modules/transformation-matrix/build-commonjs/smoothMatrix.js
 var require_smoothMatrix = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -406,7 +406,7 @@ var require_smoothMatrix = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/fromTriangles.js
+// node_modules/transformation-matrix/build-commonjs/fromTriangles.js
 var require_fromTriangles = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -450,7 +450,7 @@ var require_fromTriangles = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/fromDefinition.js
+// node_modules/transformation-matrix/build-commonjs/fromDefinition.js
 var require_fromDefinition = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -510,7 +510,7 @@ var require_fromDefinition = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/fromTransformAttribute.autogenerated.js
+// node_modules/transformation-matrix/build-commonjs/fromTransformAttribute.autogenerated.js
 var require_fromTransformAttribute_autogenerated = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -1862,7 +1862,7 @@ var require_fromTransformAttribute_autogenerated = __commonJS(function(exports) 
   var peg$allowedStartRules = exports.StartRules = ["transformList"];
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/fromTransformAttribute.js
+// node_modules/transformation-matrix/build-commonjs/fromTransformAttribute.js
 var require_fromTransformAttribute = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -1874,7 +1874,7 @@ var require_fromTransformAttribute = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/decompose.js
+// node_modules/transformation-matrix/build-commonjs/decompose.js
 var require_decompose = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -1936,7 +1936,7 @@ var require_decompose = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/flip.js
+// node_modules/transformation-matrix/build-commonjs/flip.js
 var require_flip = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -1976,7 +1976,7 @@ var require_flip = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/fromMovingPoints.js
+// node_modules/transformation-matrix/build-commonjs/fromMovingPoints.js
 var require_fromMovingPoints = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -2008,7 +2008,7 @@ var require_fromMovingPoints = __commonJS(function(exports) {
   }
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/transformation-matrix/build-commonjs/index.js
+// node_modules/transformation-matrix/build-commonjs/index.js
 var require_build_commonjs = __commonJS(function(exports) {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -2282,7 +2282,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { readdirSync, readFileSync as readFileSync2 } from "node:fs";
 import { join } from "node:path";
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/registry/parts.json
+// node_modules/@wokwi/diagram-lint/dist/registry/parts.json
 var parts_default = [
   {
     type: "board-aitewinrobot-esp32c3-supermini",
@@ -6009,10 +6009,10 @@ var parts_default = [
   }
 ];
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/registry/part-definitions.js
+// node_modules/@wokwi/diagram-lint/dist/registry/part-definitions.js
 var partDefinitions = parts_default;
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/registry/part-registry.js
+// node_modules/@wokwi/diagram-lint/dist/registry/part-registry.js
 class PartRegistry {
   constructor() {
     this.parts = new Map;
@@ -6076,7 +6076,7 @@ class PartRegistry {
   }
 }
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/rule.js
+// node_modules/@wokwi/diagram-lint/dist/rules/rule.js
 function createIssue(rule, message, options) {
   return {
     rule: rule.id,
@@ -6087,7 +6087,7 @@ function createIssue(rule, message, options) {
     context: options?.context
   };
 }
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/duplicate-id.js
+// node_modules/@wokwi/diagram-lint/dist/rules/duplicate-id.js
 var duplicateIdRule = {
   id: "duplicate-id",
   name: "Duplicate Part ID",
@@ -6111,7 +6111,7 @@ var duplicateIdRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/invalid-attribute.js
+// node_modules/@wokwi/diagram-lint/dist/rules/invalid-attribute.js
 var invalidAttributeRule = {
   id: "invalid-attribute",
   name: "Invalid Attribute",
@@ -6155,7 +6155,7 @@ var invalidAttributeRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/utils/connection-parser.js
+// node_modules/@wokwi/diagram-lint/dist/utils/connection-parser.js
 function parseEndpoint(endpoint) {
   const colonIndex = endpoint.indexOf(":");
   if (colonIndex === -1) {
@@ -6167,7 +6167,7 @@ function parseEndpoint(endpoint) {
   };
 }
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/invalid-pin.js
+// node_modules/@wokwi/diagram-lint/dist/rules/invalid-pin.js
 function isBreadboard(type) {
   return type.startsWith("wokwi-breadboard");
 }
@@ -6233,7 +6233,7 @@ var invalidPinRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/misplaced-coords.js
+// node_modules/@wokwi/diagram-lint/dist/rules/misplaced-coords.js
 var COORD_ATTRS = ["top", "left", "rotate"];
 var misplacedCoordsRule = {
   id: "misplaced-coords",
@@ -6257,7 +6257,7 @@ var misplacedCoordsRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/missing-component.js
+// node_modules/@wokwi/diagram-lint/dist/rules/missing-component.js
 var missingComponentRule = {
   id: "missing-component",
   name: "Missing Component",
@@ -6287,7 +6287,7 @@ var missingComponentRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/redundant-parts.js
+// node_modules/@wokwi/diagram-lint/dist/rules/redundant-parts.js
 var EXCLUDED_TYPES = [
   "wokwi-text",
   "wokwi-logo",
@@ -6325,7 +6325,7 @@ var redundantPartsRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/unknown-part-type.js
+// node_modules/@wokwi/diagram-lint/dist/rules/unknown-part-type.js
 var unknownPartTypeRule = {
   id: "unknown-part-type",
   name: "Unknown Part Type",
@@ -6347,7 +6347,7 @@ var unknownPartTypeRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/unsupported-part.js
+// node_modules/@wokwi/diagram-lint/dist/rules/unsupported-part.js
 var unsupportedPartRule = {
   id: "unsupported-part",
   name: "Unsupported Part",
@@ -6372,7 +6372,7 @@ var unsupportedPartRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/wrong-coord-names.js
+// node_modules/@wokwi/diagram-lint/dist/rules/wrong-coord-names.js
 var wrongCoordNamesRule = {
   id: "wrong-coord-names",
   name: "Wrong Coordinate Names",
@@ -6412,7 +6412,7 @@ var wrongCoordNamesRule = {
     return issues;
   }
 };
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/rules/index.js
+// node_modules/@wokwi/diagram-lint/dist/rules/index.js
 var allRules = [
   duplicateIdRule,
   invalidPinRule,
@@ -6425,7 +6425,7 @@ var allRules = [
   unsupportedPartRule
 ];
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@wokwi/diagram-lint/dist/linter.js
+// node_modules/@wokwi/diagram-lint/dist/linter.js
 class DiagramLinter {
   constructor(options) {
     this.registry = new PartRegistry;
@@ -6787,7 +6787,24 @@ function emitWokwiDiagram(netlist, options = {}) {
   };
   const netOutcomes = [];
   diagram.connections = wireNets(netlist, mapped, oracle, problems, netOutcomes);
+  diagram.connections.push(...serialMonitor(mapped, oracle, skipped));
   return { diagram, problems, skipped, netOutcomes };
+}
+function serialMonitor(mapped, oracle, skipped) {
+  const board = mapped.parts.find((part) => part.wokwiType === BOARD.wokwiType);
+  if (!board)
+    return [];
+  if (!oracle.isValidPin(BOARD.wokwiType, "TX") || !oracle.isValidPin(BOARD.wokwiType, "RX")) {
+    skipped.push({
+      component: `${board.id} serial`,
+      reason: `${BOARD.wokwiType} has no pins named TX and RX: its serial monitor is left to Wokwi's own default`
+    });
+    return [];
+  }
+  return [
+    [`${board.id}:TX`, "$serialMonitor:RX", "", []],
+    [`${board.id}:RX`, "$serialMonitor:TX", "", []]
+  ];
 }
 function mapComponents(netlist, problems, skipped) {
   const parts = [];
@@ -6927,7 +6944,7 @@ function findMatchingConnection(connections, wanted) {
   return connections.find((candidate) => candidate[0] === wanted[0] && candidate[1] === wanted[1] || candidate[0] === wanted[1] && candidate[1] === wanted[0]);
 }
 
-// ../../../../tools/circuit-to-wokwi/node_modules/circuit-json/dist/index.mjs
+// node_modules/circuit-json/dist/index.mjs
 var exports_dist = {};
 __export(exports_dist, {
   all_layers: () => all_layers,
@@ -7228,7 +7245,7 @@ __export(exports_dist, {
   wave_shape: () => wave_shape
 });
 
-// ../../../../tools/circuit-to-wokwi/node_modules/format-si-unit/dist/index.js
+// node_modules/format-si-unit/dist/index.js
 var SI_PREFIX_VALUES = /* @__PURE__ */ new Map([
   ["T", 1000000000000],
   ["G", 1e9],
@@ -7501,7 +7518,7 @@ var SI_PREFIXES2 = [
 ];
 var FALLBACK_PREFIX = SI_PREFIXES2[SI_PREFIXES2.length - 1];
 
-// ../../../../tools/circuit-to-wokwi/node_modules/zod/v3/helpers/util.js
+// node_modules/zod/v3/helpers/util.js
 var util;
 (function(util) {
   util.assertEqual = (_) => {};
@@ -7632,7 +7649,7 @@ var getParsedType = (data) => {
   }
 };
 
-// ../../../../tools/circuit-to-wokwi/node_modules/zod/v3/ZodError.js
+// node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -7746,7 +7763,7 @@ ZodError.create = (issues) => {
   return error;
 };
 
-// ../../../../tools/circuit-to-wokwi/node_modules/zod/v3/locales/en.js
+// node_modules/zod/v3/locales/en.js
 var errorMap = (issue, _ctx) => {
   let message;
   switch (issue.code) {
@@ -7849,13 +7866,13 @@ var errorMap = (issue, _ctx) => {
 };
 var en_default = errorMap;
 
-// ../../../../tools/circuit-to-wokwi/node_modules/zod/v3/errors.js
+// node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function getErrorMap() {
   return overrideErrorMap;
 }
 
-// ../../../../tools/circuit-to-wokwi/node_modules/zod/v3/helpers/parseUtil.js
+// node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
   const { data, path, errorMaps, issueData } = params;
   const fullPath = [...path, ...issueData.path || []];
@@ -7961,14 +7978,14 @@ var isDirty = (x) => x.status === "dirty";
 var isValid = (x) => x.status === "valid";
 var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-// ../../../../tools/circuit-to-wokwi/node_modules/zod/v3/helpers/errorUtil.js
+// node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil) {
   errorUtil.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// ../../../../tools/circuit-to-wokwi/node_modules/zod/v3/types.js
+// node_modules/zod/v3/types.js
 class ParseInputLazyPath {
   constructor(parent, value, path, key) {
     this._cachedPath = [];
@@ -11338,7 +11355,7 @@ var optionalType = ZodOptional.create;
 var nullableType = ZodNullable.create;
 var preprocessType = ZodEffects.createWithPreprocess;
 var pipelineType = ZodPipeline.create;
-// ../../../../tools/circuit-to-wokwi/node_modules/circuit-json/dist/index.mjs
+// node_modules/circuit-json/dist/index.mjs
 var resistance = stringType().or(numberType()).transform((v) => parseAndConvertSiUnit(v, "Ω").value);
 var capacitance = stringType().or(numberType()).transform((v) => parseAndConvertSiUnit(v, "F").value).transform((value) => {
   return Number.parseFloat(value.toPrecision(12));
@@ -15241,20 +15258,20 @@ var any_soup_element = any_circuit_element;
 expectTypesMatch(true);
 expectStringUnionsMatch(true);
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@tscircuit/circuit-json-util/dist/index.js
+// node_modules/@tscircuit/circuit-json-util/dist/index.js
 var import_transformation_matrix = __toESM(require_build_commonjs(), 1);
 
-// ../../../../tools/circuit-to-wokwi/node_modules/parsel-js/dist/parsel.min.js
+// node_modules/parsel-js/dist/parsel.min.js
 var t = new Set(["combinator", "comma"]);
 var n = new Set(["not", "is", "where", "has", "matches", "-moz-any", "-webkit-any", "nth-child", "nth-last-child"]);
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@tscircuit/circuit-json-util/dist/index.js
+// node_modules/@tscircuit/circuit-json-util/dist/index.js
 var import_transformation_matrix2 = __toESM(require_build_commonjs(), 1);
 var import_transformation_matrix3 = __toESM(require_build_commonjs(), 1);
 var import_transformation_matrix4 = __toESM(require_build_commonjs(), 1);
 var import_transformation_matrix5 = __toESM(require_build_commonjs(), 1);
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@flatten-js/core/dist/main.mjs
+// node_modules/@flatten-js/core/dist/main.mjs
 var CCW = true;
 var CW = false;
 var ORIENTATION = { CCW: -1, CW: 1, NOT_ORIENTABLE: 0 };
@@ -20761,7 +20778,7 @@ Flatten.parseWKT = parseWKT;
 Flatten.BooleanOperations = BooleanOperations;
 Flatten.Relations = Relations;
 
-// ../../../../tools/circuit-to-wokwi/node_modules/@tscircuit/circuit-json-util/dist/index.js
+// node_modules/@tscircuit/circuit-json-util/dist/index.js
 var import_transformation_matrix6 = __toESM(require_build_commonjs(), 1);
 function connect(map, a, b) {
   if (!a || !b)
@@ -21507,7 +21524,7 @@ var PIN1_LOCATION_PARTS = {
 };
 var PIN1_LOCATIONS = Object.keys(PIN1_LOCATION_PARTS);
 
-// ../../../../tools/circuit-to-wokwi/node_modules/circuit-json-to-connectivity-map/dist/index.js
+// node_modules/circuit-json-to-connectivity-map/dist/index.js
 function findConnectedNetworks(connections) {
   const networks = /* @__PURE__ */ new Map;
   let netCounter = 0;

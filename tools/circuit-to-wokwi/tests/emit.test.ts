@@ -76,6 +76,14 @@ describe("emitting a Wokwi diagram", () => {
     expect(sdaWires).toHaveLength(2); // one to each of the other two members
   });
 
+  test("wires the board's serial port to the serial monitor, so a scenario hears the firmware", () => {
+    // P190 (#142): Wokwi stopped connecting an ESP32's UART to the monitor by default (CLI 0.28.0, API 2026-10-09).
+    // Without these two wires a scenario's wait-serial heard nothing, not even the ROM's boot line, and timed out.
+    const { emitted } = emitFrom(tinyCircuit());
+    expect(emitted.diagram.connections).toContainEqual([`${MCU_ID}:TX`, "$serialMonitor:RX", "", []]);
+    expect(emitted.diagram.connections).toContainEqual([`${MCU_ID}:RX`, "$serialMonitor:TX", "", []]);
+  });
+
   test("colours ground black and power red, as Wokwi's own diagrams do", () => {
     const { emitted } = emitFrom(tinyCircuit());
 

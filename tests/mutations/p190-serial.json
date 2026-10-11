@@ -1,0 +1,4 @@
+[
+ {"file": "tools/circuit-to-wokwi/lib/emitters/wokwi.ts", "name": "the board's serial port is never wired to the serial monitor", "find": "  diagram.connections.push(...serialMonitor(mapped, oracle, skipped));", "replace": "  // serial monitor left unwired"},
+ {"file": "tools/circuit-to-wokwi/lib/emitters/wokwi.ts", "name": "the serial monitor's two wires cross the wrong way", "find": "    [`${board.id}:TX`, \"$serialMonitor:RX\", \"\", []],", "replace": "    [`${board.id}:TX`, \"$serialMonitor:TX\", \"\", []],"}
+]

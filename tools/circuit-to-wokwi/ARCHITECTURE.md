@@ -68,6 +68,9 @@ Written here, because nothing upstream can know it:
   pushbutton's pins are `1.l`/`2.l`, not `1`/`2`. No tool can guess this, so it is curated data;
 * **net → wires** — Wokwi has no concept of a net, only pin-to-pin wires, so each net is expanded
   (star from the board pin where there is one, otherwise a chain);
+* **the serial monitor** — the board's `TX` and `RX` wired to `$serialMonitor`. Wokwi stopped making that connection
+  by default (CLI 0.28.0, API 2026-10-09), and without it a scenario hears nothing the firmware prints, not even the
+  boot line (P190). A board part with no pins of those names is left to Wokwi's default, and said;
 * **placement** — Wokwi wants absolute pixels.
 
 ## Placement, and why it is deliberately dumb
