@@ -39,6 +39,10 @@ BEFORE_THE_BUILD = ("board", "schematic", "footprint")
 #: The exports the replan lists as working (stage 8): tsci's format, and the file it writes.
 EXPORTS = (("gerbers", "board-gerbers.zip"), ("glb", "board.glb"))
 
+#: The longest one command of the walk may take. The whole walk took 11 s on 2026-10-11; this only stops a tool that
+#: hangs from holding the suite.
+COMMAND_TIMEOUT_S = 300
+
 
 def _requirements(path):
     wanted = design.read(path)
@@ -120,7 +124,7 @@ def walk(project):
     spine = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "check_spine.py"), "requirements.json",
          "--keep", ".", "--sim-dir", "sim", "--json"],
-        cwd=str(project), capture_output=True, text=True, timeout=2 * check_spine.BUILD_TIMEOUT_S)
+        cwd=str(project), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
     verdict = json.loads(spine.stdout)
     toolchain = check_spine.find_toolchain(project)
     if toolchain is None or not any(s["name"] == "build" and s["status"] == check_spine.OK for s in verdict["stages"]):
@@ -130,7 +134,7 @@ def walk(project):
         os.symlink(modules, project / "node_modules")
     for export_format, output in EXPORTS:
         subprocess.run([str(toolchain), "export", "-f", export_format, "board.tsx", "-o", output],
-                       cwd=str(project), capture_output=True, text=True, timeout=check_spine.BUILD_TIMEOUT_S)
+                       cwd=str(project), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
     return verdict
 
 
