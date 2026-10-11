@@ -144,11 +144,12 @@ class TwoSnapshotsCompare(unittest.TestCase):
         self.assertIn("proj: fake.py two — missing from this snapshot", lines)
         self.assertIn("gone — missing from this snapshot", lines)
 
-    def test_a_changed_store_or_pin_is_named_before_the_lines(self):
+    def test_a_changed_store_or_pin_is_context_not_a_difference(self):
         old = self.f.take("old")
         (self.f.store / "drawer" / "b.json").write_text("{}")
-        lines = snapshot.report(old, self.f.take("new"))
-        self.assertTrue(lines[0].startswith("the store differs"), lines[:2])
+        new = self.f.take("new")
+        self.assertTrue(snapshot.context(old, new)[0].startswith("the store differs"), snapshot.context(old, new))
+        self.assertEqual(snapshot.report(old, new), [])
 
 
 class WhatItCouldNotRunIsSaid(unittest.TestCase):
@@ -236,6 +237,15 @@ class TheCommandLine(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("nothing differs", said)
 
+    def test_a_moved_pin_with_equal_answers_exits_0_and_names_the_pin(self):
+        self.run_main("--out", str(self.f.out / "a"), "--spark", str(self.f.spark))
+        (self.f.spark / "scripts" / "later.py").write_text("")  # spark moved on; its answers did not
+        code, said = self.run_main("--out", str(self.f.out / "b"), "--spark", str(self.f.spark),
+                                   "--against", str(self.f.out / "a" / "snapshot.json"))
+        self.assertEqual(code, 0, said)
+        self.assertIn("spark: not a git repository", said)
+        self.assertIn("nothing differs", said)
+
     def test_help_shows_the_exit_codes_and_what_it_needs(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
@@ -254,6 +264,10 @@ class TheProjectsItKnows(unittest.TestCase):
                 with self.subTest(fixture=fixture.name):
                     self.assertIn(fixture.name, found)
                     self.assertEqual(snapshot.shown(found[fixture.name]["source"]), "tests/data/snapshot/" + fixture.name)
+
+    def test_a_fixture_is_pinned_by_its_own_content_not_the_whole_repository(self):
+        fixture = sorted(p for p in (ROOT / "tests" / "data" / "snapshot").iterdir() if p.is_dir())[0]
+        self.assertTrue(snapshot._pin(fixture).startswith("in this repository: sha256 "), snapshot._pin(fixture))
 
     def test_the_live_vendor_check_is_left_out_and_said(self):
         bin_ = next(p for p in snapshot.projects() if p["name"] == "smartbin-local")

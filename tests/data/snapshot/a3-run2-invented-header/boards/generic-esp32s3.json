@@ -14,6 +14,12 @@
     "vendor": "https://wiki.dfrobot.com/SKU_DFR0975_FireBeetle_2_Board_ESP32_S3"
   },
   "physical": {
+    "footprint_module": "GenericEsp32s3",
+    "footprint_export": "GenericEsp32s3",
+    "width_mm": 25.4,
+    "height_mm": 25.4,
+    "thickness_mm": 1.6,
+    "corner_radius_mm": 1.5,
     "header": {
       "rows": 2,
       "pins": [
@@ -21,32 +27,40 @@
         4
       ],
       "pitch_mm": 2.54,
-      "row_spacing_mm": 22.86
+      "row_spacing_mm": 22.86,
+      "drill_mm": 0.9,
+      "pad_mm": 1.5,
+      "first_pad_from_edge_mm": 5.2,
+      "flush_edge": "+y"
     },
-    "width_mm": 25.4,
-    "height_mm": 25.4,
-    "footprint_export": "GenericEsp32s3"
+    "wokwi_size_px": {
+      "width": 70,
+      "height": 160
+    },
+    "header_order": {
+      "row_4a": [
+        "D2",
+        "D3",
+        "D5",
+        "D6"
+      ],
+      "row_4b": [
+        "D7",
+        "D9",
+        "GND1",
+        "3V3"
+      ]
+    }
   },
   "wokwi_part_type": "board-esp32-s3-devkitc-1",
   "wokwi_pin_naming": "gpio",
   "wokwi_power_pins": {
     "3V3": "3V3.1",
-    "GND1": "GND.1",
-    "GND2": "GND.2",
-    "GND3": "GND.3",
-    "VCC": "5V"
+    "GND1": "GND.1"
   },
   "wokwi_is_stand_in": true,
   "power_pads": {
     "GND1": {
-      "rail": "ground",
-      "direction": "out"
-    },
-    "GND2": {
-      "rail": "ground",
-      "direction": "out"
-    },
-    "GND3": {
       "rail": "ground",
       "direction": "out"
     },
@@ -56,13 +70,6 @@
       "can_supply": "regulator_3v3_a",
       "own_draw": "module_peak_a",
       "//can_supply": "P52: the figures a rail's load is summed against. The module powers its own ESP32 from this regulator before anything on the header gets any, so its own draw is a load on the rail it supplies."
-    },
-    "VCC": {
-      "rail": "5v",
-      "direction": "in",
-      "feeds": "3V3",
-      "//feeds": "P52: what reaches 3V3 comes in here, through a step-down converter, so this pad draws at most what 3V3 carries - an upper bound, the only one a record can give.",
-      "//": "The 5 V input. DFRobot: '5 V DC for powering the board (cannot charge Li-ion battery)' - see power.feeding_vcc_charges_the_battery, verified. It is a pad that works both ways and only one of them is this board's business: with nothing on the rail it carries the USB 5 V OUT, which is why `direction: in` does not mean 'always wire it'. It reaches VSYS through a P-FET, not a short (power.vcc_is_not_tied_to_vsys), so the FET is the practical current ceiling and DFRobot rate neither."
     }
   },
   "pins": {

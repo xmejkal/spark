@@ -26,6 +26,7 @@ Without either, the chain's steps are recorded as skipped. A full run takes abou
 repository, and its earlier copies are replaced.
 
 A difference is not always spark's: the report says first when the store, a project's pin or spark's pin differs.
+Those lines are context: a run on a later commit whose commands all answer as before still exits 0.
 
 Exit 0: a snapshot was taken and, with --against, nothing differs; 1: some lines differ; 2: it could not run.
 """
@@ -115,6 +116,8 @@ def _digest(folder: Path, skip=frozenset()) -> str:
 
 def _pin(folder: Path) -> str:
     """What fixes a source's content: its commit and any uncommitted files, or, outside git, a digest."""
+    if folder.resolve() != ROOT and ROOT in folder.resolve().parents:  # a fixture: its own content, not the repo's
+        return "in this repository: sha256 %s" % _digest(folder)[:12]
     git = ["git", "--no-optional-locks", "-C", str(folder)]  # never refresh the project's index: it is only read
     head = subprocess.run(git + ["rev-parse", "--short", "HEAD"], capture_output=True, text=True)
     if head.returncode:
@@ -207,9 +210,9 @@ def _said(command):
     return "skipped" if command.get("skipped") else command.get("exit")
 
 
-def report(old, new):
-    """The lines that differ between two snapshots, under each command that printed them; [] when none do. What is not
-    spark's comes first: a changed store, spark's pin, or a project's pin."""
+def context(old, new):
+    """What changed around the commands: the store, spark's pin, a project's pin. Said first, so a reader knows whose a
+    difference may be; never a difference itself, since a card's own branch always moves spark's pin."""
     lines = []
     if old.get("store", {}).get("sha256") != new["store"]["sha256"]:
         lines.append("the store differs from the one of %s: some lines may be the store's, not spark's"
@@ -220,6 +223,12 @@ def report(old, new):
         was = old.get("projects", {}).get(name)
         if was and was.get("pin") != project.get("pin"):
             lines.append("%s: pin %s → %s" % (name, was.get("pin"), project.get("pin")))
+    return lines
+
+
+def report(old, new):
+    """The lines that differ between two snapshots, under each command that printed them; [] when none do."""
+    lines = []
     for name, project in new["projects"].items():
         before = {c["label"]: c for c in old.get("projects", {}).get(name, {}).get("commands", [])}
         for command in project.get("commands", []):
@@ -291,7 +300,7 @@ def main(argv=None):
     if older is None:
         return 0
     lines = report(older, record)
-    print("\n".join(lines) if lines else "nothing differs from %s" % args.against)
+    print("\n".join(context(older, record) + (lines or ["nothing differs from %s" % args.against])))
     return 1 if lines else 0
 
 
