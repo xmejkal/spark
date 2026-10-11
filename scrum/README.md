@@ -11,10 +11,10 @@
 - An agent's launch names its card, which stands in its working stage first
   ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)), and its model:
   `Agent(description="#126 P180: the documentation expert for humans", model="sonnet", …)`.
-- Before every pull request, [a council sized to the change](#the-council-before-every-pull-request): up to six lenses
-  on Sonnet (the PO assistant, the user's journey, the tech lead, and three documentation experts, for humans, for AI,
-  and for examples and help), then the refuter on Opus. Fable only where the PO names it ([the token
-  budget](#the-token-budget)).
+- Before every pull request, [a council sized to the change](#the-council-before-every-pull-request): one reviewer
+  asking the six lenses' questions, or the six lenses on Sonnet (the PO assistant, the user's journey, the tech lead,
+  and three documentation experts, for humans, for AI, and for examples and help), or the full council for a design or
+  an epic; then the refuter on Opus. Fable only where the PO names it ([the token budget](#the-token-budget)).
 
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
 
@@ -218,18 +218,19 @@ A pull request fixes the gaps it makes. Older gaps in the README's shape go to P
 
 | the change | the council |
 | --- | --- |
-| docs only, or under about 50 changed lines | one reviewer on Sonnet asking all six lenses' questions, then the refuter on Opus |
-| other code (50 or more changed lines) | the six lenses on Sonnet, then the refuter on Opus |
-| a design or an epic | the full council |
+| docs only, or under about 50 changed lines | **the light council:** one reviewer on Sonnet asking all six lenses' questions, then the refuter on Opus |
+| anything else, 50 or more changed lines | the six lenses on Sonnet, then the refuter on Opus |
+| a design or an epic | the full council, as the Design stage runs it, then the refuter on Opus |
 
-Count added plus removed lines (`git diff --shortstat origin/main...HEAD`). A PR that merges a design or closes an epic
-takes the full council even when it is only docs.
+Count added plus removed lines (`git diff --shortstat origin/main...HEAD`). Claude's reading, the PO's to change: the
+files under `skills/`, `agents/`, `commands/` and `tools/` are behaviour, not docs, though most are Markdown; and a PR
+that merges a design or closes an epic takes the full council even when it is only docs.
 
 ## The token budget
 
 - **Sized to the question.** A look-up gets one agent; a comparison, a few. A full council (about 90 M input tokens)
-  runs only for a design or an epic; the council before a pull request is
-  [sized to the change](#the-council-before-every-pull-request).
+  runs only where a council belongs, and councils are full by default (D), except the council before a pull request,
+  which is [sized to the change](#the-council-before-every-pull-request).
 - **The model, and Fable spared.** Lenses run on Sonnet (decision of 2026-10-06). The PO's words of 2026-10-10:
   *"ok, we really need to make sure Fable is only being used for the most important parts, we're almost out of it.
   Can you make sure we don't run out of it?"* Claude's reading of them, his to change
