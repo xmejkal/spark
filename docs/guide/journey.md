@@ -902,7 +902,8 @@ A run is a separate step:
    the project's files into one image, and needs MicroPython for the S3: `/spark:setup add micropython-esp32s3`.
 3. **Write a scenario.** spark ships none for this example
    ([P130](https://github.com/xmejkal/spark/issues/64)).
-4. **Run `wokwi-cli`,** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci).
+4. **Run `wokwi-cli`,** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci). The diagram the build writes wires the board's serial port to Wokwi's serial monitor, so a
+   scenario's `wait-serial` hears the firmware ([P190](https://github.com/xmejkal/spark/issues/142)).
 
 A scenario run spends Wokwi CI minutes; none was run for this page. Watching it live in VS Code needs a Wokwi licence
 that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01). `/spark:build`'s page has both routes

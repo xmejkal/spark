@@ -3,7 +3,8 @@ import { copyFileSync, mkdtempSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { emitWokwiDiagram } from "../lib/emitters/wokwi";
+import { emitWokwiDiagram, serialMonitor } from "../lib/emitters/wokwi";
+import { PinOracle } from "../lib/geometry";
 import { buildNetlist } from "../lib/netlist";
 import { validate } from "../lib/validate";
 import { circuit, MCU_GND, MCU_NAME, MCU_SDA, net, part, tinyCircuit } from "./fixtures";
@@ -82,6 +83,15 @@ describe("emitting a Wokwi diagram", () => {
     const { emitted } = emitFrom(tinyCircuit());
     expect(emitted.diagram.connections).toContainEqual([`${MCU_ID}:TX`, "$serialMonitor:RX", "", []]);
     expect(emitted.diagram.connections).toContainEqual([`${MCU_ID}:RX`, "$serialMonitor:TX", "", []]);
+  });
+
+  test("a board part with no pins named TX and RX gets no serial wires, and no skip entry to hide a part", () => {
+    // P190's council: a skip entry counts as an accounted-for component in validate.ts, so it must not be used here.
+    const noSerial = { isValidPin: () => false, pinsOf: () => [] } as unknown as PinOracle;
+    const parts = [{ id: MCU_ID, wokwiType: BOARD.wokwiType }];
+    expect(serialMonitor({ parts } as any, noSerial)).toEqual([]);
+    const { emitted } = emitFrom(tinyCircuit());
+    expect(emitted.skipped.map((skip) => skip.component)).not.toContain(`${MCU_ID} serial`);
   });
 
   test("colours ground black and power red, as Wokwi's own diagrams do", () => {

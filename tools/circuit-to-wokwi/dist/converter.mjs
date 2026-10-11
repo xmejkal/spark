@@ -6787,20 +6787,15 @@ function emitWokwiDiagram(netlist, options = {}) {
   };
   const netOutcomes = [];
   diagram.connections = wireNets(netlist, mapped, oracle, problems, netOutcomes);
-  diagram.connections.push(...serialMonitor(mapped, oracle, skipped));
+  diagram.connections.push(...serialMonitor(mapped, oracle));
   return { diagram, problems, skipped, netOutcomes };
 }
-function serialMonitor(mapped, oracle, skipped) {
+function serialMonitor(mapped, oracle) {
   const board = mapped.parts.find((part) => part.wokwiType === BOARD.wokwiType);
   if (!board)
     return [];
-  if (!oracle.isValidPin(BOARD.wokwiType, "TX") || !oracle.isValidPin(BOARD.wokwiType, "RX")) {
-    skipped.push({
-      component: `${board.id} serial`,
-      reason: `${BOARD.wokwiType} has no pins named TX and RX: its serial monitor is left to Wokwi's own default`
-    });
+  if (!oracle.isValidPin(BOARD.wokwiType, "TX") || !oracle.isValidPin(BOARD.wokwiType, "RX"))
     return [];
-  }
   return [
     [`${board.id}:TX`, "$serialMonitor:RX", "", []],
     [`${board.id}:RX`, "$serialMonitor:TX", "", []]

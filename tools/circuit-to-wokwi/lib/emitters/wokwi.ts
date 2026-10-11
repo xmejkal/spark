@@ -87,7 +87,7 @@ export function emitWokwiDiagram(
 
   const netOutcomes: NetOutcome[] = [];
   diagram.connections = wireNets(netlist, mapped, oracle, problems, netOutcomes);
-  diagram.connections.push(...serialMonitor(mapped, oracle, skipped));
+  diagram.connections.push(...serialMonitor(mapped, oracle));
 
   return { diagram, problems, skipped, netOutcomes };
 }
@@ -96,22 +96,13 @@ export function emitWokwiDiagram(
  * The board's serial port, wired to Wokwi's serial monitor (P190, #142). Wokwi stopped connecting an ESP32's UART to
  * the monitor by default (CLI 0.28.0, API 2026-10-09): without these two wires a scenario's `wait-serial` heard
  * nothing, not even the ROM's boot line, and every run timed out. A board part with no pins named TX and RX (the
- * XIAO's) is left to Wokwi's own default, and said as a decision.
+ * XIAO's) gets none: the spine says so in its simulation line, from the diagram. Not a skip entry, which validate.ts
+ * counts as an accounted-for component.
  */
-function serialMonitor(
-  mapped: MappedComponents,
-  oracle: PinOracle,
-  skipped: { component: string; reason: string }[],
-): WokwiConnection[] {
+export function serialMonitor(mapped: Pick<MappedComponents, "parts">, oracle: PinOracle): WokwiConnection[] {
   const board = mapped.parts.find((part) => part.wokwiType === BOARD.wokwiType);
   if (!board) return [];
-  if (!oracle.isValidPin(BOARD.wokwiType, "TX") || !oracle.isValidPin(BOARD.wokwiType, "RX")) {
-    skipped.push({
-      component: `${board.id} serial`,
-      reason: `${BOARD.wokwiType} has no pins named TX and RX: its serial monitor is left to Wokwi's own default`,
-    });
-    return [];
-  }
+  if (!oracle.isValidPin(BOARD.wokwiType, "TX") || !oracle.isValidPin(BOARD.wokwiType, "RX")) return [];
   return [
     [`${board.id}:TX`, "$serialMonitor:RX", "", []],
     [`${board.id}:RX`, "$serialMonitor:TX", "", []],

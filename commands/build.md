@@ -202,7 +202,10 @@ steps:
 Part ids come from the board's component names (`BtnOpen` becomes `btnopen`). `name:` is the key the smart bin's
 passing scenarios use ([lid-cycle](https://github.com/xmejkal/sisuo-brain-transplant/blob/main/firmware/micropython/sim/lid-cycle.scenario.yaml)),
 whose notes call `control:` a deprecated alias. `wait-serial` reads the MCU's serial only: a chip's printf never
-reaches it. Two facts about the simulator that
+reaches it. The generated `diagram.json` wires the board's TX and RX to `$serialMonitor`: Wokwi stopped doing that
+by default (CLI 0.28.0, API 2026-10-09), and without it `wait-serial` hears nothing, not even the boot line
+([P190](https://github.com/xmejkal/spark/issues/142)). A board whose Wokwi part has no pins named TX and RX gets no
+such wires, and the build's simulation line says so. Two facts about the simulator that
 a firmware meets here and not on a bench: its ADC is referenced to 5 V whatever the chip, so a
 raw reading must be converted with a 5 V full scale — the flash image's `--config` is the place
 to say so (`{"ADC_REFERENCE_V": 5.0}`); and a chip's control ids are letters and digits only.
