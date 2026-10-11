@@ -13,6 +13,9 @@ macOS: instant, no extra space), its documented spark commands run there under a
 command's exit, stdout and stderr are kept with the scratch folders written as placeholders, so two snapshots of
 unchanged spark are equal line for line. The project and the store are only read.
 
+The baseline P158's plan measures against: docs/observations/2026-10-11-baseline.json (spark 684ed01, the store's
+sha256 482bd310…). A card that changes an output says which of its lines it changes, and --against shows them.
+
 Exit: 0 a snapshot was taken and, with --against, nothing differs · 1 lines differ · 2 it could not run.
 """
 

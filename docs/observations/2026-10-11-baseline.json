@@ -1,0 +1,238 @@
+{
+  "taken": "2026-10-11T10:01:00+02:00",
+  "spark": {
+    "pin": "684ed01"
+  },
+  "store": {
+    "source": "~/.local/share/spark",
+    "sha256": "482bd3101cebeddce6303bfb7172e566433bfaa6071673fc4b5968f32f4a0f3c"
+  },
+  "projects": {
+    "smartbin-local": {
+      "source": "~/Development/smartbin-local",
+      "pin": "04e3817 with uncommitted changes",
+      "commands": [
+        {
+          "label": "boards.py --path",
+          "exit": 0,
+          "stdout": "<spark>/boards/firebeetle2-esp32s3.json\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --id",
+          "exit": 0,
+          "stdout": "firebeetle2-esp32s3\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --paths",
+          "exit": 0,
+          "stdout": "<spark>/boards/firebeetle2-esp32s3.json <spark>/boards/xiao-esp32-c6.json\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --get chip",
+          "exit": 0,
+          "stdout": "esp32s3\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --get micropython_port",
+          "exit": 0,
+          "stdout": "ESP32_GENERIC_S3\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --resolve",
+          "exit": 0,
+          "stdout": "<copy>/.spark/board.json\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --validate --for-fab",
+          "exit": 0,
+          "stdout": "  active  firebeetle2-esp32s3 (library): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "check_bom.py board-gerbers.zip --circuit dist/board/circuit.json",
+          "exit": 0,
+          "stdout": "bom.csv: 24 line(s) checked against the design\n   the order matches the schematic.\n",
+          "stderr": ""
+        },
+        {
+          "label": "check_vendor_pins.py {boards.py --paths} --offline",
+          "exit": 0,
+          "stdout": "  firebeetle2-esp32s3      ok  (25 pins against spark's cache (dfrobot_firebeetle2_esp32s3.pins_arduino.h))\n  xiao-esp32-c6            ok  (20 pins against spark's cache (XIAO_ESP32C6.pins_arduino.h))\n      note: the vendor also defines WIFI_ENABLE, WIFI_ANT_CONFIG, TX, RX, which this board file does not record\n",
+          "stderr": ""
+        },
+        {
+          "label": "check_physics.py dist/board/circuit.json --rules .spark/rules.json",
+          "exit": 0,
+          "stdout": "circuit.json: checked against physics, not against itself\n\n1 needs-measurement:\n  [trace-current] GND: carries up to 1.50 A and is served by a copper pour, which this check cannot size\n      confirm the pour actually reaches every return on a 2-layer board with components on top — a pour broken into islands by traces is not a plane\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --validate",
+          "exit": 0,
+          "stdout": "  active  firebeetle2-esp32s3 (library): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        }
+      ],
+      "left_out": {
+        "check_vendor_pins.py (live)": "Makefile:223 fetches from GitHub; a snapshot stays offline"
+      }
+    },
+    "irrigation": {
+      "source": "~/Development/irrigation",
+      "pin": "1c310bd",
+      "commands": [
+        {
+          "label": "check_spine.py irrigation.requirements.json",
+          "exit": 1,
+          "stdout": "\n  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation\n\n  [ok  ] board            DFRobot FireBeetle 2 ESP32-S3\n  [ok  ] schematic        46 trace(s) written\n  [!!  ] schematic-notes  note: STATUS_LED was assigned a pin and no part claims it, so nothing in the emitted board connects to it\n  [ok  ] footprint        FireBeetle2Esp32S3.tsx\n  [ok  ] build            42 trace(s), 0 errors, tsci 0.0.2663; the documents were measured on core 0.0.2600\n  [ok  ] simulation       36 wire(s) in the diagram, 2 chip(s): 0 compiled, 2 reused\n           what it cannot show, from the records (7):\n             BtnMode: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n             DcBarrelJack12vInlet: not simulated at all: a connector is wiring, not a part to simulate; the simulator powers the board itself\n             Dfr0831Buck5v: not simulated at all: power is ideal in the simulator: the board is powered by the simulator itself and a regulator has nothing to show\n             Ds3231At24c32RtcModule: Wokwi's DS1307 answers at 0x68 with the same seven time registers, so time-keeping code runs unchanged; it has no temperature, no alarms, no aging trim, and no AT24C32 at 0x57 — a read of the EEPROM is NACKed\n             Sen0217FlowMeter: the `flowLpm` control sets a pulse train on SIG at 7.5 Hz per L/min (450 pulses per litre, the record's fact); logic-level pulses, so the 5 V-to-3.3 V divider the record demands is not exercised here\n             Soil1, Soil2, Soil3: the `moisturePct` control drives the Signal pin as a voltage: about 2.9 V dry to 1.2 V wet at a 3.3 V supply, the record's calibration facts; no settling time is modelled. Wokwi's virtual ADC is referenced to 5 V whatever the MCU (docs.wokwi.com/chips-api/analog): a firmware that converts raw readings with a 3.3 V full scale reads 2.9 V as 2.19 V, so the simulation's config names the reference\n             Valve1, Valve2, Valve3, Valve4: an LED on the gate drive: lit means the valve is commanded open. No opto, no MOSFET, no 12 V load and no flyback transient are modelled; a scenario asserts the MCU's pin\n\n  the chain is broken\n",
+          "stderr": "wrote <tmp>/spark-spine-<random>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)\n"
+        },
+        {
+          "label": "check_all.py --project .",
+          "exit": 1,
+          "stdout": "  resolved from .:\n    circuit      dist/board/circuit.json\n    rules        .spark/rules.json\n    package      not found (looked for *-gerbers.zip, fab/*.zip)\n    boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6\n\n  [ok  ] vendor-truth       the board definition matches the vendor's own pin header\n  [????] buildability       holes take their pins, packages hold their values\n           ! DcBarrelJack12vInlet: its footprint is a stand-in for one nobody has drawn yet, so the geometry here is not the part's and was not measured\n           ! Dfr0831Buck5v: its footprint is a stand-in for one nobody has drawn yet, so the geometry here is not the part's and was not measured\n           ! Sen0217FlowMeter: its footprint is a stand-in for one nobody has drawn yet, so the geometry here is not the part's and was not measured\n           ? Valve1: pad 1.20 mm around a 0.75 mm hole leaves 0.225 mm of ring: over the 0.18 mm this process can make, under the 0.25 mm it recommends\n           ? Valve2: pad 1.20 mm around a 0.75 mm hole leaves 0.225 mm of ring: over the 0.18 mm this process can make, under the 0.25 mm it recommends\n           ? Valve3: pad 1.20 mm around a 0.75 mm hole leaves 0.225 mm of ring: over the 0.18 mm this process can make, under the 0.25 mm it recommends\n           ? Valve4: pad 1.20 mm around a 0.75 mm hole leaves 0.225 mm of ring: over the 0.18 mm this process can make, under the 0.25 mm it recommends\n  [--  ] the-order          the fab package orders the parts the schematic specifies\n  [????] physics            the board obeys physics, not just itself\n           ! V12V: draws at least 0 mA; not stated: Dfr0831Buck5v.VIN: carries what V5V carries, which is not fully stated\n           ! V33: draws at least 355 mA; not stated: Soil1.VCC: operating_current_ma is not stated; Soil2.VCC: operating_current_ma is not stated; Soil3.VCC: operating_current_ma is not stated\n           ! V5V: draws at least 15 mA; not stated: Mcu.VCC: carries what V33 carries, which is not fully stated\n           ! 1 resistor(s): could not be assessed: Sen0217FlowMeterDividerSIGBottom. A netlist records neither the current through a resistor nor the voltage across it, and both depend on topology the design does not state\n           ? GND: no maximum current stated, so nothing here can be verified\n           ? V12V: no maximum current stated, so nothing here can be verified; the part records leave it open: Dfr0831Buck5v.VIN\n           ? V33: no maximum current stated, so nothing here can be verified; the part records leave it open: Soil1.VCC, Soil2.VCC, Soil3.VCC\n           ? V5V: no maximum current stated, so nothing here can be verified; the part records leave it open: Mcu.VCC\n  [FAIL] rules-vs-netlist   written rules hold in the design that was built\n           - [floating-input] Valve1.SIGNAL: joined to Mcu.D3 and no resistor to a rail\n           - [floating-input] Valve2.SIGNAL: joined to Mcu.A5 and no resistor to a rail\n           - [floating-input] Valve3.SIGNAL: joined to Mcu.D12 and no resistor to a rail\n           - [floating-input] Valve4.SIGNAL: joined to Mcu.D11 and no resistor to a rail\n\n  2 check(s) could not look: buildability, physics\n  1 not asked for: the-order\n  4 problem(s)\n",
+          "stderr": ""
+        }
+      ],
+      "left_out": {}
+    },
+    "plant-alarm": {
+      "source": "~/Development/plant-alarm",
+      "pin": "not a git repository: this copy is its pin",
+      "commands": [
+        {
+          "label": "check_spine.py requirements.json",
+          "exit": 1,
+          "stdout": "\n  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation\n\n  [ok  ] board            Seeed XIAO ESP32-C6\n  [ok  ] schematic        11 trace(s) written\n  [!!  ] schematic-notes  note: DFRobot DFR0954 MAX98357A I2S amplifier.SPK_N drives net.SPEAKER_N and nothing on this board receives it — add whatever it drives, or that net has one member and will not route\nnote: DFRobot DFR0954 MAX98357A I2S amplifier.SPK_P drives net.SPEAKER_P and nothing on this board receives it — add whatever it drives, or that net has one member and will not route\n  [????] footprint        no footprint could be generated for xiao-esp32-c6\n\n  the chain is broken\n",
+          "stderr": "could-not-run: xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them can be derived from the rest:\n  physical.header (no header geometry at all)\n"
+        }
+      ],
+      "left_out": {}
+    },
+    "a3-run1-placeholder-board": {
+      "source": "~/Development/spark/.worktrees/p184-snapshot/tests/data/snapshot/a3-run1-placeholder-board",
+      "pin": "684ed01",
+      "commands": [
+        {
+          "label": "boards.py --validate --project .",
+          "exit": 0,
+          "stdout": "         firebeetle2-esp32s3 (library): ok\n  active  generic-esp32s3 (project): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --validate --for-fab --project .",
+          "exit": 1,
+          "stdout": "         firebeetle2-esp32s3 (library): ok\n  active  generic-esp32s3 (project): 2 problem(s)\n           - physical.footprint_module is not set: no verified footprint for this board, so it is not ready to be laid out or fabricated\n           - physical.footprint_export is not set: no verified footprint for this board, so it is not ready to be laid out or fabricated\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "check_spine.py requirements.json",
+          "exit": 2,
+          "stdout": "\n  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation\n\n  [ok  ] board            Any ESP32-S3 dev board (placeholder)\n  [????] schematic        this board has no verified footprint, so a board file would reference nothing\n\n  the chain was NOT exercised — this is not a pass\n",
+          "stderr": ""
+        }
+      ],
+      "left_out": {}
+    },
+    "a3-run2-invented-header": {
+      "source": "~/Development/spark/.worktrees/p184-snapshot/tests/data/snapshot/a3-run2-invented-header",
+      "pin": "684ed01",
+      "commands": [
+        {
+          "label": "boards.py --validate --project .",
+          "exit": 0,
+          "stdout": "         firebeetle2-esp32s3 (library): ok\n  active  generic-esp32s3 (project): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --validate --for-fab --project .",
+          "exit": 1,
+          "stdout": "         firebeetle2-esp32s3 (library): ok\n  active  generic-esp32s3 (project): 1 problem(s)\n           - physical.footprint_module is not set: no verified footprint for this board, so it is not ready to be laid out or fabricated\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "check_spine.py requirements.json",
+          "exit": 2,
+          "stdout": "\n  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation\n\n  [ok  ] board            Any ESP32-S3 dev board (placeholder)\n  [ok  ] schematic        11 trace(s) written\n  [????] footprint        no footprint could be generated for generic-esp32s3\n\n  the chain was NOT exercised — this is not a pass\n",
+          "stderr": "could-not-run: generic-esp32s3 cannot have a footprint generated — these are not recorded, and none of them can be derived from the rest:\n  physical.header.first_pad_from_edge_mm\n  physical.header_order (which label is on which pad — not derivable)\n"
+        }
+      ],
+      "left_out": {}
+    },
+    "round0-c6-digit-labels": {
+      "source": "~/Development/spark/.worktrees/p184-snapshot/tests/data/snapshot/round0-c6-digit-labels",
+      "pin": "684ed01",
+      "commands": [
+        {
+          "label": "boards.py --validate --project .",
+          "exit": 0,
+          "stdout": "  active  firebeetle2-esp32c6 (project): ok\n         firebeetle2-esp32s3 (library): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --validate --for-fab --project .",
+          "exit": 0,
+          "stdout": "  active  firebeetle2-esp32c6 (project): ok\n         firebeetle2-esp32s3 (library): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "check_spine.py requirements.json",
+          "exit": 1,
+          "stdout": "\n  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation\n\n  [ok  ] board            DFRobot FireBeetle 2 ESP32-C6\n  [ok  ] schematic        7 trace(s) written\n  [ok  ] footprint        FireBeetle2Esp32C6.tsx\n  [!!  ] build            LedRed5mmSeriesA.pin1 (a terminal connected to nothing). A board builds, routes and reports no error with a component joined to nothing — the parts around it are wired to nets it is simply not on\n\n  the chain is broken\n",
+          "stderr": "wrote <tmp>/spark-spine-<random>/FireBeetle2Esp32C6.tsx (32 pads, 1.00 mm holes)\n"
+        }
+      ],
+      "left_out": {}
+    },
+    "round0-c6-record": {
+      "source": "~/Development/spark/.worktrees/p184-snapshot/tests/data/snapshot/round0-c6-record",
+      "pin": "684ed01",
+      "commands": [
+        {
+          "label": "boards.py --validate --project .",
+          "exit": 0,
+          "stdout": "  active  firebeetle2-esp32c6 (project): ok\n         firebeetle2-esp32s3 (library): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --validate --for-fab --project .",
+          "exit": 0,
+          "stdout": "  active  firebeetle2-esp32c6 (project): ok\n         firebeetle2-esp32s3 (library): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "check_spine.py requirements.json",
+          "exit": 1,
+          "stdout": "\n  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation\n\n  [ok  ] board            DFRobot FireBeetle 2 ESP32-C6\n  [ok  ] schematic        7 trace(s) written\n  [ok  ] footprint        FireBeetle2Esp32C6.tsx\n  [ok  ] build            5 trace(s), 0 errors, tsci 0.0.2621; the documents were measured on core 0.0.2600\n  [!!  ] simulation       no diagram was produced\n\n1 problem(s) converting the board:\n  - \"14\" is not a pin of board-esp32-c6-devkitc-1. Valid pins: 0, 1, 2, 3, 3V3, 4, 5, 5V, 6, 7, 8, 9, 10, 11, 12, 13, 15, 18, 19, 20, 21, 22, 23, GND.1, GND.2, GND.3, GND.4, NC0, NC1, RST, RX, TX (component mcu, pin D3, net connectivity_net2)\n\n\n  the chain is broken\n",
+          "stderr": "wrote <tmp>/spark-spine-<random>/FireBeetle2Esp32C6.tsx (32 pads, 1.00 mm holes)\n"
+        }
+      ],
+      "left_out": {}
+    },
+    "store9-stand-in-of-another-chip": {
+      "source": "~/Development/spark/.worktrees/p184-snapshot/tests/data/snapshot/store9-stand-in-of-another-chip",
+      "pin": "684ed01",
+      "commands": [
+        {
+          "label": "boards.py --validate --project .",
+          "exit": 0,
+          "stdout": "         firebeetle2-esp32s3 (library): ok\n  active  store9-c6-with-s3-stand-in (project): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        },
+        {
+          "label": "boards.py --validate --for-fab --project .",
+          "exit": 0,
+          "stdout": "         firebeetle2-esp32s3 (library): ok\n  active  store9-c6-with-s3-stand-in (project): ok\n         xiao-esp32-c6 (library): ok\n",
+          "stderr": ""
+        }
+      ],
+      "left_out": {}
+    }
+  }
+}
