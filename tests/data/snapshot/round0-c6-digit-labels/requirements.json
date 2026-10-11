@@ -1,0 +1,6 @@
+{
+  "board": "firebeetle2-esp32c6",
+  "parts": [
+    "led-red-5mm"
+  ]
+}
