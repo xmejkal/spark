@@ -7,15 +7,15 @@ a few version epics). **Full text only for items 1-7; one line for the second sl
 How to read a block: *Why* is the card's **Needed by**, the *done-test* is its **Value proven by**. "Pending Q n" is one of the
 replan's six questions, still open. A card's slice is the PO's (TEAM.md), so every slice here is a proposal: the board has no
 "Basic journey" option until he answers Q2; the fallback names today's nearest option. New cards enter **Idea**; the PO orders Ready.
-P194-P196 are the **next free numbers, check before filing** (highest filed: P193 = #145; no file in the repo uses P194-P196).
+P195-P197 are the **next free numbers, check before filing** (highest filed: P193 = #145; no file in the repo uses P195-P197).
 
 ---
 
 ## A. The first slice, items 1-7
 
-### A1. Item 1 - NEW, P194 (chore, S)
+### A1. Item 1 - NEW, P195 (chore, S)
 
-**Title:** `P194 — Nothing walks the basic journey end to end, so a broken stage goes unseen → one test runs button-and-LED through every stage that works today and names the one that breaks`
+**Title:** `P195 — Nothing walks the basic journey end to end, so a broken stage goes unseen → one test runs button-and-LED through every stage that works today and names the one that breaks`
 **Slice:** pending Q2 ("Basic journey"; fallback "3 Firmware on a Mac") · **After:** nothing · **Replan:** item 1, first in Ready
 
 **Needed by**
@@ -30,31 +30,31 @@ The PO, 2026-10-11, verbatim: *"To be honest I still feel like we're spending to
 - Depends on: nothing.
 - NOT: a baseline or snapshot of three projects (P184 #133 is Done; P158's baseline waits), a Wokwi minute, a mutation sweep, a new flag on `check_spine`.
 
-### A2. Item 2 - NEW, P195 (story, S)
+### A2. Item 2 - NEW, P196 (story, S)
 
-**Title:** `P195 — /spark:build leaves no firmware/pins.py, a second command writes it → the build writes it, equal to assign_pins --emit-pins`
-**Slice:** pending Q2 (fallback "3 Firmware on a Mac") · **After:** P194 · **Replan:** item 2
+**Title:** `P196 — /spark:build leaves no firmware/pins.py, a second command writes it → the build writes it, equal to assign_pins --emit-pins`
+**Slice:** pending Q2 (fallback "3 Firmware on a Mac") · **After:** P195 · **Replan:** item 2
 
 **Needed by**
 The PO, 2026-10-11, verbatim: *"we need to make sure the haanding over works, that it all works together, the schema, parts, firmware, pcb or even 3d model later, but at least to breadboard including working firmware is important, that's what its for."* Walked on 2026-10-11: `commands/build.md:119-120` and `docs/guide/journey.md:922` give `assign_pins.py requirements.json --emit-pins firmware/pins.py` as a separate step, so after `/spark:build` the firmware has no pin file, and the firmware "never types a GPIO number" (`build.md:131`). The user lens named it a stall.
 
 **Value proven by**
-After `/spark:build`, `firmware/pins.py` exists and equals the output of `assign_pins.py requirements.json --emit-pins`. A test pins it, and P194's test gains the stage.
+After `/spark:build`, `firmware/pins.py` exists and equals the output of `assign_pins.py requirements.json --emit-pins`. A test pins it, and P195's test gains the stage.
 
 **Body**
 - What: `check_spine.py --keep DIR` writes `firmware/pins.py` beside `board.tsx` and `breadboard.md`, from the same code as `--emit-pins`, with a line in the kept-files report like theirs.
 - Open design points, the card's to settle: whether an existing `pins.py` is left alone (as `board.tsx` is) or rewritten (it is generated, never hand-edited).
-- Depends on: P194.
+- Depends on: P195.
 - NOT: firmware generation (spark exports facts, Claude writes behaviour; the PO's direction of 2026-10-01), a change to how pins are assigned, removing the separate `--emit-pins` step.
 
 ### A3. Item 3 - existing #7, P59, part a only (S)
 
-**Title:** unchanged. **Slice:** stays "3 Firmware on a Mac" · **After:** P195
+**Title:** unchanged. **Slice:** stays "3 Firmware on a Mac" · **After:** P196
 
 **Value proven by - the line that changes**
 ```diff
 - `firmware.main` imports **with a fake `machine` on the path** (CPython or the `micropython` unix port) in a spark-generated project, and the chain reports a signal the requirements ask for that the firmware never drives **or never reads**.
-+ spark ships the `machine` stand-in and one Mac command; button-and-LED's firmware imports under CPython with it, and its LED pin reads 0, then 1 (released, pressed). P194's test gains the stage.
++ spark ships the `machine` stand-in and one Mac command; button-and-LED's firmware imports under CPython with it, and its LED pin reads 0, then 1 (released, pressed). P195's test gains the stage.
 ```
 (The acceptance-line note in brackets stays as history. The reporting half moves to P74 #8, second slice.)
 
@@ -65,24 +65,24 @@ Item 3 of the first slice (docs/2026-10-11-replan.md). Part a only: spark ships 
 - Evidence: the comment of 2026-10-11 on this card. A 15-line stand-in on the Mac's MicroPython read the LED 0 released and 1 pressed.
 - Needs a button-and-LED firmware file under tests/data. The one written on the walk is not in the repository; this item commits it.
 - Irrigation's unimportable main() (this card's first case) is not fixed by a stand-in; irrigation is not in v1.
-- Depends on: P195 (the firmware imports pins.py).
+- Depends on: P196 (the firmware imports pins.py).
 - NOT: chip-accurate pins (pins remember values; the test sets an input), checking undriven pins (P74), running on the board.
 ```
 
-### A4. Item 4 - NEW, P196 (story, M)
+### A4. Item 4 - NEW, P197 (story, M)
 
-**Title:** `P196 — A fresh button-and-LED project's check_all exits 2, so no new project gets a clean check → it exits 0 on button-and-LED, and nothing that could not look reads as a pass`
-**Slice:** pending Q2 (fallback "4 v1 on two projects") · **After:** P194 · **Replan:** item 4
+**Title:** `P197 — A fresh button-and-LED project's check_all exits 2, so no new project gets a clean check → it exits 0 on button-and-LED, and nothing that could not look reads as a pass`
+**Slice:** pending Q2 (fallback "4 v1 on two projects") · **After:** P195 · **Replan:** item 4
 
 **Needed by**
 The PO, 2026-10-11, verbatim: *"...im not even sure if the example pproject would still work and if the basic journey really works for some basic things including all stages"*. The replay of 2026-10-11 (comment on #6): *"No fresh project gets a clean check. `check_all` exits 2 on both. Physics cannot look, because init describes no rails. On the button-and-LED project, rules-vs-netlist has no rule to compare."*
 
 **Value proven by**
-`check_all.py --project .` on the button-and-LED fixture exits 0. P194's test gains the stage.
+`check_all.py --project .` on the button-and-LED fixture exits 0. P195's test gains the stage.
 
 **Body**
 - What: how it gets there is this card's design. The replan names the routes, it does not choose: P111 #45 (an explicit not-applicable value), P108 #42 (the answer counts the values nobody measured), P118 #52 (each `!` line says what clears it), or rails seeded from the board file. A route that is taken leaves its own card's value line met.
-- Depends on: P194.
+- Depends on: P195.
 - NOT: a weaker check. "A stage that could not be exercised is could-not-run, never ok" (README, last line) holds. Exit 0 comes from giving the checks what they need, or an explicit not-applicable value, never from skipping or relabelling. An `ok` that rests on unmeasured values is allowed only with their count in the answer (P108's decision of 2026-10-05). Not irrigation, not the motor example, not a new check.
 
 ### A5. Item 5 - existing #64, P130, retargeted (M)
@@ -97,7 +97,7 @@ The PO, 2026-10-11, verbatim: *"...im not even sure if the example pproject woul
 **Value proven by - the line that changes**
 ```diff
 - commands/build.md's scenario drives the documented example's own parts (a button press, the motor-driver pin's level), and one dated run of it is pasted.
-+ A harness runs a built project in Wokwi and waits for `ready`; the `ready` contract (the firmware prints `ready` on the serial line once its setup is done) is written in commands/build.md; a test of the harness passes with no Wokwi minute spent; and one dated run log of button-and-LED passes with a scenario Claude wrote from the person's words. P194's test gains the stage (the harness test, not the run).
++ A harness runs a built project in Wokwi and waits for `ready`; the `ready` contract (the firmware prints `ready` on the serial line once its setup is done) is written in commands/build.md; a test of the harness passes with no Wokwi minute spent; and one dated run log of button-and-LED passes with a scenario Claude wrote from the person's words. P195's test gains the stage (the harness test, not the run).
 ```
 
 **Append to the body**
@@ -128,7 +128,7 @@ Item 6. The PO, 2026-10-11: "otherwise yes, I would do P192, just not sure where
 - (a) esptool and mpremote in data/tools.json, offered by /spark:setup. Done when `tools.py --status` lists both. Size S.
 - (b) `deploy.py --dry-run` flashes the image that passed the simulation (the one flash_image.py wrote); P193 (#145) goes with it. Done when a test pins the printed flash lines. Size M.
 - (c) the PO's board prints `ready` after the flash. Bench. Needs B21 (bin #15), the board's SKU and revision. Suggested: run it in item 7's bench session (pending the PO).
-Suggested shape at Ready: (a) and (b) are tasks of this story; (c) is its closing proof and the story waits on hardware, so a bench step does not hold a Build slot. P194's test gains (b)'s dry run.
+Suggested shape at Ready: (a) and (b) are tasks of this story; (c) is its closing proof and the story waits on hardware, so a bench step does not hold a Build slot. P195's test gains (b)'s dry run.
 NOT: a chip table (P187/P189 #136/#138 are closed into a later epic), flashing anything but the image that passed.
 ```
 
@@ -174,7 +174,7 @@ One appended line each; no other change.
 Appended to each card (no other change; none is closed). Order: the walk decides.
 - **#8 P74:** `Second slice, first (replan 2026-10-11): the firmware checked against the pins it should drive is VISION's "next"; item 3 already proves the firmware imports, and the case in this card's value line is irrigation's, which the walk does not use.`
 - **#102 P165:** `Second slice (replan 2026-10-11): a second project on the same board is refused today with "held by button-light" (journey.md:308) and needs this card; one project on a breadboard is not stopped by a PCB-only fact (body_mm already only warns).`
-- **#13 P77:** `Second slice (replan 2026-10-11): this is the PO's "would the example still work"; P194 covers button-light first, every other example is regenerated after the walk.`
+- **#13 P77:** `Second slice (replan 2026-10-11): this is the PO's "would the example still work"; P195 covers button-light first, every other example is regenerated after the walk.`
 - **#44 P110:** `Second slice (replan 2026-10-11): PCB and 3D export works for a fresh build today; this bites when board.tsx was edited, so it waits for the walk to say.`
 - **#128 P182:** `Second slice (replan 2026-10-11): the README's first screen follows the journey that works, so it can say what works.`
 - **#81 P147:** `Second slice, last (replan 2026-10-11): before any stranger. The manifest reads 0.8.1 now and the PO decided on 2026-10-06 that every merge raises it, so what is left is the proof that a GitHub install receives a change; v1 is walked on the PO's working-folder install, where this is invisible.`
@@ -318,7 +318,7 @@ Placement is Claude's reading, the PO's to change: #136 and #138 follow #94 (the
 
 ### C4. Comments that say more than the template
 
-- **#94 (P158; leaves Build):** `Closed into the v2 core epic. Nothing is lost: the design, the plan and the short version are on main (docs/archive/2026-10-11-p158-short.md and the two files it links), part 1's 72 changes are in docs/archive/discovery/2026-10-10-p158-gaps-and-refactoring/proposal.md. The first slice stays as filed: P184 and P124 Done; P185 (#134) and #65 wait in Idea; #135, #136, #138 close into their epics; #137 into team and QA. The I0 baseline is not built; P194 is its small replacement. Leaves Build, so a Build slot is free.`
+- **#94 (P158; leaves Build):** `Closed into the v2 core epic. Nothing is lost: the design, the plan and the short version are on main (docs/archive/2026-10-11-p158-short.md and the two files it links), part 1's 72 changes are in docs/archive/discovery/2026-10-10-p158-gaps-and-refactoring/proposal.md. The first slice stays as filed: P184 and P124 Done; P185 (#134) and #65 wait in Idea; #135, #136, #138 close into their epics; #137 into team and QA. The I0 baseline is not built; P195 is its small replacement. Leaves Build, so a Build slot is free.`
 - **#135 (P186):** `Closed into team and QA tooling; leaves Ready. State: branch p186-mutants is pushed (ac5e968), the gate is green, the six-lens council ran on the first commit and its fixes are not applied, the refuter has not run, there is no pull request. The branch keeps it; one finding of its own is in it (the P13 row that only ever crashed is repaired).`
 - **#136 (P187):** `Closed into the v2 core epic (P158's C4); leaves Ready. Reproduced 2026-10-10 on a scratch store: a record with chip esp32c6 and the S3's stand-in answers ok, exit 0. v1 has one S3 board, so the walk cannot trip it. Comes back with a second board.`
 - **#138 (P189):** `Closed into the v2 core epic; leaves Ready. It hung on P187's chip-name table. The walk flashes the image that passed the simulation (P192 b), so nothing packs an interpreter for another chip. Comes back with #136.`
@@ -351,7 +351,7 @@ One comment each; the board move is in the first line.
 | 8 | #6 P100 | "Scored by someone who did not write them": nobody is named. | pending the PO |
 | 9 | #94 decision D-DP3 | "Round A runs on today's spark before any output-changing card merges"; items 2 and 4 change output first. | A7 line; pending the PO |
 | 10 | #134 P185 | Needed by points at "D-PQ1 on #94" and the plan's C2; #94 is closed. The plan is still on main. | add `(#94 is closed into the v2 core epic; the plan stays at docs/archive/2026-10-10-p158-plan.md)`; it runs before item 7 only if the PO says so (Q4) |
-| 11 | #42, #45, #52 (item 4's routes) | They are children of #67 (P133), closing into the checks epic. | P196 cites the rule itself (A4); the children stay open |
+| 11 | #42, #45, #52 (item 4's routes) | They are children of #67 (P133), closing into the checks epic. | P197 cites the rule itself (A4); the children stay open |
 | 12 | #81 P147 | Title says the version never changes; it reads 0.8.1 and the decision is in the comment of 2026-10-06. | suggested title: `P147 — An install from GitHub is shown to receive an update`. Pending the PO |
 | 13 | #123 P178 | Title: "The next version is the store". The PO's words of 2026-10-11 name the core. | C2: retitle `Later: the store, shared`. The memory entry "Next version: the store" is stale after his yes |
 | 14 | replan, `after-v1.md` | They say "stays open in Idea" and a new "After v1" slice option. | follow the PO's yes (Q2); then `STORY_MAP.md`, whose slices 4 and 10 name closed cards (P38, P87, P89, P90, P91, P92, P94 ...), takes a "closed into" line |
