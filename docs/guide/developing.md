@@ -152,6 +152,51 @@ starting another`, `2 cards labelled expedite (#1, #2) — one at a time, on the
   backlog: could-not-run — gh or the network could not be reached (To get started with GitHub CLI, please run:  gh auth login); the limits were not checked
 ```
 
+## Recording what spark answers
+
+A change to what spark prints should be able to say which answers it changed. [`tools/snapshot.py`](../../tools/snapshot.py)
+records them. It copies each project that uses spark, and the store, runs the project's documented spark commands in
+the copy, and keeps every exit, stdout and stderr. The projects are the bin, irrigation and plant-alarm, plus the five
+small cases in [`tests/data/snapshot/`](../../tests/data/snapshot/README.md). The originals are only read.
+
+```sh
+python3 tools/snapshot.py --out /tmp/after --against docs/observations/2026-10-11-baseline.json \
+    --tsci-bin <a project's node_modules/.bin>
+```
+
+The baseline was taken on 2026-10-11, before P158's cards change any output. On a branch that changed no answer, the
+run ends like this:
+
+<!-- output: run 2026-10-11, spark 0.8.1 -->
+```text
+spark: 852e296 → 87b5d34
+nothing differs from docs/observations/2026-10-11-baseline.json
+```
+
+With one word changed in what `boards.py --validate` prints, it exits 1 and lists twelve commands, each like this one:
+
+<!-- output: run 2026-10-11, spark 0.8.1 -->
+```text
+a3-run1-placeholder-board: boards.py --validate --project . — differs from the snapshot of 2026-10-11T10:22:08+02:00
+  stdout:
+    -          firebeetle2-esp32s3 (library): ok
+    -   active  generic-esp32s3 (project): ok
+    -          xiao-esp32-c6 (library): ok
+    +          firebeetle2-esp32s3 (library): fine
+    +   active  generic-esp32s3 (project): fine
+    +          xiao-esp32-c6 (library): fine
+```
+
+| exit | means |
+| --- | --- |
+| 0 | every command answered as the older snapshot recorded |
+| 1 | some lines differ, listed under the command and stream that printed them |
+| 2 | it could not run: for example, `--spark` names no spark tree, or `--against` a file it cannot read |
+
+The lines about the store, spark's pin or a project's pin come first and never set the exit. They say whose a
+difference may be, and a branch always moves spark's pin. The exits it records are not judged: irrigation's chain
+exits 1 today, and the baseline holds that. A card that changes an output says which of these lines it changes.
+
 ## The docs name only what is there
 
 [`tools/check_docs.py`](../../tools/check_docs.py) reads `README.md`, `AGENTS.md` and these guides. The suite runs it
