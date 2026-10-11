@@ -23,7 +23,8 @@ PERSONAL = re.compile(r"/Users/|/home/|/private/|smartbin-local")
 FENCE = re.compile(r"^```[a-z]*\n(.*?)^```", re.S | re.M)
 #: Files spark writes into a person's project rather than ships; the guides may name them.
 PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it into the project",
-                 "main.py": "the project's own boot file, which import_firmware.py leaves unrun"}
+                 "main.py": "the project's own boot file, which import_firmware.py leaves unrun",
+                 "boot.py": "MicroPython's other boot file, which import_firmware.py leaves unrun too"}
 #: Seconds a runnable example or a --help may take; a longer one is not light (the spec, §4).
 RUN_TIMEOUT = 60
 

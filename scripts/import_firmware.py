@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Import a project's firmware on the Mac, without running it (P59, #7).
+Import a project's firmware on the Mac, without running main.py (P59, #7).
 
     import_firmware.py [PROJECT] [--json] [--timeout SECONDS]
 
@@ -8,17 +8,18 @@ Example, in a project after `/spark:build` and the firmware are written:
 
     python3 "$CLAUDE_PLUGIN_ROOT/scripts/import_firmware.py"
 
-It imports each PROJECT/firmware/*.py (PROJECT defaults to `.`) except main.py, each in a process of its own, with
-spark's `machine` stand-in (scripts/stand_in/machine.py: a Pin that remembers its level, nothing else) and
-PROJECT/firmware first on sys.path. Per module the answer is one of:
+It imports each PROJECT/firmware/*.py and each package there (a folder holding __init__.py) except the boot files,
+main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's `machine` stand-in
+(scripts/stand_in/machine.py: a Pin that remembers its level, nothing else), firmware/ and firmware/lib, where
+MicroPython looks for drivers, first on sys.path. Per module the answer is one of:
   - imported;
   - raised: the exception's last line, which names the stand-in when the firmware wants more than a Pin;
   - timed out: it did not return within the timeout (5 s by default). Something at module level loops or waits.
     Put it in a function that main.py calls.
 
-main.py is left unrun on purpose: it is the boot file that starts the loop, so a two-line main.py over an importable
-module is the shape that can be tested. When firmware/ holds nothing to import but main.py and pins.py, that is a
-problem, not a pass: the firmware cannot be imported without running it, so move the code out of main.py into a
+The boot files are left unrun on purpose: main.py starts the loop, so a two-line main.py over an importable module is
+the shape that can be tested. When firmware/ holds nothing to import but the boot files and pins.py, that is a
+problem, not a pass: the firmware cannot be imported without running main.py, so move the code out of main.py into a
 module that main.py calls. No firmware/ folder is could-not-run.
 
 Exit 0: every module imported; 1: one did not, or there is nothing to import; 2: no firmware/ folder to look in.
