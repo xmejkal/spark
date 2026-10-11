@@ -51,7 +51,7 @@ def import_one(name, firmware, timeout_s):
     command = [sys.executable, "-B", "-c", IMPORT_ONE, name, str(STAND_IN), str(firmware)]  # -B: no __pycache__ in the folder
     try:
         done = subprocess.run(command, cwd=str(firmware), capture_output=True, text=True, errors="replace",
-                              timeout=timeout_s)
+                              stdin=subprocess.DEVNULL, timeout=timeout_s)
     except subprocess.TimeoutExpired:
         return TIMED_OUT, ("did not return within %g s: something at module level loops or waits; "
                            "put it in a function that %s calls" % (timeout_s, BOOT_FILE))

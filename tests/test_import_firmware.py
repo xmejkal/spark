@@ -201,6 +201,15 @@ class TheCommandRunsFromWhereTheyAreTest(unittest.TestCase):
                               env=dict(os.environ, PYTHONSAFEPATH="1"))
         self.assertEqual(done.returncode, outcomes.EXIT_OK, done.stdout + done.stderr)
 
+    def test_a_module_that_asks_for_input_does_not_read_the_callers_pipe(self):
+        # F6: an input() at module level took the line the caller piped in. On the board nobody types at import.
+        project = a_project(light="answer = input()\n")
+        done = subprocess.run([sys.executable, str(SCRIPT), "--json"], cwd=str(project), input="typed\n",
+                              capture_output=True, text=True)
+        answer = json.loads(done.stdout)
+        self.assertEqual(done.returncode, outcomes.EXIT_PROBLEMS, answer)
+        self.assertEqual(module_named(answer, "light")["detail"], "EOFError: EOF when reading a line")
+
 
 class AModuleThatFailsIsAProblemTest(unittest.TestCase):
     def test_a_module_that_raises_says_the_exception_s_last_line(self):
