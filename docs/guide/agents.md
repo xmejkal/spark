@@ -109,6 +109,8 @@ These only read:
 
 - `check_all.py`, `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
 - `assign_pins.py` without `--emit-pins`;
+- `import_firmware.py`. It writes nothing. It does import the project's firmware modules. Their module-level code runs
+  on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7));
 - `tools.py --status`, `boards.py --list`, `check_vendor_pins.py --offline`;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
@@ -256,6 +258,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
+| `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked`. Each of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`. A project with no `firmware/` folder is `could-not-run`. One with nothing to import but `main.py` and `pins.py` is `problems`. Its firmware cannot be imported without running it |
 | `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. With `--keep` or `--sim-dir`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`, `removed`, `not written` or `not kept`) and `why` |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
@@ -344,7 +347,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 ```
 
 **Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
-`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py` and `parts.py`. These do not take
+`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `import_firmware.py` and `parts.py`. These do not take
 it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 

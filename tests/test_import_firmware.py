@@ -12,11 +12,13 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
@@ -54,6 +56,13 @@ class ThePinsRememberTheirLevelsTest(unittest.TestCase):
         self.assertEqual(led.value(), 1)
         led.value(0)
         self.assertEqual(led.value(), 0)
+
+    def test_any_true_value_is_the_level_one(self):
+        led = self.Pin(7, self.Pin.OUT)
+        led.value(True)
+        self.assertEqual(led.value(), 1)
+        led.value(2)
+        self.assertEqual(self.machine.level(7), 1)
 
     def test_on_and_off_write_one_and_zero(self):
         led = self.Pin(7, self.Pin.OUT)
@@ -166,8 +175,17 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
 
     def test_importing_leaves_no_bytecode_in_the_person_s_folder(self):
         project = a_project(light="x = 1\n")
-        answer_for(project)
+        with mock.patch.dict(os.environ):  # the suite may run with bytecode off already; the command must not rely on it
+            for variable in ("PYTHONDONTWRITEBYTECODE", "PYTHONPYCACHEPREFIX"):
+                os.environ.pop(variable, None)
+            answer_for(project)
         self.assertFalse((project / "firmware" / "__pycache__").exists())
+
+    def test_a_module_opens_its_files_from_the_firmware_folder_as_on_the_board(self):
+        project = a_project(light="settings = open('config.json').read()\n")
+        (project / "firmware" / "config.json").write_text("{}")
+        code, answer = answer_for(project)
+        self.assertEqual(code, outcomes.EXIT_OK, answer)
 
     def test_the_project_defaults_to_the_folder_it_runs_in(self):
         project = a_project(light="x = 1\n")
@@ -183,6 +201,12 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         self.assertEqual(module_named(answer, "light")["status"], "raised")
         self.assertEqual(module_named(answer, "light")["detail"], "ValueError: no such pin")
         self.assertEqual(module_named(answer, "pins")["status"], "imported", "one bad module hid the other")
+
+    def test_the_timeout_is_the_one_asked_for(self):
+        project = a_project(slow="import time\ntime.sleep(3)\n")
+        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        self.assertEqual(module_named(answer, "slow")["status"], "timed out")
+        self.assertIn("within 0.5 s", module_named(answer, "slow")["detail"])
 
     def test_a_module_that_needs_more_than_pin_is_named_as_the_stand_in_s_limit(self):
         project = a_project(light="from machine import PWM\n")
