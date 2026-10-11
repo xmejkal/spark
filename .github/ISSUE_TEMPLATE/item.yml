@@ -6,16 +6,16 @@ body:
     id: needed-by
     attributes:
       label: Needed by
-      description: The design, project or person that needs this, in their words where possible (W14 — pull, never push).
+      description: The design, project or person that needs this, in their words where possible (W14 — pull, never push). Needed from Ready on; an idea needs only its words.
     validations:
-      required: true
+      required: false
   - type: textarea
     id: value
     attributes:
       label: Value proven by
-      description: The command whose output shows it is true, readable by the Product Owner (or what will be true, until a command exists).
+      description: The command whose output shows it is true, readable by the Product Owner (or what will be true, until a command exists). Needed from Ready on.
     validations:
-      required: true
+      required: false
   - type: input
     id: archive
     attributes:

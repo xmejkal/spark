@@ -1,7 +1,8 @@
 # The journey
 
-spark takes a gadget from an idea in words toward a board that builds and is checked, with a Wokwi diagram generated
-from it. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
+spark takes a gadget from an idea in words to the parts and how to wire them on a breadboard, the pin map its firmware
+imports, and a Wokwi simulation to run that firmware in; a board that builds and is checked, and its 3D model, come
+on request. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
 `parts.py --requirements` writes from your picks ([P97](https://github.com/xmejkal/spark/issues/18)). Each step reports
 what it could not look at; [what never to assume](agents.md#what-never-to-assume) lists where that does not hold yet.
 
@@ -911,8 +912,8 @@ L9110S dual motor driver module — motor-driver
   fix for l9110s-module.AIB: record the module's input_low_threshold_v, the level it reads as low, then run --show again: held only under the input-high threshold, the level is undefined
 ```
 
-The next step is the `spark-review` skill: it runs `check_all`, then reviewer agents, then the fabrication gate. It
-was not run here; [is it ready?](agents.md#is-it-ready) says what each part covers.
+The next steps are the [firmware](#firmware), which imports `pins.py`, and the [simulation](#simulate). Before a board is
+ordered, the `spark-review` skill runs `check_all`, then reviewer agents, then the fabrication gate. It was not run here; [is it ready?](agents.md#is-it-ready) says what each part covers.
 
 ## Firmware
 
@@ -967,7 +968,8 @@ that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01). 
 ## Bench
 
 **Not yet.** No command does this yet. spark's own hardware step is
-[P79](https://github.com/xmejkal/spark/issues/16), not designed yet.
+[P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
+sheet ([v1](../../scrum/VISION.md#versions)).
 
 A bench session that leaves a verdict a command can read is planned first in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32

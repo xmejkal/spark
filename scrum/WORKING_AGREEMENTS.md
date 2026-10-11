@@ -238,11 +238,11 @@ only because both did.
 
 ## W19 — The item exists before the work starts
 
-If work is not on the board, it is not happening; W19 says when. An issue is created on the project, with its
-*Needed by* and *Value proven by*, **before** the first command of the work is run, including for work that only
+If work is not on the board, it is not happening; W19 says when. An issue is created on the project, a
+paragraph at least, **before** the first command of the work is run, including for work that only
 produces a document — an audit, an architecture, a piece of research — and the pull request that delivers it says
-`Closes #N` (W8; since 2026-10-05, P102a). The item may be a single paragraph, and it may be refined once the work
-reveals its shape, but it exists first, so the work can be tracked, sized, and stopped.
+`Closes #N` (W8; since 2026-10-05, P102a). The item may be a single paragraph: *Needed by* and *Value proven by* come by Ready, since refinement decreases
+with distance ([versions](VISION.md#versions)), and it may be refined once the work reveals its shape, but it exists first, so the work can be tracked, sized, and stopped.
 
 **And the card stands in its working stage before any agent starts on it** (P146): a read moves its card to
 Discovery, the spec council runs on a card in Design, the plan's agents on one in Build, the final review on one in

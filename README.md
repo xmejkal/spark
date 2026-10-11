@@ -1,6 +1,6 @@
 # spark
 
-**From a list of modules to a checked board, for gadgets built from an ESP32 dev board.**
+**From an idea to a breadboard with working firmware — and a board, if you want one — for gadgets built from an ESP32 dev board.**
 
 spark is a Claude Code plugin, meant for a hobbyist building a gadget from an ESP32 *dev board* (a module such as the
 DFRobot FireBeetle 2 ESP32-S3) and off-the-shelf modules, not for chip-down boards made in volume
@@ -9,15 +9,16 @@ the parts you own and the ones it knows. It researches a missing part from the v
 a [record](GLOSSARY.md#record--and-the-four-places-one-lives): its facts, each with a source and whether anyone
 checked it.
 
-From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark generates the
-*board*: a printed circuit board your dev board and modules plug into.
+From a [requirements file](GLOSSARY.md#the-requirements-file), the dev board and a list of parts, spark gives you a
+breadboard sheet (the parts and how to wire them), the pin map your firmware imports, and a simulation to run it in.
+On request it also gives you the *board*, a printed circuit board your dev board and modules plug into, and its 3D model.
 
 - Every pin gets a reason, and the connections come from the parts' records.
 - The board builds, with a Wokwi diagram generated from it (kept only with `--sim-dir sim`,
   [P116](https://github.com/xmejkal/spark/issues/50)).
 - spark's checks read it.
 
-Its placement is a first draft, which you lay out before ordering.
+The board's placement is a first draft, which you lay out before ordering.
 [The chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from that requirements file, which you
 write, or which `parts.py --requirements` writes from the parts you picked for your needs
 ([P97](https://github.com/xmejkal/spark/issues/18)). `--board`, and a requirements file's `board`, name the dev board.
@@ -76,8 +77,8 @@ nothing does it yet; the linked issue plans it.
 | [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it and, with `--keep`, a breadboard sheet (the parts and how to wire them), or the stage that stopped it | `/spark:build` |
 | [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |
 | [Firmware](docs/guide/journey.md#firmware) | **partly**: the pin map is exported for the firmware to import. Not built yet: checking the firmware on a Mac against it ([P59](https://github.com/xmejkal/spark/issues/7), [P74](https://github.com/xmejkal/spark/issues/8)) | `assign_pins.py --emit-pins` |
-| [Simulate](docs/guide/journey.md#simulate) | **partly**: the build generates the Wokwi diagram and stages the chips, kept only with `--sim-dir sim` ([P116](https://github.com/xmejkal/spark/issues/50)). A run needs a flash image, a scenario you write, `wokwi-cli` and a Wokwi account's CI token, and it spends Wokwi CI minutes; none was run here | `/spark:build`, then `wokwi-cli` |
-| [Bench](docs/guide/journey.md#bench) | **not yet**: spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16). The first bench will be a separate project's, a sensor trash can given a new ESP32 brain ([P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2), its bring-up [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8)) | — |
+| [Simulate](docs/guide/journey.md#simulate) | **partly**: the build generates the Wokwi diagram and stages the chips, kept only with `--sim-dir sim` ([P116](https://github.com/xmejkal/spark/issues/50)). A run needs a flash image, a scenario you write, `wokwi-cli` and a Wokwi account's CI token, and it spends Wokwi CI minutes. The journey's button-and-LED project passed with a hand-written scenario on 2026-10-11 ([P190](https://github.com/xmejkal/spark/issues/142)); spark writes no scenario yet ([P130](https://github.com/xmejkal/spark/issues/64)) | `/spark:build`, then `wokwi-cli` |
+| [Bench](docs/guide/journey.md#bench) | **not yet**: spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16). The first bench is the button-and-LED project, flashed and wired from its sheet ([the plan for v1](scrum/VISION.md#versions)); the sensor trash can's bring-up follows it ([P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2)) | — |
 
 A board you wrote by hand in tscircuit is read the same way: `npx --no tsci build board.tsx`, then `/spark:init` so it
 names the rails, then `check_all.py --project .` (not run here; a project's own

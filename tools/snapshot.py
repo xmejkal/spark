@@ -15,7 +15,7 @@ Before and after a change that alters an output: main first, then the branch aga
 Against the baseline instead, every output change merged since 2026-10-11 shows too.
 
 Why: no change to spark's output merges before its outputs of 2026-10-11 are recorded, so every later change can show
-what it changed (P184, #133; P158's plan, #94). The baseline is docs/observations/2026-10-11-baseline.json. A card
+what it changed (P184, #133). The baseline is docs/observations/2026-10-11-baseline.json. A card
 that changes an output says which of its lines it changes, and --against shows them.
 
 How: each project is cloned into <dir> (an APFS clone on macOS, so no extra space). Its documented spark commands run

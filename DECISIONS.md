@@ -10,7 +10,8 @@ Last condensed: 2026-09-25; the product rules and the cautions revised 2026-10-0
 
 ## The goal, in one line
 
-**idea → parts → schema → simulation** (3D and PCB later). Working schema and code come first.
+**idea → parts → schema → firmware → simulation → flashed onto the board** (3D and PCB on request). Working schema and
+code come first.
 Anything not on that spine is a distraction, however interesting.
 
 ## The rule everything else derives from

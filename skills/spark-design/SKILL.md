@@ -1,6 +1,6 @@
 ---
 name: spark-design
-description: Design an electronic circuit or PCB from a description, especially ESP32 and module-level boards. Use when the user wants to design a circuit, make a real schematic or PCB, wire up a microcontroller with peripherals, or says "design a board for...", "make a schematic for...", "wire up an ESP32 with...". Generates the board from a requirements file through spark's own chain (parts → pin map → board file → build → simulation), builds it headless, and grades it against design rules and the parts library; tscircuit is written by hand only where the generator stops.
+description: Design an electronic circuit from a description — the parts, a breadboard sheet, the pin map its firmware imports and a simulation, with a PCB on request — especially ESP32 and module-level boards. Use when the user wants to design a circuit, make a real schematic or PCB, wire up a microcontroller with peripherals, or says "design a board for...", "make a schematic for...", "wire up an ESP32 with...". Generates the board from a requirements file through spark's own chain (parts → pin map → board file → build → breadboard sheet → simulation), builds it headless, and grades it against design rules and the parts library; tscircuit is written by hand only where the generator stops.
 ---
 
 # spark-design
@@ -95,15 +95,20 @@ a rule checklist in the loop. Follow it.
    power/ground, overlaps), fix and rebuild until clean. Do not rely on the `tsci check` CLI
    subcommands (work-in-progress) — read the circuit.json errors.
 
-6. **Verify before emitting fab output.** Hand off to `spark-review`, which ends with the fab
+6. **Breadboard and firmware first.** `/spark:build --keep .` writes `breadboard.md`, the parts and how to wire
+   them. The firmware does `import pins` (`assign_pins.py requirements.json --emit-pins firmware/pins.py`), and the
+   simulation runs it (`commands/build.md`, *Simulate*). A board is ordered only once these work, and only if the
+   person wants one.
+
+7. **Verify before emitting fab output.** Hand off to `spark-review`, which ends with the fab
    gate: `check_all.py --project .`, then `boards.py --validate --for-fab` and
    `parts.py --unverified <every part on the board>`, then `kicad-cli sch erc` if KiCad is installed. Do NOT produce Gerbers
    while something load-bearing is unverified.
 
-7. **Render and show.** `npx --no tsci export -f schematic-svg board.tsx`, convert to PNG if needed,
+8. **Render and show.** `npx --no tsci export -f schematic-svg board.tsx`, convert to PNG if needed,
    and show the user the schematic. Summarize what is verified vs still a placeholder.
 
-8. **PCB layout (only when the user wants a board).** Read `references/pcb-layout.md`. State the
+9. **PCB layout (only when the user wants a board).** Read `references/pcb-layout.md`. State the
    honest limit: AI does a first-pass placement + autoroute + DRC iteration, the human refines and
    signs off — never fab unattended. Enforce good practices with a rule-gate (net classes +
    `.kicad_dru` + `kicad-cli pcb drc`), not AI judgment. Default to Pipeline A (all-in-tscircuit,

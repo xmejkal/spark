@@ -49,7 +49,7 @@ report what something costs and what it would prove.
 
 | file | what it is for |
 | --- | --- |
-| **the spark project** (https://github.com/users/xmejkal/projects/2) | **the board, since 2026-10-05 (P102a).** Every item is an issue, with its *Needed by* and *Value proven by*; Kanban stages and limits ([the flow](#the-flow--an-items-stages), below); the Ready column's order is the PO's. The bin's own board: https://github.com/users/xmejkal/projects/1 |
+| **the spark project** (https://github.com/users/xmejkal/projects/2) | **the board, since 2026-10-05 (P102a).** Every item is an issue; from Ready on it carries its *Needed by* and *Value proven by*; Kanban stages and limits ([the flow](#the-flow--an-items-stages), below); the Ready column's order is the PO's. The bin's own board: https://github.com/users/xmejkal/projects/1 |
 | [`PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) | **the archive, frozen 2026-10-05.** Every heading says where its item went (MOVED to an issue) or how it ended |
 | [`SPRINT.md`](SPRINT.md) | the history of Sprints 1–10 |
 | [`RETROSPECTIVES.md`](RETROSPECTIVES.md) | every retro, the change it produced, and **whether that change stuck** |
@@ -106,7 +106,7 @@ PO's order into Ready commits.
 
 | stage | limit | enters when | leaves when | how |
 | --- | --- | --- | --- | --- |
-| **Idea** | — | the PO's words are recorded, or Claude files found work (decision 3); no slice is needed | the PO starts it, or it closes as not planned or as a duplicate | the issue form: *Needed by*, *Value proven by* |
+| **Idea** | — | the PO's words are recorded, or Claude files found work (decision 3); no slice is needed | the PO starts it, or it closes as not planned or as a duplicate | the PO's words are enough. *Needed by*, *Value proven by* and a slice come at Ready: refinement decreases with distance ([versions](VISION.md#versions)) |
 | **Discovery** | 2, epics count | the PO says "discover it", or a read runs on the card (D) | its document merges by PR (D) and the PO decides: design, park or drop. A read that only answered a question posts the answer, and the card goes back to Idea (D) | with the PO, through his `product-discovery` skill (P102e): journeys, a story map, his answers in batches. Drawing them in Miro and Canva is P102b |
 | **Design** | 2, epics count | a story the PO chose has no approved spec, before Ready or when it is pulled from Ready | the spec is in `docs/`, its council has run (full by default, light on request (D)), and the PO says yes | superpowers' brainstorming, then the spec in `docs/` |
 | **Ready** | 5 | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
@@ -269,7 +269,7 @@ tested and committed — Done by any reasonable bar. The chain it was meant to u
 a board with zero traces, so the *value* was zero until four further defects were found. The
 review that matters asks **"can Petr now do the thing?"**, not "did the work complete?".
 
-So every issue carries a *Value proven by* section naming a command whose output Petr can read, and
+So every issue in Ready carries a *Value proven by* section naming a command whose output Petr can read, and
 review runs those commands. If an item cannot name one, it does not enter Ready.
 
 ## Definition of Done
