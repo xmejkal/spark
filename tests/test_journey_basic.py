@@ -70,9 +70,10 @@ def _diagram(path):
 
 
 def _sheet(path):
-    wiring = re.findall(r"^\d+\. .*$", path.read_text(), re.MULTILINE)
-    lacking = [name for name in ("TactileButton", "LedRed5mm") if not any(name in line for line in wiring)]
-    return "no wiring line names %s" % " or ".join(lacking) if lacking else None
+    # An end, not a mention: a resistor's own label names the part it serves ("R1 (10kΩ pull-up on TactileButton A)").
+    ends = [end for line in re.findall(r"^\d+\. (.*)$", path.read_text(), re.MULTILINE) for end in line.split(" · ")]
+    lacking = [name for name in ("TactileButton", "LedRed5mm") if not any(end.startswith(name + " ") for end in ends)]
+    return "no wiring line has an end on %s" % " or ".join(lacking) if lacking else None
 
 
 def _gerbers(path):
@@ -126,7 +127,11 @@ def walk(project):
         [sys.executable, str(ROOT / "scripts" / "check_spine.py"), "requirements.json",
          "--keep", ".", "--sim-dir", "sim", "--json"],
         cwd=str(project), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
-    verdict = json.loads(spine.stdout)
+    try:
+        verdict = json.loads(spine.stdout)
+    except ValueError:  # a spine that printed no verdict: what it said instead is the failure's reason
+        verdict = {"status": "crashed", "stages": [{"name": "check_spine", "status": "crashed",
+                                                     "detail": spine.stderr.strip()[-800:] or "no output"}]}
     toolchain = check_spine.find_toolchain(project)
     if toolchain is None or not any(s["name"] == "build" and s["status"] == check_spine.OK for s in verdict["stages"]):
         return verdict
