@@ -44,8 +44,8 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P59: the stand-in is not on the path",
-  "find": "name, str(STAND_IN), str(firmware)]",
-  "replace": "name, str(firmware)]"
+  "find": "name, str(STAND_IN), str(firmware), str(firmware / \"lib\")]",
+  "replace": "name, str(firmware), str(firmware / \"lib\")]"
  },
  {
   "file": "scripts/import_firmware.py",
@@ -154,5 +154,11 @@
   "name": "P59 F4: boot.py is imported, and so is run, and counts as firmware",
   "find": "BOOT_FILES = (\"boot.py\", BOOT_FILE)",
   "replace": "BOOT_FILES = (BOOT_FILE,)"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P59 F5: a driver kept in firmware/lib is not found",
+  "find": ", str(firmware / \"lib\")]",
+  "replace": "]"
  }
 ]

@@ -165,6 +165,15 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
         self.assertEqual(code, outcomes.EXIT_OK, answer)
         self.assertEqual(sorted(entry["module"] for entry in answer["modules"]), ["light", "pins"])
 
+    def test_a_driver_kept_in_firmware_lib_is_found_as_on_the_board(self):
+        # F5: MicroPython looks in /lib after the root, and the project's firmware/ is uploaded as the root.
+        project = a_project(light="import driver\nlevel = driver.LEVEL\n")
+        (project / "firmware" / "lib").mkdir()
+        (project / "firmware" / "lib" / "driver.py").write_text("LEVEL = 1\n")
+        code, answer = answer_for(project)
+        self.assertEqual(code, outcomes.EXIT_OK, answer)
+        self.assertEqual([entry["module"] for entry in answer["modules"]], ["light"], "a driver is not firmware to import")
+
     def test_main_py_is_left_unrun(self):
         project = a_project(main="open('main-ran', 'w').close()\n", light="x = 1\n")
         code, answer = answer_for(project)
