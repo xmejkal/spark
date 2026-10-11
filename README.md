@@ -15,8 +15,8 @@ simulation to run it in. The same build is a *board*, a printed circuit board yo
 its fab package and 3D model (`npx --no tsci export board.tsx -f glb`) are there when you want one.
 
 - Every pin gets a reason, and the connections come from the parts' records.
-- The board builds, with a Wokwi diagram generated from it (kept only with `--sim-dir sim`,
-  [P116](https://github.com/xmejkal/spark/issues/50)).
+- The board builds, with a Wokwi diagram generated from it, kept in `sim/`, and the pin map the firmware
+  imports ([P116](https://github.com/xmejkal/spark/issues/50), [P196](https://github.com/xmejkal/spark/issues/155)).
 - spark's checks read it.
 
 The board's placement is a first draft, which you lay out before ordering.
@@ -77,8 +77,8 @@ nothing does it yet; the linked issue plans it.
 | [Research](docs/guide/journey.md#research) | **partly**: the library search runs. Research of a new part is done by agents, not run here | `/spark:research`, `/spark:identify` |
 | [Build](docs/guide/journey.md#build) | **works**: a requirements file to a board that builds, with a Wokwi diagram generated from it and, with `--keep`, a breadboard sheet (the parts and how to wire them), or the stage that stopped it | `/spark:build` |
 | [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |
-| [Firmware](docs/guide/journey.md#firmware) | **partly**: the pin map is exported for the firmware to import. Not built yet: checking the firmware on a Mac against it ([P59](https://github.com/xmejkal/spark/issues/7), [P74](https://github.com/xmejkal/spark/issues/8)) | `assign_pins.py --emit-pins` |
-| [Simulate](docs/guide/journey.md#simulate) | **partly**: the build generates the Wokwi diagram and stages the chips, kept only with `--sim-dir sim` ([P116](https://github.com/xmejkal/spark/issues/50)). A run needs a flash image, a scenario you write, `wokwi-cli` and a Wokwi account's CI token, and it spends Wokwi CI minutes. The journey's button-and-LED project passed with a hand-written scenario on 2026-10-11 ([P190](https://github.com/xmejkal/spark/issues/142)); spark writes no scenario yet ([P130](https://github.com/xmejkal/spark/issues/64)) | `/spark:build`, then `wokwi-cli` |
+| [Firmware](docs/guide/journey.md#firmware) | **partly**: the pin map is exported for the firmware to import. Not built yet: checking the firmware on a Mac against it ([P59](https://github.com/xmejkal/spark/issues/7), [P74](https://github.com/xmejkal/spark/issues/8)) | `/spark:build`, or `assign_pins.py --emit-pins` |
+| [Simulate](docs/guide/journey.md#simulate) | **partly**: the build generates the Wokwi diagram and stages the chips, kept in `sim/` ([P116](https://github.com/xmejkal/spark/issues/50)). A run needs a flash image, a scenario you write, `wokwi-cli` and a Wokwi account's CI token, and it spends Wokwi CI minutes. The journey's button-and-LED project passed with a hand-written scenario on 2026-10-11 ([P190](https://github.com/xmejkal/spark/issues/142)); spark writes no scenario yet ([P130](https://github.com/xmejkal/spark/issues/64)) | `/spark:build`, then `wokwi-cli` |
 | [Bench](docs/guide/journey.md#bench) | **not yet**: spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16). The first bench is the button-and-LED project, flashed and wired from its sheet ([the plan for v1](scrum/VISION.md#versions)); the sensor trash can's bring-up follows it ([P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2)) | — |
 
 A board you wrote by hand in tscircuit is read the same way: `npx --no tsci build board.tsx`, then `/spark:init` so it

@@ -52,12 +52,12 @@ The files that join the steps:
 | `requirements.json` | you, `parts.py --requirements` from your picks, or the `spark-design` skill with you | the chain, `assign_pins.py`, and `check_all.py` for buildability and physics |
 | `board.tsx`, and the dev board's footprint beside it | the schematic and footprint stages, kept with `--keep .` | tscircuit |
 | `dist/board/circuit.json`, the built netlist | tscircuit's build | every check, `init_project.py` (to name the rails), and the Wokwi converter |
-| `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--sim-dir sim` | `wokwi-cli`, and Wokwi for VS Code |
+| `sim/diagram.json`, `sim/wokwi.toml` and the chips | the simulation stage, kept with `--keep` or `--sim-dir` | `wokwi-cli`, and Wokwi for VS Code |
 | `.spark/rules.json` | `init_project.py`, then you | the checks, and the generator, which sizes a rail's traces from its `max_current_a` |
 | `.spark/needs.json` | `parts.py --needs-set`, and `--pick` for a need's pick | `parts.py --match` |
 | `.spark/cache/<variant>.pins_arduino.h`, the vendor's pin header | `check_vendor_pins.py` without `--offline` | `check_vendor_pins.py --offline` and `check_all.py`'s vendor-truth, which fall back to spark's own copy for the variants of the two boards it ships (`dfrobot_firebeetle2_esp32s3`, `XIAO_ESP32C6`) |
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
-| `firmware/pins.py` | `assign_pins.py --emit-pins` | your firmware |
+| `firmware/pins.py` | `check_spine.py --keep`, or `assign_pins.py --emit-pins` | your firmware |
 | `breadboard.md`, the parts and how to wire them | `check_spine.py --keep .` after a build that finished, or `breadboard.py` | you, at the bench |
 
 The converter's own [ARCHITECTURE.md](../../tools/circuit-to-wokwi/ARCHITECTURE.md) shows its part of the path.
