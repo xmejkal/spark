@@ -111,7 +111,7 @@ PO's order into Ready commits.
 | **Design** | 2, epics count | a story the PO chose has no approved spec, before Ready or when it is pulled from Ready | the spec is in `docs/`, its council has run (full by default, light on request (D)), and the PO says yes | superpowers' brainstorming, then the spec in `docs/` |
 | **Ready** | 5 | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
 | **Build** | 2 | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | superpowers' writing-plans — a plan council only for a plan of several tasks (decision 6) — then executing-plans or subagent-driven-development; the plan's tasks become sub-issues |
-| **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request) (the PO assistant, the user's journey, the tech lead, the three documentation experts, then the refuter) has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
+| **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request), sized to the change, has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
 Ready takes five (D); each working stage two, and at most four cards in flight — Discovery to Review — at once: the
@@ -169,10 +169,10 @@ skipped twice, do epics start and finish? If not, one-day sprints replace it (th
 
 ### The council before every pull request
 
-Every pull request, bigger or smaller, gets a council before the PO merges it: the PO assistant, the user's journey and
-the tech lead, three documentation experts (for human readers, for AI, and for examples and help), then the refuter. Its
-findings are fixed before the merge, not only reported. First run: P158's council on PR #98, 2026-10-08. The PO's words
-of 2026-10-08, as #80 records them (typos corrected) —
+Every pull request, bigger or smaller, gets a council before the PO merges it, sized to the change (the table below):
+the PO assistant, the user's journey and the tech lead, three documentation experts (for human readers, for AI, and for
+examples and help), then the refuter. Its findings are fixed before the merge, not only reported. First run: P158's
+council on PR #98, 2026-10-08. The PO's words of 2026-10-08, as #80 records them (typos corrected) —
 [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
 [the addition](https://github.com/xmejkal/spark/issues/80#issuecomment-6058297081):
 
@@ -213,19 +213,23 @@ and help"* ([#126](https://github.com/xmejkal/spark/issues/126)). So three docum
 A pull request fixes the gaps it makes. Older gaps in the README's shape go to P182
 ([#128](https://github.com/xmejkal/spark/issues/128)): the PO's answer of 2026-10-10, *"Keep P182 as its own card"*.
 
-**Its size follows the change** (the PO, 2026-10-11: *"Size it to the change"*,
+**The council's size follows the change** (the PO, 2026-10-11: *"Size it to the change"*,
 [#131](https://github.com/xmejkal/spark/issues/131)). Every pull request still gets a council and a refuter:
 
 | the change | the council |
 | --- | --- |
-| docs only, or under about 50 changed lines | one reviewer on Sonnet asking all six lenses' questions, then the refuter |
-| code | the six lenses on Sonnet, then the refuter |
+| docs only, or under about 50 changed lines | one reviewer on Sonnet asking all six lenses' questions, then the refuter on Opus |
+| other code (50 or more changed lines) | the six lenses on Sonnet, then the refuter on Opus |
 | a design or an epic | the full council |
+
+Count added plus removed lines (`git diff --shortstat origin/main...HEAD`). A PR that merges a design or closes an epic
+takes the full council even when it is only docs.
 
 ## The token budget
 
 - **Sized to the question.** A look-up gets one agent; a comparison, a few. A full council (about 90 M input tokens)
-  runs only where a council belongs, and councils are full by default (D).
+  runs only for a design or an epic; the council before a pull request is
+  [sized to the change](#the-council-before-every-pull-request).
 - **The model, and Fable spared.** Lenses run on Sonnet (decision of 2026-10-06). The PO's words of 2026-10-10:
   *"ok, we really need to make sure Fable is only being used for the most important parts, we're almost out of it.
   Can you make sure we don't run out of it?"* Claude's reading of them, his to change
