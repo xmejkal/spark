@@ -1,5 +1,7 @@
 # The README and its guides — design (P104)
 
+> Status 2026-10-11: built (P104); tools/check_docs.py is the authority.
+
 **Status:** the spec, for the PO's review (2026-10-05). Issue: xmejkal/spark#33, slice 1 (*Public*: a stranger can
 install and use spark).
 

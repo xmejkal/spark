@@ -171,7 +171,7 @@ python3 tools/snapshot.py --out /tmp/before --spark <main checkout> --tsci-bin <
 python3 tools/snapshot.py --out /tmp/after --against /tmp/before/snapshot.json --tsci-bin <the same>
 ```
 
-The baseline, `docs/observations/2026-10-11-baseline.json`, was taken before P158's cards change any output. Against it,
+The baseline, `docs/observations/2026-10-11-baseline.json`, was taken on 2026-10-11, before any later change to an output. Against it,
 a run also shows every output change merged since. On the branch that added it, which changed no answer, the run
 against the baseline ended like this:
 

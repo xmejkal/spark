@@ -2,8 +2,9 @@
 
 The order of the work, from `VISION.md`. **Confirmed by the PO 2026-10-03** (P69). Across: the
 journey a person takes. Down: slices, each a milestone that ends in something a command or a bench
-log proves. **An open backlog item sits on one slice below, or it is parked or deleted** —
-`tests/test_orphans.py` fails on one that does not.
+log proves. A card names its slice from Ready on (`tools/check_backlog.py`). **The order of the versions is
+[VISION.md's *Versions*](VISION.md#versions)** (2026-10-11): v1, the basic journey, item by item; later versions
+one epic each. The slices below are the board's Slice values.
 
 ## The journey, and what spark offers at each step
 
@@ -19,9 +20,9 @@ log proves. **An open backlog item sits on one slice below, or it is parked or d
 | 7 | See it | `tsci dev`, Wokwi for VS Code (P65, P67) | — |
 | 8 | Simulate | `check_spine` → Wokwi (paid minutes) | — |
 | 9 | Firmware | `pins.py` only | nothing tests firmware against the board (P59, P74) |
-| 10 | **Breadboard** — through-hole parts, wired from a table, the firmware tested on it | nothing: spark's only output is a PCB, its passives SMD | all of it (P79); the bin's `bringup/01..06` never run, no log of a verdict (P73) |
-| 11 | PCB and fab — offered once the breadboard works | `emit_board` → tscircuit, `fab.py`, `check_bom`, the review's fab gate | optional, and only after the circuit and the firmware are proven (slice 8) |
-| 12 | Enclosure — 3D export, Fusion 360, printed parts | `tsci export -f glb` only | everything past the board's own model (slice 9) |
+| 10 | **Breadboard** — through-hole parts, wired from a table, the firmware tested on it | `breadboard.md` from `/spark:build --keep` (P191): the parts and how to wire them | flashing the board (P192) and the first walk to a lit LED (P100, round A); the bin's `bringup/01..06` after it (P73) |
+| 11 | PCB and fab — offered once the breadboard works | `emit_board` → tscircuit, `fab.py`, `check_bom`, the review's fab gate | optional, and only after the circuit and the firmware are proven (a later version) |
+| 12 | Enclosure — 3D export, Fusion 360, printed parts | `tsci export -f glb` only | everything past the board's own model (a later version) |
 
 Two halves: the maker uses spark to *check* a hand-written board; only the cold tests used the
 generator. Steps 9–11 hold almost nothing from spark yet.
@@ -30,20 +31,18 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
+| **v1** | **The basic journey** — the board's Slice "v1 The basic journey" | hobbyist | the PO's walk: button-and-LED from an idea to a lit LED on a breadboard, firmware that passed the simulation, every stage handing over ([v1](VISION.md#versions)) | P195 (#154), P196 (#155), P59 (#7), P197 (#156), P130 (#64), P192 (#144), P193 (#145), P185 (#134), P100 (#6), P113 (#47), P138 (#72) |
 | **1** | **Public** — a stranger can install it | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71, P44, P75, B10, P82 (done); **P104** (#33), the README |
 | **1b** | **From a vague idea** — the walking skeleton's first step | hobbyist | goal first runs today: `/spark:drawer`, then `/spark:idea` from a goal in words to a requirements file that `/spark:build` turns into a board (store 1a–1c, done 2026-10-04 to 2026-10-08). *Not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5) — the brainstorm, the block diagram and the ways in beyond goal first; **P100** (#6) — a new idea and an existing project, each walked through with the person |
-| **2** | **First copper** — the bin on a breadboard | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | P81 (done), **B1** (bin #1), **P58** (bin #5), **P73** (bin #2), **B8** (bin #3), **B5** (bin #4), B11 (done) |
+| **2** | **First copper** — the bin on a breadboard, after v1's button-and-LED walk | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | P81 (done), B1 (done 2026-10-06), **P58** (bin #5), **P73** (bin #2), **B8** (bin #3), **B5** (bin #4), B11 (done) |
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | **P59** (#7), **P74** (#8) |
-| **4** | **v1 on two named projects** | hobbyist | the documented example and irrigation: `check_spine` exits 0; `check_all` shows no `[FAIL]`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
+| **4** | **Checks on two named projects** (v1 before 2026-10-11) | hobbyist | the documented example and irrigation: `check_spine` exits 0; `check_all` shows no `[FAIL]`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), **P78** (#14), P80 (done), P83 (done), B13 (done), **P43** (#11) (the `fix` half), **P77** (#13) (its place is the council's) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | **R2.6** (#15), then F3 and F4 as they pull |
-| **7** | **Breadboard or wires → perfboard → PCB** | hobbyist | *not designed yet* — the PO's overview: through-hole parts, no SMD, the circuit and the firmware tested on a breadboard; a soldered perfboard build as an optional step; a PCB offered only after | **P79** (#16) |
-| **8** | **A board you can order** | hobbyist | *not designed yet* — the overview: optional, with the firmware already working | pulled by the first design that wants one |
-| **9** | **An enclosure** | hobbyist | *not designed yet* — the overview: 3D export, Fusion 360, printed parts | pulled by the first design that wants one |
-| **10** | **The store, sound — then shared** | hobbyist | *not designed yet* — the PO's idea: a store you can choose (files, a database, an online repository), and a public repo of records other users read and add to by pull request, beside spark's own library | P85 (done); **P94** (#17) (the design); then store 1a P95 (done 2026-10-04 — my drawer, with P88 (done), **P91** (#22)'s shelf, **P92** (#23)'s envelope, P93 (done)'s first importers), 1b P96 (done 2026-10-05 — a goal matched — with **P89** (#20)), 1c P97 (done 2026-10-08 — picks to a building list, tallied); **P90** (#21) and **P89** (#20) stay their own items; **P87** (#19) before any shared record; then P84 (parked) (pulled by the first outside researcher), P86 (parked) |
+| **7–10** | **Later versions** — breadboard to perfboard to PCB, a board you can order, an enclosure, the store shared | hobbyist | one epic each, in the PO's words: [VISION.md's *Versions*](VISION.md#versions) | P79 (#16) stays the breadboard's epic, met by v1's walk |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b** (bin #6), P64b (parked), P64c (parked), B12 (done) |
 
 **The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
-work, really from just talking about some vague idea"*; slices 8 and 9 make ordering a board and
+work, really from just talking about some vague idea"*; later versions make ordering a board and
 printing an enclosure part of the journey, optional and after the firmware works.
 Slices 2 and 3 run side by side: the maker's share of 2 is parts and a bench, the team's is the
 items. **Order and status live in the projects:** spark (https://github.com/users/xmejkal/projects/2) and the bin
@@ -61,7 +60,7 @@ P102b to draw.
 | 1.1 | a machine with no access to Petr's account · `/plugin marketplace add xmejkal/spark` · it installs | an unauthenticated `git clone`; the install in an empty config | **yes** (2026-10-03) |
 | 1.2 | spark's whole history · searched for vendor files and secrets · none | `git rev-list --objects --all`, a secrets scan | **yes** (2026-10-03) |
 | 2.1 | the bin's firmware README · Petr wires step 2 · every pin it names is in `config.py` | P58's check | **no** — it names the XIAO's pins and a deleted `04_mp3.py` |
-| 2.2 | the drawer's audio module · `/spark:identify` on both sides · a record names it | the record | **no** (B1) |
+| 2.2 | the drawer's audio module · `/spark:identify` on both sides · a record names it | the record | **settled otherwise** — B1 named the DFR0954 from the DFRobot order history (2026-10-06) |
 | 2.3 | the bin on a breadboard · `bringup/01..06` · a log per step with a verdict, the motor current, a wake reason | the bench log | **no** |
 | 2.4 | the firmware gate · run 200 times under load · no failure, or a named one | the runs, kept whole | **partly** — one failure named in 60 |
 | 3.1 | irrigation's firmware · imported with a fake `machine` · it does not start running | an import | **no** — `main()` runs at import |

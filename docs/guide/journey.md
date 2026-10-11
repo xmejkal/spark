@@ -1,7 +1,8 @@
 # The journey
 
-spark takes a gadget from an idea in words toward a board that builds and is checked, with a Wokwi diagram generated
-from it. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
+spark takes a gadget from an idea in words to the parts and how to wire them on a breadboard, the pin map its firmware
+imports, and a Wokwi simulation to run that firmware in; a board that builds and is checked, and its 3D model (`npx --no tsci export board.tsx -f glb`, not run
+here), come on request. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
 `parts.py --requirements` writes from your picks ([P97](https://github.com/xmejkal/spark/issues/18)). Each step reports
 what it could not look at; [what never to assume](agents.md#what-never-to-assume) lists where that does not hold yet.
 
@@ -20,7 +21,7 @@ The same journey in words:
 1. Your drawer says what you own.
 2. An idea becomes needs, matched against your drawer and spark's records first.
 3. Research fills a real gap.
-4. A requirements file becomes a board that builds, with a Wokwi diagram generated from it.
+4. A requirements file becomes a board that builds, with a breadboard sheet and a Wokwi diagram generated from it.
 5. The checks say what holds.
 6. The firmware imports the pin map.
 7. A simulation runs the firmware on the diagram.
@@ -911,8 +912,8 @@ L9110S dual motor driver module — motor-driver
   fix for l9110s-module.AIB: record the module's input_low_threshold_v, the level it reads as low, then run --show again: held only under the input-high threshold, the level is undefined
 ```
 
-The next step is the `spark-review` skill: it runs `check_all`, then reviewer agents, then the fabrication gate. It
-was not run here; [is it ready?](agents.md#is-it-ready) says what each part covers.
+The next steps are the [firmware](#firmware), which imports `pins.py`, and the [simulation](#simulate). Before a board is
+ordered, the `spark-review` skill runs `check_all`, then reviewer agents, then the fabrication gate. It was not run here; [is it ready?](agents.md#is-it-ready) says what each part covers.
 
 ## Firmware
 
@@ -967,9 +968,10 @@ that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01). 
 ## Bench
 
 **Not yet.** No command does this yet. spark's own hardware step is
-[P79](https://github.com/xmejkal/spark/issues/16), not designed yet.
+[P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
+sheet ([v1](../../scrum/VISION.md#versions)).
 
-A bench session that leaves a verdict a command can read is planned first in a separate project's repository:
+After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32
 brain. That plan is [P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2), first used in the bin's
 bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
@@ -977,13 +979,13 @@ bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
 The `spark-reverse-engineer` skill writes a bench protocol, but for a board reverse-engineered from photos, not for a
 board spark generated.
 
-Until then, every green result in this guide is a build, a generated diagram or a check. No simulation was run, and
-nothing touched hardware.
+Until then, every green result in this guide is a build, a generated diagram, a check or a simulation (button-and-LED
+passed in Wokwi with a hand-written scenario on 2026-10-11, P190); nothing touched hardware.
 
 ## From draft to order
 
-Ordering a board of modules is an optional step of the journey, after the firmware works: slice 8 of
-[the story map](../../scrum/STORY_MAP.md), not designed yet. The generated board is a draft, and the header of
+Ordering a board of modules is an optional step of the journey, after the firmware works: a later version
+([VISION.md's *Versions*](../../scrum/VISION.md#versions)), not designed yet. The generated board is a draft, and the header of
 `board.tsx` says so: its modules sit in a column that does not overlap, it has no mounting holes or connector keying,
 and its traces are not sized for current until each rail's current is stated. What exists today, in order:
 

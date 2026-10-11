@@ -23,7 +23,7 @@ Evidence: comments on #16 (P79) and #6 (P100), 2026-10-11; docs/guide/journey.md
 ## Read
 - Both boards, every open card: docs/observations/2026-10-11-replan/boards.tsv (board, stage, slice, waiting on, number, labels, title). Open a card's body with `gh issue view <n> --repo xmejkal/spark` (or `--repo xmejkal/sisuo-brain-transplant` for the bin), read-only, only where its title is not enough.
 - The process: scrum/README.md (stages, limits: 2 per working stage, Ready 5, 4 in flight; finishing first; Definition of Done) and scrum/STORY_MAP.md (the slices). Read from a fresh `git show origin/main:<path>`, since the local checkout is stale.
-- P158's plan in short: `git show origin/main:docs/2026-10-11-p158-short.md` (its first slice C1–C7 was filed today: P184 done, P124 done, P186 parked, P187, P189 Ready, P185 and P188 wait on the PO).
+- P158's plan in short: `git show origin/main:docs/archive/2026-10-11-p158-short.md` (its first slice C1–C7 was filed today: P184 done, P124 done, P186 parked, P187, P189 Ready, P185 and P188 wait on the PO).
 
 ## Your task
 Propose, from your lens, how to replan so the WHOLE basic journey works first, end to end, for a basic project: idea → parts → build → breadboard sheet → firmware → passes in simulation → flashed onto the real board and working on a breadboard; PCB and 3D on request. Then everything else after it.

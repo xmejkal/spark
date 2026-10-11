@@ -50,8 +50,7 @@ Each finding of `check_physics` and `check_footprints` carries one: `problem`, `
 An **assumption** is a fact an answer rests on that nobody has checked: an open fact of a part (`--unverified`), or a
 CONFLICT whose arithmetic uses one (`--show`, which prints it with a `?`). It never changes the outcome, so it is listed
 for whoever acts on the answer, with what would settle it. A **note** is said and never fails, like a pick's "maybe
-owned — check the drawer first". Both are keys of `parts.py`'s envelope, named as in the envelope P158's design plans
-for every script (P124).
+owned — check the drawer first". Both are keys of `parts.py`'s envelope (P124).
 
 **The failure behind them:** `parts.py --show l9110s-module --json` answered a clean `ok` while its text printed two
 CONFLICT lines, so an agent acting on the JSON, as the guide told it to, missed both.
@@ -146,8 +145,8 @@ code — any key in any payload could have been renamed with the suite still gre
 ### Snapshot and baseline
 
 A **snapshot** is what spark answers, recorded: `tools/snapshot.py` runs each project's documented spark commands on a
-copy of the project and keeps every exit, stdout and stderr. The **baseline** is the snapshot taken before P158's cards
-change any output, `docs/observations/2026-10-11-baseline.json`. A later snapshot run `--against` it prints the lines
+copy of the project and keeps every exit, stdout and stderr. The **baseline** is the snapshot taken on 2026-10-11,
+before any later change to an output, `docs/observations/2026-10-11-baseline.json`. A later snapshot run `--against` it prints the lines
 that changed, under the command that printed them. It is a characterisation test of the commands the three projects
 and five fixtures run, not of all of spark: no `--json` answer is in it, and no command of `parts.py`. It records what
 they answer on the day it is taken, a 1 or a 2 included, and judges nothing (P184).
@@ -161,7 +160,7 @@ A snapshot now writes the scratch folders and the random part as placeholders.
 A git hook, installed once per clone, that runs `tools/check_commit.py` before a push leaves the
 machine. It archives **the committed tree** and runs the suite and every mutation anchor against
 *that*, not against your working copy — so uncommitted files cannot make it pass. It produces the
-line quoted in every commit:
+line quoted in every commit (this one from 2026-09-30):
 
 ```
 bec7b88 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once

@@ -224,9 +224,10 @@ that runs on Node, with nothing else to install; a project's own `cli.ts` runs w
 
 ## After it builds
 
-`check_all.py --project .` for the deterministic checks; the `spark-review` skill for the full
-gate before anything is fabricated. The fab package (the zip of Gerbers and bill of materials a board house takes)
-comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the
+With `--keep`, `breadboard.md` lists the parts and how to wire them. The firmware does `import pins`, and the simulation
+(above) runs it. `check_all.py --project .` runs the deterministic checks. A board is on request: the `spark-review`
+skill is the full gate before anything is fabricated, and the fab package (the zip of Gerbers and bill of materials a
+board house takes) comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the
 time comes, `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip` makes one; `check_all` finds `*-gerbers.zip`
 or `fab/*.zip` and reads the `bom.csv` inside it
 ([run on the example](../docs/guide/journey.md#from-draft-to-order)). The generated placement is a column that does not overlap — a draft, and

@@ -1,7 +1,7 @@
 """
 P184: tools/snapshot.py records what spark answers in the projects that use it, on copies, never the originals.
 
-Every later change in P158's plan (#94) is measured as a diff against a snapshot, so the snapshot must be honest: it
+Every later change to an output is measured as a diff against a snapshot, so the snapshot must be honest: it
 never writes into a project or the store it reads, two snapshots of unchanged spark are equal, every difference is
 shown under the command that printed it (moved, repeated and vanished lines included), a difference that may not be
 spark's says so, and anything it could not run is said with its reason, never passed over.

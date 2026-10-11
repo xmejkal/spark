@@ -166,7 +166,7 @@ regenerated and compared. The v1 close audit found five summary claims false —
 words were the numbers in disguise. Written 2026-09-30 (R5.1).
 
 **An estimate says so** (W20's clause, merged here 2026-10-09): a number that has not been run carries the word
-*estimate*, and the measured one replaces it in the same table. `docs/2026-09-30-refactoring-architecture.md` put
+*estimate*, and the measured one replaces it in the same table. `docs/archive/2026-09-30-refactoring-architecture.md` put
 **−45 code lines** for P42 in the same table as measured facts; it came to −8. P35 was estimated at −40 and measured
 −22, P29 at +20 and measured +22.
 
@@ -238,11 +238,11 @@ only because both did.
 
 ## W19 — The item exists before the work starts
 
-If work is not on the board, it is not happening; W19 says when. An issue is created on the project, with its
-*Needed by* and *Value proven by*, **before** the first command of the work is run, including for work that only
+If work is not on the board, it is not happening; W19 says when. An issue is created on the project, a
+paragraph at least, **before** the first command of the work is run, including for work that only
 produces a document — an audit, an architecture, a piece of research — and the pull request that delivers it says
-`Closes #N` (W8; since 2026-10-05, P102a). The item may be a single paragraph, and it may be refined once the work
-reveals its shape, but it exists first, so the work can be tracked, sized, and stopped.
+`Closes #N` (W8; since 2026-10-05, P102a). The item may be a single paragraph: *Needed by* and *Value proven by* come by Ready, since refinement decreases
+with distance ([versions](VISION.md#versions)), and it may be refined once the work reveals its shape, but it exists first, so the work can be tracked, sized, and stopped.
 
 **And the card stands in its working stage before any agent starts on it** (P146): a read moves its card to
 Discovery, the spec council runs on a card in Design, the plan's agents on one in Build, the final review on one in
@@ -253,7 +253,7 @@ the limits cannot see.
 description names a card standing in a working stage. The PO answered *"Not yet"* on 2026-10-09
 ([Q2 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), so there is no hook:
 nothing refuses a launch, and this agreement holds by practice. Part C of
-[P146's plan](../docs/2026-10-09-p146-process-plan.md#part-c--the-three-guards-and-the-board-field-the-pos-settings-nothing-changes-without-his-yes)
+[P146's plan](../docs/archive/2026-10-09-p146-process-plan.md#part-c--the-three-guards-and-the-board-field-the-pos-settings-nothing-changes-without-his-yes)
 describes the hook as it was proposed: a script, not written, that would look only for a card's name in the launch
 (`#N`, or `P` or `B` and a number), not at the card's stage. Even set, a hook cannot see the agents a workflow
 launches.
