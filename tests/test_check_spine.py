@@ -301,7 +301,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_the_board_its_footprint_and_dist_all_arrive(self):
         into = Path(tempfile.mkdtemp()) / "project"
-        said = check_spine.keep_into(self.workdir(), into)
+        said = [k["line"] for k in check_spine.kept_into(self.workdir(), into)]
         self.assertTrue((into / "board.tsx").is_file())
         self.assertTrue((into / "FireBeetle2Esp32S3.tsx").is_file())
         # dist is the one that matters: it is what design.CIRCUIT_PATHS names.
@@ -310,7 +310,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_a_destination_that_does_not_exist_yet_is_made(self):
         into = Path(tempfile.mkdtemp()) / "not" / "there"
-        check_spine.keep_into(self.workdir(), into)
+        check_spine.kept_into(self.workdir(), into)
         self.assertTrue((into / "board.tsx").is_file())
 
     def test_a_board_someone_has_edited_is_left_alone_and_said(self):
@@ -318,7 +318,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         # overwriting it is how a tool loses somebody's afternoon.
         into = Path(tempfile.mkdtemp())
         (into / "board.tsx").write_text("// MINE, hand-edited")
-        said = check_spine.keep_into(self.workdir(), into)
+        said = [k["line"] for k in check_spine.kept_into(self.workdir(), into)]
         self.assertEqual((into / "board.tsx").read_text(), "// MINE, hand-edited")
         self.assertTrue(any("left alone" in line and "board.tsx" in line for line in said),
                         "an untouched file must be named, not silently skipped: %s" % said)
@@ -327,7 +327,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp())
         (into / "dist" / "board").mkdir(parents=True)
         (into / "dist" / "board" / "circuit.json").write_text("stale")
-        check_spine.keep_into(self.workdir(), into)
+        check_spine.kept_into(self.workdir(), into)
         self.assertEqual((into / "dist" / "board" / "circuit.json").read_text(), "[]")
 
     def test_report_actually_calls_it_and_still_clears_the_temp_directory(self):
@@ -353,10 +353,20 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         args = argparse.Namespace(json=True, keep=into)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
             check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, self.workdir())
-        wrote = json.loads(out.getvalue())["wrote"]
-        self.assertIn({"file": str(into / "board.tsx"), "did": "left alone"}, wrote)
-        self.assertIn({"file": str(into / "dist"), "did": "wrote"}, wrote)
+        kept = json.loads(out.getvalue())["kept"]
+        self.assertIn({"file": str(into / "board.tsx"), "did": "left alone", "why": "delete it to have it regenerated"}, kept)
+        self.assertIn({"file": str(into / "dist"), "did": "wrote", "why": "this is what every check reads"}, kept)
         self.assertIn("left alone: %s" % (into / "board.tsx"), err.getvalue())
+
+    def test_a_keep_that_cannot_write_still_prints_the_verdict_and_says_so(self):
+        import argparse, contextlib, io
+        blocked = Path(tempfile.mkdtemp()) / "a-file"; blocked.write_text("not a folder")
+        args = argparse.Namespace(json=True, keep=blocked)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, self.workdir())
+        said = json.loads(out.getvalue())
+        self.assertEqual((said["status"], said["kept"][0]["did"]), ("ok", "not kept"))
+        self.assertIn("not kept", err.getvalue())
 
     def test_without_it_the_temp_directory_is_still_removed(self):
         import argparse, contextlib, io

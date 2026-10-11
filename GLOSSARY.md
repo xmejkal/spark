@@ -45,6 +45,17 @@ check on a real connector: a recommendation enforced as a limit is a false alarm
 
 Each finding of `check_physics` and `check_footprints` carries one: `problem`, `could-not-run`, and one of the two above — `needs-measurement` (physics) or `advisory` (footprints). The three outcomes belong to a whole run and are worked out from them. Severities were free text, so a rule that wrote the run's word `problems` for the finding's `problem` vanished from the text and from `check_all`, and the check answered `ok`, exit 0 (P143). Each check now keeps its list in `SEVERITIES`, and a finding with any other word becomes a `could-not-run` that names its rule and the word.
 
+### Assumption, note — what an answer rests on, and what it says without failing
+
+An **assumption** is a fact an answer rests on that nobody has checked: an open fact of a part (`--unverified`), or a
+CONFLICT whose arithmetic uses one (`--show`, which prints it with a `?`). It never changes the outcome, so it is listed
+for whoever acts on the answer, with what would settle it. A **note** is said and never fails, like a pick's "maybe
+owned — check the drawer first". Both are keys of `parts.py`'s envelope, named as in the envelope P158's design plans
+for every script (P124).
+
+**The failure behind them:** `parts.py --show l9110s-module --json` answered a clean `ok` while its text printed two
+CONFLICT lines, so an agent acting on the JSON, as the guide told it to, missed both.
+
 ### The spine, or the chain — `scripts/check_spine.py`
 
 The whole flow, end to end, stopping at the first stage that cannot produce input for the next:

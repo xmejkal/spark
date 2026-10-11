@@ -6,7 +6,7 @@
  {"file": "scripts/parts.py", "name": "what is missing to decide is not named",
   "find": "            line += \"; the module's input-low threshold is not recorded, so below that the level is undefined\"", "replace": "            pass"},
  {"file": "scripts/parts.py", "name": "--show keeps the conflict to itself",
-  "find": "        lines.append(\"\\n  CONFLICT: %s\" % conflict)", "replace": "        pass"},
+  "find": "            lines.append(\"\\n  CONFLICT: %s\" % conflict[\"line\"])", "replace": "            pass"},
  {"file": "scripts/emit_board.py", "name": "the board file keeps the conflict to itself",
   "find": "            lines.append(\"          - CONFLICT %s\" % inert(\"%s: %s\" % (part[\"name\"], conflict)))", "replace": "            pass"}
 ]

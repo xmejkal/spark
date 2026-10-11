@@ -2,7 +2,7 @@
  {
   "file": "scripts/check_spine.py",
   "name": "the built board is deleted again instead of landing in the project",
-  "find": "    kept = kept_into(workdir, args.keep) if workdir is not None and args.keep else None",
+  "find": "    kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None",
   "replace": "    kept = None"
  },
  {
@@ -20,7 +20,7 @@
  {
   "file": "scripts/check_spine.py",
   "name": "a file left alone is skipped without saying so",
-  "find": "            kept.append({\"file\": str(target), \"did\": \"left alone\",\n                         \"line\": \"left alone: %s (delete it to have it regenerated)\" % target})",
+  "find": "            kept.append({\"file\": str(target), \"did\": \"left alone\", \"why\": \"delete it to have it regenerated\",\n                         \"line\": \"left alone: %s (delete it to have it regenerated)\" % target})",
   "replace": "            pass"
  },
  {

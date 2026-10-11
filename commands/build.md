@@ -69,7 +69,7 @@ where every check already looks. **Without it the chain builds in a temp directo
 which is right for a check and wrong for the command someone is told to run first — the project
 would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
 a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, edited or
-not; delete it to have it regenerated. `dist/` is still replaced with a build of the freshly generated board, not of
+not; delete it to have it regenerated. With `--json`, each file is listed under `kept`, with what was done to it and why. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.
 
@@ -110,7 +110,7 @@ A line `… is not installed — install: …` is answered by asking the person 
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list                       # what exists, and where from
-${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host; its CONFLICT exits 1
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show l9110s-module         # what it asks of the host; exits 1: a pull it asks for is overruled (CONFLICT)
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json      # a pin per signal, with the reason
 ${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json --emit-pins firmware/pins.py   # the same map, for the firmware to import
 ${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx

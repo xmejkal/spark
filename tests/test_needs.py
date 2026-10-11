@@ -789,7 +789,7 @@ class ThePicksTest(unittest.TestCase):
             '  refused, not written: set mp3: used_in null → {"plant-alarm": 1}',
             "  mp3: maybe owned — check the drawer first",
             "  refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by smartbin-local — 1 picked here",
-            '      fix: free it — a file holding [{"entry": "board", "used_in": …}] without smartbin-local, given to '
+            '  fix for firebeetle2-esp32s3: free it — a file holding [{"entry": "board", "used_in": …}] without smartbin-local, given to '
             "--drawer-set <file> after a dry run — or pick another", ""]))  # P124 (#58): its fix, which the text left out
 
     def test_a_pick_s_notes_reach_the_envelope_as_they_reach_the_text(self):
@@ -1606,7 +1606,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [
             {"subject": "beetle-c6", "sentence": sentence,
              "fix": 'pick x-lib-board, or write a board file for beetle-c6 first (docs/guide/how-it-works.md, "Your own dev board")'}]))
-        self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n      fix: %s\n"  # P124: with its fix
+        self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n  fix for beetle-c6: %s\n"  # P124: with its fix
                          % (sentence, said["problems"][0]["fix"]))
         self.assertFalse((project / "requirements.json").exists())
 

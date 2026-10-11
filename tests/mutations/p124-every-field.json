@@ -1,74 +1,25 @@
 [
-  {
-    "file": "scripts/parts.py",
-    "name": "a CONFLICT on verified facts stays out of the envelope",
-    "find": "            problems.append(_problem(args.show, \"CONFLICT: \" + conflict[\"line\"]))",
-    "replace": "            pass"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "a CONFLICT on unverified facts is a problem",
-    "find": "        if conflict[\"rests_on\"]:",
-    "replace": "        if False:"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "a CONFLICT is said to rest on nothing unverified",
-    "find": "    rests_on = sorted(name for name in used if not facts[name].get(\"verified\"))",
-    "replace": "    rests_on = []"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "--unverified's open facts leave the envelope",
-    "find": "    return Answer({\"parts\": list(args.unverified)}, lines, assumptions=assumptions)",
-    "replace": "    return Answer({\"parts\": list(args.unverified)}, lines)"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "a pick's notes leave the envelope",
-    "find": "                  notes=[_note(note) for note in notes])",
-    "replace": "                  notes=[])"
-  },
-  {
-    "file": "scripts/outcomes.py",
-    "name": "the envelope drops notes and assumptions",
-    "find": "    said.update({key: list(value) for key, value in ((\"notes\", notes), (\"assumptions\", assumptions)) if value is not None})",
-    "replace": "    pass"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "a fix is never printed under the lines",
-    "find": "            if item.get(\"fix\") and not said(item[\"fix\"]):",
-    "replace": "            if False:"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "an item the lines already say is said again",
-    "find": "            if not said(item[\"sentence\"]):",
-    "replace": "            if True:"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "notes never reach the text",
-    "find": "        if not said(note[\"sentence\"]):",
-    "replace": "        if False:"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "assumptions never reach the text",
-    "find": "        if not said(assumption.get(\"sentence\") or assumption[\"fact\"]):",
-    "replace": "        if False:"
-  },
-  {
-    "file": "scripts/parts.py",
-    "name": "next steps never reach the text",
-    "find": "    lines += [\"  next: %s — %s\" % (\" \".join(step[\"argv\"]), step[\"why\"]) for step in answer.next]",
-    "replace": "    lines += []"
-  },
-  {
-    "file": "scripts/check_spine.py",
-    "name": "the files --keep wrote leave the JSON",
-    "find": "        said.update({\"wrote\": [{\"file\": k[\"file\"], \"did\": k[\"did\"]} for k in kept]} if kept is not None else {})",
-    "replace": "        pass"
-  }
+ {"file": "scripts/parts.py", "name": "a CONFLICT on verified facts stays out of the envelope", "find": "            problems.append(_problem(where, \"CONFLICT: \" + conflict[\"line\"], conflict[\"fix\"]))", "replace": "            pass"},
+ {"file": "scripts/parts.py", "name": "a CONFLICT on unverified facts is a problem", "find": "        if conflict[\"rests_on\"]:\n            assumptions.append(", "replace": "        if False:\n            assumptions.append("},
+ {"file": "scripts/parts.py", "name": "a CONFLICT on unverified facts reads in text like a verified one", "find": "        if conflict[\"rests_on\"]:  # the PO's", "replace": "        if False:  # the PO's"},
+ {"file": "scripts/parts.py", "name": "a CONFLICT is said to rest on nothing unverified", "find": "    rests_on = sorted(\"%s.%s\" % (part.get(\"id\"), name) for name in used if not facts[name].get(\"verified\"))", "replace": "    rests_on = []"},
+ {"file": "scripts/parts.py", "name": "a CONFLICT on verified facts loses its fix", "find": "\"rests_on\": rests_on, \"fix\": fix, \"upgrade\": upgrade})", "replace": "\"rests_on\": rests_on, \"fix\": None, \"upgrade\": upgrade})"},
+ {"file": "scripts/parts.py", "name": "the fix's pull-down is sized against the wrong voltage", "find": "int(pull_up * high / (supply[1] - high))", "replace": "int(pull_up * high / (supply[1] + high))"},
+ {"file": "scripts/parts.py", "name": "--unverified's open facts leave the envelope", "find": "    return Answer({\"parts\": list(args.unverified)}, lines, assumptions=assumptions)", "replace": "    return Answer({\"parts\": list(args.unverified)}, lines)"},
+ {"file": "scripts/parts.py", "name": "--unverified's open facts lose their source", "find": "\"sentence\": q[\"why_it_matters\"], \"source\": q[\"source\"]} for q in questions]", "replace": "\"sentence\": q[\"why_it_matters\"]} for q in questions]"},
+ {"file": "scripts/parts.py", "name": "a pick's notes leave the envelope", "find": "                  notes=[_note(note) for note in notes])", "replace": "                  notes=[])"},
+ {"file": "scripts/outcomes.py", "name": "the envelope drops notes and assumptions", "find": "    said.update({key: list(value) for key, value in ((\"notes\", notes), (\"assumptions\", assumptions)) if value is not None})", "replace": "    pass"},
+ {"file": "scripts/parts.py", "name": "an answer with no lines no longer says its problems", "find": "            print(\"parts.py: %s%s\" % (item[\"sentence\"], \" — \" + item[\"fix\"] if item.get(\"fix\") else \"\"), file=sys.stderr)", "replace": "            pass"},
+ {"file": "scripts/parts.py", "name": "a could-not-run item under the lines loses its heading", "find": "(\"could not check: \", answer.unchecked)", "replace": "(\"\", answer.unchecked)"},
+ {"file": "scripts/parts.py", "name": "an item the lines already say is said again", "find": "            if not (said(item[\"sentence\"]) or said(item.get(\"subject\"))):", "replace": "            if True:"},
+ {"file": "scripts/parts.py", "name": "an item a handler words its own way is said again", "find": "said(item[\"sentence\"]) or said(item.get(\"subject\"))", "replace": "said(item[\"sentence\"])"},
+ {"file": "scripts/parts.py", "name": "what is already said is read from the lines being added, so a second item hides", "find": "any(words in line for line in answer.lines)", "replace": "any(words in line for line in lines)"},
+ {"file": "scripts/parts.py", "name": "an item with no sentence counts as said", "find": "bool(words) and any(", "replace": "True and any("},
+ {"file": "scripts/parts.py", "name": "a fix is never printed under the lines", "find": "            if item.get(\"fix\") and not said(item[\"fix\"]):", "replace": "            if False:"},
+ {"file": "scripts/parts.py", "name": "notes never reach the text", "find": "        if not said(shown):", "replace": "        if False:"},
+ {"file": "scripts/parts.py", "name": "assumptions never reach the text", "find": "        if not (said(assumption[\"fact\"]) or said(assumption.get(\"sentence\"))):", "replace": "        if False:"},
+ {"file": "scripts/parts.py", "name": "what would settle an assumption never reaches the text", "find": "        if assumption.get(\"upgrade\") and not said(assumption[\"upgrade\"]):", "replace": "        if False:"},
+ {"file": "scripts/parts.py", "name": "next steps never reach the text", "find": "    lines += [\"  next: parts.py %s — %s\" % (\" \".join(step[\"argv\"]), step[\"why\"]) for step in answer.next]", "replace": "    lines += []"},
+ {"file": "scripts/check_spine.py", "name": "the files --keep wrote leave the JSON", "find": "            said[\"kept\"] = [{key: entry[key] for key in (\"file\", \"did\", \"why\")} for entry in kept]", "replace": "            pass"},
+ {"file": "scripts/check_spine.py", "name": "a --keep that cannot write loses the verdict", "find": "    except OSError as refused:", "replace": "    except ValueError as refused:"}
 ]

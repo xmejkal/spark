@@ -1424,8 +1424,9 @@ def conflicts_of(part):
     The record's note said so; no output did. Quiet when the pin stays under the input-high threshold
     across the module's whole supply range.
 
-    Each is {pin, line, rests_on}: `rests_on` names the facts it used that nobody has verified — none, and it is a
-    problem; any, and it is an assumption (the PO's rule, 2026-10-05 on #43).
+    Each is {pin, line, rests_on, fix, upgrade}. `rests_on` names, as `<part>.<fact>`, the facts it used that nobody
+    has verified: none, and it is a problem whose `fix` is the arithmetic's answer; any, and it is an assumption, which
+    `upgrade` says how to settle (the PO's rule, 2026-10-05 on #43).
     """
     facts = part.get("facts") or {}
     value = lambda name: (facts.get(name) or {}).get("value")
@@ -1434,7 +1435,8 @@ def conflicts_of(part):
         return []
     used = ["onboard_input_pullups_ohms"] + (["input_high_threshold_v"] if isinstance(high, (int, float)) else []) \
         + (["supply_range_v"] if isinstance(supply, list) and len(supply) == 2 else [])
-    rests_on = sorted(name for name in used if not facts[name].get("verified"))
+    rests_on = sorted("%s.%s" % (part.get("id"), name) for name in used if not facts[name].get("verified"))
+    upgrade = "verify %s from the maker's own sources (parts.py --fact-set), then run --show again" % ", ".join(rests_on)
     said = []
     for host_part in part.get("host_parts") or []:
         if host_part.get("kind") != "pulldown" or not isinstance(host_part.get("ohms"), (int, float)):
@@ -1442,6 +1444,7 @@ def conflicts_of(part):
         ratio = host_part["ohms"] / (pull_up + host_part["ohms"])
         line = ("%s: the board's %g ohm pull-down against the module's own %g ohm pull-up to its supply "
                 "holds the pin at %.2g of the supply" % (host_part["pin"], host_part["ohms"], pull_up, ratio))
+        fix = "record the module's input_high_threshold_v and supply_range_v, then run --show again"
         if isinstance(high, (int, float)):
             crossover = high / ratio
             if isinstance(supply, list) and len(supply) == 2 and supply[1] < crossover:
@@ -1450,9 +1453,13 @@ def conflicts_of(part):
                 line += " (%g V to %g V over its %g-%g V range)" % (supply[0] * ratio, supply[1] * ratio, *supply)
             line += (", so it idles HIGH, not low, on any supply above %g V (input-high threshold %g V)"
                      % (crossover, high))
+            fix = "keep the supply under %g V" % crossover
+            if isinstance(supply, list) and len(supply) == 2:
+                fix = ("a pull-down under %d ohm keeps it under its %g V input-high threshold up to %g V; or %s"
+                       % (int(pull_up * high / (supply[1] - high)), high, supply[1], fix))
         if value("input_low_threshold_v") is None:
             line += "; the module's input-low threshold is not recorded, so below that the level is undefined"
-        said.append({"pin": host_part["pin"], "line": line, "rests_on": rests_on})
+        said.append({"pin": host_part["pin"], "line": line, "rests_on": rests_on, "fix": fix, "upgrade": upgrade})
     return said
 
 
@@ -1475,8 +1482,11 @@ def describe(part):
 
     for requirement in part.get("host_requirements") or []:
         lines.append("\n  the board must: %s" % requirement)
-    for conflict in pull_conflicts(part):
-        lines.append("\n  CONFLICT: %s" % conflict)
+    for conflict in conflicts_of(part):
+        if conflict["rests_on"]:  # the PO's `?` line: it holds only if facts nobody has verified hold
+            lines.append("\n  ? CONFLICT: %s\n    it rests on facts nobody has verified — %s" % (conflict["line"], conflict["upgrade"]))
+        else:
+            lines.append("\n  CONFLICT: %s" % conflict["line"])
     return "\n".join(lines)
 
 
@@ -1490,10 +1500,12 @@ def _row(part_id, kind, rest):
 #: effect takes --dry-run (§6.4.5).
 OPERATIONS = (
     ("list", {"action": "store_true"}, "every record a project can build with, and where it comes from", (), ("parts",)),
-    ("show", {"metavar": "PART"}, "one record, wherever it lives", (), ("record",)),
+    ("show", {"metavar": "PART"}, "one record, wherever it lives, and its CONFLICT lines: on verified facts a problem "
+     "(exit 1), on unverified ones an assumption", (), ("record",)),
     ("validate", {"action": "store_true"}, "every record a project can build with, against the contract", (), ("checked",)),
     ("signals", {"nargs": "+", "metavar": "PART"}, "the signals these parts ask for, as assign_pins.py input", (), ("signals",)),
-    ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts", (), ("parts",)),
+    ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts, one assumption a fact",
+     (), ("parts",)),
     ("need", {"nargs": "+", "metavar": "WORD"}, "what exists for a need, before researching: words matched in id, name, kind, alias",
      (), ("need", "vendor_order", "found", "drafts", "catalog")),
     ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/", ("writes",), ("path", "record", "written")),
@@ -1531,7 +1543,8 @@ OPERATIONS = (
     ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
      (), ("needs",)),
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
-     "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds",
+     "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
+     "what it notes is under `notes`",
      ("writes",), ("project", "picks", "reserved", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays",
@@ -1565,7 +1578,8 @@ OPTIONS = (
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
-    ("json", {"action": "store_true"}, "answer in one envelope (docs/2026-10-04-store-design.md §6.4.1)"),
+    ("json", {"action": "store_true"}, "answer in one envelope: problems, unchecked, notes, assumptions, next "
+     "(docs/guide/agents.md, \"parts.py's envelope\")"),
 )
 
 
@@ -1601,11 +1615,12 @@ def _op_show(args, project):
     """The record, and each CONFLICT it holds: a problem on verified facts, an assumption on unverified ones (P124)."""
     part, problems, assumptions = any_record(args.show, project), [], []
     for conflict in conflicts_of(part):
+        where = "%s.%s" % (args.show, conflict["pin"])  # the part and the pin the CONFLICT is about
         if conflict["rests_on"]:
-            assumptions.append({"fact": "%s.%s" % (args.show, conflict["pin"]), "basis": "unmeasured",
-                                "rests_on": conflict["rests_on"], "sentence": "CONFLICT: " + conflict["line"]})
+            assumptions.append({"fact": where, "basis": "unmeasured", "rests_on": conflict["rests_on"],
+                                "sentence": "CONFLICT: " + conflict["line"], "upgrade": conflict["upgrade"]})
         else:
-            problems.append(_problem(args.show, "CONFLICT: " + conflict["line"]))
+            problems.append(_problem(where, "CONFLICT: " + conflict["line"], conflict["fix"]))
     return Answer({"record": part}, [describe(part)], problems=problems, assumptions=assumptions)
 
 
@@ -2204,21 +2219,24 @@ def _text_of(answer):
     handler that prints an item its own way keeps its wording; one that forgets an item no longer drops it.
     """
     lines = list(answer.lines)
-    said = lambda words: any(words in line for line in lines)  # noqa: E731
+    said = lambda words: bool(words) and any(words in line for line in answer.lines)  # noqa: E731 — the handler's own
     for heading, items in (("", answer.problems), ("could not check: ", answer.unchecked)):
         for item in items:
-            if not said(item["sentence"]):
+            if not (said(item["sentence"]) or said(item.get("subject"))):  # a handler may word an item its own way
                 lines.append("  %s%s%s" % (heading, "%s: " % item["subject"] if item.get("subject") else "", item["sentence"]))
             if item.get("fix") and not said(item["fix"]):
-                lines.append("      fix: %s" % item["fix"])
+                lines.append("  fix%s: %s" % (" for %s" % item["subject"] if item.get("subject") else "", item["fix"]))
     for note in answer.notes:
-        if not said(note["sentence"]):
-            lines.append("  %s%s" % ("%s: " % note["subject"] if note.get("subject") else "", note["sentence"]))
+        shown = "%s: %s" % (note["subject"], note["sentence"]) if note.get("subject") else note["sentence"]
+        if not said(shown):
+            lines.append("  " + shown)
     for assumption in answer.assumptions:
-        if not said(assumption.get("sentence") or assumption["fact"]):
-            lines.append("  %s%s%s" % (assumption["fact"], " = %s" % assumption["assumed"] if "assumed" in assumption else "",
-                                       " — " + assumption["sentence"] if assumption.get("sentence") else ""))
-    lines += ["  next: %s — %s" % (" ".join(step["argv"]), step["why"]) for step in answer.next]
+        if not (said(assumption["fact"]) or said(assumption.get("sentence"))):
+            lines.append("  ? %s%s%s" % (assumption["fact"], " = %s" % assumption["assumed"] if "assumed" in assumption else "",
+                                         " — " + assumption["sentence"] if assumption.get("sentence") else ""))
+        if assumption.get("upgrade") and not said(assumption["upgrade"]):
+            lines.append("    to settle it: %s" % assumption["upgrade"])
+    lines += ["  next: parts.py %s — %s" % (" ".join(step["argv"]), step["why"]) for step in answer.next]
     return lines
 
 

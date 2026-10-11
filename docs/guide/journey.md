@@ -302,9 +302,10 @@ in the same store:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --pick . board=firebeetle2-esp32s3 --dry-run
 ```
 
-<!-- output: run 2026-10-08, spark 0.7.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
   refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by button-light — 1 picked here
+  fix for firebeetle2-esp32s3: free it — a file holding [{"entry": "firebeetle-2-esp32-s3", "used_in": …}] without button-light, given to --drawer-set <file> after a dry run — or pick another
 ```
 
 **L — the requirements file.** First `/spark:init --board firebeetle2-esp32s3` in the project, as in
@@ -828,11 +829,12 @@ reports ([P109](https://github.com/xmejkal/spark/issues/43)). The board's 10 kΩ
 10 kΩ pull-ups hold both inputs HIGH at idle on a supply above 5 V. The facts it rests on are verified, so it answers
 `problems`, exit 1 ([P124](https://github.com/xmejkal/spark/issues/58)):
 
+<!-- runs: exit 1 -->
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --show l9110s-module --project .
 ```
 
-<!-- output: run 2026-10-05, spark 0.6.0 -->
+<!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 L9110S dual motor driver module — motor-driver
 
@@ -855,6 +857,8 @@ L9110S dual motor driver module — motor-driver
   CONFLICT: AIA: the board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at 0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply above 5 V (input-high threshold 2.5 V); the module's input-low threshold is not recorded, so below that the level is undefined
 
   CONFLICT: AIB: the board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at 0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply above 5 V (input-high threshold 2.5 V); the module's input-low threshold is not recorded, so below that the level is undefined
+  fix for l9110s-module.AIA: a pull-down under 2631 ohm keeps it under its 2.5 V input-high threshold up to 12 V; or keep the supply under 5 V
+  fix for l9110s-module.AIB: a pull-down under 2631 ohm keeps it under its 2.5 V input-high threshold up to 12 V; or keep the supply under 5 V
 ```
 
 The next step is the `spark-review` skill: it runs `check_all`, then reviewer agents, then the fabrication gate. It
