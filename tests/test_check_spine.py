@@ -368,6 +368,18 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
 
+    def test_a_sheet_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
+        # The refuter: it described another board, and sat beside the new requirements.
+        import argparse, contextlib, io
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        into = Path(tempfile.mkdtemp()) / "project"
+        into.mkdir(); (into / "breadboard.md").write_text("# an earlier build's sheet")
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+        self.assertFalse((into / "breadboard.md").exists())
+        self.assertIn("removed", err.getvalue())
+
     def test_kept_files_reach_the_envelope_as_they_reach_the_text(self):
         # P124 (#58), CH-16: with --json the lines of --keep went to stderr only, so an agent never read which files it
         # wrote and which it left alone.

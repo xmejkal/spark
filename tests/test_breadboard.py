@@ -191,6 +191,20 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
             said = breadboard._unwired(built.board, built)
         self.assertEqual(said, ["- STATUS_LED: board A5, nothing wired to it yet (the requirements add this signal)"])
 
+    def test_a_board_pin_s_jumper_takes_a_hole_so_four_other_ends_need_a_rail(self):
+        # Five holes a row; the jumper from the board pin takes one, so four others and the jumper fill it, five overfill.
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        circuit = [{"type": "source_component", "source_component_id": "mcu", "name": "Mcu"},
+                   {"type": "source_port", "source_port_id": "d3", "source_component_id": "mcu", "name": "pin4",
+                    "port_hints": ["pin4", "D3", "4"]}]
+        for n in range(1, 6):
+            circuit += [{"type": "source_component", "source_component_id": "c%d" % n, "name": "Part%d" % n},
+                        {"type": "source_port", "source_port_id": "p%d" % n, "source_component_id": "c%d" % n, "name": "A"}]
+        joined = {"type": "source_trace", "connected_source_port_ids": ["d3", "p1", "p2", "p3", "p4"]}
+        self.assertNotIn("rail", breadboard._wiring(board, circuit + [joined], [], {})[0])
+        joined["connected_source_port_ids"].append("p5")
+        self.assertIn("join board D3 to a rail", breadboard._wiring(board, circuit + [joined], [], {})[0])
+
     def test_a_port_alone_on_a_supply_is_a_point_that_names_the_supply(self):
         circuit = [{"type": "source_component", "source_component_id": "c1", "name": "L9110sModule"},
                    {"type": "source_port", "source_port_id": "p1", "source_component_id": "c1", "name": "VCC"},
@@ -198,6 +212,18 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
                    {"type": "source_trace", "connected_source_port_ids": ["p1"], "connected_source_net_ids": ["n1"]}]
         found = breadboard.points(circuit)
         self.assertEqual([(len(point.members), point.nets) for point in found], [(1, ["MOTOR6V"])])
+
+
+class ASignalNothingTakesTest(unittest.TestCase):
+    def test_the_sheet_says_each_signal_the_requirements_add_with_its_pin(self):
+        project = a_copy()
+        wanted = dict(json.loads((project / "requirements.json").read_text()), signals=[{"name": "BUZZER", "needs": []}])
+        (project / "requirements.json").write_text(json.dumps(wanted))
+        (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": wanted}))
+        with in_store(Path(tempfile.mkdtemp())):
+            text = breadboard.sheet(project / "requirements.json")
+        self.assertIn("Not wired:", text)
+        self.assertRegex(text, r"- BUZZER: board \S+, nothing wired to it yet")
 
 
 class WhatYouOwnTest(unittest.TestCase):

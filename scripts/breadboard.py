@@ -235,7 +235,7 @@ def _wiring(board, circuit, design_parts, resistors):
         on_board = ends[0].startswith("board ")
         if point.nets and not on_board:
             line += " · the %s supply, from off the board, not part of the parts list" % " / ".join(point.nets)
-        if len(ends) + (1 if on_board else 0) > ROW_HOLES:  # a board pin's jumper takes a hole of its row
+        if len(ends) > ROW_HOLES:  # a board pin's end is its jumper's end, in a hole of the free row
             line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
                      % ends[0] if on_board else " — put these ends on one rail")
         said.append(line)
