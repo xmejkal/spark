@@ -529,9 +529,9 @@ def simulation_detail(wires, staged, compiled, limits, serial=True):
     detail = "%d wire(s) in the diagram%s" % (
         wires, ", %d chip(s): %d compiled, %d reused"
         % (len(staged), compiled, len(staged) - compiled) if staged else "")
-    if not serial:  # P190: the board's Wokwi part has no pins named TX and RX
-        detail += ("\n           no serial monitor is wired: the board's Wokwi part has no pins named TX and RX, so a "
-                   "scenario hears nothing the firmware prints")
+    if not serial:  # P190: no pins named TX and RX, or an older converter of the project's own
+        detail += ("\n           no serial monitor is wired in the diagram (a board part with no pins named TX and RX, or "
+                   "a project's own converter older than P190), so a scenario's wait-serial may hear nothing")
     if limits:
         detail += "\n           what it cannot show, from the records (%d):" % len(limits)
         for component, sentence in limits:

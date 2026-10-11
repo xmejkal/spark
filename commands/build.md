@@ -200,7 +200,7 @@ steps:
 ```
 
 Part ids come from the board's component names (`BtnOpen` becomes `btnopen`). `name:` is the key the smart bin's
-passing scenarios use ([lid-cycle](https://github.com/xmejkal/sisuo-brain-transplant/blob/main/firmware/micropython/sim/lid-cycle.scenario.yaml)),
+scenarios use, which passed on 2026-09-25 ([lid-cycle](https://github.com/xmejkal/sisuo-brain-transplant/blob/main/firmware/micropython/sim/lid-cycle.scenario.yaml)),
 whose notes call `control:` a deprecated alias. `wait-serial` reads the MCU's serial only: a chip's printf never
 reaches it. The generated `diagram.json` wires the board's TX and RX to `$serialMonitor`: Wokwi stopped doing that
 by default (CLI 0.28.0, API 2026-10-09), and without it `wait-serial` hears nothing, not even the boot line

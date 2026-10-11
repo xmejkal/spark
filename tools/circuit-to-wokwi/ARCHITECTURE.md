@@ -70,7 +70,8 @@ Written here, because nothing upstream can know it:
   (star from the board pin where there is one, otherwise a chain);
 * **the serial monitor** — the board's `TX` and `RX` wired to `$serialMonitor`. Wokwi stopped making that connection
   by default (CLI 0.28.0, API 2026-10-09), and without it a scenario hears nothing the firmware prints, not even the
-  boot line (P190). A board part with no pins of those names is left to Wokwi's default, and said;
+  boot line (P190). A board part with no pins of those names gets none, and the spine says so; whether Wokwi prints
+  for such a part is unverified (P190 was proven on the S3 devkit);
 * **placement** — Wokwi wants absolute pixels.
 
 ## Placement, and why it is deliberately dumb
