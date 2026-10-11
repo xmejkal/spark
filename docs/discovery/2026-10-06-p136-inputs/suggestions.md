@@ -24,7 +24,7 @@ combination or just analogue modules and parts"* (#70, comments of 2026-10-06 10
 
 **How to read the references.**
 
-- `spark:` is `/Users/petr/Development/spark` at `8f7733d`, and `bin:` is `/Users/petr/Development/smartbin-local`
+- `spark:` is `~/Development/spark` at `8f7733d`, and `bin:` is `~/Development/smartbin-local`
   at `8847eb8`.
 - `#N` is a spark GitHub issue, read with `gh` on 2026-10-06. Comment times are GitHub's, in UTC (two hours behind
   Prague).
@@ -671,7 +671,7 @@ Pull each piece only when a real design is blocked without it (W14, spark:scrum/
 
 **The reads this answer is built from:**
 
-All six are under `/private/tmp/claude-501/-Users-petr-Development-smartbin-local/04754b5c-e6be-4924-97bc-e6cf796455f7/scratchpad/`.
+All six are under `<scratch>`.
 
 - **[today]** `circuit-suggestion/spark-today.md`: spark against function-first suggestion, with runs in
   `circuit-suggestion/runs/`.

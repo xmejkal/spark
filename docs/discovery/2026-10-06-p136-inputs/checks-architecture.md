@@ -5,7 +5,7 @@
 against spark at `8f7733d` (main, clean tree). Nothing in spark was edited, and its `git status` was empty before and
 after every run.*
 
-*How to read the references: a path is in spark (`/Users/petr/Development/spark`) unless it starts `smartbin:` (this
+*How to read the references: a path is in spark (`~/Development/spark`) unless it starts `smartbin:` (this
 repo) or names a file in this folder. `#56` is a spark GitHub issue, read with `gh issue view`. A seven-character code
 such as `dae10dd` is a commit. Anything I worked out rather than read is marked **INFERRED**.*
 
