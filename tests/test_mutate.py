@@ -172,6 +172,51 @@ class ARefusedMutationTest(unittest.TestCase):
         self.assertNotEqual(mutate.verdict(results, restored), mutate.EXIT_OK)
 
 
+class AMutantThatCannotLoadIsRefusedTest(unittest.TestCase):
+    """
+    P186 (#135), part 1's CH-2: a replacement that breaks the file's syntax, import or format turns the suite red for a
+    reason no test chose, and was scored caught. A wrongly indented `pass` in a P124 row would have, on 2026-10-11; only reading the row saw it.
+    """
+
+    def assert_refused(self, results, *words):
+        self.assertEqual(results[0]["status"], mutate.REFUSED, results)
+        for word in words:
+            self.assertIn(word, results[0]["detail"])
+
+    def test_a_mutant_that_does_not_compile_is_refused_naming_the_file(self):
+        root = tiny_project()
+        before = (root / "m.py").read_text()
+        results, restored = mutate.run(root, "tests", [dict(BREAK_ADD, replace="return a +")])
+        self.assert_refused(results, "m.py", "does not compile")
+        self.assertEqual(((root / "m.py").read_text(), restored), (before, True))
+
+    def test_a_mutant_that_does_not_import_is_refused_naming_the_file(self):
+        root = tiny_project()
+        broken = {"file": "m.py", "name": "a name the module needs is gone", "find": "def sub(a, b):",
+                  "replace": "nothing_defines_this\ndef sub(a, b):"}
+        results, _ = mutate.run(root, "tests", [broken])
+        self.assert_refused(results, "m.py", "does not import", "NameError")
+
+    def test_a_json_mutant_that_does_not_parse_is_refused_naming_the_file(self):
+        root = tiny_project()
+        (root / "facts.json").write_text('{"value": 2.5}\n')
+        results, _ = mutate.run(root, "tests", [{"file": "facts.json", "name": "a brace lost", "find": "}", "replace": ""}])
+        self.assert_refused(results, "facts.json", "is not JSON")
+
+    def test_a_refused_mutant_is_not_an_ok_verdict(self):
+        root = tiny_project()
+        results, restored = mutate.run(root, "tests", [dict(BREAK_ADD, replace="return a +")])
+        self.assertNotEqual(mutate.verdict(results, restored), mutate.EXIT_OK)
+
+    def test_anchors_names_a_mutant_that_does_not_compile_without_running_anything(self):
+        root = tiny_project()
+        stale = table(root, BREAK_SUB, dict(BREAK_ADD, replace="return a +"))
+        said = mutate.unloadable(root, json.loads(stale.read_text()))
+        self.assertEqual([(name, file) for name, file, _ in said], [("add subtracts", "m.py")])
+        self.assertTrue(said[0][2].startswith("the mutant of m.py does not compile: line 2, "), said)
+        self.assertEqual(mutate.main(["--anchors", str(stale), "--root", str(root)]), mutate.EXIT_ESCAPED)
+
+
 class TheToolIsHonestAboutItselfTest(unittest.TestCase):
     def test_a_suite_that_is_red_before_mutating_is_refused(self):
         # A red suite catches nothing, so scoring mutations against it is meaningless.

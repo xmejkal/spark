@@ -30,6 +30,10 @@ THE THREE RULES THE HAND-ROLLED HARNESSES LEARNED, built in:
     nothing for every mutation — which reads as success.
   * the file is restored in a `finally`, whatever happens, and the tool confirms the restore by
     running the suite once more at the end and refusing to report "all caught" if it is not green.
+  * a mutant that cannot load is refused, naming the file (P186). A replacement that breaks the
+    file's syntax or import, or a JSON file's format, turns the suite red for a reason no test
+    chose: a wrongly indented `pass` was scored caught that way. `--anchors` checks syntax and
+    format without running anything; a run also imports the mutated module.
   * the bytecode cache is never consulted. Python validates a `.pyc` by the source's mtime in
     whole seconds and its size. `a + b` -> `a - b` is a same-size edit, and mutate-then-restore
     within one second is invisible to that check: the "restored" suite ran the MUTATED bytecode
@@ -44,6 +48,7 @@ the whole product: not "the tests pass" but "the tests would notice".
 """
 
 import argparse
+import contextlib
 import json
 import re
 import subprocess
@@ -62,30 +67,39 @@ CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
 NEAR, FULL = "near", "full"
 
 
+@contextlib.contextmanager
+def _from_source(prefix):
+    """
+    The environment for one run from source alone, in a folder of its own: an empty bytecode cache and the run's temp
+    files (TMPDIR), and the folder goes with the run (P172). Without the empty cache, a same-size mutation restored
+    within a second is judged by stale `.pyc`.
+    """
+    import os
+    import shutil
+    import tempfile
+    run = Path(tempfile.mkdtemp(prefix=prefix))
+    try:
+        (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
+        environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"),
+                           TMPDIR=str(run / "tmp"))
+        yield environment
+    finally:
+        shutil.rmtree(run, ignore_errors=True)
+
+
 def suite_is_green(root, tests, only=(), failfast=False):
     """
     Run the suite once — or `only` those test modules — from source alone; the verdict is on stderr,
     which is why it is captured. `failfast` stops at the first failure: one is all a catch needs.
 
-    `-B` writes no bytecode and a fresh `PYTHONPYCACHEPREFIX` means none pre-existing is read.
-    Without both, a same-size mutation restored within a second is scored against stale `.pyc`.
-    Each run gets one folder for that empty cache and for its temp files (TMPDIR), and the folder goes with
-    the run (P172): one run of the suite left 87 caches behind, and a sweep left its tests' folders.
+    `-B` writes no bytecode and `_from_source`'s fresh `PYTHONPYCACHEPREFIX` means none pre-existing is read (P172:
+    one run of the suite left 87 caches behind, and a sweep left its tests' folders).
     """
-    import os
-    import shutil
-    import tempfile
     stop = ["-f"] if failfast else []
     command, where = (([sys.executable, "-B", "-m", "unittest"] + stop + list(only), Path(root) / tests) if only else
                       ([sys.executable, "-B", "-m", "unittest", "discover", "-s", tests] + stop, Path(root)))
-    run = Path(tempfile.mkdtemp(prefix="mutate-run-"))
-    try:
-        (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
-        environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"),
-                           TMPDIR=str(run / "tmp"))
+    with _from_source("mutate-run-") as environment:
         result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
-    finally:
-        shutil.rmtree(run, ignore_errors=True)
     verdict = (result.stderr or "") + (result.stdout or "")
     return result.returncode == 0 and "\nOK" in verdict
 
@@ -134,6 +148,43 @@ def apply(root, mutation):
             count, mutation["file"])
     path.write_text(original.replace(mutation["find"], mutation["replace"]))
     return original, None
+
+
+def _loads(file, text):
+    """Why `text`, as `file`, cannot load, or None: a .py that does not compile, a .json that does not parse."""
+    if file.endswith(".json"):
+        try:
+            json.loads(text)
+        except ValueError as broken:
+            return "the mutant of %s is not JSON: %s" % (file, broken)
+    elif file.endswith(".py"):
+        try:
+            compile(text, file, "exec")
+        except SyntaxError as broken:
+            return "the mutant of %s does not compile: line %s, %s" % (file, broken.lineno, broken.msg)
+    return None
+
+
+def unloadable(root, mutations):
+    """Every mutation whose mutant does not compile or parse, as (name, file, why), checked in memory: nothing runs."""
+    said = []
+    for mutation in mutations:
+        path = root / mutation["file"]
+        text = path.read_text() if path.is_file() else ""
+        if text.count(mutation["find"]) == 1:
+            why = _loads(mutation["file"], text.replace(mutation["find"], mutation["replace"]))
+            if why:
+                said.append((mutation.get("name", mutation["find"]), mutation["file"], why))
+    return said
+
+
+def _import_error(root, file):
+    """The last line of what importing `file` says, from source alone, or None when it imports."""
+    path = root / file
+    with _from_source("mutate-import-") as environment:
+        done = subprocess.run([sys.executable, "-B", "-c", "import sys; sys.path.insert(0, sys.argv[1]); __import__(sys.argv[2])",
+                               str(path.parent), path.stem], cwd=str(root), capture_output=True, text=True, env=environment)
+    return None if done.returncode == 0 else (done.stderr.strip().splitlines() or ["exit %d" % done.returncode])[-1]
 
 
 def anchors(root, mutations):
@@ -217,15 +268,26 @@ def run(root, tests, mutations):
 
 
 def _run(root, tests, mutations, near_by_file):
-    results = []
+    results, imports_before = [], {}
     for mutation in mutations:
         path = root / mutation["file"]
+        file = mutation["file"]
+        if file.endswith(".py") and file not in imports_before:  # a file that never imported alone cannot be judged so
+            imports_before[file] = path.is_file() and _import_error(root, file) is None
         original, refusal = apply(root, mutation)
         if refusal:
             results.append({"name": mutation.get("name", mutation["find"]),
                             "status": REFUSED, "by": None, "detail": refusal})
             continue
         try:
+            refusal = _loads(file, path.read_text())
+            if not refusal and imports_before.get(file):
+                failed = _import_error(root, file)
+                refusal = failed and "the mutant of %s does not import: %s" % (file, failed)
+            if refusal:
+                results.append({"name": mutation.get("name", mutation["find"]),
+                                "status": REFUSED, "by": None, "detail": refusal})
+                continue
             near = near_by_file.get(mutation["file"], ())
             caught_near = bool(near) and not suite_is_green(root, tests, only=near, failfast=True)
             green = False if caught_near else suite_is_green(root, tests, failfast=True)
@@ -300,6 +362,10 @@ def main(argv=None):
         wrong = anchors(root, mutations)
         for name, file, count in wrong:
             print("  [refused] %s — `find` occurs %d time(s) in %s" % (name, count, file))
+        broken = unloadable(root, mutations)
+        for name, file, why in broken:
+            print("  [refused] %s — %s" % (name, why))
+        wrong += broken
         print("  %d mutation(s) in %d table(s): %s" % (
             len(mutations), len(args.table),
             "every anchor present, once" if not wrong else "%d would be refused" % len(wrong)))
