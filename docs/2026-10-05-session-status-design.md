@@ -1,5 +1,7 @@
 # The state in view at every session start, and the day-close — design (P102c)
 
+> Status 2026-10-11: built (P102c); tools/board.py is the authority.
+
 **Status:** the spec, for the PO's review (2026-10-05). Issue: xmejkal/spark#26, a story of the tools chore P102
 (#24). It builds on P102a: the boards live in GitHub Projects (`docs/2026-10-05-backlog-in-github-design.md` §3, §9),
 and `tools/check_backlog.py` already reads the spark board and gives the limit verdict.

@@ -220,7 +220,7 @@ it out, run the `spark-review` skill and its fabrication gate, a KiCad design-ru
 
 - **The reviewer agents in `spark-review` are less proven than the checks.** The only measurements were a few eval
   runs, one to three per arm, against a no-plugin baseline
-  ([tabled in the 2026-09-24 audit](docs/audit-2026-09-24/autonomous-agent-readiness.md#on-the-eval-and-the-reprioritisation-it-drove)),
+  ([tabled in the 2026-09-24 audit](docs/archive/audit-2026-09-24/autonomous-agent-readiness.md#on-the-eval-and-the-reprioritisation-it-drove)),
   each graded on what the agent found, not by a script; the cases were removed in commit 066c4af. Treat "the reviewers
   help" as plausible, not measured.
 - **Nothing here has been validated on hardware by its author.** Ground truth is the bench.

@@ -1,3 +1,5 @@
+> Status 2026-10-11: only round A is v1 — the replan's item 7: the PO walks a basic project from the pages alone, predictions first, a diary (which project: the replan's question 4). Rounds B and C wait for a later version.
+
 <!-- Resume: invoke product-discovery again; `discovery.py check <this folder>` names the next step. -->
 # P100 — spark in real use, on the store as it is today: discovery brief
 

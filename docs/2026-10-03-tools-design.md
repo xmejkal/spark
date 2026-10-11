@@ -1,5 +1,7 @@
 # Tools spark depends on — easy to turn on, change, swap and add
 
+> Status 2026-10-11: built (P82); data/tools.json and scripts/tools.py are the authority; its plan is in docs/archive/.
+
 **Status: APPROVED by the PO, 2026-10-03 (P82's architecture).** Sections 1–4 agreed one by one in
 conversation, section 5 and the whole spec approved after review. Next: the implementation plan, for the
 PO's review before anything is built.

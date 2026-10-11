@@ -1,5 +1,7 @@
 # The backlog in GitHub — design (P102a)
 
+> Status 2026-10-11: built and in use since 2026-10-05; scrum/README.md holds the rules as run today, this page is the design behind them.
+
 **Status:** the spec, for the PO's review (2026-10-05). Designed with the PO in one sitting, after he asked for the
 tools chore (P102) before the next epic. It takes in P70 (2026-10-03), whose design stands except where §2 says
 otherwise. Every decision the PO made is in §11 with its date.
