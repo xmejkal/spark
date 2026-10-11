@@ -67,7 +67,7 @@
  },
  {
   "file": "scripts/import_firmware.py",
-  "name": "P59: no firmware folder looks at nothing and passes as a problem, not could-not-run",
+  "name": "P59: with no firmware folder the answer is problems, not could-not-run",
   "find": "    if not firmware.is_dir():",
   "replace": "    if False:"
  },
