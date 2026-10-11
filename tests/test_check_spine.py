@@ -380,6 +380,94 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("removed", err.getvalue())
 
+    def keep_with_pins(self, into, requirements=None, stages=None):
+        """`report` keeping into `into` with --json: what --json printed under `kept`, and what stderr said."""
+        import argparse, contextlib, io
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        args = argparse.Namespace(json=True, keep=into, requirements=str(requirements or fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report(stages or [check_spine.Stage("build", check_spine.OK, "fine")], args, self.workdir())
+        return json.loads(out.getvalue())["kept"], err.getvalue()
+
+    def emitted_pins(self, requirements):
+        """What `assign_pins.py requirements.json --emit-pins FILE` writes: the card's measure of the kept pin map."""
+        import assign_pins, contextlib, io
+        target = Path(tempfile.mkdtemp()) / "pins.py"
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(assign_pins.main([str(requirements), "--emit-pins", str(target)]), 0)
+        return target.read_text()
+
+    def test_keeping_a_project_s_build_writes_the_pin_map_its_firmware_imports(self):
+        # P196 (#155): after /spark:build the firmware had no pins.py until a second command wrote it.
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        into = Path(tempfile.mkdtemp()) / "project"
+        kept, err = self.keep_with_pins(into)
+        self.assertEqual((into / "firmware" / "pins.py").read_text(), self.emitted_pins(fixture / "requirements.json"))
+        self.assertIn({"file": str(into / "firmware" / "pins.py"), "did": "wrote",
+                       "why": "the pins the firmware imports"}, kept)
+        self.assertIn("wrote %s — the pins the firmware imports" % (into / "firmware" / "pins.py"), err)
+
+    def test_the_pin_map_needs_no_finished_build(self):
+        # It is made from the requirements alone, so a machine without the board engine still gets it.
+        into = Path(tempfile.mkdtemp()) / "project"
+        self.keep_with_pins(into, stages=[check_spine.Stage("build", check_spine.COULD_NOT_RUN, "no tsci")])
+        self.assertTrue((into / "firmware" / "pins.py").is_file())
+
+    def test_a_pin_map_spark_wrote_earlier_is_rewritten(self):
+        # It says "Regenerate it; do not edit it.", and one left from an earlier design sends the firmware to wrong pins.
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        into = Path(tempfile.mkdtemp()) / "project"
+        (into / "firmware").mkdir(parents=True)
+        stale = self.emitted_pins(fixture / "requirements.json") + "OLD_SIGNAL = 99\n"
+        (into / "firmware" / "pins.py").write_text(stale)
+        self.keep_with_pins(into)
+        self.assertEqual((into / "firmware" / "pins.py").read_text(), self.emitted_pins(fixture / "requirements.json"))
+
+    def test_a_pins_file_spark_did_not_write_is_left_alone_and_said(self):
+        # A person's own pins.py is theirs, as an edited board.tsx is.
+        into = Path(tempfile.mkdtemp()) / "project"
+        (into / "firmware").mkdir(parents=True)
+        (into / "firmware" / "pins.py").write_text("LED = 5  # mine\n")
+        kept, err = self.keep_with_pins(into)
+        self.assertEqual((into / "firmware" / "pins.py").read_text(), "LED = 5  # mine\n")
+        self.assertIn({"file": str(into / "firmware" / "pins.py"), "did": "left alone",
+                       "why": "spark did not write it; delete it to have it written"}, kept)
+        self.assertIn("left alone: %s" % (into / "firmware" / "pins.py"), err)
+
+    def test_a_pin_map_from_an_earlier_design_is_removed_when_the_pins_cannot_be_placed(self):
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        broken = Path(tempfile.mkdtemp()) / "requirements.json"
+        broken.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}))
+        into = Path(tempfile.mkdtemp()) / "project"
+        (into / "firmware").mkdir(parents=True)
+        (into / "firmware" / "pins.py").write_text(self.emitted_pins(fixture / "requirements.json"))
+        kept, err = self.keep_with_pins(into, requirements=broken)
+        self.assertFalse((into / "firmware" / "pins.py").exists())
+        self.assertEqual([entry["did"] for entry in kept if entry["file"].endswith("pins.py")], ["removed"])
+        self.assertIn("no pin map: ", err)
+        self.assertIn("no-such-part", err)
+
+    def test_the_one_command_keeps_the_simulation_project_too(self):
+        # JB1: `--keep .` kept the board, dist/ and the sheet, but the Wokwi diagram only with `--sim-dir sim`.
+        import contextlib, io
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+
+        def a_run_that_simulated(requirements, workdir, *rest, **named):
+            (workdir / "sim").mkdir()
+            (workdir / "sim" / "diagram.json").write_text('{"parts": []}')
+            return [check_spine.Stage("build", check_spine.OK, "fine")]
+
+        into, elsewhere = Path(tempfile.mkdtemp()) / "project", Path(tempfile.mkdtemp()) / "sim"
+        with mock.patch.object(check_spine, "run", a_run_that_simulated), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(fixture / "requirements.json"), "--keep", str(into)])
+            self.assertTrue((into / "sim" / "diagram.json").is_file())
+            # A --sim-dir of the person's own still decides where it goes.
+            other = Path(tempfile.mkdtemp()) / "project"
+            check_spine.main([str(fixture / "requirements.json"), "--keep", str(other), "--sim-dir", str(elsewhere)])
+        self.assertTrue((elsewhere / "diagram.json").is_file())
+        self.assertFalse((other / "sim").exists())
+
     def test_kept_files_reach_the_envelope_as_they_reach_the_text(self):
         # P124 (#58), CH-16: with --json the lines of --keep went to stderr only, so an agent never read which files it
         # wrote and which it left alone.

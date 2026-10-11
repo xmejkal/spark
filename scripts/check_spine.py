@@ -57,6 +57,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
 import design  # noqa: E402
@@ -80,6 +81,9 @@ REFERENCE = {"board": "firebeetle2-esp32s3",
              "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
 
 BUILD_TIMEOUT_S = 300
+
+#: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
+PIN_MODULE = Path("firmware") / "pins.py"
 
 
 class Stage:
@@ -647,9 +651,11 @@ def main(argv=None):
         except (store.StoreProblem, OSError) as unrecorded:
             print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
 
-    if args.sim_dir and (workdir / "sim").is_dir():
-        shutil.copytree(workdir / "sim", args.sim_dir, dirs_exist_ok=True)
-        print("simulation project kept in %s" % args.sim_dir, file=sys.stderr)
+    # The one command keeps the simulation project with the rest (JB1); a --sim-dir of the person's own still decides.
+    simulation = args.sim_dir or (args.keep / "sim" if args.keep else None)
+    if simulation and (workdir / "sim").is_dir():
+        shutil.copytree(workdir / "sim", simulation, dirs_exist_ok=True)
+        print("simulation project kept in %s" % simulation, file=sys.stderr)
     return report(stages, args, workdir, requirements)
 
 
@@ -721,6 +727,32 @@ def keep_breadboard(requirements, destination, stages=()):
     return {"file": str(written), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written, why)}
 
 
+def keep_pins(requirements, destination):
+    """
+    The pin map the firmware imports, beside the kept board (P196, #155), as one kept entry {file, did, why, line}: what
+    `assign_pins.py requirements.json --emit-pins` writes, from the same code, and from the requirements alone, so it
+    needs no finished build. One spark wrote is rewritten, since it says not to edit it, and is removed when the pins
+    cannot be placed: it describes another design. A `pins.py` spark did not write is left alone, as `board.tsx` is.
+    """
+    target = Path(destination) / PIN_MODULE
+    ours = target.is_file() and target.read_text().startswith(assign_pins.PIN_MODULE_HEADER)
+    if target.exists() and not ours:
+        why = "spark did not write it; delete it to have it written"
+        return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
+    try:
+        module = assign_pins.pin_module_for(str(requirements))
+    except (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
+        if ours:
+            target.unlink()
+            return {"file": str(target), "did": "removed", "why": "%s, and it described an earlier design" % stopped,
+                    "line": "no pin map: %s; removed %s, which described an earlier design" % (stopped, target)}
+        return {"file": str(target), "did": "not written", "why": str(stopped), "line": "no pin map: %s" % stopped}
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(module)
+    why = "the pins the firmware imports"
+    return {"file": str(target), "did": "wrote", "why": why, "line": "wrote %s — %s" % (target, why)}
+
+
 def report(stages, args, workdir=None, requirements=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
@@ -731,6 +763,7 @@ def report(stages, args, workdir=None, requirements=None):
     kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
     if kept is not None and getattr(args, "requirements", None):
         kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
+        kept.append(keep_pins(Path(args.requirements), Path(args.keep)))
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code],
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
