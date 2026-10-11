@@ -1433,10 +1433,12 @@ def conflicts_of(part):
     pull_up, high, supply = value("onboard_input_pullups_ohms"), value("input_high_threshold_v"), value("supply_range_v")
     if not isinstance(pull_up, (int, float)):
         return []
-    used = ["onboard_input_pullups_ohms"] + (["input_high_threshold_v"] if isinstance(high, (int, float)) else []) \
-        + (["supply_range_v"] if isinstance(supply, list) and len(supply) == 2 else [])
-    rests_on = sorted("%s.%s" % (part.get("id"), name) for name in used if not facts[name].get("verified"))
-    upgrade = "verify %s from the maker's own sources (parts.py --fact-set), then run --show again" % ", ".join(rests_on)
+    recorded = {"onboard_input_pullups_ohms": True, "input_high_threshold_v": isinstance(high, (int, float)),
+                "supply_range_v": isinstance(supply, list) and len(supply) == 2}
+    rests_on = sorted("%s.%s" % (part.get("id"), name) for name, usable in recorded.items()  # missing is not verified
+                      if not (usable and (facts.get(name) or {}).get("verified")))
+    upgrade = "record or verify %s from the maker's own sources (parts.py --fact-set), then run --show again" % ", ".join(rests_on)
+    fix = _holding_low(facts, pull_up, supply)
     said = []
     for host_part in part.get("host_parts") or []:
         if host_part.get("kind") != "pulldown" or not isinstance(host_part.get("ohms"), (int, float)):
@@ -1444,7 +1446,6 @@ def conflicts_of(part):
         ratio = host_part["ohms"] / (pull_up + host_part["ohms"])
         line = ("%s: the board's %g ohm pull-down against the module's own %g ohm pull-up to its supply "
                 "holds the pin at %.2g of the supply" % (host_part["pin"], host_part["ohms"], pull_up, ratio))
-        fix = "record the module's input_high_threshold_v and supply_range_v, then run --show again"
         if isinstance(high, (int, float)):
             crossover = high / ratio
             if isinstance(supply, list) and len(supply) == 2 and supply[1] < crossover:
@@ -1453,14 +1454,26 @@ def conflicts_of(part):
                 line += " (%g V to %g V over its %g-%g V range)" % (supply[0] * ratio, supply[1] * ratio, *supply)
             line += (", so it idles HIGH, not low, on any supply above %g V (input-high threshold %g V)"
                      % (crossover, high))
-            fix = "keep the supply under %g V" % crossover
-            if isinstance(supply, list) and len(supply) == 2:
-                fix = ("a pull-down under %d ohm keeps it under its %g V input-high threshold up to %g V; or %s"
-                       % (int(pull_up * high / (supply[1] - high)), high, supply[1], fix))
         if value("input_low_threshold_v") is None:
             line += "; the module's input-low threshold is not recorded, so below that the level is undefined"
         said.append({"pin": host_part["pin"], "line": line, "rests_on": rests_on, "fix": fix, "upgrade": upgrade})
     return said
+
+
+def _holding_low(facts, pull_up, supply):
+    """
+    A CONFLICT's fix: the largest pull-down that holds the pin under the module's input-low threshold across its supply
+    range, so it reads low, and what it then draws at rest. Under the input-high threshold alone the level is undefined
+    (the refuter on P124), so without an input-low threshold the fix is to record one.
+    """
+    low = facts.get("input_low_threshold_v") or {}
+    if not (isinstance(low.get("value"), (int, float)) and isinstance(supply, list) and len(supply) == 2):
+        return ("record the module's input_low_threshold_v, the level it reads as low, then run --show again: "
+                "held only under the input-high threshold, the level is undefined")
+    largest = int(pull_up * low["value"] / (supply[1] - low["value"]))
+    return ("a pull-down under %d ohm holds it under its %g V input-low threshold%s up to %g V, so it reads low; it then "
+            "draws up to %.2g mA from the supply at rest" % (largest, low["value"], "" if low.get("verified") else
+                                                             " (not verified)", supply[1], 1000 * supply[1] / (pull_up + largest)))
 
 
 def describe(part):
@@ -1968,7 +1981,7 @@ def _op_audit(args, project):
     shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project))
     lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
              for layer, row in counts.items()]
-    lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"][:3])) for b in broken]
+    lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"])) for b in broken]  # each, once
     lines += ["  %s (%s) owes: %s" % (o["id"], o["layer"], ", ".join(o["owes"])) for o in owed]
     lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
               % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []

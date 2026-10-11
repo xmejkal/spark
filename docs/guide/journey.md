@@ -857,8 +857,8 @@ L9110S dual motor driver module — motor-driver
   CONFLICT: AIA: the board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at 0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply above 5 V (input-high threshold 2.5 V); the module's input-low threshold is not recorded, so below that the level is undefined
 
   CONFLICT: AIB: the board's 10000 ohm pull-down against the module's own 10000 ohm pull-up to its supply holds the pin at 0.5 of the supply (1.25 V to 6 V over its 2.5-12 V range), so it idles HIGH, not low, on any supply above 5 V (input-high threshold 2.5 V); the module's input-low threshold is not recorded, so below that the level is undefined
-  fix for l9110s-module.AIA: a pull-down under 2631 ohm keeps it under its 2.5 V input-high threshold up to 12 V; or keep the supply under 5 V
-  fix for l9110s-module.AIB: a pull-down under 2631 ohm keeps it under its 2.5 V input-high threshold up to 12 V; or keep the supply under 5 V
+  fix for l9110s-module.AIA: record the module's input_low_threshold_v, the level it reads as low, then run --show again: held only under the input-high threshold, the level is undefined
+  fix for l9110s-module.AIB: record the module's input_low_threshold_v, the level it reads as low, then run --show again: held only under the input-high threshold, the level is undefined
 ```
 
 The next step is the `spark-review` skill: it runs `check_all`, then reviewer agents, then the fabrication gate. It
