@@ -1,0 +1,7 @@
+[
+ {"file": "tools/circuit-to-wokwi/lib/emitters/wokwi.ts", "name": "the board's serial port is never wired to the serial monitor", "find": "  diagram.connections.push(...serialMonitor(mapped, oracle));", "replace": "  // serial monitor left unwired"},
+ {"file": "tools/circuit-to-wokwi/lib/emitters/wokwi.ts", "name": "the serial monitor's two wires cross the wrong way", "find": "    [`${board.id}:TX`, \"$serialMonitor:RX\", \"\", []],", "replace": "    [`${board.id}:TX`, \"$serialMonitor:TX\", \"\", []],"},
+ {"file": "scripts/check_spine.py", "name": "the serial monitor's wires are counted, so the 0-connections guard never fires", "find": "               if not any(str(end).startswith(SERIAL_MONITOR) for end in connection[:2]))", "replace": "               if True)"},
+ {"file": "scripts/check_spine.py", "name": "a diagram with no serial monitor is not said", "find": "    if not serial:  # P190: no pins named TX and RX, or an older converter of the project's own", "replace": "    if False:"},
+ {"file": "tools/circuit-to-wokwi/lib/emitters/wokwi.ts", "name": "a board with no TX and RX gets serial wires anyway", "find": "  if (!oracle.isValidPin(BOARD.wokwiType, \"TX\") || !oracle.isValidPin(BOARD.wokwiType, \"RX\")) return [];", "replace": "  // the pins are not checked"}
+]

@@ -415,6 +415,20 @@ class ReachingSimulationTest(unittest.TestCase):
         # It is what an unmapped component looks like once the converter has given up on it.
         self.assertEqual(check_spine.wires_in({"parts": [{"id": "mcu"}], "connections": []}), 0)
 
+    def test_the_serial_monitor_s_wires_are_not_counted_so_an_unwired_board_still_counts_zero(self):
+        # P190: the two serial wires are in every S3 diagram; counted, the 0-connections guard could never fire.
+        serial = [["mcu:TX", "$serialMonitor:RX", "", []], ["mcu:RX", "$serialMonitor:TX", "", []]]
+        self.assertEqual(check_spine.wires_in({"connections": serial}), 0)
+        self.assertEqual(check_spine.wires_in({"connections": serial + [["mcu:38", "btn:1.l", "", []]]}), 1)
+
+    def test_a_diagram_with_no_serial_monitor_is_said_in_the_stage_line(self):
+        # P190: a board part with no pins named TX and RX gets no serial wires, so a scenario hears nothing.
+        self.assertFalse(check_spine.serial_wired({"connections": [["mcu:38", "btn:1.l", "", []]]}))
+        self.assertTrue(check_spine.serial_wired({"connections": [["mcu:TX", "$serialMonitor:RX", "", []]]}))
+        said = check_spine.simulation_detail(3, {}, 0, [], serial=False)
+        self.assertIn("no serial monitor is wired", said)
+        self.assertNotIn("serial", check_spine.simulation_detail(3, {}, 0, [], serial=True))
+
     def test_a_diagram_missing_the_key_entirely_counts_zero_rather_than_raising(self):
         self.assertEqual(check_spine.wires_in({}), 0)
 
