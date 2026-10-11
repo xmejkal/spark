@@ -7,23 +7,30 @@ What spark answers in the projects that use it, recorded on copies, never on the
     tools/snapshot.py --out <dir> --tsci-bin <path>      a toolchain for a project that has no node_modules
     tools/snapshot.py --out <dir> --spark <tree>         the spark whose answers are recorded (default: this one)
 
-Before and after a change that alters an output:
+Before and after a change that alters an output: main first, then the branch against it.
 
-    tools/snapshot.py --out /tmp/after --against docs/observations/2026-10-11-baseline.json \\
-        --tsci-bin ~/Development/smartbin-local/node_modules/.bin
+    tools/snapshot.py --out /tmp/before --spark <main checkout> --tsci-bin ~/Development/smartbin-local/node_modules/.bin
+    tools/snapshot.py --out /tmp/after --against /tmp/before/snapshot.json --tsci-bin <the same>
 
-Why: no change to spark's output merges before today's outputs are recorded, so every later change can show what it
-changed (P184, #133; P158's plan, #94). The baseline is docs/observations/2026-10-11-baseline.json. A card that changes
-an output says which of its lines it changes, and --against shows them.
+Against the baseline instead, every output change merged since 2026-10-11 shows too.
+
+Why: no change to spark's output merges before its outputs of 2026-10-11 are recorded, so every later change can show
+what it changed (P184, #133; P158's plan, #94). The baseline is docs/observations/2026-10-11-baseline.json. A card
+that changes an output says which of its lines it changes, and --against shows them.
 
 How: each project is cloned into <dir> (an APFS clone on macOS, so no extra space). Its documented spark commands run
 there under a copy of the person's store. Each command's exit, stdout and stderr are kept, with the scratch folders
 written as placeholders, so two snapshots of unchanged spark compare equal. The projects and the store are only read.
 
+What it records: the text of boards.py, check_bom.py, check_vendor_pins.py, check_physics.py, check_spine.py and
+check_all.py, as the projects run them, with what they call. Not recorded: any --json answer, any command of parts.py,
+drawer.py or needs.py, and the ten placeholder channels counted per project (#133). A change that shows only in those
+does not show here.
+
 Needs: the bin, irrigation and plant-alarm at ~/Development/<name> (a missing one is skipped and said), the store at
 ~/.local/share/spark (copied, never used live), and tsci for the chain: a project's own node_modules, or --tsci-bin.
-Without either, the chain's steps are recorded as skipped. A full run takes about a minute; --out belongs outside the
-repository, and its earlier copies are replaced.
+Without either, the chain's steps are recorded as skipped. A full run takes about a minute. --out must lie outside
+spark's tree, and a second run into it replaces the first's copies.
 
 A difference is not always spark's: the report says first when the store, a project's pin or spark's pin differs.
 Those lines are context: a run on a later commit whose commands all answer as before still exits 0.
@@ -106,7 +113,7 @@ def _clone(source: Path, target: Path):
 
 
 def _digest(folder: Path, skip=frozenset()) -> str:
-    """Every file under `folder`, path and bytes, as one sha256, leaving out the folders named in `skip`."""
+    """Every file under `folder`, path and bytes, as one sha256, leaving out the folders and files named in `skip`."""
     h = hashlib.sha256()
     for p in sorted(folder.rglob("*")):
         if p.is_file() and not skip.intersection(p.relative_to(folder).parts):
@@ -116,8 +123,8 @@ def _digest(folder: Path, skip=frozenset()) -> str:
 
 def _pin(folder: Path) -> str:
     """What fixes a source's content: its commit and any uncommitted files, or, outside git, a digest."""
-    if folder.resolve() != ROOT and ROOT in folder.resolve().parents:  # a fixture: its own content, not the repo's
-        return "in this repository: sha256 %s" % _digest(folder)[:12]
+    if FIXTURES.resolve() in folder.resolve().parents:  # a fixture: its own content, not the repository's
+        return "in this repository: sha256 %s" % _digest(folder, {"README.md"})[:12]  # what spark reads
     git = ["git", "--no-optional-locks", "-C", str(folder)]  # never refresh the project's index: it is only read
     head = subprocess.run(git + ["rev-parse", "--short", "HEAD"], capture_output=True, text=True)
     if head.returncode:
@@ -143,7 +150,9 @@ def _argv(command, spark: Path, outputs: dict):
             label = word[1:-1]
             if label not in outputs:
                 return None, "needs the output of `%s`, which this project did not run" % label
-            argv += outputs[label].split()  # as the Makefile's $(shell ...) does
+            if outputs[label].returncode:
+                return None, "needs the output of `%s`, which exited %d" % (label, outputs[label].returncode)
+            argv += outputs[label].stdout.split()  # as the Makefile's $(shell ...) does
         else:
             argv.append(word.replace("{spark}", str(spark)))
     return argv, None
@@ -181,10 +190,12 @@ def _run_project(project, work: Path, spark: Path, store: Path, tsci_bin, env_ex
         try:
             done = subprocess.run([sys.executable] + argv, cwd=copy, env=env, capture_output=True, text=True,
                                   timeout=TIMEOUT)
-        except subprocess.TimeoutExpired:
-            results.append(dict(row, skipped="timed out after %s s" % TIMEOUT))
+        except subprocess.TimeoutExpired as late:  # what it printed before it was stopped is kept
+            partial = {stream: _placeholders((text or b"").decode(errors="replace"), names)
+                       for stream, text in (("stdout", late.stdout), ("stderr", late.stderr))}
+            results.append(dict(row, skipped="timed out after %s s" % TIMEOUT, **partial))
             continue
-        outputs[command["label"]] = done.stdout
+        outputs[command["label"]] = done
         results.append(dict(row, exit=done.returncode, stdout=_placeholders(done.stdout, names),
                             stderr=_placeholders(done.stderr, names)))
     return dict(record, commands=results)
@@ -206,8 +217,8 @@ def take(project_list, out, spark=ROOT, store=STORE, tsci_bin=None, env=None):
 
 
 def _said(command):
-    """A command's outcome in one word for a comparison: its exit, or `skipped`."""
-    return "skipped" if command.get("skipped") else command.get("exit")
+    """A command's outcome for a comparison: its exit, or `skipped:` and why, so a changed reason shows."""
+    return "skipped: " + command["skipped"] if command.get("skipped") else command.get("exit")
 
 
 def context(old, new):
@@ -281,6 +292,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     out, spark = Path(args.out).resolve(), Path(args.spark).resolve()
     try:
+        for tree in {ROOT, spark}:  # its copies there would be read as fixtures, or committed
+            if out == tree or tree in out.parents:
+                raise ValueError("%s is inside spark's tree %s; take the snapshot outside it" % (out, tree))
         if not (spark / "scripts" / "boards.py").is_file():
             raise ValueError("%s is not a spark tree: it has no scripts/boards.py" % spark)
         older = None

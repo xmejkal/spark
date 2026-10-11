@@ -159,13 +159,21 @@ records them. It copies each project that uses spark, and the store, runs the pr
 the copy, and keeps every exit, stdout and stderr. The projects are the bin, irrigation and plant-alarm, plus the five
 small cases in [`tests/data/snapshot/`](../../tests/data/snapshot/README.md). The originals are only read.
 
+It records six scripts as the projects run them, with what they call, such as the chain's `emit_board.py`: `boards.py`,
+`check_bom.py`, `check_vendor_pins.py`, `check_physics.py`, `check_spine.py` and `check_all.py`. No `--json` answer is
+kept, and no command of `parts.py`, `drawer.py` or `needs.py` runs, so a change that shows only in their answers does
+not show here.
+
+Take main first, then the branch against it:
+
 ```sh
-python3 tools/snapshot.py --out /tmp/after --against docs/observations/2026-10-11-baseline.json \
-    --tsci-bin <a project's node_modules/.bin>
+python3 tools/snapshot.py --out /tmp/before --spark <main checkout> --tsci-bin <a project's node_modules/.bin>
+python3 tools/snapshot.py --out /tmp/after --against /tmp/before/snapshot.json --tsci-bin <the same>
 ```
 
-The baseline was taken on 2026-10-11, before P158's cards change any output. On a branch that changed no answer, the
-run ends like this:
+The baseline, `docs/observations/2026-10-11-baseline.json`, was taken before P158's cards change any output. Against it,
+a run also shows every output change merged since. On the branch that added it, which changed no answer, the run
+against the baseline ended like this:
 
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text

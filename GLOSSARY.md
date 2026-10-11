@@ -137,8 +137,9 @@ code — any key in any payload could have been renamed with the suite still gre
 A **snapshot** is what spark answers, recorded: `tools/snapshot.py` runs each project's documented spark commands on a
 copy of the project and keeps every exit, stdout and stderr. The **baseline** is the snapshot taken before P158's cards
 change any output, `docs/observations/2026-10-11-baseline.json`. A later snapshot run `--against` it prints the lines
-that changed, under the command that printed them. It is a characterisation test of the whole product: it records what
-spark answers today, a 1 or a 2 included, and judges nothing (P184).
+that changed, under the command that printed them. It is a characterisation test of the commands the three projects
+and five fixtures run, not of all of spark: no `--json` answer is in it, and no command of `parts.py`. It records what
+they answer on the day it is taken, a 1 or a 2 included, and judges nothing (P184).
 
 **The failure behind its placeholders:** the first two snapshots of unchanged spark differed. A chain run writes into
 a temp folder whose name is random, and prints that name, so every comparison would have reported a change nobody made.

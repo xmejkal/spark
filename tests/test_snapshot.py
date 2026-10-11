@@ -35,6 +35,7 @@ FAKE_SCRIPT = """import os, sys, tempfile, time
 from pathlib import Path
 Path("written-by-the-command.txt").write_text("x")
 Path(os.environ["SPARK_HOME"], "written-into-the-store.txt").write_text("x")
+print("started", flush=True)
 time.sleep(float(os.environ.get("FAKE_SLEEP", "0")))
 print("args:", " ".join(sys.argv[1:]))
 print("cwd:", os.getcwd())
@@ -137,6 +138,12 @@ class TwoSnapshotsCompare(unittest.TestCase):
     def test_a_changed_exit_is_reported(self):
         self.assertIn("  exit 0 → 1", snapshot.report(self.f.take("old"), self.f.take("new", env={"FAKE_EXIT": "1"})))
 
+    def test_a_changed_reason_for_a_skip_is_a_difference(self):
+        def record(why):
+            command = {"label": "c", "exit": None, "stdout": "", "stderr": "", "skipped": why}
+            return {"store": {"sha256": "s"}, "spark": {"pin": "p"}, "projects": {"proj": {"pin": "a", "commands": [command]}}}
+        self.assertIn("  exit skipped: one reason → skipped: another", snapshot.report(record("one reason"), record("another")))
+
     def test_a_command_or_a_project_gone_from_the_new_snapshot_is_reported(self):
         extra = [{"label": "fake.py two", "argv": ["{spark}/scripts/fake.py", "two"], "needs_tsci": False}]
         old = self.f.take("old", spec=self.f.spec(extra=extra) + self.f.spec(name="gone"))
@@ -167,6 +174,17 @@ class WhatItCouldNotRunIsSaid(unittest.TestCase):
             taken = self.f.take("one", spec=self.f.spec(extra=extra), env={"FAKE_SLEEP": "2"})
         commands = taken["projects"]["proj"]["commands"]
         self.assertEqual([c.get("skipped") for c in commands], ["timed out after 0.5 s"] * 2)
+
+    def test_a_timed_out_command_keeps_what_it_printed(self):
+        with mock.patch.object(snapshot, "TIMEOUT", 0.5):
+            command = first(self.f.take("one", env={"FAKE_SLEEP": "2"}))
+        self.assertIn("started", command["stdout"])
+
+    def test_an_earlier_command_that_failed_skips_the_command_that_needs_its_output(self):
+        extra = [{"label": "needs it", "argv": ["{spark}/scripts/fake.py", "{fake.py one}"], "needs_tsci": False}]
+        taken = self.f.take("one", spec=self.f.spec(extra=extra), env={"FAKE_EXIT": "1"})
+        self.assertEqual(taken["projects"]["proj"]["commands"][1]["skipped"],
+                         "needs the output of `fake.py one`, which exited 1")
 
     def test_an_earlier_output_that_is_missing_skips_the_command_that_needs_it(self):
         extra = [{"label": "needs it", "argv": ["{spark}/scripts/fake.py", "{boards.py --paths}"], "needs_tsci": False}]
@@ -212,7 +230,7 @@ class TheCommandLine(unittest.TestCase):
         self.assertEqual(first(json.loads((self.f.out / "snapshot.json").read_text()))["exit"], 0)
 
     def test_a_spark_tree_without_its_scripts_could_not_run(self):
-        code, said = self.run_main("--out", str(self.f.out), "--spark", str(self.f.out))
+        code, said = self.run_main("--out", str(self.f.out), "--spark", str(self.f.project))
         self.assertEqual(code, 2)
         self.assertIn("is not a spark tree", said)
 
@@ -246,6 +264,14 @@ class TheCommandLine(unittest.TestCase):
         self.assertIn("spark: not a git repository", said)
         self.assertIn("nothing differs", said)
 
+    def test_an_out_inside_spark_could_not_run_before_any_work(self):
+        for inside in (snapshot.FIXTURES / "would-become-a-fixture", self.f.spark / "out"):
+            with self.subTest(out=inside), mock.patch.object(snapshot, "take", side_effect=AssertionError("ran")):
+                code, said = self.run_main("--out", str(inside), "--spark", str(self.f.spark))
+                self.assertEqual(code, 2)
+                self.assertIn("inside spark's tree", said)
+                self.assertFalse(inside.exists())
+
     def test_help_shows_the_exit_codes_and_what_it_needs(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
@@ -268,6 +294,24 @@ class TheProjectsItKnows(unittest.TestCase):
     def test_a_fixture_is_pinned_by_its_own_content_not_the_whole_repository(self):
         fixture = sorted(p for p in (ROOT / "tests" / "data" / "snapshot").iterdir() if p.is_dir())[0]
         self.assertTrue(snapshot._pin(fixture).startswith("in this repository: sha256 "), snapshot._pin(fixture))
+
+    def test_a_fixture_pin_follows_what_spark_reads_not_its_readme(self):
+        fixtures = Path(tempfile.mkdtemp()).resolve()
+        case = fixtures / "case"; (case / "boards").mkdir(parents=True)
+        (case / "boards" / "a.json").write_text("{}")
+        with mock.patch.object(snapshot, "FIXTURES", fixtures):
+            before = snapshot._pin(case)
+            (case / "README.md").write_text("what the case is")
+            self.assertEqual(snapshot._pin(case), before)
+            (case / "boards" / "a.json").write_text('{"id": "a"}')
+            self.assertNotEqual(snapshot._pin(case), before)
+
+    def test_a_spark_tree_inside_this_repository_is_pinned_as_spark_not_as_a_fixture(self):
+        fake_root = Path(tempfile.mkdtemp()).resolve()  # as ROOT is: /var is a link on macOS
+        nested = fake_root / ".worktrees" / "a-card"; nested.mkdir(parents=True)
+        with mock.patch.object(snapshot, "ROOT", fake_root), \
+                mock.patch.object(snapshot, "FIXTURES", fake_root / "tests" / "data" / "snapshot"):
+            self.assertTrue(snapshot._pin(nested).startswith("not a git repository"), snapshot._pin(nested))
 
     def test_the_live_vendor_check_is_left_out_and_said(self):
         bin_ = next(p for p in snapshot.projects() if p["name"] == "smartbin-local")
