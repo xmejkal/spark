@@ -82,5 +82,17 @@
   "name": "the JSON drops the count",
   "find": "\"unmeasured\": unmeasured_in(results),",
   "replace": "\"unmeasured\": 0,"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the bound runs without the part records",
+  "find": "    span, unverified, unvoltaged = (None, [], []) if loads is None else \\\n",
+  "replace": "    span, unverified, unvoltaged = (None, [], []) if False else \\\n"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "a check that could not look adds its ? lines to the count",
+  "find": "               if result[\"status\"] in (OK, PROBLEMS) and not result.get(\"unchecked\"))",
+  "replace": "               if result[\"status\"] != SKIPPED)"
  }
 ]

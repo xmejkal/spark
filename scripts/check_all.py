@@ -432,9 +432,10 @@ def unmeasured_in(results):
     How many `?` lines the answer rests on (P108): values nobody has measured or verified, and
     advisories. The PO decided on 2026-10-05 that a null `max_current_a` stays a `?`, so an `ok`
     may rest on them, and the answer must then say how many. One line can name several figures,
-    so this counts lines, and says so.
+    so this counts lines, and says so. A check that could not look rests nothing on its lines.
     """
-    return sum(len(result.get("unmeasured", [])) for result in results if result["status"] != SKIPPED)
+    return sum(len(result.get("unmeasured", [])) for result in results
+               if result["status"] in (OK, PROBLEMS) and not result.get("unchecked"))
 
 
 def verdict(results):

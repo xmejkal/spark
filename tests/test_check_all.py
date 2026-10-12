@@ -610,6 +610,12 @@ class TheAnswerCountsWhatNobodyMeasuredTest(unittest.TestCase):
         answer = json.loads(printed.getvalue())
         self.assertEqual(answer["unmeasured"], 3, answer)
 
+    def test_a_check_that_could_not_look_rests_nothing_on_its_lines(self):
+        results = [{"check": "a", "status": check_all.COULD_NOT_RUN, "what": "x", "unchecked": ["!"],
+                    "unmeasured": ["u1"]},
+                   {"check": "b", "status": check_all.OK, "what": "y", "unmeasured": ["u2"]}]
+        self.assertIn("resting on 1 ? line(s)", check_all.render(results).splitlines()[-1])
+
     def test_an_answer_resting_on_nothing_unmeasured_says_nothing_about_it(self):
         circuit = written("circuit.json", [{"type": "source_net", "source_net_id": "V33", "name": "V33"}])
         rendered = check_all.render(check_all.run({"circuit": circuit}))

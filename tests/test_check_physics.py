@@ -296,8 +296,13 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
         self.assertIn("Pullup", findings[0].detail)
         self.assertIn("Mcu.3V3: io_volts", findings[0].detail)
 
-    def test_a_voltage_the_rules_state_is_enough_without_the_records(self):
-        self.assertEqual(self._judge(10_000, {"V33": {"nominal_volts": 3.3}}, None), [])
+    def test_a_voltage_the_rules_state_is_enough_once_the_records_are_read(self):
+        self.assertEqual(self._judge(10_000, {"V33": {"nominal_volts": 3.3}}, {}), [])
+
+    def test_without_the_records_nothing_clears_by_the_bound(self):
+        # A supply joined by a bare trace is invisible to the netlist; only the records say there is none.
+        findings = self._judge(10_000, {"V33": {"nominal_volts": 3.3}}, None)
+        self.assertEqual(self.severities(findings), ["could-not-run"])
 
     def test_a_voltage_the_rules_state_beats_the_record(self):
         # 6.4^2 / 330 = 0.124 W stays unassessed; the record's 3.3 V (0.033 W) would have cleared it.
@@ -355,7 +360,7 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
         circuit = [net("GND"), component("Shunt", "simple_resistor", resistance=1), port("Shunt", "pin1"),
                    {"type": "cad_component", "source_component_id": "Shunt", "footprinter_string": "res0603"}]
         circuit += trace("GND", ["Shunt.pin1"], [0.25])
-        findings = check_physics.check_resistor_power(check_physics.Board(circuit), {"GND": {}})
+        findings = check_physics.check_resistor_power(check_physics.Board(circuit), {"GND": {}}, {})
         self.assertEqual(self.severities(findings), ["could-not-run"])
 
     def test_a_resistor_between_two_rails_is_judged_once(self):
@@ -365,7 +370,7 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
         self.assertIn("could not be assessed: Pullup.", findings[0].detail)
 
     def test_a_voltage_that_is_not_a_number_is_no_voltage(self):
-        findings = self._judge(10_000, {"V33": {"nominal_volts": "3V3"}}, None)
+        findings = self._judge(10_000, {"V33": {"nominal_volts": "3V3"}}, {})
         self.assertEqual(self.severities(findings), ["could-not-run"])
 
     def test_a_rail_only_the_records_know_does_not_block_the_bound(self):

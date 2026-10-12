@@ -371,10 +371,15 @@ def check_resistor_power(board, rails, loads=None, bus_nets=()):
     thing a person knows and a netlist does not.
 
     One upper bound needs no topology (P197): no resistor sees more than the span between the
-    highest and the lowest voltage on the board's nets. So a package that survives `V^2 / R` at
-    that span, at half its rating, is safe whatever the circuit. A 10k pull-up at 3.3 V is 1.1 mW,
-    so a fresh button-and-LED board clears. The bound only clears: above it the resistor stays
-    unassessed, because for a shunt the bound is absurd, not a finding.
+    highest and the lowest voltage on the board's named nets. So a package that survives `V^2 / R`
+    at that span, at half its rating, is safe. A 10k pull-up at 3.3 V is 1.1 mW, so a fresh
+    button-and-LED board clears. The bound only clears: above it the resistor stays unassessed,
+    because for a shunt the bound is absurd, not a finding.
+
+    It assumes every voltage source reaches the board through a named net, which is how spark's
+    generator wires every supply (`net.X`). A supply joined by a bare trace is a voltage this file
+    cannot see, so the bound runs only when the part records were read (`loads`, which
+    `check_all --project` passes). Without them, nothing clears by it.
     """
     findings = []
     resistors = {}  # name -> the current a rail states for it, or None; each resistor judged once
@@ -389,7 +394,8 @@ def check_resistor_power(board, rails, loads=None, bus_nets=()):
             if resistors.get(component_name) is None:
                 resistors[component_name] = stated
 
-    span, unverified, unvoltaged = rail_span_volts(rails, loads, set(board.net_names()), bus_nets)
+    span, unverified, unvoltaged = (None, [], []) if loads is None else \
+        rail_span_volts(rails, loads, set(board.net_names()), bus_nets)
     unassessable, resting = [], []
     for component_name, stated in sorted(resistors.items()):
         ohms = float(board.named(component_name)["resistance"])
@@ -614,8 +620,8 @@ def main(argv=None):
         description="Check a built board against physics rather than against itself.")
     parser.add_argument("circuit", help="the built netlist, usually dist/board/circuit.json")
     parser.add_argument("--rules", help="JSON naming rails, currents and voltages. Run alone, physics "
-                        "reads each rail's voltage only from its nominal_volts here; check_all --project also "
-                        "reads it from the board's records")
+                        "reads no part records, so no resistor clears by the rail-span bound; "
+                        "check_all --project reads them")
     parser.add_argument("--json", action="store_true", help="the result as data")
     args = parser.parse_args(argv)
 
