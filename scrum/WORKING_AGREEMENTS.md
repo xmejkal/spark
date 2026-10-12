@@ -44,19 +44,22 @@ there; the call beneath it named a function that did not exist. The test was gre
 life of the defect — it verified the check was *named*, not that it *ran*.
 
 **Mechanical since P54 (2026-10-01):** `tests/test_self_confirmation.py` fails when a test reads a
-module-under-test constant that is not shared vocabulary and has no written reason, and when a
-shipped file is named by no mutation table and has no written reason. Its first catch:
+module-under-test constant that is not shared vocabulary and has no written reason. Its second half, a test that
+every shipped file is named by a mutation table, was retired with the per-change tables ([P208](https://github.com/xmejkal/spark/issues/175)). Its first catch:
 `test_flash_image` found the filesystem at `flash_image.FILESYSTEM_OFFSET` — and passed with it
 moved to an offset MicroPython never reads.
 
 ## W3 — Mutation testing is the acceptance bar
 
-Re-introduce the defect; the suite must go red. Before commit, not after somebody finds it again.
+Re-introduce the defect; the suite must go red. Before the merge, not after somebody finds it again.
 
-The defect goes into a mutation table in `tests/mutations/`. `tools/mutate.py` puts each one back into the code and
-names every mutation the suite does not notice — a missing test. The pre-push gate checks, on the tree as committed,
-that every mutation's anchor is still there, once (`tools/check_commit.py`), and every table runs in one sweep when an
-epic is done ([the Definition of Done](README.md#definition-of-done)).
+The council's mutation tester ([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)) puts the
+defects back into the changed lines, in a copy of the tree, and names each one the suite does not notice: a missing
+test. A table in `tests/mutations/` is kept only when a defect escaped, and the rows about an epic's files run in one
+sweep when the epic is done ([the Definition of Done](README.md#definition-of-done)). When, who and how:
+[the glossary](../GLOSSARY.md#mutation-and-the-mutation-table). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
+mutations as you say"*). Before it, every logic change wrote a table, and the pre-push gate checked every table's
+anchors. A table of 25 rows ran 615 s, and moved code blocked pushes (the measurement: [P130's council](../docs/observations/2026-10-12-p130-council.md)). The older tables stay as history.
 
 **A fixture that cannot see the defect is the defect** (W12, merged here 2026-10-09). When a mutation escapes, the
 first question is whether the fixture could have seen it at all. Four escapes in Sprint 3 were exactly that — three
@@ -150,7 +153,7 @@ protection on either `main`.
 
 A count, a hash, a verdict ("the chain runs end to end") goes into a commit message, a card's comment or a status
 update only in a later call than the command that produced it, copied from output that is on the screen — **and
-measured on the tree being committed**: `check_commit.py` archives `HEAD` and runs the suite and the anchors there
+measured on the tree being committed**: `check_commit.py` archives `HEAD` and runs the suite there
 before every push. A commit's message said 589 OK while the tree it held ran 562 FAILED, because the run was on the
 working tree and the file it imported was staged one commit later (close audit C3). The gate measures `HEAD` even when
 another branch is pushed; measuring the ref being pushed is [P106](https://github.com/xmejkal/spark/issues/39), not
