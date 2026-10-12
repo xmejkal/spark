@@ -412,17 +412,28 @@ def render(results):
 
     # The last line is the one a hurried reader takes away, so it must never be able to say
     # less than happened. "Nothing found by the checks that ran" was true and useless when the
-    # number of checks that ran was zero.
+    # number of checks that ran was zero. An answer resting on `?` lines says how many (P108).
+    unmeasured = unmeasured_in(results)
+    resting = ", resting on %d value(s) nobody has measured (the ? lines)" % unmeasured if unmeasured else ""
     if problems:
-        lines.append("  %d problem(s)" % problems)
+        lines.append("  %d problem(s)%s" % (problems, resting))
     elif not completed:
         lines.append("  nothing completed. This says nothing about the board.")
     elif unchecked or skipped:
-        lines.append("  nothing found by the %d check(s) that completed, of %d"
-                     % (len(completed), len(results)))
+        lines.append("  nothing found by the %d check(s) that completed, of %d%s"
+                     % (len(completed), len(results), resting))
     else:
-        lines.append("  nothing found by any of the %d checks" % len(results))
+        lines.append("  nothing found by any of the %d checks%s" % (len(results), resting))
     return "\n".join(lines)
+
+
+def unmeasured_in(results):
+    """
+    How many values the answer rests on that nobody has measured: the `?` lines (P108). The PO
+    decided on 2026-10-05 that a null `max_current_a` stays a `?`, so an `ok` may rest on them,
+    and the answer must then say how many.
+    """
+    return sum(len(result.get("unmeasured", [])) for result in results if result["status"] != SKIPPED)
 
 
 def verdict(results):
@@ -461,7 +472,7 @@ def main(argv=None):
     overall = verdict(results)
 
     if args.json:
-        print(json.dumps({"tool": "check_all", "status": overall,
+        print(json.dumps({"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
                           "resolved": resolved, "results": results}, indent=2))
     else:
         if resolved:
