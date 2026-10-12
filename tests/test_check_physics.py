@@ -300,7 +300,7 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
         self.assertEqual(self._judge(10_000, {"V33": {"nominal_volts": 3.3}}, {}), [])
 
     def test_without_the_records_nothing_clears_by_the_bound(self):
-        # A supply joined by a bare trace is invisible to the netlist; only the records say there is none.
+        # Without the records, nothing says which supplies the board has, so the bound does not run at all.
         findings = self._judge(10_000, {"V33": {"nominal_volts": 3.3}}, None)
         self.assertEqual(self.severities(findings), ["could-not-run"])
 

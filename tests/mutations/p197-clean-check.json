@@ -106,5 +106,11 @@
   "name": "a stated current is never read",
   "find": "            stated_currents.setdefault(name, amps)",
   "replace": "            pass"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "a check with problems and an unchecked line adds its ? lines",
+  "find": "               if result[\"status\"] in (OK, PROBLEMS) and not result.get(\"unchecked\"))",
+  "replace": "               if result[\"status\"] in (OK, PROBLEMS))"
  }
 ]

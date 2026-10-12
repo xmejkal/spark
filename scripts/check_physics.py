@@ -377,9 +377,10 @@ def check_resistor_power(board, rails, loads=None, bus_nets=()):
     because for a shunt the bound is absurd, not a finding.
 
     It assumes every voltage source reaches the board through a named net, which is how spark's
-    generator wires every supply (`net.X`). A supply joined by a bare trace is a voltage this file
-    cannot see, so the bound runs only when the part records were read (`loads`, which
-    `check_all --project` passes). Without them, nothing clears by it.
+    generator wires every supply (`net.X`). So the bound runs only when the part records were read
+    (`loads`, which `check_all --project` passes): the board is then spark's own design. Without
+    them, nothing clears by it. A supply that a hand-edited `board.tsx` joins by a bare trace is a
+    voltage neither this file nor the records can see, and it breaks the assumption.
 
     Every resistor on the board, not only one with an end on a rail (P197, the PO's choice of
     2026-10-12): an LED's series resistor sits between a GPIO and the LED, on no rail, and was
