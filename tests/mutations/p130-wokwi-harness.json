@@ -98,7 +98,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "an older run's passed log outlives a run that could not start",
-  "find": "log.unlink(missing_ok=True)",
+  "find": "self.log.unlink(missing_ok=True)",
   "replace": "pass"
  },
  {
@@ -110,8 +110,8 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "the image is not rebuilt, so a run tests an older firmware",
-  "find": "image.write_bytes(flash_image.image(",
-  "replace": "len(flash_image.image("
+  "find": "self.image.write_bytes(self.flash)",
+  "replace": "len(self.flash)"
  },
  {
   "file": "scripts/run_scenario.py",
@@ -148,5 +148,11 @@
   "name": "the journey's run stage passes an image without the project's main.py",
   "find": "return None if b\"light.run()\" in image.read_bytes() else",
   "replace": "return None if True else"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a refusal in the command leaves an older run's passed log in place",
+  "find": "run.log.unlink(missing_ok=True)",
+  "replace": "pass"
  }
 ]
