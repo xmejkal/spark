@@ -210,6 +210,12 @@ The lines about the store, spark's pin or a project's pin come first and never s
 difference may be, and a branch always moves spark's pin. The exits it records are not judged: irrigation's chain
 exits 1 today, and the baseline holds that. A card that changes an output says which of these lines it changes.
 
+## What spark can do
+
+`python3 tools/inventory.py` prints every script in `scripts/` and `tools/` as Markdown. Each row says what the
+script is for, which pages name it, and which of its flags no page names. Scripts that no page names and no script
+imports come first. It runs only `--help` and writes nothing. `--spark DIR` reads another tree (P200, #153).
+
 ## The docs name only what is there
 
 [`tools/check_docs.py`](../../tools/check_docs.py) reads `README.md`, `AGENTS.md` and these guides. The suite runs it
