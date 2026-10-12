@@ -465,7 +465,9 @@ def main(argv=None):
     parser.add_argument("--circuit", help="the built netlist")
     parser.add_argument("--rules", help="the project's rules file")
     parser.add_argument("--package", help="the exported fab package")
-    parser.add_argument("--json", action="store_true", help="for a caller that is not a person")
+    parser.add_argument("--json", action="store_true",
+                        help="for a caller that is not a person: one JSON document with the status, "
+                             "`unmeasured` (how many ? lines the answer rests on) and each check's result")
     args = parser.parse_args(argv)
 
     inputs, resolved, ambiguous = inputs_for(args)

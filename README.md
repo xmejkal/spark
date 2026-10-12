@@ -51,7 +51,7 @@ runs in [the journey guide](docs/guide/journey.md):
   inlet's 0.225 mm annular ring is over the 0.18 mm the default process can make, but under the 0.25 mm it recommends.
 - **A figure nobody verified:** the 3.3 V rail draws 355 mA of the dev board's 1.50 A, a rating nobody has checked.
 - **What a check could not look at:** physics, because the motor driver's and the inlet's records state no current
-  ([P120](https://github.com/xmejkal/spark/issues/54)) and four resistors' currents are unstated.
+  ([P120](https://github.com/xmejkal/spark/issues/54)) and MOTOR6V states no voltage, so four resistors have no bound.
 - **A reason for every pin:** `MOTOR_IA` goes on pad D3, GPIO38, because it *"needs nothing special; the cheapest pin
   left could still pwm, which is spent here"*.
 

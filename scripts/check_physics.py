@@ -613,7 +613,9 @@ def main(argv=None):
         prog="check_physics.py",
         description="Check a built board against physics rather than against itself.")
     parser.add_argument("circuit", help="the built netlist, usually dist/board/circuit.json")
-    parser.add_argument("--rules", help="JSON naming rails, currents and voltages")
+    parser.add_argument("--rules", help="JSON naming rails, currents and voltages. Run alone, physics "
+                        "reads each rail's voltage only from its nominal_volts here; check_all --project also "
+                        "reads it from the board's records")
     parser.add_argument("--json", action="store_true", help="the result as data")
     args = parser.parse_args(argv)
 

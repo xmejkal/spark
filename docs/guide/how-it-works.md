@@ -100,7 +100,8 @@ Each by its name in check_all's answer:
   - With no rail named, it says it could not run.
   - A null `max_current_a` is named on a `?` line that does not change the outcome.
   - A null `nominal_volts` skips the capacitor check without a word
-    ([P107](https://github.com/xmejkal/spark/issues/41)).
+    ([P107](https://github.com/xmejkal/spark/issues/41)). It also stops a resistor with no stated current from
+    clearing, unless a supply pad's `volts` fact states the rail.
   - Only `check_all.py --project` checks whether a rail's supply covers what it feeds, because only it has the part
     records.
 - **the-order**, `check_bom.py`: does the fab package order the parts the schematic specifies?

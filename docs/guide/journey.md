@@ -813,6 +813,9 @@ Its last sentence overclaims here too, as above. The motor rail's net is named `
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project .
 ```
 
+The lines are a dated record, not today's output: the last line now ends in a count of the `?` lines, and the
+four-resistor `!` line now names its cause (below).
+
 <!-- output: run 2026-10-05, spark 0.6.0 -->
 ```text
   resolved from .:
@@ -850,23 +853,27 @@ Every check ends in one of three outcomes, and `check_all` adds a fourth word, `
 `!` lines can also appear under `[FAIL]`: a check that found a problem may also have failed to look at something, and
 problems outranks could-not-run. A `?` line is an
 [advisory, or a value that needs measuring](../../GLOSSARY.md#needs-measurement-and-advisory--findings-that-do-not-change-the-outcome).
-It does not change the outcome.
+It does not change the outcome. Today the last line ends `, resting on N ? line(s)` when N is above 0: how many `?`
+lines the answer rests on.
 
-**Here physics could not look, and neither `!` line is about a rail value:**
+**Here physics ends could-not-run, for two reasons:**
 
 1. **What MOTOR6V draws.** The L9110S and power-inlet records name no current on their VCC pins
    ([P120](https://github.com/xmejkal/spark/issues/54)).
-2. **Four pull resistors.** Each needs its current stated under its rail, a key init does not write.
+2. **Four pull resistors.** Nothing clears them, because MOTOR6V states no voltage: its `nominal_volts` is `null`.
+   State `6.0` there and all four clear (6² / 10k = 3.6 mW), with no current stated.
 
 What clears each, and its shape, is in [what never to assume](agents.md#what-never-to-assume)
 ([P118](https://github.com/xmejkal/spark/issues/52)).
 
-Of the 12 rail values init left null, two show, as `?` lines: GND's and MOTOR6V's `max_current_a`.
+Of the 12 rail values init left null, three show: GND's and MOTOR6V's `max_current_a` as `?` lines, and MOTOR6V's
+`nominal_volts` in the resistors' `!` line.
 
 - V33's is taken from the part records' sum (355 mA), so it shows nothing of its own. V33's `?` line is about its
   supply, the dev board's unverified 1.50 A.
-- The other nine print nothing. A null `served_by_pour` is read as false. `nominal_volts` and `capacitor_chemistry` are
-  read only for capacitors, and this board has none.
+- The other eight print nothing. A null `served_by_pour` is read as false. `capacitor_chemistry` is read only for
+  capacitors, and this board has none. V33's `nominal_volts` is not needed, because the FireBeetle's 3V3 pad states
+  3.3 V, and GND's is 0 V by definition.
 
 The run exits 2, could-not-run, because physics could not look. Once a rail's `max_current_a` is stated, delete
 `board.tsx` and run `/spark:build` again, so the generator sizes that rail's traces.
@@ -1094,6 +1101,8 @@ With the package in the project, `check_all` finds it and the-order answers `[ok
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project .
 ```
+
+A dated record again: today's last line also counts the `?` lines.
 
 <!-- output: run 2026-10-06, spark 0.6.0 -->
 ```text
