@@ -14,7 +14,7 @@
  {
   "file": "scripts/check_all.py",
   "name": "the finding names nothing again (I10)",
-  "find": "        return answer(problems=[\"[%s] %s: %s\" % (p[\"rule\"], p[\"subject\"], p[\"detail\"]) for p in result.get(\"problems\", [])])",
-  "replace": "        return answer(problems=[p[\"detail\"] for p in result.get(\"problems\", [])])"
+  "find": "        return answer(problems=[\"[%s] %s: %s\" % (p[\"rule\"], p[\"subject\"], p[\"detail\"]) for p in result.get(\"problems\", [])],",
+  "replace": "        return answer(problems=[p[\"detail\"] for p in result.get(\"problems\", [])],"
  }
 ]
