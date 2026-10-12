@@ -270,8 +270,9 @@ because it erases the board's whole flash. Without `--port`, esptool tries each 
 deploy.py flashes only an image that passed. The image is the one `sim/wokwi.toml` names. A log in `sim/runs/` must name
 its sha256 with `verdict: passed`, and no log may name it with another verdict. A log from an older spark names no image,
 so run the scenario again. If a file in `firmware/` changed after the run, deploy.py says so: the board gets the image
-that passed, not the change. It also names each run log that tested another image, so a scenario that failed on an
-older image is not forgotten. The chip comes from the board in `requirements.json`, and esptool refuses a board with
+that passed, not the change. A run log that tested another image refuses the flash, because its scenario never tested
+this one. Run that scenario again, or delete the log if its scenario is gone. `--ignore-older-runs` flashes anyway and
+names the log in a note. The chip comes from the board in `requirements.json`, and esptool refuses a board with
 another chip.
 
 esptool and mpremote come from `/spark:setup`, as the tools list's `flasher` and `board-shell`. If esptool cannot

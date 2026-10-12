@@ -39,6 +39,9 @@ BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press 
              "and run it again")
 #: The last line: how the person sees the firmware start.
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
+#: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
+OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log. To flash anyway, pass --ignore-older-runs, and "
+                      "the line becomes a note")
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and it erases the board's flash first.
 
@@ -137,22 +140,25 @@ def watch_command(shell, port=None):
     return runnable(shell) + (["connect", port] if port else []) + ["repl"]
 
 
-def plan(project, port=None):
+def plan(project, port=None, ignore_older_runs=False):
     """
     (the flash commands, the watch command, notes) for this project. Nothing runs here. A DeployProblem or a
     tools.ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
+    A run log that tested another image refuses the flash, unless `ignore_older_runs` makes it a note.
     """
     image = image_of(project)
     runs = project / "sim" / "runs"  # run_scenario.py writes every log here, in whichever sub-folder of sim/ the image is
     why = untested(image, runs)
     if why:
         raise DeployProblem(why)
+    other = tested_another(image, runs)
+    if other and not ignore_older_runs:
+        raise DeployProblem(other + OLDER_RUNS_WAY_OUT)
     chip = chip_of(project)
     flasher, shell = tools.find("flasher", project), tools.find("board-shell", project)
     changed = newer_files(project, image)
     notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
              "scenario again to test it." % ", ".join(changed)] if changed else []
-    other = tested_another(image, runs)
     notes += [other] if other else []
     return flash_commands(flasher, chip, image, port), watch_command(shell, port), notes
 
@@ -164,11 +170,14 @@ def main(argv=None, run=None):
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with sim/ and requirements.json (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Omitted, esptool tries each port")
+    parser.add_argument("--ignore-older-runs", action="store_true",
+                        help="flash even when a log in sim/runs/ tested another image, and name it in a note "
+                        "(default: refuse)")
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
     args = parser.parse_args(argv)
     run = run or subprocess.run
     try:
-        commands, watch, notes = plan(args.project, args.port)
+        commands, watch, notes = plan(args.project, args.port, args.ignore_older_runs)
     except (DeployProblem, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN

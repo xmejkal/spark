@@ -142,28 +142,41 @@ class OnlyAnImageThatPassedTest(ProjectCase):
 
 
 class ALogThatTestedAnotherImageTest(ProjectCase):
-    """A scenario that last ran on another image is not a refusal, but it is not forgotten either."""
+    """A scenario that last ran on another image never tested this one, so it refuses the flash by default (the PO,
+    2026-10-12). --ignore-older-runs flashes anyway and names it in a note."""
 
-    def test_a_scenario_that_failed_on_an_older_image_is_named_in_a_note(self):
+    def run_two_scenarios(self):
+        """Scenario s fails, the firmware changes, and only scenario t runs again and passes."""
         self.run_the_scenario(exit_code=1)
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint('changed')\n")
         other = self.project / "sim" / "scenarios" / "t.scenario.yaml"
         other.write_text(SCENARIO.replace("name: s", "name: t"))
         self.run_the_scenario(scenario=other)
-        code, said, problems, _ = self.deploy("--dry-run")
+
+    def test_a_scenario_that_failed_on_an_older_image_refuses_the_flash(self):
+        self.run_two_scenarios()
+        code, said, problems, ran = self.deploy("--dry-run")
+        self.assertEqual((code, said, ran), (deploy.EXIT_COULD_NOT_RUN, "", []))
+        self.assertIn("s.log tested another image, not this one: run that scenario again to test this one", problems)
+        self.assertIn("pass --ignore-older-runs", problems)
+
+    def test_ignore_older_runs_flashes_and_names_them_in_a_note(self):
+        self.run_two_scenarios()
+        code, said, problems, _ = self.deploy("--dry-run", "--ignore-older-runs")
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
         self.assertIn("  note: s.log tested another image, not this one: run that scenario again to test this one",
                       said.splitlines())
 
-    def test_several_logs_go_in_one_note_and_a_log_from_an_older_spark_is_one_of_them(self):
+    def test_several_logs_go_in_one_sentence_and_a_log_from_an_older_spark_is_one_of_them(self):
         self.run_the_scenario()
         runs = self.project / "sim" / "runs"
         (runs / "a.log").write_text("# a.scenario.yaml, run 2026-10-01\nverdict: passed\n\nbody\n")
         (runs / "b.log").write_text("# b.scenario.yaml, run 2026-10-01\nverdict: failed\nimage sha256: 0\n\nbody\n")
-        code, said, _, _ = self.deploy("--dry-run")
-        self.assertEqual(code, deploy.EXIT_OK)
-        self.assertIn("  note: a.log, b.log tested another image, not this one: run those scenarios again", said.splitlines()[0])
-        self.assertEqual(said.count("note:"), 1)
+        code, _, problems, _ = self.deploy("--dry-run")
+        self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
+        self.assertIn("a.log, b.log tested another image, not this one: run those scenarios again", problems)
+        code, said, _, _ = self.deploy("--dry-run", "--ignore-older-runs")
+        self.assertEqual((code, said.count("note:")), (deploy.EXIT_OK, 1))
 
 
 class WhatDeployNeedsTest(ProjectCase):

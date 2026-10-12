@@ -9,7 +9,7 @@ Verdict before the fixes: not ready, because of one bug (DE1). The fix commits c
 | ID | Severity | Finding | Outcome |
 | --- | --- | --- | --- |
 | DE1 | should-fix | `deploy.untested()` read the logs beside the image, but `run_scenario.py` writes them to `sim/runs/`. An image in a subfolder of `sim/` whose run passed was refused, with a wrong reason. Reproduced with `firmware = "images/flash.bin"`. | acted: the logs come from `<project>/sim/runs/`, with a test. |
-| DE2 | should-fix, the PO's call | A log that tested another image was ignored. Scenario A failed on image X, the firmware changed, only B ran and passed on Y, and deploy flashed Y without a word about A. | acted as a note, not a refusal: deploy names each log that tested another image. Refusing instead is the PO's call. |
+| DE2 | should-fix, the PO's call | A log that tested another image was ignored. Scenario A failed on image X, the firmware changed, only B ran and passed on Y, and deploy flashed Y without a word about A. | acted as the PO ruled (2026-10-12): a refusal by default, and `--ignore-older-runs` flashes anyway with a note. |
 | DE3 | note | A log that cannot be read crashed deploy with a traceback (a folder named `x.log`). | acted: a path that is not a file is skipped, and a read error is a sentence. |
 | DE4 | note | `commands/build.md` gave `mpremote connect <port> repl`, but deploy prints `python -m mpremote ...`, and a bare `mpremote` is often not on the PATH after `pip install --user`. | acted: the page points at the line deploy prints, and says that the port name can change after the flash. |
 | DE5 | note | `commands/build.md` did not name the log's new sha256 line. | acted. |
