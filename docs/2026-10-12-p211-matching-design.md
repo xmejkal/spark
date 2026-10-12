@@ -79,6 +79,22 @@ classDiagram
 - `--matcher NAME` on `--match` and `--need` picks another class. An unknown name is refused, and the refusal lists
   the names.
 
+### Ready for advanced matchers
+
+The PO, 2026-10-12: *"lets get ready for the more advanced matchers, to be ableto have some text decscription or other
+info and provide it to the ai or human for him to pick the best"*.
+
+A matcher ranks, and a chooser picks. The chooser is Claude in the conversation or the person. So each candidate
+carries what a chooser reads.
+
+- `Offer.describe()` returns that text: the `about` sentence, the tags, the functions, the names, and the record's
+  `power` and `body_mm` when it has them. It leaves out what the record lacks.
+- `--match --json` adds `describe` to each candidate. The text output prints it under the candidate.
+- An advanced matcher, for example one that asks a model, is one more `Matcher` subclass. It reads `describe()`,
+  and it gives its score and its reasons in the same `Match`, so no caller changes.
+
+The pick itself stays where it is today: `--needs-set` writes the mark, and the reason is said in the conversation.
+
 ### The test set
 
 A case is a need in the PO's words and the part that it must find: `{"does", "what", "expect"}`. There are two case
