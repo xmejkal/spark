@@ -1,5 +1,7 @@
 """P82: the tools spark depends on, from one merged list (docs/2026-10-03-tools-design.md)."""
 
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -590,8 +592,6 @@ class TheFlashingToolsAreOfferedTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
     def test_status_lists_the_flasher_and_the_board_shell_with_their_install_lines(self):
-        import contextlib
-        import io
         out = io.StringIO()
         with mock.patch.object(tools.importlib.util, "find_spec", return_value=None), \
                 mock.patch.object(tools.shutil, "which", side_effect=lambda exe: "/usr/bin/" + exe), \
@@ -603,6 +603,53 @@ class TheFlashingToolsAreOfferedTest(unittest.TestCase):
                       said)
         self.assertRegex(said, r"to install: .*\besptool\b")
         self.assertRegex(said, r"to install: .*\bmpremote\b")
+
+
+
+class TheDryRunSaysWhatItWouldDoTest(unittest.TestCase):
+    """P193 (#145): `--install NAME --dry-run` prints a line for every name: what it would fetch and keep, or that it is here."""
+
+    def setUp(self):
+        defaults = dict(DEFAULTS, **{
+            "roles": {"pdf-text": "pdftotext", "simulator": "sim"},
+            "sim": {"kind": "path", "exe": "sim", "install": {"download": "/spark:setup"},
+                    "fetch": {"file": "sim", "executable": True, "platforms": {
+                        "macos-arm64": {"url": "https://example.org/sim-macos-arm64", "sha256": FOO_SHA256}}}},
+            "docs": {"kind": "mcp", "owner": "spark"},
+        })
+        for name, value in (("DEFAULTS", layer(defaults)), ("DOWNLOADS", Path(tempfile.mkdtemp()) / "downloads"),
+                            ("PERSONAL", Path(tempfile.mkdtemp()) / "absent.json")):
+            patcher = mock.patch.object(tools, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def dry_run(self, name, which):
+        out = io.StringIO()
+        with mock.patch.object(tools, "platform_key", return_value="macos-arm64"), \
+                mock.patch.object(tools.shutil, "which", side_effect=which), contextlib.redirect_stdout(out):
+            code = tools.main(["--install", name, "--dry-run"], run=lambda argv, **kw: self.fail("a dry run ran %s" % argv))
+        return code, out.getvalue()
+
+    def test_a_fetch_says_the_download_and_where_the_file_is_kept(self):
+        code, said = self.dry_run("sim", which=lambda exe: None)
+        self.assertEqual(code, tools.EXIT_OK)
+        self.assertEqual(said.splitlines(), [
+            "  would run: curl -fsSL -o %s https://example.org/sim-macos-arm64" % (tools.DOWNLOADS / "sim.part"),
+            "             keeps it as %s if its sha256 is %s..." % (tools.DOWNLOADS / "sim", FOO_SHA256[:12])])
+
+    def test_a_tool_already_here_is_said_not_left_silent(self):
+        code, said = self.dry_run("sim", which=lambda exe: "/usr/bin/" + exe)
+        self.assertEqual((code, said), (tools.EXIT_OK, "  already here: sim (/usr/bin/sim)\n"))
+
+    def test_spark_s_own_server_is_said_not_left_silent(self):
+        code, said = self.dry_run("docs", which=lambda exe: "/usr/bin/" + exe)
+        self.assertEqual((code, said), (tools.EXIT_OK, "  already here: docs (spark's own MCP server, loaded with the plugin)\n"))
+
+    def test_an_install_skips_what_is_already_here(self):
+        ran = []
+        with mock.patch.object(tools.shutil, "which", side_effect=lambda exe: "/usr/bin/" + exe):
+            self.assertEqual(tools.install(["sim", "docs"], run=lambda argv, **kw: ran.append(argv)), [])
+        self.assertEqual(ran, [])
 
 
 if __name__ == "__main__":

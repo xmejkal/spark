@@ -326,10 +326,11 @@ def run_checked(argv, **kw):
 
 
 def plan(names, project=None, personal=None):
-    """What installing these names would do, in order, needs first: [{name, argv, problem, fetch, from_project}].
+    """What installing these names would do, in order, needs first: [{name, argv, problem, fetch, here, from_project}].
 
     Nothing runs here, so /spark:setup can show every command — and which ones a project's own
-    .spark/tools.json chose — before the person's yes.
+    .spark/tools.json chose — before the person's yes. `here` is None, or why nothing needs to run for this
+    name (P193): the path where the tool was found, or that spark's own server loads with the plugin.
     """
     import shlex
     lists = merged(project, personal)
@@ -341,7 +342,8 @@ def plan(names, project=None, personal=None):
                 order.append(wanted)
     steps = []
     for name in order:
-        step = {"name": name, "argv": None, "problem": None, "fetch": None, "from_project": name in project_file}
+        step = {"name": name, "argv": None, "problem": None, "fetch": None, "here": None,
+                "from_project": name in project_file}
         steps.append(step)
         entry = lists["tools"].get(name)
         problem = "no tool called that in any tools file" if entry is None else entry_problem(entry)
@@ -351,7 +353,7 @@ def plan(names, project=None, personal=None):
         try:
             if entry.get("kind") == "mcp":
                 if not entry.get("mcp"):
-                    steps.pop()  # spark's own: the plugin declares it
+                    step["here"] = "spark's own MCP server, loaded with the plugin"
                     continue
                 command = entry["mcp"]["command"]
                 if command in lists["tools"] and not entry_problem(lists["tools"][command]) \
@@ -362,7 +364,7 @@ def plan(names, project=None, personal=None):
                 continue
             here = locate(entry, project)
             if here is not None and not pin_differences(entry, here):
-                steps.pop()  # already here, at the pinned version
+                step["here"] = " ".join(here)  # already here, at the pinned version
                 continue
             fetch = fetch_of(entry)
             if fetch:
@@ -394,6 +396,8 @@ def install(names, project=None, personal=None, run=None):
     run = run or run_checked
     ran, problems = [], []
     for step in plan(names, project, personal):
+        if step["here"]:
+            continue
         if step["problem"]:
             problems.append(step["problem"])
             continue
@@ -538,9 +542,14 @@ def main(argv=None, run=None):
             for step in plan(args.install, project, None):
                 if step["problem"]:
                     print("  cannot:    %s" % step["problem"])
+                elif step["here"]:
+                    print("  already here: %s (%s)" % (step["name"], step["here"]))
                 else:
                     print("  would run: %s%s" % (" ".join(step["argv"]), "   ← chosen by this project's .spark/tools.json"
                                                  " — check it before you say yes" if step["from_project"] else ""))
+                    if step["fetch"]:
+                        print("             keeps it as %s if its sha256 is %s..." % (DOWNLOADS / step["fetch"][0],
+                                                                                   step["fetch"][2][:12]))
                     if step["from_project"]:
                         print("             (from .spark/tools.json)")
         elif args.install:
