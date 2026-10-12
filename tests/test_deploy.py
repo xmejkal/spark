@@ -162,7 +162,7 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
         (runs / "b.log").write_text("# b.scenario.yaml, run 2026-10-01\nverdict: failed\nimage sha256: 0\n\nbody\n")
         code, said, _, _ = self.deploy("--dry-run")
         self.assertEqual(code, deploy.EXIT_OK)
-        self.assertIn("  note: a.log, b.log tested another image, not this one", said.splitlines()[0])
+        self.assertIn("  note: a.log, b.log tested another image, not this one: run those scenarios again", said.splitlines()[0])
         self.assertEqual(said.count("note:"), 1)
 
 

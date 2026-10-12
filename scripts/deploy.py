@@ -99,7 +99,8 @@ def tested_another(image, runs):
     others = [log.name for log, _, sha256 in run_logs(runs) if sha256 != digest]
     if not others:
         return None
-    return "%s tested another image, not this one: run that scenario again to test this one" % ", ".join(others)
+    again = "that scenario" if len(others) == 1 else "those scenarios"
+    return "%s tested another image, not this one: run %s again to test this one" % (", ".join(others), again)
 
 
 def newer_files(project, image):
