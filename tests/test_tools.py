@@ -616,6 +616,7 @@ class TheDryRunSaysWhatItWouldDoTest(unittest.TestCase):
                     "fetch": {"file": "sim", "executable": True, "platforms": {
                         "macos-arm64": {"url": "https://example.org/sim-macos-arm64", "sha256": FOO_SHA256}}}},
             "docs": {"kind": "mcp", "owner": "spark"},
+            "lfs": {"kind": "python", "module": "json"},
         })
         for name, value in (("DEFAULTS", layer(defaults)), ("DOWNLOADS", Path(tempfile.mkdtemp()) / "downloads"),
                             ("PERSONAL", Path(tempfile.mkdtemp()) / "absent.json")):
@@ -644,6 +645,10 @@ class TheDryRunSaysWhatItWouldDoTest(unittest.TestCase):
     def test_spark_s_own_server_is_said_not_left_silent(self):
         code, said = self.dry_run("docs", which=lambda exe: "/usr/bin/" + exe)
         self.assertEqual((code, said), (tools.EXIT_OK, "  already here: docs (spark's own MCP server, loaded with the plugin)\n"))
+
+    def test_a_python_package_already_here_names_its_module_not_only_the_interpreter(self):
+        code, said = self.dry_run("lfs", which=lambda exe: None)
+        self.assertEqual((code, said), (tools.EXIT_OK, "  already here: lfs (the json module of %s)\n" % sys.executable))
 
     def test_an_install_skips_what_is_already_here(self):
         ran = []

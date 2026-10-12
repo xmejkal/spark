@@ -364,7 +364,10 @@ def plan(names, project=None, personal=None):
                 continue
             here = locate(entry, project)
             if here is not None and not pin_differences(entry, here):
-                step["here"] = " ".join(here)  # already here, at the pinned version
+                # already here, at the pinned version. A Python package is found by its module, and its
+                # command is only the interpreter, so say the module too
+                step["here"] = ("the %s module of %s" % (entry["module"], here[0]) if entry.get("kind") == "python"
+                                else " ".join(here))
                 continue
             fetch = fetch_of(entry)
             if fetch:
