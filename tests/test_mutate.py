@@ -16,6 +16,7 @@ import json
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
@@ -351,3 +352,52 @@ class NearTestsFirstTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OnlyTheMutationsOfAPathTest(unittest.TestCase):
+    """P208: --for keeps the rows of a file, or of a folder and everything in it, from any number of tables."""
+
+    ROWS = [{"file": "scripts/a.py", "find": "x"}, {"file": "scripts/ab.py", "find": "y"}, {"file": "tools/b.py", "find": "z"}]
+
+    def test_a_file_keeps_its_own_rows(self):
+        self.assertEqual(mutate.related(self.ROWS, ["scripts/a.py"]), self.ROWS[:1])
+
+    def test_a_folder_keeps_everything_under_it_and_no_look_alike(self):
+        self.assertEqual(mutate.related(self.ROWS, ["./scripts/"]), self.ROWS[:2])
+        self.assertEqual(mutate.related(self.ROWS, ["scripts/a"]), [])
+
+    def test_the_command_runs_only_the_related_rows(self):
+        root = tiny_project(tested=False)
+        (root / "other.py").write_text("x = 1\n")
+        rows = table(root, BREAK_SUB, {"file": "other.py", "name": "x moves", "find": "x = 1", "replace": "x = 2"})
+        self.assertEqual(mutate.main([str(rows), "--root", str(root), "--for", "other.py"]), mutate.EXIT_ESCAPED)
+        self.assertEqual(mutate.main([str(rows), "--root", str(root), "--for", "nothing.py"]), mutate.EXIT_OK)
+
+
+def tiny_project_that_finds_itself():
+    """tiny_project, but its test finds `m` beside its own file, as this repository's tests do: a copy tests the copy."""
+    root = tiny_project()
+    test = root / "tests" / "test_m.py"
+    test.write_text(test.read_text().replace("sys.path.insert(0, %r)" % str(root),
+                                             "sys.path.insert(0, __import__('os').path.dirname(__file__) + '/..')"))
+    return root
+
+
+class AMutationRunInACopyTest(unittest.TestCase):
+    """P208: --copy mutates a copy of the tree, so no file a person or another agent has open is ever rewritten."""
+
+    def test_the_run_never_touches_the_tree_it_was_given_and_the_copy_goes(self):
+        root = tiny_project_that_finds_itself()
+        seen = []
+        real_run = mutate.run
+
+        def watched(where, tests, mutations):
+            seen.append(where)
+            self.assertEqual((root / "m.py").read_text().count("return a + b"), 1)
+            return real_run(where, tests, mutations)
+
+        with unittest.mock.patch.object(mutate, "run", side_effect=watched):
+            code = mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--copy"])
+        self.assertEqual(code, mutate.EXIT_OK)
+        self.assertNotEqual(seen[0], root.resolve())
+        self.assertFalse(seen[0].exists(), "the copy stays behind")

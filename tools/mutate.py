@@ -4,6 +4,8 @@ Re-introduce each defect and prove the suite goes red.
 
     tools/mutate.py tests/mutations/<table>.json
     tools/mutate.py --anchors tests/mutations/*.json      # anchors only, a second
+    tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy    # one file's rows, in a copy
+    tools/mutate.py tests/mutations/*.json --for $(git diff --name-only origin/main...HEAD) --copy   # a branch's
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -161,6 +163,30 @@ def anchors(root, mutations):
 LOCK_NAME = ".mutate.lock"
 
 
+def related(mutations, paths):
+    """The mutations of the files under `paths` (P208): a file's own rows, or a folder's and everything under it."""
+    wanted = [str(Path(path)) for path in paths]
+    return [mutation for mutation in mutations
+            if any(mutation["file"] == path or mutation["file"].startswith(path + "/") for path in wanted)]
+
+
+def copy_of(root):
+    """
+    The tree at `root` in a temporary folder, without .git, worktrees or caches (P208). A run that mutates the copy never
+    rewrites a file that a person or another agent has open: two council agents once mutated inside one worktree. The
+    JavaScript dependencies are borrowed, not copied, as the push gate does.
+    """
+    import shutil
+    import tempfile
+    copy = Path(tempfile.mkdtemp(prefix="mutate-copy-")) / root.name
+    shutil.copytree(root, copy, symlinks=True,
+                    ignore=shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME))
+    for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
+        if (root / folder / "node_modules").is_dir() and (copy / folder).is_dir():
+            (copy / folder / "node_modules").symlink_to(root / folder / "node_modules")
+    return copy
+
+
 class AnotherRunIsActive(Exception):
     """A lock is held: some other mutate run is rewriting these files right now."""
 
@@ -246,6 +272,10 @@ def main(argv=None):
                         help="only check that every `find` occurs exactly once; run nothing")
     parser.add_argument("--root", default=".", help="the project root the files are under")
     parser.add_argument("--tests", default="tests", help="the test directory, relative to root")
+    parser.add_argument("--for", dest="paths", nargs="+", metavar="PATH",
+                        help="only the rows for these files, or for everything under these folders")
+    parser.add_argument("--copy", action="store_true",
+                        help="mutate a temporary copy of the tree, never the files you or an agent have open")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -257,6 +287,11 @@ def main(argv=None):
         except (OSError, ValueError) as broken:
             print("could not read the table %s: %s" % (table, broken), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
+    if args.paths:
+        mutations = related(mutations, args.paths)
+        if not mutations:
+            print("  no mutation is about %s: nothing to run" % " ".join(args.paths))
+            return EXIT_OK
 
     if args.anchors:
         wrong = anchors(root, mutations)
@@ -268,11 +303,15 @@ def main(argv=None):
         return EXIT_ESCAPED if wrong else EXIT_OK
 
     started = time.monotonic()
+    where = copy_of(root) if args.copy else root
     try:
-        results, restored = run(root, args.tests, mutations)
+        results, restored = run(where, args.tests, mutations)
     except (AnotherRunIsActive, RedBeforeMutation) as stopped:
         print(str(stopped), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
+    finally:
+        if args.copy:
+            __import__("shutil").rmtree(where.parent, ignore_errors=True)
     code = verdict(results, restored)
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,
