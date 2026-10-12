@@ -85,10 +85,20 @@ measurement, and the check says so rather than passing it.
 ### Mutation, and the mutation table
 
 The ordinary question a suite answers is *does the code work*. A mutation asks the harder one:
-**would these tests notice if it stopped working?**
+**would these tests notice if it stopped working?** A mutation puts one defect back into the code on purpose. If the
+suite goes **red**, a test noticed it. If the suite stays green, a test is missing.
 
-After a fix, you write down how to put that exact defect **back**, and the tool checks the suite
-goes **red**. A table is JSON, one entry per defect, in `tests/mutations/<item>.json` (tables written before 2026-10-05 carry their sprint: `sprint-10-p96-…`):
+**When.** Only a change that holds logic is mutation-tested: a line that decides, computes, compares, bounds, orders
+or chooses. A change to documentation, wiring or process is not ([P208](https://github.com/xmejkal/spark/issues/175), the PO, 2026-10-12).
+
+**Who.** Before a pull request that changes logic, the council launches the **mutation tester**
+([`.claude/agents/mutation-tester.md`](.claude/agents/mutation-tester.md)). It reads the branch's diff and plants at most
+12 defects on the changed lines, in one table. It runs them once in a copy of the tree and reports *N planted, M
+caught*, and the council's report carries that line.
+
+**When a table is kept.** Only when a defect escaped. The missing test is written, the defect is caught, and the table
+goes into `tests/mutations/<card>-<topic>.json`, so that anyone can run it again. A table is JSON, one entry per defect
+(tables written before 2026-10-05 carry their sprint, such as `sprint-10-p96-…`):
 
 ```json
 {"file":    "scripts/emit_board.py",
@@ -97,23 +107,36 @@ goes **red**. A table is JSON, one entry per defect, in `tests/mutations/<item>.
  "replace": "        yield pad, net, bool(net)"}
 ```
 
-`tools/mutate.py` applies each one, runs the suite, restores the file, and reports. It was
-enforced by memory for two sprints, which failed the way memory fails: about thirty mutations run
-by hand in one sprint, and **two escaped** — each surviving a green suite until somebody happened
-to try it.
+**How to run.** `tools/mutate.py` applies each entry, runs the tests nearest the file and then the whole suite,
+restores the file, and reports. Exit 0 means that every defect was caught, 1 that one escaped or was refused, and 2
+that it could not run. A person, CI and the mutation tester run the same commands:
+
+```sh
+python3 tools/mutate.py tests/mutations/p130-wokwi-harness.json --copy                     # one table
+python3 tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy        # one file or folder
+changed=$(git diff --name-only origin/main...HEAD)                                     # a branch's files
+python3 tools/mutate.py tests/mutations/*.json --for $changed --copy                       # a branch
+python3 tools/mutate.py tests/mutations/*.json --copy                                      # every row
+```
+
+`--copy` mutates a temporary copy of the tree, so no file that you or an agent have open changes. Each call also runs
+the whole suite twice, so put many rows in one call. P130's 25 rows ran 615 s.
+
+`tools/mutate.py` exists because this rule was once kept by memory: about thirty mutations were run by hand in one
+sprint, and **two escaped**. Each survived a green suite until somebody happened to try it.
 
 ### Anchor, and re-anchoring
 
 The `find` line is the **anchor**: the exact text the mutation attaches to. It must occur
-**exactly once**, or the mutation is refused before anything runs — a substitution that silently
+**exactly once**, or the mutation is refused before anything runs. A substitution that silently
 matched nothing would run an unmutated suite and report on a change it never made, which reads
 like a pass.
 
-**When you refactor, the anchor stops matching, and that is the point.** Rewriting a function
-breaks every mutation pointed at it; `mutate.py --anchors` fails and names them, and you must
-**re-anchor** — point the old guard at the new code and re-run it to prove it still bites. Without
-that, a refactor quietly deletes your guards while the suite stays green. It is the single thing
-that makes moving this code around safe, and it fired three times in one day during Sprint 6.
+**When code moves, the anchors on it stop matching.** Since [P208](https://github.com/xmejkal/spark/issues/175), the push gate no longer checks anchors. So the
+1,418 rows in the 124 tables written before 2026-10-12 are history, and nobody keeps them current. A run names each row
+whose anchor moved as **refused**. You then **re-anchor** it (point it at the new code and run it again, to prove that
+it still bites), or you delete it and give the reason in the commit. `--for` over a branch's changed files shows
+exactly the guards that the branch moved.
 
 ### Caught, escaped, refused
 
@@ -121,7 +144,7 @@ that makes moving this code around safe, and it fired three times in one day dur
 | --- | --- | --- |
 | **caught** | the suite went red | nothing — the test is real |
 | **escaped** | the suite stayed **green** | **a missing test.** Strengthen the fixture |
-| **refused** | the anchor did not match exactly once | fix the table; nothing ran |
+| **refused** | the anchor did not match exactly once | nothing ran. Fix the table, or re-anchor or delete a row whose code moved |
 
 And one line at the end: *the suite is green with the files restored*. Without it the whole run is
 untrustworthy — something is left mutated, or was already broken.
@@ -158,9 +181,9 @@ A snapshot now writes the scratch folders and the random part as placeholders.
 ### The commit gate — `tools/pre-push`
 
 A git hook, installed once per clone, that runs `tools/check_commit.py` before a push leaves the
-machine. It archives **the committed tree** and runs the suite and every mutation anchor against
-*that*, not against your working copy — so uncommitted files cannot make it pass. It produces the
-line quoted in every commit (this one from 2026-09-30):
+machine. It archives **the committed tree** and runs the suite against *that*, not against your
+working copy — so uncommitted files cannot make it pass. It produces the line quoted in every commit
+(this one from 2026-09-30, when the gate also checked every mutation anchor, which ended with [P208](https://github.com/xmejkal/spark/issues/175)):
 
 ```
 bec7b88 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once

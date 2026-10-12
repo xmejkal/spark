@@ -3,10 +3,11 @@
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -18,7 +19,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
-from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
+import tools  # noqa: E402
+from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402
 
 #: wokwi-cli as the tests run it: tests/fake_wokwi_cli.py, which spends nothing.
 FAKE_CLI = [sys.executable, str(Path(__file__).resolve().parent / "fake_wokwi_cli.py")]
@@ -85,7 +87,15 @@ class TheVerdictTest(unittest.TestCase):
         self.assertIn("$serialMonitor", said)
 
 
-class TheRunTest(unittest.TestCase):
+#: The tools list's simulator, pointed at the fake: the same entry words as data/tools.json's wokwi-cli.
+FAKE_SIMULATOR = tools.Tool("wokwi-cli", "simulator", {
+    "account_env": "WOKWI_CLI_TOKEN",
+    "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci"}, FAKE_CLI)
+
+
+class ProjectCase(unittest.TestCase):
+    """A built project with firmware and a scenario, and wokwi-cli faked: the set-up every run test shares."""
+
     def setUp(self):
         self.project = Path(tempfile.mkdtemp())
         sim = self.project / "sim"
@@ -105,8 +115,31 @@ class TheRunTest(unittest.TestCase):
         told = {"FAKE_WOKWI_SERIAL": serial, "FAKE_WOKWI_EXIT": str(exit_code), "FAKE_WOKWI_OUT": out,
                 "FAKE_WOKWI_ERR": err, "FAKE_WOKWI_SEEN": str(self.seen)}
         with mock.patch.dict(os.environ, told):
-            return run_scenario.run(self.project, self.scenario, FAKE_CLI, micropython=self.micropython)
+            return run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
+    def command(self, *argv, token="t", tool=FAKE_SIMULATOR, exit_code=0, **fake):
+        real_find = tools.find
+
+        def find(name, *args, **kwargs):
+            if name != "simulator":
+                return real_find(name, *args, **kwargs)
+            if isinstance(tool, Exception):
+                raise tool
+            return tool
+
+        told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_OUT": READY_MATCHED, "FAKE_WOKWI_EXIT": str(exit_code),
+                "FAKE_WOKWI_SEEN": str(self.seen), **fake}
+        env = {name: value for name, value in os.environ.items() if name != "WOKWI_CLI_TOKEN"}
+        env.update(told, **({"WOKWI_CLI_TOKEN": token} if token else {}))
+        argv = list(argv) or [str(self.scenario.relative_to(self.project)), "--project", str(self.project),
+                              "--micropython", str(self.micropython)]
+        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(tools, "find", side_effect=find), \
+                redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
+            code = run_scenario.main(argv)
+        return code, out.getvalue() + err.getvalue()
+
+
+class TheRunTest(ProjectCase):
     def test_a_pass_is_logged_with_its_date_the_scenario_as_run_and_what_wokwi_cli_printed(self):
         status, said, log = self.run_with("boot\nready\nLED on\n")
         self.assertEqual((status, said, log), (OK, "passed", self.log))
@@ -176,20 +209,154 @@ class TheRunTest(unittest.TestCase):
         (self.project / "sim" / "diagram.json").unlink()
         status, said, log = self.run_with()
         self.assertEqual((status, log), (COULD_NOT_RUN, None))
-        self.assertIn("check_spine.py requirements.json --keep .", said)
+        self.assertIn("/spark:build --keep .", said)
         self.assertFalse(self.seen.exists())
         self.assertFalse(self.log.exists())
 
 
-class TheCommandTest(unittest.TestCase):
-    def test_without_a_token_nothing_runs_and_it_says_where_to_get_one(self):
-        without = {name: value for name, value in os.environ.items() if name != "WOKWI_CLI_TOKEN"}
-        with mock.patch.dict(os.environ, without, clear=True), redirect_stderr(io.StringIO()) as err, \
-                mock.patch.object(run_scenario, "run") as runs:
-            code = run_scenario.main(["sim/scenarios/lights.scenario.yaml"])
+class TheRunChecksWhatCostsNothingFirstTest(ProjectCase):
+    """Each refusal comes before the paid call: the fake wokwi-cli is never started."""
+
+    def refused(self):
+        status, said, log = self.run_with()
+        self.assertEqual((status, log), (COULD_NOT_RUN, None))
+        self.assertFalse(self.seen.exists(), "wokwi-cli ran, and a real one would have spent minutes")
+        return said
+
+    def test_a_firmware_with_no_main_py_is_refused(self):
+        # The build writes only pins.py: the board would boot to a bare prompt and never print ready (UJ2).
+        (self.project / "firmware" / "main.py").unlink()
+        self.assertIn("no firmware/main.py", self.refused())
+
+    def test_a_firmware_line_this_cannot_read_is_refused(self):
+        # TOML's single quotes: the run would write one image while wokwi-cli simulates another (TL2).
+        (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 'mine.bin'\n")
+        self.assertIn('write it as firmware = "name.bin"', self.refused())
+
+
+class TheMutationTesterFoundTheseMissingTest(ProjectCase):
+    """The mutation tester's first run on the follow-up (2026-10-12): 12 planted, 6 caught. Each escape is a test here."""
+
+    def test_an_indented_firmware_line_this_cannot_read_is_refused_too(self):
+        (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\n  firmware = 'x.bin'\n")
+        status, said, _ = self.run_with()
+        self.assertEqual(status, COULD_NOT_RUN)
+        self.assertIn('write it as firmware = "name.bin"', said)
+
+    def test_the_wall_clock_is_the_simulated_time_and_two_minutes(self):
+        # 120 s for wokwi-cli to connect and send the image, beside the simulated 60 s.
+        done = subprocess.CompletedProcess([], 0, READY_MATCHED, "")
+        with mock.patch.object(run_scenario.subprocess, "run", return_value=done) as ran:
+            self.run_with()
+        self.assertEqual(ran.call_args.kwargs["timeout"], 180)
+
+    def test_the_bytes_of_a_killed_wokwi_cli_are_decoded_into_the_log(self):
+        late = subprocess.TimeoutExpired(["wokwi-cli"], 180, output=b"ready \xff", stderr=b"Error: stuck")
+        with mock.patch.object(run_scenario.subprocess, "run", side_effect=late):
+            status, _, log = self.run_with()
+        self.assertEqual(status, COULD_NOT_RUN)
+        self.assertIn("ready \ufffd", log.read_text())
+        self.assertIn("Error: stuck", log.read_text())
+
+    def test_a_wokwi_cli_that_cannot_start_could_not_run_and_leaves_nothing(self):
+        status, said, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(
+            ["/no/such/wokwi-cli"])
+        self.assertEqual((status, log), (COULD_NOT_RUN, None))
+        self.assertIn("could not start", said)
+        self.assertEqual(list(self.scenario.parent.glob(".as-run.*")), [])
+
+    def test_a_second_run_rewrites_the_log(self):
+        self.run_with()
+        status, _, log = self.run_with("ready\nagain\n")
+        self.assertEqual(status, OK)
+        self.assertIn("again", log.read_text())
+
+    def test_a_token_named_by_the_tools_list_is_the_one_asked_for(self):
+        other = tools.Tool("wokwi-cli", "simulator", {"account_env": "OTHER_TOKEN", "needs_account": "set OTHER_TOKEN"},
+                           FAKE_CLI)
+        code, said = self.command(tool=other, token=None)
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
-        self.assertIn("https://wokwi.com/dashboard/ci", err.getvalue())
-        runs.assert_not_called()
+        self.assertIn("OTHER_TOKEN is not set", said)
+        code, _ = self.command(tool=other, token=None, OTHER_TOKEN="t")
+        self.assertEqual(code, EXIT_OK)
+
+
+class TheFixReviewFoundTheseTest(ProjectCase):
+    """The fix reviewer's FR1 and FR2 (2026-10-12)."""
+
+    def test_a_refusal_in_the_command_removes_an_older_log(self):
+        self.log.parent.mkdir()
+        self.log.write_text("verdict: passed\n")
+        (self.project / "firmware" / "main.py").unlink()
+        code, _ = self.command()
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertFalse(self.log.exists())
+
+    def test_an_interpreter_too_large_for_its_slot_could_not_run_before_anything_is_paid(self):
+        self.micropython.write_bytes(b"\xe9" + b"\x00" * (3 * 1024 * 1024))
+        status, said, _ = self.run_with()
+        self.assertEqual(status, COULD_NOT_RUN)
+        self.assertIn("larger than", said)
+        self.assertFalse(self.seen.exists())
+
+
+class TheRunLeavesAnOriginalScenarioAndALogTest(ProjectCase):
+    def test_the_scenario_runs_beside_its_original_and_the_copy_goes(self):
+        # A step's own path, a screenshot to compare with, resolves against the scenario's folder (TL4).
+        self.run_with()
+        ran = Path(json.loads(self.seen.read_text())["args"][2])
+        self.assertEqual(ran.parent, self.scenario.parent)
+        self.assertFalse(ran.exists())
+
+    def test_a_run_that_outlives_its_wall_clock_still_leaves_a_log(self):
+        # The minutes were spent, so the log is written (RX1).
+        with mock.patch.object(run_scenario, "STARTUP_ALLOWANCE_S", 0):
+            told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_SEEN": str(self.seen)}
+            with mock.patch.dict(os.environ, told):
+                status, said, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                                                              timeout_ms=1).run(FAKE_CLI)
+        self.assertEqual(status, COULD_NOT_RUN)
+        self.assertIn("did not finish", log.read_text())
+
+
+class TheCommandTest(ProjectCase):
+    """The command a person and Claude run (TL1): its exit codes, its flags and the order of its refusals."""
+
+    def test_a_pass_exits_0_and_names_its_log(self):
+        code, said = self.command()
+        self.assertEqual(code, EXIT_OK)
+        self.assertIn("log: %s" % (self.project / "sim" / "runs" / "lights.v2.log"), said)
+
+    def test_a_failed_step_exits_1(self):
+        code, said = self.command(exit_code=1, FAKE_WOKWI_ERR="Error: GPIO 4 expected to be 1 but was 0")
+        self.assertEqual(code, EXIT_PROBLEMS)
+        self.assertIn("failed (wokwi-cli exit 1)", said)
+
+    def test_the_flags_reach_the_run(self):
+        self.command(str(self.scenario.relative_to(self.project)), "--project", str(self.project), "--micropython",
+                     str(self.micropython), "--timeout-ms", "1234")
+        self.assertIn("--timeout 1234", " ".join(json.loads(self.seen.read_text())["args"]))
+        image = (self.project / "sim" / "flash-with-firmware.bin").read_bytes()
+        self.assertEqual(image[:1000], self.micropython.read_bytes()[:1000])
+
+    def test_without_a_token_nothing_runs_and_it_says_where_to_get_one(self):
+        code, said = self.command(token=None)
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("wokwi.com/dashboard/ci", said)
+        self.assertFalse(self.seen.exists())
+
+    def test_a_missing_tool_could_not_run_with_its_install_line(self):
+        code, said = self.command(tool=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE"))
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("THE LINE", said)
+
+    def test_a_missing_build_is_said_before_the_token_is_asked_for(self):
+        # UJ3: a person learns of a missing build before an account is needed.
+        (self.project / "sim" / "diagram.json").unlink()
+        code, said = self.command(token=None)
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("/spark:build --keep .", said)
+        self.assertNotIn("WOKWI_CLI_TOKEN", said)
 
 
 if __name__ == "__main__":

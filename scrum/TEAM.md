@@ -22,7 +22,9 @@ Two rules on the PO's card, moved here from the working agreements:
   [token budget](README.md#the-token-budget). Decision 1 (a), his of 2026-10-06, makes the rule a setting too: an
   `ask` rule for `wokwi-cli` and `make simulate`. It has been in his settings since 2026-10-09, on his answer *"Yes,
   always ask (Recommended)"* ([Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), for `wokwi-cli`,
-  `make simulate` and `make simulate-all`: Claude Code asks him before running any of them. (W10, moved here
+  `make simulate` and `make simulate-all`: Claude Code asks him before running any of them. `scripts/run_scenario.py`
+  (P130) starts wokwi-cli inside itself, so no rule fires for it: Claude asks him before each run, and an ask rule for
+  Claude asked him on 2026-10-12 whether to add one. (W10, moved here
   2026-10-09 by P146.) Its origin, the PO's words, written down on 2026-09-25: *"lets not waste the simulation
   minutes we already only have 21 of 50 free"*.
 - **Only the PO orders.** Claude and the agents propose, ranked, with reasons and costs; he decides, by the row order
@@ -51,6 +53,7 @@ argues with). This test is why the roster is small. It applies to every lens of 
 | **`design-reviewer`** | isolation + restricted tools + fan-out | one design dimension per run, reading only the design |
 | **`parts-researcher`** | fan-out + context budget — pages of datasheet per part | part records, vendor truth, sourcing |
 | **`part-finder`** | restricted tools — searches and the maker's pages only; it writes nothing | the exact part for one commodity need: at most two candidates, each with the maker's datasheet URL |
+| **`mutation-tester`** | isolation + restricted tools: it mutates a copy, never a tree in use, and runs only `tools/mutate.py` | the logic a branch changed: at most 12 planted defects, one call, *N planted, M caught* ([its file](../.claude/agents/mutation-tester.md), P208) |
 | **`datasheet-reader`** | restricted tools + context budget — no web; a datasheet's pages per part | one part record from one kept datasheet, every fact cited to its page |
 | **the tech lead** | it is not one: a role, played by lenses the main session launches | technical feasibility and the technical vision: a lens in every spec council, plan council and final review; proposes technical slices and refactors; owns the technical lines of [`DECISIONS.md`](../DECISIONS.md); never decides value or order. The PO, 2026-10-06: *"a tech lead role, to represent the technical feasibility and vision etc."* He confirmed these duties on 2026-10-09, answering [Q1 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370) with *"Full duties (Recommended)"*. |
 | **the PO assistant** | it is not one: a role, played by lenses the main session launches | drafts cards from the PO's words, proposes the Ready order and the slices, triages found work, keeps the day-close and the waits current; never decides value or order. The PO, 2026-10-06: *"the po agent role, like the po assistant, or so"*. He confirmed these duties on 2026-10-09, answering [Q1 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370) with *"Full duties (Recommended)"*. |

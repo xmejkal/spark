@@ -1,0 +1,80 @@
+[
+ {
+  "file": "tools/mutate.py",
+  "name": "a folder in --for also keeps every look-alike sibling (scripts/a matches scripts/ab.py)",
+  "find": "mutation[\"file\"].startswith(path + \"/\")",
+  "replace": "mutation[\"file\"].startswith(path)"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "--for drops a named file's own rows (only folder matches remain)",
+  "find": "mutation[\"file\"] == path or mutation[\"file\"].startswith(",
+  "replace": "mutation[\"file\"].startswith("
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "--for does not normalise ./scripts/ so a folder with a trailing slash matches nothing",
+  "find": "wanted = [str(Path(part)) for path in paths for part in path.split()]",
+  "replace": "wanted = [part for path in paths for part in path.split()]"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "--for takes zsh's one argument of several names as one name, and matches nothing",
+  "find": "wanted = [str(Path(part)) for path in paths for part in path.split()]",
+  "replace": "wanted = [str(Path(path)) for path in paths]"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "--for with no related row reports escaped instead of nothing to run",
+  "find": "nothing to run\" % \" \".join(args.paths), file=sys.stderr)\n            return EXIT_OK",
+  "replace": "nothing to run\" % \" \".join(args.paths), file=sys.stderr)\n            return EXIT_ESCAPED"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "--for filters nothing: every row runs",
+  "find": "        mutations = related(mutations, args.paths)\n",
+  "replace": "        mutations = mutations\n"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "--copy mutates the tree it was given, not a copy",
+  "find": "where = copy_of(root) if args.copy else root",
+  "replace": "where = root"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the copy is never removed after the run",
+  "find": "__import__(\"shutil\").rmtree(where.parent, ignore_errors=True)",
+  "replace": "pass"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the copy folder goes but its mutate-copy-* parent stays behind in the temp folder",
+  "find": "rmtree(where.parent, ignore_errors=True)",
+  "replace": "rmtree(where, ignore_errors=True)"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the copy takes the .worktrees folder along (every other worktree, recursively)",
+  "find": "ignore_patterns(\".git\", \".worktrees\", ",
+  "replace": "ignore_patterns(\".git\", "
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the copy is not given the borrowed node_modules link",
+  "find": "(copy / folder / \"node_modules\").symlink_to(root / folder / \"node_modules\")",
+  "replace": "pass"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the measured verdict is ok whatever the suite returned",
+  "find": "return \" / \".join(suite_said), suite.returncode == 0, left",
+  "replace": "return \" / \".join(suite_said), True, left"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the gate ignores a failed suite when it decides the exit status",
+  "find": "problems=not ok or backlog != 0 or bool(left)",
+  "replace": "problems=backlog != 0 or bool(left)"
+ }
+]

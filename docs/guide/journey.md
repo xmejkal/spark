@@ -41,7 +41,8 @@ What the three words mean:
   install on the PATH. The rest on 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600,
   the version spark pins; that tscircuit came from an existing install, linked into the project. The builds in
   [A recorded run](#a-recorded-run-a-button-and-an-led) and [Build](#build), and the breadboard sheet, on 2026-10-11 with
-  spark 0.8.1 and tscircuit 0.0.2621. The note above each output names its run.
+  spark 0.8.1 and tscircuit 0.0.2621. The [Simulate](#simulate) run on 2026-10-12 with spark 0.8.1 and wokwi-cli
+  0.27.1. The note above each output names its run.
 - Where: in scratch stores and fresh project folders. On 2026-10-08 one store held the drawer, `plant-alarm` and
   `button-light`, so the drawer filled in [Drawer](#drawer) is the one [Idea](#idea)'s matches and picks read. The
   `--audit` at the top of [owed facts and gaps](#owed-facts-and-gaps) ran in that store too, and each later example
@@ -996,8 +997,10 @@ missing or older than its source. `--keep .` keeps them in `sim/`
 A run is a separate step:
 
 1. **Build with the simulation kept:** `check_spine.py requirements.json --keep .`.
-2. **Write a scenario** in `sim/scenarios/`. Claude writes its steps from your words. spark's example for this project
-   is in `tests/data/breadboard/button-light/scenarios/`.
+2. **Write a scenario** in `sim/scenarios/`, a folder you create. Claude writes its steps from your words. spark's
+   example for this project is in `$CLAUDE_PLUGIN_ROOT/tests/data/breadboard/button-light/scenarios/`. The firmware
+   must print `ready` once its setup is done, and a line for each change the scenario waits on: spark's example
+   firmware does both.
 3. **Run it** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci). MicroPython for the S3
    comes from `/spark:setup add micropython-esp32s3`.
 
