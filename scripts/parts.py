@@ -1566,7 +1566,8 @@ OPERATIONS = (
     ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes, "
      "each with its score and why; --matcher picks the matcher that ranks them", (), ("needs",)),
     ("offer", {"metavar": "KEY"}, "what one offer says of itself, for the chooser to read: a record's id or a drawer entry's "
-     "key — about, description, tags, what it does, its names, power and size", (), ("offer",)),
+     "key — about, description, tags, what it does, its names, power and size. --project reads the project's own records", (),
+     ("offer",)),
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
      "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
      "what it notes is under `notes`",
@@ -2058,7 +2059,8 @@ def _op_match(args, project):
                          + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
             lines += ["          " + c["about"]] if c["about"] else []
             del c["about"]  # the text shows it; the JSON gains only `score` and `why`
-        lines += ["      … %d more, none with the need's words" % need["more"]] if need["more"] else []
+        hidden = "none with the need's words" if chosen.name == needs.MATCHER else "each scoring under %s" % matching.MIN_SHOWN
+        lines += ["      … %d more, %s" % (need["more"], hidden)] if need["more"] else []
         lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
     lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
     shown, truncated = page(matched, args.start, "match", ["--match", args.match] + (["--matcher", args.matcher] if args.matcher else []))

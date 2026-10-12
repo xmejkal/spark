@@ -1,5 +1,6 @@
 """P211: the matching library — offers, fits and the three matchers (docs/2026-10-12-p211-matching-design.md)."""
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -18,6 +19,9 @@ def an_offer(**said):
 
 
 class TheWordsTest(unittest.TestCase):
+    def test_digits_are_word_characters(self):
+        self.assertEqual(matching.words("VL6180X 3V3"), ["vl6180x", "3v3"])
+
     def test_the_plural_fold(self):
         self.assertEqual([matching.fold(w) for w in ("sensors", "gps", "bus", "glass", "status", "leds")],
                          ["sensor", "gps", "bus", "glass", "status", "led"])
@@ -43,6 +47,11 @@ class TheOfferTest(unittest.TestCase):
         offer = matching.Offer.from_record("vl6180x", "part", {})
         self.assertEqual((offer.functions, offer.names, offer.about), ([], [], None))
 
+    def test_an_entry_s_label_is_its_name(self):
+        offer = matching.Offer.from_entry("k", {"label": "a knob"})
+        self.assertEqual(offer.names, ["a knob"])
+        self.assertTrue(matching.same_words({"does": "input", "what": "knob"}, offer), "a name counts whatever the verb")
+
     def test_a_malformed_text_is_ignored(self):
         offer = matching.Offer.from_entry("k", {"label": "a knob", "about": 5, "tags": "knob", "description": ["x"]})
         self.assertEqual((offer.about, offer.description, offer.tags), (None, None, []))
@@ -61,6 +70,22 @@ class TheOfferTest(unittest.TestCase):
         self.assertNotIn("\u202e", text)
 
 
+class TheOfferJsonTest(unittest.TestCase):
+    def test_as_dict_gives_the_cleaned_capped_text_that_describe_prints(self):
+        note = "3V3\u202e only " + "x" * 5000
+        offer = matching.Offer.from_record("fb", "board", {"name": "FB", "kind": "board", "power": {"note": note}, "body_mm": {"width": 20}})
+        facts = offer.as_dict()["facts"]
+        self.assertEqual((len(facts["power"]), facts["body_mm"], facts["kind"]), (1000, '{"width": 20}', "board"))
+        self.assertIn("power: " + facts["power"], offer.describe(), "one text, built once, for the lines and for the JSON")
+        self.assertLess(len(json.dumps(offer.as_dict())), 3400)
+        self.assertNotIn("\u202e", json.dumps(offer.as_dict(), ensure_ascii=False))
+
+    def test_as_dict_cleans_what_it_does_and_keeps_the_shape(self):
+        offer = an_offer(functions=[{"does": "sense", "what": "ran\u202ege"}])
+        self.assertEqual(offer.as_dict()["functions"], [{"does": "sense", "what": "ran ge"}])
+        self.assertIn("does: sense ran ge", offer.describe())
+
+
 class TheMatchersTest(unittest.TestCase):
     #: The score of named pairs: a change of weights shows here (the spec, "How WordOverlap scores", step 5).
     SCORES = (
@@ -72,6 +97,9 @@ class TheMatchersTest(unittest.TestCase):
         ("laser range", dict(functions=[{"does": "sense", "what": "distance"}], tags=["laser"]), 0.4),
         ("the sensors", dict(functions=[{"does": "sense", "what": "x"}], tags=["sensor"]), 0.8),
         ("range", dict(functions=[{"does": "sense", "what": "x"}, {"does": "input", "what": "range"}]), 0.0),
+        ("sensor", dict(functions=[{"does": "sense", "what": "x"}], tags=["sensors"]), 0.8),  # the offer's plural folds too
+        ("leds", dict(functions=[{"does": "sense", "what": "x"}], names=["LEDs"]), 0.6),
+        ("range", dict(functions=[{"does": "sense", "what": "x"}], description="It finds the range."), 0.4),
     )
 
     def test_word_overlap_scores_the_named_pairs(self):
@@ -114,6 +142,20 @@ class TheMatchersTest(unittest.TestCase):
         self.assertEqual(matching.NameContains().score(need, offer).score, 1.0)
         self.assertEqual(matching.NameContains().score({"does": None, "what": "lidar"}, offer).score, 0.0)
         self.assertTrue(matching.NameContains().admits({"does": "input", "what": "x"}, offer), "a search word has no verb")
+
+    def test_name_contains_needs_every_typed_word(self):
+        offer = matching.Offer.from_record("vl6180x-breakout", "part", {"name": "VL6180X", "kind": "rangefinder"})
+        self.assertEqual(matching.NameContains().score({"does": None, "what": "vl6180 lidar"}, offer).score, 0.0)
+
+    def test_name_contains_searches_the_id_name_kind_and_aliases_in_that_order(self):
+        # `--need "amplifier audio-amplifier"` found the DFR0954 before P211: the name ends where the kind begins
+        offer = matching.Offer.from_record("max98357a-dfr0954", "part", {"name": "DFR0954 I2S amplifier", "kind": "audio-amplifier",
+                                                                       "also_known_as": ["MAX98357A board"]})
+        for typed, score in (("amplifier audio-amplifier", 1.0), ("audio-amplifier max98357a", 1.0), ("max98357a audio-amplifier", 0.0),
+                             ("audio-amplifier dfr0954", 0.0)):
+            with self.subTest(typed=typed):
+                need = {"does": None, "what": typed, "words": [typed]}
+                self.assertEqual(matching.NameContains().score(need, offer).score, score)
 
     def test_name_contains_keeps_an_argument_with_a_space_as_one_substring(self):
         offer = an_offer(names=["soil probe, moisture"])

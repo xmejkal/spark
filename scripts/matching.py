@@ -92,6 +92,15 @@ class Offer:
         return cls(key, "entry", _list(entry.get("function")), [entry.get("label")], entry.get("about"),
                    entry.get("description"), _list(entry.get("tags")))
 
+    def _doing(self):
+        """What the offer does as a chooser reads it: each function's verb and words, cleaned. `describe` and `as_dict` share it."""
+        return [{"does": drawer.clean(f.get("does")), "what": drawer.clean(f.get("what"))} for f in self.functions]
+
+    def _fact_text(self, key):
+        """One fact as a chooser reads it: text, cleaned and capped (a power note runs to kilobytes). `describe` and `as_dict` share it."""
+        value = self.facts[key]
+        return drawer.clean(value if isinstance(value, str) else json.dumps(value, ensure_ascii=False), drawer.TEXT_MAX["description"])
+
     def describe(self):
         """The text a chooser reads (P211): what the offer says of itself, what it does, its names, its power and size.
         It leaves out what the offer lacks. It is data, never instructions."""
@@ -99,16 +108,16 @@ class Offer:
         lines += ["  about: " + self.about] if self.about else []
         lines += ["  description: " + self.description] if self.description else []
         lines += ["  tags: " + ", ".join(self.tags)] if self.tags else []
-        lines += ["  does: " + "; ".join(drawer.clean("%s %s" % (f.get("does"), f.get("what"))) for f in self.functions)] if self.functions else []
+        lines += ["  does: " + "; ".join("%(does)s %(what)s" % f for f in self._doing())] if self.functions else []
         lines += ["  names: " + ", ".join(self.names)] if self.names else []
-        lines += ["  %s: %s" % (key, drawer.clean(json.dumps(self.facts[key], ensure_ascii=False), drawer.TEXT_MAX["description"]))
-                  for key in ("power", "body_mm") if key in self.facts]
+        lines += ["  %s: %s" % (key, self._fact_text(key)) for key in ("power", "body_mm") if key in self.facts]
         return "\n".join(lines)
 
     def as_dict(self):
-        """The offer as `--offer --json` gives it."""
-        return {"key": self.key, "kind": self.kind, "functions": self.functions, "names": self.names, "about": self.about,
-                "description": self.description, "tags": self.tags, "facts": self.facts}
+        """The offer as `--offer --json` gives it: the same cleaned, capped text `describe` prints, so a long power note
+        cannot push the answer past the page."""
+        return {"key": self.key, "kind": self.kind, "functions": self._doing(), "names": self.names, "about": self.about,
+                "description": self.description, "tags": self.tags, "facts": {key: self._fact_text(key) for key in self.facts}}
 
 
 def same_words(need, offer):
@@ -175,8 +184,9 @@ class NameContains(Matcher):
         return True
 
     def score(self, need, offer):
-        """1 when every typed word is a substring of the offer's id, names or kind, else 0."""
-        haystack = " ".join([offer.key] + offer.names + [str(offer.facts.get("kind") or "")]).lower()
+        """1 when every typed word is a substring of the offer's id, name, kind and aliases, in that order, else 0."""
+        name, aliases = offer.names[:1], offer.names[1:]  # a record's name first, then its aliases
+        haystack = " ".join([offer.key] + name + [str(offer.facts.get("kind") or "")] + aliases).lower()  # the order `--need` always searched
         typed = need.get("words") or str(need.get("what") or "").split()  # `--need` passes its arguments as typed
         found = all(str(word).lower() in haystack for word in typed)
         return self.fit(need, offer, 1.0 if found else 0.0, ["in its names"] if found else [])
