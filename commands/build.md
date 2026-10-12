@@ -187,32 +187,44 @@ nobody has run it on a spark project yet, so treat the first run as the check.
 
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
 chip kept beside the record and compiled to WebAssembly by `wokwi-cli chip compile`, or a skip
-with its reason), so the one command's last stage needs no table anywhere else. To run it:
+with its reason), so the one command's last stage needs no table anywhere else. To run it, with a Wokwi account's
+CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci):
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --sim-dir sim --firmware flash-with-firmware.bin
-${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --files firmware -o sim/flash-with-firmware.bin
-cd sim && wokwi-cli . --scenario scenarios/<name>.scenario.yaml --timeout 60000
+${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --keep .
+${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml
 ```
 
-The first keeps the simulation project — `diagram.json`, `wokwi.toml`, the chips — in `sim/`;
-the second puts MicroPython and the project's own files into one flash image (the interpreter is
-the tools list's `firmware-image` — MicroPython v1.29.0 for the ESP32-S3, fetched and checked by
-`/spark:setup`; for another chip, `--micropython <its .bin from micropython.org>`); the third runs
-a scenario. The scenario and the firmware are yours to write: spark ships neither for the documented example
-([P130](https://github.com/xmejkal/spark/issues/64)). A scenario's `set-control` lines press a button or move a
-chip's slider (a probe's `moisturePct`), and its `wait-serial` and `expect-pin` lines are what it asserts. For the
-documented example, with firmware that drives the motor's IA input while the open button is held (not run):
+The first keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml`, the chips. The second runs one
+scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
+into one flash image, so a run never tests an older firmware. The interpreter is the tools list's `firmware-image`,
+MicroPython v1.29.0 for the ESP32-S3, fetched and checked by `/spark:setup`. For another chip, add `--micropython <its
+.bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the scenario as run, and what
+wokwi-cli printed. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
+CI minutes, so this command's allowed-tools leave it out: Claude Code asks before each run.
+
+**The ready contract.** The firmware prints `ready` on a line of its own once its setup is done. `run_scenario.py` adds
+a wait for that line before the scenario's first step, because a step sent earlier reaches a board that is still
+booting. A firmware that never prints it fails with that sentence. The firmware also prints a line for each change that
+a scenario waits on.
+
+The scenario holds only behaviour. Claude writes it from the person's words, and spark ships none, because the pin map
+holds pins, not behaviour. A scenario's `set-control` lines press a button or move a chip's slider (a probe's
+`moisturePct`), and its `wait-serial` and `expect-pin` lines are what it asserts. The button-and-LED project's scenario,
+written from "the LED lights while the button is held", passed on 2026-10-12
+([its log](../tests/data/breadboard/button-light/runs/2026-10-12-the-button-lights-the-led.log)):
 
 ```yaml
 steps:
-  - wait-serial: "ready"                                        # a line your firmware prints once it runs
-  - set-control: { part-id: btnopen, name: pressed, value: 1 }
-  - delay: 500ms                                                # longer than the firmware's debounce
-  - expect-pin: { part-id: mcu, name: 38, value: 1 }            # GPIO38 is MOTOR_IA in firmware/pins.py
+  - set-control: { part-id: tactilebutton, name: pressed, value: 1 }
+  - wait-serial: "LED on"                                  # a line the firmware prints when the LED changes
+  - expect-pin: { part-id: ledred5mm, pin: A, value: 1 }
+  - set-control: { part-id: tactilebutton, name: pressed, value: 0 }
+  - wait-serial: "LED off"
+  - expect-pin: { part-id: ledred5mm, pin: A, value: 0 }
 ```
 
-Part ids come from the board's component names (`BtnOpen` becomes `btnopen`). `name:` is the key the smart bin's
+Part ids come from the board's component names (`TactileButton` becomes `tactilebutton`). `name:` is the key the smart bin's
 scenarios use, which passed on 2026-09-25 ([lid-cycle](https://github.com/xmejkal/sisuo-brain-transplant/blob/main/firmware/micropython/sim/lid-cycle.scenario.yaml)),
 whose notes call `control:` a deprecated alias. `wait-serial` reads the MCU's serial only: a chip's printf never
 reaches it. The generated `diagram.json` wires the board's TX and RX to `$serialMonitor`: Wokwi stopped doing that
@@ -220,8 +232,8 @@ by default (CLI 0.28.0, API 2026-10-09), and without it `wait-serial` hears noth
 ([P190](https://github.com/xmejkal/spark/issues/142)). A board whose Wokwi part has no pins named TX and RX gets no
 such wires, and the build's simulation line says so. Two facts about the simulator that
 a firmware meets here and not on a bench: its ADC is referenced to 5 V whatever the chip, so a
-raw reading must be converted with a 5 V full scale — the flash image's `--config` is the place
-to say so (`{"ADC_REFERENCE_V": 5.0}`); and a chip's control ids are letters and digits only.
+raw reading must be converted with a 5 V full scale. Say so in `firmware/config.json`
+(`{"ADC_REFERENCE_V": 5.0}`), which goes into the image as `/config.json`. And a chip's control ids are letters and digits only.
 Chips compile locally and cost nothing; a scenario run spends Wokwi CI minutes, so run them on
 purpose. Stand-ins are named as such in the records: a pass here is not a bench.
 
