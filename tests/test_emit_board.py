@@ -1346,6 +1346,21 @@ class WhatARailCarries(unittest.TestCase):
         self.assertAlmostEqual(rails["SERVO"]["amps"], 1.055,
                                msg="the servo's stall plus everything the module draws through VCC")
 
+    def test_a_supply_says_the_voltage_its_record_holds_its_rail_at(self):
+        # P197: physics bounds a resistor by the whole rail across it, so the rail's voltage comes from the record too.
+        board = {"power_pads": {"3V3": {"rail": "logic", "direction": "out", "can_supply": "regulator_3v3_a",
+                                        "volts": "io_volts"}},
+                 "power": {"regulator_3v3_a": self.fact(1.5), "io_volts": self.fact(3.3, verified=False)}}
+        supply = emit_board.rail_loads([], board)["V33"]["supply"]
+        self.assertEqual(supply["volts"], {"value": 3.3, "verified": False, "why": "io_volts"})
+
+    def test_a_supply_that_names_no_voltage_says_so_rather_than_zero(self):
+        board = {"power_pads": {"3V3": {"rail": "logic", "direction": "out", "can_supply": "regulator_3v3_a"}},
+                 "power": {"regulator_3v3_a": self.fact(1.5)}}
+        volts = emit_board.rail_loads([], board)["V33"]["supply"]["volts"]
+        self.assertIsNone(volts["value"])
+        self.assertIn("names no fact for its voltage", volts["why"])
+
     def test_the_generator_sizes_a_rail_the_rules_leave_null_from_its_records(self):
         """
         P52's second half: the trace was emitted at the router's default with a note calling it

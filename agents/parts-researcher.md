@@ -84,7 +84,8 @@ under a name is worse than no record.
   Each pin also names the fact that states its current, so a rail can be summed against its
   supply: `draws` on an input (`"draws": "stall_current_ma"` — the worst case, not the idle),
   `can_supply` on an output (`"can_supply": "output_current_a"`), `feeds` on a converter's input
-  (`"feeds": "VOUT"` — it draws at most what that output delivers). The fact's name carries its
+  (`"feeds": "VOUT"` — it draws at most what that output delivers). An output can also name `volts`: a fact
+  ending in `_volts`, a plain key with no dotted path, for the voltage it holds its rail at. The fact's name carries its
   unit (`_a`, `_ma`, `_ua`); a dotted name reads one key of a table (`active_supply_current_ua.active_max`).
   A pin whose figure nobody publishes still names its fact, with `value: null` — the check then
   names the part instead of summing a zero.

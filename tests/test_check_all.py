@@ -14,6 +14,8 @@ they render differently, and only one of them can sink the exit code.
 """
 
 import argparse
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -566,6 +568,65 @@ class RealFindingsTest(unittest.TestCase):
         self.assertEqual(physics["status"], check_all.OK)
         self.assertTrue(physics["unmeasured"], "an unmeasured rail must still be said out loud")
         self.assertIn("?", check_all.render(results))
+
+
+class TheAnswerCountsWhatNobodyMeasuredTest(unittest.TestCase):
+    """
+    P108. The PO decided on 2026-10-05 that a null `max_current_a` stays a `?` line, so a new project is not blocked by
+    a stall current nobody measured, and that the answer must then say how many such values it rests on. An `ok` over
+    three `?` lines read exactly like an `ok` over none.
+    """
+
+    @staticmethod
+    def _three_nulls():
+        circuit = written("circuit.json", [{"type": "source_net", "source_net_id": name, "name": name}
+                                           for name in ("V33", "V5", "VBAT")])
+        rules = written("rules.json", {"physics": {"rails": {
+            name: {"nominal_volts": 3.3, "max_current_a": None} for name in ("V33", "V5", "VBAT")}}})
+        return circuit, rules
+
+    def test_the_last_line_counts_the_values_its_answer_rests_on(self):
+        circuit, rules = self._three_nulls()
+        rendered = check_all.render(check_all.run({"circuit": circuit, "rules": rules}))
+        self.assertIn("resting on 3 ? line(s)", rendered.splitlines()[-1])
+
+    def test_every_last_line_that_reports_a_run_carries_the_count(self):
+        # Each branch of the last line: every check ran, a problem, and a run with a check not asked for.
+        ran = {"check": "a", "status": check_all.OK, "what": "x", "unmeasured": ["u1", "u2"]}
+        cases = {
+            "every check ran": [ran, {"check": "b", "status": check_all.OK, "what": "y"}],
+            "a problem": [dict(ran, status=check_all.PROBLEMS, problems=["p"])],
+            "one not asked for": [ran, {"check": "b", "status": check_all.SKIPPED, "what": "y"}],
+        }
+        for case, results in cases.items():
+            with self.subTest(case=case):
+                self.assertIn("resting on 2 ? line(s)", check_all.render(results).splitlines()[-1])
+
+    def test_the_json_carries_the_count_beside_the_status(self):
+        circuit, rules = self._three_nulls()
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            check_all.main(["--circuit", circuit, "--rules", rules, "--json"])
+        answer = json.loads(printed.getvalue())
+        self.assertEqual(answer["unmeasured"], 3, answer)
+
+    def test_a_check_that_could_not_look_rests_nothing_on_its_lines(self):
+        results = [{"check": "a", "status": check_all.COULD_NOT_RUN, "what": "x", "unchecked": ["!"],
+                    "unmeasured": ["u1"]},
+                   {"check": "b", "status": check_all.OK, "what": "y", "unmeasured": ["u2"]}]
+        self.assertIn("resting on 1 ? line(s)", check_all.render(results).splitlines()[-1])
+
+    def test_a_check_with_problems_and_an_unchecked_line_rests_nothing_on_its_lines(self):
+        results = [{"check": "a", "status": check_all.PROBLEMS, "what": "x", "problems": ["p"],
+                    "unchecked": ["!"], "unmeasured": ["u1"]},
+                   {"check": "b", "status": check_all.OK, "what": "y", "unmeasured": ["u2"]}]
+        self.assertIn("resting on 1 ? line(s)", check_all.render(results).splitlines()[-1])
+
+    def test_an_answer_resting_on_nothing_unmeasured_says_nothing_about_it(self):
+        circuit = written("circuit.json", [{"type": "source_net", "source_net_id": "V33", "name": "V33"}])
+        rendered = check_all.render(check_all.run({"circuit": circuit}))
+        self.assertNotIn("?", rendered, "the fixture must rest on nothing unmeasured")
+        self.assertNotIn("resting on", rendered)
 
 
 class TheCheckListItselfTest(unittest.TestCase):

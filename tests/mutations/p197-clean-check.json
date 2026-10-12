@@ -1,0 +1,116 @@
+[
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the bound clears a resistor whose current is stated",
+  "find": "        if stated is None and rated is not None and span is not None \\\n",
+  "replace": "        if rated is not None and span is not None \\\n"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the bound clears at the full rating, with no margin",
+  "find": "                and span * span / ohms <= rated / RESISTOR_POWER_DERATING:",
+  "replace": "                and span * span / ohms <= rated:"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the record's voltage beats the rules'",
+  "find": "        volts = volts_in((rails.get(net) or {}).get(\"nominal_volts\"))\n        if volts is None:\n            supply",
+  "replace": "        volts = None\n        if volts is None:\n            supply"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a net with no voltage no longer blocks the bound",
+  "find": "            unvoltaged.append(net)\n            continue",
+  "replace": "            continue"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a negative rail does not widen the span",
+  "find": "        highest, lowest = max(highest, volts), min(lowest, volts)",
+  "replace": "        highest = max(highest, volts)"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a board with only ground bounds everything at 0 V",
+  "find": "    if unvoltaged or highest == lowest:",
+  "replace": "    if unvoltaged:"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "named nets the rules and records do not know are left out",
+  "find": "    for net in sorted((set(rails) | wired | set(nets or ())) - set(bus_nets)):",
+  "replace": "    for net in sorted((set(rails) | wired) - set(bus_nets)):"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a rail only the records know blocks the bound",
+  "find": "    wired = {net for net in loads if nets is None or net in nets}",
+  "replace": "    wired = set(loads)"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "an unverified voltage clears silently",
+  "find": "            if unverified:\n                resting.append(component_name)",
+  "replace": "            if False:\n                resting.append(component_name)"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the could-not-run no longer names the rail without a voltage",
+  "find": "            fix=(\"state nominal_volts for %s in the rules file",
+  "replace": "            fix=(\"state nominal_volts in the rules file"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a supply's voltage is not carried to physics",
+  "find": "                                         volts=volts_of(part, supply.get(\"volts\"))))",
+  "replace": "                                         volts=volts_of(part, None)))"
+ },
+ {
+  "file": "boards/firebeetle2-esp32s3.json",
+  "name": "the FireBeetle's 3V3 pad names no voltage",
+  "find": "      \"volts\": \"io_volts\",\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "the last line drops the count",
+  "find": "    resting = \", resting on %d ? line(s)\" % unmeasured if unmeasured else \"\"",
+  "replace": "    resting = \"\""
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "the JSON drops the count",
+  "find": "\"unmeasured\": unmeasured_in(results),",
+  "replace": "\"unmeasured\": 0,"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "the bound runs without the part records",
+  "find": "    span, unverified, unvoltaged = (None, [], []) if loads is None else \\\n",
+  "replace": "    span, unverified, unvoltaged = (None, [], []) if False else \\\n"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "a check that could not look adds its ? lines to the count",
+  "find": "               if result[\"status\"] in (OK, PROBLEMS) and not result.get(\"unchecked\"))",
+  "replace": "               if result[\"status\"] != SKIPPED)"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "only a resistor with an end on a rail is assessed (CC1)",
+  "find": "                 and component.get(\"name\")}",
+  "replace": "                 and component.get(\"name\") and any(component[\"name\"] in board.components_on(rail) for rail in rails)}"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a stated current is never read",
+  "find": "            stated_currents.setdefault(name, amps)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "a check with problems and an unchecked line adds its ? lines",
+  "find": "               if result[\"status\"] in (OK, PROBLEMS) and not result.get(\"unchecked\"))",
+  "replace": "               if result[\"status\"] in (OK, PROBLEMS))"
+ }
+]

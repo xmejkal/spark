@@ -412,17 +412,30 @@ def render(results):
 
     # The last line is the one a hurried reader takes away, so it must never be able to say
     # less than happened. "Nothing found by the checks that ran" was true and useless when the
-    # number of checks that ran was zero.
+    # number of checks that ran was zero. An answer resting on `?` lines says how many (P108).
+    unmeasured = unmeasured_in(results)
+    resting = ", resting on %d ? line(s)" % unmeasured if unmeasured else ""
     if problems:
-        lines.append("  %d problem(s)" % problems)
+        lines.append("  %d problem(s)%s" % (problems, resting))
     elif not completed:
         lines.append("  nothing completed. This says nothing about the board.")
     elif unchecked or skipped:
-        lines.append("  nothing found by the %d check(s) that completed, of %d"
-                     % (len(completed), len(results)))
+        lines.append("  nothing found by the %d check(s) that completed, of %d%s"
+                     % (len(completed), len(results), resting))
     else:
-        lines.append("  nothing found by any of the %d checks" % len(results))
+        lines.append("  nothing found by any of the %d checks%s" % (len(results), resting))
     return "\n".join(lines)
+
+
+def unmeasured_in(results):
+    """
+    How many `?` lines the answer rests on (P108): values nobody has measured or verified, and
+    advisories. The PO decided on 2026-10-05 that a null `max_current_a` stays a `?`, so an `ok`
+    may rest on them, and the answer must then say how many. One line can name several figures,
+    so this counts lines, and says so. A check that could not look rests nothing on its lines.
+    """
+    return sum(len(result.get("unmeasured", [])) for result in results
+               if result["status"] in (OK, PROBLEMS) and not result.get("unchecked"))
 
 
 def verdict(results):
@@ -453,7 +466,9 @@ def main(argv=None):
     parser.add_argument("--circuit", help="the built netlist")
     parser.add_argument("--rules", help="the project's rules file")
     parser.add_argument("--package", help="the exported fab package")
-    parser.add_argument("--json", action="store_true", help="for a caller that is not a person")
+    parser.add_argument("--json", action="store_true",
+                        help="for a caller that is not a person: one JSON document with the status, "
+                             "`unmeasured` (how many ? lines the answer rests on) and each check's result")
     args = parser.parse_args(argv)
 
     inputs, resolved, ambiguous = inputs_for(args)
@@ -461,7 +476,7 @@ def main(argv=None):
     overall = verdict(results)
 
     if args.json:
-        print(json.dumps({"tool": "check_all", "status": overall,
+        print(json.dumps({"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
                           "resolved": resolved, "results": results}, indent=2))
     else:
         if resolved:

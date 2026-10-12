@@ -54,7 +54,7 @@ It ends with every field left `null`. **That list is the output, not a shortfall
 is guessed, because a guessed rail current would poison the one check that does arithmetic — and
 a check should report a null as unverifiable rather than pass it, which is the correct
 answer until somebody measures it. Not every check does yet: a null rail voltage skips the capacitor check without a
-word, and a null bus capacitance stops check_physics ([P107](https://github.com/xmejkal/spark/issues/41));
+word (it blocks the resistor bound under a `!` line), and a null bus capacitance stops check_physics ([P107](https://github.com/xmejkal/spark/issues/41));
 [what never to assume](../docs/guide/agents.md#what-never-to-assume) lists each field.
 
 Go through the list with the user. After `--force` it still names fields they answered
@@ -71,7 +71,7 @@ Each field, and how to find it out:
 | --- | --- | --- |
 | `physics.i2c_hz` | the I²C bus speed | what the firmware configures; with no I²C bus, it does not apply |
 | `physics.i2c_bus_capacitance_pf` | the I²C bus's capacitance | a measurement, or the bus parts' datasheets and the wiring; with no I²C bus, it does not apply |
-| `physics.rails.<RAIL>.nominal_volts` | the rail's voltage | what the supply is |
+| `physics.rails.<RAIL>.nominal_volts` | the rail's voltage, read by the capacitor check and the resistor bound | what the supply is |
 | `physics.rails.<RAIL>.max_current_a` | the most the rail carries | a meter; on a motor rail, the stall current |
 | `physics.rails.<RAIL>.capacitor_chemistry` | what the rail's capacitors are made of | what is on the board; with no capacitor, it does not apply |
 | `physics.rails.<RAIL>.served_by_pour` | whether a copper pour feeds the rail | the layout; with no pour, it does not apply |

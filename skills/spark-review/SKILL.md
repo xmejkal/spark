@@ -32,7 +32,7 @@ with its own flag (`--circuit`, `--rules`, `--package`), which always beats the 
 | vendor-truth | the pin map, re-derived from the vendor's own header |
 | buildability | drill vs the pin that goes in it, annular ring, via class, package vs value |
 | the-order | the BOM against the schematic it came from |
-| physics | trace current, capacitor derating, resistor dissipation, I²C rise time |
+| physics | trace current, capacitor derating, resistor dissipation (every resistor, an LED's series resistor too), I²C rise time |
 | rules-vs-netlist | written rules against the design that was built |
 
 **Do not ask a reviewer to look at anything in that table.** A reviewer pointed at a dimension a
@@ -40,7 +40,8 @@ script already covers produces false positives and nothing else.
 
 **Read the three outcomes separately.** `FAIL` is a problem. `????` means a check was given what
 it needs and still could not look, which is not a clean board. `?` lines are things the design
-does not know yet — an unmeasured rail is not a passing rail.
+does not know yet — an unmeasured rail is not a passing rail. The last line counts them (`resting on N ? line(s)`,
+top-level `unmeasured` in `--json`). Exit 0 with N above 0 is an ok on those lines: report each with the answer.
 
 ## 3. Review the dimensions, in parallel
 

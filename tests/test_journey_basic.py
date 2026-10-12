@@ -4,7 +4,7 @@ that breaks is named here and not found on the bench.
 
 The stages are the replan's table (docs/2026-10-11-replan.md): the requirements, the build with its board, the Wokwi
 diagram, the breadboard sheet and the pin map, the firmware imported with the `machine` stand-in (P59), then the PCB and 3D
-exports. Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
+exports, and every deterministic check on the fresh project (P197). Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
 build stage is could-not-run, and the skip names the stages that ran and the stages that did not.
 
     python3 -m unittest discover -s tests -p test_journey_basic.py
@@ -284,6 +284,28 @@ class TheBasicJourneyTest(unittest.TestCase):
         self.skip_without_the_build()
         self.assertEqual(self.verdict["status"], check_spine.OK, self.verdict)
         self.assertEqual(broken_stages(self.project), [], self.verdict)
+
+    def test_a_fresh_project_gets_a_clean_check(self):
+        # P197: init after the build, as commands/init.md says, then every deterministic check, as a person runs them.
+        # Exit 0 must come from checks that looked: none could-not-run, physics among them, and the `?` lines counted.
+        self.skip_without_the_build()
+        copy = Path(tempfile.mkdtemp()) / "button-light"
+        shutil.copytree(self.project, copy, symlinks=True)
+        init = subprocess.run([sys.executable, str(ROOT / "scripts" / "init_project.py"), "--project", ".",
+                               "--board", "firebeetle2-esp32s3"],
+                              cwd=str(copy), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+        self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+        checked = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_all.py"), "--project", ".", "--json"],
+                                 cwd=str(copy), capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+        answer = json.loads(checked.stdout)
+        self.assertEqual((checked.returncode, answer["status"]), (0, check_spine.OK), checked.stdout[-3000:])
+        statuses = {result["check"]: result["status"] for result in answer["results"]}
+        self.assertNotIn("could-not-run", statuses.values(), statuses)
+        # "Never from skipping": the fab package's check is the only one a fresh project may not be asked.
+        self.assertLessEqual({check for check, status in statuses.items() if status == "skipped"}, {"the-order"},
+                             statuses)
+        self.assertEqual(statuses["physics"], check_spine.OK, "physics must look, not be skipped")
+        self.assertIsInstance(answer["unmeasured"], int, "P108: the ok says how many values it rests on")
 
     def test_removing_any_stage_s_file_names_that_stage(self):
         # The card's proof: this test is only worth its run time if it goes red, by name, when a stage stops writing.

@@ -476,6 +476,20 @@ def current_of(part, pointer):
     return {"amps": value * scale, "verified": bool(fact.get("verified")), "why": pointer}
 
 
+def volts_of(part, pointer):
+    """
+    The voltage a supply pin holds its rail at, from the fact its `volts` names (P197): `io_volts`. `value` is None
+    when the record does not state it, and `why` then says what is missing, as `current_of` does for a current.
+    """
+    if not pointer:
+        return {"value": None, "verified": False, "why": "names no fact for its voltage"}
+    fact = (part.get("facts") or {}).get(pointer)
+    value = fact.get("value") if isinstance(fact, dict) and pointer.endswith("_volts") else None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return {"value": None, "verified": False, "why": "%s is not a voltage this record states" % pointer}
+    return {"value": value, "verified": bool(fact.get("verified")), "why": pointer}
+
+
 def module_as_part(board):
     """The board's power pads in the shape of a part's power entries, its `power` as its facts."""
     return {"id": "module", "_instance": "Mcu", "facts": board.get("power") or {},
@@ -493,7 +507,8 @@ def rail_loads(part_list, board=None):
     `missing` names every load the records leave open, where a total would be a guess.
 
     A converter's input `feeds` an output and draws at most what that output delivers: an upper
-    bound for a step-down converter, and the only figure its record can honestly give.
+    bound for a step-down converter, and the only figure its record can honestly give. An output
+    may also name the fact that states the voltage it holds its rail at, as `volts` (P197).
     """
     members = list(part_list) + ([module_as_part(board)] if board else [])
     rails, outputs = {}, {}
@@ -504,7 +519,8 @@ def rail_loads(part_list, board=None):
         who = "%s.%s" % (component_name(part), supply["pin"])
         if supply.get("direction") == "out":
             outputs[(id(part), supply["pin"])] = net
-            rail["supplies"].append(dict(current_of(part, supply.get("can_supply")), who=who))
+            rail["supplies"].append(dict(current_of(part, supply.get("can_supply")), who=who,
+                                         volts=volts_of(part, supply.get("volts"))))
             if supply.get("own_draw"):
                 rail["loads"].append(dict(current_of(part, supply["own_draw"]), who=who))
         elif supply.get("feeds"):
