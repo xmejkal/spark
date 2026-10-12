@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_scenario  # noqa: E402
+import sim_project  # noqa: E402
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
 
 #: wokwi-cli as the tests run it: tests/fake_wokwi_cli.py, which spends nothing.
@@ -50,7 +51,7 @@ class TheRunTest(unittest.TestCase):
         sim = self.project / "sim"
         (sim / "scenarios").mkdir(parents=True)
         (sim / "diagram.json").write_text("{}")
-        (sim / "wokwi.toml").write_text('[wokwi]\nversion = 1\n# firmware = "flash-with-firmware.bin"\n')
+        (sim / "wokwi.toml").write_text(sim_project.wokwi_toml([]))  # as the build writes it with no --firmware
         (self.project / "firmware").mkdir()
         (self.project / "firmware" / "main.py").write_text("print('ready')\n")
         self.scenario = sim / "scenarios" / "lights.scenario.yaml"
@@ -77,9 +78,13 @@ class TheRunTest(unittest.TestCase):
         self.run_with()
         seen = json.loads(self.seen.read_text())
         self.assertEqual(seen["scenario"], run_scenario.with_ready_wait(SCENARIO))
-        image = Path(seen["args"][seen["args"].index("--elf") + 1])
-        self.assertEqual(image, self.project / "sim" / "flash-with-firmware.bin")
-        self.assertIn(b"print('ready')", image.read_bytes())
+        self.assertEqual(seen["args"][0], str(self.project / "sim"))
+        self.assertIn(b"print('ready')", (self.project / "sim" / "flash-with-firmware.bin").read_bytes())
+
+    def test_a_build_with_no_image_named_gets_one_named_as_firmware_would(self):
+        # wokwi-cli refuses a wokwi.toml with no firmware line: "Firmware path must be a string" (0.27.1, 2026-10-12).
+        self.run_with()
+        self.assertEqual((self.project / "sim" / "wokwi.toml").read_text(), sim_project.wokwi_toml([], "flash-with-firmware.bin"))
 
     def test_the_image_is_the_one_wokwi_toml_names(self):
         (self.project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = "mine.bin"\nelf = "mine.bin"\n')
@@ -95,6 +100,16 @@ class TheRunTest(unittest.TestCase):
         status, said, _ = self.run_with("ready\n", exit_code=run_scenario.TIMEOUT_EXIT)
         self.assertEqual(status, PROBLEMS)
         self.assertIn("timed out after 60000 ms", said)
+
+    def test_a_board_that_never_started_could_not_run_with_wokwi_cli_s_error_line(self):
+        status, said, _ = self.run_with("", exit_code=1, said="Error: Error in wokwi.toml: Firmware path must be a string\n    at parseConfig")
+        self.assertEqual((status, said), (COULD_NOT_RUN, "wokwi-cli stopped before the board started (exit 1): "
+                                                         "Error: Error in wokwi.toml: Firmware path must be a string"))
+
+    def test_the_ready_line_is_read_from_wokwi_cli_s_echo_not_its_serial_file(self):
+        # wokwi-cli 0.27.1 wrote "readyLED onLED off" into its serial log file and each on a line of its own on stdout.
+        status, said = run_scenario.verdict(1, "readyLED on", "ready\nLED on\nexpect-pin failed", 60000)
+        self.assertEqual((status, said), (PROBLEMS, "failed (wokwi-cli exit 1): expect-pin failed"))
 
     def test_a_failed_step_is_a_problem_in_wokwi_cli_s_last_words(self):
         status, said, log = self.run_with("ready\n", exit_code=1, said="expect-pin ledred5mm:A: expected 1, got 0")

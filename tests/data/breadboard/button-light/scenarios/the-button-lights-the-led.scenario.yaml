@@ -1,0 +1,13 @@
+# The person's words: the LED lights while the button is held. Claude wrote these steps from them (P130).
+# run_scenario.py adds the wait for the firmware's ready line before the first step.
+name: the button lights the LED
+version: 1
+author: spark (P130)
+
+steps:
+  - set-control: { part-id: tactilebutton, name: pressed, value: 1 }
+  - wait-serial: "LED on"
+  - expect-pin: { part-id: ledred5mm, pin: A, value: 1 }
+  - set-control: { part-id: tactilebutton, name: pressed, value: 0 }
+  - wait-serial: "LED off"
+  - expect-pin: { part-id: ledred5mm, pin: A, value: 0 }

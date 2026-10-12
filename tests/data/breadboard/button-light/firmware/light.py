@@ -7,6 +7,8 @@ STATUS_LED through 330 ohms into the LED's anode, its cathode on GND), and pins.
 internal pull-up holds the button high (P204). So the button reads 1 released and 0 pressed, and 1 lights the LED.
 
 update() is the part the Mac exercises. run() calls time.sleep_ms, which only MicroPython has, so it runs on the board.
+run() prints `ready` once setup is done, the line a simulated run waits for (P130), then each change of the LED, the lines
+a scenario waits on.
 """
 
 import time
@@ -24,12 +26,19 @@ led = Pin(pins.STATUS_LED, Pin.OUT, value=LED_OFF)
 
 
 def update():
-    """Light the LED while the button is held."""
-    led.value(LED_ON if button.value() == BUTTON_PRESSED else LED_OFF)
+    """Light the LED while the button is held. Returns True while it is lit."""
+    lit = button.value() == BUTTON_PRESSED
+    led.value(LED_ON if lit else LED_OFF)
+    return lit
 
 
 def run(period_ms=DEFAULT_PERIOD_MS):
     """The loop main.py starts."""
+    print("ready")
+    shown = False
     while True:
-        update()
+        lit = update()
+        if lit != shown:
+            print("LED on" if lit else "LED off")
+            shown = lit
         time.sleep_ms(period_ms)

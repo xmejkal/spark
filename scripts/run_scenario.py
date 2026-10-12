@@ -9,8 +9,12 @@ line before the scenario's first step, because a step sent earlier reaches a boa
 holds only behaviour: the conversation writes it from the person's words, and spark ships none.
 
 Each run first puts MicroPython and the project's firmware/ into a new flash image, so a run never tests an older
-firmware. The log goes to sim/runs/<name>.log: the date, the verdict, the scenario as run, the serial output and what
-wokwi-cli said. A run spends Wokwi CI minutes and needs WOKWI_CLI_TOKEN. The tests use a fake wokwi-cli.
+firmware. When the build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as
+--firmware would have: wokwi-cli refuses a wokwi.toml that names none.
+
+The log goes to sim/runs/<name>.log: the date, the verdict, the scenario as run, and what wokwi-cli printed, which is the
+board's serial output among the scenario's progress. A run spends Wokwi CI minutes and needs WOKWI_CLI_TOKEN. The tests
+use a fake wokwi-cli.
 """
 
 import argparse
@@ -31,7 +35,7 @@ READY_STEP = '- wait-serial: "%s"' % READY
 #: wokwi-cli's own exit code for a run that reached --timeout (its --timeout-exit-code default).
 TIMEOUT_EXIT = 42
 DEFAULT_TIMEOUT_MS = 60000
-#: The image name when wokwi.toml names none: the build writes the line commented out when given no --firmware.
+#: The image named in wokwi.toml when the build named none.
 DEFAULT_IMAGE = "flash-with-firmware.bin"
 #: How long wokwi-cli may take beyond the simulated time: connecting, sending the image.
 STARTUP_ALLOWANCE_S = 120
@@ -52,16 +56,32 @@ def with_ready_wait(scenario):
     return "\n".join(lines) + "\n"
 
 
+def image_in(toml):
+    """The flash image wokwi.toml names. When the build named none, this names DEFAULT_IMAGE there first."""
+    text = toml.read_text()
+    if sim_project.firmware_in(toml) is None and sim_project.UNNAMED_FIRMWARE in text:
+        toml.write_text(text.replace(sim_project.UNNAMED_FIRMWARE, "\n".join(sim_project.firmware_lines(DEFAULT_IMAGE))))
+    return toml.parent / (sim_project.firmware_in(toml) or DEFAULT_IMAGE)
+
+
 def verdict(code, serial, said, timeout_ms):
-    """(status, sentence) for one finished run."""
+    """
+    (status, sentence) for one finished run. `serial` is the board's own output: empty, the board never started, so
+    nothing was looked at. The ready line is looked for in `said`, wokwi-cli's echo of the serial output: its serial log
+    file joins MicroPython's lines with no line break between them (wokwi-cli 0.27.1, 2026-10-12).
+    """
     if code == 0:
         return OK, "passed"
-    if READY not in (line.strip() for line in serial.splitlines()):
+    lines = said.splitlines()
+    why = next((line for line in lines if line.startswith("Error")), lines[-1] if lines else "no reason given")
+    if not serial.strip():
+        return COULD_NOT_RUN, "wokwi-cli stopped before the board started (exit %d): %s" % (code, why)
+    if READY not in (line.strip() for line in lines):
         return PROBLEMS, ("the firmware never printed %r: print it on a line of its own once setup is done "
                           "(the ready contract, commands/build.md)" % READY)
     if code == TIMEOUT_EXIT:
         return PROBLEMS, "timed out after %d ms: a step waited for something that never came" % timeout_ms
-    return PROBLEMS, "failed (wokwi-cli exit %d): %s" % (code, (said.strip().splitlines() or ["no reason given"])[-1])
+    return PROBLEMS, "failed (wokwi-cli exit %d): %s" % (code, why)
 
 
 def run(project, scenario, cli, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS):
@@ -74,7 +94,7 @@ def run(project, scenario, cli, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS)
     try:
         steps = with_ready_wait(scenario.read_text())
         tools.find("littlefs")
-        image = sim / (sim_project.firmware_in(sim / "wokwi.toml") or DEFAULT_IMAGE)
+        image = image_in(sim / "wokwi.toml")
         image.write_bytes(flash_image.image(flash_image.interpreter_path(micropython).read_bytes(),
                                             flash_image.files_under(project / "firmware")))
     except (OSError, ValueError, tools.ToolProblem) as cannot:
@@ -83,8 +103,8 @@ def run(project, scenario, cli, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS)
         as_run, serial_log = Path(scratch) / scenario.name, Path(scratch) / "serial.log"
         as_run.write_text(steps)
         try:
-            done = subprocess.run(list(cli) + [str(sim), "--scenario", str(as_run), "--elf", str(image),
-                                               "--timeout", str(timeout_ms), "--serial-log-file", str(serial_log)],
+            done = subprocess.run(list(cli) + [str(sim), "--scenario", str(as_run), "--timeout", str(timeout_ms),
+                                               "--serial-log-file", str(serial_log)],
                                   capture_output=True, text=True, timeout=timeout_ms / 1000 + STARTUP_ALLOWANCE_S)
         except (OSError, subprocess.TimeoutExpired) as cannot:
             return COULD_NOT_RUN, "wokwi-cli did not finish: %s" % cannot, None
@@ -93,9 +113,8 @@ def run(project, scenario, cli, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS)
     status, sentence = verdict(done.returncode, serial, said, timeout_ms)
     log = sim / "runs" / (scenario.name.split(".")[0] + ".log")
     log.parent.mkdir(exist_ok=True)
-    log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n\n--- the scenario as run ---\n%s\n--- serial ---\n%s\n"
-                   "--- wokwi-cli said ---\n%s\n" % (scenario.name, datetime.datetime.now().isoformat(timespec="seconds"),
-                                                     timeout_ms, sentence, steps, serial, said))
+    log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n\n--- the scenario as run ---\n%s\n--- wokwi-cli printed ---\n%s\n"
+                   % (scenario.name, datetime.datetime.now().isoformat(timespec="seconds"), timeout_ms, sentence, steps, said))
     return status, sentence, log
 
 
