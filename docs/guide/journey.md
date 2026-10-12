@@ -13,7 +13,7 @@ today.
 flowchart LR
     drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
     research --> build["Build — works"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
-    firmware --> simulate["Simulate — partly"] --> bench["Bench — not yet"]
+    firmware --> simulate["Simulate — works"] --> bench["Bench — not yet"]
 ```
 
 The same journey in words:
@@ -988,25 +988,37 @@ Not built yet: a check that every signal is driven and read ([P74](https://githu
 
 ## Simulate
 
-**Partly.** The build's simulation stage generates the Wokwi diagram and stages the chips: hand-written models of
+**Works.** The build's simulation stage generates the Wokwi diagram and stages the chips: hand-written models of
 modules Wokwi has no part for, kept beside a part's record and compiled with `wokwi-cli` only when the binary is
 missing or older than its source. `--keep .` keeps them in `sim/`
 ([P116](https://github.com/xmejkal/spark/issues/50)).
 
 A run is a separate step:
 
-1. **Build with the simulation kept and a firmware image named:**
-   `check_spine.py requirements.json --keep . --firmware flash-with-firmware.bin`.
-2. **Make the flash image:** `flash_image.py --files firmware -o sim/flash-with-firmware.bin`. It puts MicroPython and
-   the project's files into one image, and needs MicroPython for the S3: `/spark:setup add micropython-esp32s3`.
-3. **Write a scenario.** spark ships none for this example
-   ([P130](https://github.com/xmejkal/spark/issues/64)).
-4. **Run `wokwi-cli`,** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci). The diagram the build writes wires the board's serial port to Wokwi's serial monitor, so a
-   scenario's `wait-serial` hears the firmware ([P190](https://github.com/xmejkal/spark/issues/142)).
+1. **Build with the simulation kept:** `check_spine.py requirements.json --keep .`.
+2. **Write a scenario** in `sim/scenarios/`. Claude writes its steps from your words. spark's example for this project
+   is in `tests/data/breadboard/button-light/scenarios/`.
+3. **Run it** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci). MicroPython for the S3
+   comes from `/spark:setup add micropython-esp32s3`.
 
-A scenario run spends Wokwi CI minutes; none was run for this page. Watching it live in VS Code needs a Wokwi licence
-that includes VS Code, Hobby+ or above per wokwi.com/pricing (read 2026-10-01). `/spark:build`'s page has both routes
-([Simulate it](../../commands/build.md#simulate-it--for-real-with-the-values-set-in-the-test)).
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/run_scenario.py" sim/scenarios/the-button-lights-the-led.scenario.yaml
+```
+
+<!-- output: run 2026-10-12, spark 0.8.1 -->
+```text
+the-button-lights-the-led.scenario.yaml: passed
+log: sim/runs/the-button-lights-the-led.log
+```
+
+The command puts MicroPython and `firmware/` into one flash image and waits for the firmware's `ready` line. Then it
+runs the steps and writes the log with its date ([P130](https://github.com/xmejkal/spark/issues/64)). The diagram the
+build writes wires the board's serial port to Wokwi's serial monitor, so a scenario's `wait-serial` hears the firmware
+([P190](https://github.com/xmejkal/spark/issues/142)). The ready contract and the scenario's form are on
+`/spark:build`'s page ([Simulate it](../../commands/build.md#simulate-it--for-real-with-the-values-set-in-the-test)).
+
+A run spends Wokwi CI minutes. Watching it live in VS Code needs a Wokwi licence that includes VS Code, Hobby+ or above
+per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
@@ -1023,7 +1035,7 @@ The `spark-reverse-engineer` skill writes a bench protocol, but for a board reve
 board spark generated.
 
 Until then, every green result in this guide is a build, a generated diagram, a check or a simulation (button-and-LED
-passed in Wokwi with a hand-written scenario on 2026-10-11, P190); nothing touched hardware.
+passed in Wokwi on 2026-10-12, P130); nothing touched hardware.
 
 ## From draft to order
 

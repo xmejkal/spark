@@ -177,16 +177,21 @@ def firmware_in(toml):
         return None
 
 
+#: The line wokwi_toml writes when no image is named yet. wokwi-cli refuses such a file, so run_scenario.py names one here.
+UNNAMED_FIRMWARE = '# firmware = "flash-with-firmware.bin"  # no image named yet: MicroPython plus the project\'s files'
+
+
+def firmware_lines(firmware):
+    """The two lines that name the flash image. Each value is a JSON string, which TOML reads as its basic string: a quote
+    or a line break in the person's own --firmware stays inside its value, and the file keeps the structure written here."""
+    return ["firmware = %s" % json.dumps(firmware), "elf = %s" % json.dumps(firmware)]
+
+
 def wokwi_toml(chips, firmware=None):
     """The simulator's project file: the firmware image, and every chip by name and binary."""
     lines = ["# Written by spark from the part records. The chips stand in for parts Wokwi has no model of.",
              "[wokwi]", "version = 1"]
-    # Each value written as a JSON string, which TOML reads as its basic string: a quote or a line break in a name or in the
-    # person's own --firmware stays inside its value, and the file keeps the structure written here.
-    if firmware:
-        lines += ["firmware = %s" % json.dumps(firmware), "elf = %s" % json.dumps(firmware)]
-    else:
-        lines += ['# firmware = "flash-with-firmware.bin"  # no image named yet: MicroPython plus the project\'s files']
+    lines += firmware_lines(firmware) if firmware else [UNNAMED_FIRMWARE]
     for chip in chips:
         lines += ["", "[[chip]]", "name = %s" % json.dumps(chip), "binary = %s" % json.dumps("chips/%s.chip.wasm" % chip)]
     return "\n".join(lines) + "\n"

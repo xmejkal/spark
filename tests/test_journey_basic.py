@@ -4,7 +4,8 @@ that breaks is named here and not found on the bench.
 
 The stages are the replan's table (docs/2026-10-11-replan.md): the requirements, the build with its board, the Wokwi
 diagram, the breadboard sheet and the pin map, the firmware imported with the `machine` stand-in (P59), then the PCB and 3D
-exports, and every deterministic check on the fresh project (P197). Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
+exports, every deterministic check on the fresh project (P197), and the scenario run by the Wokwi harness (P130), with
+a fake wokwi-cli so the suite spends no Wokwi minute. Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
 build stage is could-not-run, and the skip names the stages that ran and the stages that did not.
 
     python3 -m unittest discover -s tests -p test_journey_basic.py
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 import zipfile
 from pathlib import Path
 
@@ -30,10 +32,16 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
 import design  # noqa: E402
+import run_scenario  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 #: The firmware a person (or the conversation) writes once the pin map exists (P59): main.py over light.py.
 FIRMWARE_FIXTURE = FIXTURE / "firmware"
+#: The scenario the conversation wrote from the person's words (P130), and wokwi-cli as the suite runs it: faked.
+SCENARIO_FIXTURE = FIXTURE / "scenarios" / "the-button-lights-the-led.scenario.yaml"
+FAKE_WOKWI_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
+#: The image the build's wokwi.toml names once the harness names one: commands/build.md's flash-with-firmware.bin.
+FLASH_IMAGE = "flash-with-firmware.bin"
 #: The stand-in `machine` the firmware imports under, put first on the path of a process of its own (never this one's).
 STAND_IN = ROOT / "scripts" / "stand_in"
 
@@ -120,6 +128,15 @@ def _firmware(path):
     return None if pressed == "1" else "with the button pressed the LED reads %s, not 1" % pressed
 
 
+def _run_log(path):
+    # P130: the harness ran the project's scenario, and passed, on an image of the project's own firmware.
+    text = path.read_text()
+    if "verdict: passed" not in text:
+        return "the run did not pass: %s" % text.splitlines()[1]
+    image = path.parent.parent / FLASH_IMAGE
+    return None if b"light.run()" in image.read_bytes() else "the flash image does not hold the project's main.py"
+
+
 def _gerbers(path):
     with zipfile.ZipFile(path) as fab:
         lacking = {"F_Cu.gbr", "Edge_Cuts.gbr"} - set(fab.namelist())
@@ -140,6 +157,7 @@ STAGES = (
     ("breadboard sheet", "breadboard.md", _sheet),
     ("pin map", "firmware/pins.py", _pins),
     ("firmware", "firmware/light.py", _firmware),
+    ("Wokwi run", "sim/runs/the-button-lights-the-led.log", _run_log),
     ("PCB export", "board-gerbers.zip", _gerbers),
     ("3D export", "board.glb", _model),
 )
@@ -200,6 +218,21 @@ def write_the_firmware(project):
         shutil.copy(source, project / "firmware")
 
 
+def run_the_scenario(project):
+    """
+    The scenario goes into sim/scenarios/ and the harness runs it, as a person does, with a fake wokwi-cli and interpreter.
+    Its sentence goes into the walk's verdict, so a run that could not start says why where the stage fails.
+    """
+    if not (project / "sim").is_dir():
+        return "no sim/: the build stage names why"
+    (project / "sim" / "scenarios").mkdir(exist_ok=True)
+    scenario = Path(shutil.copy(SCENARIO_FIXTURE, project / "sim" / "scenarios"))
+    interpreter = Path(tempfile.mkdtemp()) / "micropython.bin"
+    interpreter.write_bytes(b"\xe9" + b"\x00" * 999)
+    with unittest.mock.patch.dict(os.environ, {"FAKE_WOKWI_SERIAL": "ready\nLED on\nLED off\n"}):
+        return run_scenario.run(project, scenario, FAKE_WOKWI_CLI, micropython=interpreter)[1]
+
+
 class TheFirmwareStageBitesTest(unittest.TestCase):
     """
     The firmware stage's own check goes red for a wrong firmware (F3, P59). The journey above only proves the fixture
@@ -226,7 +259,7 @@ class TheFirmwareStageBitesTest(unittest.TestCase):
         self.assertEqual(_firmware(light), "with the button released the LED reads 1, not 0")
 
     def test_an_led_that_never_lights_is_named(self):
-        light = self.light_with("    led.value(LED_ON if button.value() == BUTTON_PRESSED else LED_OFF)", "    pass")
+        light = self.light_with("    led.value(LED_ON if lit else LED_OFF)", "    pass")
         self.assertEqual(_firmware(light), "with the button pressed the LED reads 0, not 1")
 
     def test_a_firmware_that_does_not_pull_the_button_up_is_named(self):
@@ -241,6 +274,27 @@ class TheFirmwareStageBitesTest(unittest.TestCase):
         self.assertIsNone(_firmware(self.light_with(pins=False)))
 
 
+class TheRunStageBitesTest(unittest.TestCase):
+    """The Wokwi run stage's own check goes red, as the firmware stage's does: a fake that always passes proves nothing alone."""
+
+    @staticmethod
+    def log_with(verdict="passed", main=b"import light\nlight.run()\n"):
+        runs = Path(tempfile.mkdtemp()) / "sim" / "runs"
+        runs.mkdir(parents=True)
+        (runs.parent / FLASH_IMAGE).write_bytes(b"\xff" * 64 + main)
+        (runs / "the-button-lights-the-led.log").write_text("# the run\nverdict: %s\n" % verdict)
+        return runs / "the-button-lights-the-led.log"
+
+    def test_a_passed_run_on_the_project_s_firmware_passes(self):
+        self.assertIsNone(_run_log(self.log_with()))
+
+    def test_a_failed_run_is_named_with_its_verdict(self):
+        self.assertEqual(_run_log(self.log_with("timed out")), "the run did not pass: verdict: timed out")
+
+    def test_an_image_without_the_project_s_main_py_is_named(self):
+        self.assertEqual(_run_log(self.log_with(main=b"")), "the flash image does not hold the project's main.py")
+
+
 class TheBasicJourneyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -250,6 +304,7 @@ class TheBasicJourneyTest(unittest.TestCase):
         shutil.copy(FIXTURE / "requirements.json", cls.project)
         cls.verdict = walk(cls.project)
         write_the_firmware(cls.project)
+        cls.verdict["scenario run"] = run_the_scenario(cls.project)
 
     def stage(self, name):
         return next((stage for stage in self.verdict["stages"] if stage["name"] == name), {})

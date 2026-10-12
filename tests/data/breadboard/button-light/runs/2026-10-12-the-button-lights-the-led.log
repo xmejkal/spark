@@ -1,0 +1,52 @@
+# the-button-lights-the-led.scenario.yaml, run 2026-10-12T09:28:23, timeout 60000 ms
+verdict: passed
+
+--- the scenario as run ---
+# The person's words: the LED lights while the button is held. Claude wrote these steps from them (P130).
+# run_scenario.py adds the wait for the firmware's ready line before the first step.
+name: the button lights the LED
+version: 1
+author: spark (P130)
+
+steps:
+  - wait-serial: "ready"
+  - set-control: { part-id: tactilebutton, name: pressed, value: 1 }
+  - wait-serial: "LED on"
+  - expect-pin: { part-id: ledred5mm, pin: A, value: 1 }
+  - set-control: { part-id: tactilebutton, name: pressed, value: 0 }
+  - wait-serial: "LED off"
+  - expect-pin: { part-id: ledred5mm, pin: A, value: 0 }
+
+--- serial ---
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x1 (POWERON),boot:0x8 (SPI_FAST_FLASH_BOOT)
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0xeac
+load:0x403c8700,len:0xc28
+load:0x403cb700,len:0x2ff8
+entry 0x403c88ac
+readyLED onLED off
+--- wokwi-cli said ---
+Wokwi CLI v0.27.1 (ffde06bde1ae)
+Connected to Wokwi Simulation API 1.0.0-20261009-g59cd2aaf
+Starting simulation...
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x1 (POWERON),boot:0x8 (SPI_FAST_FLASH_BOOT)
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0xeac
+load:0x403c8700,len:0xc28
+load:0x403cb700,len:0x2ff8
+entry 0x403c88ac
+ready
+[the button lights the LED] Expected text matched: "ready"
+LED on
+[the button lights the LED] Expected text matched: "LED on"
+[the button lights the LED] expect-pin ledred5mm:A == 1
+LED off
+[the button lights the LED] Expected text matched: "LED off"
+[the button lights the LED] expect-pin ledred5mm:A == 0
+[the button lights the LED] Scenario completed successfully
