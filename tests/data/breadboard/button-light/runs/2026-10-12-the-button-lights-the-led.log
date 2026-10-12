@@ -1,4 +1,4 @@
-# the-button-lights-the-led.scenario.yaml, run 2026-10-12T09:28:23, timeout 60000 ms
+# the-button-lights-the-led.scenario.yaml, run 2026-10-12T10:51:44, timeout 60000 ms
 verdict: passed
 
 --- the scenario as run ---
@@ -17,18 +17,7 @@ steps:
   - wait-serial: "LED off"
   - expect-pin: { part-id: ledred5mm, pin: A, value: 0 }
 
---- serial ---
-ESP-ROM:esp32s3-20210327
-Build:Mar 27 2021
-rst:0x1 (POWERON),boot:0x8 (SPI_FAST_FLASH_BOOT)
-SPIWP:0xee
-mode:DIO, clock div:1
-load:0x3fce2820,len:0xeac
-load:0x403c8700,len:0xc28
-load:0x403cb700,len:0x2ff8
-entry 0x403c88ac
-readyLED onLED off
---- wokwi-cli said ---
+--- wokwi-cli printed ---
 Wokwi CLI v0.27.1 (ffde06bde1ae)
 Connected to Wokwi Simulation API 1.0.0-20261009-g59cd2aaf
 Starting simulation...
