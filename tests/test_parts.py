@@ -2168,6 +2168,20 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
                 with self.subTest(given=given):
                     self.assertEqual(run_json(["--fact-set", "x-soil", self.facts(given)])[1], 1)
 
+    def test_a_record_gets_its_about_and_tags_cleaned(self):
+        home = self.a_probe()
+        with in_store(home):
+            _, code = run_json(["--fact-set", "x-soil", self.facts({"about": "Tells how wet\x00 the soil is.", "tags": ["Plant"]})])
+        record = json.loads((home / "catalog" / "x-soil.json").read_text())
+        self.assertEqual((code, record["about"], record["tags"]), (0, "Tells how wet  the soil is.", ["plant"]))
+
+    def test_an_unknown_key_is_still_refused(self):
+        home = self.a_probe()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-soil", self.facts({"price": 3})])
+        self.assertEqual(code, 1)
+        self.assertIn("about, description, tags", said["problems"][0]["sentence"])
+
     def test_a_fact_that_breaks_the_record_is_refused(self):
         home = self.a_probe()
         with in_store(home):

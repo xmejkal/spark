@@ -1539,7 +1539,7 @@ OPERATIONS = (
     ("drawer", {"action": "store_true"}, "what you own: label, count, the record it is, unsure, skip — 20 at a time", (),
      ("entries",)),
     ("drawer-set", {"metavar": "FILE"}, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds; with --project, an `is` may "
-     "name a record in that project, such as one /spark:research just wrote",
+     "name a record in that project, such as one /spark:research just wrote; an entry may also say its about, description and tags",
      ("writes",), ("changes", "questions", "shelved")),
     ("drawer-import", {"nargs": 2, "metavar": ("SOURCE", "FILE")},
      "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
@@ -1548,7 +1548,7 @@ OPERATIONS = (
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "fill what a record owes — a JSON object of the facts the chain reads, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     "fill what a record owes — a JSON object of the facts the chain reads, or its about, description and tags, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),
@@ -1957,12 +1957,19 @@ def _op_function_set(args, project):
 
 
 def _op_fact_set(args, project):
+    """Fill a record's chain facts, or set what it says of itself (about, description, tags — cleaned and capped as an entry's are)."""
+    import drawer
     part_id, name = args.fact_set
     facts, unreadable = _read_json_input(name)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS)):
-        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s" % ", ".join(CHAIN_FACTS))])
+    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING)):
+        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s; or of what a "
+                                                  "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
+    facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING else value for key, value in facts.items()}
+    wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])]
+    if wrong:
+        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
     return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: (
         ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
         + sorted(set(broken_problems(after, path)) - set(broken_problems(record, path)))))

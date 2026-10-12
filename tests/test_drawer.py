@@ -67,6 +67,19 @@ class TheDrawerTest(unittest.TestCase):
         self.assertEqual((code, said["status"]), (0, "ok"))
         self.assertEqual(self.entry("a-cjmcu-111"), {"schema": 1, "label": "a CJMCU-111", "count": 1})
 
+    def test_an_entry_says_what_it_does_for_a_chooser(self):
+        long = "x" * 1200
+        said, code = run(["--drawer-set", a_file([{"label": "a knob", "about": "Turns‮ endlessly.", "description": long,
+                                                    "tags": ["Knob", "DIAL\x07"]}])])
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        entry = self.entry("a-knob")
+        self.assertEqual((entry["about"], len(entry["description"]), entry["tags"]), ("Turns  endlessly.", 1000, ["knob", "dial"]))
+
+    def test_more_than_twelve_tags_are_refused(self):
+        said, code = run(["--drawer-set", a_file([{"label": "a knob", "tags": ["t%d" % n for n in range(13)]}])])
+        self.assertEqual((code, said["status"]), (1, "problems"))
+        self.assertIn("up to 12", said["problems"][0]["sentence"])
+
     def test_an_entry_with_no_count_is_owned_count_unknown(self):
         said, code = run(["--drawer-set", a_file([{"label": "some resistors"}])])
         self.assertEqual((code, self.entry("some-resistors")), (0, {"schema": 1, "label": "some resistors"}))
