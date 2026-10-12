@@ -588,7 +588,19 @@ class TheAnswerCountsWhatNobodyMeasuredTest(unittest.TestCase):
     def test_the_last_line_counts_the_values_its_answer_rests_on(self):
         circuit, rules = self._three_nulls()
         rendered = check_all.render(check_all.run({"circuit": circuit, "rules": rules}))
-        self.assertIn("resting on 3 value(s) nobody has measured", rendered.splitlines()[-1])
+        self.assertIn("resting on 3 ? line(s)", rendered.splitlines()[-1])
+
+    def test_every_last_line_that_reports_a_run_carries_the_count(self):
+        # Each branch of the last line: every check ran, a problem, and a run with a check not asked for.
+        ran = {"check": "a", "status": check_all.OK, "what": "x", "unmeasured": ["u1", "u2"]}
+        cases = {
+            "every check ran": [ran, {"check": "b", "status": check_all.OK, "what": "y"}],
+            "a problem": [dict(ran, status=check_all.PROBLEMS, problems=["p"])],
+            "one not asked for": [ran, {"check": "b", "status": check_all.SKIPPED, "what": "y"}],
+        }
+        for case, results in cases.items():
+            with self.subTest(case=case):
+                self.assertIn("resting on 2 ? line(s)", check_all.render(results).splitlines()[-1])
 
     def test_the_json_carries_the_count_beside_the_status(self):
         circuit, rules = self._three_nulls()
@@ -602,7 +614,7 @@ class TheAnswerCountsWhatNobodyMeasuredTest(unittest.TestCase):
         circuit = written("circuit.json", [{"type": "source_net", "source_net_id": "V33", "name": "V33"}])
         rendered = check_all.render(check_all.run({"circuit": circuit}))
         self.assertNotIn("?", rendered, "the fixture must rest on nothing unmeasured")
-        self.assertNotIn("nobody has measured", rendered)
+        self.assertNotIn("resting on", rendered)
 
 
 class TheCheckListItselfTest(unittest.TestCase):

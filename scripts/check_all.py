@@ -414,7 +414,7 @@ def render(results):
     # less than happened. "Nothing found by the checks that ran" was true and useless when the
     # number of checks that ran was zero. An answer resting on `?` lines says how many (P108).
     unmeasured = unmeasured_in(results)
-    resting = ", resting on %d value(s) nobody has measured (the ? lines)" % unmeasured if unmeasured else ""
+    resting = ", resting on %d ? line(s)" % unmeasured if unmeasured else ""
     if problems:
         lines.append("  %d problem(s)%s" % (problems, resting))
     elif not completed:
@@ -429,9 +429,10 @@ def render(results):
 
 def unmeasured_in(results):
     """
-    How many values the answer rests on that nobody has measured: the `?` lines (P108). The PO
-    decided on 2026-10-05 that a null `max_current_a` stays a `?`, so an `ok` may rest on them,
-    and the answer must then say how many.
+    How many `?` lines the answer rests on (P108): values nobody has measured or verified, and
+    advisories. The PO decided on 2026-10-05 that a null `max_current_a` stays a `?`, so an `ok`
+    may rest on them, and the answer must then say how many. One line can name several figures,
+    so this counts lines, and says so.
     """
     return sum(len(result.get("unmeasured", [])) for result in results if result["status"] != SKIPPED)
 

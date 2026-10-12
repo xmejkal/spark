@@ -266,59 +266,112 @@ def rail_held_at(volts, verified=True, who="Mcu.3V3"):
 
 class TheWholeRailAcrossAResistorTest(unittest.TestCase):
     """
-    P197. A netlist cannot say what a resistor dissipates, but no resistor can see more than the highest rail on the
-    board: one end is on a rail, and every net sits between ground and that rail. So V^2 / R at that voltage is an upper
-    bound, and a resistor whose package survives the bound is safe whatever the topology. The bound only clears: a
-    resistor above it is still could-not-run, because for a shunt the bound is absurd, not a finding.
+    P197. A netlist cannot say what a resistor dissipates, but no resistor sees more than the span
+    between the highest and the lowest voltage on the board's nets. So V^2 / R at that span is an
+    upper bound, and a resistor whose package survives it at half its rating is safe whatever the
+    topology. The bound only clears: a resistor above it is still could-not-run, because for a
+    shunt the bound is absurd, not a finding.
     """
 
-    def _judge(self, ohms, rails, loads=None, footprint="res0603"):
-        circuit = [net("V33"), component("Pullup", "simple_resistor", resistance=ohms), port("Pullup", "pin1"),
-                   {"type": "cad_component", "source_component_id": "Pullup", "footprinter_string": footprint}]
+    def _judge(self, ohms, rails, loads=None, footprint="res0603", more=(), bus_nets=()):
+        circuit = [net("V33"), component("Pullup", "simple_resistor", resistance=ohms),
+                   port("Pullup", "pin1"),
+                   {"type": "cad_component", "source_component_id": "Pullup",
+                    "footprinter_string": footprint}]
         circuit += trace("V33", ["Pullup.pin1"], [0.25])
-        return [f for f in check_physics.check_resistor_power(check_physics.Board(circuit), rails, loads)]
+        circuit += list(more)
+        board = check_physics.Board(circuit)
+        return check_physics.check_resistor_power(board, rails, loads, bus_nets)
+
+    def severities(self, findings):
+        return [f.severity for f in findings]
 
     def test_a_10k_pull_up_on_a_rail_the_record_holds_at_3v3_is_cleared(self):
-        # 3.3^2 / 10k = 1.09 mW against an 0603's 0.1 W.
+        # 3.3^2 / 10k = 1.09 mW against half an 0603's 0.1 W.
         self.assertEqual(self._judge(10_000, {"V33": {}, "GND": {}}, {"V33": rail_held_at(3.3)}), [])
 
     def test_a_bound_resting_on_an_unverified_voltage_says_what_it_rests_on(self):
         findings = self._judge(10_000, {"V33": {}}, {"V33": rail_held_at(3.3, verified=False)})
-        self.assertEqual([f.severity for f in findings], ["needs-measurement"])
+        self.assertEqual(self.severities(findings), ["needs-measurement"])
         self.assertIn("Pullup", findings[0].detail)
         self.assertIn("Mcu.3V3: io_volts", findings[0].detail)
 
-    def test_a_voltage_the_rules_state_beats_the_record(self):
-        # A person's answer is a measurement; here it is what lets the bound through at all.
+    def test_a_voltage_the_rules_state_is_enough_without_the_records(self):
         self.assertEqual(self._judge(10_000, {"V33": {"nominal_volts": 3.3}}, None), [])
+
+    def test_a_voltage_the_rules_state_beats_the_record(self):
+        # 6.4^2 / 330 = 0.124 W stays unassessed; the record's 3.3 V (0.033 W) would have cleared it.
+        findings = self._judge(330, {"V33": {"nominal_volts": 6.4}}, {"V33": rail_held_at(3.3)})
+        self.assertEqual(self.severities(findings), ["could-not-run"])
 
     def test_a_resistor_above_the_bound_stays_unassessed_never_a_problem(self):
         # 1 ohm at 3.3 V is 10.9 W, which says nothing about a shunt that never sees the whole rail.
         findings = self._judge(1, {"V33": {}}, {"V33": rail_held_at(3.3)})
-        self.assertEqual([f.severity for f in findings], ["could-not-run"])
+        self.assertEqual(self.severities(findings), ["could-not-run"])
         self.assertIn("could not be assessed: Pullup", findings[0].detail)
 
-    def test_a_rail_whose_voltage_nobody_states_leaves_it_unassessed(self):
+    def test_the_bound_clears_only_at_half_the_rating(self):
+        # 120 ohm at 3.3 V is 0.091 W: under an 0603's 0.1 W, over the half the bound allows.
+        findings = self._judge(120, {"V33": {}}, {"V33": rail_held_at(3.3)})
+        self.assertEqual(self.severities(findings), ["could-not-run"])
+
+    def test_a_stated_current_is_judged_by_it_even_where_the_bound_would_clear(self):
+        # 0.1 A through 10k is 100 W, whatever the 3.3 V bound says.
+        rails = {"V33": {"resistor_currents": {"Pullup": 0.1}}}
+        findings = self._judge(10_000, rails, {"V33": rail_held_at(3.3)})
+        self.assertEqual(self.severities(findings), ["problem"])
+
+    def test_a_rail_whose_voltage_nobody_states_leaves_it_unassessed_and_is_named(self):
         findings = self._judge(10_000, {"V33": {}}, {"V33": summed(0.355, rating=1.5)})
-        self.assertEqual([f.severity for f in findings], ["could-not-run"])
+        self.assertEqual(self.severities(findings), ["could-not-run"])
+        self.assertIn("no voltage is stated for V33", findings[0].detail)
+        self.assertIn("state nominal_volts for V33", findings[0].fix)
 
     def test_another_rail_of_unknown_voltage_leaves_it_unassessed(self):
         # The pull-up's far end could sit on a net at MOTOR6V, so 3.3 V bounds nothing.
         rails = {"V33": {}, "MOTOR6V": {"nominal_volts": None}}
         findings = self._judge(10_000, rails, {"V33": rail_held_at(3.3)})
-        self.assertEqual([f.severity for f in findings], ["could-not-run"])
+        self.assertEqual(self.severities(findings), ["could-not-run"])
+        self.assertIn("MOTOR6V", findings[0].fix)
+
+    def test_a_named_net_neither_the_rules_nor_the_records_know_blocks_the_bound(self):
+        more = [net("V12"), port("Load", "VIN")] + trace("V12", ["Load.VIN"], [0.25], trace_id="t2")
+        findings = self._judge(10_000, {"V33": {}}, {"V33": rail_held_at(3.3)}, more=more)
+        self.assertEqual(self.severities(findings), ["could-not-run"])
+        self.assertIn("V12", findings[0].detail)
+
+    def test_an_i2c_line_needs_no_voltage_of_its_own(self):
+        more = [net("SDA"), port("Sensor", "SDA")] + trace("SDA", ["Sensor.SDA"], [0.25], trace_id="t2")
+        self.assertEqual(self._judge(10_000, {"V33": {}}, {"V33": rail_held_at(3.3)}, more=more,
+                                     bus_nets=["SDA"]), [])
+
+    def test_a_negative_rail_widens_the_span(self):
+        # 1k across 3.3 V is 0.011 W and clears; across 3.3 V to -5 V it is 0.069 W, over half the rating.
+        rails = {"V33": {}, "VNEG": {"nominal_volts": -5}}
+        findings = self._judge(1_000, rails, {"V33": rail_held_at(3.3)})
+        self.assertEqual(self.severities(findings), ["could-not-run"])
+
+    def test_a_board_with_no_voltage_but_ground_bounds_nothing(self):
+        circuit = [net("GND"), component("Shunt", "simple_resistor", resistance=1), port("Shunt", "pin1"),
+                   {"type": "cad_component", "source_component_id": "Shunt", "footprinter_string": "res0603"}]
+        circuit += trace("GND", ["Shunt.pin1"], [0.25])
+        findings = check_physics.check_resistor_power(check_physics.Board(circuit), {"GND": {}})
+        self.assertEqual(self.severities(findings), ["could-not-run"])
+
+    def test_a_resistor_between_two_rails_is_judged_once(self):
+        more = [net("GND"), port("Pullup", "pin2")] + trace("GND", ["Pullup.pin2"], [0.25], trace_id="t2")
+        findings = self._judge(1, {"V33": {}, "GND": {}}, {"V33": rail_held_at(3.3)}, more=more)
+        self.assertEqual([f.subject for f in findings], ["1 resistor(s)"])
+        self.assertIn("could not be assessed: Pullup.", findings[0].detail)
+
+    def test_a_voltage_that_is_not_a_number_is_no_voltage(self):
+        findings = self._judge(10_000, {"V33": {"nominal_volts": "3V3"}}, None)
+        self.assertEqual(self.severities(findings), ["could-not-run"])
 
     def test_a_rail_only_the_records_know_does_not_block_the_bound(self):
         # The FireBeetle's VCC pad is a 5 V rail in its record; a design that wires nothing to it has no such net.
         loads = {"V33": rail_held_at(3.3), "V5V": summed(0.355, rating=None)}
         self.assertEqual(self._judge(10_000, {"V33": {}}, loads), [])
-
-    def test_the_highest_rail_sets_the_bound(self):
-        # 6.4^2 / 330 = 0.124 W, over an 0603's 0.1 W, though 3.3^2 / 330 = 0.033 W would pass.
-        rails = {"V33": {}, "MOTOR6V": {"nominal_volts": 6.4}}
-        findings = self._judge(330, rails, {"V33": rail_held_at(3.3)})
-        self.assertEqual([f.severity for f in findings], ["could-not-run"])
-
 
 class AnEmptyRulesFileIsNotACleanBoardTest(unittest.TestCase):
     """

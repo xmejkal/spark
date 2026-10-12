@@ -301,6 +301,9 @@ class TheBasicJourneyTest(unittest.TestCase):
         self.assertEqual((checked.returncode, answer["status"]), (0, check_spine.OK), checked.stdout[-3000:])
         statuses = {result["check"]: result["status"] for result in answer["results"]}
         self.assertNotIn("could-not-run", statuses.values(), statuses)
+        # "Never from skipping": the fab package's check is the only one a fresh project may not be asked.
+        self.assertLessEqual({check for check, status in statuses.items() if status == "skipped"}, {"the-order"},
+                             statuses)
         self.assertEqual(statuses["physics"], check_spine.OK, "physics must look, not be skipped")
         self.assertIsInstance(answer["unmeasured"], int, "P108: the ok says how many values it rests on")
 

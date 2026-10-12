@@ -500,15 +500,15 @@ def rail_loads(part_list, board=None):
     """
     What each rail carries, summed from the facts its members' power pins name (P52).
 
-    `{net: {amps, complete, missing, unverified, supply}}`; a supply also says the `volts` it holds its rail at (P197).
-    A pin names its figure — `draws` on an
+    `{net: {amps, complete, missing, unverified, supply}}`. A pin names its figure — `draws` on an
     input, `can_supply` on an output, `own_draw` where a module takes from the rail it makes —
     because a servo has a stall AND an idle current and only the record can say which one its
     pin draws. `amps` is what IS stated, so an open rail still says what it carries at least;
     `missing` names every load the records leave open, where a total would be a guess.
 
     A converter's input `feeds` an output and draws at most what that output delivers: an upper
-    bound for a step-down converter, and the only figure its record can honestly give.
+    bound for a step-down converter, and the only figure its record can honestly give. An output
+    may also name the fact that states the voltage it holds its rail at, as `volts` (P197).
     """
     members = list(part_list) + ([module_as_part(board)] if board else [])
     rails, outputs = {}, {}

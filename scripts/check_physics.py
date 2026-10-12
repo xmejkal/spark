@@ -78,6 +78,10 @@ VOLTAGE_DERATING = {"tantalum": 2.0, "electrolytic": 1.5, "ceramic": 1.5, "unkno
 #: nothing said so.
 PACKAGE_POWER_W = fab.part("package_power_w")
 
+#: The resistor bound (P197) clears a resistor only at half its package rating: the usual derating, and room for a
+#: supply above its typical voltage. VDD33 is 3.6 V at most against 3.3 V typical, which is 19% more power.
+RESISTOR_POWER_DERATING = 2.0
+
 
 #: The only severities a finding may carry. Free text let "problems" vanish: nothing rendered,
 #: counted or filtered it (P143). `could-not-run` is the outcome word of the same name.
@@ -345,7 +349,7 @@ def check_capacitor_voltages(board, rails):
     return findings
 
 
-def check_resistor_power(board, rails, loads=None):
+def check_resistor_power(board, rails, loads=None, bus_nets=()):
     """
     Whether a resistor's package survives what it dissipates — which a netlist cannot answer.
 
@@ -366,14 +370,14 @@ def check_resistor_power(board, rails, loads=None):
     To make this a real check, a design has to state the current through a resistor — which is a
     thing a person knows and a netlist does not.
 
-    One upper bound needs no topology (P197): no resistor sees more than the highest rail on the
-    board, so a package that survives `V^2 / R` at that voltage is safe whatever the circuit. A
-    10k pull-up at 3.3 V is 1.1 mW, so a fresh button-and-LED board clears. The bound only clears:
-    above it the resistor stays unassessed, because for a shunt the bound is absurd, not a finding.
+    One upper bound needs no topology (P197): no resistor sees more than the span between the
+    highest and the lowest voltage on the board's nets. So a package that survives `V^2 / R` at
+    that span, at half its rating, is safe whatever the circuit. A 10k pull-up at 3.3 V is 1.1 mW,
+    so a fresh button-and-LED board clears. The bound only clears: above it the resistor stays
+    unassessed, because for a shunt the bound is absurd, not a finding.
     """
     findings = []
-    unassessable, resting = [], []
-    bound, unverified = highest_rail_volts(rails, loads, set(board.net_names()))
+    resistors = {}  # name -> the current a rail states for it, or None; each resistor judged once
     for rail, spec in sorted(rails.items()):
         for component_name in board.components_on(rail):
             component = board.named(component_name)
@@ -382,73 +386,103 @@ def check_resistor_power(board, rails, loads=None):
             if not component.get("resistance"):
                 continue
             stated = (spec.get("resistor_currents") or {}).get(component_name)
-            package = package_of(board.footprint_of(component_name))
-            rated = PACKAGE_POWER_W.get(package)
+            if resistors.get(component_name) is None:
+                resistors[component_name] = stated
 
-            if stated is None and rated is not None and bound is not None \
-                    and bound * bound / float(component["resistance"]) <= rated:
-                if unverified:
-                    resting.append(component_name)
-                continue
-            if stated is None or rated is None:
-                unassessable.append(component_name)
-                continue
+    span, unverified, unvoltaged = rail_span_volts(rails, loads, set(board.net_names()), bus_nets)
+    unassessable, resting = [], []
+    for component_name, stated in sorted(resistors.items()):
+        ohms = float(board.named(component_name)["resistance"])
+        package = package_of(board.footprint_of(component_name))
+        rated = PACKAGE_POWER_W.get(package)
 
-            watts = stated * stated * float(component["resistance"])
-            if watts > rated:
-                findings.append(Finding(
-                    "resistor-power", component_name,
-                    "dissipates %.3f W at the %.2f A this design states for it, through %g ohm, "
-                    "but a %s is rated %.3f W"
-                    % (watts, stated, float(component["resistance"]), package, rated),
-                    fix="use a package rated above %.3f W, or lower the resistance" % watts))
+        if stated is None and rated is not None and span is not None \
+                and span * span / ohms <= rated / RESISTOR_POWER_DERATING:
+            if unverified:
+                resting.append(component_name)
+            continue
+        if stated is None or rated is None:
+            unassessable.append(component_name)
+            continue
+
+        watts = stated * stated * ohms
+        if watts > rated:
+            findings.append(Finding(
+                "resistor-power", component_name,
+                "dissipates %.3f W at the %.2f A this design states for it, through %g ohm, "
+                "but a %s is rated %.3f W"
+                % (watts, stated, ohms, package, rated),
+                fix="use a package rated above %.3f W, or lower the resistance" % watts))
 
     if unassessable:
         findings.append(Finding(
             "resistor-power", "%d resistor(s)" % len(unassessable),
             "could not be assessed: %s. A netlist records neither the current through a resistor "
-            "nor the voltage across it, and both depend on topology the design does not state"
-            % ", ".join(sorted(unassessable)),
-            fix="state the current in the rules file under the rail's `resistor_currents`, for "
+            "nor the voltage across it, and both depend on topology the design does not state%s"
+            % (", ".join(unassessable),
+               "; no voltage is stated for %s, so no bound could clear them" % ", ".join(unvoltaged)
+               if unvoltaged else ""),
+            fix=("state nominal_volts for %s in the rules file, and every resistor whose package "
+                 "survives the board's whole voltage span clears. For one that still does not, "
+                 % ", ".join(unvoltaged) if unvoltaged else "")
+                + "state the current in the rules file under the rail's `resistor_currents`, for "
                 "any resistor whose dissipation actually matters — a shunt, an LED series "
                 "resistor, a bleeder. A pull-up almost never does.",
             severity="could-not-run"))
     if resting:
         findings.append(Finding(
             "resistor-power", "%d resistor(s)" % len(resting),
-            "%s: within its package with the whole %g V rail across it, resting on figures nobody "
-            "has verified: %s" % (", ".join(sorted(resting)), bound, "; ".join(unverified)),
+            "%s: within half its package rating with the board's whole %g V span across it, "
+            "resting on figures nobody has verified: %s"
+            % (", ".join(resting), span, "; ".join(unverified)),
             fix="verify each at its source, or state the rail's nominal_volts in the rules file",
             severity=NEEDS_MEASUREMENT))
     return findings
 
 
-def highest_rail_volts(rails, loads=None, nets=None):
+def rail_span_volts(rails, loads=None, nets=None, bus_nets=()):
     """
-    The most any net on this board sits above ground, and the unverified figures that rests on (P197).
+    The most voltage two nets of this board can put across a resistor, the unverified figures
+    that rests on, and the nets with no voltage at all (P197).
 
-    Every rail must have a voltage, because the one left out could be the highest. A voltage the
-    rules state beats the record's, as a measurement beats a datasheet; ground is zero. A rail
-    only the records know, such as a module's 5 V pad that nothing wires, is not one of `nets`
-    and so reaches no resistor. Returns (None, []) when a rail has no voltage, so the caller
-    assesses nothing on a guess.
+    Every named net needs a voltage, because the one left out could be the highest or the lowest.
+    A voltage the rules state beats the record's, as a measurement beats a datasheet; ground is
+    zero. An I2C line sits between ground and the rail its pull-up goes to, so it needs none. A
+    rail only the records know, such as a module's 5 V pad that nothing wires, is not one of
+    `nets` and so reaches no resistor. The span is None when a net has no voltage, or when no net
+    but ground has one, so the caller assesses nothing on a guess.
     """
-    highest, unverified = 0.0, []
-    wired = {net for net in (loads or {}) if nets is None or net in nets}
-    for rail in sorted(set(rails) | wired):
-        if rail.upper() in GROUND_NETS:
+    loads = loads or {}
+    wired = {net for net in loads if nets is None or net in nets}
+    highest = lowest = 0.0
+    unverified, unvoltaged = [], []
+    for net in sorted((set(rails) | wired | set(nets or ())) - set(bus_nets)):
+        if net.upper() in GROUND_NETS:
             continue
-        volts = (rails.get(rail) or {}).get("nominal_volts")
+        volts = volts_in((rails.get(net) or {}).get("nominal_volts"))
         if volts is None:
-            supply = ((loads or {}).get(rail) or {}).get("supply") or {}
+            supply = (loads.get(net) or {}).get("supply") or {}
             held = supply.get("volts") or {}
-            volts = held.get("value")
+            volts = volts_in(held.get("value"))
             if volts is not None and not held.get("verified"):
                 unverified.append("%s: %s" % (supply.get("who"), held.get("why")))
         if volts is None:
-            return None, []
-        highest = max(highest, float(volts))
-    return highest, unverified
+            unvoltaged.append(net)
+            continue
+        highest, lowest = max(highest, volts), min(lowest, volts)
+    if unvoltaged or highest == lowest:
+        return None, [], unvoltaged
+    return highest - lowest, unverified, []
+
+
+def volts_in(value):
+    """A stated voltage as a number, or None for null or anything that is not one ("3V3")."""
+    if isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def check_i2c_rise_time(board, buses, bus_hz, capacitance_pf):
@@ -513,7 +547,7 @@ def run(circuit, rules, loads=None):
     if rails:
         findings += check_trace_currents(board, rails, rise_c, loads)
         findings += check_capacitor_voltages(board, rails)
-        findings += check_resistor_power(board, rails, loads)
+        findings += check_resistor_power(board, rails, loads, rules.get("i2c_buses") or ())
     else:
         findings.append(Finding(
             "rails-not-stated", "physics.rails",
