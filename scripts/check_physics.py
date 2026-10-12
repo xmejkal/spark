@@ -380,19 +380,21 @@ def check_resistor_power(board, rails, loads=None, bus_nets=()):
     generator wires every supply (`net.X`). A supply joined by a bare trace is a voltage this file
     cannot see, so the bound runs only when the part records were read (`loads`, which
     `check_all --project` passes). Without them, nothing clears by it.
+
+    Every resistor on the board, not only one with an end on a rail (P197, the PO's choice of
+    2026-10-12): an LED's series resistor sits between a GPIO and the LED, on no rail, and was
+    never looked at while physics answered `ok`. Its stated current goes under any rail's
+    `resistor_currents`.
     """
     findings = []
-    resistors = {}  # name -> the current a rail states for it, or None; each resistor judged once
-    for rail, spec in sorted(rails.items()):
-        for component_name in board.components_on(rail):
-            component = board.named(component_name)
-            if not component or component.get("ftype") != "simple_resistor":
-                continue
-            if not component.get("resistance"):
-                continue
-            stated = (spec.get("resistor_currents") or {}).get(component_name)
-            if resistors.get(component_name) is None:
-                resistors[component_name] = stated
+    stated_currents = {}
+    for spec in rails.values():
+        for name, amps in (spec.get("resistor_currents") or {}).items():
+            stated_currents.setdefault(name, amps)
+    resistors = {component["name"]: stated_currents.get(component["name"])
+                 for component in board.components.values()
+                 if component.get("ftype") == "simple_resistor" and component.get("resistance")
+                 and component.get("name")}
 
     span, unverified, unvoltaged = (None, [], []) if loads is None else \
         rail_span_volts(rails, loads, set(board.net_names()), bus_nets)
@@ -431,7 +433,7 @@ def check_resistor_power(board, rails, loads=None, bus_nets=()):
             fix=("state nominal_volts for %s in the rules file, and every resistor whose package "
                  "survives the board's whole voltage span clears. For one that still does not, "
                  % ", ".join(unvoltaged) if unvoltaged else "")
-                + "state the current in the rules file under the rail's `resistor_currents`, for "
+                + "state the current in the rules file under any rail's `resistor_currents`, for "
                 "any resistor whose dissipation actually matters — a shunt, an LED series "
                 "resistor, a bleeder. A pull-up almost never does.",
             severity="could-not-run"))

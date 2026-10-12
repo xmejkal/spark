@@ -94,5 +94,17 @@
   "name": "a check that could not look adds its ? lines to the count",
   "find": "               if result[\"status\"] in (OK, PROBLEMS) and not result.get(\"unchecked\"))",
   "replace": "               if result[\"status\"] != SKIPPED)"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "only a resistor with an end on a rail is assessed (CC1)",
+  "find": "                 and component.get(\"name\")}",
+  "replace": "                 and component.get(\"name\") and any(component[\"name\"] in board.components_on(rail) for rail in rails)}"
+ },
+ {
+  "file": "scripts/check_physics.py",
+  "name": "a stated current is never read",
+  "find": "            stated_currents.setdefault(name, amps)",
+  "replace": "            pass"
  }
 ]

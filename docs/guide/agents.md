@@ -492,8 +492,8 @@ Today's output also carries `"unmeasured": 0`, after `status`.
      `"volts"`: the name of a fact ending in `_volts`, a plain key with no dotted path. The same pin has
      `"volts": "io_volts"` (3.3 V). A project's own copy of a record (`parts/<id>.json`) wins over the library
      ([P120](https://github.com/xmejkal/spark/issues/54)).
-   - **A resistor's current.** Physics assesses only a resistor with an end on a rail named in `physics.rails`: a
-     GPIO-to-LED series resistor is on no rail and is never assessed. A current goes under its rail, as
+   - **A resistor's current.** Physics assesses every resistor on the board, an LED's series resistor on no rail
+     among them. A current goes under any rail, as
      `physics.rails.<RAIL>.resistor_currents: {"<resistor>": <amps>}`. check_physics's own fix says it matters for "a
      shunt, an LED series resistor, a bleeder. A pull-up almost never does". A resistor without one clears when V²/R
      is at most half its package rating, V being the span between the highest and the lowest voltage on the board's

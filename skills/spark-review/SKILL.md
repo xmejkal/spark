@@ -32,7 +32,7 @@ with its own flag (`--circuit`, `--rules`, `--package`), which always beats the 
 | vendor-truth | the pin map, re-derived from the vendor's own header |
 | buildability | drill vs the pin that goes in it, annular ring, via class, package vs value |
 | the-order | the BOM against the schematic it came from |
-| physics | trace current, capacitor derating, resistor dissipation (only resistors with an end on a rail: a GPIO-to-LED series resistor is not assessed), I²C rise time |
+| physics | trace current, capacitor derating, resistor dissipation (every resistor, an LED's series resistor too), I²C rise time |
 | rules-vs-netlist | written rules against the design that was built |
 
 **Do not ask a reviewer to look at anything in that table.** A reviewer pointed at a dimension a

@@ -373,6 +373,29 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
         findings = self._judge(10_000, {"V33": {"nominal_volts": "3V3"}}, {})
         self.assertEqual(self.severities(findings), ["could-not-run"])
 
+    def _off_rail(self, ohms, rails):
+        # An LED's series resistor: between a GPIO and the LED, on a trace that names no net.
+        more = [component("Series", "simple_resistor", resistance=ohms), port("Series", "pin1"),
+                port("Led", "A"),
+                {"type": "cad_component", "source_component_id": "Series", "footprinter_string": "res0603"}]
+        more += trace(None, ["Series.pin1", "Led.A"], trace_id="t3")
+        findings = self._judge(10_000, rails, {"V33": rail_held_at(3.3)}, more=more)
+        return [f for f in findings if "Series" in f.detail or f.subject == "Series"]
+
+    def test_a_resistor_on_no_rail_is_assessed_and_cleared_by_the_bound(self):
+        # The PO, 2026-10-12: every resistor. 330 ohm at 3.3 V is 33 mW, under half an 0603's 0.1 W.
+        self.assertEqual(self._off_rail(330, {"V33": {}}), [])
+
+    def test_a_resistor_on_no_rail_the_bound_cannot_clear_is_could_not_run(self):
+        # 100 ohm at 3.3 V is 0.109 W. Before P197 it was on no line at all, under an `ok`.
+        findings = self._off_rail(100, {"V33": {}})
+        self.assertEqual(self.severities(findings), ["could-not-run"])
+        self.assertIn("Series", findings[0].detail)
+
+    def test_a_current_stated_under_any_rail_judges_a_resistor_on_no_rail(self):
+        findings = self._off_rail(100, {"V33": {"resistor_currents": {"Series": 0.5}}})
+        self.assertEqual(self.severities(findings), ["problem"])
+
     def test_a_rail_only_the_records_know_does_not_block_the_bound(self):
         # The FireBeetle's VCC pad is a 5 V rail in its record; a design that wires nothing to it has no such net.
         loads = {"V33": rail_held_at(3.3), "V5V": summed(0.355, rating=None)}
