@@ -1817,8 +1817,10 @@ def _drawer_answer(changes, questions, problems, dry_run):
     shelved = [Path(path).stem for path, project in wanted if shelvable(path, project)]
     left = [Path(path).stem for path, project in wanted if not shelvable(path, project)]
     said = ["  ? %s" % q["sentence"] for q in questions] + [
-        "  %s %s on your shelf, so every project finds it" % ("would put" if dry_run or problems else "put", stem)
-        for stem in shelved] + [
+        "  %s %s on your shelf, so every project finds it%s" % (
+            "would put" if dry_run or problems else "put", Path(path).stem,
+            "" if project else ". Its folder is on no list, so a later change to the record there does not reach this copy")
+        for path, project in wanted if shelvable(path, project)] + [
         "  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it"
         % stem for stem in left]
     return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],

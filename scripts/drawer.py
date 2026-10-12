@@ -11,6 +11,7 @@ finds it.
 
 import json
 import re
+from pathlib import Path
 from collections import namedtuple
 
 import boards
@@ -213,7 +214,8 @@ def settle(entry_id, before, values, known):
     if values.get("is"):
         where, path = resolve(values["is"], known)
         if where is None:
-            return None, [], [parts._problem(entry_id, "no record called %s — `parts.py --need` finds what exists"
+            return None, [], [parts._problem(entry_id, "no record called %s — `parts.py --need` finds what exists; one "
+                                             "/spark:research just wrote into this folder needs `--project .`"
                                              % json.dumps(values["is"]))]
         shelve = _shelve_from(values["is"], where, path)
     elif "is" not in values and _words((after.get("part_number") or {}).get("number")) and (
@@ -249,10 +251,14 @@ def plan_set(items, project=None):
     """
     if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
         return [], [], [parts._problem(None, "a drawer write is a JSON list of entries, each an object")]
-    # linkable() calls the given project's own layer "project"; a shelf copy names the project as the person's list does,
-    # and names none ("") when the folder is on no list, such as one /spark:research just wrote into (P185 review, P1).
-    named = (store.project_name(project) or "") if project else None
-    known = [row[:2] + (named,) + row[3:] if row[2] == "project" else row for row in linkable(project)]
+    # The given project only fills gaps: a record it holds under an id spark already knows never shadows the shelf or the
+    # library, or its copy would go on the shelf for every project (P185 refuter, RX1). Its own layer is named as the
+    # person's list names it, or not at all ("") when the folder is on no list (P185 review, P1).
+    known = linkable()
+    if project:
+        named, seen = store.project_name(project) or "", {row[:2] for row in known}
+        known = [row[:2] + (named,) + row[3:] for row in linkable(project)
+                 if row[2] == "project" and row[:2] not in seen] + known
     current, changes, questions, problems = entries(), [], [], []
     for item in items:
         values = {key: value for key, value in item.items() if key != "entry"}
@@ -263,6 +269,12 @@ def plan_set(items, project=None):
         change, asked, refused = settle(entry_id, current.get(entry_id), values, known)
         questions += asked
         problems += refused
+        if change and change["shelve"] and change["shelve"][1] is None and not parts.shelvable(*change["shelve"]):
+            # A folder on no list keeps a record only it can see: unshelved, the entry would point at nothing elsewhere (RX3).
+            problems.append(parts._problem(entry_id, "%s does not meet the part contract yet, and its folder is on no list, "
+                                           "so no other project could find it: fix it (`parts.py --validate --project .`) "
+                                           "or put the folder on your list (/spark:init)" % Path(change["shelve"][0]).stem))
+            continue
         if change:
             changes.append(change)
             current[entry_id] = change["after"]

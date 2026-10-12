@@ -2,20 +2,20 @@
  {
   "file": "scripts/drawer.py",
   "name": "plan_set ignores the project it is given and looks only at spark's layers and the person's list",
-  "find": "for row in linkable(project)]",
-  "replace": "for row in linkable()]"
+  "find": "for row in linkable(project)",
+  "replace": "for row in linkable()"
  },
  {
   "file": "scripts/drawer.py",
   "name": "plan_set looks in the wrong folder, the project's parent, for the record /spark:research wrote",
-  "find": "for row in linkable(project)]",
-  "replace": "for row in linkable(project.parent if project else None)]"
+  "find": "for row in linkable(project)",
+  "replace": "for row in linkable(project.parent if project else None)"
  },
  {
   "file": "scripts/drawer.py",
   "name": "with a project given, plan_set offers only the project's records and drops the library and the shelf",
-  "find": "for row in linkable(project)]",
-  "replace": "for row in linkable(project) if row[2] == \"project\"]"
+  "find": "] + known",
+  "replace": "]"
  },
  {
   "file": "scripts/parts.py",
@@ -32,8 +32,14 @@
  {
   "file": "scripts/drawer.py",
   "name": "the shelf copy names the layer 'project' instead of the project's name on the list (review P1)",
-  "find": "if row[2] == \"project\" else row for row",
-  "replace": "if False else row for row"
+  "find": "named, seen = store.project_name(project) or \"\"",
+  "replace": "named, seen = \"project\""
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a project's own copy of a known id shadows the library and goes on the shelf for every project (refuter RX1)",
+  "find": "and row[:2] not in seen]",
+  "replace": "]"
  },
  {
   "file": "scripts/drawer.py",
@@ -42,9 +48,21 @@
   "replace": "return (path, where) if where"
  },
  {
+  "file": "scripts/drawer.py",
+  "name": "a record no other project can see is linked from a folder on no list (refuter RX3)",
+  "find": "if change and change[\"shelve\"] and change[\"shelve\"][1] is None and not parts.shelvable(*change[\"shelve\"]):",
+  "replace": "if False:"
+ },
+ {
   "file": "scripts/parts.py",
   "name": "a write that puts a record on the shelf does not say so",
-  "find": "\"  %s %s on your shelf, so every project finds it\"",
-  "replace": "\"\" and \"%s %s\""
+  "find": "\"  %s %s on your shelf, so every project finds it%s\" % (",
+  "replace": "\"%s%s%s\" and \"\" % ("
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a folder on no list is not said to leave the shelf copy behind (refuter RX2)",
+  "find": "\"\" if project else \". Its folder",
+  "replace": "\"\" if True else \". Its folder"
  }
 ]
