@@ -199,8 +199,8 @@ simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which th
 and a `firmware/main.py`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
 into one flash image, so a run never tests an older firmware. The interpreter is the tools list's `firmware-image`,
 MicroPython v1.29.0 for the ESP32-S3, fetched and checked by `/spark:setup`. For another chip, add `--micropython <its
-.bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the scenario as run, and what
-wokwi-cli printed. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
+.bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the sha256 of the image it tested,
+the scenario as run, and what wokwi-cli printed. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
 CI minutes. Ask the person before each run and say that it spends minutes, even when your permissions would let it
 run: this command's allowed-tools leave it out, but an allow rule of theirs or auto mode would not stop it. Every check
 that costs nothing runs first, and a run that cannot pass stops there.
@@ -249,6 +249,37 @@ The converter that writes `diagram.json` **ships with the plugin** (`tools/circu
 project may carry its own at `tools/circuit-to-wokwi/cli.ts` and that one wins; otherwise the
 plugin's is used, so this stage works wherever the plugin is installed. It is built into one file
 that runs on Node, with nothing else to install; a project's own `cli.ts` runs with `bun`.
+
+## Put it on the board
+
+Once a scenario passed, one command puts that same flash image on the board
+([P192](https://github.com/xmejkal/spark/issues/144)). Plug the board in over USB, then run in the project folder:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --port <the board's serial port> --dry-run
+```
+
+The dry run prints the two esptool commands and runs nothing. The first erases the board's flash. The second writes the
+image at `0x0`, where the simulator loaded it. Without `--dry-run`, deploy.py runs them. Ask the person before that run,
+because it erases the board's whole flash. Without `--port`, esptool tries each serial port. On macOS the board shows as
+`/dev/cu.usbmodem…`.
+
+deploy.py flashes only an image that passed. The image is the one `sim/wokwi.toml` names. A log in `sim/runs/` must name
+its sha256 with `verdict: passed`, and no log may name it with another verdict. A log from an older spark names no image,
+so run the scenario again. If a file in `firmware/` changed after the run, deploy.py says so: the board gets the image
+that passed, not the change. It also names each run log that tested another image, so a scenario that failed on an
+older image is not forgotten. The chip comes from the board in `requirements.json`, and esptool refuses a board with
+another chip.
+
+esptool and mpremote come from `/spark:setup`, as the tools list's `flasher` and `board-shell`. If esptool cannot
+connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again. To see the firmware
+start, run the line deploy.py prints last, which opens mpremote's REPL, for example
+`python3 -m mpremote connect <port> repl`. The board's port name can change after the flash, because MicroPython
+brings its own USB serial port. `python3 -m mpremote devs` lists the ports. Press Ctrl-C, then Ctrl-D. The board
+restarts its firmware and prints `ready`.
+
+Nothing has run this on a board yet. The first run is the button-and-LED project on a FireBeetle 2 ESP32-S3, at the
+bench.
 
 ## After it builds
 

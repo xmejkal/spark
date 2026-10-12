@@ -11,7 +11,9 @@
     "parts-search": "jlcpcb",
     "chip-docs": "espressif-docs",
     "bench": "sigrok",
-    "ts-runtime": "bun"
+    "ts-runtime": "bun",
+    "flasher": "esptool",
+    "board-shell": "mpremote"
   },
   "contracts": {
     "pdf-text": "page-text",
@@ -123,6 +125,24 @@
     ],
     "install": {
       "pip": "python3 -m pip install --user littlefs-python"
+    }
+  },
+  "esptool": {
+    "for": "writing the flash image that passed the simulation onto the board (deploy.py)",
+    "kind": "python",
+    "module": "esptool",
+    "version": "5.5.0",
+    "install": {
+      "pip": "python3 -m pip install --user esptool=={version}"
+    }
+  },
+  "mpremote": {
+    "for": "MicroPython's REPL on the board over USB, to see the firmware start (deploy.py prints the line)",
+    "kind": "python",
+    "module": "mpremote",
+    "version": "1.29.0",
+    "install": {
+      "pip": "python3 -m pip install --user mpremote=={version}"
     }
   },
   "micropython-esp32s3": {

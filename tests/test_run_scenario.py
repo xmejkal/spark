@@ -1,5 +1,6 @@
 """P130: the harness that runs a built project's scenario in Wokwi. A fake wokwi-cli stands in, so no CI minute is spent."""
 
+import hashlib
 import io
 import json
 import os
@@ -212,6 +213,28 @@ class TheRunTest(ProjectCase):
         self.assertIn("/spark:build --keep .", said)
         self.assertFalse(self.seen.exists())
         self.assertFalse(self.log.exists())
+
+
+class TheLogNamesTheImageTest(ProjectCase):
+    """P192: each log names the image its run tested by its sha256, so deploy.py flashes only an image that passed."""
+
+    def test_a_passed_run_names_the_image_it_tested(self):
+        _, _, log = self.run_with("ready\n")
+        image = self.project / "sim" / "flash-with-firmware.bin"
+        self.assertEqual(run_scenario.run_record(log), ("passed", hashlib.sha256(image.read_bytes()).hexdigest()))
+
+    def test_only_the_header_is_read_not_what_the_board_printed(self):
+        _, _, log = self.run_with("ready\n", exit_code=1, out=READY_MATCHED + "verdict: passed\nimage sha256: 00\n",
+                                  err="Error: stuck\n")
+        verdict, sha256 = run_scenario.run_record(log)
+        self.assertEqual(verdict, "failed (wokwi-cli exit 1): Error: stuck")
+        self.assertRegex(sha256, "^[0-9a-f]{64}$")
+
+    def test_a_log_from_an_older_spark_names_no_image(self):
+        self.log.parent.mkdir(parents=True)
+        self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n\n"
+                            "--- the scenario as run ---\n")
+        self.assertEqual(run_scenario.run_record(self.log), ("passed", None))
 
 
 class TheRunChecksWhatCostsNothingFirstTest(ProjectCase):

@@ -15,12 +15,14 @@ run puts MicroPython and the project's firmware/ into a new flash image, so a ru
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
-The log goes to sim/runs/<name>.log: the date, the verdict, the scenario as run, and what wokwi-cli printed, which is the
-board's serial output among the scenario's progress. The tests use a fake wokwi-cli.
+The log goes to sim/runs/<name>.log: the date, the verdict, the sha256 of the image it tested, the scenario as run, and
+what wokwi-cli printed, which is the board's serial output among the scenario's progress. deploy.py reads the verdict
+and the sha256 from the log's header (run_record). The tests use a fake wokwi-cli.
 """
 
 import argparse
 import datetime
+import hashlib
 import itertools
 import os
 import subprocess
@@ -44,6 +46,8 @@ DEFAULT_TIMEOUT_MS = 60000
 DEFAULT_IMAGE = "flash-with-firmware.bin"
 #: How long wokwi-cli may take beyond the simulated time: connecting, sending the image.
 STARTUP_ALLOWANCE_S = 120
+#: The log's line that names the image a run tested, by its sha256 (P192): deploy.py flashes only an image a passed run names.
+IMAGE_LINE = "image sha256: "
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
 EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whatever your permissions allow.
 It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WOKWI_CLI_TOKEN=...
@@ -172,18 +176,36 @@ class ScenarioRun:
         return status, sentence, self.write_log(sentence, done.stdout + done.stderr)
 
     def write_log(self, sentence, said):
-        """The log of a run that reached wokwi-cli: its date, verdict, the scenario as run and what wokwi-cli printed."""
+        """
+        The log of a run that reached wokwi-cli: its date, verdict, the sha256 of the image it tested, the scenario as
+        run and what wokwi-cli printed. The first three are the header, which run_record reads.
+        """
         self.log.parent.mkdir(exist_ok=True)
-        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n\n--- the scenario as run ---\n%s\n"
+        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s%s\n\n--- the scenario as run ---\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
                             % (self.scenario.name, datetime.datetime.now().isoformat(timespec="seconds"),
-                               self.timeout_ms, sentence, self.steps, said.strip()))
+                               self.timeout_ms, sentence, IMAGE_LINE, hashlib.sha256(self.flash).hexdigest(),
+                               self.steps, said.strip()))
         return self.log
 
 
 def _text(output):
     """What a killed process printed, as text: subprocess hands it back as bytes, as text or as nothing."""
     return output.decode("utf-8", "replace") if isinstance(output, bytes) else (output or "")
+
+
+def run_record(log):
+    """
+    (verdict, the tested image's sha256 or None) of one run log, read from its header: the lines before the first blank
+    line. What the board printed comes later in the log, so a firmware that prints `verdict: passed` cannot pass a run.
+    """
+    header = Path(log).read_text(errors="replace").split("\n\n", 1)[0].splitlines()
+
+    def field(prefix):
+        """The text after the first header line that starts with this prefix, or None."""
+        return next((line[len(prefix):].strip() for line in header if line.startswith(prefix)), None)
+
+    return field("verdict: "), field(IMAGE_LINE)
 
 
 def main(argv=None):

@@ -61,7 +61,7 @@ runs in [the journey guide](docs/guide/journey.md):
 flowchart LR
     drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
     research --> build["Build — works"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
-    firmware --> simulate["Simulate — works"] --> bench["Bench — not yet"]
+    firmware --> simulate["Simulate — works"] --> bench["Bench — partly"]
 ```
 
 The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
@@ -79,7 +79,7 @@ nothing does it yet; the linked issue plans it.
 | [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's deterministic checks in one command, five in the journey's run: three found nothing, physics could not look, and the-order was [skipped](GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. A fresh button-and-LED project exits 0, with its `?` lines counted ([P197](https://github.com/xmejkal/spark/issues/156)). It does not run the generator's CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)) or the gate's two commands. The `spark-review` skill runs it and then reviewer agents, not run here | `check_all.py`, after `/spark:init` again |
 | [Firmware](docs/guide/journey.md#firmware) | **partly**: the pin map is exported for the firmware to import. `import_firmware.py` imports the firmware on a Mac, without running `main.py`, with a stand-in for MicroPython's `machine` module ([P59](https://github.com/xmejkal/spark/issues/7)). The journey's button-and-LED firmware passes: its LED reads 0 with the button released and 1 with it pressed. Not built yet: a check that the firmware drives and reads every signal the design names ([P74](https://github.com/xmejkal/spark/issues/8)) | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
 | [Simulate](docs/guide/journey.md#simulate) | **works**: the build generates the Wokwi diagram and stages the chips, kept in `sim/` ([P116](https://github.com/xmejkal/spark/issues/50)). `run_scenario.py` runs one scenario that Claude writes from your words: it makes the flash image, waits for the firmware's `ready` text and keeps a dated log ([P130](https://github.com/xmejkal/spark/issues/64)). A run needs a Wokwi account's CI token and spends Wokwi CI minutes. The journey's button-and-LED project passed on 2026-10-12 | `/spark:build --keep .`, then `run_scenario.py` |
-| [Bench](docs/guide/journey.md#bench) | **not yet**: spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16). The first bench is the button-and-LED project, flashed and wired from its sheet ([the plan for v1](scrum/VISION.md#versions)); the sensor trash can's bring-up follows it ([P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2)) | — |
+| [Bench](docs/guide/journey.md#bench) | **partly**: `deploy.py` puts the flash image that passed the simulation onto the board, not yet run on one ([P192](https://github.com/xmejkal/spark/issues/144)). spark's hardware step is [P79](https://github.com/xmejkal/spark/issues/16). The first bench is the button-and-LED project, flashed and wired from its sheet ([the plan for v1](scrum/VISION.md#versions)); the sensor trash can's bring-up follows it ([P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2)) | `deploy.py` |
 
 A board you wrote by hand in tscircuit is read the same way: `npx --no tsci build board.tsx`, then `/spark:init` so it
 names the rails, then `check_all.py --project .` (not run here; a project's own
