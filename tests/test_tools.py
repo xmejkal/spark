@@ -580,5 +580,30 @@ class SparkSDefaultsHoldTogetherTest(unittest.TestCase):
         # tsci's launcher is `#!/usr/bin/env bun` (tscircuit's cli.mjs); the cold run proved it.
         self.assertIn("bun", tools.merged(None, Path(tempfile.mkdtemp()) / "absent.json")["tools"]["tscircuit"].get("needs") or [])
 
+
+class TheFlashingToolsAreOfferedTest(unittest.TestCase):
+    """P192 (a): /spark:setup offers esptool and mpremote from the shipped list, each at its pin."""
+
+    def setUp(self):
+        patcher = mock.patch.object(tools, "PERSONAL", Path(tempfile.mkdtemp()) / "absent.json")
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_status_lists_the_flasher_and_the_board_shell_with_their_install_lines(self):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with mock.patch.object(tools.importlib.util, "find_spec", return_value=None), \
+                mock.patch.object(tools.shutil, "which", side_effect=lambda exe: "/usr/bin/" + exe), \
+                contextlib.redirect_stdout(out):
+            tools.main(["--status"])
+        said = out.getvalue()
+        self.assertIn("flasher (esptool) is not installed \u2014 install: python3 -m pip install --user esptool==5.5.0", said)
+        self.assertIn("board-shell (mpremote) is not installed \u2014 install: python3 -m pip install --user mpremote==1.29.0",
+                      said)
+        self.assertRegex(said, r"to install: .*\besptool\b")
+        self.assertRegex(said, r"to install: .*\bmpremote\b")
+
+
 if __name__ == "__main__":
     unittest.main()
