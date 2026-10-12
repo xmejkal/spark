@@ -34,13 +34,15 @@ steps:
 class TheReadyWaitTest(unittest.TestCase):
     def test_the_wait_goes_before_the_first_step_at_its_indent(self):
         self.assertIn('steps:\n  - wait-serial: "ready"\n  - set-control:', run_scenario.with_ready_wait(SCENARIO))
+        flush = SCENARIO.replace("\n  - ", "\n- ")
+        self.assertIn('steps:\n- wait-serial: "ready"\n- set-control:', run_scenario.with_ready_wait(flush))
 
     def test_a_scenario_that_already_waits_for_ready_is_left_as_it_is(self):
         once = run_scenario.with_ready_wait(SCENARIO)
         self.assertEqual(run_scenario.with_ready_wait(once), once)
 
     def test_a_scenario_with_no_steps_is_refused(self):
-        for text in ("name: x\nversion: 1\n", "name: x\nsteps:\n"):
+        for text in ("name: x\nversion: 1\n", "name: x\nsteps:\n", "steps:\nversion: 1\n"):
             with self.subTest(text=text), self.assertRaisesRegex(ValueError, "steps"):
                 run_scenario.with_ready_wait(text)
 
@@ -97,7 +99,7 @@ class TheRunTest(unittest.TestCase):
         self.assertIn("never printed 'ready'", said)
 
     def test_a_timeout_after_ready_says_it_timed_out(self):
-        status, said, _ = self.run_with("ready\n", exit_code=run_scenario.TIMEOUT_EXIT)
+        status, said, _ = self.run_with("ready\n", exit_code=42)  # wokwi-cli's --timeout-exit-code default, from its --help (0.27.1)
         self.assertEqual(status, PROBLEMS)
         self.assertIn("timed out after 60000 ms", said)
 

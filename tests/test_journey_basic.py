@@ -40,6 +40,8 @@ FIRMWARE_FIXTURE = FIXTURE / "firmware"
 #: The scenario the conversation wrote from the person's words (P130), and wokwi-cli as the suite runs it: faked.
 SCENARIO_FIXTURE = FIXTURE / "scenarios" / "the-button-lights-the-led.scenario.yaml"
 FAKE_WOKWI_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
+#: The image the build's wokwi.toml names once the harness names one: commands/build.md's flash-with-firmware.bin.
+FLASH_IMAGE = "flash-with-firmware.bin"
 #: The stand-in `machine` the firmware imports under, put first on the path of a process of its own (never this one's).
 STAND_IN = ROOT / "scripts" / "stand_in"
 
@@ -127,13 +129,11 @@ def _firmware(path):
 
 
 def _run_log(path):
-    # P130: the harness ran the project's scenario after the ready line, on an image of the project's own firmware.
+    # P130: the harness ran the project's scenario, and passed, on an image of the project's own firmware.
     text = path.read_text()
     if "verdict: passed" not in text:
         return "the run did not pass: %s" % text.splitlines()[1]
-    if '- wait-serial: "%s"' % run_scenario.READY not in text:
-        return "the scenario ran with no wait for the ready line"
-    image = path.parent.parent / run_scenario.DEFAULT_IMAGE
+    image = path.parent.parent / FLASH_IMAGE
     return None if b"light.run()" in image.read_bytes() else "the flash image does not hold the project's main.py"
 
 
@@ -269,6 +269,27 @@ class TheFirmwareStageBitesTest(unittest.TestCase):
 
     def test_without_the_pin_map_the_pin_map_stage_names_it_and_this_one_says_nothing(self):
         self.assertIsNone(_firmware(self.light_with(pins=False)))
+
+
+class TheRunStageBitesTest(unittest.TestCase):
+    """The Wokwi run stage's own check goes red, as the firmware stage's does: a fake that always passes proves nothing alone."""
+
+    @staticmethod
+    def log_with(verdict="passed", main=b"import light\nlight.run()\n"):
+        runs = Path(tempfile.mkdtemp()) / "sim" / "runs"
+        runs.mkdir(parents=True)
+        (runs.parent / FLASH_IMAGE).write_bytes(b"\xff" * 64 + main)
+        (runs / "the-button-lights-the-led.log").write_text("# the run\nverdict: %s\n" % verdict)
+        return runs / "the-button-lights-the-led.log"
+
+    def test_a_passed_run_on_the_project_s_firmware_passes(self):
+        self.assertIsNone(_run_log(self.log_with()))
+
+    def test_a_failed_run_is_named_with_its_verdict(self):
+        self.assertEqual(_run_log(self.log_with("timed out")), "the run did not pass: verdict: timed out")
+
+    def test_an_image_without_the_project_s_main_py_is_named(self):
+        self.assertEqual(_run_log(self.log_with(main=b"")), "the flash image does not hold the project's main.py")
 
 
 class TheBasicJourneyTest(unittest.TestCase):
