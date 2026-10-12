@@ -385,6 +385,12 @@ def plan(names, project=None, personal=None):
         if "sudo" in argv:
             step["problem"] = "%s needs sudo, which spark never runs — run it yourself: %s" % (name, " ".join(argv))
             continue
+        folder = Path(project or ".").absolute()
+        if argv[0] == "npm" and not {"-g", "--global"} & set(argv) and not (folder / "package.json").is_file():
+            # npm installs into the nearest folder above that has a package.json, on the owner's Mac the home (P113)
+            step["problem"] = "%s: %s has no package.json, so npm can install into a folder above it — run /spark:init " \
+                              "there first" % (name, folder)
+            continue
         step["argv"] = argv
     return steps
 

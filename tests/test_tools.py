@@ -510,6 +510,7 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
     # I5 — a pin must reach what is installed.
     def npm_project(self, cli_version, core_version, pins):
         project = project_with({"tscircuit": pins} if pins else {})
+        (project / "package.json").write_text("{}\n")  # /spark:init's, which a project install needs (P113)
         for package, version in (("@tscircuit/cli", cli_version), ("tscircuit", core_version)):
             folder = project / "node_modules" / package
             folder.mkdir(parents=True)
@@ -655,6 +656,46 @@ class TheDryRunSaysWhatItWouldDoTest(unittest.TestCase):
         with mock.patch.object(tools.shutil, "which", side_effect=lambda exe: "/usr/bin/" + exe):
             self.assertEqual(tools.install(["sim", "docs"], run=lambda argv, **kw: ran.append(argv)), [])
         self.assertEqual(ran, [])
+
+
+class AnNpmInstallNeedsThePackageJsonTest(unittest.TestCase):
+    """P113 (#47): with no package.json in the project, npm installs into the nearest folder above it that has one."""
+
+    def setUp(self):
+        defaults = dict(DEFAULTS, **{
+            "engine": {"kind": "npm", "exe": "engine", "install": {"npm": "npm install --save-dev engine"}},
+            "runner": {"kind": "path", "exe": "runner", "install": {"npm": "npm install -g runner"}},
+        })
+        for name, value in (("DEFAULTS", layer(defaults)), ("PERSONAL", Path(tempfile.mkdtemp()) / "absent.json")):
+            patcher = mock.patch.object(tools, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.parent = Path(tempfile.mkdtemp())
+        (self.parent / "package.json").write_text("{}\n")
+        self.project = self.parent / "bin"
+        self.project.mkdir()
+        self.ran = []
+
+    def install(self, name):
+        with mock.patch.object(tools.shutil, "which", side_effect=lambda exe: "/usr/bin/npm" if exe == "npm" else None):
+            return tools.install([name], self.project, run=lambda argv, **kw: self.ran.append(argv))
+
+    def test_a_project_install_refuses_and_says_to_run_init_first(self):
+        with self.assertRaises(tools.ToolProblem) as refused:
+            self.install("engine")
+        self.assertEqual(self.ran, [], "npm never ran, so the parent's package.json is untouched")
+        self.assertIn("package.json", str(refused.exception))
+        self.assertIn("/spark:init", str(refused.exception))
+        self.assertEqual((self.parent / "package.json").read_text(), "{}\n")
+
+    def test_a_project_install_runs_once_the_project_has_its_package_json(self):
+        (self.project / "package.json").write_text("{}\n")
+        self.install("engine")
+        self.assertEqual(self.ran, [["npm", "install", "--save-dev", "engine"]])
+
+    def test_a_global_install_needs_no_package_json(self):
+        self.install("runner")
+        self.assertEqual(self.ran, [["npm", "install", "-g", "runner"]])
 
 
 if __name__ == "__main__":
