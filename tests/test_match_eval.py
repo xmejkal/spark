@@ -27,6 +27,20 @@ def a_drawer():
     return folder
 
 
+def a_cases_file(cases=None):
+    """A real cases file, so that a refusal is about what it says it is about."""
+    path = Path(tempfile.mkdtemp()) / "cases.json"
+    path.write_text(json.dumps(CASES if cases is None else cases))
+    return str(path)
+
+
+def ran(argv):
+    """match_eval.main's exit code and the envelope it printed (argv ends with --json)."""
+    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+        code = match_eval.main(argv)
+    return code, json.loads(out.getvalue())
+
+
 CASES = [{"does": "sense", "what": "range", "expect": "tof"}, {"does": "sense", "what": "lidar", "expect": "tof"},
          {"does": "sense", "what": "air", "not_first": "pir"}]
 
@@ -53,8 +67,36 @@ class TheEvalTest(unittest.TestCase):
         self.assertEqual((code, said["envelope"], said["status"], [m["matcher"] for m in said["data"]["matchers"]]),
                          (0, 1, "ok", ["same-words", "word-overlap"]))
 
-    def test_an_unknown_matcher_or_an_unreadable_file_could_not_run(self):
-        with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(match_eval.main(["--cases", "/nonexistent.json", "--drawer", str(a_drawer())]), 2)
-            self.assertEqual(match_eval.main(["--cases", "/nonexistent.json", "--drawer", str(a_drawer()), "--matcher", "nope"]), 2)
-            self.assertEqual(match_eval.main(["--cases", "/nonexistent.json", "--drawer", str(a_drawer()), "--matcher", "name-contains"]), 2)
+    def test_a_matcher_that_is_no_matcher_for_match_is_refused_with_the_names_that_fit(self):
+        for name in ("nope", "name-contains"):
+            with self.subTest(matcher=name):
+                code, said = ran(["--cases", a_cases_file(), "--drawer", str(a_drawer()), "--matcher", name, "--json"])
+                self.assertEqual((code, said["status"]), (2, "could-not-run"))
+                self.assertIn("same-words, word-overlap", said["unchecked"][0]["sentence"])
+
+    def test_a_cases_file_that_is_not_there_could_not_run(self):
+        code, said = ran(["--cases", "/nonexistent.json", "--drawer", str(a_drawer()), "--json"])
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+
+    def test_a_missing_argument_is_the_envelope_and_not_a_usage_message(self):
+        code, said = ran(["--drawer", str(a_drawer()), "--json"])
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertIn("--cases", said["unchecked"][0]["sentence"])
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as usage:
+            self.assertEqual(match_eval.main(["--drawer", str(a_drawer())]), 2)
+        self.assertEqual((out.getvalue().startswith("could-not-run: "), usage.getvalue()), (True, ""))
+
+    def test_a_case_with_neither_expect_nor_not_first_could_not_run(self):
+        code, said = ran(["--cases", a_cases_file([{"does": "sense", "what": "range"}]), "--drawer", str(a_drawer()), "--json"])
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertIn("expect", said["unchecked"][0]["sentence"])
+        self.assertIn("not_first", said["unchecked"][0]["fix"])
+
+    def test_a_drawer_file_that_is_not_an_object_could_not_run(self):
+        for said_in_file in ("[1, 2]", "null", '"tof"', "7"):
+            with self.subTest(file=said_in_file):
+                folder = a_drawer()
+                (folder / "odd.json").write_text(said_in_file)
+                code, said = ran(["--cases", a_cases_file(), "--drawer", str(folder), "--json"])
+                self.assertEqual((code, said["status"]), (2, "could-not-run"))
+                self.assertIn("drawer file", said["unchecked"][0]["sentence"])
