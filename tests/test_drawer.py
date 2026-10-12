@@ -94,6 +94,19 @@ class TheDrawerTest(unittest.TestCase):
         self.assertEqual([next(line for line in lines if label in line).split()[2] for label in ("burnt buzzers", "some resistors")],
                          ["0", "?"])
 
+    def test_a_record_in_the_project_given_is_linked_though_the_project_is_on_no_list(self):
+        # P185: /spark:research writes the record into the project it runs in; --drawer-set --project must find it there.
+        project = Path(tempfile.mkdtemp()) / "research"
+        (project / "parts").mkdir(parents=True)
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record.update(id="knob-encoder")
+        (project / "parts" / "knob-encoder.json").write_text(json.dumps(record))
+        run(["--drawer-set", a_file([{"label": "a knob", "count": 1}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]),
+                          "--project", str(project)])
+        self.assertEqual((said["status"], code), ("ok", 0), said)
+        self.assertEqual(self.entry("a-knob")["is"], {"part": "knob-encoder"})
+
     def test_a_new_entry_with_a_count_and_no_label_is_still_refused(self):
         said, code = run(["--drawer-set", a_file([{"entry": "some-resistors", "count": 50}])])
         self.assertEqual((said["status"], code), ("problems", 1))

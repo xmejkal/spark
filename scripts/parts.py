@@ -1840,7 +1840,7 @@ def _op_drawer_set(args, project):
     items, unreadable = _read_json_input(args.drawer_set)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    return _drawer_answer(*drawer.plan_set(items), args.dry_run)
+    return _drawer_answer(*drawer.plan_set(items, project), args.dry_run)
 
 
 def _op_drawer_import(args, project):

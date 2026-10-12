@@ -241,14 +241,15 @@ def _free_key(label, current):
     return key
 
 
-def plan_set(items):
+def plan_set(items, project=None):
     """
     What a `--drawer-set` would do: (changes, questions, problems). Each item sets fields on one entry — `entry`
-    names it; a new one's key is made from its label. A later item sees what an earlier one set.
+    names it; a new one's key is made from its label. A later item sees what an earlier one set. An `is` may name a
+    record in `project` too, the folder /spark:research just wrote it into (P185), though no list names that project.
     """
     if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
         return [], [], [parts._problem(None, "a drawer write is a JSON list of entries, each an object")]
-    current, known, changes, questions, problems = entries(), linkable(), [], [], []
+    current, known, changes, questions, problems = entries(), linkable(project), [], [], []
     for item in items:
         values = {key: value for key, value in item.items() if key != "entry"}
         entry_id = item.get("entry") or (_free_key(clean(values["label"]), current) if _words(values.get("label")) else None)
