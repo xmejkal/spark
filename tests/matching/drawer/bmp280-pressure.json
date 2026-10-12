@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "BMP280 pressure sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "pressure"
+    }
+  ],
+  "about": "Reads the air pressure, and from it the altitude and the weather trend.",
+  "description": "The chip measures the air pressure and its own temperature and sends the numbers over I2C or SPI. It reads from 300 to 1100 hPa with an error of about 1 hPa. Software turns the pressure into a height, and that height drifts as the weather changes.",
+  "tags": [
+    "barometer",
+    "altitude",
+    "weather",
+    "air"
+  ]
+}

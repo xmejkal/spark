@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Capacitive soil moisture sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "soil-moisture"
+    }
+  ],
+  "about": "Tells how wet the soil around a plant is.",
+  "description": "The probe is a flat board with a coated track that you push into the soil. It gives a voltage that drops as the soil gets wetter, and the microcontroller reads it on an analog pin. The reading is relative, so each sensor needs its own dry and wet marks.",
+  "tags": [
+    "plant",
+    "water",
+    "wet",
+    "dry",
+    "garden"
+  ]
+}

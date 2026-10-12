@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "Slide potentiometer",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "slider"
+    }
+  ],
+  "about": "A fader that slides along a track.",
+  "description": "A slider moves along a track, and its position sets a resistance, so the middle pin gives a voltage. A microcontroller reads that voltage on an analog pin. The track is 45 mm long, and dust in the track makes the reading jump.",
+  "tags": [
+    "fader",
+    "slide",
+    "linear",
+    "analog"
+  ]
+}

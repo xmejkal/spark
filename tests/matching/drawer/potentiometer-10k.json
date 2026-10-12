@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "10k potentiometer",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "potentiometer"
+    }
+  ],
+  "about": "A knob that turns between two stops and gives a voltage.",
+  "description": "A shaft moves a wiper along a resistor track of 10 kilohms. The middle pin gives a voltage between zero and the supply, and a microcontroller reads it on an analog pin. It turns about 270 degrees and then stops, and the track wears after many turns.",
+  "tags": [
+    "knob",
+    "dial",
+    "analog",
+    "volume"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "TTP223 touch pad",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "touch-pad"
+    }
+  ],
+  "about": "A pad that senses a finger's touch through thin plastic.",
+  "description": "The chip senses the small change in capacitance when a finger comes near the pad. Its output pin goes high while the pad is touched, or it toggles when you set a jumper. It works through plastic or glass up to a few millimeters thick and gives false touches when the pad is wet.",
+  "tags": [
+    "touch",
+    "capacitive",
+    "tap",
+    "finger"
+  ]
+}

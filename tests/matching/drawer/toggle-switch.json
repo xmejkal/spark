@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "Toggle switch",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "switch"
+    }
+  ],
+  "about": "A lever that stays on or off.",
+  "description": "A small lever moves a contact between two positions, and it stays where you leave it. It goes in a power line or on a pin that reads high or low. It is rated for 2 A at 125 V AC, and it wears fast when it switches a motor.",
+  "tags": [
+    "toggle",
+    "on",
+    "off",
+    "lever"
+  ]
+}

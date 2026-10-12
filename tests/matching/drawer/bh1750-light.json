@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "BH1750 light sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "light"
+    }
+  ],
+  "about": "Measures how bright the light is, in lux.",
+  "description": "The chip turns the light that hits it into a number and sends the number over I2C. It reads from 1 to 65535 lux. It has only two I2C addresses, so one bus holds two of them at most.",
+  "tags": [
+    "lux",
+    "brightness",
+    "daylight",
+    "ambient"
+  ]
+}

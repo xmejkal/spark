@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "label": "VL53L0X laser distance sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "distance"
+    }
+  ],
+  "about": "Measures how far away an object is, up to 2 m, with an infrared laser.",
+  "description": "The chip sends a short pulse of infrared laser light and times how long it takes to come back. A microcontroller reads the result over I2C as a number of millimeters. It works up to about 2 m and loses accuracy in bright sunlight.",
+  "tags": [
+    "range",
+    "distance",
+    "laser",
+    "tof",
+    "lidar",
+    "proximity"
+  ]
+}

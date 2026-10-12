@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "INA219 current sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "current"
+    }
+  ],
+  "about": "Measures the current and the voltage that a circuit draws.",
+  "description": "The chip measures the voltage across a small shunt resistor and the voltage of the supply, and it sends both over I2C. A microcontroller reads the current and the power from them. It handles up to 26 V on the bus and 3.2 A with the 0.1 ohm resistor of the board.",
+  "tags": [
+    "power",
+    "amps",
+    "voltage",
+    "battery",
+    "consumption"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "HC-SR04 ultrasonic distance sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "distance"
+    }
+  ],
+  "about": "Measures the distance to an object with sound pulses, from 2 cm to 4 m.",
+  "description": "The module sends out a burst of sound that people cannot hear and waits for the echo. A microcontroller starts it with a pulse on one pin and times the answer on another pin. It reads from 2 cm to 4 m and misses soft or slanted surfaces.",
+  "tags": [
+    "range",
+    "sonar",
+    "echo",
+    "ultrasonic",
+    "obstacle"
+  ]
+}

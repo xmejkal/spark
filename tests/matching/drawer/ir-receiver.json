@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "VS1838B IR receiver",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "infrared-remote"
+    }
+  ],
+  "about": "Receives the buttons pressed on a TV remote.",
+  "description": "The part has a photodiode and a chip that picks out the 38 kHz pulses of a remote. It sends the pulse pattern on one pin, and a library turns the pattern into a button code. It works up to about 10 m and fails in strong sunlight.",
+  "tags": [
+    "remote",
+    "ir",
+    "tv",
+    "receiver"
+  ]
+}

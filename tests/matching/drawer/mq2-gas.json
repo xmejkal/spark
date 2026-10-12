@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "MQ-2 gas sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "gas"
+    }
+  ],
+  "about": "Detects smoke and flammable gas in the air.",
+  "description": "The sensor has a small heated element whose resistance falls when gas touches it. The module gives an analog voltage and a digital pin that flips at a level you set with a dial. It needs 5 V and about a minute of warm-up, and it cannot tell one gas from another.",
+  "tags": [
+    "smoke",
+    "lpg",
+    "methane",
+    "leak",
+    "alarm"
+  ]
+}

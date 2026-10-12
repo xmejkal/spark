@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Arcade button with LED",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "button"
+    }
+  ],
+  "about": "A big round button with a light inside, for games.",
+  "description": "A large round button has a lamp inside and a micro switch below it. The button closes a circuit when pressed, and the lamp lights from its own pins. The button is 30 mm wide, and the lamp needs a resistor on 5 V.",
+  "tags": [
+    "big",
+    "arcade",
+    "led",
+    "game",
+    "light"
+  ]
+}

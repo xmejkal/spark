@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "HC-SR501 PIR motion sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "motion"
+    }
+  ],
+  "about": "Notices when a person moves in front of it.",
+  "description": "The sensor watches for a change in the infrared heat of the scene in front of it. Its output pin goes high for a set time when something warm moves. It sees about 7 m away in a cone of 120 degrees and ignores anything that stands still.",
+  "tags": [
+    "pir",
+    "presence",
+    "people",
+    "movement",
+    "infrared"
+  ]
+}
