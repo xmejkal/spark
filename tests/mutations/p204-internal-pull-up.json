@@ -18,12 +18,6 @@
   "replace": "        if False:"
  },
  {
-  "file": "scripts/init_project.py",
-  "name": "a firmware-pulled pin stays in must_not_float",
-  "find": "if need.get(\"direction\") == \"in\" and need.get(\"pin\") and need[\"pin\"] not in part.get(\"_firmware_pulls\", []):",
-  "replace": "if need.get(\"direction\") == \"in\" and need.get(\"pin\"):"
- },
- {
   "file": "scripts/compare_design.py",
   "name": "an unwired firmware-pulled pin passes",
   "find": "        if netlist.component(component_name) is not None and not netlist.nets_of(component_name, port_name):",

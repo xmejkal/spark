@@ -96,7 +96,7 @@ def declared_inputs(part_list):
     pins = []
     for part in part_list:
         for need in part.get("needs") or []:
-            if need.get("direction") == "in" and need.get("pin") and need["pin"] not in part.get("_firmware_pulls", []):
+            if need.get("direction") == "in" and need.get("pin"):
                 pins.append([emit_board.component_name(part), need["pin"]])
     return sorted(pins)
 

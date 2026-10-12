@@ -8,8 +8,8 @@
  {
   "file": "scripts/init_project.py",
   "name": "every pin becomes a floating-input rule, not only the declared inputs",
-  "find": "            if need.get(\"direction\") == \"in\" and need.get(\"pin\") and need[\"pin\"] not in part.get(\"_firmware_pulls\", []):",
-  "replace": "            if need.get(\"pin\") and need[\"pin\"] not in part.get(\"_firmware_pulls\", []):"
+  "find": "            if need.get(\"direction\") == \"in\" and need.get(\"pin\"):",
+  "replace": "            if need.get(\"pin\"):"
  },
  {
   "file": "scripts/init_project.py",
