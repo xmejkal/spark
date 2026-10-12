@@ -24,7 +24,7 @@ Two rules on the PO's card, moved here from the working agreements:
   always ask (Recommended)"* ([Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), for `wokwi-cli`,
   `make simulate` and `make simulate-all`: Claude Code asks him before running any of them. `scripts/run_scenario.py`
   (P130) starts wokwi-cli inside itself, so no rule fires for it: Claude asks him before each run, and an ask rule for
-  it was offered to him on 2026-10-12. (W10, moved here
+  Claude asked him on 2026-10-12 whether to add one. (W10, moved here
   2026-10-09 by P146.) Its origin, the PO's words, written down on 2026-09-25: *"lets not waste the simulation
   minutes we already only have 21 of 50 free"*.
 - **Only the PO orders.** Claude and the agents propose, ranked, with reasons and costs; he decides, by the row order

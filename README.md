@@ -65,7 +65,7 @@ flowchart LR
 ```
 
 The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
-`docs/guide/`, on 2026-10-05, 2026-10-06, 2026-10-08 and 2026-10-11; [the journey guide](docs/guide/journey.md) shows the output
+`docs/guide/`, on 2026-10-05, 2026-10-06, 2026-10-08, 2026-10-11 and 2026-10-12; [the journey guide](docs/guide/journey.md) shows the output
 of each step it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops
 before its goal, or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**:
 nothing does it yet; the linked issue plans it.

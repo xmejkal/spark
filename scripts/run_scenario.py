@@ -122,7 +122,7 @@ class ScenarioRun:
         self.sim = self.project / "sim"
         self.micropython, self.timeout_ms = micropython, timeout_ms
         self.log = self.sim / "runs" / (self.scenario.name.removesuffix(".yaml").removesuffix(".scenario") + ".log")
-        self.steps = self.interpreter = self.image = None
+        self.steps = self.flash = self.image = None
 
     def problem(self):
         """Why this run cannot pass, found before any Wokwi minute is spent, or None."""
@@ -134,8 +134,9 @@ class ScenarioRun:
         try:
             self.steps = with_ready_wait(self.scenario.read_text())
             tools.find("littlefs")
-            self.interpreter = flash_image.interpreter_path(self.micropython).read_bytes()
             self.image = image_in(self.sim / "wokwi.toml")
+            self.flash = flash_image.image(flash_image.interpreter_path(self.micropython).read_bytes(),
+                                           flash_image.files_under(self.project / "firmware"))
         except (OSError, ValueError, tools.ToolProblem) as cannot:
             return "%s: %s" % (self.scenario.name, cannot)
         if self.sim.resolve() not in self.image.resolve().parents:
@@ -148,7 +149,7 @@ class ScenarioRun:
         problem = self.problem()
         if problem:
             return COULD_NOT_RUN, problem, None
-        self.image.write_bytes(flash_image.image(self.interpreter, flash_image.files_under(self.project / "firmware")))
+        self.image.write_bytes(self.flash)
         # Beside the original, so a step's own path (a screenshot to compare with) resolves where its author wrote it.
         as_run = self.scenario.parent / (".as-run." + self.scenario.name)
         with tempfile.TemporaryDirectory() as scratch:
@@ -196,6 +197,7 @@ def main(argv=None):
     parser.add_argument("--micropython", type=Path, help="the interpreter .bin; omitted, the one /spark:setup downloads")
     args = parser.parse_args(argv)
     run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms)
+    run.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
     try:  # what costs nothing first, then the tool, then the token: a person learns of a missing build before an account
         problem = run.problem()
         simulator = None if problem else tools.find("simulator", args.project)
