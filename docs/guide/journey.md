@@ -340,6 +340,9 @@ With `--dry-run` first it says *would write*. The file it wrote:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
 
+The lines are a dated record. Since 2026-10-12 the button uses the board's internal pull-up
+([P204](https://github.com/xmejkal/spark/issues/167)), so today's run writes 9 traces, routes 7 and wires 7.
+
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
@@ -867,8 +870,9 @@ lines the answer rests on.
 
 1. **What MOTOR6V draws.** The L9110S and power-inlet records name no current on their VCC pins
    ([P120](https://github.com/xmejkal/spark/issues/54)).
-2. **Four pull resistors.** Nothing clears them, because MOTOR6V states no voltage: its `nominal_volts` is `null`.
-   State `6.0` there and all four clear (6² / 10k = 3.6 mW), with no current stated.
+2. **The pull resistors.** The run above has four. Since P204 the buttons use the board's internal pull-up, so two
+   remain, the L9110S's pull-downs. Nothing clears them, because MOTOR6V states no voltage: its `nominal_volts` is
+   `null`. State `6.0` there and they clear (6² / 10k = 3.6 mW), with no current stated.
 
 What clears each, and its shape, is in [what never to assume](agents.md#what-never-to-assume)
 ([P118](https://github.com/xmejkal/spark/issues/52)).

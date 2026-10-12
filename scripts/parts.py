@@ -483,6 +483,8 @@ def host_part_problems(part: dict) -> list:
                     problems.append("%s needs a positive %s" % (where, key))
         if not host_part.get("why"):
             problems.append("%s says no why — a passive nobody can explain is the first one removed" % where)
+        if "internal_will_do" in host_part and (host_part["internal_will_do"] is not True or kind != "pullup"):
+            problems.append("%s: internal_will_do is true on a pull-up, or absent (P204)" % where)
     return problems
 
 

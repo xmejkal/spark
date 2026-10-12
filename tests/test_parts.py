@@ -1378,6 +1378,14 @@ class WhatAPartDemandsOfItsHostTest(unittest.TestCase):
         self.assertTrue(any("positive ohms" in p for p in self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 0, "why": "w"}])))
         self.assertTrue(any("no why" in p for p in self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 10000}])))
 
+    def test_internal_will_do_is_true_and_only_on_a_pull_up(self):
+        # P204: the code reads it as truthy, so the string "false" would leave the resistor to the firmware.
+        pullup = {"kind": "pullup", "pin": "OUT", "ohms": 10000, "why": "w"}
+        self.assertEqual(self._problems([dict(pullup, internal_will_do=True)]), [])
+        for wrong in (dict(pullup, internal_will_do="false"), dict(pullup, kind="pulldown", internal_will_do=True)):
+            with self.subTest(wrong=wrong):
+                self.assertTrue(any("internal_will_do" in p for p in self._problems([wrong])))
+
     def test_a_series_resistor_states_its_ohms_or_the_current_it_is_for(self):
         self.assertEqual(self._problems([{"kind": "series", "pin": "OUT", "ohms": 1000, "why": "limits the LED"}]), [])
         self.assertEqual(self._problems([{"kind": "series", "pin": "OUT", "for_current_ma": 5, "why": "an indicator"}]), [])

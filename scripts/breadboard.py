@@ -266,6 +266,8 @@ def _before_power(design_parts, supplies):
     for part in design_parts:
         name = emit_board.component_name(part)
         lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in parts.pull_conflicts(part)]
+        lines += ["- %s %s has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` says (P204)"
+                  % (name, pin) for pin in part.get("_firmware_pulls", [])]
         lines += ["- %s %s: %s" % (name, pin["pin"], pin.get("note", "")) for pin in part.get("unused_pins") or []]
         if part["id"] not in seen:
             seen.add(part["id"])

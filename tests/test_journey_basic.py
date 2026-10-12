@@ -94,11 +94,10 @@ def _pins(path):
     return None if names.get("BUTTON_PULL") == "up" else "no BUTTON_PULL = \"up\": the firmware does not know to pull it up"
 
 
-#: Run in a process of its own: the LED's level with the button released, then pressed. The board holds the button high
-#: through a pull-up and a press joins it to ground, so released is 1 and pressed is 0 (breadboard.md, lines 1 and 3).
+#: Run in a process of its own: the LED's level with the button released, then pressed. Released, nothing sets the pin:
+#: only the firmware's internal pull-up holds it high (P204). A press joins it to ground, so pressed is 0.
 LIGHT_PROBE = """
 import machine, light, pins
-machine.set_level(pins.BUTTON, 1)
 light.update()
 print(machine.level(pins.STATUS_LED))
 machine.set_level(pins.BUTTON, 0)
@@ -229,6 +228,10 @@ class TheFirmwareStageBitesTest(unittest.TestCase):
     def test_an_led_that_never_lights_is_named(self):
         light = self.light_with("    led.value(LED_ON if button.value() == BUTTON_PRESSED else LED_OFF)", "    pass")
         self.assertEqual(_firmware(light), "with the button pressed the LED reads 0, not 1")
+
+    def test_a_firmware_that_does_not_pull_the_button_up_is_named(self):
+        light = self.light_with("Pin.IN, Pin.PULL_UP)", "Pin.IN)")
+        self.assertEqual(_firmware(light), "with the button released the LED reads 1, not 0")
 
     def test_a_firmware_that_does_not_import_is_named_with_its_exception(self):
         light = self.light_with("import time\n", "import time\nraise OSError('no bus')\n")

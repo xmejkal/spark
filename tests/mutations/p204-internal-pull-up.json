@@ -46,5 +46,23 @@
   "name": "a lone board pad is a wiring line",
   "find": "        if on_board and len(ends) == 1:",
   "replace": "        if False:"
+ },
+ {
+  "file": "scripts/compare_design.py",
+  "name": "a rule written before the firmware pulled the pin still fails it",
+  "find": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"] if tuple(pair) not in pulled],",
+  "replace": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"]],"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "the sheet does not say the firmware must pull the button up",
+  "find": "% (name, pin) for pin in part.get(\"_firmware_pulls\", [])]",
+  "replace": "% (name, pin) for pin in []]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "internal_will_do is taken on any value",
+  "find": "        if \"internal_will_do\" in host_part and (host_part[\"internal_will_do\"] is not True or kind != \"pullup\"):",
+  "replace": "        if False:"
  }
 ]

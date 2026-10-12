@@ -227,5 +227,11 @@ class APinTheFirmwarePullsUpTest(unittest.TestCase):
     def test_a_wired_pin_the_firmware_pulls_up_holds(self):
         self.assertEqual(self.failures(wired=True), [])
 
+    def test_a_rule_written_before_the_firmware_pulled_it_does_not_fail_it(self):
+        # A project initialised before P204 still lists the pin under must_not_float; init --force adds, never removes.
+        elements = circuit({"Mcu": ["D3"], "Btn": ["A", "B"]}, pin_to_pin=[("Mcu.D3", "Btn.A")], to_net=[("GND", "Btn.B")])
+        rules = {"must_not_float": [["Btn", "A"]], "pulled_by_firmware": [["Btn", "A"]]}
+        self.assertEqual(compare_design.run(elements, rules), [])
+
     def test_a_pin_the_firmware_pulls_up_still_must_be_wired(self):
         self.assertEqual([(f.subject, f.detail) for f in self.failures(wired=False)], [("Btn.A", "connects to nothing")])

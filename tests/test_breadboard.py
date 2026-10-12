@@ -78,6 +78,7 @@ class TheSheetTest(unittest.TestCase):
     def test_the_parts_list_names_the_board_each_part_and_each_resistor_with_its_purpose(self):
         self.assertIn("DFRobot FireBeetle 2 ESP32-S3", self.text)
         self.assertNotIn("10kΩ", self.text, "P204: the button uses the board's internal pull-up")
+        self.assertIn("TactileButton A has no resistor: the firmware must pull it up", self.text)
         self.assertIn("| 1 | 330Ω resistor, through-hole | R1 in series with LedRed5mm A |", self.text)
         self.assertIn("run a jumper from that pin to a free", self.text, "the board covers the rows beside its pins")
         self.assertIn("a breadboard and jumper wires", self.text)
