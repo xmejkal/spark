@@ -59,7 +59,7 @@ test. A table in `tests/mutations/` is kept only when a defect escaped, and the 
 sweep when the epic is done ([the Definition of Done](README.md#definition-of-done)). When, who and how:
 [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
 mutations as you say"*). Before it, every logic change wrote a table, and the pre-push gate checked every table's
-anchors. A table of 25 rows ran 615 s, and moved code blocked pushes. The older tables stay as history.
+anchors. A table of 25 rows ran 615 s, and moved code blocked pushes (the measurement: [P130's council](../docs/observations/2026-10-12-p130-council.md)). The older tables stay as history.
 
 **A fixture that cannot see the defect is the defect** (W12, merged here 2026-10-09). When a mutation escapes, the
 first question is whether the fixture could have seen it at all. Four escapes in Sprint 3 were exactly that — three

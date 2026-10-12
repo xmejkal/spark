@@ -116,7 +116,7 @@ python3 tools/mutate.py tests/mutations/p130-wokwi-harness.json --copy          
 python3 tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy        # one file or folder
 changed=$(git diff --name-only origin/main...HEAD)                                     # a branch's files
 python3 tools/mutate.py tests/mutations/*.json --for $changed --copy                       # a branch
-python3 tools/mutate.py tests/mutations/*.json --copy                                      # every row, at an epic's end
+python3 tools/mutate.py tests/mutations/*.json --copy                                      # every row
 ```
 
 `--copy` mutates a temporary copy of the tree, so no file that you or an agent have open changes. Each call also runs

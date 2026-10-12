@@ -350,9 +350,6 @@ class NearTestsFirstTest(unittest.TestCase):
         self.assertRegex(out.getvalue(), r"1 mutation\(s\) in \d+ s")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class OnlyTheMutationsOfAPathTest(unittest.TestCase):
     """P208: --for keeps the rows of a file, or of a folder and everything in it, from any number of tables."""
@@ -361,6 +358,10 @@ class OnlyTheMutationsOfAPathTest(unittest.TestCase):
 
     def test_a_file_keeps_its_own_rows(self):
         self.assertEqual(mutate.related(self.ROWS, ["scripts/a.py"]), self.ROWS[:1])
+
+    def test_several_names_in_one_argument_are_each_kept(self):
+        # zsh does not split a variable: `--for $changed` arrives as one argument, a name per line (FR5).
+        self.assertEqual(mutate.related(self.ROWS, ["scripts/a.py\ntools/b.py"]), [self.ROWS[0], self.ROWS[2]])
 
     def test_a_folder_keeps_everything_under_it_and_no_look_alike(self):
         self.assertEqual(mutate.related(self.ROWS, ["./scripts/"]), self.ROWS[:2])
@@ -400,4 +401,28 @@ class AMutationRunInACopyTest(unittest.TestCase):
             code = mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--copy"])
         self.assertEqual(code, mutate.EXIT_OK)
         self.assertNotEqual(seen[0], root.resolve())
-        self.assertFalse(seen[0].exists(), "the copy stays behind")
+        self.assertFalse(seen[0].parent.exists(), "the copy, or the folder it was made in, stays behind")
+
+    def test_the_copy_leaves_out_git_worktrees_caches_and_the_lock_and_borrows_node_modules(self):
+        root = Path(tempfile.mkdtemp()) / "tree"
+        for name in (".git/HEAD", ".worktrees/x/f.py", "__pycache__/c.pyc", mutate.LOCK_NAME, "kept.py",
+                     "node_modules/p/i.js", "tools/circuit-to-wokwi/node_modules/q/i.js", "tools/circuit-to-wokwi/cli.ts"):
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text("x")
+        (root / "link.py").symlink_to("kept.py")
+        copy = mutate.copy_of(root)
+        try:
+            for left_out in (".git", ".worktrees", "__pycache__", mutate.LOCK_NAME):
+                self.assertFalse((copy / left_out).exists(), left_out)
+            self.assertTrue((copy / "kept.py").is_file())
+            self.assertTrue((copy / "link.py").is_symlink(), "a symlink is copied as a symlink")
+            for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
+                borrowed = copy / folder / "node_modules"
+                self.assertTrue(borrowed.is_symlink(), folder)
+                self.assertEqual(borrowed.resolve(), (root / folder / "node_modules").resolve())
+        finally:
+            __import__("shutil").rmtree(copy.parent)
+
+
+if __name__ == "__main__":
+    unittest.main()

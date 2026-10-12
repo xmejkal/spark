@@ -164,8 +164,11 @@ LOCK_NAME = ".mutate.lock"
 
 
 def related(mutations, paths):
-    """The mutations of the files under `paths` (P208): a file's own rows, or a folder's and everything under it."""
-    wanted = [str(Path(path)) for path in paths]
+    """
+    The mutations of the files under `paths` (P208): a file's own rows, or a folder's and everything under it. An
+    argument may hold several names, one per line: zsh passes `$(git diff --name-only …)` in a variable as one.
+    """
+    wanted = [str(Path(part)) for path in paths for part in path.split()]
     return [mutation for mutation in mutations
             if any(mutation["file"] == path or mutation["file"].startswith(path + "/") for path in wanted)]
 
@@ -290,7 +293,7 @@ def main(argv=None):
     if args.paths:
         mutations = related(mutations, args.paths)
         if not mutations:
-            print("  no mutation is about %s: nothing to run" % " ".join(args.paths))
+            print("  no mutation is about %s: nothing to run" % " ".join(args.paths), file=sys.stderr)
             return EXIT_OK
 
     if args.anchors:
