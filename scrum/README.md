@@ -222,6 +222,10 @@ A pull request fixes the gaps it makes. Older gaps in the README's shape go to P
 | anything else, 50 or more changed lines | the six lenses on Sonnet, then the refuter on Opus |
 | a design or an epic | the full council, as the Design stage runs it, then the refuter on Opus |
 
+For a change that holds logic, the council also launches the mutation tester on Sonnet
+([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)), beside the reviewers. Its line, *N
+planted, M caught*, goes into the council's report, and an escape is fixed before the merge ([P208](https://github.com/xmejkal/spark/issues/175)).
+
 Count added plus removed lines (`git diff --shortstat origin/main...HEAD`). Claude's reading, the PO's to change: the
 files under `skills/`, `agents/`, `commands/` and `tools/` are behaviour, not docs, though most are Markdown; and a PR
 that merges a design or closes an epic takes the full council even when it is only docs.
@@ -277,11 +281,11 @@ review runs those commands. If an item cannot name one, it does not enter Ready.
 Every one of these, for every item. No exceptions, no "mostly".
 
 1. `python3 -m unittest discover -s tests` — green.
-2. **Mutation tested, for logic, by the refuter.** The refuter of the pull request's council puts the defects the
-   change prevents back into the changed lines, in a scratch copy, and names each one the suite does not notice. A
-   fix with no failing-first test is not a fix. A table in `tests/mutations/` is written only when a review finds the
-   tests weak (the PO, 2026-10-12, [P208](https://github.com/xmejkal/spark/issues/175): *"lets limit the mutations as you say"*). A change to docs, wiring or
-   process needs no mutation.
+2. **Mutation tested, for logic, by the mutation tester.** The council launches it for a change that holds logic. It
+   puts the defects that the change prevents back into the changed lines, in a copy of the tree, and reports *N
+   planted, M caught*. A fix with no failing-first test is not a fix. A table in `tests/mutations/` is kept only when a
+   defect escaped (the PO, 2026-10-12, [P208](https://github.com/xmejkal/spark/issues/175): *"lets limit the mutations as you say"*). A change to docs, wiring or
+   process needs no mutation. When, who and how: [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table).
 3. `python3 scripts/check_spine.py` — exit 0 when `scripts/` changed. With no file named it runs the reference design
    that ships with spark: the chain still runs end to end.
 4. The item's own *Value proven by* command runs and shows what it claims, and its output is posted on the issue — or,
@@ -304,9 +308,10 @@ Every one of these, for every item. No exceptions, no "mostly".
    (P169): *"lets'use git tags and releases, and we can always fill in the version /release content, what new
    functionality and bug fixes etc have been added"*.
 
-**When an epic is done** (P98; P102a moved it from the sprint's close): `python3 tools/mutate.py` over the tables that
-the epic's reviews asked for, in one sweep, which prints its time. The older tables are history since [P208](https://github.com/xmejkal/spark/issues/175): nobody
-keeps their anchors current. An escape is a missing test, opened as a backlog item the same day.
+**When an epic is done** (P98; P102a moved it from the sprint's close): every row about the files the epic changed,
+in one sweep that prints its time, `python3 tools/mutate.py tests/mutations/*.json --for <the epic's changed files>
+--copy`. A refused row is a guard whose code moved: re-anchor it or delete it with the reason. An escape is a missing
+test, opened as a backlog item the same day.
 
 A stage that could not be exercised is `could-not-run`, never `ok`. That rule outranks every other
 sentence in this folder.

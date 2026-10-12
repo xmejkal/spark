@@ -51,12 +51,13 @@ moved to an offset MicroPython never reads.
 
 ## W3 — Mutation testing is the acceptance bar
 
-Re-introduce the defect; the suite must go red. Before commit, not after somebody finds it again.
+Re-introduce the defect; the suite must go red. Before the merge, not after somebody finds it again.
 
-The refuter of the pull request's council puts the defects back into the changed lines, in a scratch copy, and names
-each one the suite does not notice: a missing test. A table in `tests/mutations/` is written only when a review finds
-the tests weak, and `tools/mutate.py` runs the epic's tables in one sweep when the epic is done
-([the Definition of Done](README.md#definition-of-done)). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
+The council's mutation tester ([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)) puts the
+defects back into the changed lines, in a copy of the tree, and names each one the suite does not notice: a missing
+test. A table in `tests/mutations/` is kept only when a defect escaped, and the rows about an epic's files run in one
+sweep when the epic is done ([the Definition of Done](README.md#definition-of-done)). When, who and how:
+[the glossary](../GLOSSARY.md#mutation-and-the-mutation-table). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
 mutations as you say"*). Before it, every logic change wrote a table, and the pre-push gate checked every table's
 anchors. A table of 25 rows ran 615 s, and moved code blocked pushes. The older tables stay as history.
 
@@ -152,7 +153,7 @@ protection on either `main`.
 
 A count, a hash, a verdict ("the chain runs end to end") goes into a commit message, a card's comment or a status
 update only in a later call than the command that produced it, copied from output that is on the screen — **and
-measured on the tree being committed**: `check_commit.py` archives `HEAD` and runs the suite and the anchors there
+measured on the tree being committed**: `check_commit.py` archives `HEAD` and runs the suite there
 before every push. A commit's message said 589 OK while the tree it held ran 562 FAILED, because the run was on the
 working tree and the file it imported was staged one commit later (close audit C3). The gate measures `HEAD` even when
 another branch is pushed; measuring the ref being pushed is [P106](https://github.com/xmejkal/spark/issues/39), not

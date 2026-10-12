@@ -43,12 +43,12 @@ The suite still reads source for rules about the code itself:
 
 `test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
-**The second rule: every fix is mutation-tested.** The refuter of the pull request's review puts the defects the fix
-prevents back into the changed lines, in a scratch copy. A table is written only when a review finds the tests weak
-([P208](https://github.com/xmejkal/spark/issues/175)):
+**The second rule: every fix that holds logic is mutation-tested.** Before the pull request, the council's mutation
+tester puts the defects that the fix prevents back into the changed lines, in a copy of the tree
+([P208](https://github.com/xmejkal/spark/issues/175)). Without a council, run the rows about your files yourself:
 
 ```sh
-python3 tools/mutate.py tests/mutations/p104-docs.json
+python3 tools/mutate.py tests/mutations/*.json --for $(git diff --name-only origin/main...HEAD) --copy
 ```
 
 [`tools/mutate.py`](../../tools/mutate.py) puts each defect in a table back into the code, and must report every one
