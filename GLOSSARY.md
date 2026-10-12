@@ -114,7 +114,8 @@ that it could not run. A person, CI and the mutation tester run the same command
 ```sh
 python3 tools/mutate.py tests/mutations/p130-wokwi-harness.json --copy                     # one table
 python3 tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy        # one file or folder
-python3 tools/mutate.py tests/mutations/*.json --for $(git diff --name-only origin/main...HEAD) --copy  # a branch
+changed=$(git diff --name-only origin/main...HEAD)                                     # a branch's files
+python3 tools/mutate.py tests/mutations/*.json --for $changed --copy                       # a branch
 python3 tools/mutate.py tests/mutations/*.json --copy                                      # every row, at an epic's end
 ```
 

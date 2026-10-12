@@ -48,7 +48,8 @@ tester puts the defects that the fix prevents back into the changed lines, in a 
 ([P208](https://github.com/xmejkal/spark/issues/175)). Without a council, run the rows about your files yourself:
 
 ```sh
-python3 tools/mutate.py tests/mutations/*.json --for $(git diff --name-only origin/main...HEAD) --copy
+changed=$(git diff --name-only origin/main...HEAD)     # the files your branch changed
+python3 tools/mutate.py tests/mutations/*.json --for $changed --copy
 ```
 
 [`tools/mutate.py`](../../tools/mutate.py) puts each defect in a table back into the code, and must report every one

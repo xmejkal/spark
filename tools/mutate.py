@@ -5,7 +5,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py tests/mutations/<table>.json
     tools/mutate.py --anchors tests/mutations/*.json      # anchors only, a second
     tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy    # one file's rows, in a copy
-    tools/mutate.py tests/mutations/*.json --for $(git diff --name-only origin/main...HEAD) --copy   # a branch's
+    tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
