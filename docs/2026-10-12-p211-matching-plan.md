@@ -13,6 +13,7 @@
 ## Global Constraints
 
 - One core, many interfaces (the PO, 2026-10-12: *"one well architected system, the interfaces then just call it, like cli, also with --json for ai"*). All matching of a need or a search word is in `scripts/matching.py`. No caller keeps its own copy of a rule. Part numbers stay in `drawer._match`.
+- Every `--json` answer is the one envelope of `outcomes.envelope` (§6.4.1), `tools/match_eval.py` included.
 - With the defaults, every candidate list, every order and every `what_matches` is the same as before. Defaults: `same-words` for `--match`, `name-contains` for `--need`. A default changes only with the PO's yes.
 - `about` is one sentence, at most 200 characters. `description` is at most 1,000 characters. `tags` are at most 12 lowercase words. Each text is cleaned with `drawer.CONTROL` and capped.
 - WordOverlap weights: a same-verb `what` 1.0, `tags` 0.8, a name, an alias or the id 0.6, `about` or `description` 0.4. `MIN_SHOWN = 0.5`. Filler words: `a`, `an`, `the`, `of`, `for`, `to`, `and`, `or`, `with`.
@@ -24,7 +25,7 @@
 
 ## Review Focus
 
-1. A hand-edited drawer entry whose `tags` is not a list, or whose `about` is a number: the offer ignores the value and nothing crashes (Task 2, `test_a_malformed_text_is_ignored`).
+1. A catalog record whose `tags` is not a list, or whose `about` is a number: the offer ignores the value, and `--match` still lists the record (Task 3, `test_a_malformed_record_text_is_ignored`). A drawer entry like that never gets this far, because `drawer.entries()` refuses the whole drawer.
 2. A record's `about` with control or bidi characters: `describe()` and `--offer` show it cleaned (Task 2, `test_describe_cleans_what_a_record_says`).
 3. `--match --matcher name-contains`: refused, and the refusal lists `same-words, word-overlap` (Task 3, `test_a_matcher_that_does_not_serve_match_is_refused`).
 4. `--offer` on a drawer entry key whose `is` names a record: it shows that record's offer, with the entry's tags (Task 4, `test_an_entry_that_is_a_record_offers_the_record`).
@@ -47,7 +48,7 @@
 ```python
     def test_an_entry_says_what_it_does_for_a_chooser(self):
         long = "x" * 1200
-        said, code = run(["--drawer-set", a_file([{"label": "a knob", "about": "Turns‮ endlessly.", "description": long,
+        said, code = run(["--drawer-set", a_file([{"label": "a knob", "about": "Turns\u202e endlessly.", "description": long,
                                                     "tags": ["Knob", "DIAL\x07"]}])])
         self.assertEqual((code, said["status"]), (0, "ok"))
         entry = self.entry("a-knob")
@@ -162,8 +163,8 @@ Update the `drawer-set` row of `OPERATIONS`: an entry may also say its `about`, 
   - `Fit = namedtuple("Fit", "offer score exact why")`.
   - `Matcher` with `name`, `serves`, `admits(need, offer)`, `rank(need, offers) -> [Fit]`, `score(need, offer) -> Fit`. Its subclasses are `SameWords` (`same-words`), `NameContains` (`name-contains`), `WordOverlap` (`word-overlap`).
   - `MATCHERS = {name: class}`, `matcher(name, caller) -> Matcher`, `UnknownMatcher(ValueError)`.
-  - `same_words(need, offer) -> bool`, `shown(rank, exact, score) -> bool`, `words(text)`, `fold(word)`, `need_words(what)`, `MIN_SHOWN`, `SHOWN_FIRST`.
-  - A need is a dict `{"does": verb or None, "what": words}`.
+  - `same_words(need, offer) -> bool`, `shown(rank, exact, score) -> bool`, `found(fits) -> [Fit]`, `words(text)`, `fold(word)`, `need_words(what)`, `MIN_SHOWN`, `SHOWN_FIRST`.
+  - A need is a dict `{"does": verb or None, "what": words}`. A `--need` search adds `"words"`: its arguments as typed.
 
 - [ ] **Step 1: Write the failing tests** in `tests/test_matching.py`:
 
@@ -222,12 +223,13 @@ class TheOfferTest(unittest.TestCase):
         self.assertEqual((len(offer.about), len(offer.description), len(offer.tags)), (200, 1000, 12))
 
     def test_describe_cleans_what_a_record_says_and_leaves_out_what_it_lacks(self):
-        offer = matching.Offer.from_record("vl", "part", {"name": "VL", "about": "Ranges‮ far.", "body_mm": {"width": 20, "height": 15}})
+        offer = matching.Offer.from_record("vl", "part", {"name": "VL", "about": "Ranges\u202e far.", "body_mm": {"width": 20, "height": 15},
+                                                          "power": {"note": "3V3\u202e only"}})
         text = offer.describe()
         self.assertIn("about: Ranges  far.", text)
         self.assertIn('body_mm: {"width": 20, "height": 15}', text)
         self.assertNotIn("description", text)
-        self.assertNotIn("‮", text)
+        self.assertNotIn("\u202e", text)
 
 
 class TheMatchersTest(unittest.TestCase):
@@ -282,6 +284,18 @@ class TheMatchersTest(unittest.TestCase):
         need = {"does": None, "what": "vl6180 rangefinder"}
         self.assertEqual(matching.NameContains().score(need, offer).score, 1.0)
         self.assertEqual(matching.NameContains().score({"does": None, "what": "lidar"}, offer).score, 0.0)
+        self.assertTrue(matching.NameContains().admits({"does": "input", "what": "x"}, offer), "a search word has no verb")
+
+    def test_name_contains_keeps_an_argument_with_a_space_as_one_substring(self):
+        offer = an_offer(names=["soil probe, moisture"])
+        need = {"does": None, "what": "soil moisture"}
+        self.assertEqual(matching.NameContains().score(need, offer).score, 1.0)
+        self.assertEqual(matching.NameContains().score(dict(need, words=["soil moisture"]), offer).score, 0.0)
+
+    def test_a_search_finds_only_what_scores(self):
+        a, b = an_offer(key="a"), an_offer(key="b")
+        fits = [matching.Fit(a, 0.0, False, []), matching.Fit(b, 1.0, True, [])]
+        self.assertEqual([fit.offer.key for fit in matching.found(fits)], ["b"])
 
     def test_rank_puts_the_best_first_and_keeps_the_order_of_equals(self):
         a, b, c = (an_offer(key=k, functions=[{"does": "sense", "what": w}]) for k, w in (("a", "x"), ("b", "range"), ("c", "y")))
@@ -405,7 +419,8 @@ class Offer:
         lines += ["  tags: " + ", ".join(self.tags)] if self.tags else []
         lines += ["  does: " + "; ".join(drawer.clean("%s %s" % (f.get("does"), f.get("what"))) for f in self.functions)] if self.functions else []
         lines += ["  names: " + ", ".join(self.names)] if self.names else []
-        lines += ["  %s: %s" % (key, json.dumps(self.facts[key], ensure_ascii=False)) for key in ("power", "body_mm") if key in self.facts]
+        lines += ["  %s: %s" % (key, drawer.clean(json.dumps(self.facts[key], ensure_ascii=False), drawer.TEXT_MAX["description"]))
+                  for key in ("power", "body_mm") if key in self.facts]
         return "\n".join(lines)
 
     def as_dict(self):
@@ -424,6 +439,11 @@ def same_words(need, offer):
 def shown(rank, exact, score):
     """Whether `--match` shows a candidate at `rank` (P211): one of the first SHOWN_FIRST, an exact one, or one scoring MIN_SHOWN."""
     return rank < SHOWN_FIRST or exact or score >= MIN_SHOWN
+
+
+def found(fits):
+    """The fits a search by words shows (P211, `--need`): those with any score."""
+    return [fit for fit in fits if fit.score > 0]
 
 
 class Matcher:
@@ -463,7 +483,8 @@ class SameWords(Matcher):
 
 class NameContains(Matcher):
     """`--need`'s rule: 1 when every word, as typed, is inside the id, a name, an alias or the kind, else 0. A part of a word
-    finds the whole (`vl6180` finds `vl6180x`), and it admits every offer: a search word has no verb."""
+    finds the whole (`vl6180` finds `vl6180x`), and it admits every offer: a search word has no verb. The need's `words`,
+    when it has them, are the arguments as typed, so one argument with a space in it stays one substring."""
     name, serves = "name-contains", ("need",)
 
     def admits(self, need, offer):
@@ -471,7 +492,8 @@ class NameContains(Matcher):
 
     def score(self, need, offer):
         haystack = " ".join([offer.key] + offer.names + [str(offer.facts.get("kind") or "")]).lower()
-        found = all(word in haystack for word in str(need.get("what") or "").lower().split())
+        typed = need.get("words") or str(need.get("what") or "").split()  # `--need` passes its arguments as typed
+        found = all(str(word).lower() in haystack for word in typed)
         return self.fit(need, offer, 1.0 if found else 0.0, ["in its names"] if found else [])
 
 
@@ -512,7 +534,7 @@ def matcher(name, caller):
     return MATCHERS[name]()
 ```
 
-- [ ] **Step 4: Run it.** `python3 -m unittest discover -s tests -p test_matching.py`. Expected: PASS. If `test_word_overlap_says_why` fails on order, the order is the need's word order: `laser`, then `range`.
+- [ ] **Step 4: Run it.** `python3 -m unittest discover -s tests -p test_matching.py`. Expected: PASS. In the whole suite, `test_orphans` fails until Task 3 imports `matching`. That is expected after this task, and only after it. If `test_word_overlap_says_why` fails on order, the order is the need's word order: `laser`, then `range`.
 
 - [ ] **Step 5: Commit.** "P211 task 2: one matching library with Offer, Fit and three matchers. SameWords and NameContains are the two old rules, and WordOverlap is the new one".
 
@@ -554,6 +576,17 @@ def matcher(name, caller):
         said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
         first = [c for c in said["data"]["needs"][0]["candidates"] if c["id"] == "y-range"][0]
         self.assertEqual((first["score"], first["why"], first["what_matches"]), (0.8, ["range: in tags"], False))
+
+    def test_the_next_page_keeps_the_matcher(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "n%d" % n, "does": "sense", "what": "soil-moisture"} for n in range(12)]}))
+        said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
+        self.assertIn("word-overlap", said["truncated"]["next"]["argv"])
+
+    def test_a_malformed_record_text_is_ignored(self):
+        self.catalog({"id": "y-odd", "name": "An odd probe", "function": [{"does": "sense", "what": "distance"}], "tags": "knob", "about": 5})
+        found = [c for c in self.alone({"id": "far", "does": "sense", "what": "distance"})["candidates"] if c["id"] == "y-odd"]
+        self.assertEqual((len(found), found[0]["score"]), (1, 1.0))
 
     def test_a_matcher_that_does_not_serve_match_is_refused(self):
         said, code = run(["--match", str(self.project), "--matcher", "name-contains"])
@@ -663,7 +696,7 @@ def _op_match(args, project):
             del c["about"]
         lines += ...  # the "… more" and "a gap" lines, unchanged
     lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
-    shown, truncated = page(matched, args.start, "match", ["--match", args.match])
+    shown, truncated = page(matched, args.start, "match", ["--match", args.match] + (["--matcher", args.matcher] if args.matcher else []))
     return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)
 ```
 
@@ -690,7 +723,7 @@ Keep the existing line formats exactly: only the loop shape changes, and `page` 
   - `parts.NEED_MATCHER = "name-contains"`.
   - `parts.need(words, project=None, matcher=None)` and `parts.catalog_matches(words, matcher=None)`.
   - `needs.offer(key, project=None) -> Offer or None`.
-  - The `--offer KEY` operation, with the data keys `offer` and `text`.
+  - The `--offer KEY` operation, with the data key `offer`.
 
 - [ ] **Step 1: Write the failing tests.** In `tests/test_parts.py`, beside the `need` tests:
 
@@ -710,7 +743,6 @@ In `tests/test_needs.py`, class `TheMatcherTest`:
         self.catalog({"id": "y-range", "name": "A rangefinder", "about": "Tells how far away a thing is.", "tags": ["range"]})
         said, code = run(["--offer", "y-range"])
         self.assertEqual((code, said["data"]["offer"]["about"], said["data"]["offer"]["tags"]), (0, "Tells how far away a thing is.", ["range"]))
-        self.assertIn("about: Tells how far away a thing is.", said["data"]["text"])
 
     def test_an_entry_that_is_a_record_offers_the_record(self):
         (self.home / "drawer" / "my-probe.json").write_text(json.dumps({"schema": 1, "label": "my probe", "count": 1,
@@ -737,10 +769,11 @@ Delete `_matches`. Add `_found`, and rewrite `catalog_matches` and `need` on it 
 
 ```python
 def _found(words, offers, matcher=None):
-    """The offers a search by words finds (P211): the need {"does": null, "what": the words}, ranked by the `--need` matcher."""
+    """The offers a search by words finds (P211): the need {"does": null, "what": the words, "words": as typed}, ranked by the
+    `--need` matcher."""
     import matching
-    need = {"does": None, "what": " ".join(words)}
-    return [fit for fit in (matcher or matching.matcher(NEED_MATCHER, "need")).rank(need, offers) if fit.score > 0]
+    need = {"does": None, "what": " ".join(words), "words": list(words)}
+    return matching.found((matcher or matching.matcher(NEED_MATCHER, "need")).rank(need, offers))
 
 
 def catalog_matches(words, matcher=None):
@@ -779,7 +812,7 @@ In `_op_need`, choose the matcher first and pass it to both calls:
     known = [p for p in catalog_matches(args.need, chosen) if ...]  # the rest unchanged
 ```
 
-Update the `need` row of `OPERATIONS`: `--matcher` picks the matcher. One known change: an argument with a space in it (`--need "soil moisture"`) is now two words. Before, it was one substring. The `--need` tests show whether anything relied on it.
+Update the `need` row of `OPERATIONS`: `--matcher` picks the matcher. An argument with a space in it (`--need "soil moisture"`) stays one substring, as before, because the need carries `words`.
 
 - [ ] **Step 4: Implement `--offer`.** In `needs.py`:
 
@@ -799,7 +832,7 @@ In `parts.py`, an `OPERATIONS` row after `match`:
 
 ```python
     ("offer", {"metavar": "KEY"}, "what one offer says of itself, for the chooser to read: a record's id or a drawer entry's "
-     "key — about, description, tags, what it does, its names, power and size", (), ("offer", "text")),
+     "key — about, description, tags, what it does, its names, power and size", (), ("offer",)),
 ```
 
 and the operation:
@@ -811,7 +844,7 @@ def _op_offer(args, project):
     if found is None:
         return Answer(problems=[_problem(args.offer, "no record and no live drawer entry called %r — `--need` and "
                                                      "`--drawer` list what exists" % args.offer)])
-    return Answer({"offer": found.as_dict(), "text": found.describe()}, found.describe().splitlines())
+    return Answer({"offer": found.as_dict()}, found.describe().splitlines())  # the text once: in the lines, not again in data
 ```
 
 - [ ] **Step 5: Run the parts and needs tests, then the whole suite.** Expected: PASS, the old `need` tests unedited (they are the parity tests).
@@ -947,12 +980,14 @@ class TheEvalTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             code = match_eval.main(["--cases", str(cases), "--drawer", str(a_drawer()), "--json"])
         said = json.loads(out.getvalue())
-        self.assertEqual((code, said["status"], [m["matcher"] for m in said["matchers"]]), (0, "ok", ["same-words", "word-overlap"]))
+        self.assertEqual((code, said["envelope"], said["status"], [m["matcher"] for m in said["data"]["matchers"]]),
+                         (0, 1, "ok", ["same-words", "word-overlap"]))
 
     def test_an_unknown_matcher_or_an_unreadable_file_could_not_run(self):
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(match_eval.main(["--cases", "/nonexistent.json", "--drawer", str(a_drawer())]), 2)
             self.assertEqual(match_eval.main(["--cases", "/nonexistent.json", "--drawer", str(a_drawer()), "--matcher", "nope"]), 2)
+            self.assertEqual(match_eval.main(["--cases", "/nonexistent.json", "--drawer", str(a_drawer()), "--matcher", "name-contains"]), 2)
 ```
 
 Note for the implementer: `lidar` is in no place, so every offer scores 0 and the key order decides. `tof` is tenth, past the first eight, so the case is a miss. If a number differs, work it out by hand from the weights before you change the expected value.
@@ -971,8 +1006,9 @@ rank 1, the cases in the shown list, the misses, and the precision cases it lose
     tools/match_eval.py --cases FILE --drawer DIR --matcher same-words --matcher word-overlap --json
 
 A case is {"does", "what", "expect": key}, the part the need must find, or a precision case {"does", "what",
-"not_first": key}, a part that must not come first. The shown list is `--match`'s (`matching.shown`). A developer's tool,
-not the product: it lives in tools/ and reaches the product's modules by path.
+"not_first": key}, a part that must not come first. The shown list is `--match`'s (`matching.shown`). `--match` sorts owned
+first and nearest first before it cuts. The invented drawer is all owned and in one layer, so here the matcher's order is
+that order. A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
 """
 
 import argparse
@@ -984,7 +1020,7 @@ SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import matching  # noqa: E402
-from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, OK  # noqa: E402
+from outcomes import EXIT_FOR, envelope  # noqa: E402
 
 
 def drawer_offers(folder):
@@ -1033,24 +1069,23 @@ def main(argv=None):
     args = parser.parse_args(argv)
     names = args.matcher or sorted(name for name, cls in matching.MATCHERS.items() if "match" in cls.serves)
     try:
-        unknown = [name for name in names if name not in matching.MATCHERS]
-        if unknown:
-            raise ValueError("no matcher called %s; the matchers: %s" % (", ".join(unknown), ", ".join(sorted(matching.MATCHERS))))
+        matchers = [matching.matcher(name, "match") for name in names]  # the core refuses a name, as --match does
         cases, offers = json.loads(Path(args.cases).read_text(encoding="utf-8")), drawer_offers(args.drawer)
-    except (OSError, ValueError) as wrong:
-        print(json.dumps({"tool": "match_eval", "status": COULD_NOT_RUN, "sentence": str(wrong)}) if args.json
-              else "could-not-run: %s" % wrong)
-        return EXIT_COULD_NOT_RUN
-    results = [evaluate(matching.MATCHERS[name](), cases, offers) for name in names]
-    print(json.dumps({"tool": "match_eval", "status": OK, "matchers": results}) if args.json else "\n".join(_lines(results)))
-    return EXIT_OK
+    except (OSError, ValueError) as wrong:  # UnknownMatcher and a JSON error are ValueErrors
+        said = envelope("match_eval", "evaluate", unchecked=[{"sentence": str(wrong), "fix": None}])
+        print(json.dumps(said) if args.json else "could-not-run: %s" % wrong)
+        return EXIT_FOR[said["status"]]
+    results = [evaluate(one, cases, offers) for one in matchers]
+    said = envelope("match_eval", "evaluate", data={"matchers": results})
+    print(json.dumps(said) if args.json else "\n".join(_lines(results)))
+    return EXIT_FOR[said["status"]]
 
 
 if __name__ == "__main__":
     sys.exit(main())
 ```
 
-`json.JSONDecodeError` is a `ValueError`, so a broken case file is could-not-run too. Make the file executable: `chmod +x tools/match_eval.py`.
+A broken case file and an unknown matcher are could-not-run, like an unreadable file. Make the file executable: `chmod +x tools/match_eval.py`.
 
 - [ ] **Step 6: Run the tests, then the eval.** `python3 -m unittest discover -s tests -p test_match_eval.py`, then `python3 tools/match_eval.py --cases tests/matching/cases.json --drawer tests/matching/drawer`. Expected: the tests PASS. The eval prints one line per matcher. Copy its output into the commit message. Do not change the data to move the numbers.
 
@@ -1064,10 +1099,10 @@ if __name__ == "__main__":
 - Modify: `commands/idea.md`, section M
 - Modify: `docs/2026-10-04-store-design.md`, the `matcher` row of §6.2 (about line 290) and row M1 (about line 91)
 - Modify: `GLOSSARY.md`
-- Modify: each page that lists the drawer's fields for a reader. Find them with `/usr/bin/grep -rln 'used_in' commands skills docs/guide README.md`.
+- Modify: `commands/drawer.md` (the drawer's field list, about line 31)
 - Read: `docs/guide/journey.md` and README's *What works today*. If they describe `--match`'s output, change them.
 
-- [ ] **Step 1: `commands/idea.md`, section M.** After the paragraph on `[other words]`, add these points in simple English (short sentences, active voice, no semicolons):
+- [ ] **Step 1: `commands/idea.md`, section M.** Add `Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *)` to the `allowed-tools` line at the top of the file (`--match *` already covers `--matcher`). After the paragraph on `[other words]`, add these points in simple English (short sentences, active voice, no semicolons):
   - With `--json`, each candidate has a `score` from 0 to 1 and a `why`.
   - The text shows each candidate's `about` line under it.
   - `parts.py --offer <id or entry key>` prints the whole text of one offer. Read it before you choose between close candidates.
@@ -1078,7 +1113,7 @@ if __name__ == "__main__":
 
 - [ ] **Step 3: GLOSSARY.md.** A section `## Matching` with one short entry each, in the file's style: matcher, offer, fit, chooser, `about`, `description`, `tags`. Each entry names where it lives (`scripts/matching.py`, the drawer, a record).
 
-- [ ] **Step 4: The drawer's field lists.** On each page that the grep finds, add `about`, `description` and `tags` with their caps.
+- [ ] **Step 4: The drawer's field list.** In `commands/drawer.md`, add `about`, `description` and `tags` with their caps.
 
 - [ ] **Step 5: Run the checks.** `python3 tools/check_docs.py`, `python3 scripts/check_spine.py`, `python3 -m unittest discover -s tests`. Expected: each exits 0.
 
