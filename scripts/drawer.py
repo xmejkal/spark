@@ -191,7 +191,7 @@ def resolve(target, known):
 
 def _shelve_from(target, where, path):
     """What shelving a link needs — (path, project) — when the record is a part living only in one project."""
-    return (path, where) if where is not None and where not in SPARKS_OWN and "part" in target else None
+    return (path, where or None) if where is not None and where not in SPARKS_OWN and "part" in target else None
 
 
 def settle(entry_id, before, values, known):
@@ -249,7 +249,11 @@ def plan_set(items, project=None):
     """
     if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
         return [], [], [parts._problem(None, "a drawer write is a JSON list of entries, each an object")]
-    current, known, changes, questions, problems = entries(), linkable(project), [], [], []
+    # linkable() calls the given project's own layer "project"; a shelf copy names the project as the person's list does,
+    # and names none ("") when the folder is on no list, such as one /spark:research just wrote into (P185 review, P1).
+    named = (store.project_name(project) or "") if project else None
+    known = [row[:2] + (named,) + row[3:] if row[2] == "project" else row for row in linkable(project)]
+    current, changes, questions, problems = entries(), [], [], []
     for item in items:
         values = {key: value for key, value in item.items() if key != "entry"}
         entry_id = item.get("entry") or (_free_key(clean(values["label"]), current) if _words(values.get("label")) else None)

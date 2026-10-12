@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/drawer.py",
+  "name": "plan_set ignores the project it is given and looks only at spark's layers and the person's list",
+  "find": "for row in linkable(project)]",
+  "replace": "for row in linkable()]"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "plan_set looks in the wrong folder, the project's parent, for the record /spark:research wrote",
+  "find": "for row in linkable(project)]",
+  "replace": "for row in linkable(project.parent if project else None)]"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "with a project given, plan_set offers only the project's records and drops the library and the shelf",
+  "find": "for row in linkable(project)]",
+  "replace": "for row in linkable(project) if row[2] == \"project\"]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "--drawer-set drops --project before it reaches plan_set",
+  "find": "drawer.plan_set(items, project), args.dry_run",
+  "replace": "drawer.plan_set(items), args.dry_run"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "--drawer-set hands plan_set no project even when one was given",
+  "find": "drawer.plan_set(items, project), args.dry_run",
+  "replace": "drawer.plan_set(items, None), args.dry_run"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "the shelf copy names the layer 'project' instead of the project's name on the list (review P1)",
+  "find": "if row[2] == \"project\" else row for row",
+  "replace": "if False else row for row"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "an unlisted folder's record is not shelved at all",
+  "find": "return (path, where or None) if where is not None",
+  "replace": "return (path, where) if where"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a write that puts a record on the shelf does not say so",
+  "find": "\"  %s %s on your shelf, so every project finds it\"",
+  "replace": "\"\" and \"%s %s\""
+ }
+]

@@ -106,6 +106,37 @@ class TheDrawerTest(unittest.TestCase):
                           "--project", str(project)])
         self.assertEqual((said["status"], code), ("ok", 0), said)
         self.assertEqual(self.entry("a-knob")["is"], {"part": "knob-encoder"})
+        # The folder is on no list, so the shelf copy names no project (review P1).
+        self.assertNotIn("based_on", json.loads((self.home / "shelf" / "knob-encoder.json").read_text()))
+
+    def test_a_listed_project_given_with_project_is_named_on_the_shelf_by_its_list_name(self):
+        run(["--drawer-set", a_file([{"label": "a mosfet", "count": 1}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "a-mosfet", "is": {"part": "dfr0457-mosfet"}}]),
+                          "--project", str(self.project)])
+        self.assertEqual((said["status"], code), ("ok", 0), said)
+        shelved = json.loads((self.home / "shelf" / "dfr0457-mosfet.json").read_text())
+        self.assertEqual(shelved["based_on"]["project"], "irrigation")
+
+    def test_a_library_record_still_links_when_a_project_is_given(self):
+        # The mutation tester's escape: with --project, the library and the shelf stay linkable.
+        run(["--drawer-set", a_file([{"label": "buttons", "count": 5}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "buttons", "is": {"part": "tactile-button"}}]),
+                          "--project", str(Path(tempfile.mkdtemp()))])
+        self.assertEqual((said["status"], code), ("ok", 0), said)
+        self.assertEqual(self.entry("buttons")["is"], {"part": "tactile-button"})
+
+    def test_the_dry_run_says_the_record_would_go_on_the_shelf(self):
+        project = Path(tempfile.mkdtemp()) / "research"
+        (project / "parts").mkdir(parents=True)
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record.update(id="knob-encoder")
+        (project / "parts" / "knob-encoder.json").write_text(json.dumps(record))
+        run(["--drawer-set", a_file([{"label": "a knob", "count": 1}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]),
+                        "--project", str(project), "--dry-run"])
+        self.assertIn("would put knob-encoder on your shelf", out.getvalue())
 
     def test_a_new_entry_with_a_count_and_no_label_is_still_refused(self):
         said, code = run(["--drawer-set", a_file([{"entry": "some-resistors", "count": 50}])])
