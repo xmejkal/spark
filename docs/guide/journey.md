@@ -13,7 +13,7 @@ today.
 flowchart LR
     drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
     research --> build["Build — works"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
-    firmware --> simulate["Simulate — works"] --> bench["Bench — not yet"]
+    firmware --> simulate["Simulate — works"] --> bench["Bench — partly"]
 ```
 
 The same journey in words:

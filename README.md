@@ -61,7 +61,7 @@ runs in [the journey guide](docs/guide/journey.md):
 flowchart LR
     drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
     research --> build["Build — works"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
-    firmware --> simulate["Simulate — works"] --> bench["Bench — not yet"]
+    firmware --> simulate["Simulate — works"] --> bench["Bench — partly"]
 ```
 
 The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
