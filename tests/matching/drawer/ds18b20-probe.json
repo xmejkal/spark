@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "DS18B20 waterproof probe",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "temperature"
+    }
+  ],
+  "about": "A waterproof probe that reads the temperature of a liquid or of soil.",
+  "description": "The probe holds a digital temperature chip inside a sealed steel tube with a long cable. It talks to the microcontroller over one data wire, and many probes can share that wire. It reads from -55 to 125 degrees Celsius and needs up to 750 ms for one reading.",
+  "tags": [
+    "thermometer",
+    "probe",
+    "waterproof",
+    "heat",
+    "cold"
+  ]
+}

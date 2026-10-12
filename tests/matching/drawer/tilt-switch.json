@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "Ball tilt switch",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "tilt-switch"
+    }
+  ],
+  "about": "Closes when it is tipped over.",
+  "description": "A small metal ball rolls inside a case. When the case tips, the ball closes or opens two contacts. It reacts at about 15 degrees from upright, and it bounces for a moment after each move.",
+  "tags": [
+    "ball",
+    "tilt",
+    "shake",
+    "angle"
+  ]
+}

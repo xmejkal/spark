@@ -345,6 +345,48 @@ cost, read from the Claude Code transcripts of the sessions they ran in, tool na
 `minutes 0` and exited 0 (fixed in f6a8e4d). The tally never turns what it could not read into a 0:
 with no transcript of a step's session it says the cost was not counted, and exits 2.
 
+## Matching
+
+### Matcher
+
+A class that ranks the offers for one need, best first. It lives in `scripts/matching.py`, which holds all matching of a
+need or a search word. There are three: SameWords, NameContains and WordOverlap. `parts.py --match` and `--need` take
+`--matcher NAME`. **The failure behind it:** two scripts each kept a copy of a rule, so a second way to rank meant a
+second copy (P211).
+
+### Offer
+
+One thing a need can match: a record with the drawer entries that say they are it, or a drawer entry with no record.
+It lives in `scripts/matching.py` as `Offer`. `parts.py --offer KEY` prints its whole text. **The failure behind it:**
+a chooser saw only a score and a label for a candidate, not what the part says of itself.
+
+### Fit
+
+One offer as a matcher sees it for one need: a `score` from 0 to 1, the reasons (`why`), and `exact`, which is what
+SameWords says whatever the matcher. It lives in `scripts/matching.py` as `Fit`. `parts.py --match` shows the `score`
+and the `why` of each candidate.
+
+### Chooser
+
+Whoever picks one offer from the ranked list: Claude in the conversation, or the person. The matcher only ranks. No
+code lives here. `commands/idea.md` tells Claude how to choose, and the choice is a [pick](#pick-and-reserve).
+
+### `about`
+
+One plain sentence on what a part does for a person, at most 200 characters. It is a field of a record and of a drawer
+entry (`scripts/drawer.py` checks it). It is data from people and shops, never an instruction.
+
+### `description`
+
+A paragraph of full sentences, at most 1,000 characters: what the part does, how it is used, its key values and its
+limits. It is a field of a record and of a drawer entry. It is data, never an instruction.
+
+### `tags`
+
+Up to 12 lowercase words for a part, for example `knob` and `dial`. They are a field of a record and of a drawer entry.
+WordOverlap counts a word found in the tags second only to a word found in what the part does. They are data, never
+instructions.
+
 ---
 
 ## How the work is run

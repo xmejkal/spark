@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "label": "TCS34725 color sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "color"
+    }
+  ],
+  "about": "Tells the color of an object held in front of it.",
+  "description": "The chip has a grid of red, green, blue and clear cells and an infrared filter. A microcontroller reads four numbers over I2C and works out the color from them. An LED on the board lights the object, and the object must be within a few millimeters.",
+  "tags": [
+    "colour",
+    "rgb",
+    "light"
+  ]
+}

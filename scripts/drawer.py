@@ -23,11 +23,18 @@ VERBS = parts.VERBS
 
 #: An entry's fields, in the order its file shows them (§5.2). No price, no date, no condition grade (W21).
 FIELDS = ("label", "count", "part_number", "revision", "is", "function", "place", "used_in", "from", "bought",
-          "unsure", "skip", "photos")
+          "unsure", "skip", "photos", "about", "description", "tags")
 
 #: A label is shown and matched, never obeyed (§6.4.6): control and bidi characters go, and it stops at 160 characters.
 LABEL_MAX = 160
 CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]+")
+
+#: What an entry or a record says of itself for a chooser (P211): one sentence and a paragraph, each capped — data, never obeyed.
+TEXT_MAX = {"about": 200, "description": 1000}
+#: At most this many tags, each a lowercase word or two (P211).
+TAGS_MAX = 12
+#: The keys that describe a part rather than place it (P211): `--drawer-set` and `--fact-set` both write them.
+DESCRIBING = ("about", "description", "tags")
 
 #: The layers spark keeps itself. A record found anywhere else lives in one project, and is shelved when linked.
 SPARKS_OWN = ("shelf", "library", "catalog")
@@ -36,9 +43,18 @@ SPARKS_OWN = ("shelf", "library", "catalog")
 Link = namedtuple("Link", "target where path question")
 
 
-def clean(text):
-    """Words from a shop or a person, made safe to show: control and bidi characters become a space; at most 160 characters."""
-    return CONTROL.sub(" ", str(text)).strip()[:LABEL_MAX]
+def clean(text, cap=LABEL_MAX):
+    """Words from a shop or a person, made safe to show: control and bidi characters become a space; at most `cap` characters."""
+    return CONTROL.sub(" ", str(text)).strip()[:cap]
+
+
+def scrub(key, value):
+    """A value as it is written under `key` (P211): tags cleaned and lowercased, a text cut at its own cap, the rest as a label."""
+    if key == "tags" and isinstance(value, list):
+        return [clean(tag).lower() if isinstance(tag, str) else tag for tag in value]
+    if key in TEXT_MAX and isinstance(value, str):
+        return clean(value, TEXT_MAX[key])
+    return _scrubbed(value)
 
 
 def _scrubbed(value):
@@ -82,6 +98,10 @@ CHECKS = {
     "photos": (lambda v: isinstance(v, list) and all(isinstance(p, dict) and re.fullmatch(r"[0-9a-f]{64}", str(p.get("sha256")))
                                                      and _words(p.get("file")) for p in v),
                '`photos` are [{"sha256", "file"}], each kept with `parts.py --keep`'),
+    "about": (lambda v: v is None or _words(v), "`about` is one sentence on what it does for you, or null"),
+    "description": (lambda v: v is None or _words(v), "a description is a few sentences: what it does, how it is used, its limits"),
+    "tags": (lambda v: isinstance(v, list) and len(v) <= TAGS_MAX and all(_words(t) for t in v),
+             '`tags` are up to %d words, for example ["knob", "dial"]' % TAGS_MAX),
 }
 
 
@@ -202,7 +222,7 @@ def settle(entry_id, before, values, known):
     drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
     {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
     """
-    values = {key: (value if key == "is" else _scrubbed(value)) for key, value in values.items()}
+    values = {key: (value if key == "is" else scrub(key, value)) for key, value in values.items()}
     problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (key, ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
     problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "DHT22 humidity sensor",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "humidity"
+    }
+  ],
+  "about": "Reads the relative humidity of the air.",
+  "description": "The sensor measures the humidity of the air with a small capacitor and sends the number as a digital signal on one wire. It also reads the temperature and uses it to compensate the humidity value. It measures from 0 to 100 percent and gives one new reading every two seconds at most.",
+  "tags": [
+    "humidity",
+    "damp",
+    "air",
+    "weather",
+    "moisture"
+  ]
+}

@@ -797,6 +797,13 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertIn("l9110s-module", [p["id"] for p in parts.need(["hg7881"])[0]],
                       "an alias alone matches — HG7881 appears nowhere but also_known_as")
 
+    def test_need_takes_a_matcher_and_refuses_one_that_does_not_serve_it(self):
+        said, code = run_json(["--need", "motor", "--matcher", "word-overlap"])
+        self.assertEqual(code, 2)
+        self.assertIn("name-contains", said["unchecked"][0]["sentence"])
+        said, code = run_json(["--need", "motor", "--matcher", "name-contains"])
+        self.assertIn("l9110s-module", [p["id"] for p in said["data"]["found"]])
+
     def test_a_draft_still_being_filled_in_is_named_and_does_not_stop_the_search(self):
         # I3: `--need` died on a researcher's skeleton while five researchers were running.
         import tempfile
@@ -2167,6 +2174,20 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
             for given in ({"price_czk": 89}, {"footprint": None}, {}, ["jst_ph_3"]):
                 with self.subTest(given=given):
                     self.assertEqual(run_json(["--fact-set", "x-soil", self.facts(given)])[1], 1)
+
+    def test_a_record_gets_its_about_and_tags_cleaned(self):
+        home = self.a_probe()
+        with in_store(home):
+            _, code = run_json(["--fact-set", "x-soil", self.facts({"about": "Tells how wet\x00 the soil is.", "tags": ["Plant"]})])
+        record = json.loads((home / "catalog" / "x-soil.json").read_text())
+        self.assertEqual((code, record["about"], record["tags"]), (0, "Tells how wet  the soil is.", ["plant"]))
+
+    def test_an_unknown_key_is_still_refused(self):
+        home = self.a_probe()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-soil", self.facts({"price": 3})])
+        self.assertEqual(code, 1)
+        self.assertIn("about, description, tags", said["problems"][0]["sentence"])
 
     def test_a_fact_that_breaks_the_record_is_refused(self):
         home = self.a_probe()

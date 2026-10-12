@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Lever limit switch",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "limit-switch"
+    }
+  ],
+  "about": "Clicks when a moving part reaches the end of its travel.",
+  "description": "A small lever presses a micro switch when a part pushes on it. The switch gives a clean on or off signal to a pin, wired to ground with a pull-up. It switches 5 A at 125 V AC and wears out after about 100000 presses.",
+  "tags": [
+    "end-stop",
+    "endstop",
+    "microswitch",
+    "lever",
+    "travel"
+  ]
+}

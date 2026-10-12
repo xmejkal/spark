@@ -26,7 +26,10 @@ With `--json` it answers 20 entries at a time; `truncated.next` is the command f
    label keeps "pack of 10"; `"many"` is a count) — leave `count` out when the person does not know how many: the entry
    is owned, count unknown, and a pick of it says so. Add only what they said: `part_number` (`{"number"}`, when one is
    printed on it), `function` (`[{"does", "what"}]`, `does` one of sense, input, indicate, sound, move, drive, power,
-   keep-time, store, compute, communicate, connect, mount — `drive` is the driver, `move` the thing driven), `place`,
+   keep-time, store, compute, communicate, connect, mount — `drive` is the driver, `move` the thing driven),
+   `about` (one plain sentence on what it does for them, at most 200 characters), `description` (a paragraph of full
+   sentences, at most 1,000 characters: what it does, how it is used, its key values and its limits), `tags` (up to 12
+   lowercase words, for example `knob` and `dial`), `place`,
    `from` (`{"seller"}`; never an order number), `skip` (their words, for a part they think is dead), `unsure: true`
    (they are not sure they have it), `used_in` (`{project: how many}`), `is` (`{"part": id}` or `{"board": id}`, only
    after they said which record it is). To undo a link, write the entry with `"is": null`; it stays unlinked until a

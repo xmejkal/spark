@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "MPU-6050 accelerometer and gyroscope",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "acceleration"
+    }
+  ],
+  "about": "Feels tilt, shaking and rotation.",
+  "description": "The chip holds a three-axis accelerometer and a three-axis gyroscope and sends 16-bit readings over I2C. A microcontroller reads the speed of turning and the pull of gravity along each axis. The range is selectable, up to 16 g and 2000 degrees per second, and the gyroscope drifts over time.",
+  "tags": [
+    "accelerometer",
+    "gyroscope",
+    "tilt",
+    "orientation",
+    "shake"
+  ]
+}

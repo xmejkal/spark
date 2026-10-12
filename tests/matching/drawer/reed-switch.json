@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "label": "Reed switch",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "reed-switch"
+    }
+  ],
+  "about": "Closes when a magnet comes near, for a door or a lid.",
+  "description": "Two thin metal strips inside a glass tube touch when a magnet comes near. The microcontroller reads it as a switch with a pull-up resistor. It switches at a distance of a few millimeters, and the glass tube breaks if it bends or falls hard.",
+  "tags": [
+    "magnet",
+    "door",
+    "window",
+    "contact"
+  ]
+}

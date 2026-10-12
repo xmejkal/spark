@@ -17,6 +17,7 @@ import design
 import drawer
 import emit_board
 import emit_footprint
+import matching
 import parts
 import store
 
@@ -118,16 +119,8 @@ def write(project, needs):
 #: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
 LAYERS = ("drawer", "project", "shelf", "library", "catalog")
 
-
-def _words(text):
-    return {word for word in re.split(r"[^a-z0-9]+", str(text or "").lower()) if word}
-
-
-def _what_matches(need, functions, names):
-    """Every word of the need's `what` in a function with the need's verb, or in the record's name or an alias (§6.2)."""
-    wanted = _words(need["what"])
-    return bool(wanted) and (any(wanted <= _words(f.get("what")) for f in functions if f.get("does") == need["does"])
-                             or wanted <= set().union(*(_words(name) for name in names)))
+#: `--match`'s matcher (P211). A default changes only with the PO's yes, after he reads `tools/match_eval.py`'s numbers.
+MATCHER = "same-words"
 
 
 def _counts(holding, mine=None):
@@ -152,52 +145,74 @@ def stops_at_footprint(board):
     return not isinstance(board, dict) or bool(emit_footprint.footprint_gaps(board))
 
 
-def _candidate(need, functions, names, holding, said, mine=None):
-    """One candidate (§6.2): `said` names it and where it lives; the rest is what its verb's functions say, and its counts."""
-    owned, free, unsure = _counts(holding, mine)
-    return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": []}, **said,
-                what=sorted({f["what"] for f in functions if f.get("does") == need["does"]}),
-                what_matches=_what_matches(need, functions, names), owned=owned, free=free, unsure=unsure)
-
-
-def candidates(need, known, entries, mine=None):
+def offers(known, entries):
     """
-    The store's candidates for one need (§6.2's code half): every record and every record-less drawer entry whose function
-    has the need's verb, owned first, then those whose `what` is the need's, nearest first. Similar enough is the agent's call.
-    What `mine`, the asking project, holds is free to it.
+    Every offer in the store (P211) as [(Offer, context)]: each readable record with the live drawer entries that say they
+    are it, then each live record-less entry that holds any. Context is {"record", "in", "path", "holding"}. Nothing costly
+    runs here: what a record owes is asked only of an offer a matcher admits.
     """
-    pointing = _pointing(entries)
-    found, known_keys = [], set()
+    pointing, built, known_keys = _pointing(entries), [], set()
     for kind, record_id, where, path in known:
         record = parts._parse(path)
-        holding = [entry for _, entry in pointing.get((kind, record_id), [])]
         if not isinstance(record, dict):
             continue
         known_keys.add((kind, record_id))
-        functions = parts.function_of(record, board=kind == "board") + [f for e in holding for f in e.get("function") or []]
-        if not any(f.get("does") == need["does"] for f in functions):
-            continue
-        names = [record.get("name")] + parts.aliases(record)
-        said = {"id": record_id, "kind": kind, "in": where, "label": record.get("name"),
-                "owes": [] if kind == "board" else parts.owes(record),
-                "broken": bool(parts._shape_problems(boards.validate, record, path, "board definition")) if kind == "board"
-                else bool(parts.broken_problems(record, path))}
-        if kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
-            said["stops_at"] = "footprint" if stops_at_footprint(record) else None
-        found.append(_candidate(need, functions, names, holding, said, mine))
+        holding = [entry for _, entry in pointing.get((kind, record_id), [])]
+        built.append((matching.Offer.from_record(record_id, kind, record, holding),
+                      {"record": record, "in": where, "path": path, "holding": holding}))
     for entry_id, entry in entries.items():
-        functions = entry.get("function") or []
         points_at_a_record = isinstance(entry.get("is"), dict) and bool(entry["is"]) and next(iter(entry["is"].items())) in known_keys
-        if points_at_a_record or entry.get("skip") or entry.get("count") == 0 or not any(f.get("does") == need["does"] for f in functions):
-            continue
-        found.append(_candidate(need, functions, [entry.get("label")], [entry],
-                                {"entry": entry_id, "in": "drawer", "label": entry.get("label")}, mine))
-    return sorted(found, key=lambda c: (c["owned"] == 0, not c["what_matches"],
+        if not (points_at_a_record or entry.get("skip") or entry.get("count") == 0):
+            built.append((matching.Offer.from_entry(entry_id, entry), {"record": None, "in": "drawer", "path": None, "holding": [entry]}))
+    return built
+
+
+def offer(key, project=None):
+    """The offer called `key` (P211): a record's id, a part's before a board's, or a drawer entry's key — the record it
+    says it is, when spark knows that record. None when nothing live has that key."""
+    rows, entries = drawer.linkable(project), drawer.entries()
+    pick = _resolve(key, {row[:2]: row[2] for row in rows}, entries)  # _resolve takes {(kind, id): where}, as plan_pick builds it
+    if pick is None:
+        return None
+    wanted = next(iter(pick.items()))
+    return next((found for found, _ in offers(rows, entries) if (found.kind, found.key) == wanted), None)
+
+
+def _candidate(need, fit, context, mine=None):
+    """One candidate (§6.2): where it lives and what it owes, what its verb's functions say, its counts and its fit."""
+    offer, record = fit.offer, context["record"]
+    owned, free, unsure = _counts(context["holding"], mine)
+    if record is None:
+        said = {"entry": offer.key, "in": "drawer", "label": context["holding"][0].get("label")}
+    else:
+        said = {"id": offer.key, "kind": offer.kind, "in": context["in"], "label": record.get("name"),
+                "owes": [] if offer.kind == "board" else parts.owes(record),
+                "broken": bool(parts._shape_problems(boards.validate, record, context["path"], "board definition"))
+                if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
+        if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
+            said["stops_at"] = "footprint" if stops_at_footprint(record) else None
+    return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": []}, **said,
+                what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
+                what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about, owned=owned, free=free, unsure=unsure)
+
+
+def candidates(need, known, entries, mine=None, matcher=None):
+    """
+    The store's candidates for one need (§6.2's code half): every offer the matcher admits, owned first, then the best
+    score, then nearest. The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
+    `mine`, the asking project, holds is free to it.
+    """
+    built = offers(known, entries)
+    context = {(offer.kind, offer.key): said for offer, said in built}
+    ranked = (matcher or matching.matcher(MATCHER, "match")).rank(need, [offer for offer, _ in built])
+    found = [_candidate(need, fit, context[(fit.offer.kind, fit.offer.key)], mine) for fit in ranked]
+    return sorted(found, key=lambda c: (c["owned"] == 0, -c["score"],
                                         LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS), c["id"] or c["entry"]))
 
 
-def match(project):
-    """Each need with its candidates (§6.2), and a problem for each need with no verb — it cannot be matched."""
+def match(project, matcher=None):
+    """Each need with its candidates (§6.2), and a problem for each need with no verb — it cannot be matched. `matcher` is
+    MATCHER's unless one is given (P211)."""
     known, entries, matched, problems, mine = drawer.linkable(project), drawer.entries(), [], [], store.project_name(project)
     for need in read(project):
         if need.get("does") not in parts.VERBS:
@@ -207,7 +222,7 @@ def match(project):
             problems.append(parts._problem(need["id"], "a need with no `what` cannot be matched — set it with --needs-set"))
             continue
         matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"],
-                            candidates=candidates(need, known, entries, mine)))
+                            candidates=candidates(need, known, entries, mine, matcher)))
     return matched, problems
 
 

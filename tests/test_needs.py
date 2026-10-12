@@ -401,10 +401,101 @@ class TheMatcherTest(unittest.TestCase):
         found = {c["id"] or c["entry"]: c for c in self.alone({"id": "heat", "does": "sense", "what": "temperature"})["candidates"]}
         self.assertEqual(found["ntc"], {"id": None, "kind": None, "entry": "ntc", "owes": [], "broken": False, "proof": [], "in": "drawer",
                                         "label": "an NTC thermistor", "what": ["temperature"], "what_matches": True,
-                                        "owned": 3, "free": 3, "unsure": False})
+                                        "score": 1.0, "why": ["same words"], "owned": 3, "free": 3, "unsure": False})
         combo = found["y-combo"]
         self.assertEqual((combo["kind"], combo["entry"], combo["in"], combo["label"], combo["what"], combo["proof"], combo["what_matches"]),
                          ("part", None, "catalog", "A combo board", ["temperature"], [], True))
+
+    def test_a_candidate_has_a_score_and_why_and_the_text_shows_its_about(self):
+        self.catalog({"id": "y-range", "name": "A rangefinder", "function": [{"does": "sense", "what": "distance"}],
+                      "about": "Tells how far away a thing is."})
+        found = {c["id"]: c for c in self.alone({"id": "far", "does": "sense", "what": "distance"})["candidates"] if c["id"]}
+        self.assertEqual((found["y-range"]["score"], found["y-range"]["why"]), (1.0, ["same words"]))
+        self.assertNotIn("about", found["y-range"])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        self.assertIn("Tells how far away a thing is.", out.getvalue())
+
+    def test_word_overlap_finds_a_part_filed_under_other_words(self):
+        self.catalog({"id": "y-range", "name": "A rangefinder", "function": [{"does": "sense", "what": "distance"}], "tags": ["range"]})
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "far", "does": "sense", "what": "range"}]}))
+        said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
+        first = [c for c in said["data"]["needs"][0]["candidates"] if c["id"] == "y-range"][0]
+        self.assertEqual((first["score"], first["why"], first["what_matches"]), (0.8, ["range: in tags"], False))
+
+    def test_the_score_orders_candidates_that_tie_on_owned_and_layer(self):
+        self.catalog({"id": "y-aaa", "name": "Alpha probe", "function": [{"does": "sense", "what": "distance"}], "tags": ["range"]},
+                     {"id": "y-zzz", "name": "Zulu probe", "function": [{"does": "sense", "what": "range"}]})
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "far", "does": "sense", "what": "range"}]}))
+        said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
+        found = [(c["id"], c["score"]) for c in said["data"]["needs"][0]["candidates"] if c["id"] in ("y-aaa", "y-zzz")]
+        self.assertEqual(found, [("y-zzz", 1.0), ("y-aaa", 0.8)], "unowned, both in the catalog: the id would put y-aaa first")
+
+    def test_the_next_page_keeps_the_matcher(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "n%d" % n, "does": "sense", "what": "soil-moisture"} for n in range(12)]}))
+        said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
+        self.assertIn("word-overlap", said["truncated"]["next"]["argv"])
+
+    def test_a_malformed_record_text_is_ignored(self):
+        self.catalog({"id": "y-odd", "name": "An odd probe", "function": [{"does": "sense", "what": "distance"}], "tags": "knob", "about": 5})
+        found = [c for c in self.alone({"id": "far", "does": "sense", "what": "distance"})["candidates"] if c["id"] == "y-odd"]
+        self.assertEqual((len(found), found[0]["score"]), (1, 1.0))
+
+    def test_a_matcher_that_does_not_serve_match_is_refused(self):
+        said, code = run(["--match", str(self.project), "--matcher", "name-contains"])
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertIn("same-words, word-overlap", said["unchecked"][0]["sentence"])
+
+    def test_offer_prints_what_a_record_says_of_itself(self):
+        self.catalog({"id": "y-range", "name": "A rangefinder", "about": "Tells how far away a thing is.", "tags": ["range"]})
+        said, code = run(["--offer", "y-range"])
+        self.assertEqual((code, said["data"]["offer"]["about"], said["data"]["offer"]["tags"]), (0, "Tells how far away a thing is.", ["range"]))
+
+    def test_the_cut_line_says_what_the_hidden_candidates_are(self):
+        for number in range(9):
+            (self.home / "drawer" / ("t%d.json" % number)).write_text(json.dumps(
+                {"schema": 1, "label": "thermometer %d" % number, "count": 1, "function": [{"does": "sense", "what": "temperature"}]}))
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "wet", "does": "sense", "what": "soil-moisture"}]}))
+        for extra, said in (([], "more, none with the need's words"), (["--matcher", "word-overlap"], "more, each scoring under 0.5")):
+            with self.subTest(extra=extra):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    parts.main(["--match", str(self.project)] + extra)
+                self.assertRegex(out.getvalue(), r"… \d+ " + re.escape(said))
+
+    def test_offer_with_a_project_reads_the_project_s_own_record(self):
+        (self.project / "parts").mkdir(parents=True)
+        (self.project / "parts" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "Our probe", "kind": "sensor",
+                                                                         "about": "The project one.",
+                                                                         "function": [{"does": "sense", "what": "soil-moisture"}]}))
+        said, _ = run(["--offer", "x-soil", "--project", str(self.project)])
+        self.assertEqual(said["data"]["offer"]["about"], "The project one.")
+        said, _ = run(["--offer", "x-soil"])
+        self.assertNotEqual(said["data"]["offer"]["about"], "The project one.", "without --project the project's records are not read")
+
+    def test_offer_json_fits_the_page_however_long_a_record_s_power_note_is(self):
+        self.catalog({"id": "y-hungry", "name": "A hungry probe", "power": {"note": "3V3\u202e only " + "x" * 6000}})
+        for key in ("y-hungry", "firebeetle2-esp32s3"):
+            with self.subTest(key=key):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    parts.main(["--offer", key, "--json"])
+                self.assertLessEqual(len(out.getvalue()), 3400)
+                self.assertNotIn("\u202e", out.getvalue())
+                self.assertEqual(json.loads(out.getvalue())["data"]["offer"]["key"], key)
+
+    def test_an_entry_that_is_a_record_offers_the_record(self):
+        (self.home / "drawer" / "my-probe.json").write_text(json.dumps({"schema": 1, "label": "my probe", "count": 1,
+                                                                        "is": {"part": "x-soil"}, "tags": ["garden"]}))
+        said, code = run(["--offer", "my-probe"])
+        self.assertEqual((code, said["data"]["offer"]["key"]), (0, "x-soil"))
+        self.assertIn("garden", said["data"]["offer"]["tags"])
+
+    def test_an_offer_nobody_has_is_a_problem(self):
+        said, code = run(["--offer", "unobtainium"])
+        self.assertEqual((code, said["status"]), (1, "problems"))
 
     def test_a_project_s_own_record_shadows_the_same_id_elsewhere(self):
         (self.project / "parts").mkdir(parents=True)
@@ -1859,7 +1950,7 @@ class TheIdeaCommandTest(unittest.TestCase):
     def test_it_names_the_project_where_a_command_takes_it_and_only_there(self):
         # the body's commands — the frontmatter names each operation once, for allowed-tools (C-5), and runs nothing
         lines = (ROOT / "commands" / "idea.md").read_text().split("---", 2)[2].splitlines()
-        flagged = [line for line in lines if any(op in line for op in ("--audit", "--function-set", "--fact-set"))]
+        flagged = [line for line in lines if any(op in line for op in ("--audit", "--function-set", "--fact-set", "--offer"))]
         self.assertTrue(flagged)
         for line in flagged:
             self.assertIn("--project <project>", line, line)

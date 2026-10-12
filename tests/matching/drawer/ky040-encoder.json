@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "label": "KY-040 rotary encoder",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "rotary-encoder"
+    }
+  ],
+  "about": "A knob that turns without end and clicks, for menus and volume.",
+  "description": "The shaft sends two pulse trains that show which way it turns and how far. A microcontroller counts the pulses, and pressing the shaft closes a third contact. It gives 20 steps for each turn, and the pulses bounce, so the code or a capacitor must filter them.",
+  "tags": [
+    "knob",
+    "dial",
+    "rotate",
+    "volume",
+    "menu",
+    "scroll"
+  ]
+}

@@ -88,7 +88,7 @@ candidate still owes before it can build.
 | story | check |
 | --- | --- |
 | S1 As the hobbyist, I say a goal; at most three questions, one at a time, turn it into needs | `<project>/.spark/needs.json` lists them (§5.3); S makes the project folder |
-| M1 As the agent, for each need I get the store's candidates, store first | `parts.py --match <project> --json` lists candidates by `does`, and says whether every word of the need's `what` is in a same-verb function, the name or an alias (`what_matches`), with layer, owned and free counts, `unsure`, proof and what each owes |
+| M1 As the agent, for each need I get the store's candidates, store first | `parts.py --match <project> --json` lists candidates by `does`, and says whether every word of the need's `what` is in a same-verb function, the name or an alias (`what_matches`), with layer, owned and free counts, `unsure`, proof, what each owes, and a `score` from 0 to 1 and a `why` (P211) |
 | M2 As the agent, I mark each need have / have-unknown / know / gap and say why | the marks are written into `needs.json` through `parts.py --needs-set`; the reason is said to the person, not stored (amended 2026-10-05: a project file holds no reasons, §5.3; 1c keeps only a passed-over part's, §5.7) |
 
 **Foundations it brings:** the `function` field (§5.6); owed / broken (§5.4) and a walk that checks every layer,
@@ -287,7 +287,7 @@ hand-written ones).
 | record store | `get(id)`, `put(id, record, check)` (validated, contained, atomic, idempotent; a read-only layer refuses), `ids()`, `delete(id)` (needs yes) | not found; refused (check failed, read-only, outside) | 1a — folders of JSON | a shared git clone (P84), a database |
 | document store | `keep(payload, name) → sha256` (to `.part`, checked, renamed), `get(sha256) → path`, `status(entry)` → present / missing / outside | wrong checksum (deleted, named) | 1c — checksum folders | a private bucket |
 | drawer importer | `read(source) → payload` (agent half); `apply(payload, dry_run) → [entry changes]` (code half) | payload shape; line counts disagree | 1a — DFRobot orders, typed list | AliExpress orders, photos |
-| matcher | `match(needs) → [{need, candidates:[{id, layer, owned, free, unsure, proof, owes}]}]` (code); the mark (agent; its reason is said to the person, §5.3) | a need with no `does` | 1b — function field + the agent | embeddings, a shared index |
+| matcher | `Matcher.rank(need, offers) → [Fit]` in `scripts/matching.py` (code, P211), and the mark (the agent decides, and its reason is said to the person, §5.3) | a need with no `does` | 1b — SameWords, NameContains and WordOverlap (P211), and the agent | embeddings, a shared index |
 | researcher | `research(need, budget) → records + a researched event` (agent) | over budget (stops, says so) | the first real gap | the JLCPCB MCP alone, manual |
 | cost counter | `count(window) → {requests, runs, documents, tokens, minutes}` | no transcript → could-not-run, never 0 | 1c — session transcripts | spark logging its own calls |
 | fetcher | `fetch(url, method="GET") → bytes` (counted; one at a time) | unreachable; not http or https | 1c — one checked download | a cache, offline mode |

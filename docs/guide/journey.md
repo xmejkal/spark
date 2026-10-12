@@ -181,6 +181,8 @@ How to read the matches:
     still reading `[ok]` ([P115](https://github.com/xmejkal/spark/issues/49)).
 - `[other words]` marks a looser match: the part does the same thing (*sense*, *indicate*) but names a different object
   (*distance*, *light*). Whether that fits is Claude's call, and Claude says so to you.
+- A candidate with an `about` line shows it under its row. With `--json`, each candidate has a `score` from 0 to 1 and a
+  `why`. `--matcher word-overlap` ranks by shared words, tags and descriptions, and `same-words` stays the default.
 - `stops at the footprint stage (P121)` marks a board whose board file has no header geometry: the chain stops at its
   footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). Of spark's two boards, only the FireBeetle
   builds today.

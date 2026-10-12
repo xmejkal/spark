@@ -68,6 +68,9 @@ KIND_FUNCTION = {"rtc": ("keep-time", "rtc"), "regulator": ("power", "regulator"
                  "audio": ("sound", "audio-player"), "rangefinder": ("sense", "distance"), "servo": ("move", "servo"),
                  "board": ("compute", "microcontroller")}
 
+#: `--need`'s matcher (P211). A default changes only with the PO's yes.
+NEED_MATCHER = "name-contains"
+
 
 def function_of(record, board=False):
     """What a record does (§5.6): its own `function`, else what its kind says, else nothing."""
@@ -898,10 +901,20 @@ def catalog_records():
     return records, broken
 
 
-def catalog_matches(words):
-    """The catalog records matching every word, the way `need` matches — researched before, unbuilt."""
-    return [dict(record, id=part_id) for part_id, record in catalog_records()[0].items()
-            if _matches(words, part_id, record)]
+def _found(words, offers, matcher=None):
+    """The offers a search by words finds (P211): the need {"does": null, "what": the words, "words": as typed}, ranked by the
+    `--need` matcher."""
+    import matching
+    need = {"does": None, "what": " ".join(words), "words": list(words)}
+    return matching.found((matcher or matching.matcher(NEED_MATCHER, "need")).rank(need, offers))
+
+
+def catalog_matches(words, matcher=None):
+    """The catalog records a search by words finds, the way `need` finds them — researched before, unbuilt."""
+    import matching
+    records = catalog_records()[0]
+    offers = [matching.Offer.from_record(part_id, "part", record) for part_id, record in records.items()]
+    return [dict(records[fit.offer.key], id=fit.offer.key) for fit in _found(words, offers, matcher)]
 
 
 #: What a record leaves behind when it goes onto the shelf (§5.5): who owns one, their photos, where to buy it,
@@ -1333,32 +1346,26 @@ def sellers(project=None):
     return ()
 
 
-def _matches(words, part_id, record):
-    haystack = " ".join([part_id, record.get("name") or "", record.get("kind") or "",
-                         " ".join(aliases(record))]).lower()
-    return all(word.lower() in haystack for word in words)
-
-
-def need(words, project=None):
+def need(words, project=None, matcher=None):
     """
     The records matching every word — in id, name, kind or an alias — so what exists is known
     before anything is researched. Backlog R11: the RC car wrote three records by hand because
     nothing looked, and "nothing looked" was the first gap its diary named (G1).
     """
-    found, drafts = [], []
+    import matching
+    loaded, offers = {}, []
     for part_id in available(project):
         try:
-            record = load(part_id, project)
+            loaded[part_id] = load(part_id, project)
         except PartError:
             # A record still being filled in — research writes a skeleton first — must not stop
             # the search for everyone: `--need` died on a researcher's draft while five ran (I3).
             # Named as a draft, matched by its id alone, never returned as usable.
-            if _matches(words, part_id, {}):
-                drafts.append(part_id)
-            continue
-        if _matches(words, part_id, record):
-            found.append(dict(record, id=part_id))
-    return found, drafts
+            loaded[part_id] = None
+        offers.append(matching.Offer.from_record(part_id, "part", loaded[part_id] or {}))
+    fits = _found(words, offers, matcher)
+    return ([dict(loaded[fit.offer.key], id=fit.offer.key) for fit in fits if loaded[fit.offer.key] is not None],
+            [fit.offer.key for fit in fits if loaded[fit.offer.key] is None])
 
 
 def skeleton(part_id, kind, vendor=None):
@@ -1521,8 +1528,8 @@ OPERATIONS = (
     ("signals", {"nargs": "+", "metavar": "PART"}, "the signals these parts ask for, as assign_pins.py input", (), ("signals",)),
     ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts, one assumption a fact",
      (), ("parts",)),
-    ("need", {"nargs": "+", "metavar": "WORD"}, "what exists for a need, before researching: words matched in id, name, kind, alias",
-     (), ("need", "vendor_order", "found", "drafts", "catalog")),
+    ("need", {"nargs": "+", "metavar": "WORD"}, "what exists for a need, before researching: words matched in id, name, kind, alias; "
+     "--matcher picks the matcher", (), ("need", "vendor_order", "found", "drafts", "catalog")),
     ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/", ("writes",), ("path", "record", "written")),
     ("sources", {"metavar": "PART"}, "ask every URL a record cites whether it answers", ("network",), ("part", "sources")),
     ("fetch", {"metavar": "PART"}, "download the datasheets and images a record cites, into your store", ("network", "writes"),
@@ -1539,7 +1546,7 @@ OPERATIONS = (
     ("drawer", {"action": "store_true"}, "what you own: label, count, the record it is, unsure, skip — 20 at a time", (),
      ("entries",)),
     ("drawer-set", {"metavar": "FILE"}, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds; with --project, an `is` may "
-     "name a record in that project, such as one /spark:research just wrote",
+     "name a record in that project, such as one /spark:research just wrote; an entry may also say its about, description and tags",
      ("writes",), ("changes", "questions", "shelved")),
     ("drawer-import", {"nargs": 2, "metavar": ("SOURCE", "FILE")},
      "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
@@ -1548,7 +1555,7 @@ OPERATIONS = (
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "fill what a record owes — a JSON object of the facts the chain reads, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     "fill what a record owes — a JSON object of the facts the chain reads, or its about, description and tags, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),
@@ -1556,8 +1563,11 @@ OPERATIONS = (
     ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
      "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
      ("changes", "written")),
-    ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
-     (), ("needs",)),
+    ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes, "
+     "each with its score and why; --matcher picks the matcher that ranks them", (), ("needs",)),
+    ("offer", {"metavar": "KEY"}, "what one offer says of itself, for the chooser to read: a record's id or a drawer entry's "
+     "key — about, description, tags, what it does, its names, power and size. --project reads the project's own records", (),
+     ("offer",)),
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
      "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
      "what it notes is under `notes`",
@@ -1591,6 +1601,8 @@ OPTIONS = (
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
     ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
+    ("matcher", {"metavar": "NAME"}, "with --match or --need: the matcher that ranks the offers; a name that does not fit "
+     "is refused with the names that do"),
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
@@ -1681,8 +1693,13 @@ def _brief(part):
 
 
 def _op_need(args, project):
-    found, drafts = need(args.need, project)
-    known = [p for p in catalog_matches(args.need) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
+    import matching
+    try:
+        chosen = matching.matcher(args.matcher or NEED_MATCHER, "need")
+    except matching.UnknownMatcher as wrong:
+        return Answer(unchecked=[_cannot(str(wrong))])
+    found, drafts = need(args.need, project, chosen)
+    known = [p for p in catalog_matches(args.need, chosen) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
     data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": [_brief(p) for p in found],
             "drafts": drafts, "catalog": [_brief(p) for p in known]}
     lines = [_row(p["id"], p["kind"], p["name"]) for p in found]
@@ -1957,12 +1974,19 @@ def _op_function_set(args, project):
 
 
 def _op_fact_set(args, project):
+    """Fill a record's chain facts, or set what it says of itself (about, description, tags — cleaned and capped as an entry's are)."""
+    import drawer
     part_id, name = args.fact_set
     facts, unreadable = _read_json_input(name)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS)):
-        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s" % ", ".join(CHAIN_FACTS))])
+    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING)):
+        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s; or of what a "
+                                                  "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
+    facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING else value for key, value in facts.items()}
+    wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])]
+    if wrong:
+        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
     return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: (
         ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
         + sorted(set(broken_problems(after, path)) - set(broken_problems(record, path)))))
@@ -2010,29 +2034,47 @@ def _op_needs(args, project):
 
 
 def _op_match(args, project):
+    import matching
     import needs
-    matched, problems = needs.match(args.match)
+    try:
+        chosen = matching.matcher(args.matcher or needs.MATCHER, "match")
+    except matching.UnknownMatcher as wrong:
+        return Answer(unchecked=[_cannot(str(wrong))])
+    matched, problems = needs.match(args.match, chosen)
     if not matched and not problems:
         return Answer(unchecked=[_cannot("%s has no needs yet — /spark:idea writes them" % args.match)])
     for need in matched:
-        kept = [c for rank, c in enumerate(need["candidates"]) if rank < 8 or c["what_matches"]]
+        kept = [c for rank, c in enumerate(need["candidates"]) if matching.shown(rank, c["what_matches"], c["score"])]
         need["more"], need["candidates"] = len(need["candidates"]) - len(kept), kept
-    shown, truncated = page(matched, args.start, "match", ["--match", args.match])
     lines = []
     for need in matched:
         lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
                                             "  [%s]" % need["mark"] if need["mark"] else ""))
-        lines += ["      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
-                                        "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
-                                                                "free %s" % c["free"] if c["owned"] else "",
-                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else "",
-                                                                "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
-                  + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
-                  for c in need["candidates"]]
-        lines += ["      … %d more, none with the need's words" % need["more"]] if need["more"] else []
+        for c in need["candidates"]:
+            lines.append("      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
+                                                  "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
+                                                                          "free %s" % c["free"] if c["owned"] else "",
+                                                                          "owes " + ", ".join(c["owes"]) if c["owes"] else "",
+                                                                          "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
+                         + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
+            lines += ["          " + c["about"]] if c["about"] else []
+            del c["about"]  # the text shows it; the JSON gains only `score` and `why`
+        hidden = "none with the need's words" if chosen.name == needs.MATCHER else "each scoring under %s" % matching.MIN_SHOWN
+        lines += ["      … %d more, %s" % (need["more"], hidden)] if need["more"] else []
         lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
     lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
+    shown, truncated = page(matched, args.start, "match", ["--match", args.match] + (["--matcher", args.matcher] if args.matcher else []))
     return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)
+
+
+def _op_offer(args, project):
+    """`--offer KEY`: the whole text of one offer, for a chooser to read (P211) — or a problem when nothing live has that key."""
+    import needs
+    found = needs.offer(args.offer, project)
+    if found is None:
+        return Answer(problems=[_problem(args.offer, "no record and no live drawer entry called %r — `--need` and "
+                                                     "`--drawer` list what exists" % args.offer)])
+    return Answer({"offer": found.as_dict()}, found.describe().splitlines())  # the text once: in the lines, not again in data
 
 
 def _op_needs_set(args, project):

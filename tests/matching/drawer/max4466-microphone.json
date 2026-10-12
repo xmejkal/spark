@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "MAX4466 microphone",
+  "count": 1,
+  "function": [
+    {
+      "does": "sense",
+      "what": "sound"
+    }
+  ],
+  "about": "Picks up sound, such as a clap or a voice, as an analog signal.",
+  "description": "The board holds a small microphone and an amplifier. It gives a voltage that follows the sound, and the microcontroller reads that voltage on an analog pin. A small trimmer sets the gain from 25 to 125 times, and a loud sound close to the board clips the signal.",
+  "tags": [
+    "microphone",
+    "mic",
+    "audio",
+    "noise",
+    "clap"
+  ]
+}

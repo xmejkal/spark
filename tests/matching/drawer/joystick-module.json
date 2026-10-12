@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Two-axis joystick module",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "joystick"
+    }
+  ],
+  "about": "A thumb stick that reads two directions.",
+  "description": "The stick moves two potentiometers, one for each axis, and the module gives two analog voltages. A press of the stick works as a button, and it closes a switch to ground. The center is not exactly at half the supply, so the code must find the center at start.",
+  "tags": [
+    "stick",
+    "thumb",
+    "direction",
+    "gamepad",
+    "xy"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Tactile push button 6 mm",
+  "count": 1,
+  "function": [
+    {
+      "does": "input",
+      "what": "button"
+    }
+  ],
+  "about": "A small push button that clicks when it is pressed.",
+  "description": "The button closes the circuit while you hold it down and opens it when you let go. It fits a breadboard or a PCB and goes between a pin and ground. It is rated for 12 V and 50 mA, so it cannot switch a motor.",
+  "tags": [
+    "push",
+    "press",
+    "click",
+    "momentary",
+    "switch"
+  ]
+}
