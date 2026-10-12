@@ -274,16 +274,16 @@ sitting" is now the [service level](README.md#the-cadences-and-what-each-one-lea
 
 ## Habits — no command judges these
 
-Three rules no command can judge, so they live here, unnumbered. The first two were W4 and W9 until 2026-10-09
+Three rules no command can judge, so they live here, unnumbered. Two of them were W4 and W9 until 2026-10-09
 (P146), and those headings above point here.
 
-**Generate the least code and text that works** (2026-10-12, P205). MVP first, then add or change in small steps,
-each one leaving everything working. It holds for every change, document, card and option. Claude carries it into
+**Generate the least code and text that works** (2026-10-12, P205). Code above all. MVP first, then add or change in
+small steps, each one leaving everything working. It holds for every change, document, card and option. Claude carries it into
 every implementer's and reviewer's brief.
 
 *Origin:* Petr, 2026-10-12 (typos corrected): *"try to always keep the generated code/text etc to minimum, definitely
 with code, we really want to always prefer simplicity, go agile, etc, really MVP first, then adding/changing, always
-keeping it working"*. He said it after P197's pull request grew to about 245 lines through its council.
+keeping it working"*. He said it after P197's pull request grew through its council.
 
 **Never change a test to make it pass** (W4). Change the decision first; the test follows the decision. If the test
 is wrong, say why in the docstring and change its *premise*, not its assertion. Claude carries it, in the PO's words,
