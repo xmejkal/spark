@@ -327,7 +327,7 @@ with no transcript of a step's session it says the cost was not counted, and exi
 
 ### Working agreement — ten of them
 
-Ten, numbered W1, W2, W3, W6, W8, W13, W14, W15, W16 and W19; beside them two habits, two role rules and two product rules (P146, 2026-10-09;
+Ten, numbered W1, W2, W3, W6, W8, W13, W14, W15, W16 and W19; beside them three habits, two role rules and two product rules (P146, 2026-10-09;
 [`scrum/WORKING_AGREEMENTS.md`](scrum/WORKING_AGREEMENTS.md), the product rules in
 [`DECISIONS.md`](DECISIONS.md#product-rules)). Not principles adopted in advance. Each one is a **failure that
 happened here**, written down with its evidence so it cannot recur quietly. When one is inconvenient,
