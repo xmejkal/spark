@@ -56,12 +56,12 @@ class ProjectCase(unittest.TestCase):
         self.micropython.write_bytes(b"\xe9" + b"\x00" * 999)
         self.image = sim / "flash-with-firmware.bin"
 
-    def run_the_scenario(self, exit_code=0):
-        """The scenario runs with a fake wokwi-cli: it writes the image and the log, as a person's run does."""
+    def run_the_scenario(self, exit_code=0, scenario=None):
+        """A scenario (default: s) runs with a fake wokwi-cli: it writes the image and the log, as a person's run does."""
         told = {"FAKE_WOKWI_SERIAL": "ready\nLED on\n", "FAKE_WOKWI_EXIT": str(exit_code), "FAKE_WOKWI_OUT": READY_MATCHED,
                 "FAKE_WOKWI_ERR": "" if exit_code == 0 else "Error: stuck\n"}
         with mock.patch.dict(os.environ, told):
-            run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
+            run_scenario.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def deploy(self, *argv, find=found, run=None):
         """(exit code, stdout, stderr, the commands run) of deploy.py in this project."""
@@ -90,6 +90,17 @@ class TheDryRunTest(ProjectCase):
         self.assertEqual(code, deploy.EXIT_OK)
         self.assertNotIn("--port", said)
         self.assertIn("/opt/python3 -m mpremote repl, press", said)
+
+
+    def test_an_image_in_a_subfolder_of_sim_is_tested_by_the_logs_in_sim_runs(self):
+        sim = self.project / "sim"
+        (sim / "wokwi.toml").write_text(sim_project.wokwi_toml([], "images/flash.bin"))
+        (sim / "images").mkdir()
+        self.run_the_scenario()
+        code, said, problems, _ = self.deploy("--dry-run")
+        self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
+        self.assertIn(shlex.quote(str(sim / "images" / "flash.bin")), said)
+        self.assertTrue((sim / "images" / "flash.bin").is_file())
 
 
 class OnlyAnImageThatPassedTest(ProjectCase):
@@ -130,6 +141,31 @@ class OnlyAnImageThatPassedTest(ProjectCase):
         self.assertIn("names no image", problems)
 
 
+class ALogThatTestedAnotherImageTest(ProjectCase):
+    """A scenario that last ran on another image is not a refusal, but it is not forgotten either."""
+
+    def test_a_scenario_that_failed_on_an_older_image_is_named_in_a_note(self):
+        self.run_the_scenario(exit_code=1)
+        (self.project / "firmware" / "main.py").write_text("print('ready')\nprint('changed')\n")
+        other = self.project / "sim" / "scenarios" / "t.scenario.yaml"
+        other.write_text(SCENARIO.replace("name: s", "name: t"))
+        self.run_the_scenario(scenario=other)
+        code, said, problems, _ = self.deploy("--dry-run")
+        self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
+        self.assertIn("  note: s.log tested another image, not this one: run that scenario again to test this one",
+                      said.splitlines())
+
+    def test_several_logs_go_in_one_note_and_a_log_from_an_older_spark_is_one_of_them(self):
+        self.run_the_scenario()
+        runs = self.project / "sim" / "runs"
+        (runs / "a.log").write_text("# a.scenario.yaml, run 2026-10-01\nverdict: passed\n\nbody\n")
+        (runs / "b.log").write_text("# b.scenario.yaml, run 2026-10-01\nverdict: failed\nimage sha256: 0\n\nbody\n")
+        code, said, _, _ = self.deploy("--dry-run")
+        self.assertEqual(code, deploy.EXIT_OK)
+        self.assertIn("  note: a.log, b.log tested another image, not this one", said.splitlines()[0])
+        self.assertEqual(said.count("note:"), 1)
+
+
 class WhatDeployNeedsTest(ProjectCase):
     def test_a_missing_flasher_names_what_installs_it_and_runs_nothing(self):
         self.run_the_scenario()
@@ -146,6 +182,21 @@ class WhatDeployNeedsTest(ProjectCase):
         code, _, problems, _ = self.deploy("--dry-run")
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
         self.assertIn("requirements.json", problems)
+
+    def test_a_folder_named_like_a_log_is_skipped(self):
+        self.run_the_scenario()
+        (self.project / "sim" / "runs" / "x.log").mkdir()
+        code, said, problems, _ = self.deploy("--dry-run")
+        self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
+        self.assertNotIn("note:", said)
+
+    def test_a_log_that_cannot_be_read_is_a_sentence_not_a_traceback(self):
+        self.run_the_scenario()
+        with mock.patch.object(run_scenario, "run_record", side_effect=PermissionError("denied")):
+            code, _, problems, ran = self.deploy("--dry-run")
+        self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
+        self.assertIn("cannot read ", problems)
+        self.assertIn("s.log: denied", problems)
 
     def test_a_firmware_file_changed_after_the_image_is_named_but_the_image_still_goes(self):
         self.run_the_scenario()

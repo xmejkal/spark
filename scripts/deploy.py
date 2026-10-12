@@ -60,11 +60,29 @@ def image_of(project):
     return image
 
 
-def untested(image):
-    """None when a passed run names this image's sha256 and no run with another verdict does. Else why not."""
+def run_logs(runs):
+    """
+    (log, verdict, the tested image's sha256 or None) for each log in the runs folder, by name. A path that is no file
+    is skipped. DeployProblem when a log cannot be read.
+    """
+    records = []
+    for log in sorted(runs.glob("*.log")):
+        if not log.is_file():
+            continue
+        try:
+            records.append((log,) + run_scenario.run_record(log))
+        except OSError as cannot:
+            raise DeployProblem("cannot read %s: %s" % (log, cannot))
+    return records
+
+
+def untested(image, runs):
+    """
+    None when a passed run in the runs folder names this image's sha256 and no run with another verdict does.
+    Else why not.
+    """
     digest = hashlib.sha256(image.read_bytes()).hexdigest()
-    named = [(log, verdict) for log in sorted((image.parent / "runs").glob("*.log"))
-             for verdict, sha256 in [run_scenario.run_record(log)] if sha256 == digest]
+    named = [(log, verdict) for log, verdict, sha256 in run_logs(runs) if sha256 == digest]
     failed = [(log, verdict) for log, verdict in named if verdict != "passed"]
     if failed:
         return ("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed"
@@ -73,6 +91,15 @@ def untested(image):
         return ("no run in sim/runs/ tested %s as it is now, and a log from an older spark names no image: "
                 "run its scenario again with run_scenario.py" % image.name)
     return None
+
+
+def tested_another(image, runs):
+    """A note naming each log in the runs folder that does not name this image's sha256, or None when every log does."""
+    digest = hashlib.sha256(image.read_bytes()).hexdigest()
+    others = [log.name for log, _, sha256 in run_logs(runs) if sha256 != digest]
+    if not others:
+        return None
+    return "%s tested another image, not this one: run that scenario again to test this one" % ", ".join(others)
 
 
 def newer_files(project, image):
@@ -115,7 +142,8 @@ def plan(project, port=None):
     tools.ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
     """
     image = image_of(project)
-    why = untested(image)
+    runs = project / "sim" / "runs"  # run_scenario.py writes every log here, in whichever sub-folder of sim/ the image is
+    why = untested(image, runs)
     if why:
         raise DeployProblem(why)
     chip = chip_of(project)
@@ -123,6 +151,8 @@ def plan(project, port=None):
     changed = newer_files(project, image)
     notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
              "scenario again to test it." % ", ".join(changed)] if changed else []
+    other = tested_another(image, runs)
+    notes += [other] if other else []
     return flash_commands(flasher, chip, image, port), watch_command(shell, port), notes
 
 
@@ -132,7 +162,7 @@ def main(argv=None, run=None):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with sim/ and requirements.json (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101; omitted, esptool tries each")
+    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Omitted, esptool tries each port")
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
     args = parser.parse_args(argv)
     run = run or subprocess.run
