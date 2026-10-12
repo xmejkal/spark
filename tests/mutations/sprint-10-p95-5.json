@@ -38,7 +38,7 @@
  {
   "file": "scripts/drawer.py",
   "name": "a record in another project is not shelved",
-  "find": "    return (path, where) if where is not None and where not in SPARKS_OWN and \"part\" in target else None",
+  "find": "    return (path, where or None) if where is not None and where not in SPARKS_OWN and \"part\" in target else None",
   "replace": "    return None"
  },
  {

@@ -94,6 +94,97 @@ class TheDrawerTest(unittest.TestCase):
         self.assertEqual([next(line for line in lines if label in line).split()[2] for label in ("burnt buzzers", "some resistors")],
                          ["0", "?"])
 
+    def test_a_record_in_the_project_given_is_linked_though_the_project_is_on_no_list(self):
+        # P185: /spark:research writes the record into the project it runs in; --drawer-set --project must find it there.
+        project = Path(tempfile.mkdtemp()) / "research"
+        (project / "parts").mkdir(parents=True)
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record.update(id="knob-encoder")
+        (project / "parts" / "knob-encoder.json").write_text(json.dumps(record))
+        run(["--drawer-set", a_file([{"label": "a knob", "count": 1}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]),
+                          "--project", str(project)])
+        self.assertEqual((said["status"], code), ("ok", 0), said)
+        self.assertEqual(self.entry("a-knob")["is"], {"part": "knob-encoder"})
+        # The folder is on no list, so the shelf copy names no project (review P1).
+        self.assertNotIn("based_on", json.loads((self.home / "shelf" / "knob-encoder.json").read_text()))
+
+    def test_a_listed_project_given_with_project_is_named_on_the_shelf_by_its_list_name(self):
+        run(["--drawer-set", a_file([{"label": "a mosfet", "count": 1}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "a-mosfet", "is": {"part": "dfr0457-mosfet"}}]),
+                          "--project", str(self.project)])
+        self.assertEqual((said["status"], code), ("ok", 0), said)
+        shelved = json.loads((self.home / "shelf" / "dfr0457-mosfet.json").read_text())
+        self.assertEqual(shelved["based_on"]["project"], "irrigation")
+
+    def test_a_library_record_still_links_when_a_project_is_given(self):
+        # The mutation tester's escape: with --project, the library and the shelf stay linkable.
+        run(["--drawer-set", a_file([{"label": "buttons", "count": 5}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "buttons", "is": {"part": "tactile-button"}}]),
+                          "--project", str(Path(tempfile.mkdtemp()))])
+        self.assertEqual((said["status"], code), ("ok", 0), said)
+        self.assertEqual(self.entry("buttons")["is"], {"part": "tactile-button"})
+
+    def a_research_folder(self, record_id="knob-encoder", **changes):
+        """A folder on no list holding one record, as /spark:research leaves it."""
+        project = Path(tempfile.mkdtemp()) / "research"
+        (project / "parts").mkdir(parents=True)
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record.update(id=record_id, **changes)
+        (project / "parts" / (record_id + ".json")).write_text(json.dumps(record))
+        return project
+
+    def test_a_project_s_own_copy_of_a_known_id_never_shadows_the_library(self):
+        # The refuter's RX1: the project's tactile-button must not go on the shelf for every project.
+        project = self.a_research_folder("tactile-button", name="a private button")
+        run(["--drawer-set", a_file([{"label": "buttons", "count": 5}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "buttons", "is": {"part": "tactile-button"}}]),
+                          "--project", str(project)])
+        self.assertEqual((said["status"], code), ("ok", 0), said)
+        self.assertEqual(said["data"]["shelved"], [])
+        self.assertFalse((self.home / "shelf" / "tactile-button.json").exists())
+
+    def test_a_shelf_copy_from_one_project_is_not_replaced_by_another_s(self):
+        first, second = self.a_research_folder(name="the first knob"), self.a_research_folder(name="the second knob")
+        run(["--drawer-set", a_file([{"label": "a knob", "count": 1}, {"label": "another knob", "count": 1}])])
+        run(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]), "--project", str(first)])
+        run(["--drawer-set", a_file([{"entry": "another-knob", "is": {"part": "knob-encoder"}}]), "--project", str(second)])
+        self.assertEqual(json.loads((self.home / "shelf" / "knob-encoder.json").read_text())["name"], "the first knob")
+
+    def test_a_folder_on_no_list_is_said_to_leave_the_shelf_copy_behind(self):
+        # The refuter's RX2: a later change to the record in that folder does not reach the shelf copy.
+        run(["--drawer-set", a_file([{"label": "a knob", "count": 1}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]),
+                        "--project", str(self.a_research_folder())])
+        self.assertIn("does not reach this copy", out.getvalue())
+
+    def test_a_record_that_cannot_be_shelved_from_a_folder_on_no_list_is_refused(self):
+        # The refuter's RX3: unshelved, the entry would point at a record no other project can see.
+        project = self.a_research_folder()
+        broken = dict(json.loads((project / "parts" / "knob-encoder.json").read_text()), pin_order_proof=None)
+        (project / "parts" / "knob-encoder.json").write_text(json.dumps(broken))  # a pin order with no proof
+        run(["--drawer-set", a_file([{"label": "a knob", "count": 1}])])
+        said, code = run(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]),
+                          "--project", str(project)])
+        self.assertEqual((said["status"], code), ("problems", 1), said)
+        self.assertIn("its folder is on no list", said["problems"][0]["sentence"])
+        self.assertNotIn("is", self.entry("a-knob"))
+
+    def test_the_dry_run_says_the_record_would_go_on_the_shelf(self):
+        project = Path(tempfile.mkdtemp()) / "research"
+        (project / "parts").mkdir(parents=True)
+        record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        record.update(id="knob-encoder")
+        (project / "parts" / "knob-encoder.json").write_text(json.dumps(record))
+        run(["--drawer-set", a_file([{"label": "a knob", "count": 1}])])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--drawer-set", a_file([{"entry": "a-knob", "is": {"part": "knob-encoder"}}]),
+                        "--project", str(project), "--dry-run"])
+        self.assertIn("would put knob-encoder on your shelf", out.getvalue())
+
     def test_a_new_entry_with_a_count_and_no_label_is_still_refused(self):
         said, code = run(["--drawer-set", a_file([{"entry": "some-resistors", "count": 50}])])
         self.assertEqual((said["status"], code), ("problems", 1))

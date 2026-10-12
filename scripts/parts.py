@@ -1538,7 +1538,8 @@ OPERATIONS = (
     ("catalog", {"action": "store_true"}, "every record research has kept, chosen or not", (), ("records", "broken")),
     ("drawer", {"action": "store_true"}, "what you own: label, count, the record it is, unsure, skip — 20 at a time", (),
      ("entries",)),
-    ("drawer-set", {"metavar": "FILE"}, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds",
+    ("drawer-set", {"metavar": "FILE"}, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds; with --project, an `is` may "
+     "name a record in that project, such as one /spark:research just wrote",
      ("writes",), ("changes", "questions", "shelved")),
     ("drawer-import", {"nargs": 2, "metavar": ("SOURCE", "FILE")},
      "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
@@ -1816,6 +1817,10 @@ def _drawer_answer(changes, questions, problems, dry_run):
     shelved = [Path(path).stem for path, project in wanted if shelvable(path, project)]
     left = [Path(path).stem for path, project in wanted if not shelvable(path, project)]
     said = ["  ? %s" % q["sentence"] for q in questions] + [
+        "  %s %s on your shelf, so every project finds it%s" % (
+            "would put" if dry_run or problems else "put", Path(path).stem,
+            "" if project else ". Its folder is on no list, so a later change to the record there does not reach this copy")
+        for path, project in wanted if shelvable(path, project)] + [
         "  not shelved: %s — it does not meet the part contract yet, so it stays in its project and the entry still links to it"
         % stem for stem in left]
     return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],
@@ -1840,7 +1845,7 @@ def _op_drawer_set(args, project):
     items, unreadable = _read_json_input(args.drawer_set)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    return _drawer_answer(*drawer.plan_set(items), args.dry_run)
+    return _drawer_answer(*drawer.plan_set(items, project), args.dry_run)
 
 
 def _op_drawer_import(args, project):

@@ -40,6 +40,9 @@ With `--json` it answers 20 entries at a time; `truncated.next` is the command f
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set <file> --dry-run
    ```
 
+   A record that `/spark:research` just wrote into this project links with `--project .`, and linking puts a copy of
+   it on the person's shelf, so every project finds it.
+
    To change an entry, give its key as `entry` and only the fields that change, each with its **new value**: you
    work out "2 → 4"; the drawer never adds. Show the person the lines and the questions, then run it without
    `--dry-run`.
