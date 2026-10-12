@@ -401,10 +401,44 @@ class TheMatcherTest(unittest.TestCase):
         found = {c["id"] or c["entry"]: c for c in self.alone({"id": "heat", "does": "sense", "what": "temperature"})["candidates"]}
         self.assertEqual(found["ntc"], {"id": None, "kind": None, "entry": "ntc", "owes": [], "broken": False, "proof": [], "in": "drawer",
                                         "label": "an NTC thermistor", "what": ["temperature"], "what_matches": True,
-                                        "owned": 3, "free": 3, "unsure": False})
+                                        "score": 1.0, "why": ["same words"], "owned": 3, "free": 3, "unsure": False})
         combo = found["y-combo"]
         self.assertEqual((combo["kind"], combo["entry"], combo["in"], combo["label"], combo["what"], combo["proof"], combo["what_matches"]),
                          ("part", None, "catalog", "A combo board", ["temperature"], [], True))
+
+    def test_a_candidate_has_a_score_and_why_and_the_text_shows_its_about(self):
+        self.catalog({"id": "y-range", "name": "A rangefinder", "function": [{"does": "sense", "what": "distance"}],
+                      "about": "Tells how far away a thing is."})
+        found = {c["id"]: c for c in self.alone({"id": "far", "does": "sense", "what": "distance"})["candidates"] if c["id"]}
+        self.assertEqual((found["y-range"]["score"], found["y-range"]["why"]), (1.0, ["same words"]))
+        self.assertNotIn("about", found["y-range"])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        self.assertIn("Tells how far away a thing is.", out.getvalue())
+
+    def test_word_overlap_finds_a_part_filed_under_other_words(self):
+        self.catalog({"id": "y-range", "name": "A rangefinder", "function": [{"does": "sense", "what": "distance"}], "tags": ["range"]})
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "far", "does": "sense", "what": "range"}]}))
+        said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
+        first = [c for c in said["data"]["needs"][0]["candidates"] if c["id"] == "y-range"][0]
+        self.assertEqual((first["score"], first["why"], first["what_matches"]), (0.8, ["range: in tags"], False))
+
+    def test_the_next_page_keeps_the_matcher(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "n%d" % n, "does": "sense", "what": "soil-moisture"} for n in range(12)]}))
+        said, _ = run(["--match", str(self.project), "--matcher", "word-overlap"])
+        self.assertIn("word-overlap", said["truncated"]["next"]["argv"])
+
+    def test_a_malformed_record_text_is_ignored(self):
+        self.catalog({"id": "y-odd", "name": "An odd probe", "function": [{"does": "sense", "what": "distance"}], "tags": "knob", "about": 5})
+        found = [c for c in self.alone({"id": "far", "does": "sense", "what": "distance"})["candidates"] if c["id"] == "y-odd"]
+        self.assertEqual((len(found), found[0]["score"]), (1, 1.0))
+
+    def test_a_matcher_that_does_not_serve_match_is_refused(self):
+        said, code = run(["--match", str(self.project), "--matcher", "name-contains"])
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertIn("same-words, word-overlap", said["unchecked"][0]["sentence"])
 
     def test_a_project_s_own_record_shadows_the_same_id_elsewhere(self):
         (self.project / "parts").mkdir(parents=True)

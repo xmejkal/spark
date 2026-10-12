@@ -1556,8 +1556,8 @@ OPERATIONS = (
     ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
      "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
      ("changes", "written")),
-    ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes",
-     (), ("needs",)),
+    ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes, "
+     "each with its score and why; --matcher picks the matcher that ranks them", (), ("needs",)),
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
      "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
      "what it notes is under `notes`",
@@ -1591,6 +1591,8 @@ OPTIONS = (
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
     ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
+    ("matcher", {"metavar": "NAME"}, "with --match or --need: the matcher that ranks the offers; a name that does not fit "
+     "is refused with the names that do"),
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
@@ -2017,28 +2019,35 @@ def _op_needs(args, project):
 
 
 def _op_match(args, project):
+    import matching
     import needs
-    matched, problems = needs.match(args.match)
+    try:
+        chosen = matching.matcher(args.matcher or needs.MATCHER, "match")
+    except matching.UnknownMatcher as wrong:
+        return Answer(unchecked=[_cannot(str(wrong))])
+    matched, problems = needs.match(args.match, chosen)
     if not matched and not problems:
         return Answer(unchecked=[_cannot("%s has no needs yet — /spark:idea writes them" % args.match)])
     for need in matched:
-        kept = [c for rank, c in enumerate(need["candidates"]) if rank < 8 or c["what_matches"]]
+        kept = [c for rank, c in enumerate(need["candidates"]) if matching.shown(rank, c["what_matches"], c["score"])]
         need["more"], need["candidates"] = len(need["candidates"]) - len(kept), kept
-    shown, truncated = page(matched, args.start, "match", ["--match", args.match])
     lines = []
     for need in matched:
         lines.append("  %s — %s / %s%s%s" % (need["need"], need["does"], need["what"], "  (%s)" % need["condition"] if need["condition"] else "",
                                             "  [%s]" % need["mark"] if need["mark"] else ""))
-        lines += ["      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
-                                        "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
-                                                                "free %s" % c["free"] if c["owned"] else "",
-                                                                "owes " + ", ".join(c["owes"]) if c["owes"] else "",
-                                                                "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
-                  + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else "")
-                  for c in need["candidates"]]
+        for c in need["candidates"]:
+            lines.append("      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
+                                                  "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
+                                                                          "free %s" % c["free"] if c["owned"] else "",
+                                                                          "owes " + ", ".join(c["owes"]) if c["owes"] else "",
+                                                                          "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
+                         + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
+            lines += ["          " + c["about"]] if c["about"] else []
+            del c["about"]  # the text shows it; the JSON gains only `score` and `why`
         lines += ["      … %d more, none with the need's words" % need["more"]] if need["more"] else []
         lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
     lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
+    shown, truncated = page(matched, args.start, "match", ["--match", args.match] + (["--matcher", args.matcher] if args.matcher else []))
     return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)
 
 
