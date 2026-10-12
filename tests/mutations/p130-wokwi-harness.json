@@ -38,7 +38,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "an image named outside sim/ is overwritten with MicroPython",
-  "find": "if sim.resolve() not in image.resolve().parents:",
+  "find": "if self.sim.resolve() not in self.image.resolve().parents:",
   "replace": "if False:"
  },
  {
@@ -92,7 +92,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a run with no sim/ goes ahead",
-  "find": "if not all((sim / name).is_file() for name in (\"diagram.json\", \"wokwi.toml\")) or not (project / \"firmware\").is_dir():",
+  "find": "if not all((self.sim / name).is_file() for name in (\"diagram.json\", \"wokwi.toml\")):",
   "replace": "if False:"
  },
  {
@@ -116,7 +116,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "the timeout is not passed, and wokwi-cli runs its own 30 s",
-  "find": "\"--timeout\", str(timeout_ms),",
+  "find": "\"--timeout\",\n                                                   str(self.timeout_ms), ",
   "replace": ""
  },
  {
@@ -134,7 +134,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a run starts with no token and spends nothing it can use",
-  "find": "if not os.environ.get(\"WOKWI_CLI_TOKEN\"):",
+  "find": "if token and not os.environ.get(token):",
   "replace": "if False:"
  },
  {
