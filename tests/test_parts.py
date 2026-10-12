@@ -797,6 +797,13 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertIn("l9110s-module", [p["id"] for p in parts.need(["hg7881"])[0]],
                       "an alias alone matches — HG7881 appears nowhere but also_known_as")
 
+    def test_need_takes_a_matcher_and_refuses_one_that_does_not_serve_it(self):
+        said, code = run_json(["--need", "motor", "--matcher", "word-overlap"])
+        self.assertEqual(code, 2)
+        self.assertIn("name-contains", said["unchecked"][0]["sentence"])
+        said, code = run_json(["--need", "motor", "--matcher", "name-contains"])
+        self.assertIn("l9110s-module", [p["id"] for p in said["data"]["found"]])
+
     def test_a_draft_still_being_filled_in_is_named_and_does_not_stop_the_search(self):
         # I3: `--need` died on a researcher's skeleton while five researchers were running.
         import tempfile

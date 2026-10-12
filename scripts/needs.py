@@ -167,6 +167,17 @@ def offers(known, entries):
     return built
 
 
+def offer(key, project=None):
+    """The offer called `key` (P211): a record's id, a part's before a board's, or a drawer entry's key — the record it
+    says it is, when spark knows that record. None when nothing live has that key."""
+    rows, entries = drawer.linkable(project), drawer.entries()
+    pick = _resolve(key, {row[:2]: row[2] for row in rows}, entries)  # _resolve takes {(kind, id): where}, as plan_pick builds it
+    if pick is None:
+        return None
+    wanted = next(iter(pick.items()))
+    return next((found for found, _ in offers(rows, entries) if (found.kind, found.key) == wanted), None)
+
+
 def _candidate(need, fit, context, mine=None):
     """One candidate (§6.2): where it lives and what it owes, what its verb's functions say, its counts and its fit."""
     offer, record = fit.offer, context["record"]

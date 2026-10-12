@@ -440,6 +440,22 @@ class TheMatcherTest(unittest.TestCase):
         self.assertEqual((code, said["status"]), (2, "could-not-run"))
         self.assertIn("same-words, word-overlap", said["unchecked"][0]["sentence"])
 
+    def test_offer_prints_what_a_record_says_of_itself(self):
+        self.catalog({"id": "y-range", "name": "A rangefinder", "about": "Tells how far away a thing is.", "tags": ["range"]})
+        said, code = run(["--offer", "y-range"])
+        self.assertEqual((code, said["data"]["offer"]["about"], said["data"]["offer"]["tags"]), (0, "Tells how far away a thing is.", ["range"]))
+
+    def test_an_entry_that_is_a_record_offers_the_record(self):
+        (self.home / "drawer" / "my-probe.json").write_text(json.dumps({"schema": 1, "label": "my probe", "count": 1,
+                                                                        "is": {"part": "x-soil"}, "tags": ["garden"]}))
+        said, code = run(["--offer", "my-probe"])
+        self.assertEqual((code, said["data"]["offer"]["key"]), (0, "x-soil"))
+        self.assertIn("garden", said["data"]["offer"]["tags"])
+
+    def test_an_offer_nobody_has_is_a_problem(self):
+        said, code = run(["--offer", "unobtainium"])
+        self.assertEqual((code, said["status"]), (1, "problems"))
+
     def test_a_project_s_own_record_shadows_the_same_id_elsewhere(self):
         (self.project / "parts").mkdir(parents=True)
         (self.project / "parts" / "x-soil.json").write_text(json.dumps({"schema": 1, "id": "x-soil", "name": "Our probe", "kind": "sensor",
