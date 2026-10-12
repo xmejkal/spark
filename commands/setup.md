@@ -27,7 +27,8 @@ espressif-docs needs Node 20 or newer ([docs/mcp.md](../docs/mcp.md)).
 ## 2. Everything missing installs in one go, after a yes
 
 If the project has no `package.json`, stop and run `/spark:init` first: without one, npm installs into the nearest
-parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
+parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)). `tools.py` refuses such a line too, and
+the dry run shows it as `cannot:`. A global line, such as `npm install -g bun`, needs no `package.json`.
 
 If anything reads `[????]`, first see exactly what installing them would run:
 
