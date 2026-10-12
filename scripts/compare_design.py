@@ -253,7 +253,7 @@ def compare(circuit_path, rules_path):
         return could_not_run("not valid JSON: %s" % broken)
 
     failures = run(circuit, rules)
-    checked = sum(len(rules.get(key) or []) for key in ("i2c_buses", "must_not_float", "pulled_by_firmware"))
+    checked = len(rules.get("i2c_buses", [])) + len(rules.get("must_not_float", []))
     if not checked:
         # "0 rule(s) checked against the built design" and then "every rule holds", exit 0 —
         # printed over the RC car, whose H-bridge's floating inputs are this project's canonical

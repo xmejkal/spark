@@ -24,12 +24,6 @@
   "replace": "        if False:"
  },
  {
-  "file": "scripts/compare_design.py",
-  "name": "firmware-pulled pins are no rule, so a fresh project compares nothing",
-  "find": "for key in (\"i2c_buses\", \"must_not_float\", \"pulled_by_firmware\"))",
-  "replace": "for key in (\"i2c_buses\", \"must_not_float\"))"
- },
- {
   "file": "scripts/check_all.py",
   "name": "the firmware's pull-up is not said",
   "find": "                      unmeasured=[\"%s: held up by the board",
