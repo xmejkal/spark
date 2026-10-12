@@ -12,6 +12,7 @@ build stage is could-not-run, and the skip names the stages that ran and the sta
 """
 
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -37,6 +38,7 @@ import check_spine  # noqa: E402
 import deploy  # noqa: E402
 import design  # noqa: E402
 import run_scenario  # noqa: E402
+import sim_project  # noqa: E402
 import tools  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
@@ -318,6 +320,33 @@ class TheRunStageBitesTest(unittest.TestCase):
 
     def test_an_image_without_the_project_s_main_py_is_named(self):
         self.assertEqual(_run_log(self.log_with(main=b"")), "the flash image does not hold the project's main.py")
+
+
+class TheDeployStageBitesTest(unittest.TestCase):
+    """The deploy stage's own check goes red, as the run stage's does: a dry run that always printed would prove nothing."""
+
+    @staticmethod
+    def image_after_a_passed_run(changed=False):
+        """The image of a project whose scenario passed on it. With `changed`, the image was altered after that run."""
+        project = Path(tempfile.mkdtemp()) / "bin"
+        (project / "sim" / "runs").mkdir(parents=True)
+        (project / "firmware").mkdir()
+        (project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": []}))
+        (project / "sim" / "wokwi.toml").write_text(sim_project.wokwi_toml([]))
+        image = project / "sim" / FLASH_IMAGE
+        image.write_bytes(b"\xff" * 64)
+        digest = hashlib.sha256(image.read_bytes()).hexdigest()
+        (project / "sim" / "runs" / "the-button-lights-the-led.log").write_text(
+            "# the run\nverdict: passed\nimage sha256: %s\n\n" % digest)
+        if changed:
+            image.write_bytes(image.read_bytes() + b"\x00")
+        return image
+
+    def test_an_image_whose_run_passed_goes(self):
+        self.assertIsNone(_deploy(self.image_after_a_passed_run()))
+
+    def test_an_image_changed_after_its_run_passed_is_named(self):
+        self.assertIn("no run in sim/runs/ tested", _deploy(self.image_after_a_passed_run(changed=True)))
 
 
 class TheBasicJourneyTest(unittest.TestCase):
