@@ -110,7 +110,8 @@ matched nothing would run an unmutated suite and report on a change it never mad
 like a pass.
 
 **When you refactor, the anchor stops matching, and that is the point.** Rewriting a function
-breaks every mutation pointed at it; `mutate.py --anchors` fails and names them, and you must
+breaks every mutation pointed at it; `mutate.py --anchors` fails and names them (when the table runs: the push gate
+no longer checks anchors, [P208](https://github.com/xmejkal/spark/issues/175)), and you must
 **re-anchor** — point the old guard at the new code and re-run it to prove it still bites. Without
 that, a refactor quietly deletes your guards while the suite stays green. It is the single thing
 that makes moving this code around safe, and it fired three times in one day during Sprint 6.
@@ -158,9 +159,9 @@ A snapshot now writes the scratch folders and the random part as placeholders.
 ### The commit gate — `tools/pre-push`
 
 A git hook, installed once per clone, that runs `tools/check_commit.py` before a push leaves the
-machine. It archives **the committed tree** and runs the suite and every mutation anchor against
-*that*, not against your working copy — so uncommitted files cannot make it pass. It produces the
-line quoted in every commit (this one from 2026-09-30):
+machine. It archives **the committed tree** and runs the suite against *that*, not against your
+working copy — so uncommitted files cannot make it pass. It produces the line quoted in every commit
+(this one from 2026-09-30, when the gate also checked every mutation anchor, which ended with [P208](https://github.com/xmejkal/spark/issues/175)):
 
 ```
 bec7b88 as committed: Ran 689 tests in 9.332s / OK; 176 mutation(s) in 37 table(s): every anchor present, once

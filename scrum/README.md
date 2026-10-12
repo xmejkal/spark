@@ -277,9 +277,11 @@ review runs those commands. If an item cannot name one, it does not enter Ready.
 Every one of these, for every item. No exceptions, no "mostly".
 
 1. `python3 -m unittest discover -s tests` — green.
-2. **Mutation tested, for logic.** Re-introduce the defect the change prevents; the suite must go red. A fix
-   with no failing-first test is not a fix. A change to docs, wiring or process needs no mutation table (the PO,
-   2026-10-11, the replan's question 6).
+2. **Mutation tested, for logic, by the refuter.** The refuter of the pull request's council puts the defects the
+   change prevents back into the changed lines, in a scratch copy, and names each one the suite does not notice. A
+   fix with no failing-first test is not a fix. A table in `tests/mutations/` is written only when a review finds the
+   tests weak (the PO, 2026-10-12, [P208](https://github.com/xmejkal/spark/issues/175): *"lets limit the mutations as you say"*). A change to docs, wiring or
+   process needs no mutation.
 3. `python3 scripts/check_spine.py` — exit 0 when `scripts/` changed. With no file named it runs the reference design
    that ships with spark: the chain still runs end to end.
 4. The item's own *Value proven by* command runs and shows what it claims, and its output is posted on the issue — or,
@@ -302,8 +304,9 @@ Every one of these, for every item. No exceptions, no "mostly".
    (P169): *"lets'use git tags and releases, and we can always fill in the version /release content, what new
    functionality and bug fixes etc have been added"*.
 
-**When an epic is done** (P98; P102a moved it from the sprint's close): `python3 tools/mutate.py tests/mutations/*.json` — every table in one sweep, which
-prints its time. An escape is a missing test, opened as a backlog item the same day.
+**When an epic is done** (P98; P102a moved it from the sprint's close): `python3 tools/mutate.py` over the tables that
+the epic's reviews asked for, in one sweep, which prints its time. The older tables are history since [P208](https://github.com/xmejkal/spark/issues/175): nobody
+keeps their anchors current. An escape is a missing test, opened as a backlog item the same day.
 
 A stage that could not be exercised is `could-not-run`, never `ok`. That rule outranks every other
 sentence in this folder.

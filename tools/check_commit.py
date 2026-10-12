@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-The suite and every mutation anchor, on the tree as COMMITTED — not the working tree.
+The suite, on the tree as COMMITTED — not the working tree.
 
     tools/check_commit.py            # HEAD
     tools/check_commit.py fd25f15    # any commit
@@ -126,7 +126,7 @@ def temp_line(left):
 
 def measure(tree):
     """
-    (suite verdict line, anchors verdict line, ok, left) for the tree at `tree`. `left` is what the suite left in
+    (suite verdict line, ok, left) for the tree at `tree`. `left` is what the suite left in
     the empty temp folder it was given (P172), None when that could not be listed; the folder goes once counted.
     """
     lend_node_modules(tree)
@@ -139,13 +139,9 @@ def measure(tree):
         shutil.rmtree(temp, ignore_errors=True)  # a plain rmtree: it never chmods and never follows a link
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines()
                   if line.startswith(("Ran ", "OK", "FAILED"))]
-    tables = sorted((tree / "tests" / "mutations").glob("*.json"))
-    anchors = subprocess.run([sys.executable, str(tree / "tools" / "mutate.py"), "--anchors",
-                              *map(str, tables), "--root", str(tree)],
-                             cwd=str(tree), capture_output=True, text=True)
-    anchors_said = anchors.stdout.strip().splitlines()[-1:] if anchors.stdout.strip() else ["(no output)"]
-    ok = suite.returncode == 0 and anchors.returncode == 0
-    return " / ".join(suite_said), anchors_said[-1].strip(), ok, left
+    # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
+    # longer blocks a push.
+    return " / ".join(suite_said), suite.returncode == 0, left
 
 
 def main(argv=None):
@@ -164,10 +160,10 @@ def gate(root, commit, scratch):
     except (ValueError, subprocess.CalledProcessError) as broken:
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    suite, anchors, ok, left = measure(scratch)
+    suite, ok, left = measure(scratch)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
-    print("%s as committed: %s; %s" % (short, suite, anchors))
+    print("%s as committed: %s" % (short, suite))
     if left != []:
         print("  " + temp_line(left))
     print("  " + size_line(root, commit))

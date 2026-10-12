@@ -44,8 +44,8 @@ there; the call beneath it named a function that did not exist. The test was gre
 life of the defect — it verified the check was *named*, not that it *ran*.
 
 **Mechanical since P54 (2026-10-01):** `tests/test_self_confirmation.py` fails when a test reads a
-module-under-test constant that is not shared vocabulary and has no written reason, and when a
-shipped file is named by no mutation table and has no written reason. Its first catch:
+module-under-test constant that is not shared vocabulary and has no written reason. Its second half, a test that
+every shipped file is named by a mutation table, was retired with the per-change tables ([P208](https://github.com/xmejkal/spark/issues/175)). Its first catch:
 `test_flash_image` found the filesystem at `flash_image.FILESYSTEM_OFFSET` — and passed with it
 moved to an offset MicroPython never reads.
 
@@ -53,10 +53,12 @@ moved to an offset MicroPython never reads.
 
 Re-introduce the defect; the suite must go red. Before commit, not after somebody finds it again.
 
-The defect goes into a mutation table in `tests/mutations/`. `tools/mutate.py` puts each one back into the code and
-names every mutation the suite does not notice — a missing test. The pre-push gate checks, on the tree as committed,
-that every mutation's anchor is still there, once (`tools/check_commit.py`), and every table runs in one sweep when an
-epic is done ([the Definition of Done](README.md#definition-of-done)).
+The refuter of the pull request's council puts the defects back into the changed lines, in a scratch copy, and names
+each one the suite does not notice: a missing test. A table in `tests/mutations/` is written only when a review finds
+the tests weak, and `tools/mutate.py` runs the epic's tables in one sweep when the epic is done
+([the Definition of Done](README.md#definition-of-done)). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
+mutations as you say"*). Before it, every logic change wrote a table, and the pre-push gate checked every table's
+anchors. A table of 25 rows ran 615 s, and moved code blocked pushes. The older tables stay as history.
 
 **A fixture that cannot see the defect is the defect** (W12, merged here 2026-10-09). When a mutation escapes, the
 first question is whether the fixture could have seen it at all. Four escapes in Sprint 3 were exactly that — three

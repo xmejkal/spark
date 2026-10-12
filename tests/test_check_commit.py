@@ -44,26 +44,23 @@ def repo_with(files):
 
 
 class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
-    MUTATE = (ROOT / "tools" / "mutate.py").read_text()
     OUTCOMES = (ROOT / "scripts" / "outcomes.py").read_text()
 
     def test_a_tree_whose_suite_passes_is_ok(self):
-        root = repo_with({"tools/mutate.py": self.MUTATE, "scripts/outcomes.py": self.OUTCOMES,
+        root = repo_with({"scripts/outcomes.py": self.OUTCOMES,
                           "m.py": "def add(a, b):\n    return a + b\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
-                                             "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
-                          "tests/mutations/t.json": '[{"file": "m.py", "find": "a + b", "replace": "a - b"}]'})
+                                             "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"})
         scratch = Path(tempfile.mkdtemp())
         check_commit.archive(root, "HEAD", scratch)
-        suite, anchors, ok, left = check_commit.measure(scratch)
-        self.assertTrue(ok, (suite, anchors))
+        suite, ok, left = check_commit.measure(scratch)
+        self.assertTrue(ok, suite)
         self.assertIn("OK", suite)
         self.assertEqual(left, [], "a suite that leaves nothing behind leaves nothing to name")
-        self.assertIn("every anchor present", anchors)
 
     def test_a_file_left_uncommitted_makes_the_committed_tree_fail(self):
         # The C3 shape: the working tree has the module, the commit does not.
-        root = repo_with({"tools/mutate.py": self.MUTATE, "scripts/outcomes.py": self.OUTCOMES,
+        root = repo_with({"scripts/outcomes.py": self.OUTCOMES,
                           "m.py": "import helper\ndef add(a, b):\n    return helper.plus(a, b)\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"})
@@ -73,7 +70,7 @@ class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
         self.assertEqual(working.returncode, 0, "the working tree passes — that is the trap")
         scratch = Path(tempfile.mkdtemp())
         check_commit.archive(root, "HEAD", scratch)
-        suite, anchors, ok, left = check_commit.measure(scratch)
+        suite, ok, left = check_commit.measure(scratch)
         self.assertFalse(ok, suite)
 
     def test_a_commit_that_does_not_exist_is_could_not_run(self):
@@ -112,20 +109,18 @@ class TheHooksGitIsNotTheSuitesTest(unittest.TestCase):
     """
 
     def test_the_measured_suite_never_sees_the_hook_s_git_variables(self):
-        root = repo_with({"tools/mutate.py": TheCommittedTreeIsMeasuredTest.MUTATE,
-                          "scripts/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
+        root = repo_with({"scripts/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
                           "m.py": "def add(a, b):\n    return a + b\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
                           "tests/test_env.py": "import os, unittest\nclass E(unittest.TestCase):\n"
                                                "    def test_no_git_variable(self):\n"
-                                               "        self.assertEqual([k for k in os.environ if k.startswith('GIT_')], [])\n",
-                          "tests/mutations/t.json": '[{"file": "m.py", "find": "a + b", "replace": "a - b"}]'})
+                                               "        self.assertEqual([k for k in os.environ if k.startswith('GIT_')], [])\n"})
         scratch = Path(tempfile.mkdtemp())
         check_commit.archive(root, "HEAD", scratch)
         with mock.patch.dict(os.environ, {"GIT_DIR": str(root / ".git"), "GIT_INDEX_FILE": str(root / ".git" / "index")}):
-            suite, anchors, ok, left = check_commit.measure(scratch)
-        self.assertTrue(ok, (suite, anchors))
+            suite, ok, left = check_commit.measure(scratch)
+        self.assertTrue(ok, suite)
 
     def test_a_throwaway_repository_leaves_the_hook_s_repository_alone(self):
         victim = repo_with({"kept.txt": "the branch being pushed\n"})
@@ -136,12 +131,12 @@ class TheHooksGitIsNotTheSuitesTest(unittest.TestCase):
 
 
 class TheGateEnforcesTheBoardTest(unittest.TestCase):
-    """P102a: a board that breaks its limits fails the gate even when the suite and the anchors are green."""
+    """P102a: a board that breaks its limits fails the gate even when the suite is green."""
 
     def test_a_board_problem_fails_the_gate(self):
         board = mock.Mock(main=mock.Mock(return_value=1))
         with mock.patch.object(check_commit, "archive"), \
-                mock.patch.object(check_commit, "measure", return_value=("OK", "anchors ok", True, [])), \
+                mock.patch.object(check_commit, "measure", return_value=("OK", True, [])), \
                 mock.patch.object(check_commit, "size_line", return_value="size"), \
                 mock.patch.dict(sys.modules, {"check_backlog": board}), \
                 contextlib.redirect_stdout(io.StringIO()):
@@ -157,7 +152,7 @@ def gate(left, ok=True, board=0):
     """`main` with everything but the temp verdict stubbed: (exit code, what it printed)."""
     said = io.StringIO()
     with mock.patch.object(check_commit, "archive"), \
-            mock.patch.object(check_commit, "measure", return_value=("Ran 1 test / OK", "anchors ok", ok, left)), \
+            mock.patch.object(check_commit, "measure", return_value=("Ran 1 test / OK", ok, left)), \
             mock.patch.object(check_commit, "size_line", return_value="size"), \
             mock.patch.dict(sys.modules, {"check_backlog": mock.Mock(main=mock.Mock(return_value=board))}), \
             contextlib.redirect_stdout(said):
@@ -173,20 +168,18 @@ class TheSuiteLeavesNoTempBehindTest(unittest.TestCase):
     """
 
     def tree(self, *tests):
-        files = {"tools/mutate.py": TheCommittedTreeIsMeasuredTest.MUTATE,
-                 "scripts/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
+        files = {"scripts/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
                  "m.py": "def add(a, b):\n    return a + b\n",
                  "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
-                                    "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
-                 "tests/mutations/t.json": '[{"file": "m.py", "find": "a + b", "replace": "a - b"}]'}
+                                    "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"}
         files.update(tests)
         scratch = Path(tempfile.mkdtemp())
         check_commit.archive(repo_with(files), "HEAD", scratch)
         return scratch
 
     def test_what_a_passing_suite_leaves_is_counted_and_named(self):
-        suite, anchors, ok, left = check_commit.measure(self.tree(("tests/test_l.py", LEAKING_TEST)))
-        self.assertTrue(ok, (suite, anchors))
+        suite, ok, left = check_commit.measure(self.tree(("tests/test_l.py", LEAKING_TEST)))
+        self.assertTrue(ok, suite)
         self.assertEqual(len(left), 1, left)
         self.assertTrue(left[0].startswith("left-behind-"), left)
 
@@ -250,7 +243,7 @@ class TheGateRemovesItsOwnArchiveTest(unittest.TestCase):
         def measured(tree):
             check_commit.lend_node_modules(tree)
             self.assertTrue((tree / "tools" / "circuit-to-wokwi" / "node_modules").is_symlink())
-            return "OK", "anchors ok", True, []
+            return "OK", True, []
 
         with mock.patch.object(check_commit, "ROOT", checkout), \
                 mock.patch.object(check_commit, "archive", side_effect=archived), \

@@ -1,23 +1,19 @@
 """
 The suite cannot pass by asking the code to confirm itself (P54).
 
-Two ways it could, both found by an outside reading rather than by any test:
+The way it could, found by an outside reading rather than by any test:
 
 * **A test that builds its expected value from the module under test.** `test_flash_image` read
   the filesystem back at `flash_image.FILESYSTEM_OFFSET` — the very number the module wrote it at.
   Move the offset and the test moves with it; the one figure that must match MicroPython's own
   partition table was guarded by nothing. Mutation testing is blind to this by construction: a
   mutation on the constant moves both sides of the assertion.
-* **A file no mutation ever touched.** Every table names the files it mutates; a script named by
-  none has never been shown to have a test that bites. `flash_image.py` and `check_bom.py` were
-  two such, under a green suite.
-
-Both are mechanical, so both are tests: a reading that needs an agent is not run, and one that runs
-in a second is.
+It is mechanical, so it is a test: a reading that needs an agent is not run, and one that runs in a
+second is. A second test here asked every shipped file to be named by a mutation table; P208 (the PO, 2026-10-12)
+retired it with the per-change tables.
 """
 
 import ast
-import json
 import re
 import sys
 import unittest
@@ -70,15 +66,6 @@ MAY_READ = {
     "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
 }
 
-#: Files no mutation table names, and why that is not a hole.
-UNMUTATED = {
-    "agents/*.md": "instructions to a model, judged by reading; W15 checks each is named where a user looks",
-    "skills/*/SKILL.md": "instructions to a model, judged by reading; W15 checks each is named where a user looks",
-    "skills/*/references/*.md": "reference prose a skill loads; judged by reading, not by a test",
-    "boards/README.md": "prose for a person",
-    "boards/xiao-esp32-c6.json": "a board no current design uses (W14); the board contract test validates it, "
-                                 "and its first design's item writes its mutations",
-}
 
 
 def constant_reads(path):
@@ -89,18 +76,6 @@ def constant_reads(path):
     return [(node.value.id, node.attr, node.lineno) for node in ast.walk(tree)
             if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
             and node.value.id in imported and re.fullmatch(r"[A-Z][A-Z0-9_]+", node.attr)]
-
-
-def mutated_files():
-    return {entry["file"] for table in (ROOT / "tests" / "mutations").glob("*.json")
-            for entry in json.loads(table.read_text())}
-
-
-def shipped_files():
-    for folder in ("scripts", "agents", "skills", "boards", "catalog"):
-        for path in sorted((ROOT / folder).rglob("*")):
-            if path.is_file() and "__pycache__" not in path.parts:
-                yield path.relative_to(ROOT).as_posix()
 
 
 class NoTestConfirmsTheCodeWithItsOwnNumbers(unittest.TestCase):
@@ -115,20 +90,6 @@ class NoTestConfirmsTheCodeWithItsOwnNumbers(unittest.TestCase):
         read = {"%s.%s" % (module, name) for path in (ROOT / "tests").glob("test_*.py")
                 for module, name, _ in constant_reads(path)}
         self.assertEqual(sorted(set(MAY_READ) - read), [], "an exception nothing needs any more")
-
-
-class EveryShippedFileHasBeenShownToHaveATestThatBites(unittest.TestCase):
-    def test_every_file_is_named_by_a_mutation_table_or_excepted_with_a_reason(self):
-        mutated = mutated_files()
-        holes = [name for name in shipped_files() if name not in mutated
-                 and not any(Path(name).match(pattern) for pattern in UNMUTATED)]
-        self.assertEqual(holes, [], "files no mutation has ever touched")
-
-    def test_every_exception_still_excuses_something(self):
-        names = list(shipped_files())
-        unused = [pattern for pattern in UNMUTATED
-                  if not any(Path(name).match(pattern) for name in names)]
-        self.assertEqual(unused, [], "an exception that matches no file any more")
 
 
 if __name__ == "__main__":

@@ -43,7 +43,9 @@ The suite still reads source for rules about the code itself:
 
 `test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
-**The second rule: every fix is mutation-tested.**
+**The second rule: every fix is mutation-tested.** The refuter of the pull request's review puts the defects the fix
+prevents back into the changed lines, in a scratch copy. A table is written only when a review finds the tests weak
+([P208](https://github.com/xmejkal/spark/issues/175)):
 
 ```sh
 python3 tools/mutate.py tests/mutations/p104-docs.json
@@ -66,7 +68,7 @@ ln -sf ../../tools/pre-push .git/hooks/pre-push
 
 It reports:
 
-- the suite and every mutation anchor, as committed;
+- the suite, as committed;
 - what the suite left behind ([P172](https://github.com/xmejkal/spark/issues/112)): the suite runs with an empty temp
   folder of the gate's own, and anything left in it fails the push with one line,
   `temp: the suite left N entries behind (…) — P172`. A folder the gate cannot list is could-not-run, which exits 2
