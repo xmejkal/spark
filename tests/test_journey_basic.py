@@ -219,15 +219,18 @@ def write_the_firmware(project):
 
 
 def run_the_scenario(project):
-    """The scenario goes into sim/scenarios/ and the harness runs it, as a person does, with a fake wokwi-cli and interpreter."""
+    """
+    The scenario goes into sim/scenarios/ and the harness runs it, as a person does, with a fake wokwi-cli and interpreter.
+    Its sentence goes into the walk's verdict, so a run that could not start says why where the stage fails.
+    """
     if not (project / "sim").is_dir():
-        return  # no build, no simulation project: the build stage names it
+        return "no sim/: the build stage names why"
     (project / "sim" / "scenarios").mkdir(exist_ok=True)
     scenario = Path(shutil.copy(SCENARIO_FIXTURE, project / "sim" / "scenarios"))
     interpreter = Path(tempfile.mkdtemp()) / "micropython.bin"
     interpreter.write_bytes(b"\xe9" + b"\x00" * 999)
     with unittest.mock.patch.dict(os.environ, {"FAKE_WOKWI_SERIAL": "ready\nLED on\nLED off\n"}):
-        run_scenario.run(project, scenario, FAKE_WOKWI_CLI, micropython=interpreter)
+        return run_scenario.run(project, scenario, FAKE_WOKWI_CLI, micropython=interpreter)[1]
 
 
 class TheFirmwareStageBitesTest(unittest.TestCase):
@@ -301,7 +304,7 @@ class TheBasicJourneyTest(unittest.TestCase):
         shutil.copy(FIXTURE / "requirements.json", cls.project)
         cls.verdict = walk(cls.project)
         write_the_firmware(cls.project)
-        run_the_scenario(cls.project)
+        cls.verdict["scenario run"] = run_the_scenario(cls.project)
 
     def stage(self, name):
         return next((stage for stage in self.verdict["stages"] if stage["name"] == name), {})

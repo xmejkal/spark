@@ -1,30 +1,152 @@
 [
- {"file": "scripts/run_scenario.py", "name": "the ready wait is not inserted before the first step",
-  "find": "lines.insert(first, lines[first][:len(lines[first]) - len(step)] + READY_STEP)", "replace": "lines.insert(len(lines), READY_STEP)"},
- {"file": "scripts/run_scenario.py", "name": "the ready wait ignores the first step's indent",
-  "find": "lines[first][:len(lines[first]) - len(step)] + READY_STEP", "replace": "\"  \" + READY_STEP"},
- {"file": "scripts/run_scenario.py", "name": "a scenario that already waits for ready gets a second wait",
-  "find": "if step.replace(\"'\", '\"') in (READY_STEP, \"- wait-serial: %s\" % READY):", "replace": "if False:"},
- {"file": "scripts/run_scenario.py", "name": "a steps: line with nothing under it is accepted",
-  "find": "if first is None or not lines[first].lstrip().startswith(\"- \"):", "replace": "if first is None:"},
- {"file": "scripts/run_scenario.py", "name": "a wokwi.toml with no image named is left so, and wokwi-cli refuses it",
-  "find": "if sim_project.firmware_in(toml) is None and sim_project.UNNAMED_FIRMWARE in text:", "replace": "if False:"},
- {"file": "scripts/run_scenario.py", "name": "a board that never started reads as a firmware fault",
-  "find": "    if not serial.strip():\n", "replace": "    if False:\n"},
- {"file": "scripts/run_scenario.py", "name": "the ready line is read from the serial file, which joins MicroPython's lines",
-  "find": "if READY not in (line.strip() for line in lines):", "replace": "if READY not in (line.strip() for line in serial.splitlines()):"},
- {"file": "scripts/run_scenario.py", "name": "a timeout reads as a failed step",
-  "find": "if code == TIMEOUT_EXIT:", "replace": "if False:"},
- {"file": "scripts/run_scenario.py", "name": "the reason is wokwi-cli's last line even when an Error line says more",
-  "find": "why = next((line for line in lines if line.startswith(\"Error\")), lines[-1] if lines else \"no reason given\")", "replace": "why = lines[-1] if lines else \"no reason given\""},
- {"file": "scripts/run_scenario.py", "name": "a run with no sim/ goes ahead",
-  "find": "if not all((sim / name).is_file() for name in (\"diagram.json\", \"wokwi.toml\")) or not (project / \"firmware\").is_dir():", "replace": "if False:"},
- {"file": "scripts/run_scenario.py", "name": "the image is not rebuilt, so a run tests an older firmware",
-  "find": "image.write_bytes(flash_image.image(", "replace": "len(flash_image.image("},
- {"file": "scripts/run_scenario.py", "name": "a run starts with no token and spends nothing it can use",
-  "find": "if not os.environ.get(\"WOKWI_CLI_TOKEN\"):", "replace": "if False:"},
- {"file": "tests/test_journey_basic.py", "name": "the journey's run stage passes a failed run",
-  "find": "if \"verdict: passed\" not in text:", "replace": "if False:"},
- {"file": "tests/test_journey_basic.py", "name": "the journey's run stage passes an image without the project's main.py",
-  "find": "return None if b\"light.run()\" in image.read_bytes() else", "replace": "return None if True else"}
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the ready wait is not inserted before the first step",
+  "find": "lines.insert(first, lines[first][:len(lines[first]) - len(step)] + READY_STEP)",
+  "replace": "lines.insert(len(lines), READY_STEP)"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the ready wait ignores the first step's indent",
+  "find": "lines[first][:len(lines[first]) - len(step)] + READY_STEP",
+  "replace": "\"  \" + READY_STEP"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a scenario that already waits for ready text gets a second wait that never matches",
+  "find": "    if any(\"wait-serial\" in step and READY in step\n",
+  "replace": "    if False and any(\"wait-serial\" in step and READY in step\n"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a ready wait after the first input stops the wait before it",
+  "find": "itertools.takewhile(lambda step: \"set-control\" not in step, steps)",
+  "replace": "steps"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a steps: line with nothing under it is accepted",
+  "find": "if first is None or not lines[first].lstrip().startswith(\"- \"):",
+  "replace": "if first is None:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a wokwi.toml with no image named is left so, and wokwi-cli refuses it",
+  "find": "if sim_project.firmware_in(toml) is None and sim_project.UNNAMED_FIRMWARE in text:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "an image named outside sim/ is overwritten with MicroPython",
+  "find": "if sim.resolve() not in image.resolve().parents:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a board that never started reads as a firmware fault",
+  "find": "    if not serial.strip():\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a board silent until the timeout reads as never started",
+  "find": "        if code == TIMEOUT_EXIT:\n            return COULD_NOT_RUN",
+  "replace": "        if False:\n            return COULD_NOT_RUN"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a lost simulator reads as a firmware fault",
+  "find": "if \"API Error\" in why:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the ready line is read from the serial file, which joins MicroPython's lines",
+  "find": "if not any(MATCHED in line and READY in line for line in out.splitlines()):",
+  "replace": "if READY not in (line.strip() for line in serial.splitlines()):"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "ready with a prefix reads as never printed",
+  "find": "if not any(MATCHED in line and READY in line for line in out.splitlines()):",
+  "replace": "if READY not in (line.strip() for line in out.splitlines()):"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a timeout reads as a failed step",
+  "find": "    if code == TIMEOUT_EXIT:\n        return PROBLEMS",
+  "replace": "    if False:\n        return PROBLEMS"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the reason is wokwi-cli's last line even when an Error line says more",
+  "find": "why = next((line for line in errors if \"Error\" in line), errors[-1] if errors else \"no reason given\")",
+  "replace": "why = errors[-1] if errors else \"no reason given\""
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the reason is read from the serial output too, so a firmware line can hide wokwi-cli's error",
+  "find": "errors = err.strip().splitlines()",
+  "replace": "errors = (out + err).strip().splitlines()"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a run with no sim/ goes ahead",
+  "find": "if not all((sim / name).is_file() for name in (\"diagram.json\", \"wokwi.toml\")) or not (project / \"firmware\").is_dir():",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "an older run's passed log outlives a run that could not start",
+  "find": "log.unlink(missing_ok=True)",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "two scenarios with dotted names write one log",
+  "find": "scenario.name.removesuffix(\".yaml\").removesuffix(\".scenario\")",
+  "replace": "scenario.name.split(\".\")[0]"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the image is not rebuilt, so a run tests an older firmware",
+  "find": "image.write_bytes(flash_image.image(",
+  "replace": "len(flash_image.image("
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the timeout is not passed, and wokwi-cli runs its own 30 s",
+  "find": "\"--timeout\", str(timeout_ms),",
+  "replace": ""
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a byte that is not UTF-8 on stdout crashes the run",
+  "find": "encoding=\"utf-8\", errors=\"replace\",",
+  "replace": "encoding=\"utf-8\","
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a byte that is not UTF-8 in the serial log crashes the run",
+  "find": "serial_log.read_text(errors=\"replace\")",
+  "replace": "serial_log.read_text()"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a run starts with no token and spends nothing it can use",
+  "find": "if not os.environ.get(\"WOKWI_CLI_TOKEN\"):",
+  "replace": "if False:"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "the journey's run stage passes a failed run",
+  "find": "if \"verdict: passed\" not in text:",
+  "replace": "if False:"
+ },
+ {
+  "file": "tests/test_journey_basic.py",
+  "name": "the journey's run stage passes an image without the project's main.py",
+  "find": "return None if b\"light.run()\" in image.read_bytes() else",
+  "replace": "return None if True else"
+ }
 ]

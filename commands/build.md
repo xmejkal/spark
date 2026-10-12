@@ -175,7 +175,7 @@ worked on. Its interface loads from a CDN, so it needs a network; the server its
 **The simulation, watched rather than asserted** — the Wokwi for VS Code extension opens the files
 the last stage writes into `sim/`, which the one command keeps: `wokwi.toml`, `diagram.json`, the chips.
 It needs the flash image too, so make both first: `check_spine.py requirements.json --keep . --firmware
-flash-with-firmware.bin`, then `flash_image.py --files firmware -o sim/flash-with-firmware.bin` (below); without them
+flash-with-firmware.bin`, then `flash_image.py --files firmware -o sim/flash-with-firmware.bin`; without them
 the extension has no firmware to run. It runs the flash image live: press the board's buttons, drag a sensor's slider, read its serial port. Open the
 project in VS Code, run **Wokwi: Select Config File** and pick `sim/wokwi.toml`, then **Wokwi: Start
 Simulator** (the command names are the extension's own, from its package). It needs a Wokwi licence
@@ -202,9 +202,10 @@ MicroPython v1.29.0 for the ESP32-S3, fetched and checked by `/spark:setup`. For
 wokwi-cli printed. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
 CI minutes, so this command's allowed-tools leave it out: Claude Code asks before each run.
 
-**The ready contract.** The firmware prints `ready` on a line of its own once its setup is done. `run_scenario.py` adds
-a wait for that line before the scenario's first step, because a step sent earlier reaches a board that is still
-booting. A firmware that never prints it fails with that sentence. The firmware also prints a line for each change that
+**The ready contract.** The firmware prints `ready` once its setup is done, and nothing else that contains the word
+before it (`already`, `not ready`). `run_scenario.py` adds a wait for the first serial text that contains `ready` before
+the scenario's first step, because a step sent earlier reaches a board that is still booting. A scenario that already
+waits for such text before its first input is left as it is. A firmware that never prints it fails with that sentence. The firmware also prints a line for each change that
 a scenario waits on.
 
 The scenario holds only behaviour. Claude writes it from the person's words, and spark ships none, because the pin map
