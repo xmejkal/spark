@@ -349,7 +349,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 
 **Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
 `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `import_firmware.py` and `parts.py`. These do not take
-it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
+it: `boards.py`, `breadboard.py`, `check_bom.py`, `deploy.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
 ## The outcomes and their exit codes

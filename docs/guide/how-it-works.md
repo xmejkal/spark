@@ -116,6 +116,7 @@ Each by its name in check_all's answer:
 - `emit_footprint.py`: a board definition, turned into the footprint module its design imports.
 - `flash_image.py`: a flash image with MicroPython and the project's files, for a headless simulation.
 - `run_scenario.py`: one scenario run in Wokwi after the firmware's `ready` text, with a dated log ([P130](https://github.com/xmejkal/spark/issues/64)).
+- `deploy.py`: puts the flash image that passed the simulation onto the board, with esptool ([P192](https://github.com/xmejkal/spark/issues/144)).
 - `breadboard.py`: the built board as a breadboard sheet: the parts, each resistor they ask for, every wire by the
   board's printed labels and the parts' legs, and what each record says to check before power ([P191](https://github.com/xmejkal/spark/issues/143)).
 

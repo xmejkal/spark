@@ -1027,7 +1027,7 @@ per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
-**Not yet.** No command does this yet. spark's own hardware step is
+**Partly.** `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). Its dry run prints the esptool commands and runs nothing. Nothing has run it on a board yet. The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v1](../../scrum/VISION.md#versions)).
 

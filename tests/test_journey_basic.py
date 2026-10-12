@@ -5,16 +5,19 @@ that breaks is named here and not found on the bench.
 The stages are the replan's table (docs/2026-10-11-replan.md): the requirements, the build with its board, the Wokwi
 diagram, the breadboard sheet and the pin map, the firmware imported with the `machine` stand-in (P59), then the PCB and 3D
 exports, every deterministic check on the fresh project (P197), and the scenario run by the Wokwi harness (P130), with
-a fake wokwi-cli so the suite spends no Wokwi minute. Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
+a fake wokwi-cli so the suite spends no Wokwi minute, then deploy.py's dry run on the image that passed (P192). Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the
 build stage is could-not-run, and the skip names the stages that ran and the stages that did not.
 
     python3 -m unittest discover -s tests -p test_journey_basic.py
 """
 
+import contextlib
+import io
 import json
 import os
 import re
 import runpy
+import shlex
 import shutil
 import subprocess
 import sys
@@ -31,8 +34,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
+import deploy  # noqa: E402
 import design  # noqa: E402
 import run_scenario  # noqa: E402
+import tools  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 #: The firmware a person (or the conversation) writes once the pin map exists (P59): main.py over light.py.
@@ -134,7 +139,26 @@ def _run_log(path):
     if "verdict: passed" not in text:
         return "the run did not pass: %s" % text.splitlines()[1]
     image = path.parent.parent / FLASH_IMAGE
+    if not image.is_file():
+        return None  # the deploy stage names the image's absence, as the pin map stage does for the firmware's
     return None if b"light.run()" in image.read_bytes() else "the flash image does not hold the project's main.py"
+
+
+def _deploy(path):
+    # P192: deploy.py's dry run takes the image the scenario passed on and writes it at 0x0. esptool and mpremote are
+    # stood in, as wokwi-cli is: the journey proves the image's way onto the board, not that this machine has esptool.
+    project = path.parent.parent
+    if not (project / "requirements.json").is_file() or not list((path.parent / "runs").glob("*.log")):
+        return None  # deploy.py reads the requirements and the run's log: those stages name their absence
+    stand_ins = {role: tools.Tool(name, role, {"kind": "python", "module": name}, [sys.executable])
+                 for role, name in (("flasher", "esptool"), ("board-shell", "mpremote"))}
+    out, err = io.StringIO(), io.StringIO()
+    with unittest.mock.patch.object(tools, "find", side_effect=lambda role, *args, **kwargs: stand_ins[role]), \
+            contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = deploy.main(["--project", str(project), "--dry-run"])
+    if code != 0:
+        return err.getvalue().strip() or "deploy.py exited %d" % code
+    return None if "write_flash 0x0 %s" % shlex.quote(str(path)) in out.getvalue() else "its dry run does not write this image"
 
 
 def _gerbers(path):
@@ -158,6 +182,7 @@ STAGES = (
     ("pin map", "firmware/pins.py", _pins),
     ("firmware", "firmware/light.py", _firmware),
     ("Wokwi run", "sim/runs/the-button-lights-the-led.log", _run_log),
+    ("deploy", "sim/" + FLASH_IMAGE, _deploy),
     ("PCB export", "board-gerbers.zip", _gerbers),
     ("3D export", "board.glb", _model),
 )
