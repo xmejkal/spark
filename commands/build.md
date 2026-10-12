@@ -191,12 +191,11 @@ with its reason), so the one command's last stage needs no table anywhere else. 
 CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci):
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --keep .
 ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml
 ```
 
-The first keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml`, the chips. The second runs one
-scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
+It needs the simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which the one command keeps with
+`--keep .`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
 into one flash image, so a run never tests an older firmware. The interpreter is the tools list's `firmware-image`,
 MicroPython v1.29.0 for the ESP32-S3, fetched and checked by `/spark:setup`. For another chip, add `--micropython <its
 .bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the scenario as run, and what
