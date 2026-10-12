@@ -69,7 +69,7 @@ class TheDrawerTest(unittest.TestCase):
 
     def test_an_entry_says_what_it_does_for_a_chooser(self):
         long = "x" * 1200
-        said, code = run(["--drawer-set", a_file([{"label": "a knob", "about": "Turns‮ endlessly.", "description": long,
+        said, code = run(["--drawer-set", a_file([{"label": "a knob", "about": "Turns\u202e endlessly.", "description": long,
                                                     "tags": ["Knob", "DIAL\x07"]}])])
         self.assertEqual((code, said["status"]), (0, "ok"))
         entry = self.entry("a-knob")
