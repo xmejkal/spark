@@ -187,34 +187,42 @@ nobody has run it on a spark project yet, so treat the first run as the check.
 
 Every part record says how it is simulated (`simulation`: a Wokwi part standing in, a custom
 chip kept beside the record and compiled to WebAssembly by `wokwi-cli chip compile`, or a skip
-with its reason), so the one command's last stage needs no table anywhere else. To run it, with a Wokwi account's
-CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci):
+with its reason), so the one command's last stage needs no table anywhere else. To run a scenario, with a Wokwi
+account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci):
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml
 ```
 
-It needs the simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which the one command keeps with
-`--keep .`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
+The scenario's path is the project's, so it works from the project folder or with `--project`. It needs the
+simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which the one command keeps with `--keep .`,
+and a `firmware/main.py`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
 into one flash image, so a run never tests an older firmware. The interpreter is the tools list's `firmware-image`,
 MicroPython v1.29.0 for the ESP32-S3, fetched and checked by `/spark:setup`. For another chip, add `--micropython <its
 .bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the scenario as run, and what
 wokwi-cli printed. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
-CI minutes, so this command's allowed-tools leave it out: Claude Code asks before each run.
+CI minutes. Ask the person before each run and say that it spends minutes, even when your permissions would let it
+run: this command's allowed-tools leave it out, but an allow rule of theirs or auto mode would not stop it. Every check
+that costs nothing runs first, and a run that cannot pass stops there.
 
 **The ready contract.** The firmware prints `ready` once its setup is done, and nothing else that contains the word
-before it (`already`, `not ready`). `run_scenario.py` adds a wait for the first serial text that contains `ready` before
+before it, such as `already` or `not ready`. `run_scenario.py` adds a wait for the first serial text that contains `ready` before
 the scenario's first step, because a step sent earlier reaches a board that is still booting. A scenario that already
-waits for such text before its first input is left as it is. A firmware that never prints it fails with that sentence. The firmware also prints a line for each change that
-a scenario waits on.
+waits for such text before its first input is left as it is. A firmware that never prints it fails with: *the
+firmware never printed 'ready': print it once setup is done (the ready contract, commands/build.md)*. The firmware also
+prints a line for each change that a scenario waits on.
 
 The scenario holds only behaviour. Claude writes it from the person's words, and spark ships none, because the pin map
 holds pins, not behaviour. A scenario's `set-control` lines press a button or move a chip's slider (a probe's
-`moisturePct`), and its `wait-serial` and `expect-pin` lines are what it asserts. The button-and-LED project's scenario,
+`moisturePct`), and its `wait-serial` and `expect-pin` lines are what it asserts. Put it in `sim/scenarios/`, which
+you create. A scenario needs `name:` and `version: 1`, or wokwi-cli refuses it ("Scenario name is missing"). Part ids
+and pin names come from `sim/diagram.json`. `set-control` takes `name:`, and `expect-pin` takes `pin:`. The button-and-LED project's scenario,
 written from "the LED lights while the button is held", passed on 2026-10-12
 ([its log](../tests/data/breadboard/button-light/runs/2026-10-12-the-button-lights-the-led.log)):
 
 ```yaml
+name: the button lights the LED
+version: 1
 steps:
   - set-control: { part-id: tactilebutton, name: pressed, value: 1 }
   - wait-serial: "LED on"                                  # a line the firmware prints when the LED changes

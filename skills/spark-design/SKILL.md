@@ -97,7 +97,9 @@ a rule checklist in the loop. Follow it.
 
 6. **Breadboard and firmware first.** `/spark:build --keep .` writes `breadboard.md`, the parts and how to wire
    them. The firmware does `import pins`: the same command writes `firmware/pins.py`, and the
-   simulation runs it (`commands/build.md`, *Simulate*). A board is ordered only once these work, and only if the
+   simulation runs it (`commands/build.md`, *Simulate*). Write the firmware so that it prints `ready` once its setup
+   is done, and a line for each change a scenario waits on. Write the scenario from the person's words into
+   `sim/scenarios/`, then run it with `run_scenario.py`, after asking the person, because a run spends Wokwi CI minutes. A board is ordered only once these work, and only if the
    person wants one.
 
 7. **Verify before emitting fab output.** Hand off to `spark-review`, which ends with the fab

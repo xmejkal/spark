@@ -38,7 +38,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "an image named outside sim/ is overwritten with MicroPython",
-  "find": "if sim.resolve() not in image.resolve().parents:",
+  "find": "if self.sim.resolve() not in self.image.resolve().parents:",
   "replace": "if False:"
  },
  {
@@ -92,13 +92,13 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a run with no sim/ goes ahead",
-  "find": "if not all((sim / name).is_file() for name in (\"diagram.json\", \"wokwi.toml\")) or not (project / \"firmware\").is_dir():",
+  "find": "if not all((self.sim / name).is_file() for name in (\"diagram.json\", \"wokwi.toml\")):",
   "replace": "if False:"
  },
  {
   "file": "scripts/run_scenario.py",
   "name": "an older run's passed log outlives a run that could not start",
-  "find": "log.unlink(missing_ok=True)",
+  "find": "self.log.unlink(missing_ok=True)",
   "replace": "pass"
  },
  {
@@ -110,13 +110,13 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "the image is not rebuilt, so a run tests an older firmware",
-  "find": "image.write_bytes(flash_image.image(",
-  "replace": "len(flash_image.image("
+  "find": "self.image.write_bytes(self.flash)",
+  "replace": "len(self.flash)"
  },
  {
   "file": "scripts/run_scenario.py",
   "name": "the timeout is not passed, and wokwi-cli runs its own 30 s",
-  "find": "\"--timeout\", str(timeout_ms),",
+  "find": "\"--timeout\",\n                                                   str(self.timeout_ms), ",
   "replace": ""
  },
  {
@@ -134,7 +134,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a run starts with no token and spends nothing it can use",
-  "find": "if not os.environ.get(\"WOKWI_CLI_TOKEN\"):",
+  "find": "if token and not os.environ.get(token):",
   "replace": "if False:"
  },
  {
@@ -148,5 +148,11 @@
   "name": "the journey's run stage passes an image without the project's main.py",
   "find": "return None if b\"light.run()\" in image.read_bytes() else",
   "replace": "return None if True else"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a refusal in the command leaves an older run's passed log in place",
+  "find": "run.log.unlink(missing_ok=True)",
+  "replace": "pass"
  }
 ]

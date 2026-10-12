@@ -230,7 +230,7 @@ def run_the_scenario(project):
     interpreter = Path(tempfile.mkdtemp()) / "micropython.bin"
     interpreter.write_bytes(b"\xe9" + b"\x00" * 999)
     with unittest.mock.patch.dict(os.environ, {"FAKE_WOKWI_SERIAL": "ready\nLED on\nLED off\n"}):
-        return run_scenario.run(project, scenario, FAKE_WOKWI_CLI, micropython=interpreter)[1]
+        return run_scenario.ScenarioRun(project, scenario, micropython=interpreter).run(FAKE_WOKWI_CLI)[1]
 
 
 class TheFirmwareStageBitesTest(unittest.TestCase):

@@ -22,7 +22,9 @@ Two rules on the PO's card, moved here from the working agreements:
   [token budget](README.md#the-token-budget). Decision 1 (a), his of 2026-10-06, makes the rule a setting too: an
   `ask` rule for `wokwi-cli` and `make simulate`. It has been in his settings since 2026-10-09, on his answer *"Yes,
   always ask (Recommended)"* ([Q4 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), for `wokwi-cli`,
-  `make simulate` and `make simulate-all`: Claude Code asks him before running any of them. (W10, moved here
+  `make simulate` and `make simulate-all`: Claude Code asks him before running any of them. `scripts/run_scenario.py`
+  (P130) starts wokwi-cli inside itself, so no rule fires for it: Claude asks him before each run, and an ask rule for
+  Claude asked him on 2026-10-12 whether to add one. (W10, moved here
   2026-10-09 by P146.) Its origin, the PO's words, written down on 2026-09-25: *"lets not waste the simulation
   minutes we already only have 21 of 50 free"*.
 - **Only the PO orders.** Claude and the agents propose, ranked, with reasons and costs; he decides, by the row order
