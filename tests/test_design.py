@@ -413,3 +413,30 @@ class CapitalsDoNotMakeTwoNamesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheBoardsOwnPullUpTest(unittest.TestCase):
+    """P204, the PO's rule of 2026-10-12: prefer what the board offers. A button's pull-up is the board's internal one."""
+
+    BOARD = {"power": {"internal_pull_up_ohms": {"value": 45000, "verified": True, "source": "test"}}}
+
+    @staticmethod
+    def button(wakes=False):
+        need = {"signal": "BUTTON", "pin": "A", "direction": "in", "needs": ["wake"] if wakes else []}
+        return {"id": "tactile-button", "needs": [need],
+                "host_parts": [{"kind": "pullup", "pin": "A", "ohms": 10000, "internal_will_do": True, "why": "t"},
+                               {"kind": "series", "pin": "A", "ohms": 330, "why": "t"}]}
+
+    def test_on_a_board_with_an_internal_pull_up_the_firmware_holds_the_pin(self):
+        part = design.firmware_pulls(self.button(), self.BOARD)
+        self.assertEqual([host["kind"] for host in part["host_parts"]], ["series"])
+        self.assertEqual(part["_firmware_pulls"], ["A"])
+
+    def test_a_pin_that_wakes_the_chip_keeps_its_resistor(self):
+        part = design.firmware_pulls(self.button(wakes=True), self.BOARD)
+        self.assertEqual(len(part["host_parts"]), 2)
+        self.assertNotIn("_firmware_pulls", part)
+
+    def test_a_board_that_states_no_internal_pull_up_keeps_every_resistor(self):
+        self.assertEqual(design.firmware_pulls(self.button(), {"power": {}}), self.button())
+        self.assertEqual(design.firmware_pulls(self.button(), None), self.button())

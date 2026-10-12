@@ -126,7 +126,11 @@ class RulesVsNetlist(Check):
             return answer(unchecked=[result.get("reason") or "no reason given"])
         # The subject is the finding: "connects to nothing" four times over named nothing a
         # person could act on (irrigation diary I10).
-        return answer(problems=["[%s] %s: %s" % (p["rule"], p["subject"], p["detail"]) for p in result.get("problems", [])])
+        # P204: a pin the board's internal pull-up holds is the firmware's to set, and no netlist shows it.
+        pulled = json.loads(Path(inputs["rules"]).read_text()).get("pulled_by_firmware") or []
+        return answer(problems=["[%s] %s: %s" % (p["rule"], p["subject"], p["detail"]) for p in result.get("problems", [])],
+                      unmeasured=["%s: held up by the board's internal pull-up, which the firmware sets and no netlist "
+                                  "shows" % ".".join(pin) for pin in pulled])
 
 
 class Physics(Check):

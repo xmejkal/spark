@@ -101,6 +101,12 @@ def declared_inputs(part_list):
     return sorted(pins)
 
 
+def firmware_pulled(part_list):
+    """Each pin the board's internal pull-up holds, set by the firmware, which no netlist shows (P204)."""
+    import emit_board
+    return sorted([emit_board.component_name(part), pin] for part in part_list for pin in part.get("_firmware_pulls", []))
+
+
 def i2c_lines(part_list):
     """
     The I2C lines THIS board has to pull up, as "Component.PIN", and the modules that bring their own.
@@ -177,6 +183,10 @@ def rules_for(nets, part_list=()):
                              'both halves on. Seeded from every pin the design\'s own part '
                              'records declare as an input — an empty list means the records '
                              'declare none, not that nobody filled it in.'),
+        "pulled_by_firmware": firmware_pulled(part_list),
+        "//pulled_by_firmware": ('Inputs the board\'s internal pull-up holds, set by the firmware with Pin.PULL_UP, '
+                                 'so no resistor is on the board (P204). No netlist shows it, so check_all says it '
+                                 'on a ? line.'),
         "physics": {
             "trace_temperature_rise_c": 10,
             "//trace_temperature_rise_c": ("How much warmer a trace may run than ambient. 10 is "

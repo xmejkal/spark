@@ -89,14 +89,15 @@ def _pins(path):
     # The firmware does `import pins`, so the file must run as Python and give the button and the LED a GPIO each.
     names = runpy.run_path(str(path))
     lacking = [name for name in ("BUTTON", "STATUS_LED") if not isinstance(names.get(name), int)]
-    return "no GPIO for %s in it" % " or ".join(lacking) if lacking else None
+    if lacking:
+        return "no GPIO for %s in it" % " or ".join(lacking)
+    return None if names.get("BUTTON_PULL") == "up" else "no BUTTON_PULL = \"up\": the firmware does not know to pull it up"
 
 
-#: Run in a process of its own: the LED's level with the button released, then pressed. The board holds the button high
-#: through a pull-up and a press joins it to ground, so released is 1 and pressed is 0 (breadboard.md, lines 1 and 3).
+#: Run in a process of its own: the LED's level with the button released, then pressed. Released, nothing sets the pin:
+#: only the firmware's internal pull-up holds it high (P204). A press joins it to ground, so pressed is 0.
 LIGHT_PROBE = """
 import machine, light, pins
-machine.set_level(pins.BUTTON, 1)
 light.update()
 print(machine.level(pins.STATUS_LED))
 machine.set_level(pins.BUTTON, 0)
@@ -228,6 +229,10 @@ class TheFirmwareStageBitesTest(unittest.TestCase):
         light = self.light_with("    led.value(LED_ON if button.value() == BUTTON_PRESSED else LED_OFF)", "    pass")
         self.assertEqual(_firmware(light), "with the button pressed the LED reads 0, not 1")
 
+    def test_a_firmware_that_does_not_pull_the_button_up_is_named(self):
+        light = self.light_with("Pin.IN, Pin.PULL_UP)", "Pin.IN)")
+        self.assertEqual(_firmware(light), "with the button released the LED reads 1, not 0")
+
     def test_a_firmware_that_does_not_import_is_named_with_its_exception(self):
         light = self.light_with("import time\n", "import time\nraise OSError('no bus')\n")
         self.assertEqual(_firmware(light), "it does not import under the stand-in: OSError: no bus")
@@ -306,6 +311,9 @@ class TheBasicJourneyTest(unittest.TestCase):
                              statuses)
         self.assertEqual(statuses["physics"], check_spine.OK, "physics must look, not be skipped")
         self.assertIsInstance(answer["unmeasured"], int, "P108: the ok says how many values it rests on")
+        rules = next(result for result in answer["results"] if result["check"] == "rules-vs-netlist")
+        self.assertIn("TactileButton.A: held up by the board's internal pull-up", " ".join(rules.get("unmeasured", [])),
+                      "P204: the firmware's pull-up is said, since no netlist shows it")
 
     def test_removing_any_stage_s_file_names_that_stage(self):
         # The card's proof: this test is only worth its run time if it goes red, by name, when a stage stops writing.

@@ -33,8 +33,10 @@ one instead — `parts/led-red-5mm.json`, the Kingbright L-7113ID, written from 
 What makes it a good record: every fact cites a page of a kept document; the pin order says how it
 was read; the warning a person must see is in `host_requirements`, which spark prints; the series
 resistor is asked for by the current it is for, and spark computes the value; `legs`, optional and keyed by the pin names in
-`pin_order`, names each pin as a person finds it on the part, and the breadboard sheet prints it. What it leaves out on
-purpose (W21): prices, stock, and facts no decision reads.
+`pin_order`, names each pin as a person finds it on the part, and the breadboard sheet prints it. A pull-up the board's
+internal one can do says `"internal_will_do": true`: on a board that states `internal_pull_up_ohms`, spark places no
+resistor and `pins.py` tells the firmware to pull the pin up, unless the pin wakes the chip ([P204](https://github.com/xmejkal/spark/issues/167)).
+What it leaves out on purpose (W21): prices, stock, and facts no decision reads.
 
 ## Source waterfall (try in order; record which source + a link as provenance)
 1. **tscircuit registry** — `tsci add <author>/<part>` (e.g. `seeed/xiao-esp32-c6`). Brings a real

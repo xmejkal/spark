@@ -208,7 +208,8 @@ def check_floating_inputs(netlist, watch, rails=()):
                 "floating-input", "%s.%s" % (component_name, port_name),
                 "joined to %s and no resistor to a rail" % (", ".join(joined) or "nothing else"),
                 "it has no defined level at reset or whenever its driver lets go; add a pull-up or "
-                "pull-down, or remove the rule if the part pulls it itself"))
+                "pull-down, or remove the rule if the part pulls it itself. If pins.py pulls it up "
+                "(P204), run init_project.py --force"))
     return failures
 
 
@@ -217,10 +218,17 @@ def run(circuit, rules):
     failures = []
     if rules.get("i2c_buses"):
         failures += check_i2c_pullups(netlist, rules["i2c_buses"])
+    pulled = {tuple(pair) for pair in rules.get("pulled_by_firmware") or []}
     if rules.get("must_not_float"):
-        failures += check_floating_inputs(
-            netlist, [tuple(pair) for pair in rules["must_not_float"]],
+        failures += check_floating_inputs(  # a pin the firmware pulls up has no resistor to find (P204)
+            netlist, [tuple(pair) for pair in rules["must_not_float"] if tuple(pair) not in pulled],
             rails=((rules.get("physics") or {}).get("rails") or {}).keys())
+    # P204: the board's internal pull-up holds these, set by the firmware. A netlist cannot show that, only that the
+    # pin reaches something at all.
+    for component_name, port_name in sorted(pulled):
+        if netlist.component(component_name) is not None and not netlist.nets_of(component_name, port_name):
+            failures.append(Failure("floating-input", "%s.%s" % (component_name, port_name), "connects to nothing",
+                                    "the firmware can pull up only a pin that is wired to the board"))
     return failures
 
 

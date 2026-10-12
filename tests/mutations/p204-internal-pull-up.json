@@ -1,0 +1,56 @@
+[
+ {
+  "file": "scripts/design.py",
+  "name": "a board that states no internal pull-up loses its resistors too",
+  "find": "    if not (((board or {}).get(\"power\") or {}).get(\"internal_pull_up_ohms\") or {}).get(\"value\"):\n        return part\n",
+  "replace": "    if False:\n        return part\n"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "a pin that wakes the chip loses its resistor",
+  "find": "if host.get(\"kind\") == \"pullup\" and host.get(\"internal_will_do\") and host.get(\"pin\") not in wakes]",
+  "replace": "if host.get(\"kind\") == \"pullup\" and host.get(\"internal_will_do\")]"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "pins.py does not tell the firmware to pull up",
+  "find": "        if entry[\"signal\"] in pulled_up:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/compare_design.py",
+  "name": "an unwired firmware-pulled pin passes",
+  "find": "        if netlist.component(component_name) is not None and not netlist.nets_of(component_name, port_name):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "the firmware's pull-up is not said",
+  "find": "                      unmeasured=[\"%s: held up by the board",
+  "replace": "                      unmeasured=[] and [\"%s: held up by the board"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "a lone board pad is a wiring line",
+  "find": "        if on_board and len(ends) == 1:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/compare_design.py",
+  "name": "a rule written before the firmware pulled the pin still fails it",
+  "find": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"] if tuple(pair) not in pulled],",
+  "replace": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"]],"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "the sheet does not say the firmware must pull the button up",
+  "find": "% (name, pin) for pin in part.get(\"_firmware_pulls\", [])]",
+  "replace": "% (name, pin) for pin in []]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "internal_will_do is taken on any value",
+  "find": "        if \"internal_will_do\" in host_part and (host_part[\"internal_will_do\"] is not True or kind != \"pullup\"):",
+  "replace": "        if False:"
+ }
+]

@@ -251,7 +251,8 @@ What a module demands of the board it plugs into. `host_parts` is the **structur
 a pull-down here, a pull-up there, with resistance and reason — and the generator places and wires
 them. `host_requirements` is the prose half, printed under the board for a human. The split
 matters: it is how the tool knows an I2C bus is *this* board's to pull up rather than one the
-module already handles itself.
+module already handles itself. A pull-up marked `internal_will_do` becomes the board's own internal pull-up, set by the firmware, when the board
+states one ([P204](https://github.com/xmejkal/spark/issues/167)).
 
 ### Owed, and broken
 

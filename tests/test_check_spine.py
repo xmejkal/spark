@@ -1181,9 +1181,10 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
         built = self.spine(check_spine.OK)[0]
+        handed = design.firmware_pulls(button, board)  # P204: the part as the chain was handed it, on this board
         self.assertEqual((built["board"]["digest"], built["parts"][0]["digest"]),
                          (self.digest_of(board, ("pins", "power_pads", "physical")),
-                          self.digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))))
+                          self.digest_of(handed, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))))
 
     def test_what_the_chain_was_handed_is_what_is_recorded_not_what_the_file_became_meanwhile(self):
         def the_person_edits_the_file():
@@ -1194,13 +1195,15 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
     def test_the_facts_recorded_are_those_the_chain_was_handed_not_those_a_record_became_meanwhile(self):
         def the_person_edits_a_record():
             record = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
-            record["host_parts"][0]["ohms"] = 4700
+            record["footprint"] = "pushbutton_id1.2_od2"  # a fact the board's choice of pull-up does not touch (P204)
             (self.project / "parts").mkdir()
             (self.project / "parts" / "tactile-button.json").write_text(json.dumps(record))
         built = self.meanwhile(the_person_edits_a_record)
         button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         self.assertEqual([e["parts"][0]["digest"] for e in built],
-                         [self.digest_of(button, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))])
+                         [self.digest_of(design.firmware_pulls(button, board),
+                                         ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))])
 
     def test_a_design_that_cannot_be_loaded_records_nothing_and_breaks_nothing(self):
         (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}))

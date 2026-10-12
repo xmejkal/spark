@@ -340,6 +340,9 @@ With `--dry-run` first it says *would write*. The file it wrote:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
 
+The lines are a dated record. Since 2026-10-12 the button uses the board's internal pull-up
+([P204](https://github.com/xmejkal/spark/issues/167)), so today's run writes 9 traces, routes 7 and wires 7.
+
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
@@ -369,6 +372,10 @@ so, and does not fail for it.
 ([P191](https://github.com/xmejkal/spark/issues/143)): the parts, the resistors the parts ask for, and every wire,
 named by the board's printed labels and the parts' legs. It comes from the circuit that was built, so it is the board
 the checks and the simulation saw. The FireBeetle reads *yours* because the drawer holds it for this project:
+
+The lines are a dated record. Since 2026-10-12 the button uses the board's internal pull-up
+([P204](https://github.com/xmejkal/spark/issues/167)): today's sheet has no 10kΩ resistor and no 3V3 line, the LED's
+resistor is R1, and `pins.py` says `BUTTON_PULL = "up"`.
 
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
@@ -730,6 +737,9 @@ Then [`/spark:build`](../../commands/build.md) runs the whole chain on it:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
 
+The lines are a dated record. Since 2026-10-12 the two buttons use the board's internal pull-up
+([P204](https://github.com/xmejkal/spark/issues/167)), so today's run writes 18 traces, routes 15 and wires 13.
+
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
@@ -860,8 +870,9 @@ lines the answer rests on.
 
 1. **What MOTOR6V draws.** The L9110S and power-inlet records name no current on their VCC pins
    ([P120](https://github.com/xmejkal/spark/issues/54)).
-2. **Four pull resistors.** Nothing clears them, because MOTOR6V states no voltage: its `nominal_volts` is `null`.
-   State `6.0` there and all four clear (6² / 10k = 3.6 mW), with no current stated.
+2. **The pull resistors.** The run above has four. Since P204 the buttons use the board's internal pull-up, so two
+   remain, the L9110S's pull-downs. Nothing clears them, because MOTOR6V states no voltage: its `nominal_volts` is
+   `null`. State `6.0` there and they clear (6² / 10k = 3.6 mW), with no current stated.
 
 What clears each, and its shape, is in [what never to assume](agents.md#what-never-to-assume)
 ([P118](https://github.com/xmejkal/spark/issues/52)).

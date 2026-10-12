@@ -94,15 +94,15 @@ part's size or simulation stand-in, nor the board's pin roles).
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
 
   [ok  ] board            DFRobot FireBeetle 2 ESP32-S3 — from the plugin's library; no project up from the requirements file, so no rules
-  [ok  ] schematic        22 trace(s) written
+  [ok  ] schematic        18 trace(s) written
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
-  [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2600
-  [ok  ] simulation       17 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
+  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.2600
+  [ok  ] simulation       13 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
 
   the chain runs end to end
 ```
 
-19 routed traces carry the 22 written connections: a group of N connected pins needs N−1 traces.
+15 routed traces carry the 18 written connections: a group of N connected pins needs N−1 traces.
 
 The last line can say more. A requirements file that `parts.py --requirements` wrote carries a note, `unserved`, for a need
 the board does not serve: it has no pick, it is marked a gap, or every pick of it is a drawer entry with no record. When

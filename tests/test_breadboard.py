@@ -53,16 +53,16 @@ class TheSheetTest(unittest.TestCase):
         return [line for line in self.text.splitlines() if re.match(r"^\d+\. ", line)]
 
     def test_each_point_of_the_built_circuit_is_one_line(self):
-        # Five points: D3 with the button and the pull-up, 3V3 with the pull-up's other end, ground with the button and
-        # the LED's cathode, A5 with the LED resistor, and the LED resistor's other end with the anode.
-        self.assertEqual(len(self.connections()), 5, self.text)
+        # Four points: D3 with the button (the board's internal pull-up holds it, P204), ground with the button and the
+        # LED's cathode, A5 with the LED resistor, and the LED resistor's other end with the anode.
+        self.assertEqual(len(self.connections()), 4, self.text)
 
     def test_a_point_names_the_board_s_printed_label_and_every_part_on_it(self):
         d3 = next(line for line in self.connections() if "board D3" in line)
         self.assertIn("TactileButton A", d3)
-        self.assertIn("R1 (10kΩ pull-up on TactileButton A), end 1", d3)
+        self.assertNotIn("pull-up", d3, "P204: the board's internal pull-up, no resistor")
         a5 = next(line for line in self.connections() if "board A5" in line)
-        self.assertIn("R2 (330Ω in series with LedRed5mm A), end 1", a5)
+        self.assertIn("R1 (330Ω in series with LedRed5mm A), end 1", a5)
 
     def test_the_board_s_ground_pads_are_one_point(self):
         grounds = [line for line in self.connections() if "board GND" in line]
@@ -77,8 +77,9 @@ class TheSheetTest(unittest.TestCase):
 
     def test_the_parts_list_names_the_board_each_part_and_each_resistor_with_its_purpose(self):
         self.assertIn("DFRobot FireBeetle 2 ESP32-S3", self.text)
-        self.assertIn("| 1 | 10kΩ resistor, through-hole | R1 pull-up on TactileButton A |", self.text)
-        self.assertIn("| 1 | 330Ω resistor, through-hole | R2 in series with LedRed5mm A |", self.text)
+        self.assertNotIn("10kΩ", self.text, "P204: the button uses the board's internal pull-up")
+        self.assertIn("TactileButton A has no resistor: the firmware must pull it up", self.text)
+        self.assertIn("| 1 | 330Ω resistor, through-hole | R1 in series with LedRed5mm A |", self.text)
         self.assertIn("run a jumper from that pin to a free", self.text, "the board covers the rows beside its pins")
         self.assertIn("a breadboard and jumper wires", self.text)
         self.assertIn("| qty | part | for | have |", self.text)
@@ -99,7 +100,7 @@ class TheMotorExampleTest(unittest.TestCase):
 
     def test_every_resistor_end_is_on_the_sheet_once(self):
         # Five reviewers found it: two pull-ups on 3V3 printed as one end, so one was never wired.
-        for tag in ("R1", "R2", "R3", "R4"):
+        for tag in ("R1", "R2"):
             for end in ("end 1", "end 2"):
                 with self.subTest(resistor=tag, end=end):
                     found = sum(len(re.findall(r"\b%s \([^)]*\), %s\b" % (tag, end), line)) for line in self.wiring)
@@ -119,7 +120,7 @@ class TheMotorExampleTest(unittest.TestCase):
 
     def test_identical_parts_are_totalled(self):
         self.assertIn("| 2 | 6x6 mm tactile push button | BtnMode, BtnOpen |", self.text)
-        self.assertIn("| 4 | 10kΩ resistor, through-hole |", self.text)
+        self.assertIn("| 2 | 10kΩ resistor, through-hole |", self.text)
 
     def test_a_point_with_more_ends_than_a_breadboard_row_says_to_use_a_rail(self):
         ground = next(line for line in self.wiring if "board GND" in line)
@@ -255,7 +256,7 @@ class WhatYouOwnTest(unittest.TestCase):
         rows = {line.split("|")[2].strip(): line.split("|")[4].strip() for line in text.splitlines() if line.startswith("| ")}
         self.assertEqual(rows["6x6 mm tactile push button"], "in your drawer")
         self.assertEqual(rows["Kingbright L-7113ID 5 mm red LED"], "to get")
-        self.assertEqual(rows["10kΩ resistor, through-hole"], "to get", "the legend's blank means only: not on your list")
+        self.assertEqual(rows["330Ω resistor, through-hole"], "to get", "the legend's blank means only: not on your list")
 
 
 class TheCommandLineTest(unittest.TestCase):

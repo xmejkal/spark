@@ -233,6 +233,8 @@ def _wiring(board, circuit, design_parts, resistors):
         ends.sort(key=lambda one: (not one.startswith("board "), _natural(one)))
         line = " · ".join(ends)
         on_board = ends[0].startswith("board ")
+        if on_board and len(ends) == 1:
+            continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
         if point.nets and not on_board:
             line += " · the %s supply, from off the board, not part of the parts list" % " / ".join(point.nets)
         if len(ends) > ROW_HOLES:  # a board pin's end is its jumper's end, in a hole of the free row
@@ -264,6 +266,8 @@ def _before_power(design_parts, supplies):
     for part in design_parts:
         name = emit_board.component_name(part)
         lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in parts.pull_conflicts(part)]
+        lines += ["- %s %s has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` says (P204)"
+                  % (name, pin) for pin in part.get("_firmware_pulls", [])]
         lines += ["- %s %s: %s" % (name, pin["pin"], pin.get("note", "")) for pin in part.get("unused_pins") or []]
         if part["id"] not in seen:
             seen.add(part["id"])
