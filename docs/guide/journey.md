@@ -370,6 +370,10 @@ so, and does not fail for it.
 named by the board's printed labels and the parts' legs. It comes from the circuit that was built, so it is the board
 the checks and the simulation saw. The FireBeetle reads *yours* because the drawer holds it for this project:
 
+The lines are a dated record. Since 2026-10-12 the button uses the board's internal pull-up
+([P204](https://github.com/xmejkal/spark/issues/167)): today's sheet has no 10kΩ resistor and no 3V3 line, the LED's
+resistor is R1, and `pins.py` says `BUTTON_PULL = "up"`.
+
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text
 # Breadboard: button-light, on a DFRobot FireBeetle 2 ESP32-S3
@@ -729,6 +733,9 @@ Then [`/spark:build`](../../commands/build.md) runs the whole chain on it:
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep .
 ```
+
+The lines are a dated record. Since 2026-10-12 the two buttons use the board's internal pull-up
+([P204](https://github.com/xmejkal/spark/issues/167)), so today's run writes 18 traces, routes 15 and wires 13.
 
 <!-- output: run 2026-10-11, spark 0.8.1 -->
 ```text

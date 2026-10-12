@@ -250,8 +250,16 @@ def record(part_id, project):
         raise DesignError("the record for %r could not be read: %s" % (part_id, broken)) from broken
 
 
-def parts_of(wanted, project):
-    """Each requested part as an instance: its record, `_instance` when named, its rails as designed."""
+def parts_of(wanted, project, board=None):
+    """
+    Each requested part as an instance: its record, `_instance` when named, its rails as designed, and each pull-up
+    the board's internal one does instead left to the firmware (`firmware_pulls`).
+    """
+    if board is None:
+        try:
+            board = boards.load(project, wanted.get("board"))
+        except boards.BoardError:
+            board = None  # no board, no internal pull-up: every resistor stays
     part_list = []
     rails = rails_requested(wanted)
     for part_id, instance in requested_parts(wanted):
@@ -260,8 +268,26 @@ def parts_of(wanted, project):
             part["_instance"] = instance
         if (part_id, instance) in rails:
             part = on_rails(part, rails[(part_id, instance)])
-        part_list.append(part)
+        part_list.append(firmware_pulls(part, board))
     return part_list
+
+
+def firmware_pulls(part, board):
+    """
+    The part with each pull-up the board's internal one does left to the firmware (P204, the PO's rule of 2026-10-12:
+    prefer what the board offers). It needs the board's `internal_pull_up_ohms` and a host pull-up marked
+    `internal_will_do`. A pin that wakes the chip keeps its resistor, because the internal pull lets go in sleep.
+    The pins left to the firmware are listed in `_firmware_pulls`.
+    """
+    if not (((board or {}).get("power") or {}).get("internal_pull_up_ohms") or {}).get("value"):
+        return part
+    wakes = {need.get("pin") for need in part.get("needs") or [] if "wake" in (need.get("needs") or [])}
+    left = [host for host in part.get("host_parts") or []
+            if host.get("kind") == "pullup" and host.get("internal_will_do") and host.get("pin") not in wakes]
+    if not left:
+        return part
+    return dict(part, host_parts=[host for host in part["host_parts"] if host not in left],
+                _firmware_pulls=[host["pin"] for host in left])
 
 
 def signal_name(part, need):
@@ -343,6 +369,6 @@ def load(path, project=None, board_id=None):
         board = boards.load(root, board_id or wanted.get("board"))
     except boards.BoardError as broken:
         raise DesignError(str(broken)) from broken
-    part_list = parts_of(wanted, root)
+    part_list = parts_of(wanted, root, board)
     return Design(Path(path), root, wanted, board, part_list, signals_of(part_list, wanted, root),
                   rules_in(root))

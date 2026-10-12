@@ -8,7 +8,7 @@
 | 1 | L9110S dual motor driver module | L9110sModule |  |
 | 1 | JST PH 2-pin power inlet | JstPh2PowerInlet |  |
 | 2 | 6x6 mm tactile push button | BtnMode, BtnOpen |  |
-| 4 | 10kΩ resistor, through-hole | R1 pull-down on L9110sModule AIA; R2 pull-down on L9110sModule AIB; R3 pull-up on BtnOpen A; R4 pull-up on BtnMode A |  |
+| 2 | 10kΩ resistor, through-hole | R1 pull-down on L9110sModule AIA; R2 pull-down on L9110sModule AIB |  |
 | | what feeds MOTOR6V: a supply from off the board, not part of this list | JstPh2PowerInlet, L9110sModule | |
 | | a breadboard and jumper wires | |  |
 
@@ -20,13 +20,12 @@ Each line is one point: put its ends in one breadboard row, or join them with a 
 rows beside its own pins, so for a line that starts with a board pin, run a jumper from that pin to a free
 row and put the line's other ends in that row.
 
-1. board 3V3 · R3 (10kΩ pull-up on BtnOpen A), end 2 · R4 (10kΩ pull-up on BtnMode A), end 2
-2. board A5 · L9110sModule AIB · R2 (10kΩ pull-down on L9110sModule AIB), end 1
-3. board D3 · L9110sModule AIA · R1 (10kΩ pull-down on L9110sModule AIA), end 1
-4. board D11 · BtnMode A (either leg of one joined pair; a meter on continuity shows which legs are joined) · R4 (10kΩ pull-up on BtnMode A), end 1
-5. board D12 · BtnOpen A (either leg of one joined pair; a meter on continuity shows which legs are joined) · R3 (10kΩ pull-up on BtnOpen A), end 1
-6. board GND · BtnMode B (either leg of the other pair) · BtnOpen B (either leg of the other pair) · JstPh2PowerInlet GND · L9110sModule GND · R1 (10kΩ pull-down on L9110sModule AIA), end 2 · R2 (10kΩ pull-down on L9110sModule AIB), end 2 — more ends than one breadboard row holds: join board GND to a rail and put the others on that rail
-7. JstPh2PowerInlet VCC · L9110sModule VCC · the MOTOR6V supply, from off the board, not part of the parts list
+1. board A5 · L9110sModule AIB · R2 (10kΩ pull-down on L9110sModule AIB), end 1
+2. board D3 · L9110sModule AIA · R1 (10kΩ pull-down on L9110sModule AIA), end 1
+3. board D11 · BtnMode A (either leg of one joined pair; a meter on continuity shows which legs are joined)
+4. board D12 · BtnOpen A (either leg of one joined pair; a meter on continuity shows which legs are joined)
+5. board GND · BtnMode B (either leg of the other pair) · BtnOpen B (either leg of the other pair) · JstPh2PowerInlet GND · L9110sModule GND · R1 (10kΩ pull-down on L9110sModule AIA), end 2 · R2 (10kΩ pull-down on L9110sModule AIB), end 2 — more ends than one breadboard row holds: join board GND to a rail and put the others on that rail
+6. JstPh2PowerInlet VCC · L9110sModule VCC · the MOTOR6V supply, from off the board, not part of the parts list
 
 ## Before you power it
 

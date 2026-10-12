@@ -46,7 +46,8 @@
       "kind": "pullup",
       "pin": "A",
       "ohms": 10000,
-      "why": "this record wires B to ground, so A idles high on a pull-up and reads 0 when pressed; the ESP32's internal pull-ups are off for the ~300 ms between reset and firmware and through any reflash, and a wake input floats while the chip sleeps — so the pull is on the board. A design that wakes on HIGH wires the button the other way, with a pull-down (see host_requirements)"
+      "why": "this record wires B to ground, so A idles high on a pull-up and reads 0 when pressed. On a board that states its internal pull-up, the firmware sets that one instead (P204): the pin floats only in the ~300 ms between reset and the firmware, harmless for a button. A pin that wakes the chip keeps this resistor, because the internal pull lets go in sleep. A design that wakes on HIGH wires the button the other way, with a pull-down (see host_requirements)",
+      "internal_will_do": true
     }
   ],
   "host_requirements": [

@@ -412,6 +412,12 @@
         "at": "Table 12, page 15"
       }
     },
+    "internal_pull_up_ohms": {
+      "value": 45000,
+      "verified": true,
+      "source": "ESP32-S3-WROOM-1 datasheet, Table 6-3 DC Characteristics (3.3 V, 25 C): RPU, internal weak pull-up resistor, 45 kOhm typical. https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.html#page=27",
+      "why_it_matters": "P204, the PO's rule of 2026-10-12: prefer what the board offers. A button's pull-up is this one, set by the firmware, instead of a resistor."
+    },
     "io_volts": {
       "value": 3.3,
       "verified": true,

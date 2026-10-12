@@ -214,3 +214,18 @@ class ABusLineNamedByItsPinTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class APinTheFirmwarePullsUpTest(unittest.TestCase):
+    """P204: the board's internal pull-up holds the button, set by the firmware. A netlist can show only that it is wired."""
+
+    def failures(self, wired):
+        elements = circuit({"Mcu": ["D3"], "Btn": ["A", "B"]},
+                           pin_to_pin=[("Mcu.D3", "Btn.A")] if wired else [], to_net=[("GND", "Btn.B")])
+        return compare_design.run(elements, {"pulled_by_firmware": [["Btn", "A"]]})
+
+    def test_a_wired_pin_the_firmware_pulls_up_holds(self):
+        self.assertEqual(self.failures(wired=True), [])
+
+    def test_a_pin_the_firmware_pulls_up_still_must_be_wired(self):
+        self.assertEqual([(f.subject, f.detail) for f in self.failures(wired=False)], [("Btn.A", "connects to nothing")])

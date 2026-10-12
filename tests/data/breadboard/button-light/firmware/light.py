@@ -2,9 +2,9 @@
 The button-and-LED firmware (P59's fixture): the LED lights while the button is held.
 
 Written by hand, as a person or the conversation writes it once pins.py exists. The polarity was read from the built
-project, not guessed: breadboard.md's wiring lines 1 and 3 (the button's A leg and the BUTTON pin sit on a 10k pull-up
-to 3V3, the other leg on GND) and lines 2, 4 and 5 (STATUS_LED through 330 ohms into the LED's anode, its cathode on
-GND), which board.tsx's own comments say again. So the button reads 1 released and 0 pressed, and 1 lights the LED.
+project, not guessed: breadboard.md's wiring (the button's A leg on the BUTTON pin, the other leg on GND, and
+STATUS_LED through 330 ohms into the LED's anode, its cathode on GND), and pins.py's BUTTON_PULL = "up": the board's
+internal pull-up holds the button high (P204). So the button reads 1 released and 0 pressed, and 1 lights the LED.
 
 update() is the part the Mac exercises. run() calls time.sleep_ms, which only MicroPython has, so it runs on the board.
 """
@@ -19,7 +19,7 @@ BUTTON_PRESSED = 0
 LED_ON, LED_OFF = 1, 0
 DEFAULT_PERIOD_MS = 20
 
-button = Pin(pins.BUTTON, Pin.IN)  # the board's own pull-up holds it high, so no internal one
+button = Pin(pins.BUTTON, Pin.IN, Pin.PULL_UP)  # pins.BUTTON_PULL: the board's internal pull-up, no resistor
 led = Pin(pins.STATUS_LED, Pin.OUT, value=LED_OFF)
 
 

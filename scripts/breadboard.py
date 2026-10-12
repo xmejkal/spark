@@ -233,6 +233,8 @@ def _wiring(board, circuit, design_parts, resistors):
         ends.sort(key=lambda one: (not one.startswith("board "), _natural(one)))
         line = " · ".join(ends)
         on_board = ends[0].startswith("board ")
+        if on_board and len(ends) == 1:
+            continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
         if point.nets and not on_board:
             line += " · the %s supply, from off the board, not part of the parts list" % " / ".join(point.nets)
         if len(ends) > ROW_HOLES:  # a board pin's end is its jumper's end, in a hole of the free row

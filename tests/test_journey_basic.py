@@ -89,7 +89,9 @@ def _pins(path):
     # The firmware does `import pins`, so the file must run as Python and give the button and the LED a GPIO each.
     names = runpy.run_path(str(path))
     lacking = [name for name in ("BUTTON", "STATUS_LED") if not isinstance(names.get(name), int)]
-    return "no GPIO for %s in it" % " or ".join(lacking) if lacking else None
+    if lacking:
+        return "no GPIO for %s in it" % " or ".join(lacking)
+    return None if names.get("BUTTON_PULL") == "up" else "no BUTTON_PULL = \"up\": the firmware does not know to pull it up"
 
 
 #: Run in a process of its own: the LED's level with the button released, then pressed. The board holds the button high
@@ -306,6 +308,9 @@ class TheBasicJourneyTest(unittest.TestCase):
                              statuses)
         self.assertEqual(statuses["physics"], check_spine.OK, "physics must look, not be skipped")
         self.assertIsInstance(answer["unmeasured"], int, "P108: the ok says how many values it rests on")
+        rules = next(result for result in answer["results"] if result["check"] == "rules-vs-netlist")
+        self.assertIn("TactileButton.A: held up by the board's internal pull-up", " ".join(rules.get("unmeasured", [])),
+                      "P204: the firmware's pull-up is said, since no netlist shows it")
 
     def test_removing_any_stage_s_file_names_that_stage(self):
         # The card's proof: this test is only worth its run time if it goes red, by name, when a stage stops writing.

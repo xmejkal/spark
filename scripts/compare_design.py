@@ -221,6 +221,12 @@ def run(circuit, rules):
         failures += check_floating_inputs(
             netlist, [tuple(pair) for pair in rules["must_not_float"]],
             rails=((rules.get("physics") or {}).get("rails") or {}).keys())
+    # P204: the board's internal pull-up holds these, set by the firmware. A netlist cannot show that, only that the
+    # pin reaches something at all.
+    for component_name, port_name in rules.get("pulled_by_firmware") or []:
+        if netlist.component(component_name) is not None and not netlist.nets_of(component_name, port_name):
+            failures.append(Failure("floating-input", "%s.%s" % (component_name, port_name), "connects to nothing",
+                                    "the firmware can pull up only a pin that is wired to the board"))
     return failures
 
 
@@ -245,7 +251,7 @@ def compare(circuit_path, rules_path):
         return could_not_run("not valid JSON: %s" % broken)
 
     failures = run(circuit, rules)
-    checked = len(rules.get("i2c_buses", [])) + len(rules.get("must_not_float", []))
+    checked = sum(len(rules.get(key) or []) for key in ("i2c_buses", "must_not_float", "pulled_by_firmware"))
     if not checked:
         # "0 rule(s) checked against the built design" and then "every rule holds", exit 0 —
         # printed over the RC car, whose H-bridge's floating inputs are this project's canonical

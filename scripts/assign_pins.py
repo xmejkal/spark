@@ -389,14 +389,15 @@ def role_note(board, role):
     return "%s: %s" % (role, note.split(". ")[0].rstrip(".")) if note else role
 
 
-def pin_module(board, assignments, source):
+def pin_module(board, assignments, source, pulled_up=()):
     """
     The pin map as a module the firmware imports (P36), instead of numbers typed by hand.
 
     Plain integers, so CPython (the fake-`machine` tests) and MicroPython read it alike (P60); one
     line per signal with its pad, why it was chosen, and what the board record says about the pin
     (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
-    refused, not mangled: a renamed constant is a pin the firmware silently stops finding.
+    refused, not mangled: a renamed constant is a pin the firmware silently stops finding. A signal in `pulled_up`
+    gets a `<SIGNAL>_PULL = "up"` line: the board's internal pull-up holds it, set by the firmware (P204).
     """
     lines = ["%s from %s" % (PIN_MODULE_HEADER, parts_library.one_line(source)),
              "# for the %s. Regenerate it; do not edit it." % parts_library.one_line(board["name"]), ""]
@@ -408,6 +409,9 @@ def pin_module(board, assignments, source):
         said = ["pad %s" % pad, entry["why"]] + [role_note(board, role)
                                                           for role in entry["roles"]]
         lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], parts_library.one_line("; ".join(said))))
+        if entry["signal"] in pulled_up:
+            lines.append('%s_PULL = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
+                         % (entry["signal"], entry["signal"]))
     return "\n".join(lines) + "\n"
 
 
@@ -422,7 +426,13 @@ def pin_module_for(requirements):
     """
     loaded = design_library.load(requirements, None, None)
     assignments, _ = assign(loaded.board, loaded.signals)
-    return pin_module(loaded.board, assignments, Path(requirements).name)
+    return pin_module(loaded.board, assignments, Path(requirements).name, pulled_up(loaded.parts))
+
+
+def pulled_up(part_list):
+    """The signals whose pull-up the board's internal one does, set by the firmware (P204)."""
+    return {design_library.signal_name(part, need) for part in part_list for need in part.get("needs") or []
+            if need.get("pin") in part.get("_firmware_pulls", [])}
 
 
 def main(argv=None):
@@ -459,7 +469,7 @@ def main(argv=None):
 
     if args.emit_pins:
         try:
-            module = pin_module(board, assignments, Path(args.requirements).name)
+            module = pin_module(board, assignments, Path(args.requirements).name, pulled_up(loaded.parts))
         except Impossible as refused:
             print("cannot write the pin map:\n\n  %s" % refused)
             return EXIT_IMPOSSIBLE
