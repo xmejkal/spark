@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram and a breadboard sheet (the parts and how to wire them) generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *)
 ---
 
 # spark:build
@@ -254,6 +254,19 @@ plugin's is used, so this stage works wherever the plugin is installed. It is bu
 that runs on Node, with nothing else to install; a project's own `cli.ts` runs with `bun`.
 
 ## Put it on the board
+
+Before you propose a flash, and when the person asks whether the right board is plugged in, run the look:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/look.py --port <the board's serial port>
+```
+
+Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
+changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
+`same`, `differs` or `unknown`, with the board's MAC and a token. With two boards on USB, it lists them and needs
+`--port`. Relay its lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
+not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
+`allowed-tools` and `deploy.py` is not, on purpose: running deploy.py is the person's decision, so Claude Code asks them.
 
 Once a scenario passed, one command puts that same flash image on the board
 ([P192](https://github.com/xmejkal/spark/issues/144)). Plug the board in over USB, then run in the project folder:

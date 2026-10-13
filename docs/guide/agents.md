@@ -117,6 +117,10 @@ These only read:
 - `import_firmware.py`. It writes nothing. It does import the project's firmware modules. Their module-level code runs
   on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7));
 - `tools.py --status`, `boards.py --list`, `check_vendor_pins.py --offline`;
+- `look.py`. It writes nothing and changes no flash, but **the board on USB restarts**, because esptool resets it to read it: a running
+  program stops and starts again, so say so before you run it. It prints text only until `--json` ([P213](https://github.com/xmejkal/spark/issues/175)): read its exit code and its lines.
+  **A field `unknown` is not a pass**, and neither is a look with no token: the exit is 2 and the line says what went unchecked.
+  The token is not the person's yes;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.
@@ -354,7 +358,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 
 **Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
 `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `import_firmware.py` and `parts.py`. These do not take
-it: `boards.py`, `breadboard.py`, `check_bom.py`, `deploy.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
+it: `boards.py`, `breadboard.py`, `check_bom.py`, `deploy.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `look.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
 ## The outcomes and their exit codes

@@ -128,7 +128,7 @@
     }
   },
   "esptool": {
-    "for": "writing the flash image that passed the simulation onto the board (deploy.py)",
+    "for": "writing the flash image that passed the simulation onto the board (deploy.py), and reading the board on USB without changing it (look.py)",
     "kind": "python",
     "module": "esptool",
     "version": "5.5.0",
@@ -137,7 +137,7 @@
     }
   },
   "mpremote": {
-    "for": "MicroPython's REPL on the board over USB, to see the firmware start (deploy.py prints the line)",
+    "for": "MicroPython's REPL on the board over USB, to see the firmware start (deploy.py prints the line), and listing the boards on USB (look.py)",
     "kind": "python",
     "module": "mpremote",
     "version": "1.29.0",

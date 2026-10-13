@@ -1027,9 +1027,32 @@ per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
-**Partly.** `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). Its dry run prints the esptool commands and runs nothing. Nothing has run it on a board yet. The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). Its dry run prints the esptool commands and runs nothing. Nothing has run it on a board yet. The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v1](../../scrum/VISION.md#versions)).
+
+### Look at the board
+
+`look.py` reads the board on USB without changing it and compares it with the board in `requirements.json`
+([P219](https://github.com/xmejkal/spark/issues/201)). The board restarts while it is read, and nothing is erased or
+written. It prints each field as `same`, `differs` or `unknown`, the board's MAC, and a token when a passed run names the
+image. This run was on a XIAO ESP32-C6 on USB, in a project that had no build yet, so it has no token. The MAC is
+masked here.
+
+<!-- output: run 2026-10-13, spark 0.9.0 -->
+```text
+$ look.py --project <project>
+  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
+  port   /dev/cu.usbmodem101
+  mac    8c:bf:ea:xx:xx:xx
+  chip   same      esp32c6
+  flash  same      4 MB
+  all fields match the board record xiao-esp32-c6.
+  no token: no sim/wokwi.toml in <project>: build with /spark:build --keep . first
+```
+
+The exit code was 2: the fields matched, but the look could not give a token. With a build and a passed scenario, the last
+line is the token. `deploy.py` does not ask for it yet.
 
 After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32
