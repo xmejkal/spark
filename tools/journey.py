@@ -38,8 +38,8 @@ STEPS = [
      "The import passes on a Mac. No check yet that it drives every signal.", "partly"),
     ("Simulate", "run_scenario.py", "Say in words what must happen.",
      "The firmware running in Wokwi, with a dated log.", "The button-and-LED project passed on 2026-10-12.", "works"),
-    ("Bench", "deploy.py", "Wire the breadboard and flash the board.", "The tested firmware on the real board.",
-     "deploy.py is ready. It did not run on a real board yet.", "partly"),
+    ("Bench", "look.py, deploy.py", "Wire the breadboard and flash the board.", "The tested firmware on the real board.",
+     "look.py reads the board on USB and checks it. deploy.py is ready. It did not run on a real board yet.", "partly"),
 ]
 #: Each status: the stop's fill, the label's fill, the label's text color, and its line in the legend.
 COLORS = {"works": ("#2dc75c", "#adf0c7", "#067429", "works: it ran end to end for the docs"),

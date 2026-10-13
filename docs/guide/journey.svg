@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1772" width="1600" height="1772" font-family="&apos;Noto Sans&apos;, &apos;Helvetica Neue&apos;, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1840" width="1600" height="1840" font-family="&apos;Noto Sans&apos;, &apos;Helvetica Neue&apos;, Helvetica, Arial, sans-serif">
 <title>The spark journey: eight steps from an idea to a working gadget, and how far each works today</title>
-<rect width="1600" height="1772" rx="24" fill="#ffffff"/>
+<rect width="1600" height="1840" rx="24" fill="#ffffff"/>
 <text x="48" y="96" font-size="44" font-weight="bold" fill="#1a1a1a" text-anchor="start">From an idea to a working gadget</text>
 <text x="48" y="140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The spark journey, and how far each step worked in the runs up to 2026-10-12.</text>
 <circle cx="58" cy="180" r="10" fill="#2dc75c"/>
@@ -12,7 +12,7 @@
 <text x="227" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">1</text>
 <text x="227" y="358" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Drawer</text>
 <text x="227" y="390" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">/spark:drawer</text>
-<rect x="48" y="412" width="358" height="486" rx="12" fill="#f0f5fd"/>
+<rect x="48" y="412" width="358" height="520" rx="12" fill="#f0f5fd"/>
 <text x="68" y="452" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
 <text x="68" y="486" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Say which parts you own.</text>
 <text x="68" y="564" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
@@ -28,7 +28,7 @@
 <text x="609" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">2</text>
 <text x="609" y="358" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Idea</text>
 <text x="609" y="390" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">/spark:idea</text>
-<rect x="430" y="412" width="358" height="486" rx="12" fill="#f0f5fd"/>
+<rect x="430" y="412" width="358" height="520" rx="12" fill="#f0f5fd"/>
 <text x="450" y="452" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
 <text x="450" y="486" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Describe the gadget in your</text>
 <text x="450" y="520" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">own words.</text>
@@ -45,7 +45,7 @@
 <text x="991" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">3</text>
 <text x="991" y="358" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Research</text>
 <text x="991" y="390" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">/spark:research</text>
-<rect x="812" y="412" width="358" height="486" rx="12" fill="#f0f5fd"/>
+<rect x="812" y="412" width="358" height="520" rx="12" fill="#f0f5fd"/>
 <text x="832" y="452" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
 <text x="832" y="486" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Pick a part for a real gap.</text>
 <text x="832" y="564" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
@@ -60,7 +60,7 @@
 <text x="1373" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">4</text>
 <text x="1373" y="358" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Build</text>
 <text x="1373" y="390" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">/spark:build</text>
-<rect x="1194" y="412" width="358" height="486" rx="12" fill="#f0f5fd"/>
+<rect x="1194" y="412" width="358" height="520" rx="12" fill="#f0f5fd"/>
 <text x="1214" y="452" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
 <text x="1214" y="486" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Run it on the requirements</text>
 <text x="1214" y="520" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">file.</text>
@@ -72,70 +72,72 @@
 <text x="1262" y="721" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
 <text x="1214" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Ran end to end on</text>
 <text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11.</text>
-<line x1="227" y1="978" x2="1373" y2="978" stroke="#b0b0b0" stroke-width="4"/>
-<circle cx="227" cy="978" r="36" fill="#2dc75c"/>
-<text x="227" y="989" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>
-<text x="227" y="1060" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Checks</text>
-<text x="227" y="1092" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">check_all.py</text>
-<rect x="48" y="1114" width="358" height="486" rx="12" fill="#f0f5fd"/>
-<text x="68" y="1154" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
-<text x="68" y="1188" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Run the checks on the</text>
-<text x="68" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">project.</text>
-<text x="68" y="1266" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
-<text x="68" y="1300" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">What holds, and what a</text>
-<text x="68" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">check could not look at.</text>
-<rect x="68" y="1398" width="96" height="36" rx="18" fill="#adf0c7"/>
-<text x="116" y="1423" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
-<text x="68" y="1468" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">A fresh button-and-LED</text>
-<text x="68" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">project passes.</text>
-<circle cx="609" cy="978" r="36" fill="#ffdc4a"/>
-<text x="609" y="989" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">6</text>
-<text x="609" y="1060" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Firmware</text>
-<text x="609" y="1092" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">import_firmware.py</text>
-<rect x="430" y="1114" width="358" height="486" rx="12" fill="#f0f5fd"/>
-<text x="450" y="1154" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
-<text x="450" y="1188" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Write the firmware with</text>
-<text x="450" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Claude.</text>
-<text x="450" y="1266" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
-<text x="450" y="1300" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">A pin map that the firmware</text>
-<text x="450" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">imports.</text>
-<rect x="450" y="1398" width="96" height="36" rx="18" fill="#fff6b6"/>
-<text x="498" y="1423" font-size="20" font-weight="bold" fill="#af7e04" text-anchor="middle">partly</text>
-<text x="450" y="1468" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The import passes on a Mac.</text>
-<text x="450" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">No check yet that it drives</text>
-<text x="450" y="1536" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">every signal.</text>
-<circle cx="991" cy="978" r="36" fill="#2dc75c"/>
-<text x="991" y="989" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">7</text>
-<text x="991" y="1060" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Simulate</text>
-<text x="991" y="1092" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">run_scenario.py</text>
-<rect x="812" y="1114" width="358" height="486" rx="12" fill="#f0f5fd"/>
-<text x="832" y="1154" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
-<text x="832" y="1188" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Say in words what must</text>
-<text x="832" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">happen.</text>
-<text x="832" y="1266" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
-<text x="832" y="1300" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The firmware running in</text>
-<text x="832" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Wokwi, with a dated log.</text>
-<rect x="832" y="1398" width="96" height="36" rx="18" fill="#adf0c7"/>
-<text x="880" y="1423" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
-<text x="832" y="1468" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The button-and-LED project</text>
-<text x="832" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">passed on 2026-10-12.</text>
-<circle cx="1373" cy="978" r="36" fill="#ffdc4a"/>
-<text x="1373" y="989" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">8</text>
-<text x="1373" y="1060" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Bench</text>
-<text x="1373" y="1092" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">deploy.py</text>
-<rect x="1194" y="1114" width="358" height="486" rx="12" fill="#f0f5fd"/>
-<text x="1214" y="1154" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
-<text x="1214" y="1188" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Wire the breadboard and</text>
-<text x="1214" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">flash the board.</text>
-<text x="1214" y="1266" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
-<text x="1214" y="1300" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The tested firmware on the</text>
-<text x="1214" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">real board.</text>
-<rect x="1214" y="1398" width="96" height="36" rx="18" fill="#fff6b6"/>
-<text x="1262" y="1423" font-size="20" font-weight="bold" fill="#af7e04" text-anchor="middle">partly</text>
-<text x="1214" y="1468" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">deploy.py is ready. It did</text>
-<text x="1214" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">not run on a real board</text>
-<text x="1214" y="1536" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">yet.</text>
-<rect x="48" y="1632" width="1504" height="92" rx="12" fill="#1a1a1a"/>
-<text x="72" y="1670" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> the button-and-LED project passed its Wokwi simulation on 2026-10-12.</text>
-<text x="72" y="1704" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> flash it on a real FireBeetle 2 ESP32-S3.</text>
+<line x1="227" y1="1012" x2="1373" y2="1012" stroke="#b0b0b0" stroke-width="4"/>
+<circle cx="227" cy="1012" r="36" fill="#2dc75c"/>
+<text x="227" y="1023" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>
+<text x="227" y="1094" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Checks</text>
+<text x="227" y="1126" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">check_all.py</text>
+<rect x="48" y="1148" width="358" height="520" rx="12" fill="#f0f5fd"/>
+<text x="68" y="1188" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
+<text x="68" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Run the checks on the</text>
+<text x="68" y="1256" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">project.</text>
+<text x="68" y="1300" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
+<text x="68" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">What holds, and what a</text>
+<text x="68" y="1368" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">check could not look at.</text>
+<rect x="68" y="1432" width="96" height="36" rx="18" fill="#adf0c7"/>
+<text x="116" y="1457" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
+<text x="68" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">A fresh button-and-LED</text>
+<text x="68" y="1536" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">project passes.</text>
+<circle cx="609" cy="1012" r="36" fill="#ffdc4a"/>
+<text x="609" y="1023" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">6</text>
+<text x="609" y="1094" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Firmware</text>
+<text x="609" y="1126" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">import_firmware.py</text>
+<rect x="430" y="1148" width="358" height="520" rx="12" fill="#f0f5fd"/>
+<text x="450" y="1188" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
+<text x="450" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Write the firmware with</text>
+<text x="450" y="1256" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Claude.</text>
+<text x="450" y="1300" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
+<text x="450" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">A pin map that the firmware</text>
+<text x="450" y="1368" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">imports.</text>
+<rect x="450" y="1432" width="96" height="36" rx="18" fill="#fff6b6"/>
+<text x="498" y="1457" font-size="20" font-weight="bold" fill="#af7e04" text-anchor="middle">partly</text>
+<text x="450" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The import passes on a Mac.</text>
+<text x="450" y="1536" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">No check yet that it drives</text>
+<text x="450" y="1570" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">every signal.</text>
+<circle cx="991" cy="1012" r="36" fill="#2dc75c"/>
+<text x="991" y="1023" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">7</text>
+<text x="991" y="1094" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Simulate</text>
+<text x="991" y="1126" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">run_scenario.py</text>
+<rect x="812" y="1148" width="358" height="520" rx="12" fill="#f0f5fd"/>
+<text x="832" y="1188" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
+<text x="832" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Say in words what must</text>
+<text x="832" y="1256" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">happen.</text>
+<text x="832" y="1300" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
+<text x="832" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The firmware running in</text>
+<text x="832" y="1368" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Wokwi, with a dated log.</text>
+<rect x="832" y="1432" width="96" height="36" rx="18" fill="#adf0c7"/>
+<text x="880" y="1457" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
+<text x="832" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The button-and-LED project</text>
+<text x="832" y="1536" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">passed on 2026-10-12.</text>
+<circle cx="1373" cy="1012" r="36" fill="#ffdc4a"/>
+<text x="1373" y="1023" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">8</text>
+<text x="1373" y="1094" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Bench</text>
+<text x="1373" y="1126" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">look.py, deploy.py</text>
+<rect x="1194" y="1148" width="358" height="520" rx="12" fill="#f0f5fd"/>
+<text x="1214" y="1188" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You do</text>
+<text x="1214" y="1222" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Wire the breadboard and</text>
+<text x="1214" y="1256" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">flash the board.</text>
+<text x="1214" y="1300" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
+<text x="1214" y="1334" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The tested firmware on the</text>
+<text x="1214" y="1368" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">real board.</text>
+<rect x="1214" y="1432" width="96" height="36" rx="18" fill="#fff6b6"/>
+<text x="1262" y="1457" font-size="20" font-weight="bold" fill="#af7e04" text-anchor="middle">partly</text>
+<text x="1214" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">look.py reads the board on</text>
+<text x="1214" y="1536" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">USB and checks it.</text>
+<text x="1214" y="1570" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">deploy.py is ready. It did</text>
+<text x="1214" y="1604" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">not run on a real board</text>
+<text x="1214" y="1638" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">yet.</text>
+<rect x="48" y="1700" width="1504" height="92" rx="12" fill="#1a1a1a"/>
+<text x="72" y="1738" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> the button-and-LED project passed its Wokwi simulation on 2026-10-12.</text>
+<text x="72" y="1772" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> flash it on a real FireBeetle 2 ESP32-S3.</text>
 </svg>

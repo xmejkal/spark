@@ -24,6 +24,14 @@ print `status: ok`, exit 0, and hand you a board where every finding it emitted 
 `could-not-run` — it had examined nothing and said "fine". That is worse than no check at all,
 because you now believe something.
 
+### look and token — `look.py`
+
+A **look** is a read of the board on USB that changes nothing, compared with the project's board record. The board
+restarts while it is read, and nothing is erased or written. A **token** is a short code the look prints: one half from
+the board's MAC, one half from the flash image. It shows that a look was made on this board for this image. It is not
+the person's yes, and it is not a secret. The failure behind them: `deploy.py` erased whatever board was on USB, so
+a wrong board lost its flash (P219).
+
 ### `skipped` — the fourth word, and only `check_all` has it
 
 "I was not asked" is not "I was asked and could not look". A check whose inputs were never
