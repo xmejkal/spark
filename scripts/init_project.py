@@ -35,6 +35,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import ai_files  # noqa: E402
 import boards  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
@@ -475,6 +476,8 @@ def main(argv=None):
             written.append((path, payload))
     notes.append(write(project / "package.json", package_file(project), force=False)[1])
     notes.extend(unstated)
+    ai_did, ai_notes = ai_files.AiFiles(project).write()
+    notes.extend(ai_notes)
 
     if args.board:
         if args.board not in boards.available(project):
@@ -505,7 +508,7 @@ def main(argv=None):
             for field in fields:
                 print("  %s  %s" % (path.name, field))
 
-    if not written and not args.board:
+    if not written and not args.board and not ai_did:
         print("\nnothing to do — everything already exists. "
               "--force merges what is derived into rules.json and keeps your answers.")
         return EXIT_NOTHING_TO_DO

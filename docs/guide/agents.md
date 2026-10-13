@@ -118,7 +118,7 @@ These only read:
 
 These write:
 
-- `init_project.py`: four project files, plus the store's projects list.
+- `init_project.py`: four project files, three files that AI tools read, plus the store's projects list.
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for
   what you have, and refuses a failed or stale build.
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check

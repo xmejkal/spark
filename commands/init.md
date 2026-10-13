@@ -1,5 +1,5 @@
 ---
-description: Set up a project for spark — writes the rules and brief files every check and reviewer needs, with nothing guessed.
+description: Set up a project for spark — writes the rules and brief files every check and reviewer needs, with nothing guessed, and the files AI tools read.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
 ---
 
@@ -47,6 +47,15 @@ tsci climbs to your home folder looking for a root — never rewritten once you 
 rails from the built design if there is one. Existing files are left alone unless `--force`, which merges what
 init derives into rules.json and keeps your answers; it rewrites project.json only if that file has no answers, and
 never rewrites package.json ([P114](https://github.com/xmejkal/spark/issues/48)).
+
+It also writes the files that AI tools read ([P216](https://github.com/xmejkal/spark/issues/197)), and one note for
+each:
+
+- `AGENTS.md`: spark's section, between two marker lines. Each run rewrites only that section.
+- `CLAUDE.md`: the line `@AGENTS.md`, only when no `CLAUDE.md` is here. A person's own `CLAUDE.md` is left alone,
+  and the note names the line to add.
+- `CLAUDE.local.md`: a link to `rules.md` in the person's store, kept out of git by `.git/info/exclude`. No
+  `rules.md` means no link, and the note says where to write one. A person's own file is left alone.
 
 ## 3. Read what it could not answer
 

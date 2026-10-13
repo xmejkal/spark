@@ -48,8 +48,12 @@ Sets up a project for spark. It writes:
 - `.spark/project.json`
 - `boards/active.json`
 - a `package.json`, which tscircuit installs into
+- spark's section of `AGENTS.md`, between two marker lines
+- a `CLAUDE.md` with `@AGENTS.md`, only when the project has none
+- `CLAUDE.local.md`, a link to `rules.md` in your store, kept out of git
 
-It also adds the project to your projects list in your store.
+It also adds the project to your projects list in your store. It leaves a file that you wrote alone, and says what to
+add.
 
 If there is a built design, it names the rails from it, so it runs again after the first build, with `--force`
 ([journey: Checks](journey.md#checks)). `--force` merges what init derives into rules.json and keeps your answers. It
