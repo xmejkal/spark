@@ -52,7 +52,7 @@ class WhatThePersonSeesTest(LookScriptCase):
             "  chip   same      esp32c6",
             "  flash  same      4 MB",
             "  all fields match the board record xiao-esp32-c6.",
-            "  token  %s  for deploy.py --token (P219's next step). It is not your yes: deploy.py asks for that." % self.token()])
+            "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token()])
 
     def test_a_flash_that_differs_but_holds_the_image_is_a_warning_with_its_token(self):
         self.run_the_scenario()

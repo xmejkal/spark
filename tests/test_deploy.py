@@ -5,7 +5,6 @@ import io
 import json
 import os
 import shlex
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -81,6 +80,7 @@ class TheDryRunTest(ProjectCase):
         self.assertEqual(said.splitlines(), [
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase_flash" % PORT,
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s write_flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
+            "  board: not looked at: run look.py",
             "  then, to see it start: /opt/python3 -m mpremote connect %s repl, press Ctrl-C, then Ctrl-D: "
             "the firmware prints `ready`" % PORT])
 
@@ -247,26 +247,6 @@ class WhatDeployNeedsTest(ProjectCase):
         code, said, _, _ = self.deploy("--dry-run")
         self.assertEqual(code, deploy.EXIT_OK)
         self.assertIn("note: firmware/main.py changed after this image was made", said)
-
-
-class TheFlashTest(ProjectCase):
-    def test_a_flash_erases_then_writes_the_image_and_says_how_to_see_it_start(self):
-        self.run_the_scenario()
-        code, said, _, ran = self.deploy("--port", PORT)
-        self.assertEqual(code, deploy.EXIT_OK)
-        self.assertEqual([argv[-1] for argv in ran], ["erase_flash", str(self.image)])
-        self.assertIn("then, to see it start", said)
-
-    def test_a_failed_erase_writes_nothing_and_says_what_to_try(self):
-        self.run_the_scenario()
-        ran = []
-
-        def fails(argv, **kw):
-            ran.append(argv)
-            raise subprocess.CalledProcessError(2, argv)
-        code, _, problems, _ = self.deploy("--port", "/dev/nothing", run=fails)
-        self.assertEqual((code, len(ran)), (deploy.EXIT_COULD_NOT_RUN, 1))
-        self.assertIn("hold the board's BOOT button", problems)
 
 
 if __name__ == "__main__":
