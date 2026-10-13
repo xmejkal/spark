@@ -113,8 +113,9 @@ flowchart LR
 | 5 | spark: lists the ports again (the name can change), reads the start for a fixed time, says `ready` seen, not seen or unknown | E USER-3, PHYS-1 | a boot-time `ready` lost before the port opens | not yet | A1: can a command see `ready`? A2: does `os.statvfs('/')` show 512 blocks? |
 | 6 | spark: records the MAC, project, image sha256, date and whose yes, and keeps the serial log | E #196 "Value proven by", USERJ-9 | a flash nobody can trace | not yet | Q6: where does the record live? |
 
-Mechanics, by reading: a 16 MB board keeps the image header's 4 MB size (TLJ-11). So MicroPython makes a 2 MiB
-filesystem at `0x200000`, and it matches the image. Only the bench shows it. Detail of the five outcomes after a flash: B7 below.
+Mechanics, by reading: MicroPython v1.29.0 sets the flash size from the chip, so on a 16 MiB board the `vfs` partition
+has 3584 blocks, where the image's filesystem has 512 (★C5, refuted, the refuter's read of `main.c:251-273`). Whether
+it mounts the image's filesystem is H. Only the bench shows it. Detail of the five outcomes after a flash: B7 below.
 
 ```mermaid
 flowchart LR

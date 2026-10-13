@@ -33,7 +33,7 @@ stay thin (D8). Slice names are the board's Slice options.
 ## P215 (#196), the flash half — the image that passed goes on through the gate, and a command reads the start
 - type: story, on the existing card
 - needed by: "at least to breadboard including working firmware is important" (the PO, #144) and "and yes, its ok to splt it" (the PO, 2026-10-13, D12)
-- value proven by: the PO's board, flashed once through the gate, prints `ready` in a log that a command read. `os.statvfs('/')` shows 512 blocks of 4096 B. The record names the board's MAC, the image sha256, the date and whose yes (A1, A2, A3, A10)
+- value proven by: the PO's board, flashed once through the gate, prints `ready` in a log that a command read. `main.py` is listed, and `os.statvfs('/')`'s block count is written down (★C5 refuted). The record names the board's MAC, the image sha256, the date and whose yes (A1, A2, A3, A10)
 - depends on: P219 (#201), first story
 - status: proposed
 - label (the repository's type label): story (the card's own label stays)

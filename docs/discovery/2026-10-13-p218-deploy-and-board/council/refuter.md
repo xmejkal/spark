@@ -402,7 +402,7 @@ a yes matches what it read. The places:
 - C30 holds: `deploy.py:34-35`.
 - C28 is moot for deploy under D13.
 
-**verification.md** is still the template (`⟨fill⟩`), so it adds nothing to compare yet.
+**verification.md** was still the template when I read it, so it added nothing to compare.
 
 ## 3. Rival explanations, and what D13 changes
 
@@ -538,21 +538,13 @@ Each interpretation in the folder, with the strongest rival the folder does not 
 
 ## Searches
 
-None: I made no search-engine query. I opened two web sources that the brief cites, by fetch. The folder counts fetches
-against the budget, so these are my 2:
+No search-engine query. I opened two web sources that the brief cites, by fetch. The folder counts fetches against the
+budget, so these are my 2:
 
-1. `curl https://raw.githubusercontent.com/micropython/micropython/v1.29.0/ports/esp32/main.c`, for ★C5. 334 lines,
-   sha256 `37cb251bd9ee6dbe62e9ba0825cf3ad6ae445e0d6bfe12a7d25c539dd9d4eb08`, read 2026-10-13. Used.
-2. `curl -L https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_overview/usb_device_const_COM.html`,
-   for ★C9. HTML sha256 `46ee9d22669097b653ceb64ef63b23522254f0ec5d46f619e5f7f9a8ec35fe94`, read 2026-10-13. Used.
+1. `curl https://raw.githubusercontent.com/micropython/micropython/v1.29.0/ports/esp32/main.c`, 334 lines, sha256 `37cb251bd9ee6dbe62e9ba0825cf3ad6ae445e0d6bfe12a7d25c539dd9d4eb08`, read 2026-10-13, used · ★C5, whether the boot of the image is settled
+2. `curl -L https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_overview/usb_device_const_COM.html`, HTML sha256 `46ee9d22669097b653ceb64ef63b23522254f0ec5d46f619e5f7f9a8ec35fe94`, read 2026-10-13, used · ★C9, what names a board before any byte is sent
 
-The budget left these cited web pointers unopened:
-
-- the esptool basic-commands page (★C3)
-- micropython.org's ESP32_GENERIC_S3 page (★C6)
-- the mpremote docs (★C8, ★C14)
-- the esp32 library page (★C12)
-- the esp32 quickref (★C13)
-- esp-web-tools (★C15)
-
-In their place I read local sources: the installed esptool 3.3 and mpremote 1.29.0, and the kept MicroPython image.
+The budget left six cited web pointers unopened: the esptool basic-commands page (★C3), micropython.org's
+ESP32_GENERIC_S3 page (★C6), the mpremote docs (★C8, ★C14), the esp32 library page (★C12), the esp32 quickref (★C13)
+and esp-web-tools (★C15). In their place I read local sources: the installed esptool 3.3 and mpremote 1.29.0, and the
+kept MicroPython image. (Added by Claude, who ran the synthesis: `verification.md` opened four of the six afterwards.)
