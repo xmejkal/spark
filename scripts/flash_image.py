@@ -2,7 +2,7 @@
 """
 A flash image with MicroPython AND the project's files, for a headless simulation.
 
-    flash_image.py --files firmware -o sim/flash-with-firmware.bin    # the tools list's MicroPython build
+    flash_image.py --files firmware -o sim/flash-with-firmware.bin    # the build the project's board names
     flash_image.py --micropython sim/micropython-esp32s3.bin --files firmware -o sim/flash-with-firmware.bin
     flash_image.py ... --config '{"THRESHOLD_PCT": 40}'      # also writes /config.json into the image
 
@@ -14,7 +14,8 @@ the files there and concatenates the two. The littlefs parameters are the ESP32 
 they are wrong the simulated board boots to a bare REPL with no main.py, which is the symptom.
 
 Written for the smart bin (its tools/build-flash-image.py) and made general here for backlog
-P31: any project, any file tree, the board's chip named on the command line by the image.
+P31: any project, any file tree. The board's record names its MicroPython build (`micropython_port`), and the tools
+list's entry with that build is the interpreter (P229).
 """
 
 import argparse
@@ -23,6 +24,7 @@ import sys
 from pathlib import Path
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
+import boards
 import tools
 
 FLASH_SIZE = 4 * 1024 * 1024
@@ -69,24 +71,47 @@ def image(interpreter, files, overrides=None):
     return bytes(flash)
 
 
-def interpreter_path(given):
-    """The MicroPython build: the one given, else the tools list's download (P82)."""
+def board_build(project):
+    """The MicroPython build the project's board names (its record's `micropython_port`), or None with no board."""
+    try:
+        board = json.loads((Path(project) / "requirements.json").read_text()).get("board")
+        return boards.get(Path(project), "micropython_port", board) if board else None
+    except (OSError, ValueError, AttributeError, boards.BoardError):
+        return None
+
+
+def interpreter_path(given, project=None):
+    """
+    The MicroPython build: the one given, else the tools list's download for the build the project's board names
+    (P229), else the firmware-image role's (P82). A board whose build no tool holds is a ToolProblem, never another
+    chip's build.
+    """
     if given:
         return Path(given)
-    return Path(tools.find("firmware-image").command[0])
+    build = board_build(project) if project else None
+    if not build:
+        return Path(tools.find("firmware-image", project).command[0])
+    for name, entry in tools.merged(project)["tools"].items():
+        if entry.get("micropython_port") == build and "micropython-esp32-bin" in (entry.get("meets") or []):
+            return Path(tools.find(name, project).command[0])
+    raise tools.ToolProblem("no tool on the tools list holds the MicroPython build %s that the board names; add one "
+                            "from https://micropython.org/download/%s/" % (build, build))
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--micropython", type=Path, help="the interpreter .bin from micropython.org for the board's chip; "
-                        "omitted, the tools list's firmware-image download")
+                        "omitted, the tools list's download for the build the project's board names")
+    parser.add_argument("--project", type=Path, default=Path("."),
+                        help="the project whose requirements.json names the board (default: here); with no board, the "
+                        "tools list's firmware-image download")
     parser.add_argument("--files", required=True, type=Path, help="the directory whose files go into the image, as they are")
     parser.add_argument("--config", help="JSON written as /config.json into the image")
     parser.add_argument("-o", "--output", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
         tools.find("littlefs")
-        interpreter = interpreter_path(args.micropython)
+        interpreter = interpreter_path(args.micropython, args.project)
     except tools.ToolProblem as missing:
         print("flash_image.py: %s" % missing, file=sys.stderr)
         return EXIT_COULD_NOT_RUN

@@ -113,6 +113,48 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
             self.assertEqual(flash_image.interpreter_path(None), Path("/downloads/mp.bin"))
         self.assertEqual(asked.call_args[0][0], "firmware-image")
 
+    def project_on(self, board):
+        project = Path(tempfile.mkdtemp())
+        (project / "requirements.json").write_text(json.dumps({"board": board}))
+        return project
+
+    def two_builds(self):
+        """A tools list with the S3 and the C6 builds, each naming the build it holds (P229, D41)."""
+        return {"tools": {"micropython-esp32s3": {"micropython_port": "ESP32_GENERIC_S3", "meets": ["micropython-esp32-bin"]},
+                          "micropython-esp32c6": {"micropython_port": "ESP32_GENERIC_C6", "meets": ["micropython-esp32-bin"]}},
+                "roles": {"firmware-image": "micropython-esp32s3"}, "contracts": {}}
+
+    def test_the_build_comes_from_the_project_s_board(self):
+        import tools
+        found = tools.Tool("micropython-esp32c6", None, {}, ["/downloads/c6.bin"])
+        with mock.patch.object(tools, "merged", return_value=self.two_builds()), \
+                mock.patch.object(tools, "find", return_value=found) as asked:
+            self.assertEqual(flash_image.interpreter_path(None, self.project_on("xiao-esp32-c6")), Path("/downloads/c6.bin"))
+        self.assertEqual(asked.call_args[0][0], "micropython-esp32c6")
+
+    def test_a_board_whose_build_no_tool_holds_is_refused_by_name(self):
+        import tools
+        lists = self.two_builds()
+        del lists["tools"]["micropython-esp32c6"]
+        with mock.patch.object(tools, "merged", return_value=lists), self.assertRaises(tools.ToolProblem) as said:
+            flash_image.interpreter_path(None, self.project_on("xiao-esp32-c6"))
+        self.assertIn("ESP32_GENERIC_C6", str(said.exception))
+
+    def test_a_project_with_no_board_uses_the_firmware_image_role(self):
+        import tools
+        found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
+        with mock.patch.object(tools, "find", return_value=found) as asked:
+            self.assertEqual(flash_image.interpreter_path(None, Path(tempfile.mkdtemp())), Path("/downloads/mp.bin"))
+        self.assertEqual(asked.call_args[0][0], "firmware-image")
+
+    def test_the_shipped_list_holds_a_build_for_each_shipped_board(self):
+        import tools
+        held = {entry.get("micropython_port") for entry in tools.merged()["tools"].values()}
+        for record in sorted((ROOT / "boards").glob("*.json")):
+            port = json.loads(record.read_text()).get("micropython_port")
+            if port:
+                self.assertIn(port, held, record.name)
+
     def test_a_given_build_is_used_as_given(self):
         self.assertEqual(flash_image.interpreter_path(self.root / "micropython.bin"), self.root / "micropython.bin")
 

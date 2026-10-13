@@ -147,6 +147,8 @@
   },
   "micropython-esp32s3": {
     "for": "the interpreter the flash image starts with, for an ESP32-S3",
+    "//micropython_port": "The build this file holds, as a board record's `micropython_port` names it; flash_image.py picks the entry whose build the project's board names (P229).",
+    "micropython_port": "ESP32_GENERIC_S3",
     "kind": "download",
     "file": "ESP32_GENERIC_S3-20260824-v1.29.0.bin",
     "url": "https://micropython.org/resources/firmware/ESP32_GENERIC_S3-20260824-v1.29.0.bin",
@@ -156,6 +158,20 @@
     ],
     "install": {
       "download": "/spark:setup add micropython-esp32s3"
+    }
+  },
+  "micropython-esp32c6": {
+    "for": "the interpreter the flash image starts with, for an ESP32-C6",
+    "micropython_port": "ESP32_GENERIC_C6",
+    "kind": "download",
+    "file": "ESP32_GENERIC_C6-20260824-v1.29.0.bin",
+    "url": "https://micropython.org/resources/firmware/ESP32_GENERIC_C6-20260824-v1.29.0.bin",
+    "sha256": "3688ba4e2c3949e639f5772e99fdb0efa1258b162a496133f78c108434195c89",
+    "meets": [
+      "micropython-esp32-bin"
+    ],
+    "install": {
+      "download": "/spark:setup add micropython-esp32c6"
     }
   },
   "jlcpcb": {

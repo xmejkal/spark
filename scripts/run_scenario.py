@@ -139,7 +139,7 @@ class ScenarioRun:
             self.steps = with_ready_wait(self.scenario.read_text())
             tools.find("littlefs")
             self.image = image_in(self.sim / "wokwi.toml")
-            self.flash = flash_image.image(flash_image.interpreter_path(self.micropython).read_bytes(),
+            self.flash = flash_image.image(flash_image.interpreter_path(self.micropython, self.project).read_bytes(),
                                            flash_image.files_under(self.project / "firmware"))
         except (OSError, ValueError, tools.ToolProblem) as cannot:
             return "%s: %s" % (self.scenario.name, cannot)

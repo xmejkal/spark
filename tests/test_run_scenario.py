@@ -230,6 +230,19 @@ class TheLogNamesTheImageTest(ProjectCase):
         self.assertEqual(verdict, "failed (wokwi-cli exit 1): Error: stuck")
         self.assertRegex(sha256, "^[0-9a-f]{64}$")
 
+    def test_with_no_build_given_the_image_starts_with_the_build_the_board_names(self):
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        c6 = self.project / "c6.bin"
+        c6.write_bytes(b"\xe9C6" + b"\x00" * 997)
+        real_find = tools.find
+        found = tools.Tool("micropython-esp32c6", None, {}, [str(c6)])
+        told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
+                "FAKE_WOKWI_ERR": "", "FAKE_WOKWI_SEEN": str(self.seen)}
+        with mock.patch.dict(os.environ, told), mock.patch.object(
+                tools, "find", side_effect=lambda name, *rest, **kw: found if name == "micropython-esp32c6" else real_find(name, *rest, **kw)):
+            run_scenario.ScenarioRun(self.project, self.scenario).run(FAKE_CLI)
+        self.assertEqual((self.project / "sim" / "flash-with-firmware.bin").read_bytes()[:3], b"\xe9C6")
+
     def test_a_log_from_an_older_spark_names_no_image(self):
         self.log.parent.mkdir(parents=True)
         self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n\n"
