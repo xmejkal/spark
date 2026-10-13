@@ -1004,7 +1004,7 @@ A run is a separate step:
    must print `ready` once its setup is done, and a line for each change the scenario waits on: spark's example
    firmware does both.
 3. **Run it** with a Wokwi account's CI token in `WOKWI_CLI_TOKEN` (wokwi.com/dashboard/ci). MicroPython for the
-   board comes from `/spark:setup add micropython-esp32s3`, or `micropython-esp32c6` for a C6 board.
+   board comes from `/spark:setup add micropython-esp32s3`, `micropython-esp32c6` for a C6 board, or `micropython-xiao-esp32c6` for the XIAO.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/run_scenario.py" sim/scenarios/the-button-lights-the-led.scenario.yaml

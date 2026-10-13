@@ -241,7 +241,7 @@ What each job is:
 | board-engine | tscircuit, installed into the project at the version spark pins |
 | chip-docs | the espressif-docs MCP server, for `datasheet-reader` |
 | diagram-converter | spark's own, in `tools/circuit-to-wokwi/` |
-| firmware-image | MicroPython for the S3, used when a project names no board. A board's record names its own build, and the list holds the S3 and the C6 builds |
+| firmware-image | MicroPython for the S3, used when a project names no board. A board's record names its own build, and the list holds the S3 and C6 builds and Seeed's XIAO C6 build |
 | js-runtime | Node: runs the bundled diagram converter, npm (which installs tscircuit) and spark's two MCP servers |
 | littlefs | `littlefs-python`: packs the firmware's files into the flash image |
 | parts-search | the jlcpcb MCP server, for `part-finder` |

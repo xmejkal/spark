@@ -235,11 +235,11 @@ class TheLogNamesTheImageTest(ProjectCase):
         c6 = self.project / "c6.bin"
         c6.write_bytes(b"\xe9C6" + b"\x00" * 997)
         real_find = tools.find
-        found = tools.Tool("micropython-esp32c6", None, {}, [str(c6)])
+        found = tools.Tool("micropython-xiao-esp32c6", None, {}, [str(c6)])
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
                 "FAKE_WOKWI_ERR": "", "FAKE_WOKWI_SEEN": str(self.seen)}
         with mock.patch.dict(os.environ, told), mock.patch.object(
-                tools, "find", side_effect=lambda name, *rest, **kw: found if name == "micropython-esp32c6" else real_find(name, *rest, **kw)):
+                tools, "find", side_effect=lambda name, *rest, **kw: found if name == "micropython-xiao-esp32c6" else real_find(name, *rest, **kw)):
             run_scenario.ScenarioRun(self.project, self.scenario).run(FAKE_CLI)
         self.assertEqual((self.project / "sim" / "flash-with-firmware.bin").read_bytes()[:3], b"\xe9C6")
 
