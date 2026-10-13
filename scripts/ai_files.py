@@ -19,6 +19,7 @@ import store
 BEGIN = "<!-- spark:begin"
 BEGIN_LINE = BEGIN + ". /spark:init writes this section and rewrites it on each run. Edit outside the markers. -->"
 END = "<!-- spark:end -->"
+BEGIN_AT, END_AT = (re.compile("^" + re.escape(marker), re.M) for marker in (BEGIN, END))  # at a line's start only
 SECTION = (Path(__file__).resolve().parent.parent / "data" / "agents-section.md").read_text()
 IMPORT = "@AGENTS.md"
 CLAUDE_MD = "<!-- /spark:init wrote this file. It is yours now: spark never rewrites it. -->\n%s\n" % IMPORT
@@ -49,11 +50,11 @@ class AiFiles:
         text = read(path)
         if text is None:
             return False, "AGENTS.md is not UTF-8 text, so it is left alone"
-        begin = re.search("^" + re.escape(BEGIN), text, re.M)
+        begin = BEGIN_AT.search(text)
         if begin is None:
             store.write_file(path, text + ("" if text.endswith("\n") else "\n") + "\n" + block)
             return True, "added spark's section to the end of your AGENTS.md"
-        end = re.compile("^" + re.escape(END), re.M).search(text, begin.end())
+        end = END_AT.search(text, begin.end())
         if end is None:
             return False, "AGENTS.md has spark's begin marker but no end marker, so it is left alone: fix the markers"
         if store.write_file(path, text[:begin.start()] + block.rstrip("\n") + text[end.end():]):
@@ -80,9 +81,9 @@ class AiFiles:
 
     def claude_local_md(self):
         path = self.project / LOCAL
-        if path.is_symlink() and path.resolve() == self.rules.resolve():
-            return self.excluded(False, "%s already links your rules in %s" % (LOCAL, self.rules))
         if path.is_symlink():
+            if path.resolve() == self.rules.resolve():
+                return self.excluded(False, "%s already links your rules in %s" % (LOCAL, self.rules))
             return False, ("%s links to %s, not to your rules in %s: remove it and run init again"
                            % (LOCAL, os.readlink(path), self.rules))
         if os.path.lexists(path):
