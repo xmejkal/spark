@@ -41,7 +41,7 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | P59 (#7, done in v0.9.0), **P74** (#8, parked, after v1.0) |
 | **4** | **Checks on two named projects** (stale: v1 is now the basic journey, v1.0; its open cards wait, none is in v1.0) | hobbyist | the documented example and irrigation: `check_spine` exits 0; `check_all` shows no `[FAIL]`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), P78 (#14, closed), P80 (done), P83 (done), B13 (done), P43 (#11, closed), **P77** (#13) (its place is the council's) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | R2.6 (#15, done); later, after v1.0: a stranger's first install |
-| **v2 and later** | **Later versions** — v2 is one core (P158 #94), the rest one epic each: breadboard to perfboard to PCB, a board you can order, an enclosure, the store shared | hobbyist | one epic each, in the PO's words: [VISION.md's *Versions*](VISION.md#versions) | P79 (#16) stays the breadboard's epic, met by v1's walk |
+| **v2 and later** | **Later versions** — v2 is one core (P158 #94), the rest one epic each: live on the board (P235 #224, the REPL, WebREPL, a serial monitor, debugging), breadboard to perfboard to PCB, a board you can order, an enclosure, the store shared | hobbyist | one epic each, in the PO's words: [VISION.md's *Versions*](VISION.md#versions) | P79 (#16) stays the breadboard's epic, met by v1's walk |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b** (bin #6), P64b (parked), P64c (parked), B12 (done) |
 
 **The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
@@ -64,8 +64,8 @@ The deploy journeys J1 to J7 are in [`jobs-and-journeys.md`](../docs/discovery/2
 - J3, the board is not the one the project is for: v1.0 (the stop) and v1.2 (what differs, and the offers).
 - J2, change the firmware and put it on again: v1.1.
 - J7, two near-identical boards: v1.2.
-- J4, debug on the board live: later (spike P222, #204).
-- J6, try things live over USB or Wi-Fi: later (spike P222, #204).
+- J4, debug on the board live: later, the epic P235 (#224), live on the board (spike P222, #204).
+- J6, try things live over USB or Wi-Fi: later, the epic P235 (#224).
 - J5, Arduino or PlatformIO: later (spike P221, #203).
 - Proposed, new: J8, a stranger takes the basic journey on their own machine: after v1.0.
 - Proposed, new: J9, the PCB and a printed body from the same conversation: later (the north star, P203 #163).
