@@ -272,13 +272,21 @@ Once a scenario passed, one command puts that same flash image on the board
 ([P192](https://github.com/xmejkal/spark/issues/144)). Plug the board in over USB, then run in the project folder:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --port <the board's serial port> --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run
 ```
 
-The dry run prints the two esptool commands and runs nothing. The first erases the board's flash. The second writes the
-image at `0x0`, where the simulator loaded it. Without `--dry-run`, deploy.py runs them. Ask the person before that run,
-because it erases the board's whole flash. Without `--port`, esptool tries each serial port. On macOS the board shows as
-`/dev/cu.usbmodem…`.
+The dry run prints the two esptool commands and runs nothing. It does not look at the board. The first command erases
+the board's flash. The second writes the image at `0x0`, where the simulator loaded it. The real run goes in this
+order: the look, its token, then the person's yes.
+
+1. Run `look.py` and relay its lines. A stop means do not propose the flash.
+2. Give the person the line `deploy.py --token <the token>`, with `--port` only when two boards are on USB.
+3. Wait. The person runs it in their own terminal window. deploy.py looks at the board again (the board restarts),
+   names every warning in its question and erases only after they type `yes`.
+
+If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
+yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. On macOS the board
+shows as `/dev/cu.usbmodem…`.
 
 deploy.py flashes only an image that passed. The image is the one `sim/wokwi.toml` names. A log in `sim/runs/` must name
 its sha256 with `verdict: passed`, and no log may name it with another verdict. A log from an older spark names no image,
