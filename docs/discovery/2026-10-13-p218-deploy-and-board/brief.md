@@ -185,6 +185,8 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - D43 · refuter-close conflict 6: a live session's one yes (D29) goes through D19's gate, the look's token and the person's terminal yes; `exec` is then free until the session ends · the PO · 2026-10-13 · this session, he picked "Yes, same gate" · options considered: a yes in the chat
 - D44 · refuter-close conflict 8: `requirements.json` names the board type; the store maps the MACs of that type that the person deployed to, with the yes per board (D18, D23) · the PO · 2026-10-13 · this session, he picked "The type; store maps MAC" · options considered: the project names one MAC
 - D45 · refuter-close conflicts 1, 5 and 7 stand as recorded: the blink is the PO's exception (D38); the facts file is named in the log (D22's caveat, built by D42); an MCP or web path has no person-only gate yet, a limit for P213 and later · Claude, from the PO's answers · 2026-10-13 · caveat: conflict 7 is open for any interface without a terminal
+- D46 · the understanding is confirmed: the job, the ladder P228, P229, P219, P215, P213, the later rows, and A7 as the riskiest · the PO · 2026-10-13 · this session, he picked "Yes, that is it"
+- D47 · the DE2 ruling (commit `3188a62`, only on `origin/p192-deploy`) is cherry-picked onto P219's branch; the old branch is deleted after P219 merges · the PO · 2026-10-13 · this session, he picked "Carry into P219", after "if it stays in history, lets get rid of it, if its not useful" · options considered: a small PR now, drop it
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
@@ -211,7 +213,15 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), and answered Q1 to Q23 (D16 to D40), but has not confirmed the jobs, a direction or the remaining risk. The queue is empty. When it is written: each item that changes code updates its `--help`, `docs/guide/agents.md` and the README or guide in the same PR (the PO, 2026-10-13, D21) <!-- REQUIRED:handoff -->
+- Outcome: the firmware that passed in Wokwi reaches a real board safely, for the person and for Claude (D1, D4, D6, D46)
+- Who: the PO at his desk, with the Seeed XIAO ESP32-C6 (D13, D14); Claude through the CLI first (D8)
+- Success and its proof: P215's line, a command reads `ready` and the board's files match the per-file hashes (D33, D42)
+- Constraints: no erase or write without the look, its token and the person's terminal yes (D4, D19); the port only with two or more boards (D25); another chip is a stop (D24); no browser flasher (D11); the blink is the one behaviour exception (D38); each item updates its help, AI and human docs (D21)
+- What he said (D) against what we assume (H): D16 to D47 are his; A1, A4, A7 and A8 are H, rated high (D16)
+- Order: P228, then P229 with the C6 build (D41), then P219 with DE2 (D47), then P215, then P213 (D26); later P231 to P235 (items.md)
+- Riskiest: A7, tested at P228's read-only bench (risks-and-tests.md)
+- Journeys and map: jobs-and-journeys.md, story-map.md, https://miro.com/app/board/uXjVEaysFtc=/
+- Options considered: the Options section and each D row <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
