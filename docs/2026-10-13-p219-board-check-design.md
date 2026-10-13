@@ -158,7 +158,7 @@ exit with `outcomes.status_of`: a field that differs is a problem, and a field t
 | deploy: no token | 2 | `run look.py first, then deploy.py --token <token>.` |
 | deploy: token differs | 2 | `the image changed since the look: run look.py again.` (or the board) |
 | deploy: its own look finds another chip | 1 | the look's chip line, and `not flashed.` |
-| deploy: no terminal | 2 | `no terminal to ask you in. Run this line yourself (in Claude Code, type ! first):` and the full line with the script's real path, the token and the port |
+| deploy: no terminal | 2 | `no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):` and the full line with the script's real path, the token and the port |
 | deploy: the person answers no | 2 | `not flashed: you answered no.` (the EPILOG and agents.md say so) |
 
 `--dry-run` never touches USB, as today: it prints the commands and `board: not looked at: run look.py`. A look in a
@@ -199,10 +199,10 @@ Done when: the suite passes. Nothing a person runs changes yet.
 Done when: `look.py` on the PO's XIAO prints chip and flash `same` and a token, and `check_docs.py`, `inventory.py`
 and the suite pass.
 
-### Before step 4: one bench line
+### The bench line before step 4, answered
 
-The PO runs `! python3 -c "import sys; print(sys.stdin.isatty(), sys.stdout.isatty())"` in Claude Code. If `!` gives
-no terminal, the no-terminal sentence says "in your own terminal window" and drops the `!` hint.
+The PO ran `! python3 -c "import sys; print(sys.stdin.isatty(), sys.stdout.isatty())"` in Claude Code on 2026-10-13,
+and it printed `False False`. So `!` gives no terminal, and the yes must come from the person's own terminal window.
 
 ### Step 4: the gate (about 200 lines with tests)
 
