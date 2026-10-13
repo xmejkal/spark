@@ -93,7 +93,8 @@ took the wake-capable pin count from 3 usable to 22, which changed every assignm
 ## Flash size
 
 `flash_mb` is the flash in MB: one number, or a list when one record covers SKUs with different flash (the FireBeetle
-2: `[16, 4]`). Write its `//flash_mb` source beside it. `board_look.py` compares what esptool reads from a board with it.
+2: `[16, 4]`). Write its `//flash_mb` source beside it. `board_look.py` compares what esptool reads from a board with it. A record without `flash_mb` makes the flash field
+unknown, and that is a warning.
 
 ## Simulation
 
