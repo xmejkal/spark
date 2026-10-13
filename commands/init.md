@@ -1,5 +1,5 @@
 ---
-description: Set up a project for spark — writes the rules and brief files every check and reviewer needs, with nothing guessed.
+description: Set up a project for spark — writes the rules and brief files every check and reviewer needs, with nothing guessed, and the files AI tools read.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *)
 ---
 

@@ -10,6 +10,7 @@ The files that AI tools read in a project that uses spark (P216 step 6), written
 """
 
 import os
+import re
 from pathlib import Path
 
 import store
@@ -20,6 +21,7 @@ BEGIN_LINE = BEGIN + ". /spark:init writes this section and rewrites it on each 
 END = "<!-- spark:end -->"
 SECTION = (Path(__file__).resolve().parent.parent / "data" / "agents-section.md").read_text()
 IMPORT = "@AGENTS.md"
+CLAUDE_MD = "<!-- /spark:init wrote this file. It is yours now: spark never rewrites it. -->\n%s\n" % IMPORT
 LOCAL = "CLAUDE.local.md"
 
 
@@ -37,34 +39,42 @@ class AiFiles:
     def agents_md(self):
         path = self.project / "AGENTS.md"
         block = "%s\n%s%s\n" % (BEGIN_LINE, SECTION, END)
+        if path.is_symlink():
+            return False, "AGENTS.md is a link, so it is left alone and has no section from spark"
         if not path.exists():
             store.write_file(path, block)
             return True, "wrote AGENTS.md with spark's section"
-        text = path.read_text()
-        if BEGIN not in text:
-            store.write_file(path, text.rstrip("\n") + "\n\n" + block)
+        text = read(path)
+        begin = re.search("^" + re.escape(BEGIN), text, re.M)
+        if begin is None:
+            store.write_file(path, text + ("" if text.endswith("\n") else "\n") + "\n" + block)
             return True, "added spark's section to the end of your AGENTS.md"
-        start, end = text.index(BEGIN), text.find(END, text.index(BEGIN))
-        if end < 0:
+        end = re.compile("^" + re.escape(END), re.M).search(text, begin.end())
+        if end is None:
             return False, "AGENTS.md has spark's begin marker but no end marker, so it is left alone: fix the markers"
-        if store.write_file(path, text[:start] + block.rstrip("\n") + text[end + len(END):]):
+        if store.write_file(path, text[:begin.start()] + block.rstrip("\n") + text[end.end():]):
             return True, "rewrote spark's section of AGENTS.md"
         return False, "AGENTS.md already has spark's section"
 
     def claude_md(self):
         path = self.project / "CLAUDE.md"
+        if path.is_symlink():
+            return False, "CLAUDE.md is a link, so it is left alone. Make sure that it has the line %s" % IMPORT
         if not path.exists():
-            store.write_file(path, IMPORT + "\n")
+            store.write_file(path, CLAUDE_MD)
             return True, "wrote CLAUDE.md: %s" % IMPORT
-        if IMPORT in path.read_text().split():
+        if IMPORT in read(path).split():  # Claude Code imports an @path anywhere in a line
             return False, "CLAUDE.md already imports AGENTS.md"
-        return False, ("CLAUDE.md is yours and does not import AGENTS.md, so it is left alone and Claude Code does not "
+        return False, ("CLAUDE.md is yours, so it is left alone. It does not import AGENTS.md, so Claude Code does not "
                        "read AGENTS.md: add the line %s to it" % IMPORT)
 
     def claude_local_md(self):
         path = self.project / LOCAL
         if path.is_symlink() and path.resolve() == self.rules.resolve():
             return self.excluded(False, "%s already links your rules in %s" % (LOCAL, self.rules))
+        if path.is_symlink():
+            return False, ("%s links to %s, not to your rules in %s: remove it and run init again"
+                           % (LOCAL, os.readlink(path), self.rules))
         if os.path.lexists(path):
             return False, "%s is yours, so it is left alone. Spark would link your rules in %s" % (LOCAL, self.rules)
         if not self.rules.is_file():
@@ -87,3 +97,8 @@ class AiFiles:
         exclude.parent.mkdir(parents=True, exist_ok=True)
         store.write_file(exclude, "\n".join(lines + [LOCAL]) + "\n")
         return True, note + ", kept out of git"
+
+
+def read(path):
+    """A file's text as it is on disk: no line endings changed, so a person's CRLF stays outside spark's section."""
+    return path.read_bytes().decode("utf-8")

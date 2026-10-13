@@ -48,7 +48,9 @@ class AiFilesTest(unittest.TestCase):
         self.assertTrue(did)
         self.assertIn(BEGIN, self.text("AGENTS.md"))
         self.assertIn(END, self.text("AGENTS.md"))
-        self.assertEqual(self.text("CLAUDE.md"), "@AGENTS.md\n")
+        first, second = self.text("CLAUDE.md").splitlines()
+        self.assertIn("spark never rewrites it", first)
+        self.assertEqual(second, "@AGENTS.md")
         link = self.project / "CLAUDE.local.md"
         self.assertTrue(link.is_symlink())
         self.assertEqual(link.resolve(), self.rules.resolve())
@@ -79,6 +81,33 @@ class AiFilesTest(unittest.TestCase):
         self.assertEqual(text.count(BEGIN), 1)
         self.assertTrue(text.startswith("before\n") and text.endswith("after\n"))
         self.assertIn("## spark\n", text)
+
+    def test_a_marker_named_in_a_sentence_is_not_the_marker(self):
+        mine = "see %s markers\nMY TEXT\n%s\n" % (BEGIN, END)
+        (self.project / "AGENTS.md").write_text(mine)
+        self.run_it()
+        self.assertTrue(self.text("AGENTS.md").startswith(mine))
+
+    def test_the_person_s_crlf_stays_outside_the_section(self):
+        (self.project / "AGENTS.md").write_bytes(b"line1\r\nline2\r\n")
+        self.run_it()
+        self.assertTrue((self.project / "AGENTS.md").read_bytes().startswith(b"line1\r\nline2\r\n"))
+
+    def test_a_linked_agents_md_and_a_dangling_claude_md_are_left_alone(self):
+        (self.project / "shared.md").write_text("shared\n")
+        (self.project / "AGENTS.md").symlink_to(self.project / "shared.md")
+        (self.project / "CLAUDE.md").symlink_to(self.project / "gone.md")
+        did, notes = self.run_it()
+        self.assertTrue((self.project / "AGENTS.md").is_symlink())
+        self.assertEqual(self.text("shared.md"), "shared\n")
+        self.assertTrue((self.project / "CLAUDE.md").is_symlink())
+        self.assertFalse((self.project / "gone.md").exists())
+
+    def test_a_link_to_an_old_store_is_named_and_left_alone(self):
+        (self.project / "CLAUDE.local.md").symlink_to(self.store / "old" / "rules.md")
+        did, notes = self.run_it()
+        self.assertEqual(os.readlink(self.project / "CLAUDE.local.md"), str(self.store / "old" / "rules.md"))
+        self.assertTrue(any("remove it and run init again" in note for note in notes), notes)
 
     def test_a_begin_marker_without_an_end_is_left_alone_and_said(self):
         broken = "%s\nhalf\n" % BEGIN
