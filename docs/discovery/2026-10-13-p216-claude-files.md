@@ -63,8 +63,8 @@ every session. Memory holds facts that Claude learns in one project, never rules
 ## Roles and agents
 
 `scrum/TEAM.md`'s roster stays the one list of who does what. Each agent has one source file in `agents/`, as today,
-in neutral Markdown with frontmatter. An adapter writes it out as each chosen tool's agent file. A role that is not an
-agent, such as the tech lead lens, is a prompt in the same place, so any tool can play it. Team-only agents, such as
+in neutral Markdown with frontmatter. An adapter writes it out as each chosen tool's agent file. Some roles are not
+agents, for example the tech lead lens. Each of them is a prompt in the same place, so any tool can play it. Team-only agents, such as
 the mutation tester, stay in spark's repository and never ship in the plugin.
 
 ## Control
