@@ -18,7 +18,9 @@ overwritten. The first slice serves Claude Code and every tool that reads `AGENT
 
 ## The open formats it builds on
 
-As understood in mid-2026. Step 4 makes sure of each before any code depends on it.
+As understood in mid-2026. Step 4 made sure of each, with sources, in
+[`2026-10-13-p216-formats.md`](2026-10-13-p216-formats.md). Two changes: Gemini CLI needs a setting to read `AGENTS.md`.
+A `CLAUDE.md` or `CLAUDE.local.md` stops Claude Code from reading it, so the import stays.
 
 | kind of piece | open format | who reads it |
 | --- | --- | --- |
