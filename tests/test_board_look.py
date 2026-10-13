@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_look  # noqa: E402
+import image_check  # noqa: E402
 import outcomes  # noqa: E402
 import tools  # noqa: E402
 from test_deploy import FOUND, PORT, ProjectCase, found  # noqa: E402
@@ -43,17 +44,18 @@ class LookCase(ProjectCase):
     def board(self, name):
         (self.project / "requirements.json").write_text(json.dumps({"board": name, "parts": []}))
 
-    def look(self, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", port=None, flasher=None, esptool_code=0):
-        """The Report of Look.run with fake tools. LookStop propagates."""
+    def look(self, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", port=None, flasher=None, esptool_code=0,
+             text=None, **kwargs):
+        """The Report of Look.run with fake tools. `text` is what esptool prints, in place of the file. LookStop propagates."""
         def run(argv, **kw):
             self.ran.append(argv)
             if "devs" in argv:
                 return done(data(devs))
-            return done(data(esptool), esptool_code)
+            return done(text or data(esptool), esptool_code)
 
         flasher = flasher or FOUND["flasher"]
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: flasher if name == "flasher" else found(name)):
-            return board_look.looker(self.project, run).run(self.project, port)
+            return board_look.looker(self.project, run).run(self.project, port, **kwargs)
 
 
 class PortFinderTest(LookCase):
@@ -73,11 +75,34 @@ class PortFinderTest(LookCase):
                          [(C6_PORT, "8c:bf:ea:xx:xx:xx", "Espressif USB JTAG/serial debug unit"),
                           ("/dev/cu.usbserial-1410", "None", "USB Serial")])
 
+    def test_a_failed_mpremote_stops_with_the_last_line_of_its_stderr(self):
+        failed = subprocess.CompletedProcess([], 1, "", "Traceback\nmpremote: no such command\n")
+        with self.assertRaises(board_look.LookStop) as stop:
+            board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: failed).boards()
+        self.assertEqual(str(stop.exception), "could not list the boards on USB: mpremote: no such command")
+
+    def test_both_commands_have_a_timeout_and_a_timeout_stops_with_the_boot_hint(self):
+        seen = []
+        self.look()
+        board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: seen.append(kw["timeout"]) or done("")).boards()
+        board_look.EsptoolReader(FOUND["flasher"], lambda argv, **kw: seen.append(kw["timeout"]) or done(data("c6-flash-id.txt"))).read(C6_PORT)
+        self.assertEqual(seen, [15, 60])
+
+        def stalled(argv, **kw):
+            raise subprocess.TimeoutExpired(argv, kw["timeout"])
+        for call in (lambda: board_look.PortFinder(FOUND["board-shell"], stalled).boards(),
+                     lambda: board_look.EsptoolReader(FOUND["flasher"], stalled).read(C6_PORT)):
+            with self.assertRaises(board_look.LookStop) as stop:
+                call()
+            self.assertIn("took more than", str(stop.exception))
+            self.assertIn("BOOT", str(stop.exception))
+
     def test_two_boards_and_no_port_stops_listing_both_and_reads_neither(self):
         with self.assertRaises(board_look.LookStop) as stop:
             self.look(devs="mpremote-devs-two.txt")
         said = str(stop.exception)
-        for part in (C6_PORT, "8c:bf:ea:xx:xx:xx", "/dev/cu.usbserial-1410", "look.py --port", "unplug one"):
+        for part in (C6_PORT, "8c:bf:ea:xx:xx:xx", "/dev/cu.usbserial-1410", "look.py --port", "unplug one",
+                     "Espressif USB JTAG/serial debug unit", "USB Serial"):
             self.assertIn(part, said)
         self.assertFalse([a for a in self.ran if "flash_id" in a])
 
@@ -118,11 +143,17 @@ class EsptoolReaderTest(unittest.TestCase):
         self.assertEqual(self.read("c6-flash-id-garbled.txt"), board_look.Reading("esp32c6", None, "8c:bf:ea:xx:xx:xx"))
         self.assertIsNone(self.read("c6-flash-id-no-mac.txt").mac)
 
-    def test_a_failed_connect_raises(self):
+    def test_any_non_zero_exit_raises(self):
         with self.assertRaises(board_look.LookStop) as stop:
             self.read("wrong-chip.txt", code=2)
         self.assertIn("could not read the board on %s" % C6_PORT, str(stop.exception))
         self.assertIn("BOOT", str(stop.exception))
+
+    def test_two_different_detecting_lines_and_the_last_wins(self):
+        for first in ("Autodetection failed, trying again...", "ESP32"):
+            text = "Detecting chip type... %s\nDetecting chip type... ESP32-S3\nBASE MAC: aa:bb:cc:dd:ee:ff\n" % first
+            reading = board_look.EsptoolReader(FOUND["flasher"], lambda argv, **kw: done(text)).read(C6_PORT)
+            self.assertEqual(reading.chip, "esp32s3", first)
 
     def test_it_runs_flash_id_with_the_underscore_on_the_port(self):
         ran = []
@@ -199,6 +230,29 @@ class LookTest(LookCase):
         self.assertEqual(report.stops, ["the flash is 2 MB, the image needs 4 MB"])
         self.assertIsNone(report.token())
 
+    def fit(self, record, megabytes, extra):
+        """The Report for a 4 MB image plus `extra` bytes on a board that says `megabytes` MB."""
+        self.run_the_scenario()
+        self.board(record)
+        self.image.write_bytes(self.image.read_bytes() + b"x" * extra)
+        text = data("s3-flash-id-16mb.txt").replace("16MB", "%dMB" % megabytes)
+        return self.look(text=text)
+
+    def test_the_fit_check_runs_when_the_flash_is_in_the_records_list(self):
+        report = self.fit("firebeetle2-esp32s3", 4, 1)  # the record says [16, 4], the board 4: same, yet too small
+        self.assertEqual((report.fields["flash"], report.stops), ("same", ["the flash is 4 MB, the image needs 5 MB"]))
+        self.assertIsNone(report.token())
+
+    def test_an_image_of_exactly_the_flash_read_fits(self):
+        report = self.fit("firebeetle2-esp32s3", 4, 0)
+        self.assertEqual((report.verdict, report.stops), ("match", []))
+
+    def test_one_byte_over_one_megabyte_does_not_fit_a_one_megabyte_flash(self):
+        self.run_the_scenario()
+        self.image.write_bytes(b"x" * (1024 * 1024 + 1))
+        report = self.look(text=data("c6-flash-id.txt").replace("4MB", "1MB"))
+        self.assertEqual(report.stops, ["the flash is 1 MB, the image needs 2 MB"])
+
     def test_a_field_it_cannot_read_is_a_warning_and_unchecked(self):
         self.run_the_scenario()
         report = self.look(esptool="c6-flash-id-garbled.txt")
@@ -219,10 +273,41 @@ class LookTest(LookCase):
 
     def test_an_image_no_passed_run_names_means_no_token(self):
         self.run_the_scenario()
-        self.image.write_bytes(self.image.read_bytes() + b"x")
+        self.image.write_bytes(b"x" + self.image.read_bytes()[1:])  # the same size: the fit check is not in play
         report = self.look()
         self.assertIsNone(report.token())
         self.assertIn("no run in sim/runs/ tested", report.no_token_reason())
+
+    def test_a_log_that_tested_another_image_means_no_token_unless_told_to_ignore_it(self):
+        self.run_the_scenario()
+        runs = self.project / "sim" / "runs"
+        (runs / "old.log").write_text("# old.scenario.yaml, run 2026-10-01\nverdict: passed\nimage sha256: 0\n\nbody\n")
+        report = self.look()
+        self.assertIsNone(report.token())
+        self.assertIn("old.log tested another image", report.no_token_reason())
+        self.assertIsNotNone(self.look(ignore_older_runs=True).token())
+
+    def test_a_log_that_cannot_be_read_still_lets_the_fit_check_run(self):
+        self.run_the_scenario()
+        self.image.write_bytes(self.image.read_bytes() + b"x")  # 4 MB + 1 byte on a 4 MB flash
+        with mock.patch.object(image_check.run_scenario, "run_record", side_effect=OSError("denied")):
+            report = self.look()
+        self.assertEqual(report.stops, ["the flash is 4 MB, the image needs 5 MB"])
+        self.assertIn("cannot read", report.image_why)
+
+    def test_a_record_without_flash_says_the_record_does_not_hold_it_and_a_silent_board_says_so(self):
+        self.run_the_scenario()
+        with mock.patch.object(board_look.boards, "load", return_value={"chip": "esp32c6"}):
+            self.assertEqual(self.look().warnings, ["flash unknown: the record does not hold it"])
+        self.assertEqual(self.look(esptool="c6-flash-id-garbled.txt").warnings, ["flash unknown: the board did not say"])
+
+    def test_requirements_missing_or_naming_no_board_stops_without_a_name_of_none(self):
+        (self.project / "requirements.json").write_text(json.dumps({"parts": []}))
+        for _ in range(2):
+            with self.assertRaises(board_look.LookStop) as stop:
+                self.look()
+            self.assertEqual(str(stop.exception), "requirements.json names no board")
+            (self.project / "requirements.json").unlink(missing_ok=True)
 
     def test_a_board_with_no_record_stops_and_points_to_p230(self):
         self.board("no-such-board")

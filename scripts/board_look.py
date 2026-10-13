@@ -1,7 +1,8 @@
 """
 Read the board on USB without changing it, and compare it with the project's board record (P219, #201).
 
-A library: look.py and deploy.py only parse arguments, call `looker(project).run(project, port)` and print the Report.
+A library: look.py only parses arguments, calls `looker(project).run(project, port)` and prints the Report. The gate
+module of step 4 will call it too. It reads the image checks from image_check.py and never imports deploy.py.
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
     PortFinder     the boards on USB, from mpremote's list. It never opens a port.
@@ -21,7 +22,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import boards
-import deploy
+import image_check
 import outcomes
 import tools
 
@@ -31,6 +32,8 @@ Port = namedtuple("Port", "device serial usb product")
 #: What esptool said, each field None when it could not be parsed. flash_mb is a number of MB.
 Reading = namedtuple("Reading", "chip flash_mb mac")
 MB = 1024 * 1024
+#: How long a subprocess may take, in seconds: mpremote only lists, esptool connects to a board and may wait for it.
+LIST_TIMEOUT, READ_TIMEOUT = 15, 60
 
 
 class LookStop(Exception):
@@ -41,13 +44,19 @@ class PortFinder:
     """The boards on USB. It runs mpremote's `devs`, which only lists, never opens a port or runs code on a board."""
 
     def __init__(self, shell, run=subprocess.run):
-        self.command, self.run = deploy.runnable(shell) + ["devs"], run
+        self.command, self.run = image_check.runnable(shell) + ["devs"], run
 
     def boards(self):
         try:
-            done = self.run(self.command, capture_output=True, text=True)
+            done = self.run(self.command, capture_output=True, text=True, timeout=LIST_TIMEOUT)
         except OSError as cannot:
             raise LookStop("could not list the boards on USB: %s" % cannot)
+        except subprocess.TimeoutExpired:
+            raise LookStop("could not list the boards on USB: mpremote took more than %d s. %s"
+                           % (LIST_TIMEOUT, image_check.BOOT_HINT))
+        if done.returncode:
+            lines = (done.stderr or "").strip().splitlines()
+            raise LookStop("could not list the boards on USB: %s" % (lines[-1] if lines else "mpremote exited with %d" % done.returncode))
         rows = [line.split(None, 3) for line in done.stdout.splitlines()]
         return [Port(*(row + [""])[:4]) for row in rows if len(row) >= 3 and row[2] != NOT_A_BOARD]
 
@@ -68,13 +77,16 @@ class EsptoolReader(BoardReader):
     def read(self, port):
         if self.flasher.name != "esptool":
             raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher.name)
-        command = deploy.runnable(self.flasher) + ["--port", port, "flash_id"]
+        command = image_check.runnable(self.flasher) + ["--port", port, "flash_id"]
         try:
-            done = self.run(command, capture_output=True, text=True)
+            done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT)
         except OSError as cannot:
             raise LookStop("could not read the board on %s: %s" % (port, cannot))
+        except subprocess.TimeoutExpired:
+            raise LookStop("could not read the board on %s: esptool took more than %d s. %s"
+                           % (port, READ_TIMEOUT, image_check.BOOT_HINT))
         if done.returncode:
-            raise LookStop("could not read the board on %s. %s" % (port, deploy.BOOT_HINT))
+            raise LookStop("could not read the board on %s. %s" % (port, image_check.BOOT_HINT))
         return self.parse(done.stdout)
 
     @staticmethod
@@ -125,13 +137,14 @@ class Report:
         self.stops, self.warnings = [], []
         if self.fields["chip"] == "differs":
             self.stops.append("this board is an %s, the project is for an %s" % (reading.chip, record["chip"]))
-        if self.fields["flash"] == "differs":
-            needs = -(-image.stat().st_size // MB) if image else 0
-            if reading.flash_mb < needs:
-                self.stops.append("the flash is %s MB, the image needs %d MB" % (reading.flash_mb, needs))
-            else:
-                self.warnings.append("the flash differs: %s MB, the record says %s" % (reading.flash_mb, _recorded(record["flash_mb"])))
-        self.warnings += ["%s unknown: the board did not say" % name for name, state in self.fields.items() if state == "unknown"]
+        if image and reading.flash_mb is not None and reading.flash_mb * MB < image.stat().st_size:  # whatever compare said
+            self.stops.append("the flash is %s MB, the image needs %d MB" % (reading.flash_mb, -(-image.stat().st_size // MB)))
+        elif self.fields["flash"] == "differs":
+            self.warnings.append("the flash differs: %s MB, the record says %s" % (reading.flash_mb, _recorded(record["flash_mb"])))
+        for name, read_key, _, _ in FIELDS:
+            if self.fields[name] == "unknown":
+                why = "the board did not say" if getattr(reading, read_key) is None else "the record does not hold it"
+                self.warnings.append("%s unknown: %s" % (name, why))
         self.verdict = "stop" if self.stops else "warning" if self.warnings else "match"
         self.status = outcomes.status_of([n for n, s in self.fields.items() if s == "differs"],
                                          [n for n, s in self.fields.items() if s == "unknown"])
@@ -158,16 +171,18 @@ class Look:
     def __init__(self, finder, reader):
         self.finder, self.reader = finder, reader
 
-    def run(self, project, port=None):
+    def run(self, project, port=None, ignore_older_runs=False):
         """A Report. LookStop says why not: no record, no board, two boards without a port, a read that failed."""
         record = self.record_of(project)
         port = port or self.only_port()
         reading = self.reader.read(port)
+        image, why = None, None
         try:
-            image = deploy.image_of(project)
-            why = deploy.untested(image, project / "sim" / "runs")
-        except deploy.DeployProblem as cannot:
-            image, why = None, str(cannot)
+            image = image_check.image_of(project)
+            runs = project / "sim" / "runs"
+            why = image_check.untested(image, runs) or (None if ignore_older_runs else image_check.tested_another(image, runs))
+        except image_check.DeployProblem as cannot:
+            why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
         return Report(port, reading, record, image, why)
 
     @staticmethod
@@ -177,6 +192,8 @@ class Look:
             name = json.loads((project / "requirements.json").read_text()).get("board")
         except (OSError, ValueError, AttributeError):
             name = None
+        if not name:
+            raise LookStop("requirements.json names no board")
         try:
             return boards.load(project, name)
         except boards.BoardError:
@@ -187,7 +204,7 @@ class Look:
         if not found:
             raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only.")
         if len(found) > 1:
-            lines = ["  %s  %s" % (each.device, each.serial) for each in found]
+            lines = ["  %s  %s  %s" % (each.device, each.serial, each.product) for each in found]
             raise LookStop("%d boards on USB:\n%s\nlook.py --port %s  (unplug one to tell them apart)"
                            % (len(found), "\n".join(lines), found[0].device))
         return found[0].device
