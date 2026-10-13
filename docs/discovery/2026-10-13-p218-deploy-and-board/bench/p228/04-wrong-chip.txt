@@ -1,0 +1,12 @@
+2026-10-13T16:23:01Z
+$ python3 -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 read-mac
+esptool v5.5.0
+Serial port /dev/cu.usbmodem101:
+Connecting...
+
+ERROR: A fatal error occurred: This chip is ESP32-C6, not ESP32-S3. Wrong chip argument?
+exit 2
+
+2026-10-13T16:23:05Z
+$ mpremote devs (after the reads, no button pressed)
+/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit

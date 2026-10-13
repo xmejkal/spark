@@ -1,0 +1,9 @@
+2026-10-13T16:23:12Z
+$ listen 8 s on /dev/cu.usbmodem101, DTR/RTS untouched, nothing sent
+123 bytes
+mode:DIO, clock div:2
+load:0x4086c410,len:0xc24
+load:0x4086e610,len:0x2708
+load:0x40875728,len:0x594
+entry 0x4086c410
+

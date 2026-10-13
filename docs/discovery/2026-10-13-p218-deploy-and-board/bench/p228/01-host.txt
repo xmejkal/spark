@@ -1,0 +1,13 @@
+2026-10-13T16:22:28Z
+$ ioreg (Espressif device)
+          "locationID" = 1048576
+          "USB Vendor Name" = "Espressif"
+          "idVendor" = 12346
+          "USB Serial Number" = "8c:bf:ea:xx:xx:xx"
+$ mpremote devs
+/dev/cu.Bluetooth-Incoming-Port None 0000:0000 None None
+/dev/cu.BoseQC35II None 0000:0000 None None
+/dev/cu.FreeLoop1_R None 0000:0000 None None
+/dev/cu.debug-console None 0000:0000 None None
+/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit
+/dev/cu.wlan-debug None 0000:0000 None None
