@@ -135,7 +135,7 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - Q20 · Is the look its own command, and may Claude run it unasked? · decides: what starts a look · options: on request, on its own · unblocks: P219 · opinion (—) · kind: decision · status: answered D37
 - Q21 · Two boards the person cannot tell apart: "unplug one and list again", or a blink, which is behaviour? · decides: the two-board journey's end · options: unplug, blink · unblocks: P232 · opinion (—) · kind: decision · status: answered D38
 - Q22 · May the board gain a Slice option for P218's later rows? · decides: where P231 to P235 sit · options: a new Slice, v1, none until filed · unblocks: items.md · opinion (—) · kind: decision · status: answered D39
-- Q23 · Which of the user lens's account questions will you answer? · decides: which frictions become E · options: all, some, none · unblocks: the usability row · opinion (—) · kind: account · status: queued
+- Q23 · Which of the user lens's account questions will you answer? · decides: which frictions become E · options: all, some, none · unblocks: the usability row · opinion (—) · kind: account · status: answered D40
 - Q24 · Split P215 into a read-only half and a flash half? · decides: the cards of slice 0 · status: answered D12
 - Q25 · A browser flasher: for which rung, if any? · decides: an interface beside the CLI · status: answered D11, from council/po-assistant-web-flasher.md
 
@@ -179,6 +179,7 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - D37 · Q20: the look is its own read-only command; Claude may run it unasked, and it says that the board will restart · the PO · 2026-10-13 · this session, he picked "Own command, Claude may run" · options considered: on request only, only inside deploy
 - D38 · Q21: two boards the person cannot tell apart end with spark blinking one board's LED. Caveat: a blink is behaviour spark writes, against AGENTS.md "Spark exports facts, never behaviour", so the item that builds it names this exception · the PO · 2026-10-13 · this session, he picked "A blink" · options considered: unplug one and list again
 - D39 · Q22: no Slice field on the GitHub board; items get their place when they are filed · the PO · 2026-10-13 · this session, he picked "None until filed" · options considered: a new Slice field, the version field
+- D40 · Q23: no account questions now; P228's bench asks the few that still matter (a look that restarts the gadget, the port name, the revision) with the board in hand · the PO · 2026-10-13 · this session, he picked "None now, at the bench" · options considered: a short set of five, all of them
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
@@ -205,7 +206,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), and answered Q1 to Q22 (D16 to D39), but has not confirmed the jobs, a direction or the remaining risk. Q23 is next. When it is written: each item that changes code updates its `--help`, `docs/guide/agents.md` and the README or guide in the same PR (the PO, 2026-10-13, D21) <!-- REQUIRED:handoff -->
+not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), and answered Q1 to Q23 (D16 to D40), but has not confirmed the jobs, a direction or the remaining risk. Q24 is next. When it is written: each item that changes code updates its `--help`, `docs/guide/agents.md` and the README or guide in the same PR (the PO, 2026-10-13, D21) <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
