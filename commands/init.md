@@ -48,6 +48,15 @@ rails from the built design if there is one. Existing files are left alone unles
 init derives into rules.json and keeps your answers; it rewrites project.json only if that file has no answers, and
 never rewrites package.json ([P114](https://github.com/xmejkal/spark/issues/48)).
 
+It also writes the files that AI tools read ([P216](https://github.com/xmejkal/spark/issues/197)), and one note for
+each:
+
+- `AGENTS.md`: spark's section, between two marker lines. Each run rewrites only that section.
+- `CLAUDE.md`: the line `@AGENTS.md`, only when no `CLAUDE.md` is here. A person's own `CLAUDE.md` is left alone,
+  and the note names the line to add.
+- `CLAUDE.local.md`: a link to `rules.md` in the person's store, kept out of git by `.git/info/exclude`. No
+  `rules.md` means no link, and the note says where to write one. A person's own file is left alone.
+
 ## 3. Read what it could not answer
 
 It ends with every field left `null`. **That list is the output, not a shortfall.** Nothing here
