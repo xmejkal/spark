@@ -140,6 +140,12 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
             flash_image.interpreter_path(None, self.project_on("xiao-esp32-c6"))
         self.assertIn("SEEED_XIAO_ESP32C6", str(said.exception))
 
+    def test_a_named_board_with_no_build_in_its_record_is_refused_not_given_the_default(self):
+        import tools
+        with mock.patch.object(tools, "merged", return_value=self.two_builds()), self.assertRaises(tools.ToolProblem) as said:
+            flash_image.interpreter_path(None, self.project_on("no-such-board"))
+        self.assertIn("no-such-board", str(said.exception))
+
     def test_a_project_with_no_board_uses_the_firmware_image_role(self):
         import tools
         found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])

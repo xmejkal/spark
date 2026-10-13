@@ -72,12 +72,20 @@ def image(interpreter, files, overrides=None):
 
 
 def board_build(project):
-    """The MicroPython build the project's board names (its record's `micropython_port`), or None with no board."""
+    """
+    The MicroPython build the project's board names (its record's `micropython_port`), or None when the project names
+    no board. A named board whose record cannot give its build is a ToolProblem, never the default build.
+    """
     try:
         board = json.loads((Path(project) / "requirements.json").read_text()).get("board")
-        return boards.get(Path(project), "micropython_port", board) if board else None
-    except (OSError, ValueError, AttributeError, boards.BoardError):
+    except (OSError, ValueError, AttributeError):
         return None
+    if not board:
+        return None
+    try:
+        return boards.get(Path(project), "micropython_port", board)
+    except boards.BoardError as cannot:
+        raise tools.ToolProblem("the board %s names no MicroPython build that can be read: %s" % (board, cannot))
 
 
 def interpreter_path(given, project=None):
