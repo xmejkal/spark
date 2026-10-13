@@ -149,6 +149,14 @@ class Report:
         self.status = outcomes.status_of([n for n, s in self.fields.items() if s == "differs"],
                                          [n for n, s in self.fields.items() if s == "unknown"])
 
+    def exit_code(self):
+        """What the shell sees. A stop is a problem even when every field is `same` (the image does not fit a flash the
+        record lists), and a look with no token went unchecked, since deploy.py cannot go on without one."""
+        if self.stops:
+            return outcomes.EXIT_PROBLEMS
+        unchecked = [n for n, s in self.fields.items() if s == "unknown"] + (["token"] if self.no_token_reason() else [])
+        return outcomes.EXIT_FOR[outcomes.status_of([n for n, s in self.fields.items() if s == "differs"], unchecked)]
+
     def no_token_reason(self):
         """Why there is no token, or None when there is one."""
         if self.verdict == "stop":
