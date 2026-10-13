@@ -103,6 +103,19 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(said[-2], "  all fields match the board record xiao-esp32-c6.")
         self.assertRegex(said[-1], r"^  no token: .*run a scenario first")
 
+    def test_ignore_older_runs_gives_a_token_where_an_older_log_tested_another_image(self):
+        self.run_the_scenario()
+        (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
+        other = self.scenario.with_name("t.scenario.yaml")
+        other.write_text(self.scenario.read_text().replace("name: s", "name: t"))
+        self.run_the_scenario(scenario=other)
+        code, said, _ = self.go()
+        self.assertEqual(code, 2)
+        self.assertRegex(said[-1], r"^  no token: .*tested another image")
+        code, said, _ = self.go("--ignore-older-runs")
+        self.assertEqual(code, 0)
+        self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+
     def test_no_mac_is_no_token(self):
         self.run_the_scenario()
         code, said, _ = self.go(esptool="c6-flash-id-no-mac.txt")

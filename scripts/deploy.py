@@ -110,7 +110,7 @@ def plan(project, port=None, ignore_older_runs=False):
 
 def again(args, port):
     """The line that runs this deploy again, for the person's own terminal."""
-    line = [str(Path(__file__).resolve()), "--project", str(args.project.resolve()), "--token", args.token, "--port", port]
+    line = [str(Path(__file__).resolve()), "--project", str(args.project.resolve()), "--token", args.token or "", "--port", port]
     return shlex.join(line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
 
 
@@ -146,16 +146,16 @@ def main(argv=None, run=None, consent=None):
         return EXIT_OK
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
-        print("\n".join(look.lines(report)[:-1]), flush=True)  # the look's lines, without its token line
+        print("\n".join(look.lines(report, token=False)), flush=True)
         deploy_gate.gate_open(report, args.token, consent or deploy_gate.TerminalConsent(again(args, report.port)),
-                              report.image.relative_to(args.project))
-    except board_look.LookStop as stop:
-        print("deploy.py: %s" % stop, file=sys.stderr)
+                              image_of(args.project).relative_to(args.project))
+        commands, watch, _ = plan(args.project, report.port, args.ignore_older_runs)
+    except (board_look.LookStop, DeployProblem, tools.ToolProblem) as cannot:
+        print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.Closed as shut:
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code
-    commands, watch, _ = plan(args.project, report.port, args.ignore_older_runs)
     for command in commands:
         print("  running: %s" % shlex.join(command), flush=True)
         try:

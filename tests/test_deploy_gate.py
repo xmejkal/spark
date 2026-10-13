@@ -3,6 +3,7 @@ and the person types yes in their own terminal."""
 
 import contextlib
 import io
+import shlex
 import subprocess
 import sys
 import unittest
@@ -170,11 +171,46 @@ class TheGateTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, ["erase_flash"]))
         self.assertIn("hold the board's BOOT button", problems)
 
+    def test_a_flash_too_small_for_the_image_stops_before_the_question(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        consent = Says(True)
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", esptool="s3-flash-id-2mb.txt", consent=consent)
+        self.assertEqual((code, self.flashed(), consent.asked), (1, [], []))
+        self.assertIn("the flash is 2 MB, the image needs 4 MB. not flashed.", problems)
+
+    def test_no_board_on_usb_is_a_sentence_and_erases_nothing(self):
+        self.run_the_scenario()
+        code, said, problems = self.deploy("--token", "aaaa-bbbb", devs_text="\n", consent=Says(True))
+        self.assertEqual((code, said, self.flashed()), (2, "", []))
+        self.assertIn("deploy.py: no board found.", problems)
+
     def test_the_dry_run_never_touches_usb(self):
         self.run_the_scenario()
         code, said, _ = self.deploy("--dry-run")
         self.assertEqual((code, self.ran), (0, []))
         self.assertIn("  board: not looked at: run look.py", said.splitlines())
+
+
+class TheDefaultConsentTest(GateCase):
+    """deploy.main with no consent given asks in this terminal. Under the tests stdout is no terminal, as in Claude's shell."""
+
+    def test_no_token_says_to_run_the_look_first(self):
+        self.run_the_scenario()
+        code, _, problems = self.deploy()
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("run look.py first, then deploy.py --token <token>.", problems)
+
+    def test_no_terminal_prints_the_line_to_run_and_erases_nothing(self):
+        self.run_the_scenario()
+        token = self.token()
+        code, said, problems = self.deploy("--token", token)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("  chip   same      esp32c6", said.splitlines())
+        line = shlex.join([str(Path(deploy.__file__).resolve()), "--project", str(self.project.resolve()), "--token", token,
+                           "--port", "/dev/cu.usbmodem101"])
+        self.assertIn("no terminal to ask you in", problems)
+        self.assertIn("\n  %s\n" % line, problems)
 
 
 class TerminalConsentTest(unittest.TestCase):

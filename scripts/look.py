@@ -29,8 +29,8 @@ Exit codes: 0 every field matches and there is a token, 1 a field differs or the
 or could not check something (a field unknown, no token), and the sentence says why."""
 
 
-def lines(report):
-    """The lines a person reads, for a Report."""
+def lines(report, token=True):
+    """The lines a person reads, for a Report. deploy.py prints them without the token line."""
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
     out = [RESTART, "port   %s" % report.port, "mac    %s" % (reading.mac or "not read")]
@@ -43,8 +43,9 @@ def lines(report):
                       ", ".join("%s: %s" % each for each in report.unknown.items())))
     if report.verdict == "match":
         out.append("all fields match the board record %s." % name)
-    token = report.token()
-    out.append(TOKEN % token if token else "no token: %s" % report.no_token_reason())
+    if token:
+        mine = report.token()
+        out.append(TOKEN % mine if mine else "no token: %s" % report.no_token_reason())
     return ["  " + line for line in out]
 
 
