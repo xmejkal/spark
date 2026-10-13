@@ -19,7 +19,9 @@ import store
 BEGIN = "<!-- spark:begin"
 BEGIN_LINE = BEGIN + ". /spark:init writes this section and rewrites it on each run. Edit outside the markers. -->"
 END = "<!-- spark:end -->"
-BEGIN_AT, END_AT = (re.compile("^" + re.escape(marker), re.M) for marker in (BEGIN, END))  # at a line's start only
+#: A marker counts only at the start of a line, never named inside a sentence.
+BEGIN_AT = re.compile("^" + re.escape(BEGIN), re.M)
+END_AT = re.compile("^" + re.escape(END), re.M)
 SECTION = (Path(__file__).resolve().parent.parent / "data" / "agents-section.md").read_text()
 IMPORT = "@AGENTS.md"
 CLAUDE_MD = "<!-- /spark:init wrote this file. It is yours now: spark never rewrites it. -->\n%s\n" % IMPORT
