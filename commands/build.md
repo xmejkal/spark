@@ -197,9 +197,12 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml
 The scenario's path is the project's, so it works from the project folder or with `--project`. It needs the
 simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which the one command keeps with `--keep .`,
 and a `firmware/main.py`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
-into one flash image, so a run never tests an older firmware. The interpreter is the tools list's `firmware-image`,
-MicroPython v1.29.0 for the ESP32-S3, fetched and checked by `/spark:setup`. For another chip, add `--micropython <its
-.bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the sha256 of the image it tested,
+into one flash image, so a run never tests an older firmware. The interpreter is the MicroPython v1.29.0 build that the
+board's record names in `micropython_port`, taken from the tools list and fetched and checked by `/spark:setup`. The
+list holds the ESP32-S3 and ESP32-C6 builds and Seeed's XIAO ESP32-C6 build. A board whose build is not on the list, or whose record
+names no build, stops with its name. With no board
+in `requirements.json`, the interpreter is the tools list's `firmware-image`, the S3 build. To use another build, add
+`--micropython <its .bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the sha256 of the image it tested,
 the scenario as run, and what wokwi-cli printed. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
 CI minutes. Ask the person before each run and say that it spends minutes, even when your permissions would let it
 run: this command's allowed-tools leave it out, but an allow rule of theirs or auto mode would not stop it. Every check

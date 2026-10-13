@@ -70,6 +70,11 @@ the `[????]` rows.
 
 - **Python 3.9 or newer,** and nothing outside its standard library, except `flash_image.py` and `run_scenario.py`,
   which need `littlefs-python`.
+- **The MicroPython build the board names,** for `flash_image.py` and `run_scenario.py`. The board's record names it in
+  `micropython_port`, and the tools list holds `micropython-esp32s3`, `micropython-esp32c6` and `micropython-xiao-esp32c6`. A board whose build is
+  not on the list, or whose record names no build, is could-not-run with the board's or the build's name. So is a
+  `requirements.json` that cannot be read. Only a project with no `requirements.json`, or no `board` in it, gets the
+  `firmware-image` default. Never pass another chip's build with `--micropython`.
 - **The GitHub CLI `gh`, logged in** (`gh auth login`; `gh auth status` shows it), for `check_vendor_pins.py` unless it
   is given `--offline`.
 - **tscircuit, to build a board.** npm installs it, and it runs on bun (`tsci` starts with `#!/usr/bin/env bun`); bun
