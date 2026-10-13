@@ -1,0 +1,75 @@
+[
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "drop stop check",
+  "find": "    if report.stops:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "stop code 2",
+  "find": "EXIT_PROBLEMS)",
+  "replace": "EXIT_COULD_NOT_RUN)"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "accept missing token",
+  "find": "    if not token:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "compare one half",
+  "find": "mine.split(\"-\")) if given",
+  "replace": "mine.split(\"-\")) if what == \"the image\" and given"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "accept y",
+  "find": ".strip() == \"yes\"",
+  ".replace": "x",
+  "replace": ".strip() in (\"yes\", \"y\")"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "one tty enough",
+  "find": "self.stdin.isatty() and self.stdout.isatty()",
+  "replace": "self.stdin.isatty() or self.stdout.isatty()"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "drop warnings from question",
+  "find": "    if accepted:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "no answer ignored",
+  "find": "    if not consent.ask(question):\n",
+  "replace": "    if not (consent.ask(question) or True):\n"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "erase on args.port",
+  "find": "plan(args.project, report.port, args.ignore_older_runs)\n    for",
+  "replace": "plan(args.project, args.port, args.ignore_older_runs)\n    for"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "look in dry run",
+  "find": "    if args.dry_run:\n        print(\"\\n\".join",
+  "replace": "    if args.dry_run and False:\n        print(\"\\n\".join"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "look ignores ignore flag",
+  "find": ".run(args.project, args.port, args.ignore_older_runs)",
+  "replace": ".run(args.project, args.port)"
+ },
+ {
+  "file": "scripts/look.py",
+  "name": "look.py ignores flag",
+  "find": ".run(args.project, args.port, args.ignore_older_runs)",
+  "replace": ".run(args.project, args.port)"
+ }
+]

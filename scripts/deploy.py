@@ -3,7 +3,8 @@
 Put the flash image that passed the simulation onto the board (P192).
 
     deploy.py --dry-run                          # in the project folder: print what it would run, run nothing
-    deploy.py --port /dev/cu.usbmodem1101        # erase the board's flash, then write the image
+    look.py                                      # read the board on USB and print its token
+    deploy.py --token 3f9a-0c1e                  # look again, ask yes in your terminal, erase, then write the image
 
 The image is the one sim/wokwi.toml names. run_scenario.py writes it, MicroPython and the project's firmware/ in one
 flash image, and tests it: each run's log names the image's sha256. This flashes the image only when a run that passed
@@ -11,7 +12,9 @@ names it and no run with another verdict does. esptool erases the flash and writ
 simulator loaded it. Then mpremote's REPL shows the board start: press Ctrl-C, then Ctrl-D, and the firmware prints
 `ready` (the ready contract, commands/build.md).
 
-The chip comes from the project's board (requirements.json's `board`), and esptool refuses a board with another chip.
+Before the erase, deploy.py looks at the board as look.py does (P219). It refuses a stop, a token that is not this
+board's and this image's, and a person who does not type yes in their own terminal (deploy_gate.py). The chip comes from
+the project's board (requirements.json's `board`), and esptool refuses a board with another chip too.
 esptool and mpremote are the tools list's `flasher` and `board-shell`, which /spark:setup installs.
 """
 
@@ -22,7 +25,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_look
 import boards
+import deploy_gate
+import look
 import tools
 from image_check import (BOOT_HINT, DeployProblem, image_of, run_logs, runnable, tested_another,  # noqa: F401
                          untested)
@@ -42,7 +48,14 @@ OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the p
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
 (--ignore-older-runs flashes anyway). It erases the board's flash first.
 
-Exit codes: 0 done (with --dry-run: printed), 2 it could not run, and the sentence says why."""
+The gate: run look.py first and pass its token. deploy.py looks at the board again (the board restarts) and refuses a
+stop (another chip, a flash too small for the image) or a token that is not this board's and this image's. Then it
+asks in your terminal, naming every warning: type yes to accept them and erase. Only a real terminal can answer.
+A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. "Go
+ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
+
+Exit codes: 0 done (with --dry-run: printed), 1 the look found a stop, 2 it could not run, you answered no or there was
+no terminal, and the sentence says why."""
 
 
 def newer_files(project, image):
@@ -95,13 +108,24 @@ def plan(project, port=None, ignore_older_runs=False):
     return flash_commands(flasher, chip, image, port), watch_command(shell, port), notes
 
 
-def main(argv=None, run=None):
-    """Print the flash commands (--dry-run) or run them, erase first. `run` is how a command runs. Returns the exit code."""
+def again(args, port):
+    """The line that runs this deploy again, for the person's own terminal."""
+    line = [str(Path(__file__).resolve()), "--project", str(args.project.resolve()), "--token", args.token or "", "--port", port]
+    return shlex.join(line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
+
+
+def main(argv=None, run=None, consent=None):
+    """
+    Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
+    `consent` how the person says yes (default: in this terminal). Returns the exit code.
+    """
     parser = argparse.ArgumentParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with sim/ and requirements.json (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Omitted, esptool tries each port")
+    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on "
+                        "USB: the look lists them")
+    parser.add_argument("--token", help="the token look.py printed for this board and this image")
     parser.add_argument("--ignore-older-runs", action="store_true",
                         help="flash even when a log in sim/runs/ tested another image, and name it in a note "
                         "(default: refuse)")
@@ -115,10 +139,24 @@ def main(argv=None, run=None):
         return EXIT_COULD_NOT_RUN
     for note in notes:
         print("  note: %s" % note)
+    if args.dry_run:
+        print("\n".join("  would run: %s" % shlex.join(command) for command in commands))
+        print("  board: not looked at: run look.py")
+        print("  " + WATCH % shlex.join(watch))
+        return EXIT_OK
+    try:
+        report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
+        print("\n".join(look.lines(report, token=False)), flush=True)
+        deploy_gate.gate_open(report, args.token, consent or deploy_gate.TerminalConsent(again(args, report.port)),
+                              image_of(args.project).relative_to(args.project))
+        commands, watch, _ = plan(args.project, report.port, args.ignore_older_runs)
+    except (board_look.LookStop, DeployProblem, tools.ToolProblem) as cannot:
+        print("deploy.py: %s" % cannot, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    except deploy_gate.Closed as shut:
+        print("deploy.py: %s" % shut, file=sys.stderr)
+        return shut.code
     for command in commands:
-        if args.dry_run:
-            print("  would run: %s" % shlex.join(command))
-            continue
         print("  running: %s" % shlex.join(command), flush=True)
         try:
             run(command, check=True)

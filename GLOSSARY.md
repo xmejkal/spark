@@ -32,6 +32,13 @@ the board's MAC, one half from the flash image. It shows that a look was made on
 the person's yes, and it is not a secret. The failure behind them: `deploy.py` erased whatever board was on USB, so
 a wrong board lost its flash (P219).
 
+### gate and the yes — `deploy_gate.py`
+
+The **gate** is the part of `deploy.py` that refuses to erase until its own look finds no stop and the token matches
+this board and this image. **The yes** is the person typing `yes` at the gate's question in their own terminal. A
+pipe, a script and Claude Code's `!` are no terminal, so deploy.py prints the line to run instead. "Go ahead" in a
+chat is not the yes (P219).
+
 ### `skipped` — the fourth word, and only `check_all` has it
 
 "I was not asked" is not "I was asked and could not look". A check whose inputs were never

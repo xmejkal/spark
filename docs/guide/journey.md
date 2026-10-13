@@ -1027,7 +1027,7 @@ per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
-**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). Its dry run prints the esptool commands and runs nothing. Nothing has run it on a board yet. The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after the person types yes in their own terminal ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. Nothing has run it on a board yet. The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v1](../../scrum/VISION.md#versions)).
 
@@ -1052,7 +1052,32 @@ $ look.py --project <project>
 ```
 
 The exit code was 2: the fields matched, but the look could not give a token. With a build and a passed scenario, the last
-line is the token. `deploy.py` does not ask for it yet.
+line is the token.
+
+### The gate
+
+`deploy.py --token` looks at the board again, then asks the person in their own terminal before it erases
+([P219](https://github.com/xmejkal/spark/issues/201)). On 2026-10-14 the same XIAO ran the button-and-LED project,
+whose scenario passed in Wokwi. Its board record `xiao-esp32-c6-fresh` holds no flash size, so the look gave the flash
+as `unknown` and a token. From Claude Code's shell, which has no terminal, deploy.py printed the look and the line to
+run, and exited 2. The MAC and the token's board half are masked here.
+
+<!-- output: run 2026-10-14, spark 0.9.0 -->
+```text
+$ deploy.py --project <project> --token xxxx-ae44
+  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
+  port   /dev/cu.usbmodem101
+  mac    8c:bf:ea:xx:xx:xx
+  chip   same      esp32c6
+  flash  unknown   4 MB
+  1 field unknown (flash: the record does not hold it): deploy.py will ask you to accept it.
+deploy.py: no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):
+  <spark>/scripts/deploy.py --project <project> --token xxxx-ae44 --port /dev/cu.usbmodem101
+```
+
+The PO ran that line in his own terminal window, answered `no` at the question, and deploy.py said
+`deploy.py: not flashed: you answered no.` Nothing was erased. The real flash is
+[P215](https://github.com/xmejkal/spark/issues/196).
 
 After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32

@@ -134,9 +134,9 @@
 <text x="1262" y="1457" font-size="20" font-weight="bold" fill="#af7e04" text-anchor="middle">partly</text>
 <text x="1214" y="1502" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">look.py reads the board on</text>
 <text x="1214" y="1536" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">USB and checks it.</text>
-<text x="1214" y="1570" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">deploy.py is ready. It did</text>
-<text x="1214" y="1604" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">not run on a real board</text>
-<text x="1214" y="1638" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">yet.</text>
+<text x="1214" y="1570" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">deploy.py asks your yes</text>
+<text x="1214" y="1604" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">first. It did not flash a</text>
+<text x="1214" y="1638" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">real board yet.</text>
 <rect x="48" y="1700" width="1504" height="92" rx="12" fill="#1a1a1a"/>
 <text x="72" y="1738" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> the button-and-LED project passed its Wokwi simulation on 2026-10-12.</text>
 <text x="72" y="1772" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> flash it on a real FireBeetle 2 ESP32-S3.</text>

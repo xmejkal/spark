@@ -845,3 +845,12 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT110 | PR #227: the restart sentence prints after esptool reset the board | P219 refuter (Opus), 2026-10-13 | rejected | build.md tells Claude to say it before the run |
 | AT111 | PR #227: "all fields match" can come with exit 2 (no token) | P219 refuter (Opus), 2026-10-13 | **acted** | the agents.md line on exit 1 and 2 |
 | AT112 | PR #227: the mutation run, 13 planted, 13 caught; `exit_code` caught only by the wider suite | P219 mutation tester (Sonnet), 2026-10-13 | **acted** | the direct test in AT104 |
+| AT113 | PR #228: no test ran deploy.main with the default consent (no token; a token and no terminal) | P219 step 4 lens (Sonnet), refuter (Opus), 2026-10-14 | **acted** | two tests; the line to run is pinned ([report](2026-10-14-p228-review.md)) |
+| AT114 | PR #228: with no `--token`, `again()` passed None to `shlex.join` | P219 step 4 lens (Sonnet), 2026-10-14 | rejected | the refuter: `shlex.quote(None)` gives `''`; the code now passes `""` on purpose |
+| AT115 | PR #228: the second `plan()` after the yes was outside the try, so a problem there was a traceback | P219 step 4 lens (Sonnet), refuter (Opus), 2026-10-14 | **acted** | inside the try with the look and the gate |
+| AT116 | PR #228: an image rebuilt between the look and the erase is flashed under the old token | P219 step 4 lens (Sonnet), refuter (Opus), 2026-10-14 | raised | P215: re-hash the image after the yes |
+| AT117 | PR #228: a typo in the token reads as "the board changed since the look" | P219 step 4 lens (Sonnet), 2026-10-14 | raised | later: a "not a token" message; the gate stays shut |
+| AT118 | PR #228: no deploy test for a too-small flash or for a look that cannot run | P219 step 4 lens (Sonnet), refuter (Opus), 2026-10-14 | **acted** | two tests |
+| AT119 | PR #228: `look.lines(report)[:-1]` relied on the token line being last | P219 step 4 lens (Sonnet), refuter (Opus), 2026-10-14 | **acted** | `lines(report, token=False)` |
+| AT120 | PR #228: `report.image.relative_to` ran before the gate, so a missing image was a traceback | P219 refuter (Opus), 2026-10-14 | **acted** | `image_of` inside the try |
+| AT121 | PR #228: the mutation run, 12 planted, 11 caught; look.py's `--ignore-older-runs` escaped | P219 mutation tester (Sonnet), 2026-10-14 | **acted** | a look.py test; `tests/mutations/p219-gate.json` |

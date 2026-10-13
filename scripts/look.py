@@ -10,8 +10,7 @@ import board_look
 from outcomes import EXIT_COULD_NOT_RUN
 
 RESTART = "the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
-#: The token line. deploy.py has no --token before P219's step 4, so the line says so until step 4 drops the brackets.
-TOKEN = "token  %s  for deploy.py --token (P219's next step). It is not your yes: deploy.py asks for that."
+TOKEN = "token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that."
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
 erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.
 Nothing else on the board is touched. The board's record is the one requirements.json names. The look compares the chip
@@ -23,14 +22,15 @@ hex digits: one from the board's MAC and one from the image that a passed run na
 board for this image. It is not the yes and it is not a secret. With no MAC, no image or no passed run, there is no token,
 and the line says why.
 
-With two or more boards on USB, --port is needed: the look lists them and reads none.
+With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a
+token even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it.
 
 Exit codes: 0 every field matches and there is a token, 1 a field differs or the look found a stop, 2 it could not run
 or could not check something (a field unknown, no token), and the sentence says why."""
 
 
-def lines(report):
-    """The lines a person reads, for a Report."""
+def lines(report, token=True):
+    """The lines a person reads, for a Report. deploy.py prints them without the token line."""
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
     out = [RESTART, "port   %s" % report.port, "mac    %s" % (reading.mac or "not read")]
@@ -43,8 +43,9 @@ def lines(report):
                       ", ".join("%s: %s" % each for each in report.unknown.items())))
     if report.verdict == "match":
         out.append("all fields match the board record %s." % name)
-    token = report.token()
-    out.append(TOKEN % token if token else "no token: %s" % report.no_token_reason())
+    if token:
+        mine = report.token()
+        out.append(TOKEN % mine if mine else "no token: %s" % report.no_token_reason())
     return ["  " + line for line in out]
 
 
@@ -55,9 +56,11 @@ def main(argv=None, run=subprocess.run):
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with requirements.json and sim/ (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
+    parser.add_argument("--ignore-older-runs", action="store_true",
+                        help="give a token even when a log in sim/runs/ tested another image (default: no token)")
     args = parser.parse_args(argv)
     try:
-        report = board_look.looker(args.project, run).run(args.project, args.port)
+        report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
     except board_look.LookStop as stop:
         print("look.py: %s" % stop, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
