@@ -1,0 +1,5 @@
+esptool v5.5.0
+Serial port /dev/cu.usbmodem101:
+Connecting...
+
+ERROR: A fatal error occurred: This chip is ESP32-C6, not ESP32-S3. Wrong chip argument?

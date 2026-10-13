@@ -1,0 +1,13 @@
+esptool v5.5.0
+Serial port /dev/cu.usbserial-1410:
+Connecting....
+Detecting chip type... Autodetection failed, trying again...
+Connecting....
+Detecting chip type... ESP32
+Connected to ESP32 on /dev/cu.usbserial-1410:
+Chip type:          ESP32-D0WD-V3 (revision v3.1)
+MAC:                24:6f:28:xx:xx:xx
+
+Flash Memory Information:
+=========================
+Detected flash size: 4MB

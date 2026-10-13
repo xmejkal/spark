@@ -1,0 +1,2 @@
+/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit
+/dev/cu.usbserial-1410 None 1a86:7523 USB Serial

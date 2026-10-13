@@ -3,6 +3,8 @@
   "id": "xiao-esp32-c6",
   "name": "Seeed XIAO ESP32-C6",
   "chip": "esp32c6",
+  "//flash_mb": "The flash in MB, as the board has it. Seeed: \"512KB SRAM & 4MB Flash\" (https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/, read 2026-10-13). A bench read agrees: esptool 5.5.0 flash-id printed \"Detected flash size: 4MB\" (docs/discovery/2026-10-13-p218-deploy-and-board/bench/p228/03-esptool.txt). The look (board_look.py) compares a board with it.",
+  "flash_mb": 4,
   "//micropython_port": "The MicroPython build this board runs: Seeed's own, https://micropython.org/download/SEEED_XIAO_ESP32C6/ (v1.29.0, 2026-08-24, read 2026-10-13). The PO chose it over ESP32_GENERIC_C6 on 2026-10-13 (P229).",
   "micropython_port": "SEEED_XIAO_ESP32C6",
   "//": "Everything the rest of the project needs to know about which board this is. The firmware, the PCB design, the simulator project and the consistency checks all derive from this file, so changing board starts here. See boards/README.md.",

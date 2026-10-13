@@ -1,0 +1,3 @@
+/dev/cu.Bluetooth-Incoming-Port None 0000:0000 None
+/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit
+/dev/cu.debug-console None 0000:0000 None
