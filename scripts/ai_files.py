@@ -14,7 +14,9 @@ from pathlib import Path
 
 import store
 
-BEGIN = "<!-- spark:begin. /spark:init writes this section and rewrites it on each run. Edit outside the markers. -->"
+#: The markers in a person's AGENTS.md are a contract: an old section is found by these, whatever its first line says.
+BEGIN = "<!-- spark:begin"
+BEGIN_LINE = BEGIN + ". /spark:init writes this section and rewrites it on each run. Edit outside the markers. -->"
 END = "<!-- spark:end -->"
 SECTION = (Path(__file__).resolve().parent.parent / "data" / "agents-section.md").read_text()
 IMPORT = "@AGENTS.md"
@@ -34,7 +36,7 @@ class AiFiles:
 
     def agents_md(self):
         path = self.project / "AGENTS.md"
-        block = "%s\n%s%s\n" % (BEGIN, SECTION, END)
+        block = "%s\n%s%s\n" % (BEGIN_LINE, SECTION, END)
         if not path.exists():
             store.write_file(path, block)
             return True, "wrote AGENTS.md with spark's section"

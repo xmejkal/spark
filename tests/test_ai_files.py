@@ -23,6 +23,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import ai_files  # noqa: E402
 
+#: The markers, spelled out: a person's file keeps them across spark versions, so the test does not read them from
+#: the code.
+BEGIN = "<!-- spark:begin"
+END = "<!-- spark:end -->"
+
 
 class AiFilesTest(unittest.TestCase):
     def setUp(self):
@@ -41,8 +46,8 @@ class AiFilesTest(unittest.TestCase):
     def test_a_new_project_gets_all_three(self):
         did, notes = self.run_it()
         self.assertTrue(did)
-        self.assertIn(ai_files.BEGIN, self.text("AGENTS.md"))
-        self.assertIn(ai_files.END, self.text("AGENTS.md"))
+        self.assertIn(BEGIN, self.text("AGENTS.md"))
+        self.assertIn(END, self.text("AGENTS.md"))
         self.assertEqual(self.text("CLAUDE.md"), "@AGENTS.md\n")
         link = self.project / "CLAUDE.local.md"
         self.assertTrue(link.is_symlink())
@@ -63,19 +68,20 @@ class AiFilesTest(unittest.TestCase):
         self.run_it()
         text = self.text("AGENTS.md")
         self.assertTrue(text.startswith("# my project\n\nmine\n"))
-        self.assertEqual(text.count(ai_files.BEGIN), 1)
+        self.assertEqual(text.count(BEGIN), 1)
 
     def test_an_old_section_is_replaced_between_the_markers_only(self):
         (self.project / "AGENTS.md").write_text(
-            "before\n%s\nold words\n%s\nafter\n" % (ai_files.BEGIN, ai_files.END))
+            "before\n%s. an older first line -->\nold words\n%s\nafter\n" % (BEGIN, END))
         self.run_it()
         text = self.text("AGENTS.md")
         self.assertNotIn("old words", text)
+        self.assertEqual(text.count(BEGIN), 1)
         self.assertTrue(text.startswith("before\n") and text.endswith("after\n"))
-        self.assertIn(ai_files.SECTION.strip(), text)
+        self.assertIn("## spark\n", text)
 
     def test_a_begin_marker_without_an_end_is_left_alone_and_said(self):
-        broken = "%s\nhalf\n" % ai_files.BEGIN
+        broken = "%s\nhalf\n" % BEGIN
         (self.project / "AGENTS.md").write_text(broken)
         did, notes = self.run_it()
         self.assertEqual(self.text("AGENTS.md"), broken)
