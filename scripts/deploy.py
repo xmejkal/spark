@@ -40,8 +40,8 @@ BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press 
 #: The last line: how the person sees the firmware start.
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
-OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log. To flash anyway, pass --ignore-older-runs, and "
-                      "this line is printed as a note instead")
+OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the person says yes. To flash anyway, pass "
+                      "--ignore-older-runs, and deploy.py names the log in a note")
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
 (--ignore-older-runs flashes anyway). It erases the board's flash first.
@@ -100,11 +100,18 @@ def untested(image, runs):
 def tested_another(image, runs):
     """A sentence naming each log in the runs folder that does not name this image's sha256, or None when every log does."""
     digest = hashlib.sha256(image.read_bytes()).hexdigest()
-    others = [log.name for log, _, sha256 in run_logs(runs) if sha256 != digest]
-    if not others:
+    logs = [(log.name, sha256) for log, _, sha256 in run_logs(runs) if sha256 != digest]
+    if not logs:
         return None
-    again = "that scenario" if len(others) == 1 else "those scenarios"
-    return "%s tested another image, not this one: run %s again to test this one" % (", ".join(others), again)
+    others = [name for name, sha256 in logs if sha256]
+    older = [name for name, sha256 in logs if not sha256]
+    said = []
+    if others:
+        said.append("%s tested another image, not this one" % ", ".join(others))
+    if older:
+        said.append("%s %s no image (an older spark)" % (", ".join(older), "names" if len(older) == 1 else "name"))
+    again = "that scenario" if len(logs) == 1 else "those scenarios"
+    return "%s: run %s again to test this one" % (", and ".join(said), again)
 
 
 def newer_files(project, image):

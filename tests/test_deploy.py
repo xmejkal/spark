@@ -202,7 +202,8 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
         (runs / "b.log").write_text("# b.scenario.yaml, run 2026-10-01\nverdict: failed\nimage sha256: 0\n\nbody\n")
         code, _, problems, _ = self.deploy("--dry-run")
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
-        self.assertIn("a.log, b.log tested another image, not this one: run those scenarios again", problems)
+        self.assertIn("b.log tested another image, not this one, and a.log names no image (an older spark): run those "
+                      "scenarios again", problems)
         code, said, _, _ = self.deploy("--dry-run", "--ignore-older-runs")
         self.assertEqual((code, said.count("note:")), (deploy.EXIT_OK, 1))
 
