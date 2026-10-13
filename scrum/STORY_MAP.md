@@ -4,7 +4,7 @@ The order of the work, from `VISION.md`. **Confirmed by the PO 2026-10-03** (P69
 journey a person takes. Down: slices, each a milestone that ends in something a command or a bench
 log proves. A card names its slice from Ready on (`tools/check_backlog.py`). **The order of the versions is
 [VISION.md's *Versions*](VISION.md#versions)** (2026-10-11): v1, the basic journey, item by item; later versions
-one epic each. The slices below are the board's Slice values, now read by release: v0.9.0 is out, v1.0 to v1.2 are next, and the rest wait. The open cards of the old slices 1, 3 and 4 carry the Slice "parked, after v1.0" (the PO, 2026-10-13), P139 (#73) among them while the FireBeetle S3 is missing.
+one epic each. The slices below are the board's Slice values, now read by release: v0.9.0 is out, v1.0 to v1.2 are next, and the rest wait. The open cards of the old slices 1, 3 and 4 carry the Slice "parked, after v1.0" (the PO, 2026-10-13), P139 (#73) among them while the FireBeetle S3 is missing. The other old numbered slices stay as names on their cards.
 
 ## The journey, and what spark offers at each step
 
@@ -31,10 +31,10 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 
 | # | slice | for | done when | items |
 | --- | --- | --- | --- | --- |
-| **v0.9.0** | **Done, the chain to a simulated run** (PR #221) | hobbyist | released 2026-10-13: an idea to a board, a breadboard sheet, the pin map and firmware that passes in Wokwi, and a known dev board path | P195, P196, P59, P197, P130, P192, P193, P228, P229, P185, P113 (all closed) |
+| **v0.9.0** | **Done, the chain to a simulated run** (PR #221) | hobbyist | released 2026-10-13: an idea to a board, a breadboard sheet, the pin map and firmware that passes in Wokwi, and a known dev board path | P195, P196, P59, P197, P130, P192, P193, P228, P229, P185, P113 (all closed; the board keeps them in the Slice v1.0), among others: [the release notes](https://github.com/xmejkal/spark/releases/tag/v0.9.0) have the full list |
 | **v1.0** | **The basic journey** — the board's Slice "v1.0 The basic journey" | hobbyist | the PO's walk: button-and-LED from an idea to a lit LED on a breadboard, firmware that passed the simulation, every stage handing over ([v1](VISION.md#versions)). Deploy slice 0: the check and the gate (P219), the flash through it (P215), `/spark:deploy` (P213), then the walk (P100) | P219 (#201), P215 (#196), P213 (#192), **P100** (#6), P138 (#72), P214 (#194), P202 (#161), P204 (#167), P218 (#200, the deploy epic) |
 | **v1.1** | **Change it and put it on again** — deploy slice 1, the Slice "v1.1 Change it and put it on again" | hobbyist | the PO changes one line, gives one command, and sees one receipt line with the image sha256 ([the deploy map](../docs/discovery/2026-10-13-p218-deploy-and-board/story-map.md)) | no card yet (a new story under P218 #200) |
-| **v1.2** | **Another board, the matching base** — deploy slices 2 and 3, the Slice "v1.2 Another board" | hobbyist | a wrong board record names the difference and writes nothing. Two near-identical boards are told apart by MAC. A project that needs PSRAM gets the matching MicroPython build | P219 second story (#201), P230 (#218), two new stories |
+| **v1.2** | **Another board, the matching base** — deploy slices 2 and 3, the Slice "v1.2 Another board" | hobbyist | a wrong board record names the difference and writes nothing. Two near-identical boards are told apart by MAC. A project that needs PSRAM gets the matching MicroPython build | a second P219 story (no card yet), P230 (#218), two new stories |
 | **1** | **Public** — a stranger can install it (done 2026-10-03, P104 closed) | hobbyist | the repository is public with no vendor file in its history; an unauthenticated clone works; nothing shipped names one person's machine | P71, P44, P75, B10, P82, P104 (all done). The open P137 (#71) and P147 (#81) are sheet cards, not v1 |
 | **1b** | **From a vague idea** (after v1.0, not scheduled) — the walking skeleton's first step | hobbyist | goal first runs today: `/spark:drawer`, then `/spark:idea` from a goal in words to a requirements file that `/spark:build` turns into a board (store 1a–1c, done 2026-10-04 to 2026-10-08). *Not designed yet* — the PO's overview: brainstorm a vague idea into what it does and which kinds of module, a schematic first without specific parts | **P76** (#5) — the brainstorm, the block diagram and the ways in beyond goal first; P100 (#6) moved to v1.0 |
 | **2** | **First copper** — the bin on a breadboard, after v1's button-and-LED walk | maker | bring-up 01–06 logged with a verdict each; the motor current measured; a `wake_reason()` line after a wave | P81 (done), B1 (done 2026-10-06), **P58** (bin #5), **P73** (bin #2), **B8** (bin #3), **B5** (bin #4), B11 (done) |
@@ -67,8 +67,8 @@ The deploy journeys J1 to J7 are in [`jobs-and-journeys.md`](../docs/discovery/2
 - J4, debug on the board live: later, the epic P235 (#224), live on the board (spike P222, #204).
 - J6, try things live over USB or Wi-Fi: later, the epic P235 (#224).
 - J5, Arduino or PlatformIO: later (spike P221, #203).
-- Proposed, new: J8, a stranger takes the basic journey on their own machine: after v1.0.
-- Proposed, new: J9, the PCB and a printed body from the same conversation: later (the north star, P203 #163).
+- Proposed, new, not yet in the discovery file: J8, a stranger takes the basic journey on their own machine: after v1.0.
+- Proposed, new, not yet in the discovery file: J9, the PCB and a printed body from the same conversation: later (the north star, P203 #163).
 
 ## Scenarios — and whether each runs today
 
