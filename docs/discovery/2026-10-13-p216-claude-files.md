@@ -20,7 +20,8 @@ overwritten. The first slice serves Claude Code and every tool that reads `AGENT
 
 As understood in mid-2026. Step 4 made sure of each, with sources, in
 [`2026-10-13-p216-formats.md`](2026-10-13-p216-formats.md). Two changes: Gemini CLI needs a setting to read `AGENTS.md`.
-A `CLAUDE.md` or `CLAUDE.local.md` stops Claude Code from reading it, so the import stays.
+A `CLAUDE.md` or `CLAUDE.local.md` in the working folder or above it stops Claude Code from reading `AGENTS.md`.
+So the import line `@AGENTS.md` in `CLAUDE.md` stays.
 
 | kind of piece | open format | who reads it |
 | --- | --- | --- |
