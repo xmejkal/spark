@@ -98,7 +98,7 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
   - No-go: a write through an interface that skips the core gate (an MCP tool, a command page, a prompt) · D D8, the PO, 2026-10-13, applied by the synthesis · caveat: proposed
   - No-go: a write to the first port found (`mpremote connect auto`, esptool's port search) · E `scripts/deploy.py` (★C1) · caveat: proposed. Per the refuter: the named chip
   - No-go: the words "this is your board" · H `council/user-journeys.md` USERJ-2 · caveat: proposed. The words are "no difference found in what could be read"
-  - No-go: behaviour written by spark, such as an OTA receiver, WebREPL boot code or an identifying blink · E `AGENTS.md` "Spark exports facts, never behaviour" · caveat: proposed
+  - No-go: behaviour written by spark, such as an OTA receiver or WebREPL boot code. The identifying blink is the PO's exception (D38) · E `AGENTS.md` "Spark exports facts, never behaviour" · caveat: proposed
   - No-go: a chip table, and any eFuse write · E #144 "NOT: a chip table", `council/tech-lead-journeys.md` TLJ-29 · caveat: proposed
   - Rabbit hole: a text filter on free-form `exec` code, and an interpreter OTA before anyone uses OTA · H `council/tech-lead-journeys.md` TLJ-37, POJ-28 · caveat: proposed
   - Rabbit hole: a flash backup by default before every erase · H `council/tech-lead-journeys.md` TLJ-14 · caveat: proposed, Q17
@@ -131,10 +131,10 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - Q16 · What counts as "ready seen" and "really sure"? · decides: J1's pass line and the receipt · options: a command only, a command or the person, plus per-file hashes · unblocks: P215 · opinion (—) · kind: decision · status: answered D33
 - Q17 · Offer a flash backup before an erase: always, with other firmware, as an option, or never? · decides: the first flash's yes and its time · options: as asked · unblocks: P219 · opinion (—) · kind: decision · status: answered D34
 - Q18 · Which file names the project's board: `requirements.json` or `boards/active.json`? · decides: what the probe compares with · options: either, both must agree · unblocks: P219 · opinion (—) · kind: decision · status: answered D35
-- Q19 · Which boards must P219 handle: the two records, or any S3? · decides: the compare's rows · options: as asked · unblocks: P219 · opinion (—) · kind: decision · status: queued
-- Q20 · Is the look its own command, and may Claude run it unasked? · decides: what starts a look · options: on request, on its own · unblocks: P219 · opinion (—) · kind: decision · status: queued
-- Q21 · Two boards the person cannot tell apart: "unplug one and list again", or a blink, which is behaviour? · decides: the two-board journey's end · options: unplug, blink · unblocks: P232 · opinion (—) · kind: decision · status: queued
-- Q22 · May the board gain a Slice option for P218's later rows? · decides: where P231 to P235 sit · options: a new Slice, v1, none until filed · unblocks: items.md · opinion (—) · kind: decision · status: queued
+- Q19 · Which boards must P219 handle: the two records, or any S3? · decides: the compare's rows · options: as asked · unblocks: P219 · opinion (—) · kind: decision · status: answered D36
+- Q20 · Is the look its own command, and may Claude run it unasked? · decides: what starts a look · options: on request, on its own · unblocks: P219 · opinion (—) · kind: decision · status: answered D37
+- Q21 · Two boards the person cannot tell apart: "unplug one and list again", or a blink, which is behaviour? · decides: the two-board journey's end · options: unplug, blink · unblocks: P232 · opinion (—) · kind: decision · status: answered D38
+- Q22 · May the board gain a Slice option for P218's later rows? · decides: where P231 to P235 sit · options: a new Slice, v1, none until filed · unblocks: items.md · opinion (—) · kind: decision · status: answered D39
 - Q23 · Which of the user lens's account questions will you answer? · decides: which frictions become E · options: all, some, none · unblocks: the usability row · opinion (—) · kind: account · status: queued
 - Q24 · Split P215 into a read-only half and a flash half? · decides: the cards of slice 0 · status: answered D12
 - Q25 · A browser flasher: for which rung, if any? · decides: an interface beside the CLI · status: answered D11, from council/po-assistant-web-flasher.md
@@ -175,6 +175,10 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - D33 · Q16: ready seen means a command read `ready` on the port and the files on the board match the per-file hashes (D20); if no command can see it (A1), it reads unknown · the PO · 2026-10-13 · this session, he picked "Plus file hashes" · options considered: a command only, a command or the person
 - D34 · Q17: a flash backup is offered before an erase only when the look finds firmware spark did not put there (no facts file, D22) · the PO · 2026-10-13 · this session, he picked "When other firmware" · options considered: always, as an option, never
 - D35 · Q18: `requirements.json`'s `board` names the project's board, the one source deploy.py reads today · the PO · 2026-10-13 · this session, he picked "requirements.json" · options considered: both must agree
+- D36 · Q19: P219's first story handles the two board records (FireBeetle 2 ESP32-S3, XIAO ESP32-C6); any other board reads no record and points to P230 · the PO · 2026-10-13 · this session, he picked "The records spark has" · options considered: any S3 or C6 by chip
+- D37 · Q20: the look is its own read-only command; Claude may run it unasked, and it says that the board will restart · the PO · 2026-10-13 · this session, he picked "Own command, Claude may run" · options considered: on request only, only inside deploy
+- D38 · Q21: two boards the person cannot tell apart end with spark blinking one board's LED. Caveat: a blink is behaviour spark writes, against AGENTS.md "Spark exports facts, never behaviour", so the item that builds it names this exception · the PO · 2026-10-13 · this session, he picked "A blink" · options considered: unplug one and list again
+- D39 · Q22: no Slice field on the GitHub board; items get their place when they are filed · the PO · 2026-10-13 · this session, he picked "None until filed" · options considered: a new Slice field, the version field
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
@@ -201,7 +205,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), and answered Q1 to Q18 (D16 to D35), but has not confirmed the jobs, a direction or the remaining risk. Q19 is next. When it is written: each item that changes code updates its `--help`, `docs/guide/agents.md` and the README or guide in the same PR (the PO, 2026-10-13, D21) <!-- REQUIRED:handoff -->
+not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), and answered Q1 to Q22 (D16 to D39), but has not confirmed the jobs, a direction or the remaining risk. Q23 is next. When it is written: each item that changes code updates its `--help`, `docs/guide/agents.md` and the README or guide in the same PR (the PO, 2026-10-13, D21) <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
