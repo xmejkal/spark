@@ -128,7 +128,8 @@ def _recorded(value):
 
 
 class Report:
-    """What the look found. `stops` and `warnings` are sentences; the verdict is match, warning or stop."""
+    """What the look found. `stops` and `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
+    warning or stop."""
 
     def __init__(self, port, reading, record, image, image_why):
         self.port, self.reading, self.record = port, reading, record
@@ -141,21 +142,20 @@ class Report:
             self.stops.append("the flash is %s MB, the image needs %d MB" % (reading.flash_mb, -(-image.stat().st_size // MB)))
         elif self.fields["flash"] == "differs":
             self.warnings.append("the flash differs: %s MB, the record says %s" % (reading.flash_mb, _recorded(record["flash_mb"])))
-        for name, read_key, _, _ in FIELDS:
-            if self.fields[name] == "unknown":
-                why = "the board did not say" if getattr(reading, read_key) is None else "the record does not hold it"
-                self.warnings.append("%s unknown: %s" % (name, why))
-        self.verdict = "stop" if self.stops else "warning" if self.warnings else "match"
-        self.status = outcomes.status_of([n for n, s in self.fields.items() if s == "differs"],
-                                         [n for n, s in self.fields.items() if s == "unknown"])
+        self.unknown = {name: "the board did not say" if getattr(reading, read_key) is None else "the record does not hold it"
+                        for name, read_key, _, _ in FIELDS if self.fields[name] == "unknown"}
+        self.verdict = "stop" if self.stops else "warning" if self.warnings or self.unknown else "match"
+
+    @property
+    def status(self):
+        """The one outcome. A stop is a problem even when every field is `same` (the image does not fit a flash the
+        record lists), and a look with no token went unchecked, since deploy.py cannot go on without one."""
+        return outcomes.status_of([n for n, s in self.fields.items() if s == "differs"] + self.stops,
+                                  list(self.unknown) + (["token"] if self.no_token_reason() else []))
 
     def exit_code(self):
-        """What the shell sees. A stop is a problem even when every field is `same` (the image does not fit a flash the
-        record lists), and a look with no token went unchecked, since deploy.py cannot go on without one."""
-        if self.stops:
-            return outcomes.EXIT_PROBLEMS
-        unchecked = [n for n, s in self.fields.items() if s == "unknown"] + (["token"] if self.no_token_reason() else [])
-        return outcomes.EXIT_FOR[outcomes.status_of([n for n, s in self.fields.items() if s == "differs"], unchecked)]
+        """What the shell sees: the exit for `status`."""
+        return outcomes.EXIT_FOR[self.status]
 
     def no_token_reason(self):
         """Why there is no token, or None when there is one."""

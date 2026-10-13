@@ -68,7 +68,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go(esptool="c6-flash-id-garbled.txt")
         self.assertEqual(code, 2)
         self.assertIn("  flash  unknown   not read", said)
-        self.assertIn("  1 field unknown (flash): deploy.py will ask you to accept it.", said)
+        self.assertIn("  1 field unknown (flash: the board did not say): deploy.py will ask you to accept it.", said)
         self.assertTrue(said[-1].startswith("  token  "))
 
     def test_another_chip_is_a_stop_with_no_token(self):

@@ -35,12 +35,12 @@ def lines(report):
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
     out = [RESTART, "port   %s" % report.port, "mac    %s" % (reading.mac or "not read")]
     out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
-    unknown = [field for field, state in report.fields.items() if state == "unknown"]
     out += ["%s: deploy.py will refuse." % stop for stop in report.stops]
-    out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings if "unknown:" not in warning]
-    if unknown:
+    out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings]
+    if report.unknown:
         out.append("%d field%s unknown (%s): deploy.py will ask you to accept it."
-                   % (len(unknown), "" if len(unknown) == 1 else "s", ", ".join(unknown)))
+                   % (len(report.unknown), "" if len(report.unknown) == 1 else "s",
+                      ", ".join("%s: %s" % each for each in report.unknown.items())))
     if report.verdict == "match":
         out.append("all fields match the board record %s." % name)
     token = report.token()

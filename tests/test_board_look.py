@@ -242,6 +242,12 @@ class LookTest(LookCase):
         report = self.fit("firebeetle2-esp32s3", 4, 1)  # the record says [16, 4], the board 4: same, yet too small
         self.assertEqual((report.fields["flash"], report.stops), ("same", ["the flash is 4 MB, the image needs 5 MB"]))
         self.assertIsNone(report.token())
+        self.assertEqual((report.status, report.exit_code()), (outcomes.PROBLEMS, outcomes.EXIT_PROBLEMS))
+
+    def test_a_match_with_no_token_went_unchecked(self):
+        report = self.look()  # no scenario run, so no passed run names the image
+        self.assertEqual((report.verdict, report.token()), ("match", None))
+        self.assertEqual((report.status, report.exit_code()), (outcomes.COULD_NOT_RUN, outcomes.EXIT_COULD_NOT_RUN))
 
     def test_an_image_of_exactly_the_flash_read_fits(self):
         report = self.fit("firebeetle2-esp32s3", 4, 0)
@@ -257,7 +263,7 @@ class LookTest(LookCase):
         self.run_the_scenario()
         report = self.look(esptool="c6-flash-id-garbled.txt")
         self.assertEqual((report.verdict, report.status, report.fields["flash"]), ("warning", outcomes.COULD_NOT_RUN, "unknown"))
-        self.assertIn("flash unknown", report.warnings[0])
+        self.assertEqual((report.unknown, report.warnings), ({"flash": "the board did not say"}, []))
 
     def test_no_mac_means_no_token_and_says_why(self):
         self.run_the_scenario()
@@ -298,8 +304,8 @@ class LookTest(LookCase):
     def test_a_record_without_flash_says_the_record_does_not_hold_it_and_a_silent_board_says_so(self):
         self.run_the_scenario()
         with mock.patch.object(board_look.boards, "load", return_value={"chip": "esp32c6"}):
-            self.assertEqual(self.look().warnings, ["flash unknown: the record does not hold it"])
-        self.assertEqual(self.look(esptool="c6-flash-id-garbled.txt").warnings, ["flash unknown: the board did not say"])
+            self.assertEqual(self.look().unknown, {"flash": "the record does not hold it"})
+        self.assertEqual(self.look(esptool="c6-flash-id-garbled.txt").unknown, {"flash": "the board did not say"})
 
     def test_requirements_missing_or_naming_no_board_stops_without_a_name_of_none(self):
         (self.project / "requirements.json").write_text(json.dumps({"parts": []}))

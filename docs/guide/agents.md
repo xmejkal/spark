@@ -120,7 +120,8 @@ These only read:
 - `look.py`. It writes nothing and changes no flash, but **the board on USB restarts**, because esptool resets it to read it: a running
   program stops and starts again, so say so before you run it. It prints text only until `--json` ([P213](https://github.com/xmejkal/spark/issues/175)): read its exit code and its lines.
   **A field `unknown` is not a pass**, and neither is a look with no token: the exit is 2 and the line says what went unchecked.
-  The token is not the person's yes;
+  Exit 1 is a stop (deploy.py will refuse, no token) or a field that differs but that the person can accept (with a token):
+  the stop line or the token line tells them apart. The token is not the person's yes;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.

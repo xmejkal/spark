@@ -258,13 +258,13 @@ that runs on Node, with nothing else to install; a project's own `cli.ts` runs w
 Before you propose a flash, and when the person asks whether the right board is plugged in, run the look:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/look.py --port <the board's serial port>
+${CLAUDE_PLUGIN_ROOT}/scripts/look.py
 ```
 
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
 `same`, `differs` or `unknown`, with the board's MAC and a token. With two boards on USB, it lists them and needs
-`--port`. Relay its lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
+`--port <the board's serial port>`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Relay its lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
 `allowed-tools` and `deploy.py` is not, on purpose: running deploy.py is the person's decision, so Claude Code asks them.
 
