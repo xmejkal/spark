@@ -11,6 +11,8 @@
     "DFR0975",
     "DFR1145"
   ],
+  "//flash_mb": "The flash sizes in MB that this board ships with, one per SKU: 16 for DFR0975 (N16R8), 4 for DFR1145 (N4), as the //sku line says (DFRobot, https://wiki.dfrobot.com/SKU_DFR0975_FireBeetle_2_Board_ESP32_S3). A read size in the list is the same. The look (board_look.py) compares a board with it.",
+  "flash_mb": [16, 4],
   "//sources": "Every fact below came from one of these, not from a pinout picture. The Arduino variant header is the authority for the silkscreen-to-GPIO map; soc_caps.h is the authority for what the silicon can do.",
   "sources": {
     "pins": "espressif/arduino-esp32 variants/dfrobot_firebeetle2_esp32s3/pins_arduino.h",

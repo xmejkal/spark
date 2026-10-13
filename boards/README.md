@@ -90,6 +90,11 @@ board with more wake-capable pins is precisely the kind of change that should ma
 the pin map rather than transplant it. Going from the XIAO ESP32-C6 to the FireBeetle 2 ESP32-S3
 took the wake-capable pin count from 3 usable to 22, which changed every assignment.
 
+## Flash size
+
+`flash_mb` is the flash in MB: one number, or a list when one record covers SKUs with different flash (the FireBeetle
+2: `[16, 4]`). Write its `//flash_mb` source beside it. `board_look.py` compares what esptool reads from a board with it.
+
 ## Simulation
 
 `wokwi_part_type` names the part the generated Wokwi diagram uses. If Wokwi has no model of the
