@@ -8,7 +8,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
-**Stands on:** 11 H, — of which would change the decision <!-- REQUIRED:debt -->
+**Stands on:** 11 H, 4 of which would change the decision (A1, A4, A7, A8, rated high by D16) <!-- REQUIRED:debt -->
 **Decision needed:** Q1, the importance of each assumption and the pass lines <!-- REQUIRED:decision-needed -->
 
 ## Frame
@@ -67,7 +67,7 @@ e.g. `- [★C2] 13 of 526 tickets ask for recurring tasks · E tickets.csv:2-14 
 - [★C22] The lenses split on a facts file: inside the image (POJ-30), copied after the flash so the image stays the one that passed (USERJ-10), or in the image without its own sha256 (TLJ-27) · E `council/po-assistant-journeys.md` POJ-30, `council/user-journeys.md` USERJ-10 · caveat: a split, raised as Q5
 - [★C23] The chain is MicroPython-specific. The plain output of Arduino and PlatformIO is an app-only binary, but Wokwi loads a full image too, so a merged image can be what passed. VISION lists "Arduino or ESP-IDF before a design pulls them" as a not-goal · E `council/tech-lead.md` TL-15 and TL-16, `scrum/VISION.md:69` · caveat: Wokwi loads a full image too. Needs beyond Wokwi are H (TL-17)
 - [C24] The lenses split on where board memory lives: the project's `.spark/` (POJ-19) or the person's store (TLJ-20) · E `council/po-assistant-journeys.md` POJ-19 · caveat: a split, raised as Q6
-- [★C25] The lenses name different riskiest beliefs: the boot of the image (PO-20), and the readable facts as proof of the right board (POJ-26) · E `council/po-assistant.md` PO-20, `council/po-assistant-journeys.md` POJ-26 · caveat: the boot is open again, because ★C5 is refuted. The riskiest below is the synthesis's choice, pending Q1
+- [★C25] The lenses name different riskiest beliefs: the boot of the image (PO-20), and the readable facts as proof of the right board (POJ-26) · E `council/po-assistant.md` PO-20, `council/po-assistant-journeys.md` POJ-26 · caveat: the boot is open again, because ★C5 is refuted. The PO set the riskiest below (D16)
 - [★C26] `deploy.py` keeps its steps in functions, but `main()` runs the erase and write loop, and there is no `--json` and no gate in code · E `scripts/deploy.py:177-186`, `council/tech-lead.md` TL-19 · caveat: main() runs the erase, so the run moves into the core with the gate. The gates are outside the code (★C2, two gates)
 - [C27] ESPHome asks nothing on an update after a one-time setup of a name, a key and a safe mode, and its checks are silent while they pass · E https://esphome.io/components/ota/esphome/ read 2026-10-13 · caveat: how it checks the binary was not read
 
@@ -104,8 +104,8 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
   - Rabbit hole: a flash backup by default before every erase · H `council/tech-lead-journeys.md` TLJ-14 · caveat: proposed, Q17
 
 ## Riskiest assumption and its test
-- Riskiest: A7, that the facts the core reads, with the person's word for the rest, catch the wrong-board cases that harm a breadboard project: another chip, another SKU, a swapped board. D4's gate stands on it, and nothing has read the PO's board yet (★C3, ★C25) · proposed — the synthesis's opinion, after POJ-26, pending Q1. The facts are those esptool 5.5.0 reads. The boot is open again because ★C5 is refuted, so Q1 also asks which of the two is riskiest <!-- REQUIRED:riskiest -->
-- Test · kind · pass line, dated before any result · proposed | D<n>: A7's test at P228's read-only bench · kind: a bench test, read-only (electronics-firmware:R5), with nothing erased and no Wokwi minute · pass line, set 2026-10-13: the raw outputs, compared by hand, read same for chip and flash against the real record. Against a scratch copy changed to the N4, they read "flash differs". A swapped board, if one is at the desk, reads another MAC. Revision and wiring read unknown. The board's files are the same before and after · proposed — the synthesis's opinion, pending Q1 <!-- REQUIRED:test -->
+- Riskiest: A7, that the facts the core reads, with the person's word for the rest, catch the wrong-board cases that harm a breadboard project: another chip, another SKU, a swapped board. D4's gate stands on it, and nothing has read the PO's board yet (★C3, ★C25) · D16, the PO, 2026-10-13, after POJ-26. The facts are those esptool 5.5.0 reads. The boot is open again because ★C5 is refuted, so A2 can become the riskiest once the S3 returns (D16) <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed | D<n>: A7's test at P228's read-only bench · kind: a bench test, read-only (electronics-firmware:R5), with nothing erased and no Wokwi minute · pass line, set 2026-10-13: the raw outputs, compared by hand, read same for chip and flash against the real record. Against a scratch copy changed to the N4, they read "flash differs". A swapped board, if one is at the desk, reads another MAC. Revision and wiring read unknown. The board's files are the same before and after · D16, the PO, 2026-10-13 <!-- REQUIRED:test -->
 
 ## Questions
 <!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
@@ -113,7 +113,7 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D16 <!-- REQUIRED:q1 -->
 - Q2 · How do D4 and D6 hold together for a known board? · decides: what a known board's deploy asks, and what Claude does alone · options: H1 a remembered yes per board, H2 the request is the yes, H3 a yes only on a difference, or a pairing · unblocks: P231 · opinion (the user lens offers H1 with H3) · kind: decision · status: queued
 - Q3 · How does a yes bind: typed in the person's terminal, a token the write needs back, or prose? Does it bind to the port, MAC and image of this run? · decides: whether Claude can ever erase alone · options: typed, token, prose · unblocks: P219 · opinion (D8 puts the gate in the core) · kind: decision · status: queued
 - Q4 · May files go onto a board without a full flash, and what must a passed run name? · decides: whether J2 is in this epic, and the log format · options: per-file hashes, a labelled untested path, full flash only · unblocks: P222 · opinion (—) · kind: decision · status: queued
@@ -155,6 +155,8 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - D13 · the FireBeetle 2 ESP32-S3 is missing, so the bench runs on another board at hand (a C6 board or another S3); get ready for a different board: migrate the project, or check whether a deploy is possible on it at all; later perhaps "deploy, but this and this will not work"; for the easy examples, another board is fine for now · the PO · 2026-10-13 · this session, verbatim: "Also, I already know I can't actualy find the firebeetle 2 esp32 s3 boadr, so I will most probably only have a different one, one of the c6 ones or another s3 that I have laying around, so lets get ready for the situation when its a nother board and it needs to be migrated or somehow even checked if its even possible to deploy it on that one, later maybe we can make something more advanced like ok, deploy,but this and this won't work, but for now and the easy examples we have, it should be ok to use another one laying around." · the drawer (the PO's store, read 2026-10-13) holds a Seeed XIAO ESP32-C6 (1), a FireBeetle 2 ESP32-C6 DFR1075 (2), a Beetle ESP32-C6 Mini DFR1117 (3), a Romeo ESP32-S3 DFR0994 (1) and a Beetle ESP32 DFR0575 (2); spark has board records only for firebeetle2-esp32s3 and xiao-esp32-c6 (ls boards/)
 - D14 · the bench board is the Seeed XIAO ESP32-C6, researched fresh as if spark did not know it, then compared with the shipped record; filed as P229 (#217) · the PO · 2026-10-13 · this session, verbatim: "Seeed studi esp32 c6, the very small one, but I don't think we have it yet, so we'll need to research it to have it in the store and use it . It's actually the Xiao, but lets make sure we really have it created and usable in the store  and the project, like really full scdenarion if the board was not in the store yet.", then the option "Also research it fresh" · options considered: migrate to the shipped record, research it fresh, a FireBeetle 2 ESP32-C6
 - D15 · install esptool 5.5.0 (the pin) for the user, because 3.3 has no ESP32-C6 choice · the PO · 2026-10-13 · this session, the option "Yes, install 5.5.0" · taken: `python3 -m esptool version` printed `5.5.0`
+- D16 · Q1: high A1, A4, A7, A8; medium A5, A6, A9, A10; low until the S3 is found A2, A3, A11, because the bench runs on the XIAO ESP32-C6. A7 stays the riskiest, with the pass lines as written in risks-and-tests.md · the PO · 2026-10-13 · this session, he picked "Accept as proposed" · options considered: A2 as the riskiest, his own ratings
+- D17 · the gaps and findings of every agent run become rows in `docs/observations/INDEX.md` · the PO · standing rule in his `CLAUDE.local.md`, "The board" · applied 2026-10-13 to the refuter and P229's walk
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
@@ -174,6 +176,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - comment on #200 linking this brief, the PR and the Miro board · taken 2026-10-13, D3
 - the Miro board for the map and options · created 2026-10-13, D3 and D9: https://miro.com/app/board/uXjVEaysFtc=/
 - P215 split: P228 (#215) is the read-only bench, in Build; P215 (#196) keeps the flash half, back in Ready, last · taken 2026-10-13, the PO: "and yes, its ok to splt it"
+- observation rows AT41 to AT64 in `docs/observations/INDEX.md`, for the refuter and P229's walk · taken 2026-10-13, D17
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
