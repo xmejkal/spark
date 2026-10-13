@@ -30,7 +30,7 @@ class AiFiles:
 
     def __init__(self, project, store_home=None):
         self.project = Path(project)
-        self.rules = Path(store_home if store_home is not None else store.home()) / "rules.md"
+        self.rules = Path(store_home if store_home is not None else store.home()).absolute() / "rules.md"
 
     def write(self):
         results = [self.agents_md(), self.claude_md(), self.claude_local_md()]
@@ -39,12 +39,16 @@ class AiFiles:
     def agents_md(self):
         path = self.project / "AGENTS.md"
         block = "%s\n%s%s\n" % (BEGIN_LINE, SECTION, END)
-        if path.is_symlink():
-            return False, "AGENTS.md is a link, so it is left alone and has no section from spark"
+        if path.is_symlink():  # a link to a file in the project, such as CLAUDE.md, is followed
+            path = path.resolve()
+            if not path.is_file() or self.project.resolve() not in path.parents:
+                return False, "AGENTS.md is a link out of the project or to nothing, so it is left alone"
         if not path.exists():
             store.write_file(path, block)
             return True, "wrote AGENTS.md with spark's section"
         text = read(path)
+        if text is None:
+            return False, "AGENTS.md is not UTF-8 text, so it is left alone"
         begin = re.search("^" + re.escape(BEGIN), text, re.M)
         if begin is None:
             store.write_file(path, text + ("" if text.endswith("\n") else "\n") + "\n" + block)
@@ -58,12 +62,18 @@ class AiFiles:
 
     def claude_md(self):
         path = self.project / "CLAUDE.md"
-        if path.is_symlink():
-            return False, "CLAUDE.md is a link, so it is left alone. Make sure that it has the line %s" % IMPORT
+        agents = self.project / "AGENTS.md"
+        if path.exists() and agents.exists() and path.resolve() == agents.resolve():
+            return False, "CLAUDE.md and AGENTS.md are one file, so Claude Code already reads AGENTS.md"
+        if os.path.lexists(path) and not path.exists():
+            return False, "CLAUDE.md is a link to nothing, so it is left alone. It needs the line %s" % IMPORT
         if not path.exists():
             store.write_file(path, CLAUDE_MD)
             return True, "wrote CLAUDE.md: %s" % IMPORT
-        if IMPORT in read(path).split():  # Claude Code imports an @path anywhere in a line
+        text = read(path)
+        if text is None:
+            return False, "CLAUDE.md is not UTF-8 text, so it is left alone. It needs the line %s" % IMPORT
+        if IMPORT in text.split():  # Claude Code imports an @path anywhere in a line
             return False, "CLAUDE.md already imports AGENTS.md"
         return False, ("CLAUDE.md is yours, so it is left alone. It does not import AGENTS.md, so Claude Code does not "
                        "read AGENTS.md: add the line %s to it" % IMPORT)
@@ -100,5 +110,11 @@ class AiFiles:
 
 
 def read(path):
-    """A file's text as it is on disk: no line endings changed, so a person's CRLF stays outside spark's section."""
-    return path.read_bytes().decode("utf-8")
+    """
+    A file's text as it is on disk: no line endings changed, so a person's CRLF stays outside spark's section. None
+    for a file that is not UTF-8, which spark leaves alone.
+    """
+    try:
+        return path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        return None
