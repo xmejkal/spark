@@ -5,7 +5,7 @@ status: proposed, or filed D<n>.
 e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)` -->
 
 Every item is a proposal. Nothing is filed. An item on an existing card is a story or a checklist for that card.
-Once the PO says yes, it goes into the card's body or a comment. An item marked new takes the next free number, P229 on 2026-10-13
+Once the PO says yes, it goes into the card's body or a comment. An item marked new takes the next free number, P231 on 2026-10-13
 (read from `gh issue list --state all`), read again at filing. Each item's logic sits in the core, and its interfaces
 stay thin (D8). Slice names are the board's Slice options.
 
@@ -50,7 +50,7 @@ stay thin (D8). Slice names are the board's Slice options.
 - parent (the epic, as a sub-issue): P218 (#200)
 - slice (one Slice option of the board, or "ask the decider for a new one"): v1 The basic journey
 
-## P229 (new) — a known board asks the same questions as a new one → its deploy runs silent checks and prints one receipt line
+## P231 (new) — a known board asks the same questions as a new one → its deploy runs silent checks and prints one receipt line
 - type: story, new
 - needed by: "if the board is known, we know its correct, the upgrade and deploy should be semless, but really being sure everything is ok" (the PO, 2026-10-13, D6)
 - value proven by: the PO changes one line, gives one command, and reads one receipt line with the board's name and the image sha256. A board flashed by hand with another tool stops the deploy before any write (A9)
@@ -70,7 +70,7 @@ stay thin (D8). Slice names are the board's Slice options.
 - parent (the epic, as a sub-issue): P218 (#200)
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (Q22)
 
-## P230 (new) — two almost identical boards look the same to deploy → spark lists them by MAC and writes only to the one the person named
+## P232 (new) — two almost identical boards look the same to deploy → spark lists them by MAC and writes only to the one the person named
 - type: story, new
 - needed by: "what if there are two almost thee same boards connected to the computer" (the PO, 2026-10-13, D5)
 - value proven by: with two boards plugged in, the core refuses until one is named. It binds a name to that MAC and finds the board by MAC after the flash
@@ -80,7 +80,7 @@ stay thin (D8). Slice names are the board's Slice options.
 - parent (the epic, as a sub-issue): P218 (#200)
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (Q22)
 
-## P231 (new) — the record cannot say which MicroPython build a board needs → spark offers the matching build on a yes and asks for the new run it needs
+## P233 (new) — the record cannot say which MicroPython build a board needs → spark offers the matching build on a yes and asks for the new run it needs
 - type: story, new
 - needed by: "offer a more suiting one or even somehow offer to download the firmware base" (the PO, 2026-10-13, D4) and "A MicroPython build that the board needs, if any, becomes its own card" (#196)
 - value proven by: the record names the build. A passed log names the new image, and deploy flashes it
@@ -100,7 +100,7 @@ stay thin (D8). Slice names are the board's Slice options.
 - parent (the epic, as a sub-issue): P218 (#200)
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (Q22)
 
-## P232 (new) — nothing on a board says what spark put there → a facts file on the board that the core reads back
+## P234 (new) — nothing on a board says what spark put there → a facts file on the board that the core reads back
 - type: story, new
 - needed by: "is there any protocol / workflow between the spark plugin and the boardd firmware" (the PO, 2026-10-13, D5)
 - value proven by: `deploy.py --check` prints the project, the board id and the per-file hashes found on the board, and says absent for a board spark did not flash
@@ -110,7 +110,7 @@ stay thin (D8). Slice names are the board's Slice options.
 - parent (the epic, as a sub-issue): P218 (#200)
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (Q22)
 
-## P233 (new) — OTA and a Wi-Fi REPL have no design → a discovery of their own
+## P235 (new) — OTA and a Wi-Fi REPL have no design → a discovery of their own
 - type: epic or discovery, new, a later version
 - needed by: "what about OTA" (the PO, 2026-10-13, D5) and "or on the same wifi" (the PO, 2026-10-13, D7)
 - value proven by: a finding on the OTA layout, the code on the board that listens, the secret, the rollback rule and the cable sentence, with sources
