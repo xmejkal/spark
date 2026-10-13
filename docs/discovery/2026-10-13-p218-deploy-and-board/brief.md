@@ -160,6 +160,7 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - D18 · Q2: H1 with H3. spark remembers one yes per board, scoped to update or erase, and asks again only when a read fact differs, is unknown, or data would be lost · the PO · 2026-10-13 · this session, he picked "H1 + H3" · options considered: H3 alone, H1 alone, H2 the request is the yes · caveat: the yes outlives a rewired board
 - D19 · Q3: a token and a terminal. The core needs a token from its own look, bound to the port, the MAC and the image. Before a first erase, the CLI also asks the person in their own terminal · the PO · 2026-10-13 · this session, he picked "Token + terminal" · options considered: token only, terminal only, prose as today · caveat: Claude can copy the token. The terminal prompt sits in the CLI, not the core (D8), so an MCP or web path needs its own way to ask
 - D20 · Q4: per-file hashes. The passed run's log also names each file's sha256, and an update copies only files that a passed run names, so decision 1 holds · the PO · 2026-10-13 · this session, he picked "Per-file hashes" · options considered: a labelled untested path, full flash only · caveat: the log change is read, not built (★C11)
+- D21 · a change that is done updates its documentation in the same PR: the help text, the AI version and the human version · the PO · 2026-10-13 · this session, verbatim: "and also always remember updating documentation accordingly when done.  and also help and ai version and human version" · now a rule in his `rules.md`
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
@@ -186,7 +187,7 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), but has not confirmed the jobs, a direction or the remaining risk. Q1 is open, and every assumption is unrated <!-- REQUIRED:handoff -->
+not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), and answered Q1 to Q4 (D16 to D20), but has not confirmed the jobs, a direction or the remaining risk. Q5 is next. When it is written: each item that changes code updates its `--help`, `docs/guide/agents.md` and the README or guide in the same PR (the PO, 2026-10-13, D21) <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
