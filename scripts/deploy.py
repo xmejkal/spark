@@ -16,7 +16,6 @@ esptool and mpremote are the tools list's `flasher` and `board-shell`, which /sp
 """
 
 import argparse
-import hashlib
 import json
 import shlex
 import subprocess
@@ -24,9 +23,9 @@ import sys
 from pathlib import Path
 
 import boards
-import run_scenario
-import sim_project
 import tools
+from image_check import (BOOT_HINT, DeployProblem, image_of, run_logs, runnable, tested_another,  # noqa: F401
+                         untested)
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
 
 #: Where the image goes: it is the whole flash from its first byte, as the simulator loaded it.
@@ -34,9 +33,6 @@ IMAGE_OFFSET = "0x0"
 #: esptool's commands with underscores: esptool 3 and 4 know only these, and 5.x still accepts them with a deprecation
 #: line (esptool 5.5.0's cli_util.py, read 2026-10-12). The tools list finds any installed esptool, not only its pin.
 ERASE, WRITE = "erase_flash", "write_flash"
-#: What to try when esptool cannot reach the board.
-BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press and release RESET, release BOOT, "
-             "and run it again")
 #: The last line: how the person sees the firmware start.
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
@@ -47,71 +43,6 @@ EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), a
 (--ignore-older-runs flashes anyway). It erases the board's flash first.
 
 Exit codes: 0 done (with --dry-run: printed), 2 it could not run, and the sentence says why."""
-
-
-class DeployProblem(Exception):
-    """Why the image cannot go onto the board yet. The message is the whole sentence."""
-
-
-def image_of(project):
-    """The flash image sim/wokwi.toml names, which run_scenario.py writes. DeployProblem when there is none yet."""
-    toml = project / "sim" / "wokwi.toml"
-    if not toml.is_file():
-        raise DeployProblem("no sim/wokwi.toml in %s: build with /spark:build --keep . first" % project)
-    image = toml.parent / (sim_project.firmware_in(toml) or run_scenario.DEFAULT_IMAGE)
-    if not image.is_file():
-        raise DeployProblem("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it" % image)
-    return image
-
-
-def run_logs(runs):
-    """
-    (log, verdict, the tested image's sha256 or None) for each log in the runs folder, by name. A path that is no file
-    is skipped. DeployProblem when a log cannot be read.
-    """
-    records = []
-    for log in sorted(runs.glob("*.log")):
-        if not log.is_file():
-            continue
-        try:
-            records.append((log,) + run_scenario.run_record(log))
-        except OSError as cannot:
-            raise DeployProblem("cannot read %s: %s" % (log, cannot))
-    return records
-
-
-def untested(image, runs):
-    """
-    None when a passed run in the runs folder names this image's sha256 and no run with another verdict does.
-    Else why not.
-    """
-    digest = hashlib.sha256(image.read_bytes()).hexdigest()
-    named = [(log, verdict) for log, verdict, sha256 in run_logs(runs) if sha256 == digest]
-    failed = [(log, verdict) for log, verdict in named if verdict != "passed"]
-    if failed:
-        return ("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed"
-                % (failed[0][0].name, failed[0][1]))
-    if not named:
-        return ("no run in sim/runs/ tested %s as it is now, and a log from an older spark names no image: "
-                "run its scenario again with run_scenario.py" % image.name)
-    return None
-
-
-def tested_another(image, runs):
-    """A sentence naming each log in the runs folder that does not name this image's sha256, or None when every log does."""
-    digest = hashlib.sha256(image.read_bytes()).hexdigest()
-    logs = [(log.name, sha256) for log, _, sha256 in run_logs(runs) if sha256 != digest]
-    if not logs:
-        return None
-    others = [name for name, sha256 in logs if sha256]
-    older = [name for name, sha256 in logs if not sha256]
-    said = []
-    if others:
-        said.append("%s tested another image, not this one" % ", ".join(others))
-    if older:
-        said.append("%s %s no image (an older spark)" % (", ".join(older), "names" if len(older) == 1 else "name"))
-    again = "that scenario" if len(logs) == 1 else "those scenarios"
-    return "%s: run %s again to test this one" % (", and ".join(said), again)
 
 
 def newer_files(project, image):
@@ -128,13 +59,6 @@ def chip_of(project):
         return boards.get(project, "chip", json.loads(requirements.read_text()).get("board"))
     except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:
         raise DeployProblem("the board's chip cannot be read from %s: %s" % (requirements, cannot))
-
-
-def runnable(tool):
-    """The command that runs a tool: a Python package as `python -m <module>`, anything else as it was found."""
-    if tool.entry.get("kind") == "python":
-        return tool.command + ["-m", tool.entry["module"]]
-    return list(tool.command)
 
 
 def flash_commands(flasher, chip, image, port=None):
