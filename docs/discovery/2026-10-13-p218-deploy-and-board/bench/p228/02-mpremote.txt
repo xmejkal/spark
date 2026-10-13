@@ -1,0 +1,22 @@
+2026-10-13T16:22:33Z
+$ mpremote connect /dev/cu.usbmodem101 exec "import sys,os; print(sys.implementation); print(os.uname()); print(os.statvfs(\"/\")); print(os.listdir(\"/\"))"
+Traceback (most recent call last):
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/site-packages/mpremote/__main__.py", line 6, in <module>
+    sys.exit(main.main())
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/site-packages/mpremote/main.py", line 622, in main
+    handler_func(state, args)
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/site-packages/mpremote/commands.py", line 500, in do_exec
+    _do_execbuffer(state, args.expr[0], args.follow)
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/site-packages/mpremote/commands.py", line 483, in _do_execbuffer
+    state.ensure_raw_repl()
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/site-packages/mpremote/main.py", line 552, in ensure_raw_repl
+    self.transport.enter_raw_repl(soft_reset=soft_reset)
+  File "~/.pyenv/versions/3.10.0/lib/python3.10/site-packages/mpremote/transport_serial.py", line 195, in enter_raw_repl
+    raise TransportError("could not enter raw repl")
+mpremote.transport.TransportError: could not enter raw repl
+b''
+exit 1

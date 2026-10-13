@@ -1,0 +1,119 @@
+
+2026-10-13T16:22:49Z
+$ python3 -m esptool --port /dev/cu.usbmodem101 chip-id
+esptool v5.5.0
+Serial port /dev/cu.usbmodem101:
+Connecting....
+Detecting chip type... ESP32-C6
+Connected to ESP32-C6 on /dev/cu.usbmodem101:
+Chip type:          ESP32-C6FH4 (QFN32) (revision v0.1)
+Features:           Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz, Embedded Flash 4MB
+Crystal frequency:  40MHz
+USB mode:           USB-Serial/JTAG
+MAC:                8c:bf:ea:ff:fe:xx:xx:xx
+BASE MAC:           8c:bf:ea:xx:xx:xx
+MAC_EXT:            ff:fe
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+
+WARNING: ESP32-C6 has no chip ID. Reading MAC address instead.
+MAC:                8c:bf:ea:ff:fe:xx:xx:xx
+BASE MAC:           8c:bf:ea:xx:xx:xx
+MAC_EXT:            ff:fe
+
+Hard resetting via RTS pin...
+exit 0
+
+2026-10-13T16:22:50Z
+$ python3 -m esptool --port /dev/cu.usbmodem101 flash-id
+esptool v5.5.0
+Serial port /dev/cu.usbmodem101:
+Connecting...
+Detecting chip type... ESP32-C6
+Connected to ESP32-C6 on /dev/cu.usbmodem101:
+Chip type:          ESP32-C6FH4 (QFN32) (revision v0.1)
+Features:           Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz, Embedded Flash 4MB
+Crystal frequency:  40MHz
+USB mode:           USB-Serial/JTAG
+MAC:                8c:bf:ea:ff:fe:xx:xx:xx
+BASE MAC:           8c:bf:ea:xx:xx:xx
+MAC_EXT:            ff:fe
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+
+Flash Memory Information:
+=========================
+Manufacturer: 20
+Device: 4016
+Detected flash size: 4MB
+
+Hard resetting via RTS pin...
+exit 0
+
+2026-10-13T16:22:51Z
+$ python3 -m esptool --port /dev/cu.usbmodem101 read-mac
+esptool v5.5.0
+Serial port /dev/cu.usbmodem101:
+Connecting...
+Detecting chip type... ESP32-C6
+Connected to ESP32-C6 on /dev/cu.usbmodem101:
+Chip type:          ESP32-C6FH4 (QFN32) (revision v0.1)
+Features:           Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz, Embedded Flash 4MB
+Crystal frequency:  40MHz
+USB mode:           USB-Serial/JTAG
+MAC:                8c:bf:ea:ff:fe:xx:xx:xx
+BASE MAC:           8c:bf:ea:xx:xx:xx
+MAC_EXT:            ff:fe
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+
+MAC:                8c:bf:ea:ff:fe:xx:xx:xx
+BASE MAC:           8c:bf:ea:xx:xx:xx
+MAC_EXT:            ff:fe
+
+Hard resetting via RTS pin...
+exit 0
+
+2026-10-13T16:22:52Z
+$ python3 -m esptool --port /dev/cu.usbmodem101 get-security-info
+esptool v5.5.0
+Serial port /dev/cu.usbmodem101:
+Connecting...
+Detecting chip type... ESP32-C6
+Connected to ESP32-C6 on /dev/cu.usbmodem101:
+Chip type:          ESP32-C6FH4 (QFN32) (revision v0.1)
+Features:           Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz, Embedded Flash 4MB
+Crystal frequency:  40MHz
+USB mode:           USB-Serial/JTAG
+MAC:                8c:bf:ea:ff:fe:xx:xx:xx
+BASE MAC:           8c:bf:ea:xx:xx:xx
+MAC_EXT:            ff:fe
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+
+Security Information:
+=====================
+Flags: 0x00000000 (0b0)
+Key Purposes: (0, 0, 0, 0, 0, 0, 12)
+  BLOCK_KEY0 - USER/EMPTY
+  BLOCK_KEY1 - USER/EMPTY
+  BLOCK_KEY2 - USER/EMPTY
+  BLOCK_KEY3 - USER/EMPTY
+  BLOCK_KEY4 - USER/EMPTY
+  BLOCK_KEY5 - USER/EMPTY
+Chip ID: 13
+API Version: 0
+Secure Boot: Disabled
+Flash Encryption: Disabled
+SPI Boot Crypt Count (SPI_BOOT_CRYPT_CNT): 0x0
+
+Hard resetting via RTS pin...
+exit 0
