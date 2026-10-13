@@ -2,6 +2,11 @@
 
 **From an idea to a breadboard sheet and firmware checked in simulation — and a board, if you want one — for gadgets built from an ESP32 dev board.**
 
+[![The spark journey in eight steps, and how far each works today](docs/guide/journey.svg)](docs/guide/journey.md)
+
+The same journey is [on a Miro board](https://miro.com/app/board/uXjVEavQ4JQ=/), and [the journey guide](docs/guide/journey.md)
+shows the runs behind each step.
+
 spark is a Claude Code plugin, meant for a hobbyist building a gadget from an ESP32 *dev board* (a module such as the
 DFRobot FireBeetle 2 ESP32-S3) and off-the-shelf modules, not for chip-down boards made in volume
 ([the vision](scrum/VISION.md)). You describe the gadget, and spark helps turn it into needs, which it matches against
@@ -57,14 +62,7 @@ runs in [the journey guide](docs/guide/journey.md):
 
 ## What works today
 
-```mermaid
-flowchart LR
-    drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
-    research --> build["Build — works"] --> checks["Checks — works"] --> firmware["Firmware — partly"]
-    firmware --> simulate["Simulate — works"] --> bench["Bench — partly"]
-```
-
-The table says the same in words. Each status comes from runs made for these docs, this README and the guides in
+The table says in words what the picture at the top shows. Each status comes from runs made for these docs, this README and the guides in
 `docs/guide/`, on 2026-10-05, 2026-10-06, 2026-10-08, 2026-10-11 and 2026-10-12; [the journey guide](docs/guide/journey.md) shows the output
 of each step it describes, and what was not run. **works**: it ran end to end for these docs. **partly**: it stops
 before its goal, or part of it was not run here (agents, a conversation, or a paid simulation run). **not yet**:
