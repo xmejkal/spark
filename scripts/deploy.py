@@ -43,7 +43,8 @@ WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prin
 OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log. To flash anyway, pass --ignore-older-runs, and "
                       "the line becomes a note")
 #: What --help says beyond the arguments.
-EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and it erases the board's flash first.
+EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
+(--ignore-older-runs flashes anyway). It erases the board's flash first.
 
 Exit codes: 0 done (with --dry-run: printed), 2 it could not run, and the sentence says why."""
 
