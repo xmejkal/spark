@@ -67,9 +67,9 @@ Steps 1 to 3 are done by hand now, so that you can use the layout today. Steps 4
    `CLAUDE.local.md` with the import, and an entry in `.git/info/exclude` where it is a git repository. First one
    project: a `claude -p` run there names a rule, and a run in a folder without spark does not. Then the other five.
 4. A first PR: spark's own `CLAUDE.md`. It imports `@AGENTS.md` and points to `scrum/` and
-   `docs/guide/developing.md`. It holds the principles for developing spark: spark is the product, one core with thin
-   interfaces, free and few local tools, a breadboard with working firmware as the bar, findings to
-   `docs/observations/INDEX.md`, no vendor files in history. Nothing personal.
+   `docs/guide/developing.md`. It holds the principles for developing spark, and nothing personal. Spark is the product, with one
+   core and thin interfaces. Its tools are free, few and local. The bar is a breadboard with working firmware.
+   Findings go to `docs/observations/INDEX.md`, and no vendor file enters the history.
 5. A second PR: `/spark:init` writes `.claude/rules/spark.md` and `CLAUDE.local.md` and reports what is here. A test
    runs it on a scratch project and runs it twice. Then init runs on the six projects and replaces the hand-made files.
 
@@ -79,8 +79,8 @@ Steps 1 to 3 are done by hand now, so that you can use the layout today. Steps 4
   runs only in the spark and bin folders.
 - The bin's `CLAUDE.md` has 175 lines and loads every session. Its tscircuit section repeats spark's recipes. A later
   card can cut it to the bin's own facts and point to the recipes.
-- Spark's projects list could later drive one command that refreshes every project's spark files at once, after the
-  conventions change. A later card, if wanted.
+- Spark's projects list can later drive one command that refreshes every project's spark files at once, after the
+  conventions change. If you want it, a later card does it.
 - A project that other AI tools also read can keep `AGENTS.md` with a one-line `CLAUDE.md` that imports it, as spark
   does. Init does not force it.
 
