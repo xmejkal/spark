@@ -8,8 +8,8 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
 **Ready for:** collecting evidence <!-- REQUIRED:ready -->
-**Stands on:** ⟨fill⟩ H, ⟨fill⟩ of which would change the decision <!-- REQUIRED:debt -->
-**Decision needed:** none until the council reports; then Q1 <!-- REQUIRED:decision-needed -->
+**Stands on:** 11 H, — of which would change the decision <!-- REQUIRED:debt -->
+**Decision needed:** Q1, the importance of each assumption and the pass lines <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): "Can we please have the council do the basic research and analysis of the epic and the spikes? And have them design the basic user journeys from the silest [simplest] one to the more advanced ones?" (the PO, 2026-10-13, this session). Before it, the same session: "I mean about the deployment processs [process] and what happens when its a different board, some basic research what is possible to do with repl, etc.. ?" <!-- REQUIRED:request -->
@@ -33,7 +33,7 @@ is unrated. check computes both. -->
 <!-- EXTEND:frame -->
 - Depth: TRIO (default: PO assistant, user, tech lead) | FULL or LIGHT (who asked, when); add "no independent review" if subagents could not start: TRIO, three agents: the PO assistant, the user, the tech lead (with the physics lens). The PO asked for "the council", 2026-10-13 <!-- REQUIRED:depth -->
   <!-- Cost, measured once: the P900 rehearsal's council took 6 agents, 499 calls and about 90M input tokens (2026-10-06). -->
-- Search budget: proposed: the PO assistant 6 web searches, the user 3, the tech lead 8 (a query to the Espressif docs server counts as one), the refuter 2 <!-- REQUIRED:budget -->
+- Search budget: 44 web searches in total, after the raises for D5, D7 and D10: the PO assistant 20 (6, then 4, 2, 3 and 5), the user 5 (3, then 2), the tech lead 17 (8, then 4, 3 and 2; a query to the Espressif docs server counts as one), the refuter 2 <!-- REQUIRED:budget -->
 - Appetite (the decider's, asked only when heading for design) | —: — <!-- REQUIRED:appetite -->
 
 ## What we found <!-- CLAIMS -->
@@ -43,17 +43,69 @@ Say what the evidence can support: an account (what happened to one person), dat
 period), a document (what was specified), the product (what exists, not whether anyone needs it), a benchmark (a
 comparison). Model knowledge is H until a source is read. Elsewhere cite a ★ claim as ★C<n>, with its keep: words.
 e.g. `- [★C2] 13 of 526 tickets ask for recurring tasks · E tickets.csv:2-14 · caveat: picked by Lena; shows that, not how often` -->
-- ⟨fill⟩ <!-- REQUIRED:findings -->
+- [★C1] `deploy.py` checks only the chip name it passes to esptool. With no `--port`, esptool tries each port and erases the first board it reaches · E `scripts/deploy.py` `chip_of`, `council/user.md` USER-1 · caveat: read from code, never run on a board <!-- REQUIRED:findings -->
+- [★C2] The erase runs first, with no prompt, no `--yes` and no `--json`. The only gate is a sentence in `commands/build.md` that tells Claude to ask · E `scripts/deploy.py` `main`, `council/po-assistant.md` PO-23 · caveat: a prose gate fails when an allow rule or auto mode is on (USERJ-4, H)
+- [★C3] esptool reads an S3's chip, revision, eFuse flash and PSRAM, MAC, flash size and security state. No tool reads the PSRAM mode or the board's revision, maker and wiring · E `council/tech-lead.md` TL-3 and TL-7, https://docs.espressif.com/projects/esptool/en/latest/esp32s3/esptool/basic-commands.html read 2026-10-13 · caveat: from master source and docs. The output of 5.5.0 on the N16R8 is not seen
+- [★C4] The record holds `chip` and `micropython_port` as fields. Flash and PSRAM are prose in `//sku`, one file covers the N16R8 and the N4, and no field holds USB mode or a MicroPython variant · E `boards/firebeetle2-esp32s3.json:5`, `council/tech-lead-journeys.md` TLJ-6 · caveat: a field per SKU changes the record's shape (TLJ-7)
+- [★C5] By a read, the 4 MiB image on the 16 MB board gives a 2 MiB filesystem at `0x200000` that matches the image's, because the image header keeps 4 MB · E `council/tech-lead-journeys.md` TLJ-11, https://raw.githubusercontent.com/micropython/micropython/v1.29.0/ports/esp32/main.c read 2026-10-13 · caveat: settles the arithmetic, not the boot. Rests on master ESP-IDF, and a `--flash-size` argument breaks it (TLJ-12)
+- [★C6] MicroPython offers a Standard and a SPIRAM_OCT build for the S3, and the same page says Standard detects PSRAM. spark pins only Standard, which the simulation runs · E https://micropython.org/download/ESP32_GENERIC_S3/ read 2026-10-13, `council/tech-lead.md` PHYS-5 · caveat: the two statements are not resolved. The N16R8's need is — until the bench
+- [★C7] On native USB, a boot-time `ready` can be lost before the host opens the port. `deploy.py` does not watch the port, and its watch line is interactive, so Claude cannot read `ready` · E `docs/2026-10-12-p192-deploy-plan.md` decision 6, `council/tech-lead.md` PHYS-1 · caveat: the loss at a hard reset is H, a bench question
+- [★C8] Every read touches a running gadget. esptool ends with a hard reset (v3.3 default), and `mpremote exec` stops `main.py` until a reset · E `council/tech-lead-journeys.md` TLJ-2, https://docs.micropython.org/en/latest/reference/mpremote.html read 2026-10-13 · caveat: the 5.5.0 default is —. Download mode after a read is H (USERJ-5)
+- [★C9] In the S3 ROM, the USB serial number is the MAC, so the port list names a board before any byte is sent, and `mpremote connect id:` selects it · E https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_overview/usb_device_const_COM.html read 2026-10-13, `council/tech-lead-journeys.md` TLJ-19 · caveat: shown for the ROM only. Under MicroPython it is H (A10)
+- [★C10] Code cannot tell a person's yes from Claude's flag. So the yes binds to what the check read (port, MAC, image), or comes from a terminal Claude lacks · H `council/user-journeys.md` USERJ-4, Claude's design reading · caveat: the shell without a terminal is not tested
+- [★C11] The passed artefact is the whole image, named by its sha256 in the run log. A file copy puts bytes on the board that no log names, so an update departs from decision 1 unless the log names per-file hashes · E `docs/2026-10-12-p192-deploy-plan.md` decision 1, `council/tech-lead.md` TL-13 · caveat: the log change is read, not built
+- [★C12] The kept partition table has no OTA slot, so an OTA of the interpreter needs another layout and an image the simulator has not passed · E `council/tech-lead.md` TL-14, decoded from the kept .bin, https://docs.micropython.org/en/latest/library/esp32.html read 2026-10-13 · caveat: an OTA build for the S3 on micropython.org is —
+- [★C13] Wi-Fi needs code on the board. WebREPL starts from boot code with one password on all interfaces. mpremote cannot drive it, and `webrepl_cli.py` only gets and puts files · E https://docs.micropython.org/en/latest/esp32/quickref.html read 2026-10-13, `council/tech-lead-journeys.md` TLJ-34 · caveat: read through summarising fetches
+- [★C14] Over USB, Claude can already run mpremote's non-interactive commands (`devs`, `exec`, `run`, `fs`, `mount`). Only `repl` is interactive · E https://docs.micropython.org/en/latest/reference/mpremote.html read 2026-10-13, `council/tech-lead-journeys.md` TLJ-33 · caveat: none ran on a board
+- [★C15] No tool read guards a pre-erase yes or a live session. Thonny asks a port and an erase tick, ESP Web Tools keys builds by chip, and a third-party MicroPython MCP plugin writes and deletes files with no identity check seen · E https://github.com/esphome/esp-web-tools read 2026-10-13, `council/po-assistant-journeys.md` POJ-4, POJ-36, POJ-39 · caveat: snippets and a README, not source
+- [★C16] `pins.py` holds GPIO numbers, not a signal's direction. The record names the strap, console, LED and button pins, and leaves the USB pins out of `pins` · E `scripts/assign_pins.py:410`, `council/tech-lead-journeys.md` TLJ-37 · caveat: an output-only guard needs the direction as a new fact
+- [★C17] The revision is readable only by eye. V1.1 has a PMIC and 5.1 k I2C pull-ups, and V1.2 has none, so an I2C scan reads differently · E `boards/firebeetle2-esp32s3.json:298`, `council/tech-lead.md` PHYS-7 and PHYS-9 · caveat: an electrical inference exists (H)
+- [C18] This Mac's esptool is v3.3, not the pinned 5.5.0, and does not know `esp32c6` · E `python3 -m esptool version`, `council/tech-lead.md` TL-4 · caveat: this machine on 2026-10-13
+- [★C19] "esptool refuses another chip" is a docstring claim, tested only with a fake `run` · E `scripts/deploy.py:14`, `tests/test_deploy.py` · caveat: none
+- [★C20] Accepting another board regenerates the pin map, the diagram and the sheet. The image sha256 changes, so a new metered run must pass · E `council/tech-lead-journeys.md` TLJ-10, `scripts/deploy.py:79` · caveat: another chip also needs another interpreter (H)
+- [★C21] The PO is the only user (n = 1), with one board, none on a USB port. J1 is the only job with a blocked person · E `ls /dev/cu.*` 2026-10-13, `council/po-assistant.md` PO-17 · caveat: other makers are H
+- [★C22] The lenses split on a facts file: inside the image (POJ-30), copied after the flash so the image stays the one that passed (USERJ-10), or in the image without its own sha256 (TLJ-27) · E `council/po-assistant-journeys.md` POJ-30, `council/user-journeys.md` USERJ-10 · caveat: a split, raised as Q5
+- [★C23] The chain is MicroPython-specific. For Arduino and PlatformIO, Wokwi runs an app-only binary, not the whole image deploy writes. VISION lists "Arduino or ESP-IDF before a design pulls them" as a not-goal · E `council/tech-lead.md` TL-15 and TL-16, `scrum/VISION.md:69` · caveat: needs beyond Wokwi are H (TL-17)
+- [C24] The lenses split on where board memory lives: the project's `.spark/` (POJ-19) or the person's store (TLJ-20) · E `council/po-assistant-journeys.md` POJ-19 · caveat: a split, raised as Q6
+- [★C25] The lenses name different riskiest beliefs: the boot of the image (PO-20), whose arithmetic TLJ-11 then settled, and the readable facts as proof of the right board (POJ-26) · E `council/po-assistant.md` PO-20, `council/po-assistant-journeys.md` POJ-26 · caveat: the riskiest below is the synthesis's choice, pending Q1
+- [★C26] `deploy.py` has the one-core shape (functions in a module, `main()` prints), but no `--json` and no gate in code · E `scripts/deploy.py:160`, `council/tech-lead.md` TL-19 · caveat: the only gate is prose (★C2)
+- [C27] ESPHome asks nothing on an update after a one-time setup of a name, a key and a safe mode, and its checks are silent while they pass · E https://esphome.io/components/ota/esphome/ read 2026-10-13 · caveat: how it checks the binary was not read
 
 ## Options <!-- CLAIMS -->
 <!-- Two or three per open decision: decision · option · cost · what it would prove · opinion (whose), then the tag
 and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether seen tasks get done · opinion (the facilitator's) · H ★C2 · caveat: none` -->
-- ⟨fill⟩ <!-- REQUIRED:options -->
-- Proposed no-gos and rabbit holes (proposals until the decider confirms): ⟨fill⟩ <!-- REQUIRED:nogos -->
+- Q2 D4 with D6 · H1, a yes per board that spark remembers, scoped to "update" or "erase" · a record only the person's answer writes · whether one yes per board keeps D4 · opinion (the user lens offers H1 with H3 as one pairing) · H ★C10 · caveat: the yes outlives a rewired board <!-- REQUIRED:options -->
+- Q2 · H2, the request in this turn is the yes · least code · whether a request is yes enough · opinion (the user lens rates it weakest) · H ★C2 · caveat: an agent can make the request, so the interface decides, a risk under D8
+- Q2 · H3, a yes only when a field differs, is unknown, or data is lost · silent checks and a manifest in the core · whether the stops fall where harm is · opinion (—) · H ★C3 · caveat: silent about wiring and revision
+- Q3 the yes · typed in the person's own terminal · small, in the core · whether Claude never erases alone · opinion (—) · H ★C10 · caveat: friction on every first write
+- Q3 · a token the look prints that the write needs back · small, in the core · whether a yes stays with one board and image · opinion (—) · H ★C9 · caveat: Claude can copy it
+- Q3 · prose, as today · none · nothing · opinion (—) · H ★C2 · caveat: logic in an interface, against D8
+- Q4 updates · per-file hashes in the passed log · one writer and one reader · whether an update keeps decision 1 · opinion (the tech lead lists it first) · H ★C11 · caveat: read, not built
+- Q4 · a labelled untested path beside deploy · a second core path · whether tries stay apart from deploys · opinion (—) · H ★C14 · caveat: untested code on a board
+- Q4 · full flash only · none · nothing · opinion (—) · H ★C20 · caveat: metered minutes per change
+- Q5 known · the host record only · a record · whether MAC and read facts suffice · opinion (the tech lead calls the MAC strongest, TLJ-29) · H ★C9 · caveat: blind to a board changed by another tool
+- Q5 · the record and a facts file after the flash · a file written and read back · whether a hand-changed board is caught · opinion (the user lens) · H ★C22 · caveat: a stale file is a claim
+- Q5 · the record and a facts file in the image · the image builder changes · whether the file is part of what passed · opinion (the PO assistant) · H ★C22 · caveat: no own sha256 inside it
+- Q11 the base · keep Standard until the bench shows a need · none · whether `ready` needs no PSRAM · opinion (the tech lead calls the boot likely) · H ★C6 · caveat: PSRAM unused
+- Q11 · add SPIRAM_OCT and a variant fact now · an entry, a field, a metered run · whether it serves the N16R8 · opinion (—) · H ★C6 · caveat: sha256 pinned after a first download
+- Q14 OTA · a later epic with its own discovery · none now · whether the cable suffices · opinion (the PO assistant and the tech lead) · H ★C12 · caveat: D5 asked for the journeys, which are here
+- Q14 · a spike now on files over Wi-Fi · a spike · whether WebREPL serves · opinion (—) · H ★C13 · caveat: the listener is behaviour spark does not write
+- Q15 P221 · the not-goal stands · none · nothing · opinion (the PO assistant, PO-29) · H ★C23 · caveat: against the PO's words
+- Q15 · lifted for the spike's reading · a read · what each platform needs · opinion (—) · H ★C23 · caveat: installs need their own yes
+- Q15 · lifted for the chain · a second writer and adapter · whether Arduino serves · opinion (—) · H ★C23 · caveat: waits for v2 (#94)
+- Proposed no-gos and rabbit holes (proposals until the decider confirms), one per line below · H the synthesis · caveat: none is decided unless a D is named <!-- REQUIRED:nogos -->
+  - No-go: a browser flasher · D D11, the PO, 2026-10-13 · caveat: revisit only for a first install by a person with no Python
+  - No-go: a write through an interface that skips the core gate (an MCP tool, a command page, a prompt) · D D8, the PO, 2026-10-13, applied by the synthesis · caveat: proposed
+  - No-go: a write to the first port found (`mpremote connect auto`, esptool's port search) · E `scripts/deploy.py` (★C1) · caveat: proposed
+  - No-go: the words "this is your board" · H `council/user-journeys.md` USERJ-2 · caveat: proposed. The words are "no difference found in what could be read"
+  - No-go: behaviour written by spark, such as an OTA receiver, WebREPL boot code or an identifying blink · E `AGENTS.md` "Spark exports facts, never behaviour" · caveat: proposed
+  - No-go: a chip table, and any eFuse write · E #144 "NOT: a chip table", `council/tech-lead-journeys.md` TLJ-29 · caveat: proposed
+  - Rabbit hole: a text filter on free-form `exec` code, and an interpreter OTA before anyone uses OTA · H `council/tech-lead-journeys.md` TLJ-37, POJ-28 · caveat: proposed
+  - Rabbit hole: a flash backup by default before every erase · H `council/tech-lead-journeys.md` TLJ-14 · caveat: proposed, Q17
 
 ## Riskiest assumption and its test
-- Riskiest: ⟨fill⟩ · proposed — ⟨whose opinion⟩, pending Q1 | D<n> <!-- REQUIRED:riskiest -->
-- Test · kind · pass line, dated before any result · proposed | D<n>: ⟨fill⟩ <!-- REQUIRED:test -->
+- Riskiest: A7, that the facts the core reads, with the person's word for the rest, catch the wrong-board cases that harm a breadboard project: another chip, another SKU, a swapped board. D4's gate stands on it, and nothing has read the PO's board yet (★C3, ★C25) · proposed — the synthesis's opinion, after POJ-26, pending Q1 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed | D<n>: A7's test at P228's read-only bench · kind: a bench test, read-only (electronics-firmware:R5), with nothing erased and no Wokwi minute · pass line, set 2026-10-13: the raw outputs, compared by hand, read same for chip and flash against the real record. Against a scratch copy changed to the N4, they read "flash differs". A swapped board, if one is at the desk, reads another MAC. Revision and wiring read unknown. The board's files are the same before and after · proposed — the synthesis's opinion, pending Q1 <!-- REQUIRED:test -->
 
 ## Questions
 <!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
@@ -61,7 +113,31 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: ⟨fill⟩ <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
+- Q2 · How do D4 and D6 hold together for a known board? · decides: what a known board's deploy asks, and what Claude does alone · options: H1 a remembered yes per board, H2 the request is the yes, H3 a yes only on a difference, or a pairing · unblocks: P229 · opinion (the user lens offers H1 with H3) · kind: decision · status: queued
+- Q3 · How does a yes bind: typed in the person's terminal, a token the write needs back, or prose? Does it bind to the port, MAC and image of this run? · decides: whether Claude can ever erase alone · options: typed, token, prose · unblocks: P219 · opinion (D8 puts the gate in the core) · kind: decision · status: queued
+- Q4 · May files go onto a board without a full flash, and what must a passed run name? · decides: whether J2 is in this epic, and the log format · options: per-file hashes, a labelled untested path, full flash only · unblocks: P222 · opinion (—) · kind: decision · status: queued
+- Q5 · What makes a board known: a host record, a facts file on the board, or both? A file inside the image, or after the flash? · decides: the known board's checks and the contract · options: as in Options · unblocks: P229, P232 · opinion (the lenses split, ★C22) · kind: decision · status: queued
+- Q6 · May spark keep a record per MAC with the person's names, in `.spark/` or the store? How does a person re-pin a replaced board? · decides: board memory · options: project, store, none · unblocks: P229, P230 · opinion (the lenses split, C24) · kind: decision · status: queued
+- Q7 · Is an unknown field a stop or a warning? May Claude pass ignore, and does ignore reach another chip? · decides: what an unreadable board allows · options: stop, the person's ignore, any ignore · unblocks: P219 · opinion (—) · kind: decision · status: queued
+- Q8 · Must every write name the port? · decides: the default of `deploy.py` · options: always, with two or more boards · unblocks: P219 · opinion (two lenses ask it) · kind: decision · status: queued
+- Q9 · Is the ladder accepted, with the gate as P219's first story before P215's flash half? · decides: Ready after P228 · options: P219 then P215, inside P215, a new card · unblocks: the map · opinion (the synthesis, from D4. The lenses order `--json` differently) · kind: decision · status: queued
+- Q10 · For another board with the same chip, what comes first: migrate, go ahead, or a general record? Does migrate accept a metered run? · decides: P219's second story · options: migrate, go ahead, general record · unblocks: P219 · opinion (—) · kind: decision · status: queued
+- Q11 · Standard or SPIRAM_OCT for the N16R8, and who picks a build? · decides: P231 and a second tools entry · options: as in Options · unblocks: P231 · opinion (—) · kind: decision · status: queued
+- Q12 · For live tries: read-only with each write behind a yes, or free `exec` with a yes? Firmware functions, session time, a signal's direction? · decides: P222's live scope · options: narrow verbs, free `exec`, reads only · unblocks: P222 · opinion (the tech lead, TLJ-37) · kind: decision · status: queued
+- Q13 · May P222 try a third-party MicroPython MCP plugin and belay, or only mpremote and WebREPL? · decides: P222's tools · options: spark's tools only, also the two · unblocks: P222 · opinion (the PO assistant flags unguarded writes, POJ-36) · kind: decision · status: queued
+- Q14 · Is OTA a later slice with its own discovery, and which OTA: files or a new interpreter? Is a Wi-Fi REPL wanted? · decides: P233 · options: as in Options · unblocks: P233 · opinion (—) · kind: decision · status: queued
+- Q15 · Does the not-goal "Arduino or ESP-IDF before a design pulls them" stand, lift for the spike, or lift for the chain? Arduino or PlatformIO first? · decides: J5's place · options: as in Options · unblocks: P221 · opinion (—) · kind: decision · status: queued
+- Q16 · What counts as "ready seen" and "really sure"? · decides: J1's pass line and the receipt · options: a command only, a command or the person, plus per-file hashes · unblocks: P215 · opinion (—) · kind: decision · status: queued
+- Q17 · Offer a flash backup before an erase: always, with other firmware, as an option, or never? · decides: the first flash's yes and its time · options: as asked · unblocks: P219 · opinion (—) · kind: decision · status: queued
+- Q18 · Which file names the project's board: `requirements.json` or `boards/active.json`? · decides: what the probe compares with · options: either, both must agree · unblocks: P219 · opinion (—) · kind: decision · status: queued
+- Q19 · Which boards must P219 handle: the two records, or any S3? · decides: the compare's rows · options: as asked · unblocks: P219 · opinion (—) · kind: decision · status: queued
+- Q20 · Is the look its own command, and may Claude run it unasked? · decides: what starts a look · options: on request, on its own · unblocks: P219 · opinion (—) · kind: decision · status: queued
+- Q21 · Two boards the person cannot tell apart: "unplug one and list again", or a blink, which is behaviour? · decides: the two-board journey's end · options: unplug, blink · unblocks: P230 · opinion (—) · kind: decision · status: queued
+- Q22 · May the board gain a Slice option for P218's later rows? · decides: where P229 to P233 sit · options: a new Slice, v1, none until filed · unblocks: items.md · opinion (—) · kind: decision · status: queued
+- Q23 · Which of the user lens's account questions will you answer? · decides: which frictions become E · options: all, some, none · unblocks: the usability row · opinion (—) · kind: account · status: queued
+- Q24 · Split P215 into a read-only half and a flash half? · decides: the cards of slice 0 · status: answered D12
+- Q25 · A browser flasher: for which rung, if any? · decides: an interface beside the CLI · status: answered D11, from council/po-assistant-web-flasher.md
 
 ## Decisions
 - D1 · the frame confirmed as proposed: TRIO, the search budget, the scope · the PO · 2026-10-13 · this session, verbatim: "Sounds good as you recommend it" · options considered: TRIO, FULL, OTA in scope
@@ -71,13 +147,20 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - D5 · the scope widens: two almost identical boards connected at once, updates over the air (OTA), and a protocol or workflow between spark and the board's firmware join the journeys to design · the PO · 2026-10-13 · this session, verbatim: "Thinking about all probable use  cases, what if there are two almost thee same boards connected to the computer, what about OTA, is there any protocol / workflow between the spark plugin and the boardd firmware or anything like that?" · options considered: OTA named only (the frame's open question)
 - D6 · when the board is known and correct, the deploy and the update are seamless, and spark is still really sure that everything is right · the PO · 2026-10-13 · this session, verbatim: "On the other hand if the board is known, we know its correct, the upgrade and deploy should be semless, but really being sure everything is ok" · it meets D4's "never without the person's yes": the council proposes how the two hold together
 - D7 · a journey where Claude reaches the board's REPL directly, over USB or over the same Wi-Fi, and tries things live on the board · the PO · 2026-10-13 · this session, verbatim: "And maybe ther's even a way to access the repl directly frm claude if the board is connected, or on the same wifi , maybe we/claude can try things live on the board, etc.." · it widens P222 (#204) with Wi-Fi
+- D8 · the work sticks to one well-architected core that various interfaces use: a CLI, a web server, MCP and others · the PO · 2026-10-13 · this session, verbatim: "And as usually remember that we want to stick to a well architected core system that various interfaces use, lie cli or web server, or MCP, etc.." · it restates AGENTS.md's principle "One core, many interfaces"
+- D9 · the use-case and journey diagrams go on the discovery's Miro board, step by step from the basic journeys · the PO · 2026-10-13 · this session, verbatim: "Oh and please ultimately make the diagrams and such for use cases and journeys etc in miro. but lets go step by step from the basic user journeys" · the board: https://miro.com/app/board/uXjVEaysFtc=/ (created 2026-10-13)
+- D10 · research a browser flasher for ESP32: is it useful, how it works, how it can be integrated · the PO · 2026-10-13 · this session, verbatim: "And please laso research and analyze the web version f a flashing tool for esp32, I think there was one. Would it be useful for us? How does it work? How can it be integrated ?" · the PO assistant writes council/po-assistant-web-flasher.md
+- D11 · no browser flasher for now: the Python esptool stays the one flashing tool, because a browser flasher adds nothing for the known board or for Claude (council/po-assistant-web-flasher.md, WF-9, WF-20) · the PO · 2026-10-13 · this session, verbatim: "we don't need to use the js flasher if its not adding anything to our case, the python tool is ok and easier at first right?" · options considered: Shape B (the core serves a local page with esptool-js), a hosted page
+- D12 · P215 splits: P228 (#215) is the read-only bench, in Build, and P215 (#196) keeps the flash half, back in Ready, last · the PO · 2026-10-13 · this session, verbatim: "and yes, its ok to splt it" · options considered: one bench card (P215 as filed)
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
-- ⟨fill⟩ | none <!-- REQUIRED:found -->
+- [C28] The record's VCC pad carries two sentences that disagree, and DFRobot's wiki gives a third reading · E `boards/firebeetle2-esp32s3.json:142`, `council/tech-lead.md` PHYS-8, #73 · caveat: it belongs to P139 (#73), not to deploy <!-- REQUIRED:found -->
+- [C29] The kept MicroPython header says DIO at 80 MHz, while the v1.29.0 S3 build file appends a QIO sdkconfig · E `council/tech-lead-journeys.md` TLJ-15, https://raw.githubusercontent.com/micropython/micropython/v1.29.0/ports/esp32/boards/ESP32_GENERIC_S3/mpconfigboard.cmake read 2026-10-13 · caveat: unexplained, and no deploy decision rests on it yet
+- [C30] `tools.find` accepts any installed esptool, not only its pin, so this Mac runs v3.3 · E `scripts/deploy.py:34`, `council/tech-lead.md` TL-4 · caveat: a `/spark:setup` matter, a proposal of its own
 
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
@@ -86,14 +169,15 @@ None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - move #196 to Build, Waiting on the PO, since 2026-10-13 · taken, D3
 - Ready reordered: P214, P139, P138, P202 · taken, D2
 - comment on #200 linking this brief · pending, at the PR
-- a Miro board for the map and options · pending, at step 4, D3
+- the Miro board for the map and options · created 2026-10-13, D3 and D9: https://miro.com/app/board/uXjVEaysFtc=/
+- P215 split: P228 (#215) is the read-only bench, in Build; P215 (#196) keeps the flash half, back in Ready, last · taken 2026-10-13, the PO: "and yes, its ok to splt it"
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-⟨the hand-off | not yet: what is unconfirmed⟩ <!-- REQUIRED:handoff -->
+not yet: the PO confirmed the frame (D1) and widened the scope (D4 to D7), but has not confirmed the jobs, a direction or the remaining risk. Q1 is open, and every assumption is unrated <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
