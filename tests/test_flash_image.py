@@ -146,6 +146,68 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
             flash_image.interpreter_path(None, self.project_on("no-such-board"))
         self.assertIn("no-such-board", str(said.exception))
 
+    def test_the_build_s_tool_is_found_in_the_project_s_lists(self):
+        import tools
+        project = self.project_on("xiao-esp32-c6")
+        found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
+        with mock.patch.object(tools, "merged", return_value=self.two_builds()) as lists, \
+                mock.patch.object(tools, "find", return_value=found) as asked:
+            flash_image.interpreter_path(None, project)
+        self.assertEqual(asked.call_args, mock.call("micropython-xiao-esp32c6", project))
+        self.assertEqual(lists.call_args, mock.call(project))
+
+    def test_an_entry_that_does_not_meet_the_contract_is_not_the_build(self):
+        import tools
+        lists = self.two_builds()
+        lists["tools"] = {"a-stray": {"micropython_port": "SEEED_XIAO_ESP32C6"}, **lists["tools"]}
+        found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
+        with mock.patch.object(tools, "merged", return_value=lists), \
+                mock.patch.object(tools, "find", return_value=found) as asked:
+            flash_image.interpreter_path(None, self.project_on("xiao-esp32-c6"))
+        self.assertEqual(asked.call_args[0][0], "micropython-xiao-esp32c6")
+
+    def test_a_broken_requirements_file_is_refused_not_given_the_default(self):
+        import tools
+        project = Path(tempfile.mkdtemp())
+        (project / "requirements.json").write_text("{not json")
+        with self.assertRaises(tools.ToolProblem) as said:
+            flash_image.interpreter_path(None, project)
+        self.assertIn("requirements.json", str(said.exception))
+
+    def image_from_main(self, project, argv, cwd=None):
+        import contextlib
+        import io
+        import os
+        import tools
+        c6, s3 = self.root / "c6.bin", self.root / "s3.bin"
+        c6.write_bytes(b"\xe9C6" + b"\x00" * 997)
+        s3.write_bytes(b"\xe9S3" + b"\x00" * 997)
+        real = tools.find
+        builds = {"micropython-xiao-esp32c6": c6, "firmware-image": s3, "micropython-esp32s3": s3}
+
+        def find(name, *rest, **kw):
+            return tools.Tool(name, None, {}, [str(builds[name])]) if name in builds else real(name, *rest, **kw)
+        here = os.getcwd()
+        try:
+            os.chdir(cwd or here)
+            with mock.patch.object(tools, "find", side_effect=find), contextlib.redirect_stdout(io.StringIO()), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                code = flash_image.main(argv + ["--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
+        finally:
+            os.chdir(here)
+        return code, (self.root / "out.bin").read_bytes()[:3]
+
+    def test_the_command_takes_the_build_of_the_project_it_is_given(self):
+        project = self.project_on("xiao-esp32-c6")
+        self.assertEqual(self.image_from_main(project, ["--project", str(project)]), (0, b"\xe9C6"))
+
+    def test_the_command_finds_its_project_from_a_folder_inside_it(self):
+        project = self.project_on("xiao-esp32-c6")
+        (project / "boards").mkdir()
+        (project / "boards" / "active.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
+        (project / "firmware").mkdir()
+        self.assertEqual(self.image_from_main(project, [], cwd=project / "firmware"), (0, b"\xe9C6"))
+
     def test_a_project_with_no_board_uses_the_firmware_image_role(self):
         import tools
         found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])

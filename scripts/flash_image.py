@@ -76,16 +76,27 @@ def board_build(project):
     The MicroPython build the project's board names (its record's `micropython_port`), or None when the project names
     no board. A named board whose record cannot give its build is a ToolProblem, never the default build.
     """
-    try:
-        board = json.loads((Path(project) / "requirements.json").read_text()).get("board")
-    except (OSError, ValueError, AttributeError):
+    requirements = Path(project) / "requirements.json"
+    if not requirements.is_file():
         return None
+    try:
+        board = json.loads(requirements.read_text()).get("board")
+    except (OSError, ValueError, AttributeError) as cannot:
+        raise tools.ToolProblem("%s cannot be read, so its board's MicroPython build is not known: %s" % (requirements, cannot))
     if not board:
         return None
     try:
         return boards.get(Path(project), "micropython_port", board)
     except boards.BoardError as cannot:
         raise tools.ToolProblem("the board %s names no MicroPython build that can be read: %s" % (board, cannot))
+
+
+def project_here():
+    """The project this runs in: the nearest folder up with boards/active.json or .spark/, else the current folder."""
+    try:
+        return boards.project_root()
+    except boards.BoardError:
+        return Path(".")
 
 
 def interpreter_path(given, project=None):
@@ -110,16 +121,17 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--micropython", type=Path, help="the interpreter .bin from micropython.org for the board's chip; "
                         "omitted, the tools list's download for the build the project's board names")
-    parser.add_argument("--project", type=Path, default=Path("."),
-                        help="the project whose requirements.json names the board (default: here); with no board, the "
-                        "tools list's firmware-image download")
+    parser.add_argument("--project", type=Path,
+                        help="the project whose requirements.json names the board (default: the nearest folder up from "
+                        "here with boards/active.json or .spark/, else here); with no board, the tools list's "
+                        "firmware-image download")
     parser.add_argument("--files", required=True, type=Path, help="the directory whose files go into the image, as they are")
     parser.add_argument("--config", help="JSON written as /config.json into the image")
     parser.add_argument("-o", "--output", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
         tools.find("littlefs")
-        interpreter = interpreter_path(args.micropython, args.project)
+        interpreter = interpreter_path(args.micropython, args.project or project_here())
     except tools.ToolProblem as missing:
         print("flash_image.py: %s" % missing, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
