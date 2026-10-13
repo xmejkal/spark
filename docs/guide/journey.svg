@@ -5,8 +5,8 @@
 <text x="48" y="140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The spark journey, and how far each step worked in the runs up to 2026-10-12.</text>
 <circle cx="58" cy="180" r="10" fill="#2dc75c"/>
 <text x="78" y="188" font-size="22" font-weight="normal" fill="#595959" text-anchor="start">works: it ran end to end for the docs</text>
-<circle cx="548" cy="180" r="10" fill="#ffdc4a"/>
-<text x="568" y="188" font-size="22" font-weight="normal" fill="#595959" text-anchor="start">partly: it stops before its goal, or part of it was not run</text>
+<circle cx="547" cy="180" r="10" fill="#ffdc4a"/>
+<text x="567" y="188" font-size="22" font-weight="normal" fill="#595959" text-anchor="start">partly: it stops before its goal, or part of it was not run</text>
 <line x1="227" y1="276" x2="1373" y2="276" stroke="#b0b0b0" stroke-width="4"/>
 <circle cx="227" cy="276" r="36" fill="#ffdc4a"/>
 <text x="227" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">1</text>
