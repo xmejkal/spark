@@ -45,7 +45,7 @@ board or another build appears.
 ## Delta to the product's map <!-- REQUIRED:spark-process:map-delta -->
 <!-- The rows to add or change in the repository's own story map file, in that file's table shape, with its journey
 step numbers; proposed, not applied. "n/a — no map file" is allowed. -->
-Proposed for `scrum/STORY_MAP.md`, not applied:
+Applied to `scrum/STORY_MAP.md` in PR #221 (2026-10-13). The slices map to releases there: slice 0 is v1.0, slice 1 is v1.1, slices 2 and 3 are v1.2. The delta as proposed:
 
 - The journey table, step 10 Breadboard, gap cell. Today: "flashing the board (P192) and the first walk to a lit LED
   (P100, round A)". Proposed: "the safe deploy: the read-only bench (P228), the check and the gate in the core (P219),
