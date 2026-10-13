@@ -2,7 +2,7 @@
 
 Card: [P219 (#201)](https://github.com/xmejkal/spark/issues/201), under the epic [P218 (#200)](https://github.com/xmejkal/spark/issues/200).
 Status: the plan after its six lenses and the refuter (rows in [the council file](observations/2026-10-13-p219-council.md)),
-for the PO's yes. Nothing is built.
+for the PO's yes. His answers to its two questions are at the end. Nothing is built.
 
 ## The short version
 
@@ -23,7 +23,7 @@ and the person can still go on where spark is not sure. Four PRs, each one worki
 - **the yes**: the person types `yes` in their own terminal. Claude must not type it. A program can fake a terminal,
   so the barrier is a rule plus `deploy.py` kept out of Claude's `allowed-tools`, so the person approves the command.
 - **token**: a short code that the look prints, in two halves: one from the board's MAC, one from the image. It shows
-  that a look was made on this board for this image. It is not the yes, and it is not a secret (see PO question 1).
+  that a look was made on this board for this image. It is not the yes, and it is not a secret (the PO's answer 1).
 
 ### What the person sees
 
@@ -124,10 +124,10 @@ classDiagram
   with its port and serial number from `mpremote devs` (the MAC on a native-USB board, `None` on a CH340), and the
   command to copy. It never reads every board, since each read restarts a board. It reads the record named by `requirements.json`'s `board`. A board
   with no record stops and points to P230 (D36).
-- `Report.verdict` is one of: all match; a warning (a field `unknown`, or the flash `differs`, see PO question 2);
-  a stop (another chip). `Report.token()` is two halves of 4 hex digits: sha256 of the MAC, and sha256 of the image
+- `Report.verdict` is one of: all match. A warning: a field `unknown`, or the flash `differs` but holds the image.
+  A stop: another chip, or a flash smaller than the image (the PO's answer 2). `Report.token()` is two halves of 4 hex digits: sha256 of the MAC, and sha256 of the image
   file. So the gate can say which one changed. The port is not in it, because a native-USB board can come back on
-  another port name after a reset (PO question 1). There is no token when the MAC cannot be read, when there is no
+  another port name after a reset (the PO's answer 1). There is no token when the MAC cannot be read, when there is no
   image yet, or when no passed run names the image: the look still prints the fields, and says why there is no token.
 
 `scripts/deploy_gate.py`, the only way to the erase (D8):
@@ -149,6 +149,7 @@ exit with `outcomes.status_of`: a field that differs is a problem, and a field t
 | look: a field unknown | 2 | `1 field unknown (flash): deploy.py will ask you to accept it.` then the token |
 | look: a field differs | 1 | `the flash differs: 8 MB, the record says 16 or 4. deploy.py will ask you to accept it.` then the token |
 | look: no MAC, no image, or an image no passed run names | 2 | the fields, then `no token: <why>` |
+| look: the flash cannot hold the image | 1 | `the flash is 4 MB, the image needs 8 MB: deploy.py will refuse.` no token |
 | look: another chip | 1 | `this board is an esp32s3, the project is for an esp32c6: deploy.py will refuse.` no token |
 | no board on USB | 2 | `no board found. Plug it straight into the computer with a data cable, not a hub that gives power only.` |
 | cannot connect | 2 | `could not read the board on <port>.` then the BOOT hint that `deploy.py` already has |
@@ -236,14 +237,13 @@ The MAC in the store and a quiet repeat flash (v1.1). Migrate and another board'
 `ready` and the facts file on the board (P215, D42), and with it D34's offer to back up firmware spark did not write.
 `--json` and `/spark:deploy` (P213). PSRAM. Two boards told apart by a blink (D38). A USB id in the record.
 
-## Questions for the PO
+## The PO's answers, 2026-10-13
 
-1. The token (D19). D19 binds it to the port, the MAC and the image. The plan drops the port, because a native-USB
-   board can come back on another port name after a reset, and a token would then fail for no reason you can see.
-   The gate also looks again itself, and Claude can copy the token, so the yes in the terminal is the real guard.
-   Three options: the token on the MAC and the image (the plan), the token as D19 says with the port, or no token
-   (about 40 lines and 4 tests less).
-2. A flash size that differs. With the two records it cannot happen: the XIAO's flash is inside the chip, and the
-   FireBeetle record allows 16 and 4. It can happen with another board of the same chip, for example an ESP32-S3
-   DevKitC with 8 MB on a FireBeetle project. A warning that your yes accepts,
-   or a stop? The plan makes it a warning, because you asked that the check can be ignored. Another chip stays a stop.
+His words: *"have the council decide, but I think that if the flash or psram or whatever is worse so it wouldn't fit
+or run, then stop, otherwise just a warning. Unique token, yes."*
+
+1. The token stays, unique to this board and this image. The council's binding holds: the MAC and the image, not the
+   port (the tech lead and the refuter, AT75 and AT84), because a port name can change after a reset.
+2. A field that is worse, so that the firmware would not fit or run, is a stop. Any other difference is a warning that
+   the person's yes accepts. For the flash: a read size smaller than the image is a stop, and a size that differs from
+   the record but holds the image is a warning. PSRAM follows the same rule when it enters in v1.2.
