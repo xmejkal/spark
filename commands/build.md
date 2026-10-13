@@ -271,7 +271,7 @@ deploy.py flashes only an image that passed. The image is the one `sim/wokwi.tom
 its sha256 with `verdict: passed`, and no log may name it with another verdict. A log from an older spark names no image,
 so run the scenario again. If a file in `firmware/` changed after the run, deploy.py says so: the board gets the image
 that passed, not the change. A run log that tested another image refuses the flash, because its scenario never tested
-this one. Run that scenario again, or delete the log if its scenario is gone. `--ignore-older-runs` flashes anyway and
+this one. Run that scenario again, or, after the person says yes, delete the log if its scenario is gone. A dry run refuses too. `--ignore-older-runs` flashes anyway and
 names the log in a note. The chip comes from the board in `requirements.json`, and esptool refuses a board with
 another chip.
 

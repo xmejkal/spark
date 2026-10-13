@@ -167,6 +167,34 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
         self.assertIn("  note: s.log tested another image, not this one: run that scenario again to test this one",
                       said.splitlines())
 
+    def test_ignore_older_runs_never_flashes_an_image_whose_own_run_failed(self):
+        self.run_the_scenario(exit_code=1)
+        code, _, problems, ran = self.deploy("--ignore-older-runs")
+        self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
+        self.assertIn("s.log did not pass on this image", problems)
+
+    def test_a_real_run_refuses_before_any_command(self):
+        self.run_two_scenarios()
+        code, _, problems, ran = self.deploy()
+        self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
+        self.assertIn("pass --ignore-older-runs", problems)
+
+    def test_plan_refuses_by_default(self):
+        self.run_two_scenarios()
+        with mock.patch.object(tools, "find", side_effect=found), self.assertRaises(deploy.DeployProblem) as said:
+            deploy.plan(self.project)
+        self.assertIn("--ignore-older-runs", str(said.exception))
+
+    def test_the_log_refusal_comes_before_the_tools(self):
+        self.run_two_scenarios()
+
+        def missing(name, *args, **kwargs):
+            raise tools.ToolProblem("flasher (esptool) is not installed")
+        code, _, problems, _ = self.deploy("--dry-run", find=missing)
+        self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
+        self.assertIn("tested another image", problems)
+        self.assertNotIn("not installed", problems)
+
     def test_several_logs_go_in_one_sentence_and_a_log_from_an_older_spark_is_one_of_them(self):
         self.run_the_scenario()
         runs = self.project / "sim" / "runs"

@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/deploy.py",
+  "name": "refuse-never",
+  "find": "if other and not ignore_older_runs:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "refuse-always",
+  "find": "if other and not ignore_older_runs:",
+  "replace": "if other:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "inverted-flag",
+  "find": "if other and not ignore_older_runs:",
+  "replace": "if other and ignore_older_runs:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "note-dropped",
+  "find": "    notes += [other] if other else []\n",
+  "replace": "    notes += []\n"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "flag-not-passed",
+  "find": "plan(args.project, args.port, args.ignore_older_runs)",
+  "replace": "plan(args.project, args.port)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "flag-default-true",
+  "find": "ignore_older_runs=False):",
+  "replace": "ignore_older_runs=True):"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "store-true-false",
+  "find": "\"--ignore-older-runs\", action=\"store_true\"",
+  "replace": "\"--ignore-older-runs\", action=\"store_false\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "way-out-dropped",
+  "find": "raise DeployProblem(other + OLDER_RUNS_WAY_OUT)",
+  "replace": "raise DeployProblem(other)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "way-out-no-flag",
+  "find": "To flash anyway, pass --ignore-older-runs, and ",
+  "replace": "To flash anyway, pass nothing, and "
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "check-after-tools",
+  "find": "    other = tested_another(image, runs)\n    if other and not ignore_older_runs:\n        raise DeployProblem(other + OLDER_RUNS_WAY_OUT)\n    chip = chip_of(project)\n",
+  "replace": "    chip = chip_of(project)\n    other = tested_another(image, runs)\n"
+ }
+]
