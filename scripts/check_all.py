@@ -55,8 +55,7 @@ import design  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
-from outcomes import OK, PROBLEMS, COULD_NOT_RUN, EXIT_FOR, answer, status_of  # noqa: E402
-SKIPPED = "skipped"   # check_all's own fourth word: not asked for, which is not could-not-run
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, answer, status_of  # noqa: E402
 
 
 class Check:

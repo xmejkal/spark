@@ -72,7 +72,7 @@ import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
-from outcomes import OK, PROBLEMS, COULD_NOT_RUN, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 
 #: The design the chain is proven against when nobody names one. A motor driver, a sensor on a
 #: bus, and the power inlet that supplies the rail the modules only consume — the smallest set
@@ -84,11 +84,6 @@ BUILD_TIMEOUT_S = 300
 
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
 PIN_MODULE = Path("firmware") / "pins.py"
-
-
-#: A stage that does not apply to this design (P236, the board alone). It is never ok: the verdict ignores it, and
-#: the last line says what ran.
-SKIPPED = "skipped"
 
 
 class Stage:
@@ -580,6 +575,11 @@ def verdict(stages):
         unchecked=[s for s in stages if s.status == COULD_NOT_RUN])]
 
 
+def vouches_for_a_build(stages):
+    """Whether the store may note that the board was built: the chain ran end to end, and no stage was skipped (P236)."""
+    return verdict(stages) == EXIT_OK and not any(stage.status == SKIPPED for stage in stages)
+
+
 def left_off(requirements):
     """
     The needs the requirements file says it leaves off the board (C-2: the note `parts.py --requirements` writes, `unserved`),
@@ -680,7 +680,7 @@ def main(argv=None):
 
     # The history says a build ran end to end (§5.7) — written here, by the chain itself, never on anyone's say-so.
     # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.
-    if handed is not None and verdict(stages) == EXIT_OK:
+    if handed is not None and vouches_for_a_build(stages):
         try:
             parts.note_built(handed)
         except (store.StoreProblem, OSError) as unrecorded:
@@ -732,6 +732,19 @@ def _kept(workdir, destination):
     except OSError as refused:
         return [{"file": str(destination), "did": "not kept", "why": str(refused),
                  "line": "not kept: %s — %s" % (destination, refused)}]
+
+
+def drop_an_older_build(destination, stages):
+    """
+    For the board alone (P236): an earlier build's `dist/` describes another board, and every check reads it, so it
+    is removed and said, as the breadboard sheet is. Returns the kept entries, none when there is nothing to remove.
+    """
+    old = Path(destination) / "dist"
+    if not any(stage.status == SKIPPED for stage in stages) or not old.is_dir():
+        return []
+    shutil.rmtree(old)
+    why = "board only: no board was built, and it described an earlier build"
+    return [{"file": str(old), "did": "removed", "why": why, "line": "removed %s: %s" % (old, why)}]
 
 
 def keep_breadboard(requirements, destination, stages=()):
@@ -826,6 +839,7 @@ def report(stages, args, workdir=None, requirements=None):
     kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
     if kept is not None and getattr(args, "requirements", None):
         kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
+        kept += drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
     simulation = keep_simulation(workdir, simulation_dir(args)) if workdir is not None and simulation_dir(args) else None
     if simulation is not None:

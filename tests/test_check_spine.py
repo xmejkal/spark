@@ -955,6 +955,33 @@ class TheBoardAloneTest(unittest.TestCase):
         kept = check_spine.keep_breadboard(workdir / "requirements.json", workdir, stages)
         self.assertEqual(kept["line"], "no breadboard sheet: board only: nothing to wire")
 
+    def test_the_store_is_never_told_a_board_alone_was_built(self):
+        _, stages = self.run_alone()
+        self.assertFalse(check_spine.vouches_for_a_build(stages))
+        self.assertTrue(check_spine.vouches_for_a_build([check_spine.Stage("build", check_spine.OK)]))
+
+    def test_an_earlier_build_s_dist_is_removed_and_said(self):
+        workdir, stages = self.run_alone()
+        (workdir / "dist" / "board").mkdir(parents=True)
+        kept = check_spine.drop_an_older_build(workdir, stages)
+        self.assertEqual([entry["did"] for entry in kept], ["removed"])
+        self.assertFalse((workdir / "dist").exists())
+        self.assertEqual(check_spine.drop_an_older_build(workdir, [check_spine.Stage("build", check_spine.OK)]), [])
+
+    def test_a_string_true_is_not_board_only(self):
+        _, stages = self.run_alone(board_only="true")
+        self.assertEqual((stages[-1].name, stages[-1].status), ("parts", check_spine.COULD_NOT_RUN))
+
+    def test_the_json_says_ok_and_each_skipped_stage(self):
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "board_only": True}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_spine.main([str(workdir / "requirements.json"), "--json"])
+        said = json.loads(out.getvalue())
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual([s["status"] for s in said["stages"]].count("skipped"), 4)
+
     def test_board_only_with_parts_is_refused(self):
         _, stages = self.run_alone(parts=["tactile-button"])
         self.assertEqual((stages[-1].name, stages[-1].status), ("parts", check_spine.COULD_NOT_RUN))
