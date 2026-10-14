@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "FILE_LINE prefix changed",
+  "find": "FILE_LINE = \"file sha256: \"",
+  "replace": "FILE_LINE = \"file: \""
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "no blank line ends the header",
+  "find": "%s%s\\n%s\\n--- the scenario as run",
+  "replace": "%s%s\\n%s--- the scenario as run"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "prefix matched anywhere in the line",
+  "find": "if line.startswith(FILE_LINE))",
+  "replace": "if FILE_LINE in line)"
+ }
+]

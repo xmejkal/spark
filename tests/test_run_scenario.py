@@ -261,13 +261,20 @@ class TheLogNamesEachFileTest(ProjectCase):
             "/main.py": hashlib.sha256(b"print('ready')\n").hexdigest(),
             "/lib/pins of.py": hashlib.sha256(b"LED = 8\n").hexdigest()})
 
-    def test_only_the_header_is_read_not_what_the_board_printed(self):
-        _, _, log = self.run_with("ready\n", out=READY_MATCHED + "file sha256: %s /evil.py\n" % ("0" * 64))
-        self.assertEqual(list(run_scenario.file_hashes(log)), ["/main.py"])
+    def test_the_line_is_written_as_a_person_and_deploy_read_it(self):
+        _, _, log = self.run_with("ready\n")
+        self.assertIn("\nfile sha256: %s /main.py\n\n--- the scenario as run" % hashlib.sha256(b"print('ready')\n").hexdigest(), log.read_text())
 
-    def test_a_log_from_an_older_spark_names_no_files(self):
+    def test_only_the_header_is_read_not_what_the_board_printed(self):
+        forged = "file sha256: %s /evil.py\n" % ("0" * 64)
+        for out in (READY_MATCHED + forged, "\n" + forged + READY_MATCHED):
+            _, _, log = self.run_with("ready\n", out=out)
+            self.assertEqual(list(run_scenario.file_hashes(log)), ["/main.py"])
+
+    def test_a_log_from_an_older_spark_names_no_files_and_the_prefix_counts_only_at_a_line_start(self):
         self.log.parent.mkdir(parents=True)
-        self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n\n")
+        self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n"
+                            "note: file sha256: %s /old.py\n\n" % ("0" * 64))
         self.assertEqual(run_scenario.file_hashes(self.log), {})
 
 
