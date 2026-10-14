@@ -64,6 +64,16 @@ class BoardConnectionTest(unittest.TestCase):
                 step(connection(Mpremote(fails=dropped)))
             self.assertIn("SerialException", str(said.exception))
 
+    def test_a_failure_with_no_traceback_is_the_board_unreachable_with_its_words(self):
+        with self.assertRaises(board_connection.BoardUnreachable) as said:
+            connection(Mpremote(fails=("", "failed to access /dev/ttyX\n"))).run_code("pass")
+        self.assertEqual(str(said.exception), "failed to access /dev/ttyX")
+
+    def test_a_failure_that_prints_only_to_stdout_and_no_traceback_is_the_board_unreachable(self):
+        with self.assertRaises(board_connection.BoardUnreachable) as said:
+            connection(Mpremote(fails=("b''\n", ""))).run_code("pass")
+        self.assertEqual(str(said.exception), "b''")
+
     def test_a_copy_that_fails_with_a_board_traceback_is_still_unreachable(self):
         with self.assertRaises(board_connection.BoardUnreachable):
             connection(Mpremote(fails=("Traceback (most recent call last):\nOSError: 28\n", ""))).copy_to_board("/tmp/x", "x")
