@@ -571,7 +571,8 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).
    If the board waits in its download mode, deploy.py prints "press the board's R (reset) button once" and waits 60 s
    for the port to go and come back under the same name. Relay that line to the person at once, because only a hand on the board can do it
-   ([P243](https://github.com/xmejkal/spark/issues/252)).
+   ([P243](https://github.com/xmejkal/spark/issues/252)). The board log keeps what the port printed, or `nothing`
+   ([P244](https://github.com/xmejkal/spark/issues/255)).
    Relay deploy.py's line as printed: it ends with mpremote's own words, and the board log under `sim/runs/board/`
    keeps all mpremote printed. Never run mpremote by hand to turn an unknown into a pass.
 

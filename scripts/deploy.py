@@ -72,7 +72,8 @@ that stops with an error is not seen. If mpremote cannot reach the board, for ex
 the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
 If ready is unknown and the passed log names files, deploy.py reads the port with DTR and RTS off. If it reads `waiting for download`, the
 board waits in its download mode: deploy.py asks you to press the board's R (reset) button once, waits %d s for the
-port to go and come back under the same name, and reads the board again.
+port to go and come back under the same name, and reads the board again. What the port printed, or `nothing`, goes in
+the board log.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
@@ -222,16 +223,18 @@ def main(argv=None, run=None, consent=None, probe=None):
     if verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
         probe = probe or download_mode.DownloadModeProbe.for_tool(tools.find("board-shell", args.project),
                                                                     report.port, run)
-        waits, console = probe.waits_in_download_mode() if probe else (False, "")
-        if waits:
-            print("  %s" % download_mode.PRESS_RESET, flush=True)
-            reset = probe.wait_for_reset()
-            if reset:
-                facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
-            else:
-                sentence = download_mode.NO_RESET
-            said = "console with DTR and RTS off: %s\n%s\n%s" % (
-                console.strip(), "reset seen" if reset else "no reset", said)
+        if probe:  # P244: what the console said goes in the log, download mode or not
+            waits, console = probe.waits_in_download_mode()
+            heard = "console with DTR and RTS off: %s\n" % (console.strip() or "nothing")
+            if waits:
+                print("  %s" % download_mode.PRESS_RESET, flush=True)
+                reset = probe.wait_for_reset()
+                if reset:
+                    facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
+                else:
+                    sentence = download_mode.NO_RESET
+                heard += "reset seen\n" if reset else "no reset\n"
+            said = heard + said
     log = keep_board_log(args.project, report.port, image, verdict, sentence, said, facts_line)
     print("  %s\n  %s: %s\n  board log: %s" % (facts_line, verdict, sentence, log))
     try:
