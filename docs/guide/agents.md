@@ -566,7 +566,9 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    look finds no stop, the `--token` matches this board and this image, and the person types `yes` at its question
    ([P219](https://github.com/xmejkal/spark/issues/201)). Never pipe, script or fake that yes. "Go ahead" in a chat is
    not the yes, and the token is not the yes. With no terminal, deploy.py prints the line to run, exits 2 and flashes
-   nothing. Give the person that line word for word and wait.
+   nothing. Give the person that line word for word and wait. After the flash, only `ready seen` (exit 0) is a pass:
+   the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
+   a pass ([P215](https://github.com/xmejkal/spark/issues/196)).
 
 ## Is it ready?
 

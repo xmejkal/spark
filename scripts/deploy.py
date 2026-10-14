@@ -9,8 +9,9 @@ Put the flash image that passed the simulation onto the board (P192).
 The image is the one sim/wokwi.toml names. run_scenario.py writes it, MicroPython and the project's firmware/ in one
 flash image, and tests it: each run's log names the image's sha256. This flashes the image only when a run that passed
 names it and no run with another verdict does. esptool erases the flash and writes the image at 0x0, where the
-simulator loaded it. Then mpremote's REPL shows the board start: press Ctrl-C, then Ctrl-D, and the firmware prints
-`ready` (the ready contract, commands/build.md).
+simulator loaded it. Then deploy.py reads the board with mpremote (board_ready.py, P215): each file's sha256 against the
+passed run's log, then the firmware's start, which prints `ready` (the ready contract, commands/build.md). The board's
+log goes to sim/runs/board/.
 
 Before the erase, deploy.py looks at the board as look.py does (P219). It refuses a stop, a token that is not this
 board's and this image's, and a person who does not type yes in their own terminal (deploy_gate.py). The chip comes from
@@ -19,6 +20,8 @@ esptool and mpremote are the tools list's `flasher` and `board-shell`, which /sp
 """
 
 import argparse
+import datetime
+import hashlib
 import json
 import shlex
 import subprocess
@@ -26,13 +29,15 @@ import sys
 from pathlib import Path
 
 import board_look
+import board_ready
 import boards
 import deploy_gate
 import look
 import tools
-from image_check import (BOOT_HINT, DeployProblem, image_of, run_logs, runnable, tested_another,  # noqa: F401
-                         untested)
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
+from image_check import (BOOT_HINT, DeployProblem, image_of, passed_log, run_logs, runnable,  # noqa: F401
+                         tested_another, untested)
+from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from run_scenario import file_hashes
 
 #: Where the image goes: it is the whole flash from its first byte, as the simulator loaded it.
 IMAGE_OFFSET = "0x0"
@@ -54,8 +59,12 @@ asks in your terminal, naming every warning: type yes to accept them and erase. 
 A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. "Go
 ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
-Exit codes: 0 done (with --dry-run: printed), 1 the look found a stop, 2 it could not run, you answered no or there was
-no terminal, and the sentence says why."""
+After the flash it reads the board: ready seen means the board's files match the passed run's sha256s and the firmware
+printed `ready` within %d s. The board's log goes to sim/runs/board/. If mpremote cannot reach the board, for example
+because its port changed after the flash, ready is unknown, never seen.
+
+Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
+came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % board_ready.READY_WAIT
 
 
 def newer_files(project, image):
@@ -81,13 +90,23 @@ def flash_commands(flasher, chip, image, port=None):
 
 
 def watch_command(shell, port=None):
-    """mpremote's REPL on the board, where the person sees the firmware print `ready`."""
-    return runnable(shell) + (["connect", port] if port else []) + ["repl"]
+    """mpremote's REPL on the board, where the person sees the firmware print `ready`. `shell` is mpremote's command."""
+    return shell + (["connect", port] if port else []) + ["repl"]
+
+
+def keep_board_log(project, port, image, verdict, sentence, said):
+    """The board's log after a flash, in sim/runs/board/ beside the run logs (whose *.log glob does not reach it)."""
+    now = datetime.datetime.now()
+    log = project / "sim" / "runs" / "board" / ("%s.log" % now.strftime("%Y-%m-%dT%H-%M-%S"))
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text("# deploy %s on %s\nimage sha256: %s\n%s: %s\n\n%s\n" % (
+        now.isoformat(timespec="seconds"), port, hashlib.sha256(image.read_bytes()).hexdigest(), verdict, sentence, said))
+    return log
 
 
 def plan(project, port=None, ignore_older_runs=False):
     """
-    (the flash commands, the watch command, notes) for this project. Nothing runs here. A DeployProblem or a
+    (the flash commands, mpremote's command, notes) for this project. Nothing runs here. A DeployProblem or a
     tools.ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
     A run log that tested another image refuses the flash, unless `ignore_older_runs` makes it a note.
     """
@@ -105,7 +124,7 @@ def plan(project, port=None, ignore_older_runs=False):
     notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
              "scenario again to test it." % ", ".join(changed)] if changed else []
     notes += [other] if other else []
-    return flash_commands(flasher, chip, image, port), watch_command(shell, port), notes
+    return flash_commands(flasher, chip, image, port), runnable(shell), notes
 
 
 def again(args, port):
@@ -133,7 +152,7 @@ def main(argv=None, run=None, consent=None):
     args = parser.parse_args(argv)
     run = run or subprocess.run
     try:
-        commands, watch, notes = plan(args.project, args.port, args.ignore_older_runs)
+        commands, shell, notes = plan(args.project, args.port, args.ignore_older_runs)
     except (DeployProblem, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
@@ -142,14 +161,16 @@ def main(argv=None, run=None, consent=None):
     if args.dry_run:
         print("\n".join("  would run: %s" % shlex.join(command) for command in commands))
         print("  board: not looked at: run look.py")
-        print("  " + WATCH % shlex.join(watch))
+        print("  " + WATCH % shlex.join(watch_command(shell, args.port)))
         return EXIT_OK
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
         print("\n".join(look.lines(report, token=False)), flush=True)
         deploy_gate.gate_open(report, args.token, consent or deploy_gate.TerminalConsent(again(args, report.port)),
                               image_of(args.project).relative_to(args.project))
-        commands, watch, _ = plan(args.project, report.port, args.ignore_older_runs)
+        commands, shell, _ = plan(args.project, report.port, args.ignore_older_runs)
+        if report.token() != args.token:  # AT116: the image changed while the person answered
+            raise DeployProblem("the image changed after your yes: run look.py again. not flashed.")
     except (board_look.LookStop, DeployProblem, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
@@ -163,8 +184,15 @@ def main(argv=None, run=None, consent=None):
         except (OSError, subprocess.CalledProcessError) as failed:
             print("deploy.py: `%s` failed (%s): %s" % (shlex.join(command), failed, BOOT_HINT), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
-    print("  " + WATCH % shlex.join(watch))
-    return EXIT_OK
+    image = image_of(args.project)
+    verdict, sentence, said = board_ready.BoardReady(shell, report.port, run).check(
+        file_hashes(passed_log(image, args.project / "sim" / "runs")))
+    log = keep_board_log(args.project, report.port, image, verdict, sentence, said)
+    print("  %s: %s\n  board log: %s" % (verdict, sentence, log))
+    if verdict == board_ready.UNKNOWN:
+        print("  " + WATCH % shlex.join(watch_command(shell, report.port)))
+        return EXIT_COULD_NOT_RUN
+    return EXIT_OK if verdict == board_ready.SEEN else EXIT_PROBLEMS
 
 
 if __name__ == "__main__":

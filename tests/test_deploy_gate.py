@@ -2,6 +2,7 @@
 and the person types yes in their own terminal."""
 
 import contextlib
+import hashlib
 import io
 import shlex
 import subprocess
@@ -18,6 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import deploy  # noqa: E402
 import deploy_gate  # noqa: E402
+import flash_image  # noqa: E402
 import tools  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
@@ -45,6 +47,24 @@ class Stream(io.StringIO):
 
 
 class GateCase(LookCase):
+    #: What the fake board prints when its firmware starts, or the exception mpremote raises then.
+    prints = "ready\n"
+    #: The fake board's files {path: bytes}, or None for the firmware the image holds.
+    files_on_board = None
+    #: The exception mpremote raises when it hashes the board's files, or None.
+    unread = None
+
+    def on_board(self, command):
+        """What mpremote exec prints on the fake board: the firmware's start, or a line per file."""
+        if command[-1] == "import main":
+            if isinstance(self.prints, Exception):
+                raise self.prints
+            return done(self.prints)
+        if self.unread:
+            raise self.unread
+        files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
+        return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
+
     def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command."""
         def run(command, **kw):
@@ -53,6 +73,8 @@ class GateCase(LookCase):
                 return done(devs_text or data(devs))
             if "flash_id" in command:
                 return done(text or data(esptool))
+            if "exec" in command:
+                return self.on_board(command)
             if fails:
                 raise subprocess.CalledProcessError(2, command)
             return done("")
@@ -85,7 +107,7 @@ class TheGateTest(GateCase):
         self.assertEqual(self.flashed(), ["erase_flash", str(self.image)])
         self.assertTrue(all("/dev/cu.usbmodem101" in c for c in self.ran if "erase_flash" in c or "write_flash" in c))
         self.assertIn("erase ALL of this board's flash", consent.asked[0])
-        self.assertIn("then, to see it start", said)
+        self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the run that passed", said)
 
     def test_the_answer_no_erases_nothing(self):
         self.run_the_scenario()
@@ -190,6 +212,88 @@ class TheGateTest(GateCase):
         code, said, _ = self.deploy("--dry-run")
         self.assertEqual((code, self.ran), (0, []))
         self.assertIn("  board: not looked at: run look.py", said.splitlines())
+
+
+class TheBoardAfterTheFlashTest(GateCase):
+    """P215 step 2 (D33): after the flash, ready is seen only when the board's files match and the firmware says it."""
+
+    def flash(self, consent=None):
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), consent=consent or Says(True))
+
+    def test_ready_seen_is_kept_in_a_board_log_beside_the_run_logs_and_the_next_look_ignores_it(self):
+        code, said, _ = self.flash()
+        logs = list((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual((code, len(logs)), (0, 1))
+        self.assertIn("board log: %s" % logs[0], said)
+        self.assertIn("ready seen: ", logs[0].read_text())
+        self.assertIn("image sha256: %s" % hashlib.sha256(self.image.read_bytes()).hexdigest(), logs[0].read_text())
+        self.assertIsNotNone(self.look().token())
+
+    def test_a_file_that_differs_on_the_board_is_named_and_ready_is_not_seen(self):
+        self.files_on_board = {"/main.py": b"print('old')\n"}
+        code, said, _ = self.flash()
+        self.assertEqual(code, 1)
+        self.assertIn("ready not seen: the board's /main.py is not the files that passed", said)
+
+    def test_a_file_missing_on_the_board_is_named(self):
+        self.files_on_board = {}
+        code, said, _ = self.flash()
+        self.assertEqual(code, 1)
+        self.assertIn("/main.py is not the files that passed", said)
+
+    def test_a_firmware_that_prints_no_ready_is_not_seen(self):
+        self.prints = "booting\n"
+        code, said, _ = self.flash()
+        self.assertEqual(code, 1)
+        self.assertIn("ready not seen: the firmware printed no 'ready' in 20 s", said)
+
+    def test_ready_printed_before_the_wait_ends_is_seen(self):
+        self.prints = subprocess.TimeoutExpired(["mpremote"], 20, output=b"ready\nLED on\n")
+        code, said, _ = self.flash()
+        self.assertEqual(code, 0)
+        self.assertIn("ready seen", said)
+
+    def test_mpremote_that_cannot_reach_the_board_is_unknown_never_seen(self):
+        self.unread = subprocess.CalledProcessError(1, ["mpremote"])
+        code, said, _ = self.flash()
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: mpremote could not read the board's files", said)
+        self.assertIn("then, to see it start", said)
+
+    def test_a_board_that_hangs_is_unknown(self):
+        self.unread = subprocess.TimeoutExpired(["mpremote"], 20)
+        code, said, _ = self.flash()
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown", said)
+
+    def test_a_passed_log_from_before_the_file_lines_is_unknown(self):
+        self.run_the_scenario()
+        log = next((self.project / "sim" / "runs").glob("*.log"))
+        log.write_text("".join(line for line in log.read_text().splitlines(True) if not line.startswith("file sha256: ")))
+        code, said, _ = self.deploy("--token", self.token(), consent=Says(True))
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: the passed run's log names no files", said)
+
+    def test_an_image_rebuilt_and_passed_while_the_person_answered_is_not_flashed(self):
+        main, runs = self.project / "firmware" / "main.py", self.project / "sim" / "runs"
+        first = main.read_text()
+        main.write_text("print('ready')\nprint('new')\n")
+        self.run_the_scenario()  # a new firmware, built and passed, swapped in while the question waits
+        rebuilt = self.image.read_bytes(), {log.name: log.read_text() for log in runs.glob("*.log")}
+        main.write_text(first)
+        test = self
+
+        class ChangesTheImage(Says):
+            def ask(self, question):
+                test.image.write_bytes(rebuilt[0])
+                for name, text in rebuilt[1].items():
+                    (runs / name).write_text(text)
+                return True
+
+        code, _, problems = self.flash(ChangesTheImage(True))
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("the image changed after your yes: run look.py again. not flashed.", problems)
 
 
 class TheDefaultConsentTest(GateCase):
