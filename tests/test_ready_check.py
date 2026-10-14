@@ -48,17 +48,17 @@ class ReadyCheckTest(unittest.TestCase):
 
 class WhatTheBoardSaysTest(unittest.TestCase):
     def test_hash_code_that_raises_on_the_board_is_unknown_with_its_output(self):
-        raised = board_connection.CodeRaisedOnBoard("Traceback\nImportError: hashlib\n", 1)
+        raised = board_connection.BoardCodeError("Traceback\nImportError: hashlib\n", 1)
         verdict, _, log = board_ready_check(FakeBoardConnection(raised))
         self.assertEqual((verdict, log), ("ready unknown", "Traceback\nImportError: hashlib\n"))
 
     def test_a_board_gone_after_the_hashes_is_unknown_and_keeps_both_outputs(self):
         hashes = "file %s /main.py\n" % MAIN["/main.py"]
-        verdict, _, log = board_ready_check(FakeBoardConnection(hashes, board_connection.BoardUnreachable("could not enter raw repl", "x")))
+        verdict, _, log = board_ready_check(FakeBoardConnection(hashes, board_connection.BoardUnreachableError("could not enter raw repl", "x")))
         self.assertEqual((verdict, log), ("ready unknown", hashes + "x"))
 
     def test_a_facts_copy_that_raises_on_the_board_is_said_not_raised(self):
-        facts = board_facts.FactsFile(FakeBoardConnection(copy_raises=board_connection.CodeRaisedOnBoard("Traceback\nOSError: 28\n", 1)))
+        facts = board_facts.FactsFile(FakeBoardConnection(copy_raises=board_connection.BoardCodeError("Traceback\nOSError: 28\n", 1)))
         self.assertEqual(facts.write({"a": 1}), "mpremote could not copy it: OSError: 28")
 
 

@@ -236,10 +236,10 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Error | an exception | ends in `Error` (the deploy area only, for now) | `GateClosedError` |
 | Value | facts with no actions | a plain noun | `Port`, `BoardReading` |
 
-The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. Until
-they merge, `LookService`, `DeployService`, `ReadyResult`, `DeployResult`, `TerminalConsentStrategy`,
-`require_open_gate` and the unit suffixes do not exist yet, and some classes keep their old names: `Consent`, `Report`,
-`Reading` and `Look`.
+The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
+gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. Until
+PRs 4 to 8 merge, `LookService`, `DeployService`, `ReadyResult` and `DeployResult` do not exist yet, and some classes
+keep their old names: `Report`, `Reading` and `Look`.
 
 These rules name a class, a function or a constant:
 

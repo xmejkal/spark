@@ -28,7 +28,7 @@ class FakeBoardConnection:
 
 
 class FakeConsent:
-    """A fake Consent: answers `answer` and keeps each question. A test that must act while the question
+    """A fake ConsentStrategy: answers `answer` and keeps each question. A test that must act while the question
     waits subclasses it and overrides `ask`."""
 
     def __init__(self, answer):

@@ -434,7 +434,7 @@ class TerminalConsentTest(unittest.TestCase):
 
     def ask(self, typed, stdin_tty=True, stdout_tty=True):
         stdout = Stream(tty=stdout_tty)
-        consent = deploy_gate.TerminalConsent(self.LINE, Stream(typed, stdin_tty), stdout)
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream(typed, stdin_tty), stdout)
         return consent.ask("erase ALL of this board's flash?"), stdout.getvalue()
 
     def test_yes_in_a_terminal_is_the_yes(self):
@@ -446,7 +446,7 @@ class TerminalConsentTest(unittest.TestCase):
 
     def test_a_pipe_is_no_terminal_and_gives_the_line_to_run(self):
         for stdin_tty, stdout_tty in ((False, True), (True, False), (False, False)):
-            with self.assertRaises(deploy_gate.Closed) as shut:
+            with self.assertRaises(deploy_gate.GateClosedError) as shut:
                 self.ask("yes\n", stdin_tty, stdout_tty)
             self.assertIn("no terminal to ask you in", str(shut.exception))
             self.assertIn(self.LINE, str(shut.exception))
