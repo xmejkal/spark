@@ -43,3 +43,10 @@ the C6 (`esp32c6.py:19`, `:206-209`), so it is no fix.
 - Is this order right, and do steps 1 to 5 stay steps of P215, with step 2 as a spike card?
 - Does the spike use button-light as it is, or a board-only blink (P236, #233)?
 - The user lens asks: how long may deploy.py wait for the board before it says unknown? The spike gives the number.
+
+## The names in these reports, and in the code
+
+The lenses wrote before the names were chosen. PR #236 merged these names (the PO asked for clear names, 2026-10-14):
+`BoardLink` is `BoardConnection`, `LinkError` is `BoardUnreachable`, `FirmwareStopped` is `CodeRaisedOnBoard`,
+`BoardReady` is `ReadyCheck`, `BoardFacts` is `FactsFile`. `WaitAndRetry`, `NoRetry`, `Deploy`, `DeployResult`,
+`FakeBoard` and `FakeClock` are proposals only, and no code has them yet.
