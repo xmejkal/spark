@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/board_facts.py",
+  "name": "facts not sorted",
+  "find": "indent=1, sort_keys=True)",
+  "replace": "indent=1, sort_keys=False)"
+ },
+ {
+  "file": "scripts/board_facts.py",
+  "name": "facts cp ignores the port",
+  "find": "self.base = list(shell) + ([\"connect\", port] if port else [])",
+  "replace": "self.base = list(shell)"
+ },
+ {
+  "file": "scripts/board_facts.py",
+  "name": "record keyed by project",
+  "find": "key = store.slug(said[\"mac\"])",
+  "replace": "key = store.slug(said[\"project\"])"
+ },
+ {
+  "file": "scripts/board_facts.py",
+  "name": "verdict fixed",
+  "find": "\"verdict\": verdict,",
+  "replace": "\"verdict\": \"ready seen\","
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "facts without mac",
+  "find": "board_of(project), report.reading.mac, image_of(project)",
+  "replace": "board_of(project), None, image_of(project)"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "boards not private",
+  "find": "\"projects\", \"history\", \"boards\")",
+  "replace": "\"projects\", \"history\")"
+ }
+]

@@ -4,6 +4,7 @@ and the person types yes in their own terminal."""
 import contextlib
 import hashlib
 import io
+import json
 import shlex
 import subprocess
 import sys
@@ -17,9 +18,11 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_facts  # noqa: E402
 import deploy  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
+import store  # noqa: E402
 import tools  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
@@ -53,6 +56,17 @@ class GateCase(LookCase):
     files_on_board = None
     #: The exception mpremote raises when it hashes the board's files, or None.
     unread = None
+    #: The exception mpremote raises when it copies the facts file, or None; what `fs cat` adds to the copy.
+    uncopied, garbled = None, ""
+
+    def fs(self, command):
+        """mpremote fs cp and fs cat on the fake board, which keeps the copied files in self.copied."""
+        if self.uncopied:
+            raise self.uncopied
+        if command[-3] == "cp":
+            self.copied[command[-1].lstrip(":")] = Path(command[-2]).read_text()
+            return done("")
+        return done(self.copied[command[-1].lstrip(":")] + self.garbled)
 
     def on_board(self, command):
         """What mpremote exec prints on the fake board: the firmware's start, or a line per file."""
@@ -67,8 +81,12 @@ class GateCase(LookCase):
 
     def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command."""
+        self.copied = getattr(self, "copied", {})
+
         def run(command, **kw):
             self.ran.append(command)
+            if "fs" in command:
+                return self.fs(command)
             if "devs" in command:
                 return done(devs_text or data(devs))
             if "flash_id" in command:
@@ -308,6 +326,85 @@ class TheBoardAfterTheFlashTest(GateCase):
         code, _, problems = self.flash(ChangesTheImage(True))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the image changed after your yes: run look.py again. not flashed.", problems)
+
+
+class TheFactsAfterTheFlashTest(GateCase):
+    """P215 step 3 (D22, D23, D44): the board holds what spark put there, and the store remembers the board by its MAC."""
+
+    def flash(self, consent=None):
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), consent=consent or Says(True))
+
+    def test_the_facts_file_is_on_the_board_and_the_board_log_names_its_sha256(self):
+        code, said, _ = self.flash()
+        facts = json.loads(self.copied["spark.json"])
+        self.assertEqual(code, 0)
+        self.assertEqual((facts["project"], facts["board"], facts["image_sha256"]),
+                         (self.project.name, "xiao-esp32-c6", hashlib.sha256(self.image.read_bytes()).hexdigest()))
+        self.assertEqual(facts["files"], {"/main.py": hashlib.sha256((self.project / "firmware" / "main.py").read_bytes()).hexdigest()})
+        self.assertEqual(facts["spark"], json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"])
+        line = "facts file spark.json sha256: %s" % hashlib.sha256(self.copied["spark.json"].encode()).hexdigest()
+        self.assertIn(line, said)
+        self.assertIn(line, next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
+    def test_the_store_keeps_one_record_per_mac_and_adds_each_deploy(self):
+        _, said, _ = self.flash()
+        record = Path(said.split("store record: ")[1].strip())
+        before = len(json.loads(record.read_text())["deploys"])  # the suite's store is shared, so count from here
+        self.flash()
+        kept = json.loads(record.read_text())
+        self.assertEqual(record.parent, store.place("boards"))
+        self.assertEqual((kept["mac"], kept["board"], len(kept["deploys"])),
+                         (json.loads(self.copied["spark.json"])["mac"], "xiao-esp32-c6", before + 1))
+        self.assertEqual(kept["deploys"][-1]["verdict"], "ready seen")
+        self.assertTrue(kept["deploys"][-1]["yes"].startswith("typed in a terminal by "))
+
+    def test_the_facts_go_to_the_look_s_port_and_name_the_look_s_mac(self):
+        self.flash()
+        copy = next(command for command in self.ran if "cp" in command)
+        self.assertEqual(copy[copy.index("connect"):copy.index("connect") + 2], ["connect", "/dev/cu.usbmodem101"])
+        self.assertEqual(json.loads(self.copied["spark.json"])["mac"], self.look().reading.mac)
+
+    def test_the_record_is_named_by_the_mac_private_and_keeps_the_verdict(self):
+        self.files_on_board = {"/main.py": b"print('old')\n"}
+        _, said, _ = self.flash()
+        record = Path(said.split("store record: ")[1].strip())
+        self.assertEqual(record.name, store.slug(self.look().reading.mac) + ".json")
+        self.assertEqual(record.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(json.loads(record.read_text())["deploys"][-1]["verdict"], "ready not seen")
+
+    def test_the_same_facts_are_the_same_bytes(self):
+        self.assertEqual(board_facts.text_of({"b": 1, "a": 2}), board_facts.text_of({"a": 2, "b": 1}))
+
+    def test_a_copy_that_fails_is_said_and_the_ready_check_still_runs(self):
+        self.uncopied = subprocess.CalledProcessError(1, ["mpremote"])
+        code, said, _ = self.flash()
+        self.assertEqual(code, 0)
+        self.assertIn("facts file: not written: mpremote could not copy it", said)
+        self.assertIn("ready seen", said)
+
+    def test_a_facts_file_that_reads_back_different_is_not_written(self):
+        self.garbled = "x"
+        _, said, _ = self.flash()
+        self.assertIn("facts file: not written: it read back different from what was copied", said)
+
+    def test_a_board_record_that_is_not_one_is_left_as_it_is_and_the_verdict_stands(self):
+        _, said, _ = self.flash()
+        record = Path(said.split("store record: ")[1].strip())
+        good = record.read_text()
+        self.addCleanup(record.write_text, good)  # the suite's store is shared
+        for bad in ("", "[]", '{"mac": "x"}'):
+            record.write_text(bad)
+            code, said, _ = self.flash()
+            self.assertEqual(code, 0)
+            self.assertIn("store record: not written: %s is not a board record, so it was left as it is" % record, said)
+            self.assertEqual(record.read_text(), bad)
+
+    def test_a_store_that_cannot_be_written_is_a_sentence(self):
+        with mock.patch.object(store, "write_json", side_effect=store.StoreProblem("no room")):
+            code, said, _ = self.flash()
+        self.assertEqual(code, 0)
+        self.assertIn("store record: not written: no room", said)
 
 
 class TheDefaultConsentTest(GateCase):

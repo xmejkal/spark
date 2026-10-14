@@ -116,7 +116,7 @@ Each by its name in check_all's answer:
 - `emit_footprint.py`: a board definition, turned into the footprint module its design imports.
 - `flash_image.py`: a flash image with MicroPython and the project's files, for a headless simulation.
 - `run_scenario.py`: one scenario run in Wokwi after the firmware's `ready` text, with a dated log ([P130](https://github.com/xmejkal/spark/issues/64)).
-- `deploy.py`: puts the flash image that passed the simulation onto the board, with esptool ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board first and asks the person's yes in their terminal. `deploy_gate.py` is that gate ([P219](https://github.com/xmejkal/spark/issues/201)). After the flash, `board_ready.py` checks the board's files against the passed run's sha256s and reads `ready` ([P215](https://github.com/xmejkal/spark/issues/196)).
+- `deploy.py`: puts the flash image that passed the simulation onto the board, with esptool ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board first and asks the person's yes in their terminal. `deploy_gate.py` is that gate ([P219](https://github.com/xmejkal/spark/issues/201)). After the flash, `board_facts.py` copies a facts file to the board and reads it back, and `board_ready.py` checks the board's files against the passed run's sha256s and reads `ready` ([P215](https://github.com/xmejkal/spark/issues/196)).
 - `look.py`: reads the board on USB with esptool, without changing it, and compares it with its board record; the board restarts. `board_look.py` is its library ([P219](https://github.com/xmejkal/spark/issues/201)).
 - `breadboard.py`: the built board as a breadboard sheet: the parts, each resistor they ask for, every wire by the
   board's printed labels and the parts' legs, and what each record says to check before power ([P191](https://github.com/xmejkal/spark/issues/143)).
@@ -211,6 +211,9 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
 - your shelf: records that every project then finds. One gets there when a drawer entry links a record from another of
   your projects, or when `parts.py --requirements` writes a file for a pick that came from the catalog or from another
   of your projects (a shelf for every part you choose is [P91](https://github.com/xmejkal/spark/issues/22));
+- your boards, `boards/<MAC>.json`: one private record for each physical board that `deploy.py` flashed, with its
+  type and each deploy (the project, the image's sha256, the date, the verdict and whose yes it was)
+  ([P215](https://github.com/xmejkal/spark/issues/196));
 - your history, `history.jsonl`: one line for each event, appended, and private to you (0600 files in 0700 folders,
   refused inside a git work tree). The events are `step` (a project's step started, with the Claude Code session it
   ran in), `reused` (a pick taken from the library, your store or another project), `passed_over` (a part you passed
