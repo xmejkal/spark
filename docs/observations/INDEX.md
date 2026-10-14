@@ -854,3 +854,5 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT119 | PR #228: `look.lines(report)[:-1]` relied on the token line being last | P219 step 4 lens (Sonnet), refuter (Opus), 2026-10-14 | **acted** | `lines(report, token=False)` |
 | AT120 | PR #228: `report.image.relative_to` ran before the gate, so a missing image was a traceback | P219 refuter (Opus), 2026-10-14 | **acted** | `image_of` inside the try |
 | AT121 | PR #228: the mutation run, 12 planted, 11 caught; look.py's `--ignore-older-runs` escaped | P219 mutation tester (Sonnet), 2026-10-14 | **acted** | a look.py test; `tests/mutations/p219-gate.json` |
+| AT122 | PR #229: a firmware file name with a line break can end the log's header or forge a file line | P215 step 1 reviewer (Sonnet), 2026-10-14 | rejected | [report](2026-10-14-p229-review.md): only the firmware's own author can make such a name |
+| AT123 | PR #229: the mutation run, 11 planted, 8 caught; the line's literal form, the header's closing blank line and a mid-line prefix escaped | P215 step 1 mutation tester (Opus), 2026-10-14 | **acted** | three tests; `tests/mutations/p215-hashes.json` |
