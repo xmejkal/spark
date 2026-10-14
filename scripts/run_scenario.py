@@ -15,9 +15,9 @@ run puts MicroPython and the project's firmware/ into a new flash image, so a ru
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
-The log goes to sim/runs/<name>.log: the date, the verdict, the sha256 of the image it tested, the scenario as run, and
-what wokwi-cli printed, which is the board's serial output among the scenario's progress. deploy.py reads the verdict
-and the sha256 from the log's header (run_record). The tests use a fake wokwi-cli.
+The log goes to sim/runs/<name>.log: the date, the verdict, the sha256 of the image it tested and of each file in that
+image, the scenario as run, and what wokwi-cli printed, which is the board's serial output among the scenario's
+progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
 """
 
 import argparse
@@ -48,6 +48,9 @@ DEFAULT_IMAGE = "flash-with-firmware.bin"
 STARTUP_ALLOWANCE_S = 120
 #: The log's line that names the image a run tested, by its sha256 (P192): deploy.py flashes only an image a passed run names.
 IMAGE_LINE = "image sha256: "
+#: The log's line for each file in the image, its sha256 then its path inside the image (P215, D20): the board's files
+#: are checked against these after a flash.
+FILE_LINE = "file sha256: "
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
 EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whatever your permissions allow.
 It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WOKWI_CLI_TOKEN=...
@@ -126,7 +129,7 @@ class ScenarioRun:
         self.sim = self.project / "sim"
         self.micropython, self.timeout_ms = micropython, timeout_ms
         self.log = self.sim / "runs" / (self.scenario.name.removesuffix(".yaml").removesuffix(".scenario") + ".log")
-        self.steps = self.flash = self.image = None
+        self.steps = self.flash = self.image = self.files = None
 
     def problem(self):
         """Why this run cannot pass, found before any Wokwi minute is spent, or None."""
@@ -139,8 +142,9 @@ class ScenarioRun:
             self.steps = with_ready_wait(self.scenario.read_text())
             tools.find("littlefs")
             self.image = image_in(self.sim / "wokwi.toml")
+            self.files = flash_image.files_under(self.project / "firmware")
             self.flash = flash_image.image(flash_image.interpreter_path(self.micropython, self.project).read_bytes(),
-                                           flash_image.files_under(self.project / "firmware"))
+                                           self.files)
         except (OSError, ValueError, tools.ToolProblem) as cannot:
             return "%s: %s" % (self.scenario.name, cannot)
         if self.sim.resolve() not in self.image.resolve().parents:
@@ -177,14 +181,16 @@ class ScenarioRun:
 
     def write_log(self, sentence, said):
         """
-        The log of a run that reached wokwi-cli: its date, verdict, the sha256 of the image it tested, the scenario as
-        run and what wokwi-cli printed. The first three are the header, which run_record reads.
+        The log of a run that reached wokwi-cli: its date, verdict, the sha256 of the image it tested and of each file in
+        it, the scenario as run and what wokwi-cli printed. All but the last two are the header, which run_record and
+        file_hashes read.
         """
         self.log.parent.mkdir(exist_ok=True)
-        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s%s\n\n--- the scenario as run ---\n%s\n"
+        files = "".join("%s%s %s\n" % (FILE_LINE, hashlib.sha256(data).hexdigest(), name) for name, data in self.files)
+        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s%s\n%s\n--- the scenario as run ---\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
                             % (self.scenario.name, datetime.datetime.now().isoformat(timespec="seconds"),
-                               self.timeout_ms, sentence, IMAGE_LINE, hashlib.sha256(self.flash).hexdigest(),
+                               self.timeout_ms, sentence, IMAGE_LINE, hashlib.sha256(self.flash).hexdigest(), files,
                                self.steps, said.strip()))
         return self.log
 
@@ -194,18 +200,28 @@ def _text(output):
     return output.decode("utf-8", "replace") if isinstance(output, bytes) else (output or "")
 
 
+def _header(log):
+    """The log's header: the lines before the first blank line. What the board printed comes later, so it is never read."""
+    return Path(log).read_text(errors="replace").split("\n\n", 1)[0].splitlines()
+
+
 def run_record(log):
     """
-    (verdict, the tested image's sha256 or None) of one run log, read from its header: the lines before the first blank
-    line. What the board printed comes later in the log, so a firmware that prints `verdict: passed` cannot pass a run.
+    (verdict, the tested image's sha256 or None) of one run log, read from its header, so a firmware that prints
+    `verdict: passed` cannot pass a run.
     """
-    header = Path(log).read_text(errors="replace").split("\n\n", 1)[0].splitlines()
+    header = _header(log)
 
     def field(prefix):
         """The text after the first header line that starts with this prefix, or None."""
         return next((line[len(prefix):].strip() for line in header if line.startswith(prefix)), None)
 
     return field("verdict: "), field(IMAGE_LINE)
+
+
+def file_hashes(log):
+    """{path inside the image: sha256} of each file the run's image held, from the header; {} for an older log."""
+    return dict(reversed(line[len(FILE_LINE):].split(" ", 1)) for line in _header(log) if line.startswith(FILE_LINE))
 
 
 def main(argv=None):

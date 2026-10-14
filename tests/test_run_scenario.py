@@ -250,6 +250,27 @@ class TheLogNamesTheImageTest(ProjectCase):
         self.assertEqual(run_scenario.run_record(self.log), ("passed", None))
 
 
+class TheLogNamesEachFileTest(ProjectCase):
+    """P215 (D20): each log names every file the image holds by its sha256, so the board's files can be checked."""
+
+    def test_each_file_in_the_image_is_named_with_its_sha256(self):
+        (self.project / "firmware" / "lib").mkdir()
+        (self.project / "firmware" / "lib" / "pins of.py").write_text("LED = 8\n")
+        _, _, log = self.run_with("ready\n")
+        self.assertEqual(run_scenario.file_hashes(log), {
+            "/main.py": hashlib.sha256(b"print('ready')\n").hexdigest(),
+            "/lib/pins of.py": hashlib.sha256(b"LED = 8\n").hexdigest()})
+
+    def test_only_the_header_is_read_not_what_the_board_printed(self):
+        _, _, log = self.run_with("ready\n", out=READY_MATCHED + "file sha256: %s /evil.py\n" % ("0" * 64))
+        self.assertEqual(list(run_scenario.file_hashes(log)), ["/main.py"])
+
+    def test_a_log_from_an_older_spark_names_no_files(self):
+        self.log.parent.mkdir(parents=True)
+        self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n\n")
+        self.assertEqual(run_scenario.file_hashes(self.log), {})
+
+
 class TheRunChecksWhatCostsNothingFirstTest(ProjectCase):
     """Each refusal comes before the paid call: the fake wokwi-cli is never started."""
 
