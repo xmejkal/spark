@@ -69,7 +69,12 @@ def remember(said, verdict, yes_by=None):
               "verdict": verdict, "yes": "typed in a terminal by %s" % (yes_by or getpass.getuser())}
     with store.locked():
         path = store.place("boards") / (key + ".json")
-        record = json.loads(path.read_text()) if path.is_file() else {"mac": said["mac"], "deploys": []}
+        try:
+            record = json.loads(path.read_text()) if path.is_file() else {"mac": said["mac"], "deploys": []}
+        except ValueError:
+            record = None
+        if not isinstance(record, dict) or not isinstance(record.get("deploys"), list):
+            raise store.StoreProblem("%s is not a board record, so it was left as it is" % path)
         record["board"] = said["board"]
         record["deploys"].append(deploy)
         store.write_json("boards", key, record)

@@ -370,6 +370,18 @@ class TheFactsAfterTheFlashTest(GateCase):
         _, said, _ = self.flash()
         self.assertIn("facts file: not written: it read back different from what was copied", said)
 
+    def test_a_board_record_that_is_not_one_is_left_as_it_is_and_the_verdict_stands(self):
+        _, said, _ = self.flash()
+        record = Path(said.split("store record: ")[1].strip())
+        good = record.read_text()
+        self.addCleanup(record.write_text, good)  # the suite's store is shared
+        for bad in ("", "[]", '{"mac": "x"}'):
+            record.write_text(bad)
+            code, said, _ = self.flash()
+            self.assertEqual(code, 0)
+            self.assertIn("store record: not written: %s is not a board record, so it was left as it is" % record, said)
+            self.assertEqual(record.read_text(), bad)
+
     def test_a_store_that_cannot_be_written_is_a_sentence(self):
         with mock.patch.object(store, "write_json", side_effect=store.StoreProblem("no room")):
             code, said, _ = self.flash()
