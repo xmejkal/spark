@@ -72,7 +72,8 @@ that stops with an error is not seen. If mpremote cannot reach the board, for ex
 the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
 If ready is unknown and the passed log names files, deploy.py reads the port with DTR and RTS off. If it reads `waiting for download`, the
 board waits in its download mode: deploy.py asks you to press the board's R (reset) button once, waits %d s for the
-port to go and come back under the same name, and reads the board again. What the port printed, `nothing`, or why it could
+port to go and come back under the same name, and reads the board again. If it reads the firmware's `ready`, the
+board finished its restart late, and deploy.py reads it again at once. What the port printed, `nothing`, or why it could
 not be read goes in the board log.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
@@ -234,6 +235,9 @@ def main(argv=None, run=None, consent=None, probe=None):
                 else:
                     sentence = download_mode.NO_RESET
                 heard += "reset seen\n" if reset else "no reset\n"
+            elif download_mode.booted(console):  # P245: mpremote asked while the board still restarted
+                facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
+                heard += download_mode.READ_AGAIN + "\n"
             said = heard + said
     log = keep_board_log(args.project, report.port, image, verdict, sentence, said, facts_line)
     print("  %s\n  %s: %s\n  board log: %s" % (facts_line, verdict, sentence, log))

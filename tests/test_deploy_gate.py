@@ -371,6 +371,23 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertIn("ready unknown: mpremote could not read the board's files", said)
         self.assertIn("console with DTR and RTS off: nothing\n", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
+    def test_a_console_that_heard_ready_reads_the_board_again(self):
+        # P245 (#257): on 2026-10-15 mpremote asked while the board still restarted, then the console heard ready
+        self.uncopied = self.unread
+        boot = "mode:DIO, clock div:2\nentry 0x4086b910\nready\n"
+        probe = FakeDownloadModeProbe(boot, on_console=self.answers)
+        code, said, _ = self.flash(probe)
+        self.assertEqual((code, probe.asked), (0, ["console"]))
+        self.assertNotIn("press the board's R", said)
+        self.assertIn("ready seen", said)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+        self.assertIn("console with DTR and RTS off: mode:DIO, clock div:2\nentry 0x4086b910\nready\nread again\n", log)
+
+    def test_a_ready_inside_another_word_is_not_a_boot(self):
+        code, said, _ = self.flash(FakeDownloadModeProbe("not ready yet\n", on_console=self.answers))
+        self.assertEqual(code, 2)
+        self.assertNotIn("read again", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
     def test_what_a_board_not_in_download_mode_printed_stays_in_the_log(self):
         # P244 (#255): the 2026-10-15 bench lost what the check read, so nobody knew why the board was silent
         code, said, _ = self.flash(FakeDownloadModeProbe("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n"))

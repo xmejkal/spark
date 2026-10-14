@@ -13,7 +13,7 @@ import os
 import subprocess
 import time
 
-from run_scenario import printed_text
+from run_scenario import READY, printed_text
 
 #: What the ESP32 ROM prints when it boots into download mode, as the XIAO C6 printed it on 2026-10-14 (AT157).
 DOWNLOAD_MODE = "waiting for download"
@@ -24,6 +24,8 @@ READ_S, RESET_WAIT_S, POLL_S = 2, 60, 0.1
 #: What deploy.py says when no reset came. The wait looks for the same port name only.
 NO_RESET = ("the board waits in download mode, and its port did not go and come back in %d s: press its R button. If "
             "the port came back under another name, `python3 -m mpremote devs` lists the ports" % RESET_WAIT_S)
+#: What the board log adds when the console heard the firmware's `ready`, and deploy.py read the board again (P245).
+READ_AGAIN = "read again"
 #: What the probe says of a port it could not read (P244): a could-not-run, never a silent console.
 UNREAD = "could not read the port: %s"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
@@ -89,3 +91,9 @@ class DownloadModeProbe:
                 return True
             self.clock.sleep(POLL_S)
         return False
+
+
+def booted(console):
+    """True when a line of `console` is the firmware's `ready`: the board finished its restart after mpremote asked
+    (P245, the 2026-10-15 bench)."""
+    return READY in [line.strip() for line in console.splitlines()]
