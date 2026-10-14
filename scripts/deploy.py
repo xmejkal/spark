@@ -9,9 +9,10 @@ Put the flash image that passed the simulation onto the board (P192).
 The image is the one sim/wokwi.toml names. run_scenario.py writes it, MicroPython and the project's firmware/ in one
 flash image, and tests it: each run's log names the image's sha256. This flashes the image only when a run that passed
 names it and no run with another verdict does. esptool erases the flash and writes the image at 0x0, where the
-simulator loaded it. Then deploy.py reads the board with mpremote (board_ready.py, P215): each file's sha256 against the
-passed run's log, then the firmware's start, which prints `ready` (the ready contract, commands/build.md). The board's
-log goes to sim/runs/board/.
+simulator loaded it. Then deploy.py copies a facts file, spark.json, to the board and reads it back (board_facts.py,
+P215), and reads the board with mpremote (board_ready.py): each file's sha256 against the passed run's log, then the
+firmware's start, which prints `ready` (the ready contract, commands/build.md). The board's log goes to
+sim/runs/board/, and the store keeps a record of the board by its MAC.
 
 Before the erase, deploy.py looks at the board as look.py does (P219). It refuses a stop, a token that is not this
 board's and this image's, and a person who does not type yes in their own terminal (deploy_gate.py). The chip comes from
@@ -28,11 +29,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_facts
 import board_look
 import board_ready
 import boards
 import deploy_gate
 import look
+import store
 import tools
 from image_check import (BOOT_HINT, DeployProblem, image_of, passed_log, run_logs, runnable,  # noqa: F401
                          tested_another, untested)
@@ -59,10 +62,12 @@ asks in your terminal, naming every warning: type yes to accept them and erase. 
 A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. "Go
 ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
-After the flash it reads the board: ready seen means the board's files match the passed run's sha256s and the firmware
-printed `ready` within %d s. The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the board, for
-example because its port changed after the flash, or the passed run's log is from before P215 and names no files,
-ready is unknown, never seen.
+After the flash it copies spark.json to the board: spark's version, the project, the board type, the MAC, the image's
+sha256 and each file's sha256. The board log names the file's sha256, and the store's boards/<MAC>.json adds this
+deploy with its verdict and whose yes it was. Then it reads the board: ready seen means the board's files match the
+passed run's sha256s and the firmware printed `ready` within %d s. The board's log goes to sim/runs/board/. A firmware
+that stops with an error is not seen. If mpremote cannot reach the board, for example because its port changed after
+the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % board_ready.READY_WAIT
@@ -75,11 +80,16 @@ def newer_files(project, image):
                   if path.is_file() and "__pycache__" not in path.parts and path.stat().st_mtime > made)
 
 
+def board_of(project):
+    """The project's board type, requirements.json's `board` (D35)."""
+    return json.loads((project / "requirements.json").read_text()).get("board")
+
+
 def chip_of(project):
     """The board's chip as esptool names it, from requirements.json's board (P192: no chip table)."""
     requirements = project / "requirements.json"
     try:
-        return boards.get(project, "chip", json.loads(requirements.read_text()).get("board"))
+        return boards.get(project, "chip", board_of(project))
     except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:
         raise DeployProblem("the board's chip cannot be read from %s: %s" % (requirements, cannot))
 
@@ -95,14 +105,25 @@ def watch_command(shell, port=None):
     return shell + (["connect", port] if port else []) + ["repl"]
 
 
-def keep_board_log(project, port, image, verdict, sentence, said):
+def keep_board_log(project, port, image, verdict, sentence, said, facts_line):
     """The board's log after a flash, in sim/runs/board/ beside the run logs (whose *.log glob does not reach it)."""
     now = datetime.datetime.now()
     log = project / "sim" / "runs" / "board" / ("%s.log" % now.strftime("%Y-%m-%dT%H-%M-%S"))
     log.parent.mkdir(parents=True, exist_ok=True)
-    log.write_text("# deploy %s on %s\nimage sha256: %s\n%s: %s\n\n%s\n" % (
-        now.isoformat(timespec="seconds"), port, hashlib.sha256(image.read_bytes()).hexdigest(), verdict, sentence, said))
+    log.write_text("# deploy %s on %s\nimage sha256: %s\n%s\n%s: %s\n\n%s\n" % (
+        now.isoformat(timespec="seconds"), port, hashlib.sha256(image.read_bytes()).hexdigest(), facts_line, verdict,
+        sentence, said))
     return log
+
+
+def put_facts(project, report, shell, run, expected):
+    """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
+    said = board_facts.facts(project, board_of(project), report.reading.mac, image_of(project), expected)
+    why = board_facts.BoardFacts(shell, report.port, run).write(said)
+    if why:
+        return said, "facts file: not written: %s" % why
+    return said, "facts file %s sha256: %s" % (board_facts.FACTS_FILE,
+                                              hashlib.sha256(board_facts.text_of(said).encode()).hexdigest())
 
 
 def plan(project, port=None, ignore_older_runs=False):
@@ -187,9 +208,15 @@ def main(argv=None, run=None, consent=None):
             return EXIT_COULD_NOT_RUN
     image = image_of(args.project)
     passed = passed_log(image, args.project / "sim" / "runs")
-    verdict, sentence, said = board_ready.BoardReady(shell, report.port, run).check(file_hashes(passed) if passed else {})
-    log = keep_board_log(args.project, report.port, image, verdict, sentence, said)
-    print("  %s: %s\n  board log: %s" % (verdict, sentence, log))
+    expected = file_hashes(passed) if passed else {}
+    facts, facts_line = put_facts(args.project, report, shell, run, expected)
+    verdict, sentence, said = board_ready.BoardReady(shell, report.port, run).check(expected)
+    log = keep_board_log(args.project, report.port, image, verdict, sentence, said, facts_line)
+    print("  %s\n  %s: %s\n  board log: %s" % (facts_line, verdict, sentence, log))
+    try:
+        print("  store record: %s" % board_facts.remember(facts, verdict))
+    except (OSError, store.StoreProblem) as cannot:
+        print("  store record: not written: %s" % cannot)
     if verdict == board_ready.UNKNOWN:
         print("  " + WATCH % shlex.join(watch_command(shell, report.port)))
         return EXIT_COULD_NOT_RUN

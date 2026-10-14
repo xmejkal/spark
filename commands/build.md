@@ -299,7 +299,10 @@ another chip.
 esptool and mpremote come from `/spark:setup`, as the tools list's `flasher` and `board-shell`. If esptool cannot
 connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again.
 
-After the flash, deploy.py reads the board with mpremote. It hashes each file that the passed run's log names, on the
+After the flash, deploy.py copies a facts file, `spark.json`, to the board and reads it back. It names spark's
+version, the project, the board type, the MAC, the image's sha256 and each file's sha256. The board's log names the
+facts file's sha256, and your store keeps one record for each board by its MAC, `boards/<MAC>.json`, with each
+deploy, its verdict and whose yes it was. Then deploy.py reads the board with mpremote. It hashes each file that the passed run's log names, on the
 board, and then starts the firmware and reads its output. `ready seen` (exit 0) means the files match and the firmware
 printed `ready`. `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
 firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
