@@ -297,11 +297,16 @@ names the log in a note. The chip comes from the board in `requirements.json`, a
 another chip.
 
 esptool and mpremote come from `/spark:setup`, as the tools list's `flasher` and `board-shell`. If esptool cannot
-connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again. To see the firmware
-start, run the line deploy.py prints last, which opens mpremote's REPL, for example
-`python3 -m mpremote connect <port> repl`. The board's port name can change after the flash, because MicroPython
-brings its own USB serial port. `python3 -m mpremote devs` lists the ports. Press Ctrl-C, then Ctrl-D. The board
-restarts its firmware and prints `ready`.
+connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again.
+
+After the flash, deploy.py reads the board with mpremote. It hashes each file that the passed run's log names, on the
+board, and then starts the firmware and reads its output. `ready seen` (exit 0) means the files match and the firmware
+printed `ready`. `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
+firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
+log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The board's log goes to `sim/runs/board/`.
+The board's port name can change after the flash, because MicroPython can bring its own USB serial port, and then the
+read is unknown. `python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
+prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D.
 
 Nothing has run this on a board yet. The first run is the button-and-LED project on a FireBeetle 2 ESP32-S3, at the
 bench.

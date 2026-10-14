@@ -64,6 +64,12 @@ def untested(image, runs):
     return None
 
 
+def passed_log(image, runs):
+    """The first log in the runs folder that passed on this image's sha256, or None. Its file lines are what a board must hold."""
+    digest = hashlib.sha256(image.read_bytes()).hexdigest()
+    return next((log for log, verdict, sha256 in run_logs(runs) if sha256 == digest and verdict == "passed"), None)
+
+
 def tested_another(image, runs):
     """A sentence naming each log in the runs folder that does not name this image's sha256, or None when every log does."""
     digest = hashlib.sha256(image.read_bytes()).hexdigest()
