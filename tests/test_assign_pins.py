@@ -505,6 +505,12 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         exec(assign_pins.pin_module(lit, [], "r.json"), names)
         self.assertEqual(names["ONBOARD_LED"], 15)
 
+    def test_a_signal_named_like_the_board_s_led_is_refused_not_shadowed(self):
+        lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the LED"}})
+        assignments, _ = assign_pins.assign(lit, [{"name": "ONBOARD_LED", "needs": []}])
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.pin_module(lit, assignments, "r.json")
+
     def test_a_board_with_no_led_of_its_own_names_none(self):
         names = {}
         exec(assign_pins.pin_module(board(), [], "r.json"), names)
