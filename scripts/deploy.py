@@ -72,8 +72,8 @@ that stops with an error is not seen. If mpremote cannot reach the board, for ex
 the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
 If ready is unknown and the passed log names files, deploy.py reads the port with DTR and RTS off. If it reads `waiting for download`, the
 board waits in its download mode: deploy.py asks you to press the board's R (reset) button once, waits %d s for the
-port to go and come back under the same name, and reads the board again. What the port printed, or `nothing`, goes in
-the board log.
+port to go and come back under the same name, and reads the board again. What the port printed, `nothing`, or why it could
+not be read goes in the board log.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
