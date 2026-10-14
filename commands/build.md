@@ -301,8 +301,9 @@ connect, hold the board's BOOT button, press and release RESET, then release BOO
 
 After the flash, deploy.py reads the board with mpremote. It hashes each file that the passed run's log names, on the
 board, and then starts the firmware and reads its output. `ready seen` (exit 0) means the files match and the firmware
-printed `ready`. `ready not seen` (exit 1) names the file that differs, or says that no `ready` came. `ready unknown`
-(exit 2) means mpremote could not reach the board, and it is not a pass. The board's log goes to `sim/runs/board/`.
+printed `ready`. `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
+firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
+log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The board's log goes to `sim/runs/board/`.
 The board's port name can change after the flash, because MicroPython can bring its own USB serial port, and then the
 read is unknown. `python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
 prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D.

@@ -60,8 +60,9 @@ A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run
 ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
 After the flash it reads the board: ready seen means the board's files match the passed run's sha256s and the firmware
-printed `ready` within %d s. The board's log goes to sim/runs/board/. If mpremote cannot reach the board, for example
-because its port changed after the flash, ready is unknown, never seen.
+printed `ready` within %d s. The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the board, for
+example because its port changed after the flash, or the passed run's log is from before P215 and names no files,
+ready is unknown, never seen.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % board_ready.READY_WAIT
@@ -185,8 +186,8 @@ def main(argv=None, run=None, consent=None):
             print("deploy.py: `%s` failed (%s): %s" % (shlex.join(command), failed, BOOT_HINT), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
     image = image_of(args.project)
-    verdict, sentence, said = board_ready.BoardReady(shell, report.port, run).check(
-        file_hashes(passed_log(image, args.project / "sim" / "runs")))
+    passed = passed_log(image, args.project / "sim" / "runs")
+    verdict, sentence, said = board_ready.BoardReady(shell, report.port, run).check(file_hashes(passed) if passed else {})
     log = keep_board_log(args.project, report.port, image, verdict, sentence, said)
     print("  %s: %s\n  board log: %s" % (verdict, sentence, log))
     if verdict == board_ready.UNKNOWN:

@@ -254,6 +254,20 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.assertEqual(code, 0)
         self.assertIn("ready seen", said)
 
+    def test_a_firmware_that_stops_with_an_error_is_not_seen_and_its_traceback_is_kept(self):
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], output="ready\n", stderr="Traceback: OSError: 19\n")
+        code, said, _ = self.flash()
+        self.assertEqual(code, 1)
+        self.assertIn("ready not seen: the firmware stopped with an error (mpremote exit 1)", said)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertIn("Traceback: OSError: 19", log.read_text())
+
+    def test_a_passed_log_gone_after_the_flash_is_unknown_not_a_traceback(self):
+        with mock.patch.object(deploy, "passed_log", side_effect=lambda *a: None):
+            code, said, _ = self.flash()
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: the passed run's log names no files", said)
+
     def test_mpremote_that_cannot_reach_the_board_is_unknown_never_seen(self):
         self.unread = subprocess.CalledProcessError(1, ["mpremote"])
         code, said, _ = self.flash()

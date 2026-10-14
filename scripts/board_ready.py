@@ -4,7 +4,7 @@ After a flash: do the board's files match the passed run's hashes, and does the 
 A library. `BoardReady` runs mpremote twice on the board's port. First it hashes each file that the passed run's log
 names (run_scenario.file_hashes), on the board itself. Then it imports `main`, as the board does at boot, and reads its
 output for READY_WAIT seconds. Ready is seen only when both agree. When mpremote cannot reach the board, it is unknown,
-never seen.
+never seen. So is a passed run's log from before P215, which names no files.
 """
 
 import subprocess
@@ -50,16 +50,21 @@ class BoardReady:
             return UNKNOWN, "mpremote could not read the board's files (%s)" % cannot, ""
         read = dict(line.split(" ", 2)[1:][::-1] for line in hashes.splitlines() if line.startswith("file "))
         differ = [path for path in sorted(expected) if read.get(path) != expected[path]]
+        stopped = None
         try:
             said = self._exec("import main", timeout=self.wait)
         except subprocess.TimeoutExpired as running:
             said = _text(running.stdout)
-        except (OSError, subprocess.CalledProcessError) as cannot:
+        except subprocess.CalledProcessError as failed:  # the board answered the hashes, so the firmware stopped
+            said, stopped = _text(failed.stdout) + _text(failed.stderr), failed.returncode
+        except OSError as cannot:
             return UNKNOWN, "mpremote could not start the firmware (%s)" % cannot, hashes
         log = hashes + said
         if differ:
             return NOT_SEEN, "the board's %s %s not the files that passed" % (
                 ", ".join(differ), "is" if len(differ) == 1 else "are"), log
+        if stopped is not None:
+            return NOT_SEEN, "the firmware stopped with an error (mpremote exit %d): see the board log" % stopped, log
         if READY not in said:
             return NOT_SEEN, "the firmware printed no %r in %d s" % (READY, self.wait), log
         return SEEN, "the firmware printed %r and the board's %d files match the run that passed" % (

@@ -568,7 +568,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    not the yes, and the token is not the yes. With no terminal, deploy.py prints the line to run, exits 2 and flashes
    nothing. Give the person that line word for word and wait. After the flash, only `ready seen` (exit 0) is a pass:
    the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
-   a pass ([P215](https://github.com/xmejkal/spark/issues/196)).
+   a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).
 
 ## Is it ready?
 
