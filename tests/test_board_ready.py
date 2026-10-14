@@ -1,0 +1,58 @@
+"""P215 step 2 (#196): BoardReady reads the board on its own port, and a board it cannot reach is unknown, never judged."""
+
+import hashlib
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
+import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import board_ready  # noqa: E402
+import image_check  # noqa: E402
+
+MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
+
+
+class Unreachable:
+    """mpremote with no board on the port: exit 1, nothing printed, as subprocess.run reports it. Keeps each command."""
+
+    def __init__(self):
+        self.ran = []
+
+    def __call__(self, command, check=False, **kw):
+        self.ran.append(command)
+        if check:
+            raise subprocess.CalledProcessError(1, command)
+        return subprocess.CompletedProcess(command, 1, "", "")
+
+
+class BoardReadyTest(unittest.TestCase):
+    def test_a_board_that_cannot_be_reached_is_unknown_not_a_file_that_differs(self):
+        verdict, _, _ = board_ready.BoardReady(["mpremote"], "/dev/ttyX", Unreachable()).check(MAIN)
+        self.assertEqual(verdict, "ready unknown")
+
+    def test_each_read_names_the_board_s_port(self):
+        run = Unreachable()
+        board_ready.BoardReady(["mpremote"], "/dev/ttyX", run).check(MAIN)
+        self.assertEqual(run.ran[0][:4], ["mpremote", "connect", "/dev/ttyX", "exec"])
+
+
+class PassedLogTest(unittest.TestCase):
+    def test_a_failed_run_on_the_same_image_is_never_the_passed_log(self):
+        runs = Path(tempfile.mkdtemp())
+        image = runs / "image.bin"
+        image.write_bytes(b"image")
+        digest = hashlib.sha256(b"image").hexdigest()
+        (runs / "a.log").write_text("# a\nverdict: failed (wokwi-cli exit 1)\nimage sha256: %s\n\n" % digest)
+        (runs / "b.log").write_text("# b\nverdict: passed\nimage sha256: %s\n\n" % digest)
+        self.assertEqual(image_check.passed_log(image, runs), runs / "b.log")
+
+
+if __name__ == "__main__":
+    unittest.main()
