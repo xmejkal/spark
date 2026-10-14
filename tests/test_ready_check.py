@@ -1,4 +1,4 @@
-"""P215 step 2 (#196): BoardReady reads the board on its own port, and a board it cannot reach is unknown, never judged."""
+"""P215 step 2 (#196): ReadyCheck reads the board on its own port, and a board it cannot reach is unknown, never judged."""
 
 import hashlib
 import subprocess
@@ -13,7 +13,8 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_ready  # noqa: E402
+import board_connection  # noqa: E402
+import ready_check  # noqa: E402
 import image_check  # noqa: E402
 
 MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
@@ -34,12 +35,12 @@ class Unreachable:
 
 class BoardReadyTest(unittest.TestCase):
     def test_a_board_that_cannot_be_reached_is_unknown_not_a_file_that_differs(self):
-        verdict, _, _ = board_ready.BoardReady(["mpremote"], "/dev/ttyX", Unreachable()).check(MAIN)
+        verdict, _, _ = ready_check.ReadyCheck(board_connection.BoardConnection(["mpremote"], "/dev/ttyX", Unreachable())).check(MAIN)
         self.assertEqual(verdict, "ready unknown")
 
     def test_each_read_names_the_board_s_port(self):
         run = Unreachable()
-        board_ready.BoardReady(["mpremote"], "/dev/ttyX", run).check(MAIN)
+        ready_check.ReadyCheck(board_connection.BoardConnection(["mpremote"], "/dev/ttyX", run)).check(MAIN)
         self.assertEqual(run.ran[0][:4], ["mpremote", "connect", "/dev/ttyX", "exec"])
 
 

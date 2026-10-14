@@ -10,7 +10,7 @@ The image is the one sim/wokwi.toml names. run_scenario.py writes it, MicroPytho
 flash image, and tests it: each run's log names the image's sha256. This flashes the image only when a run that passed
 names it and no run with another verdict does. esptool erases the flash and writes the image at 0x0, where the
 simulator loaded it. Then deploy.py copies a facts file, spark.json, to the board and reads it back (board_facts.py,
-P215), and reads the board with mpremote (board_ready.py): each file's sha256 against the passed run's log, then the
+P215), and reads the board with mpremote (ready_check.py): each file's sha256 against the passed run's log, then the
 firmware's start, which prints `ready` (the ready contract, commands/build.md). The board's log goes to
 sim/runs/board/, and the store keeps a record of the board by its MAC.
 
@@ -30,8 +30,9 @@ import sys
 from pathlib import Path
 
 import board_facts
+import board_connection
 import board_look
-import board_ready
+import ready_check
 import boards
 import deploy_gate
 import look
@@ -70,7 +71,8 @@ that stops with an error is not seen. If mpremote cannot reach the board, for ex
 the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
-came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % board_ready.READY_WAIT
+came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
+    ready_check.READY_WAIT)
 
 
 def newer_files(project, image):
@@ -116,14 +118,14 @@ def keep_board_log(project, port, image, verdict, sentence, said, facts_line):
     return log
 
 
-def put_facts(project, report, shell, run, expected):
+def put_facts(project, report, connection, expected):
     """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
     said = board_facts.facts(project, board_of(project), report.reading.mac, image_of(project), expected)
-    why = board_facts.BoardFacts(shell, report.port, run).write(said)
+    why = board_facts.FactsFile(connection).write(said)
     if why:
         return said, "facts file: not written: %s" % why
     return said, "facts file %s sha256: %s" % (board_facts.FACTS_FILE,
-                                              hashlib.sha256(board_facts.text_of(said).encode()).hexdigest())
+                                              hashlib.sha256(board_facts.facts_text(said).encode()).hexdigest())
 
 
 def plan(project, port=None, ignore_older_runs=False):
@@ -209,18 +211,19 @@ def main(argv=None, run=None, consent=None):
     image = image_of(args.project)
     passed = passed_log(image, args.project / "sim" / "runs")
     expected = file_hashes(passed) if passed else {}
-    facts, facts_line = put_facts(args.project, report, shell, run, expected)
-    verdict, sentence, said = board_ready.BoardReady(shell, report.port, run).check(expected)
+    connection = board_connection.BoardConnection(shell, report.port, run, ready_check.READY_WAIT)
+    facts, facts_line = put_facts(args.project, report, connection, expected)
+    verdict, sentence, said = ready_check.ReadyCheck(connection).check(expected)
     log = keep_board_log(args.project, report.port, image, verdict, sentence, said, facts_line)
     print("  %s\n  %s: %s\n  board log: %s" % (facts_line, verdict, sentence, log))
     try:
-        print("  store record: %s" % board_facts.remember(facts, verdict))
+        print("  store record: %s" % board_facts.record_deploy(facts, verdict))
     except (OSError, store.StoreProblem) as cannot:
         print("  store record: not written: %s" % cannot)
-    if verdict == board_ready.UNKNOWN:
+    if verdict == ready_check.UNKNOWN:
         print("  " + WATCH % shlex.join(watch_command(shell, report.port)))
         return EXIT_COULD_NOT_RUN
-    return EXIT_OK if verdict == board_ready.SEEN else EXIT_PROBLEMS
+    return EXIT_OK if verdict == ready_check.SEEN else EXIT_PROBLEMS
 
 
 if __name__ == "__main__":

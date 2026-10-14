@@ -293,6 +293,17 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.assertIn("ready unknown: mpremote could not read the board's files", said)
         self.assertIn("then, to see it start", said)
 
+    def test_a_board_that_does_not_answer_keeps_mpremote_s_words_in_the_line_and_the_board_log(self):
+        self.unread = subprocess.CalledProcessError(
+            1, ["mpremote"], "b''\n", "Traceback (most recent call last):\nmpremote.transport.TransportError: could not enter raw repl\n")
+        code, said, _ = self.flash()
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: mpremote could not read the board's files: "
+                      "mpremote.transport.TransportError: could not enter raw repl", said)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+        self.assertIn("b''", log)
+        self.assertIn("could not enter raw repl", log)
+
     def test_a_board_that_hangs_is_unknown(self):
         self.unread = subprocess.TimeoutExpired(["mpremote"], 20)
         code, said, _ = self.flash()
@@ -374,7 +385,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["verdict"], "ready not seen")
 
     def test_the_same_facts_are_the_same_bytes(self):
-        self.assertEqual(board_facts.text_of({"b": 1, "a": 2}), board_facts.text_of({"a": 2, "b": 1}))
+        self.assertEqual(board_facts.facts_text({"b": 1, "a": 2}), board_facts.facts_text({"a": 2, "b": 1}))
 
     def test_a_copy_that_fails_is_said_and_the_ready_check_still_runs(self):
         self.uncopied = subprocess.CalledProcessError(1, ["mpremote"])
