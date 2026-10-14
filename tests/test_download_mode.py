@@ -66,6 +66,7 @@ class TheConsoleTest(unittest.TestCase):
         self.assertTrue(download_mode.booted("entry 0x4086b910\r\nready\r\n"))
         self.assertFalse(download_mode.booted("not ready yet\n"))
         self.assertFalse(download_mode.booted(""))
+        self.assertTrue(download_mode.booted(" ready \n"))
 
     def test_a_firmware_s_lines_are_not_download_mode(self):
         probe = download_mode.DownloadModeProbe(["/opt/python3"], PORT, printing("ready\n", []))

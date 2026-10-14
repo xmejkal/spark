@@ -381,7 +381,14 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertNotIn("press the board's R", said)
         self.assertIn("ready seen", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+        self.assertIn("facts file spark.json sha256", said)
         self.assertIn("console with DTR and RTS off: mode:DIO, clock div:2\nentry 0x4086b910\nready\nread again\n", log)
+
+    def test_download_mode_with_ready_after_it_still_asks_for_r_and_never_reads_again(self):
+        code, said, _ = self.flash(FakeDownloadModeProbe("waiting for download\nready\n", reset=False))
+        self.assertEqual(code, 2)
+        self.assertIn("the board waits in download mode, and its port did not go and come back", said)
+        self.assertNotIn("read again", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_ready_inside_another_word_is_not_a_boot(self):
         code, said, _ = self.flash(FakeDownloadModeProbe("not ready yet\n", on_console=self.answers))
