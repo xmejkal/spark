@@ -220,20 +220,26 @@ imports come first. It runs only `--help` and writes nothing. `--spark DIR` read
 
 New code in `scripts/` is small classes with one job each, in library modules, and `main()` only parses and prints
 (AGENTS.md). Each class plays one of these roles, and its name or its docstring says which. The PO set this rule on
-2026-10-14 ([P239](https://github.com/xmejkal/spark/issues/238); the council's synthesis is
-`docs/observations/2026-10-14-p239-oo-council/synthesis.md`).
+2026-10-14 ([P239](https://github.com/xmejkal/spark/issues/238), from the council's synthesis in
+[PR #239](https://github.com/xmejkal/spark/pull/239)).
+
+Some words first. A base class defines what a family of classes can do, and each subclass is one member of the family
+that fills it in. A docstring is the text in quotes at the top of a class or a function, which says what it does. A
+namedtuple is a small record whose fields have names, so a caller writes `result.verdict` and not `result[0]`.
 
 | Role | What it is | Its name | Example |
 |---|---|---|---|
 | Service | runs the steps of one flow over objects it was given | ends in `Service` | `LookService`, `DeployService` |
-| Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy`; `BoardReader` and `Flasher` stay plain |
-| Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote |
+| Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy`; `BoardReader` and `Flasher` stay plain, and their docstrings say Strategy |
+| Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote, the tool that talks to MicroPython on a board |
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
-| Error | an exception | ends in `Error` | `GateClosedError` |
+| Error | an exception | ends in `Error` (the deploy area only, for now) | `GateClosedError` |
 | Value | facts with no actions | a plain noun | `Port`, `BoardReading` |
 
-The examples are the deploy area's target names. P239's PRs 3 to 8 give the code these names, and until they merge,
-some of the classes still have their old names, for example `Consent` and `Report`.
+The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. Until
+they merge, `LookService`, `DeployService`, `ReadyResult`, `DeployResult`, `TerminalConsentStrategy`,
+`require_open_gate` and the unit suffixes do not exist yet, and some classes keep their old names: `Consent`, `Report`,
+`Reading` and `Look`.
 
 These rules name a class, a function or a constant:
 
