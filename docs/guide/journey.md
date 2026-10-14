@@ -1101,9 +1101,10 @@ Hard resetting via RTS pin...
 
 Then `python3 -m mpremote connect /dev/cu.usbmodem101 repl` talks to the running firmware: `200` and Enter make the LED
 blink every 200 ms. Ctrl-C stops the firmware and gives MicroPython's `>>>` prompt, Ctrl-D starts it again, and Ctrl-]
-leaves mpremote. The first flash of the day said `ready unknown` instead: the board waited in its download mode, and a
-press of its R button started the firmware ([the bench log](../observations/2026-10-14-p236-bench.md),
-[P238](https://github.com/xmejkal/spark/issues/235)). The XIAO's R and B buttons are the small parts at the two top
+leaves mpremote. If the board waits in its download mode after the flash, deploy.py prints `the board waits in download
+mode: press the board's R (reset) button once`. Press R once. deploy.py waits 60 s for the port to go and come back,
+and then reads the board again ([P243](https://github.com/xmejkal/spark/issues/252),
+[the bench log](../observations/2026-10-14-p243-bench.md)). The XIAO's R and B buttons are the small parts at the two top
 corners, beside the USB plug.
 
 After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
