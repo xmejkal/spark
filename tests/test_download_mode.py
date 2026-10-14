@@ -62,6 +62,12 @@ class TheConsoleTest(unittest.TestCase):
         self.assertEqual(opened, [(PORT, 115200, False, False), "closed"])
         self.assertEqual(out.getvalue(), ROM + "\ufffd")
 
+    def test_a_line_that_is_ready_is_a_boot_and_a_word_inside_a_line_is_not(self):
+        self.assertTrue(download_mode.booted("entry 0x4086b910\r\nready\r\n"))
+        self.assertFalse(download_mode.booted("not ready yet\n"))
+        self.assertFalse(download_mode.booted(""))
+        self.assertTrue(download_mode.booted(" ready \n"))
+
     def test_a_firmware_s_lines_are_not_download_mode(self):
         probe = download_mode.DownloadModeProbe(["/opt/python3"], PORT, printing("ready\n", []))
         self.assertFalse(probe.waits_in_download_mode()[0])

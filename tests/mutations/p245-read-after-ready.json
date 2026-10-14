@@ -1,0 +1,56 @@
+[
+ {
+  "file": "scripts/download_mode.py",
+  "name": "substring",
+  "find": "return READY in [line.strip() for line in console.splitlines()]",
+  "replace": "return READY in console"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "no-strip",
+  "find": "return READY in [line.strip() for line in console.splitlines()]",
+  "replace": "return READY in console.splitlines()"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "never-booted",
+  "find": "return READY in [line.strip() for line in console.splitlines()]",
+  "replace": "return False"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "branch-dropped",
+  "find": "elif download_mode.booted(console):  # P245",
+  "replace": "elif False:  # P245"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "branch-also-when-waits",
+  "find": "elif download_mode.booted(console):  # P245",
+  "replace": "if download_mode.booted(console):  # P245"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "reread-not-kept",
+  "find": "facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)\n                heard += download_mode.READ_AGAIN",
+  "replace": "_ = read_board(args.project, report, connection, expected)\n                heard += download_mode.READ_AGAIN"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "logged-without-reread",
+  "find": "facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)\n                heard += download_mode.READ_AGAIN",
+  "replace": "pass\n                heard += download_mode.READ_AGAIN"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "not-logged",
+  "find": "heard += download_mode.READ_AGAIN + \"\\n\"",
+  "replace": "heard += \"\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "facts-stale",
+  "find": "facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)\n                heard += download_mode.READ_AGAIN",
+  "replace": "_f, _l, verdict, sentence, said = read_board(args.project, report, connection, expected)\n                heard += download_mode.READ_AGAIN"
+ }
+]
