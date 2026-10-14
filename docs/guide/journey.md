@@ -1027,7 +1027,7 @@ per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
-**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after the person types yes in their own terminal ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. Nothing has run it on a board yet. The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after the person types yes in their own terminal ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v1](../../scrum/VISION.md#versions)).
 
@@ -1076,8 +1076,35 @@ deploy.py: no terminal to ask you in. Run this line in your own terminal window 
 ```
 
 The PO ran that line in his own terminal window, answered `no` at the question, and deploy.py said
-`deploy.py: not flashed: you answered no.` Nothing was erased. The real flash is
-[P215](https://github.com/xmejkal/spark/issues/196).
+`deploy.py: not flashed: you answered no.` Nothing was erased.
+
+### The first flash: a blink on the board alone
+
+On 2026-10-14 the PO flashed a project with no parts on the same XIAO
+([P236](https://github.com/xmejkal/spark/issues/233)). Its `requirements.json` says `"board_only": true`, so the build
+skips the parts, schematic, footprint and build stages and simulates the board alone. `firmware/pins.py` names the
+board's own LED, `ONBOARD_LED = 15`, from the board record. The firmware, written in the conversation, blinks that LED.
+A number typed in the board's console sets the period in milliseconds, and `steady`, `heartbeat` or `random` picks the
+pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut
+here.
+
+<!-- output: run 2026-10-14, spark 0.9.0 -->
+```text
+$ deploy.py --project . --token xxxx-f34b
+...
+Hard resetting via RTS pin...
+  facts file spark.json sha256: aab5fd6e5ddc3864c9d9ea22539132ad9bb4ff606e164cf1bf8c41f7dc1bb0d2
+  ready seen: the firmware printed 'ready' and the board's 3 files match the run that passed
+  board log: sim/runs/board/2026-10-14T14-12-17.log
+  store record: <store>/boards/8c-bf-ea-xx-xx-xx.json
+```
+
+Then `python3 -m mpremote connect /dev/cu.usbmodem101 repl` talks to the running firmware: `200` and Enter make the LED
+blink every 200 ms. Ctrl-C stops the firmware and gives MicroPython's `>>>` prompt, Ctrl-D starts it again, and Ctrl-]
+leaves mpremote. The first flash of the day said `ready unknown` instead: the board waited in its download mode, and a
+press of its R button started the firmware ([the bench log](../observations/2026-10-14-p236-bench.md),
+[P238](https://github.com/xmejkal/spark/issues/235)). The XIAO's R and B buttons are the small parts at the two top
+corners, beside the USB plug.
 
 After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32
@@ -1087,8 +1114,8 @@ bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
 The `spark-reverse-engineer` skill writes a bench protocol, but for a board reverse-engineered from photos, not for a
 board spark generated.
 
-Until then, every green result in this guide is a build, a generated diagram, a check or a simulation (button-and-LED
-passed in Wokwi on 2026-10-12, P130); nothing touched hardware.
+Apart from the blink above, every green result in this guide is a build, a generated diagram, a check or a simulation
+(button-and-LED passed in Wokwi on 2026-10-12, P130). The button-and-LED project is not yet wired and flashed.
 
 ## From draft to order
 
