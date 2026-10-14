@@ -157,6 +157,20 @@ class TheRunTest(ProjectCase):
         self.assertIn("--timeout 60000", " ".join(seen["args"]))
         self.assertIn(b"print('ready')", (self.project / "sim" / "flash-with-firmware.bin").read_bytes())
 
+    def test_a_project_named_relative_to_here_hands_the_cli_an_absolute_scenario(self):
+        # P236: wokwi-cli reads --scenario from inside sim/, so `sim/scenarios/x` became `sim/sim/scenarios/x`.
+        told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
+                "FAKE_WOKWI_ERR": "", "FAKE_WOKWI_SEEN": str(self.seen)}
+        here = os.getcwd()
+        try:
+            os.chdir(self.project)
+            with mock.patch.dict(os.environ, told):
+                run_scenario.ScenarioRun(".", self.scenario.relative_to(self.project), micropython=self.micropython).run(FAKE_CLI)
+        finally:
+            os.chdir(here)
+        args = json.loads(self.seen.read_text())["args"]
+        self.assertTrue(Path(args[args.index("--scenario") + 1]).is_absolute())
+
     def test_a_build_with_no_image_named_gets_one_named_as_firmware_would(self):
         # wokwi-cli refuses a wokwi.toml with no firmware line: "Firmware path must be a string" (0.27.1, 2026-10-12).
         self.run_with()

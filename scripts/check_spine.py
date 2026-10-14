@@ -72,7 +72,7 @@ import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
-from outcomes import OK, PROBLEMS, COULD_NOT_RUN, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 
 #: The design the chain is proven against when nobody names one. A motor driver, a sensor on a
 #: bus, and the power inlet that supplies the rail the modules only consume — the smallest set
@@ -358,10 +358,15 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # Nothing to build is not a pass. An empty parts list came out `ok` end to end — two traces
     # (the processor's own ground and 3.3 V) and two wires — which proves nothing about the chain
     # and reads as though it did. Intake row M3 had it as `problems` on 09-25; both were wrong.
+    if requirements.get("board_only") is True:
+        if requirements.get("parts"):
+            return stages + [Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one")]
+        return stages + board_alone(board, workdir, firmware)
     if not requirements.get("parts"):
         return stages + [Stage("parts", COULD_NOT_RUN,
                                "the requirements name no parts, so there is nothing to build; a "
-                               "board holding only the microcontroller proves nothing")]
+                               "board holding only the microcontroller proves nothing. A project that runs "
+                               'on the board alone says "board_only": true')]
 
     # The design's own part records, so the build stage below can ask whether the circuit
     # honoured what they state. `emit_board` reads the same records in its subprocess; if that
@@ -522,6 +527,25 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)))]
 
 
+def board_alone(board, workdir, firmware=None):
+    """
+    The stages after `board` for a project that runs on the board alone (P236): nothing to wire, so the parts,
+    schematic, footprint and build stages are SKIPPED, never ok, and the simulation holds the board's Wokwi part only.
+    """
+    skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", "schematic", "footprint", "build")]
+    if not board.get("wokwi_part_type"):
+        return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type")]
+    sim_dir = workdir / "sim"
+    sim_dir.mkdir(exist_ok=True)
+    (sim_dir / "board.json").write_text(json.dumps(board, indent=2) + "\n")
+    (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml((), firmware))
+    diagram = {"version": 1, "author": "spark", "editor": "wokwi",
+               "parts": [{"type": board["wokwi_part_type"], "id": "mcu", "top": 0, "left": 0, "attrs": {}}],
+               "connections": []}
+    (sim_dir / "diagram.json").write_text(json.dumps(diagram, indent=2) + "\n")
+    return skipped + [Stage("simulation", OK, "the board alone, " + simulation_detail(0, {}, 0, (), serial_wired(diagram)))]
+
+
 def simulation_detail(wires, staged, compiled, limits, serial=True):
     """
     What the simulation stage says, including what it cannot show.
@@ -551,6 +575,11 @@ def verdict(stages):
         unchecked=[s for s in stages if s.status == COULD_NOT_RUN])]
 
 
+def vouches_for_a_build(stages):
+    """Whether the store may note that the board was built: the chain ran end to end, and no stage was skipped (P236)."""
+    return verdict(stages) == EXIT_OK and not any(stage.status == SKIPPED for stage in stages)
+
+
 def left_off(requirements):
     """
     The needs the requirements file says it leaves off the board (C-2: the note `parts.py --requirements` writes, `unserved`),
@@ -563,13 +592,14 @@ def left_off(requirements):
 
 
 def render(stages, code, unserved=()):
-    mark = {OK: "ok  ", PROBLEMS: "!!  ", COULD_NOT_RUN: "????"}
+    mark = {OK: "ok  ", PROBLEMS: "!!  ", COULD_NOT_RUN: "????", SKIPPED: "--  "}
     lines = ["", "  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation", ""]
     for stage in stages:
         lines.append("  [%s] %-16s %s" % (mark[stage.status], stage.name, stage.detail))
     lines.append("")
     lines.append({
-        EXIT_OK: "  the chain runs end to end",
+        EXIT_OK: "  the chain runs end to end" + (" for the board alone: nothing to wire, so no board was built"
+                                                  if any(stage.status == SKIPPED for stage in stages) else ""),
         EXIT_PROBLEMS: "  the chain is broken",
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
     }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))
@@ -592,7 +622,7 @@ def design_handed_to(workdir, project):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("requirements", nargs="?",
-                        help="a requirements.json; omit for the reference design")
+                        help="a requirements.json; omit for the reference design. \"board_only\": true with no parts builds the board alone")
     parser.add_argument("--json", action="store_true",
                         help="the verdict as one JSON object: check, status, stages, and kept with --keep or --sim-dir")
     parser.add_argument("--keep", metavar="DIR", type=Path,
@@ -650,7 +680,7 @@ def main(argv=None):
 
     # The history says a build ran end to end (§5.7) — written here, by the chain itself, never on anyone's say-so.
     # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.
-    if handed is not None and verdict(stages) == EXIT_OK:
+    if handed is not None and vouches_for_a_build(stages):
         try:
             parts.note_built(handed)
         except (store.StoreProblem, OSError) as unrecorded:
@@ -704,6 +734,19 @@ def _kept(workdir, destination):
                  "line": "not kept: %s — %s" % (destination, refused)}]
 
 
+def drop_an_older_build(destination, stages):
+    """
+    For the board alone (P236): an earlier build's `dist/` describes another board, and every check reads it, so it
+    is removed and said, as the breadboard sheet is. Returns the kept entries, none when there is nothing to remove.
+    """
+    old = Path(destination) / "dist"
+    if not any(stage.status == SKIPPED for stage in stages) or not old.is_dir():
+        return []
+    shutil.rmtree(old)
+    why = "board only: no board was built, and it described an earlier build"
+    return [{"file": str(old), "did": "removed", "why": why, "line": "removed %s: %s" % (old, why)}]
+
+
 def keep_breadboard(requirements, destination, stages=()):
     """
     The breadboard sheet beside the kept board (P191, #143), as one kept entry {file, did, why, line}. Only from a build
@@ -712,7 +755,8 @@ def keep_breadboard(requirements, destination, stages=()):
     """
     sheet = Path(destination) / breadboard.SHEET
     if not any(stage.name == "build" and stage.status == OK for stage in stages):
-        why = "the build did not finish in this run"
+        why = ("board only: nothing to wire" if any(stage.status == SKIPPED for stage in stages)
+               else "the build did not finish in this run")
         if sheet.exists():
             sheet.unlink()
             return {"file": str(sheet), "did": "removed", "why": why + ", and it described an earlier build",
@@ -795,6 +839,7 @@ def report(stages, args, workdir=None, requirements=None):
     kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
     if kept is not None and getattr(args, "requirements", None):
         kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
+        kept += drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
     simulation = keep_simulation(workdir, simulation_dir(args)) if workdir is not None and simulation_dir(args) else None
     if simulation is not None:

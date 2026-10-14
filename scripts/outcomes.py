@@ -21,6 +21,9 @@ EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
 #: What `--json` says, and what `check_all` aggregates. `skipped` is `check_all`'s own fourth
 #: word for a check that was not asked for, which is not the same as one that could not look.
 OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"
+#: A check that was not asked for (check_all), or a stage that does not apply to the design (check_spine, P236: the
+#: board alone). Never ok, and never could-not-run.
+SKIPPED = "skipped"
 
 #: Exit code for each status word, and back again, for the scripts that translate one into the
 #: other. `EXIT_FOR` existed here with zero callers while five scripts wrote the same dictionary
