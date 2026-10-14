@@ -498,6 +498,24 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         aliased = board(physical={"pad_aliases": {assignments[0]["pin"]: "SILK"}})
         self.assertIn("# pad SILK;", assign_pins.pin_module(aliased, assignments, "r.json"))
 
+    def test_the_board_s_own_led_is_named_even_with_no_parts(self):
+        # P236: a board-only project blinks the LED the board record names; the number is the record's, not a guess.
+        lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the on-board user LED (not on the header)"}})
+        names = {}
+        exec(assign_pins.pin_module(lit, [], "r.json"), names)
+        self.assertEqual(names["ONBOARD_LED"], 15)
+
+    def test_a_signal_named_like_the_board_s_led_is_refused_not_shadowed(self):
+        lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the LED"}})
+        assignments, _ = assign_pins.assign(lit, [{"name": "ONBOARD_LED", "needs": []}])
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.pin_module(lit, assignments, "r.json")
+
+    def test_a_board_with_no_led_of_its_own_names_none(self):
+        names = {}
+        exec(assign_pins.pin_module(board(), [], "r.json"), names)
+        self.assertNotIn("ONBOARD_LED", names)
+
     def test_a_pin_with_a_role_carries_the_board_records_own_words(self):
         # The probe models were told nothing and got ADC2-with-WiFi wrong; a note in the file
         # the firmware imports is where the next one reads it (P60: notes fixed 7 of 7).

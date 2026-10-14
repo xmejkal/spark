@@ -133,7 +133,7 @@ These write:
   what you have, and refuses a failed or stale build.
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
   reads, writes `breadboard.md` after a build that finished, and creates `.tscircuit/cache/`. It also writes
-  `firmware/pins.py`, but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
+  `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
