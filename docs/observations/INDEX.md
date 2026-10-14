@@ -870,5 +870,5 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT145 | PR #241: the fakes' docstrings skipped what they raise and how a test subclasses them | P239 PR 2 lens (Sonnet), 2026-10-14 | **acted** | IndexError and the `ask` override named |
 | AT146 | PR #241: the rename made test lines over 120 columns longer | P239 PR 2 lens (Sonnet), 2026-10-14 | rejected | cosmetic; 12 lines were already over; the linter spike P240 (#242) covers line length |
 | AT147 | P240 spike: ruff 0.17.0 finds 1,940 with its defaults (UP031 1,277), 98 with F only (F401 96), 0 real-bug codes; 99 of 117 files would reformat; firmware main.py 2 (import order) | P240 spike (Sonnet), 2026-10-14 | **acted** | the PO: ruff later; filed as P241 (#245) |
-| AT148 | P240 spike: many tests carry `# noqa: E402 - reason`, which ruff calls an invalid noqa comment | P240 spike (Sonnet), 2026-10-14 | raised | fixed in P241 (#245) |
+| AT148 | P240 spike: many tests carry `# noqa: E402 - reason`, which ruff calls an invalid noqa comment | P240 spike (Sonnet), 2026-10-14 | raised | to fix in P241 (#245) |
 | AT149 | PR #244: the renames left no old name where a reader or caller sees it; the abc base breaks no subclass; 136 deploy tests OK | P239 PR 3 lens (Sonnet), 2026-10-14 | verified | no findings; tests/mutations/*.json keep the old names as records |
