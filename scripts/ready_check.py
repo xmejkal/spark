@@ -3,16 +3,16 @@ After a flash: do the board's files match the passed run's hashes, and does the 
 
 A library. `ReadyCheck` runs code on the board twice, through its BoardConnection. First it hashes each file that
 the passed run's log names (run_scenario.file_hashes), on the board itself. Then it imports `main`, as the board does
-at boot, and reads its output for READY_WAIT seconds. Ready is seen only when both agree. When mpremote cannot reach
+at boot, and reads its output for READY_WAIT_S seconds. Ready is seen only when both agree. When mpremote cannot reach
 the board, it is unknown, never seen. So is a passed run's log from before P215, which names no files.
 """
 
-from board_connection import BoardUnreachable, CodeRaisedOnBoard
+from board_connection import BoardUnreachableError, BoardCodeError
 from run_scenario import READY
 
 #: How long the board's output is read for `ready`, in seconds. The firmware keeps running after it, so mpremote is
 #: stopped at the end, and what it printed until then is the board's log.
-READY_WAIT = 20
+READY_WAIT_S = 20
 #: Run on the board: one line per file, `file <sha256 or missing> <path>`. %r is the list of paths.
 HASH_FILES = """import hashlib, binascii
 for p in %r:
@@ -44,16 +44,16 @@ class ReadyCheck:
             return UNKNOWN, "the passed run's log names no files (an older spark): run its scenario again", ""
         try:
             hashes = self.connection.run_code(HASH_FILES % sorted(expected))
-        except (BoardUnreachable, CodeRaisedOnBoard) as cannot:
+        except (BoardUnreachableError, BoardCodeError) as cannot:
             return UNKNOWN, "mpremote could not read the board's files: %s" % cannot, cannot.output
         read = dict(line.split(" ", 2)[1:][::-1] for line in hashes.splitlines() if line.startswith("file "))
         differ = [path for path in sorted(expected) if read.get(path) != expected[path]]
         stopped = None
         try:
-            said = self.connection.run_code("import main", keep_running_for=READY_WAIT)
-        except CodeRaisedOnBoard as raised:  # the board answered the hashes, so the firmware stopped
+            said = self.connection.run_code("import main", keep_running_for=READY_WAIT_S)
+        except BoardCodeError as raised:  # the board answered the hashes, so the firmware stopped
             said, stopped = raised.output, str(raised)
-        except BoardUnreachable as cannot:
+        except BoardUnreachableError as cannot:
             return UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output
         log = hashes + said
         if differ:
@@ -62,6 +62,6 @@ class ReadyCheck:
         if stopped is not None:
             return NOT_SEEN, "the firmware stopped with an error: %s" % stopped, log
         if READY not in said:
-            return NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT), log
+            return NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log
         return SEEN, "the firmware printed %r and the board's %d files match the run that passed" % (
             READY, len(expected)), log
