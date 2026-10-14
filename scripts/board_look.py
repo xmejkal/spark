@@ -33,7 +33,7 @@ Port = namedtuple("Port", "device serial usb product")
 Reading = namedtuple("Reading", "chip flash_mb mac")
 MB = 1024 * 1024
 #: How long a subprocess may take, in seconds: mpremote only lists, esptool connects to a board and may wait for it.
-LIST_TIMEOUT, READ_TIMEOUT = 15, 60
+LIST_TIMEOUT_S, READ_TIMEOUT_S = 15, 60
 
 
 class LookStop(Exception):
@@ -48,12 +48,12 @@ class PortFinder:
 
     def boards(self):
         try:
-            done = self.run(self.command, capture_output=True, text=True, timeout=LIST_TIMEOUT)
+            done = self.run(self.command, capture_output=True, text=True, timeout=LIST_TIMEOUT_S)
         except OSError as cannot:
             raise LookStop("could not list the boards on USB: %s" % cannot)
         except subprocess.TimeoutExpired:
             raise LookStop("could not list the boards on USB: mpremote took more than %d s. %s"
-                           % (LIST_TIMEOUT, image_check.BOOT_HINT))
+                           % (LIST_TIMEOUT_S, image_check.BOOT_HINT))
         if done.returncode:
             lines = (done.stderr or "").strip().splitlines()
             raise LookStop("could not list the boards on USB: %s" % (lines[-1] if lines else "mpremote exited with %d" % done.returncode))
@@ -79,12 +79,12 @@ class EsptoolReader(BoardReader):
             raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher.name)
         command = image_check.runnable(self.flasher) + ["--port", port, "flash_id"]
         try:
-            done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT)
+            done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:
             raise LookStop("could not read the board on %s: %s" % (port, cannot))
         except subprocess.TimeoutExpired:
             raise LookStop("could not read the board on %s: esptool took more than %d s. %s"
-                           % (port, READ_TIMEOUT, image_check.BOOT_HINT))
+                           % (port, READ_TIMEOUT_S, image_check.BOOT_HINT))
         if done.returncode:
             raise LookStop("could not read the board on %s. %s" % (port, image_check.BOOT_HINT))
         return self.parse(done.stdout)

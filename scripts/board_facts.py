@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 import store
-from board_connection import BoardUnreachable, CodeRaisedOnBoard
+from board_connection import BoardUnreachableError, BoardCodeError
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
 FACTS_FILE = "spark.json"
@@ -49,7 +49,7 @@ class FactsFile:
             try:
                 self.connection.copy_to_board(local, FACTS_FILE)
                 back = self.connection.read_file(FACTS_FILE)
-            except (BoardUnreachable, CodeRaisedOnBoard) as cannot:
+            except (BoardUnreachableError, BoardCodeError) as cannot:
                 return "mpremote could not copy it: %s" % cannot
         return None if back.strip() == text.strip() else "it read back different from what was copied"
 

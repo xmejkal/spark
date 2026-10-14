@@ -72,7 +72,7 @@ the flash, or the passed run's log is from before P215 and names no files, ready
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
-    ready_check.READY_WAIT)
+    ready_check.READY_WAIT_S)
 
 
 def newer_files(project, image):
@@ -185,15 +185,15 @@ def main(argv=None, run=None, consent=None):
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
         print("\n".join(look.lines(report, token=False)), flush=True)
-        deploy_gate.gate_open(report, args.token, consent or deploy_gate.TerminalConsent(rerun_line(args, report.port)),
-                              image_of(args.project).relative_to(args.project))
+        consent = consent or deploy_gate.TerminalConsentStrategy(rerun_line(args, report.port))
+        deploy_gate.require_open_gate(report, args.token, consent, image_of(args.project).relative_to(args.project))
         commands, mpremote, _ = plan(args.project, report.port, args.ignore_older_runs)
         if report.token() != args.token:  # AT116: the image changed while the person answered
             raise DeployProblem("the image changed after your yes: run look.py again. not flashed.")
     except (board_look.LookStop, DeployProblem, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    except deploy_gate.Closed as shut:
+    except deploy_gate.GateClosedError as shut:
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code
     for command in commands:
