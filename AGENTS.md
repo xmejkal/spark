@@ -27,7 +27,7 @@ These are the PO's standing rules for work on spark itself. Where a decision is 
 - One core, many interfaces. New code is a small class with one job in a library module, and `main()` only parses
   arguments and prints. The CLI (with `--json`), the agents and MCP call that code. An agent prompt never repeats
   its logic. When a fix touches a script, take the small refactor toward this shape if it makes the code simpler.
-  The whole-repository change waits for [v2, #94](https://github.com/xmejkal/spark/issues/94).
+  The whole-repository change waits for [v0.13, #94](https://github.com/xmejkal/spark/issues/94).
 - Records grow by need. A property enters when a check, a stage or the PO needs it, with its origin. Prefer checks
   that read facts in records to logic written per part ([P94](https://github.com/xmejkal/spark/issues/17)).
 - Free, few and local. Use only free tools, one tool per job, and a local CLI before a web service or an MCP server.

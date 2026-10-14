@@ -1029,7 +1029,7 @@ per wokwi.com/pricing (read 2026-10-01).
 
 **Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after the person types yes in their own terminal ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
-sheet ([v1](../../scrum/VISION.md#versions)).
+sheet ([v0.10](../../scrum/VISION.md#versions)).
 
 ### Look at the board
 

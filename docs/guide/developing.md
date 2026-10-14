@@ -249,7 +249,7 @@ These rules name a class, a function or a constant:
   in place of returning False says so: `require_open_gate`.
 - A constant that holds a number carries its unit (`_S`, `_MB`). A constant that holds a sentence ends in `_HINT` or
   `_MESSAGE`.
-- Only the deploy area uses the `Error` suffix now. The rest of the repository changes in v2
+- Only the deploy area uses the `Error` suffix now. The rest of the repository changes in v0.13
   ([#94](https://github.com/xmejkal/spark/issues/94)).
 
 Each docstring says these things:

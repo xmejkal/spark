@@ -36,9 +36,9 @@ on real hardware by a bench protocol.
 | | who | evidence |
 | --- | --- | --- |
 | **Primary** | **The hobbyist.** An idea in words, whatever ESP32 board is in the drawer, some modules. At home in a terminal; no EDA, maybe no meter, no Wokwi licence. Succeeds when `/spark:build` exits 0 on *their* board and then their firmware runs. Quits when their board is not one spark knows, when a paid simulator blocks them, or when `init` asks for values they cannot measure. | **Hypothesis.** The PO's choice. Every "stranger" so far was Claude in one of our sessions, and no person outside the project has installed spark. Slice 5 tests it with a real one. |
-| **The test bench** | **The maker** (Petr). A dead bin and a drawer of modules; directs Claude rather than typing commands; buys from Czech shops. His bin is spark's second bench, after v1's button-and-LED walk. | **Evidence.** Its board is hand-written and spark checks it — spark never generated it. Nothing has run on hardware yet. |
+| **The test bench** | **The maker** (Petr). A dead bin and a drawer of modules; directs Claude rather than typing commands; buys from Czech shops. His bin is spark's second bench, after v0.10's button-and-LED walk. | **Evidence.** Its board is hand-written and spark checks it — spark never generated it. Nothing has run on hardware yet. |
 | **A constraint** | **The agent at the keyboard.** Every logged run was one. It must act on a script's answer without reading the script's source. | **Evidence**: the 09-24 first-time run *"got there by reading Python source, not docs"*. It counts only through the two above. |
-| **Not for** | **A professional ordering chip-down boards in volume.** spark is "a board made of modules"; its autorouter can emit shorts (README); real layout is out. | the PO's v1 line; the README |
+| **Not for** | **A professional ordering chip-down boards in volume.** spark is "a board made of modules"; its autorouter can emit shorts (README); real layout is out. | the PO's v0.10 line; the README |
 
 **What would change this page:** the real outsider (slice 5) who meets their goal with a
 breadboard and firmware alone and never wants a board file ends the hobbyist as written; one whose
@@ -47,15 +47,18 @@ ahead of everything after it.
 
 ## Versions
 
+Every planned version comes before the launch, and spark stays at 0.x until the PO says otherwise (the PO,
+2026-10-14: *"it has to be an mvp"*). The basic journey is v0.10, then v0.11, v0.12 and v0.13. 1.0 is the launch.
+
 Refinement decreases with distance (the PO, 2026-10-11: *"only the to of the backlog is really refined t detail and
-the lowe on the backlog the less details"*). v1 is planned item by item on the board. The next version is one epic in
-the PO's words, and each later one a line. Detail moves down only when work moves up. Which version follows v1 is
-decided when v1 is done. This table is the one place versions are kept current; the replan of 2026-10-11 is where it came from.
+the lowe on the backlog the less details"*). v0.10 is planned item by item on the board. The next version is one epic in
+the PO's words, and each later one a line. Detail moves down only when work moves up. Which version follows v0.10 is
+decided when v0.10 is done. This table is the one place versions are kept current; the replan of 2026-10-11 is where it came from.
 
 | version | done when | how much is planned |
 | --- | --- | --- |
-| **v1 — the basic journey** (done at v1.0, the walk; v1.1, change and flash again, and v1.2, another board, follow) | from an idea in words, a hobbyist gets a parts list, a breadboard sheet and firmware that passes the simulation and runs once flashed onto their own board, with the PCB and 3D model on request. It is proved by the PO's walk of button-and-LED to a lit LED, and to be kept by `tests/test_journey_basic.py` (v1's item 1) | each Ready item in full, the next slice a line each: [the replan](../docs/2026-10-11-replan.md) and the board |
-| **v2 candidate — one core** | *"a real object oriented system, a package or module, that then MCP or AI or human through CLI can be acccessed and its calling the same code, so we don't have extra artefacts and code that's not refactored and reused"* (the PO, 2026-10-11) | one epic, [P158](https://github.com/xmejkal/spark/issues/94); its 2026-10-10 design and plan are input, not its plan |
+| **v0.10 — the basic journey** (done at v0.10, the walk; v0.11, change and flash again, and v0.12, another board, follow) | from an idea in words, a hobbyist gets a parts list, a breadboard sheet and firmware that passes the simulation and runs once flashed onto their own board, with the PCB and 3D model on request. It is proved by the PO's walk of button-and-LED to a lit LED, and to be kept by `tests/test_journey_basic.py` (v0.10's item 1) | each Ready item in full, the next slice a line each: [the replan](../docs/2026-10-11-replan.md) and the board |
+| **v0.13 candidate — one core** | *"a real object oriented system, a package or module, that then MCP or AI or human through CLI can be acccessed and its calling the same code, so we don't have extra artefacts and code that's not refactored and reused"* (the PO, 2026-10-11) | one epic, [P158](https://github.com/xmejkal/spark/issues/94); its 2026-10-10 design and plan are input, not its plan |
 | **later** | the store, shared ([P178](https://github.com/xmejkal/spark/issues/123)) · checks for bigger projects · a board you can order · an enclosure · a stranger's first install · team and QA tooling · one front end for spark ([P199](https://github.com/xmejkal/spark/issues/152)) · interactive system maps ([P198](https://github.com/xmejkal/spark/issues/151)) | one epic each |
 
 ## Not goals
@@ -63,7 +66,7 @@ decided when v1 is done. This table is the one place versions are kept current; 
 | not a goal | why |
 | --- | --- |
 | Production layout, chip-down design, volume | the anti-persona's needs. **Ordering a board of modules is IN the journey** (the PO, 2026-10-03, revising the morning's "later"): optional, after the firmware works — a later version |
-| Analogue simulation; a link between two boards | out of v1 by the PO; R10 parked |
+| Analogue simulation; a link between two boards | out of v0.10 by the PO; R10 parked |
 | A firmware generator, or anything that writes behaviour | P56: spark exports facts and a harness; the conversation writes the firmware |
 | A knowledge skill per firmware runtime | P60: the current models already know the runtimes; the guarantee is a check against the real runtime, never a reference |
 | Arduino or ESP-IDF before a design pulls them | F1, F2 parked |
