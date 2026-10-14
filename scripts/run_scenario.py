@@ -159,7 +159,7 @@ class ScenarioRun:
             return COULD_NOT_RUN, problem, None
         self.image.write_bytes(self.flash)
         # Beside the original, so a step's own path (a screenshot to compare with) resolves where its author wrote it.
-        as_run = self.scenario.parent / (".as-run." + self.scenario.name)
+        as_run = self.scenario.absolute().parent / (".as-run." + self.scenario.name)  # wokwi-cli reads a relative one from sim/
         with tempfile.TemporaryDirectory() as scratch:
             serial_log = Path(scratch) / "serial.log"
             try:
