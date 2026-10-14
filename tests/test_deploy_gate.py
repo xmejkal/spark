@@ -24,7 +24,7 @@ import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent  # noqa: E402
+from fakes import FakeConsent, FakeDownloadModeProbe  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 
@@ -69,7 +69,7 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False, probe=None):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command."""
         self.copied = getattr(self, "copied", {})
 
@@ -90,7 +90,7 @@ class GateCase(LookCase):
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent)
+            code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, probe=probe)
         return code, out.getvalue(), err.getvalue()
 
     def token(self, **kw):
@@ -327,6 +327,67 @@ class TheBoardAfterTheFlashTest(GateCase):
         code, _, problems = self.flash(ChangesTheImage(True))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the image changed after your yes: run look.py again. not flashed.", problems)
+
+
+class TheBoardInDownloadModeTest(GateCase):
+    """P243 (#252): a board silent after the flash because it waits in download mode gets a press of R, then the
+    ready check runs again."""
+
+    unread = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+
+    def flash(self, probe):
+        self.run_the_scenario()
+        return self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe)
+
+    def answers(self):
+        self.unread = self.uncopied = None
+        self.ran.append("reset")
+
+    def test_a_press_of_r_after_download_mode_runs_the_ready_check_again(self):
+        self.uncopied = self.unread
+        probe = FakeDownloadModeProbe("boot:0x4 (DOWNLOAD)\nwaiting for download\n", on_reset=self.answers)
+        code, said, _ = self.flash(probe)
+        self.assertEqual((code, probe.asked), (0, ["console", "reset"]))
+        self.assertIn("press the board's R (reset) button once", said)
+        self.assertIn("ready seen", said)
+        self.assertIn("facts file spark.json sha256", said)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+        self.assertIn("console with DTR and RTS off: boot:0x4 (DOWNLOAD)\nwaiting for download\nreset seen", log)
+        after = self.ran[self.ran.index("reset") + 1:]
+        self.assertEqual([c[c.index("fs") + 1] if "fs" in c else c[-1][:6] for c in after], ["cp", "cat", "import", "import"])
+
+    def test_no_press_in_time_is_unknown_and_says_to_press_r(self):
+        code, said, _ = self.flash(FakeDownloadModeProbe("waiting for download\n", reset=False))
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
+                      "press its R button", said)
+        self.assertIn("waiting for download\nno reset", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
+    def test_a_silent_board_not_in_download_mode_stays_unknown_and_asks_nothing(self):
+        probe = FakeDownloadModeProbe("")
+        code, said, _ = self.flash(probe)
+        self.assertEqual((code, probe.asked), (2, ["console"]))
+        self.assertNotIn("press the board's R", said)
+        self.assertIn("ready unknown: mpremote could not read the board's files", said)
+
+    def test_a_passed_log_that_names_no_files_is_never_probed(self):
+        probe = FakeDownloadModeProbe("waiting for download\n")
+        with mock.patch.object(deploy, "file_hashes", side_effect=lambda log: {}):
+            code, said, _ = self.flash(probe)
+        self.assertEqual((code, probe.asked), (2, []))
+        self.assertIn("ready unknown: the passed run's log names no files", said)
+
+    def test_a_board_that_answers_is_never_probed(self):
+        self.unread = None
+        probe = FakeDownloadModeProbe("waiting for download\n")
+        self.assertEqual((self.flash(probe)[0], probe.asked), (0, []))
+
+    def test_without_a_probe_the_default_reads_the_port_with_mpremote_s_python(self):
+        code, said, _ = self.flash(None)
+        self.assertEqual(code, 2)
+        probes = [command for command in self.ran if command[1:2] == ["-c"] and "serial" in command[2]]
+        self.assertEqual([command[:1] + command[3:] for command in probes],
+                         [FOUND["board-shell"].command + [self.look().port, "2"]])
 
 
 class TheFactsAfterTheFlashTest(GateCase):

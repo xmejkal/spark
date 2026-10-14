@@ -35,6 +35,7 @@ import board_look
 import ready_check
 import boards
 import deploy_gate
+import download_mode
 import look
 import store
 import tools
@@ -69,10 +70,13 @@ deploy with its verdict and whose yes it was. Then it reads the board: ready see
 passed run's sha256s and the firmware printed `ready` within %d s. The board's log goes to sim/runs/board/. A firmware
 that stops with an error is not seen. If mpremote cannot reach the board, for example because its port changed after
 the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
+If ready is unknown and the passed log names files, deploy.py reads the port with DTR and RTS off. If it reads `waiting for download`, the
+board waits in its download mode: deploy.py asks you to press the board's R (reset) button once, waits %d s for the
+port to go and come back under the same name, and reads the board again.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
-    ready_check.READY_WAIT_S)
+    ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
 def newer_files(project, image):
@@ -152,10 +156,17 @@ def rerun_line(args, port):
     return shlex.join(line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
 
 
-def main(argv=None, run=None, consent=None):
+def read_board(project, report, connection, expected):
+    """(the facts, the facts line, the verdict, its sentence, the board's log) after a flash: the facts, then ready."""
+    facts, facts_line = put_facts(project, report, connection, expected)
+    return (facts, facts_line) + ready_check.ReadyCheck(connection).check(expected)
+
+
+def main(argv=None, run=None, consent=None, probe=None):
     """
     Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
-    `consent` how the person says yes (default: in this terminal). Returns the exit code.
+    `consent` how the person says yes (default: in this terminal), `probe` how a board in download mode is found
+    (default: download_mode.DownloadModeProbe). Returns the exit code.
     """
     parser = argparse.ArgumentParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -207,8 +218,20 @@ def main(argv=None, run=None, consent=None):
     passed = passed_log(image, args.project / "sim" / "runs")
     expected = file_hashes(passed) if passed else {}
     connection = board_connection.BoardConnection(mpremote, report.port, run)
-    facts, facts_line = put_facts(args.project, report, connection, expected)
-    verdict, sentence, said = ready_check.ReadyCheck(connection).check(expected)
+    facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
+    if verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
+        probe = probe or download_mode.DownloadModeProbe.for_tool(tools.find("board-shell", args.project),
+                                                                    report.port, run)
+        waits, console = probe.waits_in_download_mode() if probe else (False, "")
+        if waits:
+            print("  %s" % download_mode.PRESS_RESET, flush=True)
+            reset = probe.wait_for_reset()
+            if reset:
+                facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
+            else:
+                sentence = download_mode.NO_RESET
+            said = "console with DTR and RTS off: %s\n%s\n%s" % (
+                console.strip(), "reset seen" if reset else "no reset", said)
     log = keep_board_log(args.project, report.port, image, verdict, sentence, said, facts_line)
     print("  %s\n  %s: %s\n  board log: %s" % (facts_line, verdict, sentence, log))
     try:
