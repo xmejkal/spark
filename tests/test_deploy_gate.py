@@ -273,10 +273,10 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.assertIn("ready seen", said)
 
     def test_a_firmware_that_stops_with_an_error_is_not_seen_and_its_traceback_is_kept(self):
-        self.prints = subprocess.CalledProcessError(1, ["mpremote"], output="ready\n", stderr="Traceback: OSError: 19\n")
+        self.prints = subprocess.CalledProcessError(1, ["mpremote"], output="ready\nTraceback: OSError: 19\n", stderr="")
         code, said, _ = self.flash()
         self.assertEqual(code, 1)
-        self.assertIn("ready not seen: the firmware stopped with an error (mpremote exit 1)", said)
+        self.assertIn("ready not seen: the firmware stopped with an error: Traceback: OSError: 19", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log"))
         self.assertIn("Traceback: OSError: 19", log.read_text())
 

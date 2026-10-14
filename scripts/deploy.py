@@ -102,11 +102,6 @@ def flash_commands(flasher, chip, image, port=None):
     return [base + [ERASE], base + [WRITE, IMAGE_OFFSET, str(image)]]
 
 
-def watch_command(shell, port=None):
-    """mpremote's REPL on the board, where the person sees the firmware print `ready`. `shell` is mpremote's command."""
-    return shell + (["connect", port] if port else []) + ["repl"]
-
-
 def keep_board_log(project, port, image, verdict, sentence, said, facts_line):
     """The board's log after a flash, in sim/runs/board/ beside the run logs (whose *.log glob does not reach it)."""
     now = datetime.datetime.now()
@@ -143,15 +138,15 @@ def plan(project, port=None, ignore_older_runs=False):
     if other and not ignore_older_runs:
         raise DeployProblem(other + OLDER_RUNS_WAY_OUT)
     chip = chip_of(project)
-    flasher, shell = tools.find("flasher", project), tools.find("board-shell", project)
+    flasher, mpremote = tools.find("flasher", project), tools.find("board-shell", project)
     changed = newer_files(project, image)
     notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
              "scenario again to test it." % ", ".join(changed)] if changed else []
     notes += [other] if other else []
-    return flash_commands(flasher, chip, image, port), runnable(shell), notes
+    return flash_commands(flasher, chip, image, port), runnable(mpremote), notes
 
 
-def again(args, port):
+def rerun_line(args, port):
     """The line that runs this deploy again, for the person's own terminal."""
     line = [str(Path(__file__).resolve()), "--project", str(args.project.resolve()), "--token", args.token or "", "--port", port]
     return shlex.join(line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
@@ -176,7 +171,7 @@ def main(argv=None, run=None, consent=None):
     args = parser.parse_args(argv)
     run = run or subprocess.run
     try:
-        commands, shell, notes = plan(args.project, args.port, args.ignore_older_runs)
+        commands, mpremote, notes = plan(args.project, args.port, args.ignore_older_runs)
     except (DeployProblem, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
@@ -185,14 +180,14 @@ def main(argv=None, run=None, consent=None):
     if args.dry_run:
         print("\n".join("  would run: %s" % shlex.join(command) for command in commands))
         print("  board: not looked at: run look.py")
-        print("  " + WATCH % shlex.join(watch_command(shell, args.port)))
+        print("  " + WATCH % shlex.join(board_connection.BoardConnection(mpremote, args.port).repl_command()))
         return EXIT_OK
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
         print("\n".join(look.lines(report, token=False)), flush=True)
-        deploy_gate.gate_open(report, args.token, consent or deploy_gate.TerminalConsent(again(args, report.port)),
+        deploy_gate.gate_open(report, args.token, consent or deploy_gate.TerminalConsent(rerun_line(args, report.port)),
                               image_of(args.project).relative_to(args.project))
-        commands, shell, _ = plan(args.project, report.port, args.ignore_older_runs)
+        commands, mpremote, _ = plan(args.project, report.port, args.ignore_older_runs)
         if report.token() != args.token:  # AT116: the image changed while the person answered
             raise DeployProblem("the image changed after your yes: run look.py again. not flashed.")
     except (board_look.LookStop, DeployProblem, tools.ToolProblem) as cannot:
@@ -211,7 +206,7 @@ def main(argv=None, run=None, consent=None):
     image = image_of(args.project)
     passed = passed_log(image, args.project / "sim" / "runs")
     expected = file_hashes(passed) if passed else {}
-    connection = board_connection.BoardConnection(shell, report.port, run, ready_check.READY_WAIT)
+    connection = board_connection.BoardConnection(mpremote, report.port, run)
     facts, facts_line = put_facts(args.project, report, connection, expected)
     verdict, sentence, said = ready_check.ReadyCheck(connection).check(expected)
     log = keep_board_log(args.project, report.port, image, verdict, sentence, said, facts_line)
@@ -221,7 +216,7 @@ def main(argv=None, run=None, consent=None):
     except (OSError, store.StoreProblem) as cannot:
         print("  store record: not written: %s" % cannot)
     if verdict == ready_check.UNKNOWN:
-        print("  " + WATCH % shlex.join(watch_command(shell, report.port)))
+        print("  " + WATCH % shlex.join(connection.repl_command()))
         return EXIT_COULD_NOT_RUN
     return EXIT_OK if verdict == ready_check.SEEN else EXIT_PROBLEMS
 

@@ -33,7 +33,7 @@ class Unreachable:
         return subprocess.CompletedProcess(command, 1, "", "")
 
 
-class BoardReadyTest(unittest.TestCase):
+class ReadyCheckTest(unittest.TestCase):
     def test_a_board_that_cannot_be_reached_is_unknown_not_a_file_that_differs(self):
         verdict, _, _ = ready_check.ReadyCheck(board_connection.BoardConnection(["mpremote"], "/dev/ttyX", Unreachable())).check(MAIN)
         self.assertEqual(verdict, "ready unknown")

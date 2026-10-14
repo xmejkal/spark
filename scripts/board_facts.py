@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 import store
-from board_connection import BoardUnreachable, FirmwareStopped
+from board_connection import BoardUnreachable, CodeRaisedOnBoard
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
 FACTS_FILE = "spark.json"
@@ -49,28 +49,28 @@ class FactsFile:
             try:
                 self.connection.copy_to_board(local, FACTS_FILE)
                 back = self.connection.read_file(FACTS_FILE)
-            except (BoardUnreachable, FirmwareStopped) as cannot:
+            except (BoardUnreachable, CodeRaisedOnBoard) as cannot:
                 return "mpremote could not copy it: %s" % cannot
         return None if back.strip() == text.strip() else "it read back different from what was copied"
 
 
-def record_deploy(said, verdict, yes_by=None):
+def record_deploy(facts, verdict, yes_by=None):
     """
     The store's record of this board, by its MAC, with this deploy added: the project, the image's sha256, the date,
     the verdict and whose yes it was (the person typed it in their own terminal). Returns the record's path.
     """
-    key = store.slug(said["mac"])
-    deploy = {"project": said["project"], "image_sha256": said["image_sha256"], "deployed": said["deployed"],
+    key = store.slug(facts["mac"])
+    deploy = {"project": facts["project"], "image_sha256": facts["image_sha256"], "deployed": facts["deployed"],
               "verdict": verdict, "yes": "typed in a terminal by %s" % (yes_by or getpass.getuser())}
     with store.locked():
         path = store.place("boards") / (key + ".json")
         try:
-            record = json.loads(path.read_text()) if path.is_file() else {"mac": said["mac"], "deploys": []}
+            record = json.loads(path.read_text()) if path.is_file() else {"mac": facts["mac"], "deploys": []}
         except ValueError:
             record = None
         if not isinstance(record, dict) or not isinstance(record.get("deploys"), list):
             raise store.StoreProblem("%s is not a board record, so it was left as it is" % path)
-        record["board"] = said["board"]
+        record["board"] = facts["board"]
         record["deploys"].append(deploy)
         store.write_json("boards", key, record)
     return path

@@ -170,7 +170,7 @@ class ScenarioRun:
                                       timeout=self.timeout_ms / 1000 + STARTUP_ALLOWANCE_S)
             except subprocess.TimeoutExpired as late:
                 sentence = "wokwi-cli did not finish in %d s" % late.timeout
-                return COULD_NOT_RUN, sentence, self.write_log(sentence, "\n".join(map(_text, (late.stdout, late.stderr))))
+                return COULD_NOT_RUN, sentence, self.write_log(sentence, "\n".join(map(printed_text, (late.stdout, late.stderr))))
             except OSError as cannot:
                 return COULD_NOT_RUN, "wokwi-cli could not start: %s" % cannot, None
             finally:
@@ -195,7 +195,7 @@ class ScenarioRun:
         return self.log
 
 
-def _text(output):
+def printed_text(output):
     """What a killed process printed, as text: subprocess hands it back as bytes, as text or as nothing."""
     return output.decode("utf-8", "replace") if isinstance(output, bytes) else (output or "")
 

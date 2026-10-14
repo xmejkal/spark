@@ -34,7 +34,7 @@ class Mpremote:
 
 
 def connection(run):
-    return board_connection.BoardConnection(["mpremote"], "/dev/ttyX", run, wait=20)
+    return board_connection.BoardConnection(["mpremote"], "/dev/ttyX", run, timeout_s=20)
 
 
 class BoardConnectionTest(unittest.TestCase):
@@ -50,15 +50,27 @@ class BoardConnectionTest(unittest.TestCase):
         self.assertIn("b''", said.exception.output)
 
     def test_code_that_raises_on_the_board_is_the_firmware_stopping(self):
-        board = ("ready\n", "Traceback (most recent call last):\n  File \"light.py\", line 9\nOSError: [Errno 19] ENODEV\n")
-        with self.assertRaises(board_connection.FirmwareStopped) as said:
+        board = ("ready\nTraceback (most recent call last):\n  File \"light.py\", line 9\nOSError: [Errno 19] ENODEV\n", "")
+        with self.assertRaises(board_connection.CodeRaisedOnBoard) as said:
             connection(Mpremote(fails=board)).run_code("import main")
-        self.assertIn("OSError: [Errno 19] ENODEV", said.exception.output)
+        self.assertEqual(str(said.exception), "OSError: [Errno 19] ENODEV")
         self.assertTrue(said.exception.output.startswith("ready\n"))
+
+    def test_mpremote_s_own_traceback_is_the_board_unreachable_never_the_firmware(self):
+        dropped = ("", "Traceback (most recent call last):\n  File \"mpremote/main.py\"\nserial.serialutil.SerialException:"
+                       " device reports readiness to read but returned no data\n")
+        for step in (lambda c: c.run_code("pass"), lambda c: c.copy_to_board("/tmp/x", "x"), lambda c: c.read_file("x")):
+            with self.assertRaises(board_connection.BoardUnreachable) as said:
+                step(connection(Mpremote(fails=dropped)))
+            self.assertIn("SerialException", str(said.exception))
+
+    def test_a_copy_that_fails_with_a_board_traceback_is_still_unreachable(self):
+        with self.assertRaises(board_connection.BoardUnreachable):
+            connection(Mpremote(fails=("Traceback (most recent call last):\nOSError: 28\n", ""))).copy_to_board("/tmp/x", "x")
 
     def test_a_run_that_is_still_going_when_the_time_is_up_gives_what_it_printed(self):
         going = subprocess.TimeoutExpired(["mpremote"], 20, output=b"ready\nLED on\n")
-        self.assertEqual(connection(Mpremote(raises=going)).run_code("import main", keep_running=True), "ready\nLED on\n")
+        self.assertEqual(connection(Mpremote(raises=going)).run_code("import main", keep_running_for=20), "ready\nLED on\n")
 
     def test_no_answer_in_time_is_board_unreachable(self):
         with self.assertRaises(board_connection.BoardUnreachable) as said:
