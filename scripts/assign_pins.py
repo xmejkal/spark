@@ -415,6 +415,8 @@ def pin_module(board, assignments, source, pulled_up=()):
                          % (entry["signal"], entry["signal"]))
     led = ((board.get("pin_roles") or {}).get("onboard_led") or {}).get("gpio") or []
     if len(led) == 1:
+        if any(entry["signal"] == "ONBOARD_LED" for entry in assignments):
+            raise Impossible("a signal is named ONBOARD_LED, the name pins.py gives the board's own LED: rename it")
         lines.append("ONBOARD_LED = %d  # %s; its polarity is not in the board record"
                      % (led[0], role_note(board, "onboard_led")))
     return "\n".join(lines) + "\n"
