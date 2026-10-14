@@ -341,6 +341,7 @@ class TheBoardInDownloadModeTest(GateCase):
 
     def answers(self):
         self.unread = self.uncopied = None
+        self.ran.append("reset")
 
     def test_a_press_of_r_after_download_mode_runs_the_ready_check_again(self):
         self.uncopied = self.unread
@@ -351,12 +352,16 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertIn("ready seen", said)
         self.assertIn("facts file spark.json sha256", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
-        self.assertIn("console with DTR and RTS off: boot:0x4 (DOWNLOAD)\nwaiting for download", log)
+        self.assertIn("console with DTR and RTS off: boot:0x4 (DOWNLOAD)\nwaiting for download\nreset seen", log)
+        after = self.ran[self.ran.index("reset") + 1:]
+        self.assertEqual([c[c.index("fs") + 1] if "fs" in c else c[-1][:6] for c in after], ["cp", "cat", "import", "import"])
 
     def test_no_press_in_time_is_unknown_and_says_to_press_r(self):
         code, said, _ = self.flash(FakeDownloadModeProbe("waiting for download\n", reset=False))
         self.assertEqual(code, 2)
-        self.assertIn("ready unknown: the board waits in download mode, and no reset came in 60 s: press its R button", said)
+        self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
+                      "press its R button", said)
+        self.assertIn("waiting for download\nno reset", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_silent_board_not_in_download_mode_stays_unknown_and_asks_nothing(self):
         probe = FakeDownloadModeProbe("")
@@ -364,6 +369,13 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertEqual((code, probe.asked), (2, ["console"]))
         self.assertNotIn("press the board's R", said)
         self.assertIn("ready unknown: mpremote could not read the board's files", said)
+
+    def test_a_passed_log_that_names_no_files_is_never_probed(self):
+        probe = FakeDownloadModeProbe("waiting for download\n")
+        with mock.patch.object(deploy, "file_hashes", side_effect=lambda log: {}):
+            code, said, _ = self.flash(probe)
+        self.assertEqual((code, probe.asked), (2, []))
+        self.assertIn("ready unknown: the passed run's log names no files", said)
 
     def test_a_board_that_answers_is_never_probed(self):
         self.unread = None
@@ -373,7 +385,9 @@ class TheBoardInDownloadModeTest(GateCase):
     def test_without_a_probe_the_default_reads_the_port_with_mpremote_s_python(self):
         code, said, _ = self.flash(None)
         self.assertEqual(code, 2)
-        self.assertTrue(any(command[1:2] == ["-c"] and "serial" in command[2] for command in self.ran))
+        probes = [command for command in self.ran if command[1:2] == ["-c"] and "serial" in command[2]]
+        self.assertEqual([command[:1] + command[3:] for command in probes],
+                         [FOUND["board-shell"].command + [self.look().port, "2"]])
 
 
 class TheFactsAfterTheFlashTest(GateCase):

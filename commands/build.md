@@ -313,9 +313,9 @@ printed `ready`. `ready not seen` (exit 1) names the file that differs, or says 
 firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
 log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The line ends with mpremote's
 own words, and the board's log keeps all it printed. The board's log goes to `sim/runs/board/`.
-If mpremote hears nothing, deploy.py reads the port with DTR and RTS off. If the port says `waiting for download`, the
+If ready is unknown and the passed run's log names files, deploy.py reads the port with DTR and RTS off. If the port says `waiting for download`, the
 board waits in its download mode. deploy.py then asks you to press the board's R (reset) button once, waits 60 s for
-the port to go and come back, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)).
+the port to go and come back under the same name, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)).
 The board's port name can change after the flash, because MicroPython can bring its own USB serial port, and then the
 read is unknown. `python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
 prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D.

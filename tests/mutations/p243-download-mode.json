@@ -1,0 +1,80 @@
+[
+ {
+  "file": "scripts/download_mode.py",
+  "name": "for_tool drops the python-package check",
+  "find": "if tool.entry.get(\"kind\") != \"python\" or not port:",
+  "replace": "if not port:"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "for_tool drops the port check",
+  "find": "if tool.entry.get(\"kind\") != \"python\" or not port:",
+  "replace": "if tool.entry.get(\"kind\") != \"python\":"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "console opens with DTR and RTS on",
+  "find": "0.1, False, False",
+  "replace": "0.1, True, True"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "console drops check=True",
+  "find": "timeout=READ_S + 10, check=True)",
+  "replace": "timeout=READ_S + 10, check=False)"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "any console is download mode",
+  "find": "return DOWNLOAD_MODE in said, said",
+  "replace": "return True, said"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "reset without the port going",
+  "find": "            elif gone:",
+  "replace": "            else:"
+ },
+ {
+  "file": "scripts/download_mode.py",
+  "name": "reset when the port only goes",
+  "find": "                gone = True",
+  "replace": "                return True"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "probe without expected files",
+  "find": "if verdict == ready_check.UNKNOWN and expected:",
+  "replace": "if verdict == ready_check.UNKNOWN:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "probe whatever the verdict",
+  "find": "if verdict == ready_check.UNKNOWN and expected:",
+  "replace": "if expected:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "ask for R whatever the console",
+  "find": "        if waits:",
+  "replace": "        if True:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "no retry after the reset",
+  "find": "                facts, facts_line, verdict, sentence, said = read_board",
+  "replace": "                facts, facts_line, verdict, sentence, said = facts, facts_line, verdict, sentence, said; read_board"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "console line left out of the board log",
+  "find": "said = \"console with DTR and RTS off: %s\\n%s\\n%s\" % (",
+  "replace": "said = said or \"%s%s%s\" % ("
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "the log does not say whether the reset came",
+  "find": "\"reset seen\" if reset else \"no reset\"",
+  "replace": "\"reset seen\""
+ }
+]

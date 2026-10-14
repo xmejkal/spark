@@ -1,7 +1,10 @@
 """P243 (#252): after a flash, a board that waits in download mode is found, and a press of its R button is seen."""
 
+import contextlib
+import io
 import subprocess
 import sys
+import types
 import unittest
 from pathlib import Path
 
@@ -14,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import download_mode  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeClock  # noqa: E402
+from unittest import mock  # noqa: E402
 
 PORT = "/dev/cu.usbmodem101"
 ROM = "ESP-ROM:esp32c6-20220919\nboot:0x4 (DOWNLOAD(USB/UART0/SDIO_FEI_FEO))\nwaiting for download\n"
@@ -35,9 +39,40 @@ class TheConsoleTest(unittest.TestCase):
         self.assertEqual(ran[0][:2] + ran[0][3:], ["/opt/python3", "-c", PORT, "2"])
         self.assertIn("s.dtr, s.rts = sys.argv[1], 115200, 0.1, False, False", ran[0][2])
 
+    def test_the_console_script_opens_the_port_with_dtr_and_rts_off_and_prints_what_it_read(self):
+        opened = []
+
+        class Serial:
+            def __init__(self):
+                self.chunks = [ROM.encode(), b"\xff"]
+
+            def open(self):
+                opened.append((self.port, self.baudrate, self.dtr, self.rts))
+
+            def read(self, size):
+                return self.chunks.pop(0) if self.chunks else b""
+
+            def close(self):
+                opened.append("closed")
+
+        out = io.StringIO()
+        with mock.patch.dict(sys.modules, {"serial": types.SimpleNamespace(Serial=Serial)}), \
+                mock.patch.object(sys, "argv", ["-c", PORT, "0.01"]), contextlib.redirect_stdout(out):
+            exec(download_mode.READ_CONSOLE, {})
+        self.assertEqual(opened, [(PORT, 115200, False, False), "closed"])
+        self.assertEqual(out.getvalue(), ROM + "\ufffd")
+
     def test_a_firmware_s_lines_are_not_download_mode(self):
         probe = download_mode.DownloadModeProbe(["/opt/python3"], PORT, printing("ready\n", []))
         self.assertFalse(probe.waits_in_download_mode()[0])
+
+    def test_a_console_script_that_fails_is_not_download_mode_whatever_it_printed(self):
+        def run(command, check=False, **kw):
+            if check:
+                raise subprocess.CalledProcessError(1, command, ROM, "no module named serial")
+            return subprocess.CompletedProcess(command, 1, ROM, "no module named serial")
+        self.assertEqual(download_mode.DownloadModeProbe(["/opt/python3"], PORT, run).waits_in_download_mode(),
+                         (False, ""))
 
     def test_a_port_that_cannot_be_read_is_not_download_mode(self):
         def fails(command, **kw):

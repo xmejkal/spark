@@ -21,6 +21,9 @@ DOWNLOAD_MODE = "waiting for download"
 PRESS_RESET = "the board waits in download mode: press the board's R (reset) button once"
 #: How long the console is read, how long the person has to press R, and how often the port is looked at, in seconds.
 READ_S, RESET_WAIT_S, POLL_S = 2, 60, 0.1
+#: What deploy.py says when no reset came. The wait looks for the same port name only.
+NO_RESET = ("the board waits in download mode, and its port did not go and come back in %d s: press its R button. If "
+            "the port came back under another name, `python3 -m mpremote devs` lists the ports" % RESET_WAIT_S)
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
 #: it does not choose the boot mode. argv: the port, the seconds.
 READ_CONSOLE = """import sys, time, serial
