@@ -41,3 +41,28 @@ reliable. A wait and a retry alone will not make it pass every time. Ways that d
    the same session. That proves the firmware starts, but it does not check the files.
 3. A firmware that reads its input, so the buffer never fills (the conversation writes the firmware, not spark).
 4. A second round of this spike with 20 tries per row, to measure how often each sequence works.
+
+## Round 2, 2026-10-14 afternoon, on the blink project (P236)
+
+Short version: 15 of 15 esptool resets booted the firmware when nothing else held the port. Download mode came only
+when the chip was already in it, or when a probe opened the port at a reset. The fix does not need the exact cause:
+after a flash, deploy.py tells download mode apart from a silent board and asks the person to press R.
+
+1. The blink firmware reads its input, so idea 3 above is in place. Its console answers typed lines.
+2. The first flash (13:50) followed the PO's presses of BOOT and R. After esptool's reset, mpremote heard nothing.
+   A probe that opened the port with DTR and RTS off read `waiting for download`. A press of R booted the firmware.
+3. Two later deploys (14:03 and 14:12, the board running its firmware before each) said `ready seen` by themselves.
+4. A script ran `esptool chip-id` and then opened the port with DTR and RTS off, read 4 s and sent Enter. Three runs
+   from the running firmware, and three pairs of `--after no-reset` then a normal reset: all 15 reads show the ROM boot
+   lines, then `ready`. Even after `--after no-reset`, the chip restarted, so opening the port restarted it.
+5. While the PO's mpremote held the port, esptool failed with "Could not exclusively lock port", and one esptool reset
+   froze his mpremote session.
+
+What is proven: on the XIAO C6's USB-Serial-JTAG port, opening the port can restart the chip, and a chip that waits in
+download mode stays silent for mpremote ("could not enter raw repl", nothing received). Not proven: which line states
+choose download mode. Espressif documents that the USB-Serial-JTAG peripheral maps DTR and RTS to the boot pin and the
+reset; the exact sequence was not measured here.
+
+The proposed fix (a story, not part of this spike): after the flash, when mpremote hears nothing, deploy.py reads the
+console with DTR and RTS off. If it reads `waiting for download`, it says "press the board's R (reset) button once" and
+waits for the port to come back, then runs the ready check. A board that says nothing at all stays `ready unknown`.
