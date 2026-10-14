@@ -72,13 +72,13 @@ class TheConsoleTest(unittest.TestCase):
                 raise subprocess.CalledProcessError(1, command, ROM, "no module named serial")
             return subprocess.CompletedProcess(command, 1, ROM, "no module named serial")
         self.assertEqual(download_mode.DownloadModeProbe(["/opt/python3"], PORT, run).waits_in_download_mode(),
-                         (False, ""))
+                         (False, "could not read the port: no module named serial"))
 
     def test_a_port_that_cannot_be_read_is_not_download_mode(self):
         def fails(command, **kw):
             raise subprocess.CalledProcessError(1, command, "", "could not open port")
         self.assertEqual(download_mode.DownloadModeProbe(["/opt/python3"], PORT, fails).waits_in_download_mode(),
-                         (False, ""))
+                         (False, "could not read the port: could not open port"))
 
     def test_a_probe_needs_mpremote_as_a_python_package_and_a_port(self):
         python = tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote"}, ["/opt/python3"])

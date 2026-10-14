@@ -24,6 +24,8 @@ READ_S, RESET_WAIT_S, POLL_S = 2, 60, 0.1
 #: What deploy.py says when no reset came. The wait looks for the same port name only.
 NO_RESET = ("the board waits in download mode, and its port did not go and come back in %d s: press its R button. If "
             "the port came back under another name, `python3 -m mpremote devs` lists the ports" % RESET_WAIT_S)
+#: What the probe says of a port it could not read (P244): a could-not-run, never a silent console.
+UNREAD = "could not read the port: %s"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
 #: it does not choose the boot mode. argv: the port, the seconds.
 READ_CONSOLE = """import sys, time, serial
@@ -59,17 +61,22 @@ class DownloadModeProbe:
         return cls(tool.command, port, run)
 
     def console(self):
-        """What the port printed in READ_S seconds, or '' when it could not be read."""
+        """(What the port printed in READ_S seconds, None), or (None, why) when it could not be read."""
         try:
             done = self.run(self.python + ["-c", READ_CONSOLE, self.port, str(READ_S)], capture_output=True, text=True,
                             timeout=READ_S + 10, check=True)
-        except (OSError, subprocess.SubprocessError):
-            return ""
-        return printed_text(done.stdout)
+        except subprocess.CalledProcessError as failed:
+            return None, ((failed.stderr or "").strip().splitlines() or [str(failed)])[-1]
+        except (OSError, subprocess.SubprocessError) as failed:
+            return None, str(failed)
+        return printed_text(done.stdout), None
 
     def waits_in_download_mode(self):
-        """(True when the console says DOWNLOAD_MODE, what it printed)."""
-        said = self.console()
+        """(True when the console says DOWNLOAD_MODE, what it printed). A port it could not read is never download
+        mode, and what it says is UNREAD with the reason, never an empty console (P244)."""
+        said, why = self.console()
+        if said is None:
+            return False, UNREAD % why
         return DOWNLOAD_MODE in said, said
 
     def wait_for_reset(self, timeout_s=RESET_WAIT_S):

@@ -369,6 +369,14 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertEqual((code, probe.asked), (2, ["console"]))
         self.assertNotIn("press the board's R", said)
         self.assertIn("ready unknown: mpremote could not read the board's files", said)
+        self.assertIn("console with DTR and RTS off: nothing\n", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
+    def test_what_a_board_not_in_download_mode_printed_stays_in_the_log(self):
+        # P244 (#255): the 2026-10-15 bench lost what the check read, so nobody knew why the board was silent
+        code, said, _ = self.flash(FakeDownloadModeProbe("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n"))
+        self.assertEqual(code, 2)
+        self.assertIn("console with DTR and RTS off: rst:0x15 (USB_UART_HPSYS),boot:0x1e\n",
+                      next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_passed_log_that_names_no_files_is_never_probed(self):
         probe = FakeDownloadModeProbe("waiting for download\n")
