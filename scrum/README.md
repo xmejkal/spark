@@ -55,7 +55,7 @@ report what something costs and what it would prove.
 | [`RETROSPECTIVES.md`](RETROSPECTIVES.md) | every retro, the change it produced, and **whether that change stuck** |
 | [`WORKING_AGREEMENTS.md`](WORKING_AGREEMENTS.md) | the rules, and where each one came from |
 | [`TEAM.md`](TEAM.md) | the role cards, the roster and the test each member has to pass to exist |
-| [`VISION.md`](VISION.md) | what spark is, who it is for, v1 and what it is not (confirmed by the PO on 2026-10-03, P69) |
+| [`VISION.md`](VISION.md) | what spark is, who it is for, v0.10 and what it is not (confirmed by the PO on 2026-10-03, P69) |
 | [`STORY_MAP.md`](STORY_MAP.md) | the journey a person takes, and the slices in order — each a milestone a command or a bench log proves; a card's *Slice* field names one (confirmed by the PO on 2026-10-03, P69) |
 
 The work lives on the two boards and nowhere else, each card an issue in its repository. `docs/observations/INDEX.md`
