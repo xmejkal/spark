@@ -18,6 +18,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_facts  # noqa: E402
 import deploy  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
@@ -357,6 +358,23 @@ class TheFactsAfterTheFlashTest(GateCase):
                          (json.loads(self.copied["spark.json"])["mac"], "xiao-esp32-c6", before + 1))
         self.assertEqual(kept["deploys"][-1]["verdict"], "ready seen")
         self.assertTrue(kept["deploys"][-1]["yes"].startswith("typed in a terminal by "))
+
+    def test_the_facts_go_to_the_look_s_port_and_name_the_look_s_mac(self):
+        self.flash()
+        copy = next(command for command in self.ran if "cp" in command)
+        self.assertEqual(copy[copy.index("connect"):copy.index("connect") + 2], ["connect", "/dev/cu.usbmodem101"])
+        self.assertEqual(json.loads(self.copied["spark.json"])["mac"], self.look().reading.mac)
+
+    def test_the_record_is_named_by_the_mac_private_and_keeps_the_verdict(self):
+        self.files_on_board = {"/main.py": b"print('old')\n"}
+        _, said, _ = self.flash()
+        record = Path(said.split("store record: ")[1].strip())
+        self.assertEqual(record.name, store.slug(self.look().reading.mac) + ".json")
+        self.assertEqual(record.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(json.loads(record.read_text())["deploys"][-1]["verdict"], "ready not seen")
+
+    def test_the_same_facts_are_the_same_bytes(self):
+        self.assertEqual(board_facts.text_of({"b": 1, "a": 2}), board_facts.text_of({"a": 2, "b": 1}))
 
     def test_a_copy_that_fails_is_said_and_the_ready_check_still_runs(self):
         self.uncopied = subprocess.CalledProcessError(1, ["mpremote"])
