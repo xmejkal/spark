@@ -24,18 +24,8 @@ import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
+from fakes import FakeConsent  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
-
-
-class Says:
-    """A Consent that answers `answer` and keeps each question."""
-
-    def __init__(self, answer):
-        self.answer, self.asked = answer, []
-
-    def ask(self, question):
-        self.asked.append(question)
-        return self.answer
 
 
 class Stream(io.StringIO):
@@ -113,13 +103,13 @@ class GateCase(LookCase):
 class TheGateTest(GateCase):
     def test_no_token_says_to_run_the_look_first_and_erases_nothing(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy(consent=Says(True))
+        code, _, problems = self.deploy(consent=FakeConsent(True))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("run look.py first, then deploy.py --token <token>.", problems)
 
     def test_the_yes_erases_then_writes_on_the_port_the_look_picked(self):
         self.run_the_scenario()
-        consent = Says(True)
+        consent = FakeConsent(True)
         code, said, _ = self.deploy("--token", self.token(), consent=consent)
         self.assertEqual(code, 0)
         self.assertEqual(self.flashed(), ["erase_flash", str(self.image)])
@@ -129,27 +119,27 @@ class TheGateTest(GateCase):
 
     def test_the_answer_no_erases_nothing(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=Says(False))
+        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(False))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("not flashed: you answered no.", problems)
 
     def test_a_token_for_another_board_names_the_board(self):
         self.run_the_scenario()
         image = self.token().split("-")[1]
-        code, _, problems = self.deploy("--token", "0000-" + image, consent=Says(True))
+        code, _, problems = self.deploy("--token", "0000-" + image, consent=FakeConsent(True))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the board changed since the look: run look.py again.", problems)
 
     def test_a_token_for_another_image_names_the_image(self):
         self.run_the_scenario()
         mac, _ = self.token().split("-")
-        code, _, problems = self.deploy("--token", mac + "-0000", consent=Says(True))
+        code, _, problems = self.deploy("--token", mac + "-0000", consent=FakeConsent(True))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the image changed since the look: run look.py again.", problems)
 
     def test_a_token_with_more_after_the_image_half_is_another_image(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token() + "-1", consent=Says(True))
+        code, _, problems = self.deploy("--token", self.token() + "-1", consent=FakeConsent(True))
         self.assertEqual(code, 2)
         self.assertIn("the image changed", problems)
 
@@ -157,7 +147,7 @@ class TheGateTest(GateCase):
         self.run_the_scenario()
         token = self.token()
         moved = data("mpremote-devs-one.txt").replace("/dev/cu.usbmodem101", "/dev/cu.usbmodem2101")
-        code, _, _ = self.deploy("--token", token, devs_text=moved, consent=Says(True))
+        code, _, _ = self.deploy("--token", token, devs_text=moved, consent=FakeConsent(True))
         self.assertEqual(code, 0)
         self.assertTrue(all("/dev/cu.usbmodem2101" in c for c in self.ran if "erase_flash" in c))
 
@@ -165,7 +155,7 @@ class TheGateTest(GateCase):
         self.run_the_scenario()
         token = self.token()
         self.board("firebeetle2-esp32s3")
-        consent = Says(True)
+        consent = FakeConsent(True)
         code, _, problems = self.deploy("--token", token, consent=consent)
         self.assertEqual((code, self.flashed(), consent.asked), (1, [], []))
         self.assertIn("this board is an esp32c6, the project is for an esp32s3. not flashed.", problems)
@@ -174,7 +164,7 @@ class TheGateTest(GateCase):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
         token = self.token(esptool="s3-flash-id-8mb.txt")
-        consent = Says(True)
+        consent = FakeConsent(True)
         code, _, _ = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
         self.assertEqual(code, 0)
         self.assertIn("the flash differs: 8 MB, the record says 16 or 4", consent.asked[0])
@@ -182,13 +172,13 @@ class TheGateTest(GateCase):
     def test_an_unknown_field_is_named_in_the_question(self):
         self.run_the_scenario()
         token = self.token(esptool="c6-flash-id-garbled.txt")
-        consent = Says(True)
+        consent = FakeConsent(True)
         self.deploy("--token", token, esptool="c6-flash-id-garbled.txt", consent=consent)
         self.assertIn("flash unknown (the board did not say)", consent.asked[0])
 
     def test_a_look_with_no_token_refuses_whatever_token_is_given(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", "aaaa-bbbb", esptool="c6-flash-id-no-mac.txt", consent=Says(True))
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", esptool="c6-flash-id-no-mac.txt", consent=FakeConsent(True))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("no token: the board's MAC could not be read. not flashed.", problems)
 
@@ -197,7 +187,7 @@ class TheGateTest(GateCase):
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
         self.run_the_scenario(scenario=self.second_scenario())
         token = self.token(ignore_older_runs=True)
-        code, _, _ = self.deploy("--token", token, "--ignore-older-runs", consent=Says(True))
+        code, _, _ = self.deploy("--token", token, "--ignore-older-runs", consent=FakeConsent(True))
         self.assertEqual(code, 0)
 
     def second_scenario(self):
@@ -207,21 +197,21 @@ class TheGateTest(GateCase):
 
     def test_a_failed_erase_writes_nothing_and_says_what_to_try(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=Says(True), fails=True)
+        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=True)
         self.assertEqual((code, self.flashed()), (2, ["erase_flash"]))
         self.assertIn("hold the board's BOOT button", problems)
 
     def test_a_flash_too_small_for_the_image_stops_before_the_question(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
-        consent = Says(True)
+        consent = FakeConsent(True)
         code, _, problems = self.deploy("--token", "aaaa-bbbb", esptool="s3-flash-id-2mb.txt", consent=consent)
         self.assertEqual((code, self.flashed(), consent.asked), (1, [], []))
         self.assertIn("the flash is 2 MB, the image needs 4 MB. not flashed.", problems)
 
     def test_no_board_on_usb_is_a_sentence_and_erases_nothing(self):
         self.run_the_scenario()
-        code, said, problems = self.deploy("--token", "aaaa-bbbb", devs_text="\n", consent=Says(True))
+        code, said, problems = self.deploy("--token", "aaaa-bbbb", devs_text="\n", consent=FakeConsent(True))
         self.assertEqual((code, said, self.flashed()), (2, "", []))
         self.assertIn("deploy.py: no board found.", problems)
 
@@ -237,7 +227,7 @@ class TheBoardAfterTheFlashTest(GateCase):
 
     def flash(self, consent=None):
         self.run_the_scenario()
-        return self.deploy("--token", self.token(), consent=consent or Says(True))
+        return self.deploy("--token", self.token(), consent=consent or FakeConsent(True))
 
     def test_ready_seen_is_kept_in_a_board_log_beside_the_run_logs_and_the_next_look_ignores_it(self):
         code, said, _ = self.flash()
@@ -314,7 +304,7 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.run_the_scenario()
         log = next((self.project / "sim" / "runs").glob("*.log"))
         log.write_text("".join(line for line in log.read_text().splitlines(True) if not line.startswith("file sha256: ")))
-        code, said, _ = self.deploy("--token", self.token(), consent=Says(True))
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the passed run's log names no files", said)
 
@@ -327,7 +317,7 @@ class TheBoardAfterTheFlashTest(GateCase):
         main.write_text(first)
         test = self
 
-        class ChangesTheImage(Says):
+        class ChangesTheImage(FakeConsent):
             def ask(self, question):
                 test.image.write_bytes(rebuilt[0])
                 for name, text in rebuilt[1].items():
@@ -344,7 +334,7 @@ class TheFactsAfterTheFlashTest(GateCase):
 
     def flash(self, consent=None):
         self.run_the_scenario()
-        return self.deploy("--token", self.token(), consent=consent or Says(True))
+        return self.deploy("--token", self.token(), consent=consent or FakeConsent(True))
 
     def test_the_facts_file_is_on_the_board_and_the_board_log_names_its_sha256(self):
         code, said, _ = self.flash()
