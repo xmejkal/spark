@@ -45,6 +45,11 @@ somewhere quiet. An optional `"signals":
 `parts[0] calls its instance 'Btn Open', but an instance's name is a name — letters, digits and _ (BtnOpen): the board is
 written with it as code`.
 
+A project that runs on the board alone, such as a blink of the board's own LED, says `"board_only": true` with an empty
+`parts` list. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
+the board alone. `firmware/pins.py` names `ONBOARD_LED` when the board record names one on-board LED. An empty `parts`
+list without `board_only` still stops at the parts stage.
+
 `parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, the
 parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack, and keeps every other
 key you added by hand (`signals`).

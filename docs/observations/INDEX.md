@@ -882,3 +882,10 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT147 | P240 spike: ruff 0.17.0 finds 1,940 with its defaults (UP031 1,277), 98 with F only (F401 96), 0 real-bug codes; 99 of 117 files would reformat; firmware main.py 2 (import order) | P240 spike (Sonnet), 2026-10-14 | **acted** | the PO: ruff later; filed as P241 (#245) |
 | AT148 | P240 spike: many tests carry `# noqa: E402 - reason`, which ruff calls an invalid noqa comment | P240 spike (Sonnet), 2026-10-14 | raised | to fix in P241 (#245) |
 | AT149 | PR #244: the renames left no old name where a reader or caller sees it; the abc base breaks no subclass; 136 deploy tests OK | P239 PR 3 lens (Sonnet), 2026-10-14 | verified | no findings; tests/mutations/*.json keep the old names as records |
+| AT150 | PR #246: a signal named ONBOARD_LED got a second line that shadowed it, so the firmware drove the board's LED | P236 lens (Sonnet), 2026-10-14 | **acted** | refused by name, with a test |
+| AT151 | PR #247: a board-only run wrote the store's `built` line, the proof that a board runs end to end | P236 refuter (Opus), 2026-10-14 | **acted** | `vouches_for_a_build`: no skipped stage |
+| AT152 | PR #247: an earlier build's `dist/` stayed beside a board-only project, and every check reads it | P236 refuter (Opus), 2026-10-14 | **acted** | `drop_an_older_build` removes it and says so |
+| AT153 | PR #247: `SKIPPED` defined twice, in check_all and check_spine | P236 refuter (Opus), 2026-10-14 | **acted** | one definition in outcomes.py |
+| AT154 | PR #247: no test of the JSON or of `"board_only": "true"` | P236 refuter (Opus), 2026-10-14 | **acted** | two tests |
+| AT155 | PR #247: the board-only simulation warns that no serial monitor is wired | P236 lens (Sonnet), 2026-10-14 | rejected | true of the diagram, and it says "may"; the XIAO's USB console was heard anyway (blink-c6 run passed); a board whose console is a UART can need the wire |
+| AT156 | PR #247: an earlier full build's `wokwi-mapping.json` and `chips/` stay in `sim/` | P236 lens (Sonnet), 2026-10-14 | raised | low: the one-part diagram names no chip; later |

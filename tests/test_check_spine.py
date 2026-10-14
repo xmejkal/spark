@@ -917,6 +917,75 @@ class NothingToBuildIsNotAPassTest(unittest.TestCase):
         self.assertEqual(stages[-1].status, check_spine.COULD_NOT_RUN)
         self.assertIn("nothing to build", stages[-1].detail)
         self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+        self.assertIn('"board_only": true', stages[-1].detail)
+
+
+class TheBoardAloneTest(unittest.TestCase):
+    """P236: a project that says `"board_only": true` builds the board alone: the board stages are skipped, never ok."""
+
+    def run_alone(self, **extra):
+        workdir = Path(tempfile.mkdtemp())
+        requirements = dict({"board": "xiao-esp32-c6", "parts": [], "board_only": True}, **extra)
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        return workdir, check_spine.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
+
+    def test_the_board_stages_are_skipped_and_the_simulation_holds_the_board(self):
+        workdir, stages = self.run_alone()
+        self.assertEqual([(s.name, s.status) for s in stages],
+                         [("board", "ok"), ("parts", "skipped"), ("schematic", "skipped"), ("footprint", "skipped"),
+                          ("build", "skipped"), ("simulation", "ok")])
+        diagram = json.loads((workdir / "sim" / "diagram.json").read_text())
+        self.assertEqual([part["type"] for part in diagram["parts"]], ["board-xiao-esp32-c6"])
+        self.assertTrue((workdir / "sim" / "wokwi.toml").is_file())
+        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_OK)
+
+    def test_the_verdict_says_the_board_alone_ran(self):
+        _, stages = self.run_alone()
+        said = check_spine.render(stages, check_spine.verdict(stages))
+        self.assertIn("[--  ] build", said)
+        self.assertIn("the chain runs end to end for the board alone", said)
+
+    def test_a_board_wokwi_cannot_show_is_could_not_run(self):
+        board = {"name": "No Wokwi Board"}
+        stages = check_spine.board_alone(board, Path(tempfile.mkdtemp()))
+        self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.COULD_NOT_RUN))
+
+    def test_the_breadboard_line_says_there_is_nothing_to_wire(self):
+        workdir, stages = self.run_alone()
+        kept = check_spine.keep_breadboard(workdir / "requirements.json", workdir, stages)
+        self.assertEqual(kept["line"], "no breadboard sheet: board only: nothing to wire")
+
+    def test_the_store_is_never_told_a_board_alone_was_built(self):
+        _, stages = self.run_alone()
+        self.assertFalse(check_spine.vouches_for_a_build(stages))
+        self.assertTrue(check_spine.vouches_for_a_build([check_spine.Stage("build", check_spine.OK)]))
+
+    def test_an_earlier_build_s_dist_is_removed_and_said(self):
+        workdir, stages = self.run_alone()
+        (workdir / "dist" / "board").mkdir(parents=True)
+        kept = check_spine.drop_an_older_build(workdir, stages)
+        self.assertEqual([entry["did"] for entry in kept], ["removed"])
+        self.assertFalse((workdir / "dist").exists())
+        self.assertEqual(check_spine.drop_an_older_build(workdir, [check_spine.Stage("build", check_spine.OK)]), [])
+
+    def test_a_string_true_is_not_board_only(self):
+        _, stages = self.run_alone(board_only="true")
+        self.assertEqual((stages[-1].name, stages[-1].status), ("parts", check_spine.COULD_NOT_RUN))
+
+    def test_the_json_says_ok_and_each_skipped_stage(self):
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "board_only": True}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_spine.main([str(workdir / "requirements.json"), "--json"])
+        said = json.loads(out.getvalue())
+        self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual([s["status"] for s in said["stages"]].count("skipped"), 4)
+
+    def test_board_only_with_parts_is_refused(self):
+        _, stages = self.run_alone(parts=["tactile-button"])
+        self.assertEqual((stages[-1].name, stages[-1].status), ("parts", check_spine.COULD_NOT_RUN))
+        self.assertIn("board_only", stages[-1].detail)
 
 
 class AnEmitBoardCrashIsNotADesignFaultTest(unittest.TestCase):
