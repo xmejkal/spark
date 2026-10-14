@@ -17,6 +17,7 @@ import board_connection  # noqa: E402
 import board_facts  # noqa: E402
 import ready_check  # noqa: E402
 import image_check  # noqa: E402
+from fakes import FakeBoardConnection  # noqa: E402
 
 MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
 
@@ -45,35 +46,19 @@ class ReadyCheckTest(unittest.TestCase):
         self.assertEqual(run.ran[0][:4], ["mpremote", "connect", "/dev/ttyX", "exec"])
 
 
-class Connection:
-    """A fake BoardConnection: run_code gives or raises each of `answers` in turn; copy_to_board raises `copy_raises`."""
-
-    def __init__(self, *answers, copy_raises=None):
-        self.answers, self.copy_raises = list(answers), copy_raises
-
-    def run_code(self, code, keep_running_for=None):
-        answer = self.answers.pop(0)
-        if isinstance(answer, Exception):
-            raise answer
-        return answer
-
-    def copy_to_board(self, local, remote):
-        raise self.copy_raises
-
-
 class WhatTheBoardSaysTest(unittest.TestCase):
     def test_hash_code_that_raises_on_the_board_is_unknown_with_its_output(self):
         raised = board_connection.CodeRaisedOnBoard("Traceback\nImportError: hashlib\n", 1)
-        verdict, _, log = board_ready_check(Connection(raised))
+        verdict, _, log = board_ready_check(FakeBoardConnection(raised))
         self.assertEqual((verdict, log), ("ready unknown", "Traceback\nImportError: hashlib\n"))
 
     def test_a_board_gone_after_the_hashes_is_unknown_and_keeps_both_outputs(self):
         hashes = "file %s /main.py\n" % MAIN["/main.py"]
-        verdict, _, log = board_ready_check(Connection(hashes, board_connection.BoardUnreachable("could not enter raw repl", "x")))
+        verdict, _, log = board_ready_check(FakeBoardConnection(hashes, board_connection.BoardUnreachable("could not enter raw repl", "x")))
         self.assertEqual((verdict, log), ("ready unknown", hashes + "x"))
 
     def test_a_facts_copy_that_raises_on_the_board_is_said_not_raised(self):
-        facts = board_facts.FactsFile(Connection(copy_raises=board_connection.CodeRaisedOnBoard("Traceback\nOSError: 28\n", 1)))
+        facts = board_facts.FactsFile(FakeBoardConnection(copy_raises=board_connection.CodeRaisedOnBoard("Traceback\nOSError: 28\n", 1)))
         self.assertEqual(facts.write({"a": 1}), "mpremote could not copy it: OSError: 28")
 
 

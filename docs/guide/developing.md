@@ -263,6 +263,9 @@ Each docstring says these things:
 A tiny value or a calculation with no state stays a plain function or a namedtuple. Make a class when something holds
 state and offers several actions on it, or when a test or a caller must swap it.
 
+The fake of a part that a caller can swap lives in `tests/fakes.py` and starts with `Fake`, for example
+`FakeBoardConnection` and `FakeConsent`. A fake of a tool's output, such as mpremote's, stays in its test file.
+
 ## The docs name only what is there
 
 [`tools/check_docs.py`](../../tools/check_docs.py) reads `README.md`, `AGENTS.md` and these guides. The suite runs it
