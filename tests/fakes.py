@@ -37,3 +37,35 @@ class FakeConsent:
     def ask(self, question):
         self.asked.append(question)
         return self.answer
+
+
+class FakeClock:
+    """A fake clock: `sleep` moves `now` on at once and keeps each sleep."""
+
+    def __init__(self, now=0.0):
+        self.now, self.slept = now, []
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.slept.append(seconds)
+        self.now += seconds
+
+
+class FakeDownloadModeProbe:
+    """A fake DownloadModeProbe: the console prints `console`, and wait_for_reset answers `reset` after it calls
+    `on_reset` (a test's way to make the board answer again). Keeps how often each was asked."""
+
+    def __init__(self, console="", reset=True, on_reset=None):
+        self.console, self.reset, self.on_reset, self.asked = console, reset, on_reset, []
+
+    def waits_in_download_mode(self):
+        self.asked.append("console")
+        return "waiting for download" in self.console, self.console
+
+    def wait_for_reset(self):
+        self.asked.append("reset")
+        if self.on_reset:
+            self.on_reset()
+        return self.reset

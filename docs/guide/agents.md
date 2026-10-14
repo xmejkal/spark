@@ -569,6 +569,9 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    nothing. Give the person that line word for word and wait. After the flash, only `ready seen` (exit 0) is a pass:
    the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
    a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).
+   If the board waits in its download mode, deploy.py prints "press the board's R (reset) button once" and waits 60 s
+   for the port to go and come back. Relay that line to the person at once, because only a hand on the board can do it
+   ([P243](https://github.com/xmejkal/spark/issues/252)).
    Relay deploy.py's line as printed: it ends with mpremote's own words, and the board log under `sim/runs/board/`
    keeps all mpremote printed. Never run mpremote by hand to turn an unknown into a pass.
 
