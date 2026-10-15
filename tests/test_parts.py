@@ -2395,6 +2395,29 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertIn("pin_order_proof", parts.owes(unproven))
         self.assertEqual(parts.broken_problems(unproven, written(unproven)), [])
 
+    def test_validate_skips_the_checks_of_the_keys_it_is_told_to(self):
+        empty = part(pin_order=["P"], pin_order_proof={}, simulation={}, body_mm={"height": 3, "verified": True, "source": "x"})
+        path = written(empty)
+        owed = ("pin_order_proof", "simulation", "body_mm")
+        self.assertTrue(all(any(p.startswith(key) for p in parts.validate(empty, path)) for key in owed))
+        self.assertEqual(parts.validate(empty, path, skip=owed), [])
+        self.assertEqual(parts.broken_problems(empty, path), [])
+        unordered = part(pin_order=[])
+        self.assertTrue(parts.validate(unordered, written(unordered))[0].startswith("pin_order must be"))
+        self.assertEqual(parts.validate(unordered, written(unordered), skip=("pin_order",)), [])
+
+    def test_validate_skips_a_missing_required_key_and_its_own_check(self):
+        nameless = part(schema=2)
+        del nameless["kind"]
+        problems = parts.validate(nameless, written(nameless))
+        self.assertEqual([p[:9] for p in problems], ["schema is", "missing r"])
+        self.assertEqual(parts.validate(nameless, written(nameless), skip=("schema", "kind")), [])
+
+    def test_a_problem_inside_a_present_list_is_broken_even_when_other_keys_are_owed(self):
+        unsignalled = part(needs=[{"pin": "P", "direction": "in"}])
+        self.assertIn("simulation", parts.owes(unsignalled))
+        self.assertEqual(parts.broken_problems(unsignalled, written(unsignalled)), ["needs[0] has no signal"])
+
     def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):
         home = Path(tempfile.mkdtemp())
         (home / "catalog").mkdir()

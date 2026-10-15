@@ -29,6 +29,7 @@ every document quietly assumed.
 
 import argparse
 import contextlib
+import functools
 import datetime
 import hashlib
 import json
@@ -113,12 +114,6 @@ def owes(record):
             [key for key in CHAIN_FACTS if _absent(key, record.get(key))])
 
 
-def _about(problem, key):
-    """Whether a validate problem is about this key — it starts with it, or says "no <key>" — rather than merely naming it."""
-    return (problem.startswith((key + " ", key + ".", key + "[")) or problem == "missing required key %r" % key
-            or re.search(r"\bno %s\b" % re.escape(key), problem) is not None)
-
-
 def _shape_problems(check, record, path, what):
     """A check's problems — or, when the record is too malformed for the check to read, one saying so (§5.4: never a traceback)."""
     try:
@@ -128,10 +123,8 @@ def _shape_problems(check, record, path, what):
 
 
 def broken_problems(record, path):
-    """What is wrong with a part record beyond what it owes (§5.4): `validate`'s problems that name no owed key."""
-    owed = owes(record)
-    return [problem for problem in _shape_problems(validate, record, path, "part record")
-            if not any(_about(problem, key) for key in owed)]
+    """What is wrong with a part record beyond what it owes (§5.4): `validate`'s problems, with the checks of each owed key skipped."""
+    return _shape_problems(functools.partial(validate, skip=owes(record)), record, path, "part record")
 
 
 def audit(project=None):
@@ -564,17 +557,20 @@ def control_problems(chip, definition):
             for control in parsed.get("controls") or [] if not CONTROL_ID.fullmatch(str(control.get("id")))]
 
 
-def validate(part: dict, path: Path) -> list:
-    """Every way this definition breaks the contract. Empty means it holds."""
+def validate(part: dict, path: Path, skip=()) -> list:
+    """
+    Every way this definition breaks the contract. Empty means it holds. A key in `skip` is one the record owes
+    (`owes`), so its checks do not run.
+    """
     problems = []
 
-    if part.get("schema") != SUPPORTED_SCHEMA:
+    if "schema" not in skip and part.get("schema") != SUPPORTED_SCHEMA:
         problems.append("schema is %r, but this code understands only %d"
                         % (part.get("schema"), SUPPORTED_SCHEMA))
     for key in REQUIRED_KEYS:
-        if key not in part:
+        if key not in part and key not in skip:
             problems.append("missing required key %r" % key)
-    if part.get("id") != path.stem:
+    if "id" not in skip and part.get("id") != path.stem:
         problems.append("id is %r but the file is named %r; they must match"
                         % (part.get("id"), path.stem))
     elif isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
@@ -664,7 +660,7 @@ def validate(part: dict, path: Path) -> list:
     # carried nothing at all and silently became 16 x 12 mm inside the generator. Placement was
     # then proven not to overlap, using numbers nobody had taken.
     body = part.get("body_mm")
-    if body is not None:
+    if body is not None and "body_mm" not in skip:
         if not isinstance(body, dict):
             problems.append("body_mm is not an object; it needs width, height and provenance")
         else:
@@ -695,7 +691,7 @@ def validate(part: dict, path: Path) -> list:
     # (C-1). An absent one (`_absent`: null, no key, empty) is owed, not wrong, so only a value that is there is
     # checked; whether a name names a real footprint is a build's to say.
     footprint = part.get("footprint")
-    if not (_absent("footprint", footprint) or (isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))):
+    if not ("footprint" in skip or _absent("footprint", footprint) or (isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))):
         problems.append("footprint is %r, but a footprint is the name of one — a footprinter's, in lower-case letters, "
                         "digits, _ and . (pinrow5, jst_ph_3, dip12_w15.24mm), or a JLCPCB part, jlcpcb:C<number>: the "
                         "board is written with it as code" % (footprint,))
@@ -705,7 +701,7 @@ def validate(part: dict, path: Path) -> list:
     # as pin1: "AIA", and every trace to the module landed on the wrong pad. Nothing here could
     # have been right, because the physical order was not written down anywhere.
     order = part.get("pin_order")
-    if order is not None:
+    if order is not None and "pin_order" not in skip:
         if not isinstance(order, list) or not order:
             problems.append("pin_order must be a list of pad names, pad 1 first")
         else:
@@ -798,8 +794,10 @@ def validate(part: dict, path: Path) -> list:
     problems.extend(host_part_problems(part))
     problems.extend(i2c_pullup_problems(part))
     problems.extend(document_problems(part))
-    problems.extend(pin_order_problems(part))
-    problems.extend(simulation_problems(part, path))
+    if "pin_order_proof" not in skip:
+        problems.extend(pin_order_problems(part))
+    if "simulation" not in skip:
+        problems.extend(simulation_problems(part, path))
     problems.extend(function_problems(part))
     return problems
 
