@@ -277,7 +277,7 @@ sitting" is now the [service level](README.md#the-cadences-and-what-each-one-lea
 
 ## Habits — no command judges these
 
-Four rules no command can judge, so they live here, unnumbered. Two of them were W4 and W9 until 2026-10-09
+The rules no command can judge live here, unnumbered. Two of them were W4 and W9 until 2026-10-09
 (P146), and those headings above point here.
 
 **Generate the least code and text that works** (2026-10-12, P205). Code above all. MVP first, then add or change in
@@ -328,6 +328,14 @@ asked an isolated agent to rediscover three escapes written down in `scrum/SPRIN
 `Read`: an open-book exam scored as isolation. So: **before an acceptance line is relied on, reproduce the state it
 assumes** — or mark it unverified, the way a part record marks a fact nobody has confirmed. An item may be written with
 an unreproduced criterion; it may not be *closed* on one.
+
+**Say "wait", then come back** (2026-10-15, P261). When someone asks while you work, answer at once in one line:
+"wait, I finish this first, then I come back", with the step you finish. At its end, come back and say so. An
+expedite interrupts at once. After about three notes back and forth on one point, talk it through live.
+
+*Origin:* Petr, 2026-10-15 ([#283](https://github.com/xmejkal/spark/issues/283)): *"good communiication realtime
+ideally, reacting fast, can say wait after I finish this, i'll get righ back to you when I can"*. The PO assistant and
+the tech lead accepted it on his word: *"have my asistent and tech lead decide"*. "About three" is our own number.
 
 ## How a rule changes
 

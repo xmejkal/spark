@@ -74,7 +74,7 @@ choice after a three-lens council).
 | when the PO stops | the day-close, `tools/board.py close` | one status update: what moved, what was proven, what is aging, the runs and their tokens, the next card |
 | Ready is down to two | ordering Ready | Claude proposes in a batch, and the PO orders. When he names "next" in conversation, the card moves that turn, with his words quoted |
 | an epic's last story is Done, or its appetite is spent (decision 5; the PO reads it on the board) | value check, outside audit, retro | the PO's verdict; the audit's report in `docs/observations/`; a retro of at most two changes, each with the command that checks it, plus a look at the limits, and a process check that is not one of the two changes: is the process agile enough, with planning done as we go and not all at once in great detail (P257) |
-| once a week | the weekly look | one status update: cards done; in flight and the oldest; waits and the oldest; Idea in and out. Plus a list of Idea cards to close, which the PO strikes or confirms |
+| once a week | the weekly look | one status update: cards done; in flight and the oldest; waits and the oldest; Idea in and out. Plus a list of Idea cards to close, which the PO strikes or confirms. Plus one retro line (what to change, or nothing) and one thing the PO can try now (P261, 2026-10-15, an experiment) |
 | 2026-11-02 | the trial check (kept) | its first question now counts work on cards the board showed in Idea. It notes "limits raised 2026-10-06, the trial's second day" |
 
 - **The session start** is P102c's hook, in the PO's own settings; it prints nothing outside his project folders. It
@@ -171,7 +171,7 @@ skipped twice, do epics start and finish? If not, one-day sprints replace it (th
 
 Every pull request, bigger or smaller, gets a council before the PO merges it, sized to the change (the table below):
 the PO assistant, the user's journey and the tech lead, three documentation experts (for human readers, for AI, and for
-examples and help), then the refuter. Its findings are fixed before the merge, not only reported. First run: P158's
+examples and help), then the refuter ([its file](../.claude/agents/refuter.md), an experiment since P261). Its findings are fixed before the merge, not only reported. First run: P158's
 council on PR #98, 2026-10-08. The PO's words of 2026-10-08, as #80 records them (typos corrected) —
 [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
 [the addition](https://github.com/xmejkal/spark/issues/80#issuecomment-6058297081):
@@ -297,9 +297,8 @@ Every one of these, for every item. No exceptions, no "mostly".
 8. A change to what a step of the journey does updates [the journey guide](../docs/guide/journey.md) and the README's
    *What works today* in the same change (P104, the PO 2026-10-05). Nothing mechanical checks it: `tools/check_docs.py`
    cannot tell whether a status is still current, so the council reads it.
-9. Before the PR: [the council](#the-council-before-every-pull-request), sized to the change, with its three
-   documentation questions — for human readers (the README's shape included), for AI (skills, agents, descriptions)
-   and for examples and help — and its fixes (the PO, 2026-10-08, 2026-10-10 and 2026-10-11).
+9. Before the PR: [the council](#the-council-before-every-pull-request), sized to the change, and its fixes. That
+   section holds its questions and their dates (one place since P261, 2026-10-15).
 10. **A version bump is a release.** The PR that changes the version in `.claude-plugin/plugin.json` (and README's
    footer, which `tools/check_docs.py` ties to it) is tagged `vX.Y.Z` on its merge and gets a GitHub release whose
    notes say what new functionality and which bug fixes came in; the PR's body names the release. Major when a
