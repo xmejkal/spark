@@ -2423,6 +2423,21 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertIn("simulation", parts.owes(unsignalled))
         self.assertEqual(parts.broken_problems(unsignalled, written(unsignalled)), ["needs[0] has no signal"])
 
+    def test_a_pin_order_that_is_no_list_is_named_not_a_shape_line(self):
+        for wrong in (5, "AB"):
+            unlisted = part(pin_order=wrong, pin_order_proof={"verified": False, "source": "x"})
+            self.assertEqual(parts.broken_problems(unlisted, written(unlisted)), ["pin_order must be a list of pad names, pad 1 first"])
+
+    def test_a_chip_record_with_no_plain_id_is_named_not_a_shape_line(self):
+        anonymous = part(simulation={"wokwi": {"chip": "x", "pins": {}}})
+        path = written(anonymous)
+        del anonymous["id"]
+        self.assertIn("missing required key 'id'", parts.validate(anonymous, path))
+        self.assertFalse(any(p.startswith("does not meet") for p in parts.broken_problems(anonymous, path)))
+        numbered = part(id=5, simulation={"wokwi": {"chip": "x", "pins": {}}})
+        self.assertTrue(any(p.startswith("id is 5 but the file is named") for p in parts.validate(numbered, path)))
+        self.assertFalse(any(p.startswith("does not meet") for p in parts.broken_problems(numbered, path)))
+
     def test_a_wrong_pin_order_is_named_when_its_proof_is_owed(self):
         unlisted = part(pin_order=5)
         del unlisted["pin_order_proof"]
