@@ -51,7 +51,7 @@ question (belay, the MCP plugin, D30) for later, and gets a comment that P252 to
 
 ## 5. P246 (#260) — a new board-only project for live tries
 - type: story, on the existing card
-- needed by: "then we'll make another testing project without anything" (the PO, 2026-10-15, #260) and "A new P246 project" (D16)
+- needed by: "then we'll make another testing project without anything" (the PO, 2026-10-15, #260) and "A new P246 project" (D16); and the PO, 2026-10-15 (D18): "lets make the functionality itself cool, do some cool stuff with what we have so the diodes and maybe a button if it's accessible, lets play with various animations eand effects". Proposed scope: effects on the one on-board LED (for example breathe by PWM, heartbeat, candle flicker, strobe, morse of a typed word), a typed line picks the effect and its speed, and the BOOT button cycles effects once the record cites its pin (AT158; it is a strapping pin, so a press at reset enters download mode)
 - value proven by: a new project with nothing but the XIAO C6: it passes in Wokwi, prints `ready` on the bare board, reads its console without waiting (docs/guide/agents.md:577-578), and shows what a live try changed, for example the on-board LED
 - depends on: —
 - status: proposed
