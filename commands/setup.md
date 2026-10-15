@@ -51,8 +51,8 @@ folder is yours, as with nvm or Homebrew; otherwise install bun yourself, and if
 Python package with `pip install --user`, a system tool with Homebrew, the MicroPython build into
 `~/.local/share/spark/downloads/` and wokwi-cli as Wokwi's release binary beside it, each checked
 against its checksum before it is used. **Never `sudo`**: a line that needs it is printed for the person
-to run. Then show the picture again — what was installed reads `[ok  ]`. A row that says a version is
-*here* while the list *pins* another is offered the same way: `--install` puts the pinned one in.
+to run. Then show the picture again — what was installed reads `[ok  ]`. A row that says a version of an npm or a
+Python tool is *here* while the list *pins* another is offered the same way: `--install` puts the pinned one in.
 
 `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before any
 `--install` line runs, the dry run too (unless the person's own settings already let it run: an allow rule of theirs,
