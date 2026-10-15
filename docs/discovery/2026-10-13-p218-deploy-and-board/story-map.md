@@ -38,6 +38,8 @@ OTA (POJ-25, TLJ-18 steps 1 and 2).
 | 6 later | Reach it without a cable | OTA and a Wi-Fi REPL: code on the board that listens, an OTA layout, a secret, a rollback rule | J2, J6 | E ★C12, ★C13 | a discovery or spike of its own | new (D31) |
 | spike | Choose what goes on it | other platforms: what the chain needs from Arduino and PlatformIO | J5 | E ★C23 | the spike's finding with sources | P221 #203 (D32) |
 
+Moved to P235 on 2026-10-15 (D17 and D23 of [P235's discovery](../2026-10-15-p235-live-on-board/brief.md)): slice 4's row "Try things live" is P235's slice Live 0, and slice 6 "Reach it without a cable" is P235's later row (Wi-Fi, D31). Slice 4's row "Change it and put it on again" stays with P218.
+
 Order: slice 0 first. It is the only slice that depends on nothing else. D26 set the order: P228, P219's first story,
 P215, P213. P229 (#217) adds the C6 MicroPython entry before P215's flash (D41). Slices 2 and 3 matter once a second
 board or another build appears.
