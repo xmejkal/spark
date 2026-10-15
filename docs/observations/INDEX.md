@@ -912,3 +912,4 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT177 | A firmware that never reads its console blocks mpremote ("could not enter raw repl"); reading it without waiting gave `ready seen` at 02:10 | P215 bench (the PO, Claude), 2026-10-15 | **acted** | button-light's `light.py`; agents.md's flash rule; journey.md |
 | AT178 | Opening the port with DTR and RTS off restarted the XIAO C6 (against P238 round 1's 4 opens) | P215 bench (Claude), 2026-10-15 | raised | P238 (#235) |
 | AT179 | A pass on a bare board shows nothing when the firmware drives only external parts; deploy.py does not say so | P215 bench (the PO), 2026-10-15 | raised | the PO decides on a card |
+| AT180 | PR #259: run count off by one in journey.md, the journey strip stale since 10-14, one 'could' | P215 reviewer (Sonnet), 2026-10-15 | **acted** | PR #259 |
