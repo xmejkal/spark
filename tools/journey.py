@@ -17,8 +17,8 @@ from xml.sax.saxutils import escape
 ROOT = Path(__file__).resolve().parent.parent
 PICTURE = "docs/guide/journey.svg"
 #: The strip at the bottom: where we are, and what is next. Each line holds at most STRIP characters.
-WHERE = "the button-and-LED project passed its Wokwi simulation on 2026-10-12."
-NEXT = "flash it on a real FireBeetle 2 ESP32-S3."
+WHERE = "the button-and-LED firmware read ready seen on a XIAO ESP32-C6 on 2026-10-15."
+NEXT = "wire its breadboard and press the button."
 STRIP = 100
 #: Each step: its name in the README's table, its command, what you do, what you get, a note on how far it works, and
 #: the status that note was written for. A step whose status changes in the table needs a new note here.
@@ -39,7 +39,7 @@ STEPS = [
     ("Simulate", "run_scenario.py", "Say in words what must happen.",
      "The firmware running in Wokwi, with a dated log.", "The button-and-LED project passed on 2026-10-12.", "works"),
     ("Bench", "look.py, deploy.py", "Wire the breadboard and flash the board.", "The tested firmware on the real board.",
-     "look.py reads the board on USB and checks it. deploy.py asks your yes first. It did not flash a real board yet.", "partly"),
+     "look.py reads the board on USB and checks it. deploy.py asks your yes first. It flashed a XIAO ESP32-C6 and read ready. No wired breadboard yet.", "partly"),
 ]
 #: Each status: the stop's fill, the label's fill, the label's text color, and its line in the legend.
 COLORS = {"works": ("#2dc75c", "#adf0c7", "#067429", "works: it ran end to end for the docs"),

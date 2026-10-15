@@ -574,6 +574,8 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    ([P243](https://github.com/xmejkal/spark/issues/252)). The board log keeps what the port printed, `nothing`, or why it could not be read
    ([P244](https://github.com/xmejkal/spark/issues/255)). If the port printed the firmware's `ready`, the board
    finished its restart late, and deploy.py reads it again at once ([P245](https://github.com/xmejkal/spark/issues/257)).
+   A firmware that never reads its console leaves `ready unknown` with "could not enter raw repl": the board ignores
+   Ctrl-C, so mpremote cannot stop it. The conversation's firmware reads the console without waiting ([P215](https://github.com/xmejkal/spark/issues/196)).
    Relay deploy.py's line as printed: it ends with mpremote's own words, and the board log under `sim/runs/board/`
    keeps all mpremote printed. Never run mpremote by hand to turn an unknown into a pass.
 
