@@ -12,7 +12,7 @@ delta). The order follows the proposed map and changes with Q2 and Q3.
 ## P246 (#260) — the board-only project reads its console and answers a typed line
 - type: story, on the existing card <!-- REQUIRED:item-type -->
 - needed by: "then we'll make another testing project without anything" (the PO, 2026-10-15, #260) <!-- REQUIRED:needed-by -->
-- value proven by: the project passes in Wokwi, prints `ready` on the bare XIAO C6, and answers a typed line. docs/guide/agents.md states the rule "the firmware reads its console" if Q4 says yes <!-- REQUIRED:value-proven-by -->
+- value proven by: the project passes in Wokwi, prints `ready` on the bare XIAO C6, and answers a typed line, as docs/guide/agents.md:577-578 already asks. If Q13 picks blink-c6, this card closes with blink-c6 as the bench <!-- REQUIRED:value-proven-by -->
 - depends on: Q4, Q13 <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->

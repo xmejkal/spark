@@ -67,7 +67,7 @@ flowchart LR
 | --- | --- | --- | --- | --- | --- |
 | 1 | a part does not answer (button-light with no wires) | E OBS/2026-10-15-p215-bench-rerun.md:34-35 (USR-20) | he has no wires, so he cannot test the signal | not yet | — |
 | 2 | asks Claude what the pin reads | H P218 jobs-and-journeys.md UC7 step 1 | Claude stops the firmware to read. A read in a new mode can change a pin the firmware set | not yet | Q21 |
-| 3 | Claude names the pin by name and number | E INDEX AT150, P218 ★C16 (USR-13) | pins.py holds no direction. Strap and USB pins can be hit | not yet | — |
+| 3 | Claude names the pin by name and number | E INDEX AT150, P218 ★C16 (USR-13) | pins.py holds no direction. The XIAO's header carries no strap, USB or flash pin (the board record's strapping note, PHY-3), so only code that names a pin by its GPIO number can hit them | not yet | — |
 | 4 | presses the button or moves a wire while Claude reads | H P218 UC7 step 6 | Claude cannot see his hand, so it must say when | not yet | — |
 | 5 | compares the read with the diagram | E OBS/2026-10-15-p215-bench-rerun.md:34 | the bare XIAO has one LED and no wired parts, so the check is weak | not yet | — |
 | 6 | learns whether the wire, the part or the code is wrong | — | no run exists | — | Q22 |
