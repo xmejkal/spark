@@ -40,6 +40,9 @@ import boards  # noqa: E402
 import store  # noqa: E402
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
+#: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
+UNKNOWN_VERSION = "unknown version"
+
 PLUGIN = SCRIPTS.parent
 DEFAULTS = PLUGIN / "data" / "tools.json"
 #: The person's tools list and downloads, in their store. Read once, when the process starts — which for a
@@ -209,7 +212,7 @@ def pin_differences(entry, command):
 def version_note(name, reported, field="version", project=None, personal=None):
     """'' when the reported version is the one the list states for this field, else the one line to print."""
     stated = merged(project, personal)["tools"].get(name, {}).get(field)
-    if not stated or reported in (None, "unknown version") or str(reported) == str(stated):
+    if not stated or reported in (None, UNKNOWN_VERSION) or str(reported) == str(stated):
         return ""
     return "; spark was measured on %s %s %s" % (name, field, stated)
 

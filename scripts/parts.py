@@ -1069,6 +1069,8 @@ DATASHEET_SAYS = {"max_continuous_current": ["dc forward current", "continuous c
                   "deep_sleep_current": ["deep-sleep", "deep sleep"], "supply_voltage": ["supply voltage"]}
 TABLE_ROW = re.compile(r"\S\s{3,}\S.*\S\s{3,}\S")
 STANDALONE_NUMBER = re.compile(r"(?<![\w.=])\d+(\.\d+)?(?![\w.])")
+#: A fact's status in a datasheet scan, as `--scan` prints it.
+FOUND, LABEL_ONLY, NOT_FOUND = "FOUND", "LABEL ONLY", "NOT FOUND"
 SECTION = re.compile(r"^\s*(Table\s+\d+.*|[A-Z]{2,}[A-Z0-9 /&,\-]{4,}.*|\d+(\.\d+)+\s+[A-Z].{3,60})$")
 
 
@@ -1087,7 +1089,7 @@ def scan_datasheet(pages, wanted, labels=None):
         stem = fact[:-len(suffix)] if suffix else fact
         words = list(dict.fromkeys(DATASHEET_SAYS.get(stem, []) + [stem.replace("_", " ")] + list((labels or {}).get(fact, []))))
         plan[fact] = (words, re.compile(UNIT_PRINTED[suffix]) if suffix else None)
-    found = {fact: {"status": "NOT FOUND", "hits": [], "tried": words} for fact, (words, _) in plan.items()}
+    found = {fact: {"status": NOT_FOUND, "hits": [], "tried": words} for fact, (words, _) in plan.items()}
     for number, text in pages:
         lines, section = text.splitlines(), None
         for index, line in enumerate(lines, 1):
@@ -1100,16 +1102,16 @@ def scan_datasheet(pages, wanted, labels=None):
                 has_unit = unit is None or unit.search(line) or re.search(r"\(\s*" + unit.pattern + r"\s*\)", above)
                 if TABLE_ROW.search(line) and STANDALONE_NUMBER.search(line) and has_unit:
                     entry = found[fact]
-                    if entry["status"] != "FOUND":
-                        entry["status"], entry["hits"] = "FOUND", []
+                    if entry["status"] != FOUND:
+                        entry["status"], entry["hits"] = FOUND, []
                     entry["hits"].append((number, index, section, re.sub(r"\s{3,}", " | ", line.strip())))
-                elif found[fact]["status"] == "NOT FOUND":
+                elif found[fact]["status"] == NOT_FOUND:
                     # A wrapped cell puts a row's label between its values: show the line above too.
                     above_line = [previous.strip() for previous in lines[max(0, index - 3):index - 1] if previous.strip()][-1:]
                     below = [following.strip() for following in lines[index:index + 6] if following.strip()][:2]
-                    found[fact] = dict(found[fact], status="LABEL ONLY",
+                    found[fact] = dict(found[fact], status=LABEL_ONLY,
                                        hits=[(number, index, section, " // ".join(above_line + [line.strip()] + below))])
-        if all(entry["status"] == "FOUND" for entry in found.values()):
+        if all(entry["status"] == FOUND for entry in found.values()):
             break
     return found
 
@@ -1142,11 +1144,11 @@ def read_datasheet(path, wanted, labels=None, project=None):
     found = scan_datasheet(counted(), wanted, labels)
     lines = []
     for fact, entry in found.items():
-        if entry["status"] == "NOT FOUND":
+        if entry["status"] == NOT_FOUND:
             lines.append("%-28s NOT FOUND — tried: %s" % (fact, ", ".join(entry["tried"])))
         for number, line, section, text in entry["hits"][:3]:
             lines.append("%-28s %-10s p%d:%d  [%s]  %s" % (fact, entry["status"], number, line, section or "no heading", text[:220]))
-    missing = [fact for fact, entry in found.items() if entry["status"] != "FOUND"]
+    missing = [fact for fact, entry in found.items() if entry["status"] != FOUND]
     lines.append("read %d of the document's pages, %s" % (len(read), "stopping where the last fact was found" if not missing
                  else "%d fact(s) not on a table row: read those pages as images" % len(missing)))
     return Answer({"facts": found, "pages_read": read}, lines,
@@ -2166,13 +2168,6 @@ def _released(changes, name):
             for was, now in [((change["was"].get("used_in") or {}).get(name, 0), change["now"]["used_in"].get(name, 0))] if now < was]
 
 
-#: What `--requirements` says of a need nothing on the board serves (C-2), by why: plainly, and what the person can do.
-NOT_ON_THE_BOARD = {"no pick": "no pick; --match lists its candidates",
-                    "a gap": "marked a gap: nothing like it is in the store yet; research it before it can be built",
-                    "no record": "{picks} has no record: fine for what is wired off the board (a speaker, a battery); what sits on the "
-                                 "board needs one — link its drawer entry to a record with `is`, or research one"}
-
-
 def _op_requirements(args, project):
     import boards
     import needs
@@ -2205,7 +2200,7 @@ def _op_requirements(args, project):
              "terminal hangs off), never a supply (%s %s on it)" % (gap["net"], ", ".join(gap["received_by"]),
                                                                     "is" if len(gap["received_by"]) == 1 else "are")
              for gap in ([] if problems else no_driver)]
-    said += ["  not on the board: %s — %s" % (item["need"], NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
+    said += ["  not on the board: %s — %s" % (item["need"], needs.NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
              for item in ([] if problems else unserved)]
     said += [] if problems else _names_your_entries(needs.REQUIREMENTS, needs.unserved_keys(content) - named, args.dry_run)
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],

@@ -251,6 +251,12 @@ These rules name a class, a function or a constant:
   in place of returning False says so: `require_open_gate`.
 - A constant that holds a number carries its unit (`_S`, `_MB`). A constant that holds a sentence ends in `_HINT` or
   `_MESSAGE`.
+- Code decides on a named constant, never on a sentence ([P260](https://github.com/xmejkal/spark/issues/282)). A
+  message is the text a person reads, and a phrase is an outside tool's words. The code that writes a value and the
+  code that reads it import the same name, for example `needs.WHY_NO_RECORD`. An outside tool's phrase lives in one
+  constant next to the code that reads it, and its comment names the tool. `tests/test_no_magic_strings.py` fails
+  on a literal with a space in a comparison or a search. It does not see a one-word literal or a sentence built at
+  run time, so a reviewer checks those.
 - Only the deploy area uses the `Error` suffix now. The rest of the repository changes in v0.13
   ([#94](https://github.com/xmejkal/spark/issues/94)).
 

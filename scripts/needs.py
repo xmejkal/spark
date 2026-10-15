@@ -403,6 +403,14 @@ Requirements = collections.namedtuple("Requirements", "content shelving unplaced
 
 #: The note a requirements file keeps of the needs it leaves off the board (C-2): `check_spine` reads it into its verdict.
 UNSERVED = "unserved"
+#: The `why` of an unserved note: the codes `--requirements` writes and reads (C-2, F16). The values stay, because
+#: requirements.json keeps them.
+WHY_NO_PICK, WHY_GAP, WHY_NO_RECORD = "no pick", "a gap", "no record"
+#: What `--requirements` says of a need nothing on the board serves (C-2), by why: plainly, and what the person can do.
+NOT_ON_THE_BOARD = {WHY_NO_PICK: "no pick; --match lists its candidates",
+                    WHY_GAP: "marked a gap: nothing like it is in the store yet; research it before it can be built",
+                    WHY_NO_RECORD: "{picks} has no record: fine for what is wired off the board (a speaker, a battery); what sits on the "
+                                 "board needs one — link its drawer entry to a record with `is`, or research one"}
 
 
 def unserved_keys(content):
@@ -411,7 +419,7 @@ def unserved_keys(content):
     person's labels, which `--requirements` says once, as `--pick` does of needs.json's. A note that is no such note names none.
     """
     notes = content.get(UNSERVED) if isinstance(content, dict) else None
-    return {key for note in (notes if isinstance(notes, list) else []) if isinstance(note, dict) and note.get("why") == "no record"
+    return {key for note in (notes if isinstance(notes, list) else []) if isinstance(note, dict) and note.get("why") == WHY_NO_RECORD
             for key in (note.get("picks") if isinstance(note.get("picks"), list) else []) if isinstance(key, str)}
 
 #: The facts that place a part, not wire it (the PO, 2026-10-08; P165): a pick that owes only these is written, and the PCB step
@@ -544,9 +552,9 @@ def _unserved(needs, known, entries):
     for need in needs:
         picks = [_as_record(pick, known, entries) for pick in need.get("pick") or []]
         if not picks:
-            said.append({"need": need["id"], "why": "a gap" if need.get("mark") == "gap" else "no pick", "picks": []})
+            said.append({"need": need["id"], "why": WHY_GAP if need.get("mark") == "gap" else WHY_NO_PICK, "picks": []})
         elif all("entry" in pick for pick in picks):
-            said.append({"need": need["id"], "why": "no record", "picks": [pick["entry"] for pick in picks]})
+            said.append({"need": need["id"], "why": WHY_NO_RECORD, "picks": [pick["entry"] for pick in picks]})
     return said
 
 
