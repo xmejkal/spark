@@ -2412,6 +2412,11 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         problems = parts.validate(nameless, written(nameless))
         self.assertEqual([p[:9] for p in problems], ["schema is", "missing r"])
         self.assertEqual(parts.validate(nameless, written(nameless), owed=("schema", "kind")), [])
+        anonymous = part()
+        path = written(anonymous)
+        del anonymous["id"]
+        self.assertTrue(any(p.startswith("id is None") for p in parts.validate(anonymous, path)))
+        self.assertEqual(parts.broken_problems(anonymous, path), [])
 
     def test_a_problem_inside_a_present_list_is_broken_even_when_other_keys_are_owed(self):
         unsignalled = part(needs=[{"pin": "P", "direction": "in"}])

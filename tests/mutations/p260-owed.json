@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "schema",
+  "find": "if \"schema\" not in owed and part",
+  "replace": "if part"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "required",
+  "find": "if key not in part and key not in owed:",
+  "replace": "if key not in part:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "id",
+  "find": "if \"id\" not in owed and part.get(\"id\")",
+  "replace": "if part.get(\"id\")"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "body",
+  "find": "if body is not None and \"body_mm\" not in owed:",
+  "replace": "if body is not None:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "pin_order",
+  "find": "if order is not None and \"pin_order\" not in owed:",
+  "replace": "if order is not None:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "proof",
+  "find": "if \"pin_order_proof\" not in owed:\n        problems.extend(pin_order_problems",
+  "replace": "if True:\n        problems.extend(pin_order_problems"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "sim",
+  "find": "if \"simulation\" not in owed:",
+  "replace": "if True:"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "broken",
+  "find": "owed=owes(record)",
+  "replace": "owed=()"
+ }
+]
