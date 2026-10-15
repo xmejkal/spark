@@ -69,7 +69,7 @@ class ReachScriptTest(unittest.TestCase):
         line = json.loads(said)
         self.assertEqual(code, 0)
         self.assertEqual(sorted(line), ["at", "cure", "cure_first", "first_try_failed", "output", "port", "reached", "why"])
-        self.assertEqual(line["cure"], {"heard": RESTART.heard, "why": None, "restart_heard": True, "port_back": True})
+        self.assertEqual(line["cure"], {"heard": RESTART.heard, "why": None, "restart_heard": True, "port_back": True, "boot_heard": False})
         self.assertFalse(line["cure_first"])
         self.assertTrue(line["first_try_failed"])
 
@@ -111,6 +111,11 @@ class ReachScriptTest(unittest.TestCase):
         _, said, _, _ = self.go(answers=(REFUSED, "reached\n"), probe=FakeConsoleProbe(cured=unread))
         self.assertIn("        its read failed: could not open port\n", said)
         self.assertIn("        nothing heard\n", said)
+
+    def test_a_boot_tail_is_said_apart_from_a_restart(self):
+        tail = Cure("entry 0x4086b910\nready\n", None, False, True, True)
+        _, said, _, _ = self.go(answers=(REFUSED, "reached\n"), probe=FakeConsoleProbe(cured=tail))
+        self.assertIn("  cure    boot tail heard, no rst: line, the port was back\n", said)
 
 
 if __name__ == "__main__":

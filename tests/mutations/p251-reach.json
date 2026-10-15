@@ -14,20 +14,14 @@
  {
   "file": "scripts/board_console.py",
   "name": "cure says a restart was heard whenever the port was read",
-  "find": "return Cure(heard, why, shows_restart(heard), port_back)",
-  "replace": "return Cure(heard, why, bool(heard), port_back)"
+  "find": "        return Cure(heard, why, shows_restart(heard), port_back, shows_boot(heard))",
+  "replace": "        return Cure(heard, why, bool(heard), port_back, shows_boot(heard))"
  },
  {
   "file": "scripts/board_console.py",
   "name": "cure never waits for the port to come back",
   "find": "while not self.port_exists(self.port) and self.clock.monotonic() < end:",
   "replace": "while False:"
- },
- {
-  "file": "scripts/board_console.py",
-  "name": "a restart is any rst: inside a word",
-  "find": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+|^entry 0x[0-9a-f]+\", re.MULTILINE)",
-  "replace": "RESTART = re.compile(r\"rst:|entry 0x[0-9a-f]+\", re.MULTILINE)"
  },
  {
   "file": "scripts/board_reach.py",
@@ -109,8 +103,32 @@
  },
  {
   "file": "scripts/board_console.py",
-  "name": "the entry line is not a restart",
-  "find": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+|^entry 0x[0-9a-f]+\", re.MULTILINE)",
-  "replace": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+\", re.MULTILINE)"
+  "name": "a restart is any rst: inside a word",
+  "find": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+\")",
+  "replace": "RESTART = re.compile(r\"rst:\")"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "a boot tail counts as a restart",
+  "find": "        return Cure(heard, why, shows_restart(heard), port_back, shows_boot(heard))",
+  "replace": "        return Cure(heard, why, shows_boot(heard), port_back, shows_boot(heard))"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "the boot end matched inside a line",
+  "find": "BOOT_END = re.compile(r\"^entry 0x[0-9a-f]+\\s*$\", re.MULTILINE)",
+  "replace": "BOOT_END = re.compile(r\"entry 0x[0-9a-f]+\", re.MULTILINE)"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "a boot tail is never heard",
+  "find": "    return shows_restart(console) or BOOT_END.search(console) is not None",
+  "replace": "    return shows_restart(console)"
+ },
+ {
+  "file": "scripts/reach.py",
+  "name": "a boot tail is said as no restart",
+  "find": "\"boot tail heard, no rst: line\" if cure.boot_heard",
+  "replace": "\"no restart heard\" if cure.boot_heard"
  }
 ]

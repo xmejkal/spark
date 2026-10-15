@@ -31,3 +31,12 @@ one finding in short.
 | BL4 | "the open restarts a board whose output was not dead" was not measured | acted (deleted) |
 | BL5 | the `entry 0x..` fix is not tested | acted |
 | BL6 | "does not explain" and "near" claim more than n allows | acted |
+
+## PR #281's review (AT233's follow-up)
+
+| id | finding | verdict |
+| --- | --- | --- |
+| F1 | a firmware line that starts with `entry 0x` would match (Sonnet) | acted (the line must hold only `entry 0x..`) |
+| F2 | no test for a line-start `entry 0x` that is not the ROM's, nor for `\r\n` (Sonnet) | acted |
+| F3 | a boot tail can be old buffered output, so `entry 0x..` alone is not proof that the cure restarted the board (Opus) | acted: `restart_heard` stays `rst:` only, and a new `boot_heard` says the tail |
+| F4 | the restart column cannot tell the cure's restart from another (a watchdog, mpremote's own open) and H3 stays untested (Opus) | note, kept in the bench log's limits |
