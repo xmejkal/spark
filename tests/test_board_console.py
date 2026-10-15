@@ -1,4 +1,5 @@
-"""P243 (#252): after a flash, a board that waits in download mode is found, and a press of its R button is seen."""
+"""P243 (#252), P251 (#264): the board's console, read so that the open does not choose the boot mode: download mode
+found, a press of R seen."""
 
 import contextlib
 import io
@@ -14,6 +15,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_console  # noqa: E402
 import download_mode  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeClock  # noqa: E402
@@ -34,7 +36,7 @@ def printing(text, ran):
 class TheConsoleTest(unittest.TestCase):
     def test_the_rom_s_download_line_is_download_mode_and_its_words_are_kept(self):
         ran = []
-        waits, said = download_mode.DownloadModeProbe(["/opt/python3"], PORT, printing(ROM, ran)).waits_in_download_mode()
+        waits, said = board_console.ConsoleProbe(["/opt/python3"], PORT, printing(ROM, ran)).waits_in_download_mode()
         self.assertEqual((waits, said), (True, ROM))
         self.assertEqual(ran[0][:2] + ran[0][3:], ["/opt/python3", "-c", PORT, "2"])
         self.assertIn("s.dtr, s.rts = sys.argv[1], 115200, 0.1, False, False", ran[0][2])
@@ -58,7 +60,7 @@ class TheConsoleTest(unittest.TestCase):
         out = io.StringIO()
         with mock.patch.dict(sys.modules, {"serial": types.SimpleNamespace(Serial=Serial)}), \
                 mock.patch.object(sys, "argv", ["-c", PORT, "0.01"]), contextlib.redirect_stdout(out):
-            exec(download_mode.READ_CONSOLE, {})
+            exec(board_console.READ_CONSOLE, {})
         self.assertEqual(opened, [(PORT, 115200, False, False), "closed"])
         self.assertEqual(out.getvalue(), ROM + "\ufffd")
 
@@ -69,7 +71,7 @@ class TheConsoleTest(unittest.TestCase):
         self.assertTrue(download_mode.booted(" ready \n"))
 
     def test_a_firmware_s_lines_are_not_download_mode(self):
-        probe = download_mode.DownloadModeProbe(["/opt/python3"], PORT, printing("ready\n", []))
+        probe = board_console.ConsoleProbe(["/opt/python3"], PORT, printing("ready\n", []))
         self.assertFalse(probe.waits_in_download_mode()[0])
 
     def test_a_console_script_that_fails_is_not_download_mode_whatever_it_printed(self):
@@ -77,21 +79,21 @@ class TheConsoleTest(unittest.TestCase):
             if check:
                 raise subprocess.CalledProcessError(1, command, ROM, "no module named serial")
             return subprocess.CompletedProcess(command, 1, ROM, "no module named serial")
-        self.assertEqual(download_mode.DownloadModeProbe(["/opt/python3"], PORT, run).waits_in_download_mode(),
+        self.assertEqual(board_console.ConsoleProbe(["/opt/python3"], PORT, run).waits_in_download_mode(),
                          (False, "could not read the port: no module named serial"))
 
     def test_a_port_that_cannot_be_read_is_not_download_mode(self):
         def fails(command, **kw):
             raise subprocess.CalledProcessError(1, command, "", "could not open port")
-        self.assertEqual(download_mode.DownloadModeProbe(["/opt/python3"], PORT, fails).waits_in_download_mode(),
+        self.assertEqual(board_console.ConsoleProbe(["/opt/python3"], PORT, fails).waits_in_download_mode(),
                          (False, "could not read the port: could not open port"))
 
     def test_a_probe_needs_mpremote_as_a_python_package_and_a_port(self):
         python = tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote"}, ["/opt/python3"])
         command = tools.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
-        self.assertEqual(download_mode.DownloadModeProbe.for_tool(python, PORT).python, ["/opt/python3"])
-        self.assertIsNone(download_mode.DownloadModeProbe.for_tool(command, PORT))
-        self.assertIsNone(download_mode.DownloadModeProbe.for_tool(python, None))
+        self.assertEqual(board_console.ConsoleProbe.for_tool(python, PORT).python, ["/opt/python3"])
+        self.assertIsNone(board_console.ConsoleProbe.for_tool(command, PORT))
+        self.assertIsNone(board_console.ConsoleProbe.for_tool(python, None))
 
 
 class TheResetTest(unittest.TestCase):
@@ -99,7 +101,7 @@ class TheResetTest(unittest.TestCase):
         """A probe whose port is there or not at each look, in turn, then there for good."""
         looks = list(here)
         self.clock = FakeClock()
-        return download_mode.DownloadModeProbe(["/opt/python3"], PORT, clock=self.clock,
+        return board_console.ConsoleProbe(["/opt/python3"], PORT, clock=self.clock,
                                                port_exists=lambda port: looks.pop(0) if looks else True)
 
     def test_a_port_that_goes_and_comes_back_is_the_reset(self):
@@ -115,6 +117,78 @@ class TheResetTest(unittest.TestCase):
         probe.port_exists = lambda port: False
         self.assertFalse(probe.wait_for_reset(timeout_s=1))
 
+
+class TheCureTest(unittest.TestCase):
+    """P251: the open with DTR and RTS off is the cure. It keeps what the restart printed, then waits for the port."""
+
+    def probe(self, run, *here):
+        looks = list(here)
+        self.clock = FakeClock()
+        return board_console.ConsoleProbe(["/opt/python3"], PORT, run, clock=self.clock,
+                                          port_exists=lambda port: looks.pop(0) if looks else True)
+
+    def test_a_restart_heard_on_the_open_is_kept_and_the_cure_settles_2_s(self):
+        heard = "ESP-ROM:esp32c6-20220919\nrst:0x15 (USB_UART_HPSYS),boot:0x1e\nready\n"
+        self.assertEqual(self.probe(printing(heard, [])).cure(), board_console.Cure(heard, None, True, True))
+        self.assertEqual(self.clock.slept, [2])
+
+    def test_an_open_that_printed_no_restart_is_no_restart(self):
+        self.assertEqual(self.probe(printing("first: 1\n", [])).cure(), board_console.Cure("first: 1\n", None, False, True))
+
+    def test_a_read_that_failed_mid_restart_keeps_what_it_heard_and_its_reason(self):
+        def fails(command, **kw):
+            raise subprocess.CalledProcessError(1, command, "rst:0x15 (USB_UART_HPSYS)\n", "serial.SerialException: device disconnected")
+        self.assertEqual(self.probe(fails).cure(), board_console.Cure(
+            "rst:0x15 (USB_UART_HPSYS)\n", "serial.SerialException: device disconnected", True, True))
+
+    def test_a_read_that_timed_out_keeps_its_reason(self):
+        def stalls(command, **kw):
+            raise subprocess.TimeoutExpired(command, kw["timeout"])
+        cure = self.probe(stalls).cure()
+        self.assertEqual((cure.heard, cure.restart_heard), ("", False))
+        self.assertIn("timed out", cure.why)
+
+    def test_the_cure_waits_until_the_port_is_there_again(self):
+        self.probe(printing("", []), False, False, True).cure()
+        self.assertEqual(self.clock.slept, [0.1, 0.1, 2])
+
+    def test_a_port_not_back_after_10_s_is_said_and_not_settled(self):
+        probe = self.probe(printing("", []))
+        probe.port_exists = lambda port: False
+        cure = probe.cure()
+        self.assertFalse(cure.port_back)
+        self.assertGreaterEqual(self.clock.now, 10)
+        self.assertLess(self.clock.now, 11)
+        self.assertNotIn(2, self.clock.slept)
+
+    def test_a_restart_is_the_rom_s_rst_line_and_not_a_word_that_ends_in_rst(self):
+        self.assertTrue(board_console.shows_restart("rst:0x15 (USB_UART_HPSYS),boot:0x1e"))
+        self.assertTrue(board_console.shows_restart("ESP-ROM\nrst:0xc (SW_CPU),boot:0x8"))
+        self.assertFalse(board_console.shows_restart("first: 1\nworst:0x\n"))
+        self.assertFalse(board_console.shows_restart("ready\n"))
+
+    def test_the_console_script_prints_what_it_read_when_the_port_drops(self):
+        class Serial:
+            def __init__(self):
+                self.chunks = [b"rst:0x15\n"]
+
+            def open(self):
+                pass
+
+            def read(self, size):
+                if self.chunks:
+                    return self.chunks.pop(0)
+                raise OSError("device disconnected")
+
+            def close(self):
+                pass
+
+        out = io.StringIO()
+        with mock.patch.dict(sys.modules, {"serial": types.SimpleNamespace(Serial=Serial)}), \
+                mock.patch.object(sys, "argv", ["-c", PORT, "5"]), contextlib.redirect_stdout(out), \
+                self.assertRaises(OSError):
+            exec(board_console.READ_CONSOLE, {})
+        self.assertEqual(out.getvalue(), "rst:0x15\n")
 
 if __name__ == "__main__":
     unittest.main()

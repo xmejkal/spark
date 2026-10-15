@@ -60,6 +60,18 @@ class PortFinder:
         rows = [line.split(None, 3) for line in done.stdout.splitlines()]
         return [Port(*(row + [""])[:4]) for row in rows if len(row) >= 3 and row[2] != NOT_A_BOARD]
 
+    def require_one_port(self, script):
+        """The port of the one board on USB. LookStop when there is none, or when there are two or more: it lists them
+        and names `script`'s --port (P218's D25)."""
+        found = self.boards()
+        if not found:
+            raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only.")
+        if len(found) > 1:
+            lines = ["  %s  %s  %s" % (each.device, each.serial, each.product) for each in found]
+            raise LookStop("%d boards on USB:\n%s\n%s --port %s  (unplug one to tell them apart)"
+                           % (len(found), "\n".join(lines), script, found[0].device))
+        return found[0].device
+
 
 class BoardReader:
     """How a board is read. `read(port)` returns a Reading, or raises LookStop when the board cannot be read."""
@@ -208,14 +220,7 @@ class Look:
             raise LookStop("no board record for %s: P230 will research one." % name)
 
     def only_port(self):
-        found = self.finder.boards()
-        if not found:
-            raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only.")
-        if len(found) > 1:
-            lines = ["  %s  %s  %s" % (each.device, each.serial, each.product) for each in found]
-            raise LookStop("%d boards on USB:\n%s\nlook.py --port %s  (unplug one to tell them apart)"
-                           % (len(found), "\n".join(lines), found[0].device))
-        return found[0].device
+        return self.finder.require_one_port("look.py")
 
 
 def looker(project, run=subprocess.run):

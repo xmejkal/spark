@@ -35,6 +35,7 @@ import board_look
 import ready_check
 import boards
 import deploy_gate
+import board_console
 import download_mode
 import look
 import store
@@ -168,7 +169,7 @@ def main(argv=None, run=None, consent=None, probe=None):
     """
     Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
     `consent` how the person says yes (default: in this terminal), `probe` how a board in download mode is found
-    (default: download_mode.DownloadModeProbe). Returns the exit code.
+    (default: board_console.ConsoleProbe). Returns the exit code.
     """
     parser = argparse.ArgumentParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -222,7 +223,7 @@ def main(argv=None, run=None, consent=None, probe=None):
     connection = board_connection.BoardConnection(mpremote, report.port, run)
     facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
     if verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
-        probe = probe or download_mode.DownloadModeProbe.for_tool(tools.find("board-shell", args.project),
+        probe = probe or board_console.ConsoleProbe.for_tool(tools.find("board-shell", args.project),
                                                                     report.port, run)
         if probe:  # P244: what the console said goes in the log, download mode or not
             waits, console = probe.waits_in_download_mode()

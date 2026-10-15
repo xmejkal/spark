@@ -40,7 +40,7 @@ STRUCTURE = "a path, a fixture or a registry the test walks — where to look, n
 RELATION = ("a relation between tuning numbers (this costs less than that), which is the design "
             "decision itself; the numbers' values are not the expectation")
 MAY_READ = {
-    "download_mode.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
+    "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
     "assign_pins.BUS_LINES": SAMENESS, "parts.BUSES": SAMENESS,
     "assign_pins.CAPABILITIES": SAMENESS, "parts.CAPABILITIES": SAMENESS,
     "check_footprints.PACKAGE_POWER_W": SAMENESS, "check_physics.PACKAGE_POWER_W": SAMENESS,

@@ -235,6 +235,8 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
 | Error | an exception | ends in `Error` (the deploy area only, for now) | `GateClosedError` |
 | Value | facts with no actions | a plain noun | `Port`, `BoardReading` |
+| Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
+| Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe` |
 
 The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
 gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. Until
@@ -265,6 +267,12 @@ state and offers several actions on it, or when a test or a caller must swap it.
 
 The fake of a part that a caller can swap lives in `tests/fakes.py` and starts with `Fake`, for example
 `FakeBoardConnection` and `FakeConsent`. A fake of a tool's output, such as mpremote's, stays in its test file.
+
+The PO's bench tools for live work on a board sit beside the deploy area. `scripts/reach.py` runs one line on the
+board on USB and cures it once when its USB output died at power-on (P251,
+[#264](https://github.com/xmejkal/spark/issues/264)). Its flags are `--project`, `--port`, `--json` (one line for the
+bench log) and `--cure-first` (the bench's cold arm). It is not in [agents.md](agents.md) until P247 puts it behind
+the PO's grant.
 
 ## The docs name only what is there
 

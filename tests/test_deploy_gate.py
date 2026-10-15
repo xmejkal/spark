@@ -24,7 +24,7 @@ import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeDownloadModeProbe  # noqa: E402
+from fakes import FakeConsent, FakeConsoleProbe  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 
@@ -345,7 +345,7 @@ class TheBoardInDownloadModeTest(GateCase):
 
     def test_a_press_of_r_after_download_mode_runs_the_ready_check_again(self):
         self.uncopied = self.unread
-        probe = FakeDownloadModeProbe("boot:0x4 (DOWNLOAD)\nwaiting for download\n", on_reset=self.answers)
+        probe = FakeConsoleProbe("boot:0x4 (DOWNLOAD)\nwaiting for download\n", on_reset=self.answers)
         code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (0, ["console", "reset"]))
         self.assertIn("press the board's R (reset) button once", said)
@@ -357,14 +357,14 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertEqual([c[c.index("fs") + 1] if "fs" in c else c[-1][:6] for c in after], ["cp", "cat", "import", "import"])
 
     def test_no_press_in_time_is_unknown_and_says_to_press_r(self):
-        code, said, _ = self.flash(FakeDownloadModeProbe("waiting for download\n", reset=False))
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n", reset=False))
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
                       "press its R button", said)
         self.assertIn("waiting for download\nno reset", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_silent_board_not_in_download_mode_stays_unknown_and_asks_nothing(self):
-        probe = FakeDownloadModeProbe("")
+        probe = FakeConsoleProbe("")
         code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (2, ["console"]))
         self.assertNotIn("press the board's R", said)
@@ -375,7 +375,7 @@ class TheBoardInDownloadModeTest(GateCase):
         # P245 (#257): on 2026-10-15 mpremote asked while the board still restarted, then the console heard ready
         self.uncopied = self.unread
         boot = "mode:DIO, clock div:2\nentry 0x4086b910\nready\n"
-        probe = FakeDownloadModeProbe(boot, on_console=self.answers)
+        probe = FakeConsoleProbe(boot, on_console=self.answers)
         code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (0, ["console"]))
         self.assertNotIn("press the board's R", said)
@@ -385,25 +385,25 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertIn("console with DTR and RTS off: mode:DIO, clock div:2\nentry 0x4086b910\nready\nread again\n", log)
 
     def test_download_mode_with_ready_after_it_still_asks_for_r_and_never_reads_again(self):
-        code, said, _ = self.flash(FakeDownloadModeProbe("waiting for download\nready\n", reset=False))
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\nready\n", reset=False))
         self.assertEqual(code, 2)
         self.assertIn("the board waits in download mode, and its port did not go and come back", said)
         self.assertNotIn("read again", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_ready_inside_another_word_is_not_a_boot(self):
-        code, said, _ = self.flash(FakeDownloadModeProbe("not ready yet\n", on_console=self.answers))
+        code, said, _ = self.flash(FakeConsoleProbe("not ready yet\n", on_console=self.answers))
         self.assertEqual(code, 2)
         self.assertNotIn("read again", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_what_a_board_not_in_download_mode_printed_stays_in_the_log(self):
         # P244 (#255): the 2026-10-15 bench lost what the check read, so nobody knew why the board was silent
-        code, said, _ = self.flash(FakeDownloadModeProbe("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n"))
+        code, said, _ = self.flash(FakeConsoleProbe("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n"))
         self.assertEqual(code, 2)
         self.assertIn("console with DTR and RTS off: rst:0x15 (USB_UART_HPSYS),boot:0x1e\n",
                       next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_passed_log_that_names_no_files_is_never_probed(self):
-        probe = FakeDownloadModeProbe("waiting for download\n")
+        probe = FakeConsoleProbe("waiting for download\n")
         with mock.patch.object(deploy, "file_hashes", side_effect=lambda log: {}):
             code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (2, []))
@@ -411,7 +411,7 @@ class TheBoardInDownloadModeTest(GateCase):
 
     def test_a_board_that_answers_is_never_probed(self):
         self.unread = None
-        probe = FakeDownloadModeProbe("waiting for download\n")
+        probe = FakeConsoleProbe("waiting for download\n")
         self.assertEqual((self.flash(probe)[0], probe.asked), (0, []))
 
     def test_without_a_probe_the_default_reads_the_port_with_mpremote_s_python(self):

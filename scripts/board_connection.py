@@ -15,6 +15,9 @@ from run_scenario import printed_text
 #: How MicroPython starts the report of an exception that the board's code raised. mpremote 1.29.0 prints that report
 #: to stdout and exits 1, and its own failures to stderr (mpremote/commands.py:489-492, read 2026-10-14).
 BOARD_TRACEBACK = "Traceback"
+#: What mpremote says when the board did not answer its raw REPL, as part of its last line
+#: `mpremote.transport.TransportError: could not enter raw repl` (docs/observations/2026-10-15-p235-reach-test.md).
+RAW_REPL_REFUSED = "could not enter raw repl"
 #: How long one mpremote call may take before the board counts as not answering, in seconds.
 DEFAULT_TIMEOUT_S = 20
 
@@ -91,3 +94,37 @@ class BoardConnection:
         except OSError as cannot:
             raise BoardUnreachableError(str(cannot)) from None
         return printed_text(done.stdout)
+
+
+class RetryingBoardConnection:
+    """
+    Decorator: a BoardConnection that, when mpremote could not enter the raw REPL, lets `probe` cure the board once and
+    runs the code again (P251). `probe` is a board_console.ConsoleProbe, or None for no cure. `last_cure` is the Cure of
+    the last run_code, or None when it needed none. The other methods pass through.
+    """
+
+    def __init__(self, connection, probe):
+        self.connection, self.probe, self.last_cure = connection, probe, None
+
+    def run_code(self, code, keep_running_for=None):
+        """What the board printed while it ran `code`, as BoardConnection.run_code, after one cure when it needed one."""
+        self.last_cure = None
+        try:
+            return self.connection.run_code(code, keep_running_for)
+        except BoardUnreachableError as refused:
+            if self.probe is None or RAW_REPL_REFUSED not in str(refused):
+                raise
+        self.last_cure = self.probe.cure()
+        return self.connection.run_code(code, keep_running_for)
+
+    def copy_to_board(self, local, remote):
+        """BoardConnection.copy_to_board, with no cure."""
+        return self.connection.copy_to_board(local, remote)
+
+    def read_file(self, remote):
+        """BoardConnection.read_file, with no cure."""
+        return self.connection.read_file(remote)
+
+    def repl_command(self):
+        """BoardConnection.repl_command."""
+        return self.connection.repl_command()

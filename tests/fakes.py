@@ -7,7 +7,7 @@ class FakeBoardConnection:
     Raises IndexError when a test asks for more answers than it gave."""
 
     def __init__(self, *answers, copy_raises=None):
-        self.answers, self.copy_raises, self.copied = list(answers), copy_raises, []
+        self.answers, self.copy_raises, self.copied, self.ran = list(answers), copy_raises, [], []
 
     def _next(self):
         answer = self.answers.pop(0)
@@ -16,6 +16,7 @@ class FakeBoardConnection:
         return answer
 
     def run_code(self, code, keep_running_for=None):
+        self.ran.append((code, keep_running_for))
         return self._next()
 
     def read_file(self, remote):
@@ -53,22 +54,29 @@ class FakeClock:
         self.now += seconds
 
 
-class FakeDownloadModeProbe:
-    """A fake DownloadModeProbe: the console prints `console`, and wait_for_reset answers `reset` after it calls
-    `on_reset` (a test's way to make the board answer again), and the console read calls `on_console`. Keeps how often each was asked."""
+class FakeConsoleProbe:
+    """A fake ConsoleProbe: the console prints `printed`, and wait_for_reset answers `reset` after it calls
+    `on_reset` (a test's way to make the board answer again), and the console read calls `on_console`. cure() calls
+    `on_cure` and gives `cured`, a board_console.Cure. Keeps how often each was asked."""
 
-    def __init__(self, console="", reset=True, on_reset=None, on_console=None):
-        self.console, self.reset, self.on_reset, self.asked = console, reset, on_reset, []
-        self.on_console = on_console
+    def __init__(self, printed="", reset=True, on_reset=None, on_console=None, cured=None, on_cure=None):
+        self.printed, self.reset, self.on_reset, self.asked = printed, reset, on_reset, []
+        self.on_console, self.cured, self.on_cure = on_console, cured, on_cure
 
     def waits_in_download_mode(self):
         self.asked.append("console")
         if self.on_console:
             self.on_console()
-        return "waiting for download" in self.console, self.console
+        return "waiting for download" in self.printed, self.printed
 
     def wait_for_reset(self):
         self.asked.append("reset")
         if self.on_reset:
             self.on_reset()
         return self.reset
+
+    def cure(self):
+        self.asked.append("cure")
+        if self.on_cure:
+            self.on_cure()
+        return self.cured
