@@ -26,8 +26,8 @@
  {
   "file": "scripts/board_console.py",
   "name": "a restart is any rst: inside a word",
-  "find": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+\")",
-  "replace": "RESTART = re.compile(r\"rst:\")"
+  "find": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+|^entry 0x[0-9a-f]+\", re.MULTILINE)",
+  "replace": "RESTART = re.compile(r\"rst:|entry 0x[0-9a-f]+\", re.MULTILINE)"
  },
  {
   "file": "scripts/board_reach.py",
@@ -106,5 +106,11 @@
   "name": "the firmware-stopped line when nothing ran",
   "find": "    if result.reached:\n        out.append(FIRMWARE_STOPPED_MESSAGE)",
   "replace": "    if True:\n        out.append(FIRMWARE_STOPPED_MESSAGE)"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "the entry line is not a restart",
+  "find": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+|^entry 0x[0-9a-f]+\", re.MULTILINE)",
+  "replace": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+\", re.MULTILINE)"
  }
 ]

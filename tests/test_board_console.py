@@ -167,6 +167,11 @@ class TheCureTest(unittest.TestCase):
         self.assertFalse(board_console.shows_restart("first: 1\nworst:0x\n"))
         self.assertFalse(board_console.shows_restart("ready\n"))
 
+    def test_a_boot_heard_from_its_middle_is_a_restart_by_its_entry_line(self):
+        tail = "mode:DIO, clock div:2\nload:0x40875730,len:0xdbc\nentry 0x4086b910\nready\n"
+        self.assertTrue(board_console.shows_restart(tail))
+        self.assertFalse(board_console.shows_restart("my entry 0x10 point\n"))
+
     def test_the_console_script_prints_what_it_read_when_the_port_drops(self):
         class Serial:
             def __init__(self):

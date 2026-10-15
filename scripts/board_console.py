@@ -23,9 +23,10 @@ PORT_BACK_S = 10
 #: How long the cure waits after the port is there, before mpremote opens it, in seconds. A guess that P251's bench
 #: tests: the shown cures came 20 s or more before the next mpremote call (reach-test.md, 08:25 and 08:48).
 PORT_SETTLE_S = 2
-#: The ESP32 ROM's line of a restart, `rst:0x15 (USB_UART_HPSYS),boot:0x1e` on the XIAO C6 (AT187), and never a word
-#: such as `first:` inside the firmware's own lines.
-RESTART = re.compile(r"\brst:0x[0-9a-f]+")
+#: The ESP32 ROM's lines of a restart: `rst:0x15 (USB_UART_HPSYS),boot:0x1e` at its start (AT187), or `entry 0x4086b910`
+#: at its end, when the read began after the first lines (P251's bench, AT233). Never a word such as `first:` inside
+#: the firmware's own lines.
+RESTART = re.compile(r"\brst:0x[0-9a-f]+|^entry 0x[0-9a-f]+", re.MULTILINE)
 #: What the probe says of a port it could not read (P244): a could-not-run, never a silent console.
 UNREAD = "could not read the port: %s"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
@@ -50,7 +51,7 @@ Cure = namedtuple("Cure", "heard why restart_heard port_back")
 
 
 def shows_restart(console):
-    """True when `console` holds the ROM's line of a restart."""
+    """True when `console` holds one of the ROM's lines of a restart."""
     return RESTART.search(console) is not None
 
 
