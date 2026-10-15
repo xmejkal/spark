@@ -2436,6 +2436,7 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertFalse(any(p.startswith("does not meet") for p in parts.broken_problems(anonymous, path)))
         numbered = part(id=5, simulation={"wokwi": {"chip": "x", "pins": {}}})
         self.assertTrue(any(p.startswith("id is 5 but the file is named") for p in parts.validate(numbered, path)))
+        self.assertFalse(any(p.startswith("does not meet") for p in parts.broken_problems(numbered, path)))
 
     def test_a_wrong_pin_order_is_named_when_its_proof_is_owed(self):
         unlisted = part(pin_order=5)
