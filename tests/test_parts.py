@@ -2452,7 +2452,11 @@ class OwedIsNotBrokenTest(unittest.TestCase):
                  ({"needs": [{"signal": "S", "pin": "P", "needs": 5}]}, "needs[0].needs is 5"),
                  ({"facts": {"x": cited}}, "facts.x cites ['x']"),
                  ({"power": [{"rail": "m", "direction": "out"}, {"rail": "m", "direction": "out"}]}, "power[0] has no pin"),
-                 ({"power": [{"pin": "V", "rail": ["m"], "direction": "out"}]}, "power[0] rail is ['m']")]
+                 ({"power": [{"pin": "V", "rail": ["m"], "direction": "out"}]}, "power[0] rail is ['m']"),
+                 ({"needs": [None]}, "needs[0] is None, but it is an object"), ({"power": [None]}, "power[0] is None"),
+                 ({"unused_pins": [None]}, "unused_pins[0] is None"), ({"host_parts": [None]}, "host_parts[0] is None"),
+                 ({"needs": [{"signal": "S", "bus": "i2c"}]}, "needs[0] has no pin"),
+                 ({"needs": [{"signal": "S", "pin": "P", "needs": [None]}]}, "needs[0].needs[0] is None, but it is a string")]
         for overrides, named in wrong:
             with self.subTest(named):
                 record = part(**overrides)

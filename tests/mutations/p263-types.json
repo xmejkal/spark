@@ -1,9 +1,56 @@
 [
- {"file": "scripts/parts.py", "name": "a wrong type runs the other checks", "find": "    if wrong_types:  # every check below", "replace": "    if False:  # every check below"},
- {"file": "scripts/parts.py", "name": "an owed key is type-checked", "find": "if key not in owed})", "replace": "})"},
- {"file": "scripts/parts.py", "name": "list items are not walked", "find": "for problem in type_problems(item, kind.item,", "replace": "for problem in [] if item else type_problems(item, kind.item,"},
- {"file": "scripts/parts.py", "name": "map values are not walked", "find": "for problem in type_problems(inner, kind.value,", "replace": "for problem in [] if inner else type_problems(inner, kind.value,"},
- {"file": "scripts/parts.py", "name": "a cited list is looked up", "find": "if not isinstance(cited, str) or cited not in", "replace": "if cited not in"},
- {"file": "scripts/parts.py", "name": "a None pin is joined", "find": "\", \".join(map(str, pins))", "replace": "\", \".join(pins)"},
- {"file": "scripts/parts.py", "name": "a list rail is a key", "find": "elif direction == \"out\" and isinstance(supply.get(\"rail\"), (str, type(None))):", "replace": "elif direction == \"out\":"}
+ {
+  "file": "scripts/parts.py",
+  "name": "a wrong type runs the other checks",
+  "find": "    if wrong_types:  # the checks below",
+  "replace": "    if False:  # the checks below"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "an owed key is type-checked",
+  "find": "if key not in owed})",
+  "replace": "})"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "list items are not walked",
+  "find": "                                type_problems(item, expected.item, \"%s[%d]\" % (where, index)))]",
+  "replace": "                                [])]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "map values are not walked",
+  "find": "for problem in type_problems(inner, expected.value,",
+  "replace": "for problem in [] if inner else type_problems(inner, expected.value,"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a cited list is looked up",
+  "find": "if not isinstance(cited, str) or cited not in",
+  "replace": "if cited not in"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a None pin is joined",
+  "find": "\", \".join(map(str, pins))",
+  "replace": "\", \".join(pins)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a list rail is a key",
+  "find": "elif direction == \"out\" and isinstance(supply.get(\"rail\"), (str, type(None))):",
+  "replace": "elif direction == \"out\":"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a null list item is absent",
+  "find": "if item is None and not expected.nulls else",
+  "replace": "if False else"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "an i2c need with no pin is joined",
+  "find": "if need.get(\"bus\") == \"i2c\" and need.get(\"pin\")]",
+  "replace": "if need.get(\"bus\") == \"i2c\"]"
+ }
 ]
