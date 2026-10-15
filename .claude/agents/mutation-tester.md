@@ -28,7 +28,8 @@ If the branch changes no logic, report `nothing to mutate` with one sentence tha
    most 12 rows for the whole branch. Choose the defects whose escape would hurt most.
 2. Put every row in one table: a JSON list of `{"file", "name", "find", "replace"}`, in the output folder that your
    brief names, never in `tests/mutations/`. A `find` must occur exactly once in its file. Run
-   `python3 tools/mutate.py --anchors <table>` first, and fix each row that it refuses.
+   `python3 tools/mutate.py --anchors <table>` first, and fix each row that it refuses (a `find` that is not unique, or a `replace` that does not
+   compile or parse).
 3. Run the table once: `python3 tools/mutate.py <table> --copy`. Make one call, because each call also runs the whole
    suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes.
 4. Report `N planted, M caught`. For each escape, give the row and the test that it shows is missing: which input,

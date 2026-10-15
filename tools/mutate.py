@@ -3,7 +3,7 @@
 Re-introduce each defect and prove the suite goes red.
 
     tools/mutate.py tests/mutations/<table>.json
-    tools/mutate.py --anchors tests/mutations/*.json      # anchors only, a second
+    tools/mutate.py --anchors tests/mutations/*.json      # anchors and syntax only, a second
     tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy    # one file's rows, in a copy
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
 
@@ -24,7 +24,7 @@ THE TABLE
 substitution that silently matched nothing was scored "caught" by an earlier hand-rolled
 harness, because the suite it ran was the unmutated one.
 
-THE THREE RULES THE HAND-ROLLED HARNESSES LEARNED, built in:
+THE FOUR RULES THE HAND-ROLLED HARNESSES LEARNED, built in:
 
   * stderr is captured. `unittest` writes its verdict there, and a harness that drops it prints
     nothing for every mutation — which reads as success.
@@ -334,7 +334,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("table", nargs="+", help="JSON lists of {file, find, replace, name?}")
     parser.add_argument("--anchors", action="store_true",
-                        help="only check that every `find` occurs exactly once; run nothing")
+                        help="only check that every `find` occurs exactly once and that each mutant compiles (.py) "
+                             "or parses (.json); run nothing. A run also imports each mutated module")
     parser.add_argument("--root", default=".", help="the project root the files are under")
     parser.add_argument("--tests", default="tests", help="the test directory, relative to root")
     parser.add_argument("--for", dest="paths", nargs="+", metavar="PATH",

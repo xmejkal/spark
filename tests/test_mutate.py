@@ -216,6 +216,27 @@ class AMutantThatCannotLoadIsRefusedTest(unittest.TestCase):
         self.assertTrue(said[0][2].startswith("the mutant of m.py does not compile: line 2, "), said)
         self.assertEqual(mutate.main(["--anchors", str(stale), "--root", str(root)]), mutate.EXIT_ESCAPED)
 
+    def test_a_file_that_never_imported_alone_is_judged_by_the_suite_not_refused(self):
+        # The mutation run of PR #292: with the baseline guard gone, every mutant of such a file read as refused.
+        root = tiny_project()
+        (root / "tests" / "cfg.py").write_text("STEP = 1\n")
+        (root / "m.py").write_text("import cfg\n" + (root / "m.py").read_text())
+        results, _ = mutate.run(root, "tests", [BREAK_ADD])
+        self.assertEqual(results[0]["status"], mutate.CAUGHT, results)
+
+    def test_the_import_check_finds_a_module_beside_its_own_file_in_a_folder(self):
+        # The mutation run of PR #292: an import check that looked in the wrong folder judged nothing.
+        root = tiny_project()
+        (root / "pkg").mkdir()
+        (root / "pkg" / "t.py").write_text("ONE = 1\n")
+        (root / "pkg" / "s.py").write_text("from t import ONE\n\ndef one():\n    return ONE\n")
+        write_test(root, "test_s.py", "sys.path.insert(0, %r)" % str(root / "pkg"), "import s",
+                   "class S(unittest.TestCase):", "    def test_one(self): self.assertEqual(s.one(), 1)")
+        broken = {"file": "pkg/s.py", "name": "a module that is not there", "find": "from t import ONE",
+                  "replace": "import nonexistent_xyz\nfrom t import ONE"}
+        results, _ = mutate.run(root, "tests", [broken])
+        self.assert_refused(results, "pkg/s.py", "does not import", "nonexistent_xyz")
+
 
 class TheToolIsHonestAboutItselfTest(unittest.TestCase):
     def test_a_suite_that_is_red_before_mutating_is_refused(self):
