@@ -2402,6 +2402,9 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertTrue(all(any(p.startswith(key) for p in parts.validate(empty, path)) for key in owed))
         self.assertEqual(parts.validate(empty, path, owed=owed), [])
         self.assertEqual(parts.broken_problems(empty, path), [])
+        blank = part(pin_order="")
+        self.assertIn("pin_order", parts.owes(blank))
+        self.assertEqual(parts.broken_problems(blank, written(blank)), [], "an owed key is not type-checked")
         unordered = part(pin_order=[])
         self.assertTrue(parts.validate(unordered, written(unordered))[0].startswith("pin_order must be"))
         self.assertEqual(parts.validate(unordered, written(unordered), owed=("pin_order",)), [])
@@ -2426,7 +2429,7 @@ class OwedIsNotBrokenTest(unittest.TestCase):
     def test_a_pin_order_that_is_no_list_is_named_not_a_shape_line(self):
         for wrong in (5, "AB"):
             unlisted = part(pin_order=wrong, pin_order_proof={"verified": False, "source": "x"})
-            self.assertEqual(parts.broken_problems(unlisted, written(unlisted)), ["pin_order must be a list of pad names, pad 1 first"])
+            self.assertEqual(parts.broken_problems(unlisted, written(unlisted)), ["pin_order is %r, but it is a list" % (wrong,)])
 
     def test_a_chip_record_with_no_plain_id_is_named_not_a_shape_line(self):
         anonymous = part(simulation={"wokwi": {"chip": "x", "pins": {}}})
@@ -2438,11 +2441,37 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertTrue(any(p.startswith("id is 5 but the file is named") for p in parts.validate(numbered, path)))
         self.assertFalse(any(p.startswith("does not meet") for p in parts.broken_problems(numbered, path)))
 
+    def test_a_value_of_the_wrong_type_is_named_not_a_shape_line(self):
+        cited = {"value": 1, "verified": True, "source": "s", "cites": {"document": ["x"]}}
+        wrong = [({"needs": ["a"]}, "needs[0] is 'a'"), ({"power": ["a"]}, "power[0] is 'a'"),
+                 ({"unused_pins": ["a"]}, "unused_pins[0] is 'a'"), ({"needs": 5}, "needs is 5"),
+                 ({"power": {"a": 1}}, "power is {'a': 1}"), ({"documents": ["a"]}, "documents is ['a']"),
+                 ({"pin_order": [["a"]]}, "pin_order[0] is ['a']"), ({"facts": 5}, "facts is 5"),
+                 ({"facts": {"module_has_i2c_pullups": "x"}}, "facts.module_has_i2c_pullups is 'x'"),
+                 ({"host_parts": 5}, "host_parts is 5"), ({"host_parts": ["a"]}, "host_parts[0] is 'a'"),
+                 ({"sourcing": 5}, "sourcing is 5"),
+                 ({"needs": [{"signal": "S", "pin": ["a"], "direction": "in"}]}, "needs[0].pin is ['a']"),
+                 ({"needs": [{"signal": "S", "pin": "P", "bus": ["i2c"]}]}, "needs[0].bus is ['i2c']"),
+                 ({"needs": [{"signal": "S", "pin": "P", "needs": 5}]}, "needs[0].needs is 5"),
+                 ({"facts": {"x": cited}}, "facts.x cites ['x']"),
+                 ({"power": [{"rail": "m", "direction": "out"}, {"rail": "m", "direction": "out"}]}, "power[0] has no pin"),
+                 ({"power": [{"pin": "V", "rail": ["m"], "direction": "out"}]}, "power[0] rail is ['m']"),
+                 ({"needs": [None]}, "needs[0] is None, but it is an object"), ({"power": [None]}, "power[0] is None"),
+                 ({"unused_pins": [None]}, "unused_pins[0] is None"), ({"host_parts": [None]}, "host_parts[0] is None"),
+                 ({"needs": [{"signal": "S", "bus": "i2c"}]}, "needs[0] has no pin"),
+                 ({"needs": [{"signal": "S", "pin": "P", "needs": [None]}]}, "needs[0].needs[0] is None, but it is a string")]
+        for overrides, named in wrong:
+            with self.subTest(named):
+                record = part(**overrides)
+                problems = parts.broken_problems(record, written(record))
+                self.assertTrue(any(p.startswith(named) for p in problems), problems)
+                self.assertFalse(any(p.startswith("does not meet") for p in problems), problems)
+
     def test_a_wrong_pin_order_is_named_when_its_proof_is_owed(self):
         unlisted = part(pin_order=5)
         del unlisted["pin_order_proof"]
         self.assertIn("pin_order_proof", parts.owes(unlisted))
-        self.assertEqual(parts.broken_problems(unlisted, written(unlisted)), ["pin_order must be a list of pad names, pad 1 first"])
+        self.assertEqual(parts.broken_problems(unlisted, written(unlisted)), ["pin_order is 5, but it is a list"])
 
     def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):
         home = Path(tempfile.mkdtemp())
