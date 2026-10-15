@@ -17,8 +17,8 @@ from xml.sax.saxutils import escape
 ROOT = Path(__file__).resolve().parent.parent
 PICTURE = "docs/guide/journey.svg"
 #: The strip at the bottom: where we are, and what is next. Each line holds at most STRIP characters.
-WHERE = "the button-and-LED project passed its Wokwi simulation on 2026-10-12."
-NEXT = "flash it on a real FireBeetle 2 ESP32-S3."
+WHERE = "the button-and-LED firmware read ready seen on a XIAO ESP32-C6 on 2026-10-15."
+NEXT = "wire its breadboard and press the button."
 STRIP = 100
 #: Each step: its name in the README's table, its command, what you do, what you get, a note on how far it works, and
 #: the status that note was written for. A step whose status changes in the table needs a new note here.

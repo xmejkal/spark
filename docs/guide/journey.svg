@@ -139,6 +139,6 @@
 <text x="1214" y="1672" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">ESP32-C6 and read ready. No</text>
 <text x="1214" y="1706" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">wired breadboard yet.</text>
 <rect x="48" y="1768" width="1504" height="92" rx="12" fill="#1a1a1a"/>
-<text x="72" y="1806" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> the button-and-LED project passed its Wokwi simulation on 2026-10-12.</text>
-<text x="72" y="1840" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> flash it on a real FireBeetle 2 ESP32-S3.</text>
+<text x="72" y="1806" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> the button-and-LED firmware read ready seen on a XIAO ESP32-C6 on 2026-10-15.</text>
+<text x="72" y="1840" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> wire its breadboard and press the button.</text>
 </svg>
