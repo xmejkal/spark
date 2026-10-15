@@ -277,7 +277,7 @@ sitting" is now the [service level](README.md#the-cadences-and-what-each-one-lea
 
 ## Habits — no command judges these
 
-Three rules no command can judge, so they live here, unnumbered. Two of them were W4 and W9 until 2026-10-09
+Four rules no command can judge, so they live here, unnumbered. Two of them were W4 and W9 until 2026-10-09
 (P146), and those headings above point here.
 
 **Generate the least code and text that works** (2026-10-12, P205). Code above all. MVP first, then add or change in
@@ -287,6 +287,18 @@ every implementer's and reviewer's brief.
 *Origin:* Petr, 2026-10-12 (typos corrected): *"try to always keep the generated code/text etc to minimum, definitely
 with code, we really want to always prefer simplicity, go agile, etc, really MVP first, then adding/changing, always
 keeping it working"*. He said it after P197's pull request grew through its council.
+
+**Plan as we go** (2026-10-15, P257). Before any code, the plan comes first, in plan mode, and a small plan council
+finds its gaps. The steps before it come from the work's place: a story points to its step on its epic's journey and
+story map, an epic gets a deeper discovery and a plan of its slices, and each retro checks that the process stays agile
+enough. [The flow](README.md#the-flow--an-items-stages) says each step.
+
+*Origin:* Petr, 2026-10-15, during P235's discovery (typos corrected): *"always remember the plan mode before we
+actually start implementing and a small tech council to find gaps in the plan and fixes it"*, *"whenever we're
+implementing something, there should first be the journey/use cases/story map, technical refinement then plan,
+council finds gaps and then we can go"* and *"lets always evaluate during retrospectives, so that we keep improving
+our process to be agile enough, yet allowing for planning, just like as we go, not all at once in great detail"*. His
+yes to the three changes is on [#262](https://github.com/xmejkal/spark/issues/262).
 
 **Never change a test to make it pass** (W4). Change the decision first; the test follows the decision. If the test
 is wrong, say why in the docstring and change its *premise*, not its assertion. Claude carries it, in the PO's words,
