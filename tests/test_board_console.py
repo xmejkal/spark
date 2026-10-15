@@ -119,7 +119,7 @@ class TheResetTest(unittest.TestCase):
 
 
 class TheCureTest(unittest.TestCase):
-    """P251: the open with DTR and RTS off is the cure. It reads what the restart printed, then waits for the port."""
+    """P251: the open with DTR and RTS off is the cure. It keeps what the restart printed, then waits for the port."""
 
     def probe(self, run, *here):
         looks = list(here)
@@ -127,42 +127,68 @@ class TheCureTest(unittest.TestCase):
         return board_console.ConsoleProbe(["/opt/python3"], PORT, run, clock=self.clock,
                                           port_exists=lambda port: looks.pop(0) if looks else True)
 
-    def test_a_restart_heard_on_the_open_is_kept(self):
+    def test_a_restart_heard_on_the_open_is_kept_and_the_cure_settles_2_s(self):
         heard = "ESP-ROM:esp32c6-20220919\nrst:0x15 (USB_UART_HPSYS),boot:0x1e\nready\n"
-        self.assertEqual(self.probe(printing(heard, [])).cure(), board_console.Cure(heard, None, True))
+        self.assertEqual(self.probe(printing(heard, [])).cure(), board_console.Cure(heard, None, True, True))
+        self.assertEqual(self.clock.slept, [2])
 
     def test_an_open_that_printed_no_restart_is_no_restart(self):
-        self.assertEqual(self.probe(printing("", [])).cure(), board_console.Cure("", None, False))
+        self.assertEqual(self.probe(printing("first: 1\n", [])).cure(), board_console.Cure("first: 1\n", None, False, True))
 
-    def test_a_read_that_failed_mid_restart_keeps_its_reason(self):
+    def test_a_read_that_failed_mid_restart_keeps_what_it_heard_and_its_reason(self):
         def fails(command, **kw):
-            raise subprocess.CalledProcessError(1, command, "", "serial.SerialException: device disconnected")
-        self.assertEqual(self.probe(fails).cure(),
-                         board_console.Cure(None, "serial.SerialException: device disconnected", False))
+            raise subprocess.CalledProcessError(1, command, "rst:0x15 (USB_UART_HPSYS)\n", "serial.SerialException: device disconnected")
+        self.assertEqual(self.probe(fails).cure(), board_console.Cure(
+            "rst:0x15 (USB_UART_HPSYS)\n", "serial.SerialException: device disconnected", True, True))
 
     def test_a_read_that_timed_out_keeps_its_reason(self):
         def stalls(command, **kw):
             raise subprocess.TimeoutExpired(command, kw["timeout"])
         cure = self.probe(stalls).cure()
-        self.assertEqual((cure.heard, cure.restart_heard), (None, False))
+        self.assertEqual((cure.heard, cure.restart_heard), ("", False))
         self.assertIn("timed out", cure.why)
 
     def test_the_cure_waits_until_the_port_is_there_again(self):
-        probe = self.probe(printing("", []), False, False, True)
-        probe.cure()
-        self.assertEqual(len(self.clock.slept), 2)
+        self.probe(printing("", []), False, False, True).cure()
+        self.assertEqual(self.clock.slept, [0.1, 0.1, 2])
 
-    def test_the_wait_for_the_port_ends_after_10_s(self):
+    def test_a_port_not_back_after_10_s_is_said_and_not_settled(self):
         probe = self.probe(printing("", []))
         probe.port_exists = lambda port: False
-        probe.cure()
+        cure = probe.cure()
+        self.assertFalse(cure.port_back)
         self.assertGreaterEqual(self.clock.now, 10)
         self.assertLess(self.clock.now, 11)
+        self.assertNotIn(2, self.clock.slept)
 
-    def test_a_restart_is_the_rom_s_rst_line(self):
-        self.assertTrue(board_console.restarted("rst:0x15 (USB_UART_HPSYS),boot:0x1e"))
-        self.assertFalse(board_console.restarted("ready\n"))
+    def test_a_restart_is_the_rom_s_rst_line_and_not_a_word_that_ends_in_rst(self):
+        self.assertTrue(board_console.shows_restart("rst:0x15 (USB_UART_HPSYS),boot:0x1e"))
+        self.assertTrue(board_console.shows_restart("ESP-ROM\nrst:0xc (SW_CPU),boot:0x8"))
+        self.assertFalse(board_console.shows_restart("first: 1\nworst:0x\n"))
+        self.assertFalse(board_console.shows_restart("ready\n"))
 
+    def test_the_console_script_prints_what_it_read_when_the_port_drops(self):
+        class Serial:
+            def __init__(self):
+                self.chunks = [b"rst:0x15\n"]
+
+            def open(self):
+                pass
+
+            def read(self, size):
+                if self.chunks:
+                    return self.chunks.pop(0)
+                raise OSError("device disconnected")
+
+            def close(self):
+                pass
+
+        out = io.StringIO()
+        with mock.patch.dict(sys.modules, {"serial": types.SimpleNamespace(Serial=Serial)}), \
+                mock.patch.object(sys, "argv", ["-c", PORT, "5"]), contextlib.redirect_stdout(out), \
+                self.assertRaises(OSError):
+            exec(board_console.READ_CONSOLE, {})
+        self.assertEqual(out.getvalue(), "rst:0x15\n")
 
 if __name__ == "__main__":
     unittest.main()

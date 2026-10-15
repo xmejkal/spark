@@ -118,10 +118,13 @@ class RetryingBoardConnection:
         return self.connection.run_code(code, keep_running_for)
 
     def copy_to_board(self, local, remote):
+        """BoardConnection.copy_to_board, with no cure."""
         return self.connection.copy_to_board(local, remote)
 
     def read_file(self, remote):
+        """BoardConnection.read_file, with no cure."""
         return self.connection.read_file(remote)
 
     def repl_command(self):
+        """BoardConnection.repl_command."""
         return self.connection.repl_command()

@@ -16,7 +16,7 @@ from board_console import ConsoleProbe
 from image_check import runnable
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
 
-#: What reach.py says after any run: mpremote's exec stops the firmware that ran (reach-test.md).
+#: What reach.py says after the board answered: mpremote's exec stops the firmware that ran (reach-test.md).
 FIRMWARE_STOPPED_MESSAGE = "the firmware is stopped: press R or replug to run it"
 EPILOG = """It runs print("reached") on the board with mpremote's exec. When mpremote says "could not enter raw repl", it
 opens the port once with DTR and RTS off, which restarted a XIAO ESP32-C6 whose USB output died at power-on, waits until
@@ -29,27 +29,29 @@ bench's cold arm. With two or more boards on USB, --port is needed.
 Exit codes: 0 the board answered, 2 it did not, or reach.py could not run, and the last line says why."""
 
 
-def lines(port, result):
+def describe(port, result):
     """The lines a person reads, for a ReachResult."""
     cure = result.cure
-    out = ["port    %s" % port, "first   %s" % ("did not answer" if result.first_try_failed else "answered")]
+    first = {None: "none: the cure came first", True: "did not answer", False: "answered"}[result.first_try_failed]
+    out = ["port    %s" % port, "first   %s" % first]
     if cure is not None:
-        heard = (cure.heard or "").strip() or "nothing"
-        out.append("cure    %s" % ("could not read the port: %s" % cure.why if cure.heard is None else
-                                   "restart heard" if cure.restart_heard else "no restart heard"))
-        out += ["        %s" % line for line in heard.splitlines()] if cure.heard is not None else []
+        out.append("cure    %s, the port %s" % ("restart heard" if cure.restart_heard else "no restart heard",
+                                                "was back" if cure.port_back else "was not back"))
+        out += ["        its read failed: %s" % cure.why] if cure.why else []
+        out += ["        %s" % line for line in (cure.heard.strip() or "nothing heard").splitlines()]
     out.append("reached" if result.reached else "not reached: %s" % result.why)
     if result.reached and result.why:
         out.append(result.why)
-    out.append(FIRMWARE_STOPPED_MESSAGE)
+    if result.reached:
+        out.append(FIRMWARE_STOPPED_MESSAGE)
     return ["  " + line for line in out]
 
 
-def as_json(port, result):
-    """One line of JSON for the bench log: the result, the port, and `at`, the time it was written."""
+def to_json(port, result, cure_first):
+    """One line of JSON for the bench log: the result, the port, the arm, and `at`, the time it was written."""
     fields = result._asdict()
     fields["cure"] = result.cure._asdict() if result.cure is not None else None
-    return json.dumps(dict(fields, port=port, at=time.strftime("%Y-%m-%dT%H:%M:%S%z")))
+    return json.dumps(dict(fields, port=port, cure_first=cure_first, at=time.strftime("%Y-%m-%dT%H:%M:%S%z")))
 
 
 def main(argv=None, run=subprocess.run, probe=None):
@@ -75,7 +77,7 @@ def main(argv=None, run=subprocess.run, probe=None):
         print("reach.py: %s" % board_reach.NO_PROBE_MESSAGE, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     result = board_reach.reach(BoardConnection(runnable(shell), port, run), probe, cure_first=args.cure_first)
-    print(as_json(port, result) if args.json else "\n".join(lines(port, result)))
+    print(to_json(port, result, args.cure_first) if args.json else "\n".join(describe(port, result)))
     return EXIT_OK if result.reached else EXIT_COULD_NOT_RUN
 
 

@@ -1,0 +1,110 @@
+[
+ {
+  "file": "scripts/board_connection.py",
+  "name": "retry cures any unreachable, not only the raw-REPL refusal",
+  "find": "if self.probe is None or RAW_REPL_REFUSED not in str(refused):",
+  "replace": "if self.probe is None:"
+ },
+ {
+  "file": "scripts/board_connection.py",
+  "name": "retry drops the no-probe check",
+  "find": "if self.probe is None or RAW_REPL_REFUSED not in str(refused):",
+  "replace": "if RAW_REPL_REFUSED not in str(refused):"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "cure says a restart was heard whenever the port was read",
+  "find": "return Cure(heard, why, shows_restart(heard), port_back)",
+  "replace": "return Cure(heard, why, bool(heard), port_back)"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "cure never waits for the port to come back",
+  "find": "while not self.port_exists(self.port) and self.clock.monotonic() < end:",
+  "replace": "while False:"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "a restart is any rst: inside a word",
+  "find": "RESTART = re.compile(r\"\\brst:0x[0-9a-f]+\")",
+  "replace": "RESTART = re.compile(r\"rst:\")"
+ },
+ {
+  "file": "scripts/board_reach.py",
+  "name": "cure_first still retries with a second cure",
+  "find": "runner = connection if cure_first else RetryingBoardConnection(connection, probe)",
+  "replace": "runner = RetryingBoardConnection(connection, probe)"
+ },
+ {
+  "file": "scripts/board_reach.py",
+  "name": "first_try_failed true after the cold arm's cure",
+  "find": "first_try_failed = None if cure_first else not reached or cure is not None",
+  "replace": "first_try_failed = not reached or cure is not None"
+ },
+ {
+  "file": "scripts/board_reach.py",
+  "name": "code that raised counts as not reached",
+  "find": "output, why = raised.output, \"the code raised: %s\" % raised",
+  "replace": "output, reached, why = raised.output, False, \"the code raised: %s\" % raised"
+ },
+ {
+  "file": "scripts/board_reach.py",
+  "name": "no-probe reason dropped",
+  "find": "elif not reached and probe is None and RAW_REPL_REFUSED in why:",
+  "replace": "elif False:"
+ },
+ {
+  "file": "scripts/reach.py",
+  "name": "reach.py exits 0 when not reached",
+  "find": "return EXIT_OK if result.reached else EXIT_COULD_NOT_RUN",
+  "replace": "return EXIT_OK"
+ },
+ {
+  "file": "scripts/reach.py",
+  "name": "cure-first without a probe runs anyway",
+  "find": "if args.cure_first and probe is None:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "two boards pass the one-board rule",
+  "find": "if len(found) > 1:",
+  "replace": "if len(found) > 2:"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "the console script drops what it read when the port drops",
+  "find": "try:\n    while time.monotonic() < end:\n        out += s.read(512)\n    s.close()\nfinally:\n    sys.stdout.write",
+  "replace": "if True:\n    while time.monotonic() < end:\n        out += s.read(512)\n    s.close()\nif True:\n    sys.stdout.write"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "a failed read loses what it heard",
+  "find": "return printed_text(failed.stdout or \"\"), ((failed.stderr",
+  "replace": "return \"\", ((failed.stderr"
+ },
+ {
+  "file": "scripts/board_console.py",
+  "name": "no settle after the port is back",
+  "find": "            self.clock.sleep(PORT_SETTLE_S)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/board_reach.py",
+  "name": "an answer without reached is a reach",
+  "find": "if why is None and code == PRINT_REACHED and \"reached\" not in output.split():",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/board_reach.py",
+  "name": "every failed retry blames the board",
+  "find": "        if RAW_REPL_REFUSED in error:\n",
+  "replace": "        if True:\n"
+ },
+ {
+  "file": "scripts/reach.py",
+  "name": "the firmware-stopped line when nothing ran",
+  "find": "    if result.reached:\n        out.append(FIRMWARE_STOPPED_MESSAGE)",
+  "replace": "    if True:\n        out.append(FIRMWARE_STOPPED_MESSAGE)"
+ }
+]

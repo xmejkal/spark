@@ -8,6 +8,7 @@ restarted a board whose USB output died at power-on (docs/observations/2026-10-1
 """
 
 import os
+import re
 import subprocess
 import time
 from collections import namedtuple
@@ -19,8 +20,12 @@ from run_scenario import printed_text
 READ_S, POLL_S = 2, 0.1
 #: How long the cure waits for the port to be there again after its open restarted the board, in seconds.
 PORT_BACK_S = 10
-#: How the ESP32 ROM starts the line of a restart: `rst:0x15 (USB_UART_HPSYS),boot:0x1e` on the XIAO C6 (AT187).
-RESTART = "rst:"
+#: How long the cure waits after the port is there, before mpremote opens it, in seconds. A guess that P251's bench
+#: tests: the shown cures came 20 s or more before the next mpremote call (reach-test.md, 08:25 and 08:48).
+PORT_SETTLE_S = 2
+#: The ESP32 ROM's line of a restart, `rst:0x15 (USB_UART_HPSYS),boot:0x1e` on the XIAO C6 (AT187), and never a word
+#: such as `first:` inside the firmware's own lines.
+RESTART = re.compile(r"\brst:0x[0-9a-f]+")
 #: What the probe says of a port it could not read (P244): a could-not-run, never a silent console.
 UNREAD = "could not read the port: %s"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
@@ -30,21 +35,23 @@ s = serial.Serial()
 s.port, s.baudrate, s.timeout, s.dtr, s.rts = sys.argv[1], 115200, 0.1, False, False
 s.open()
 out, end = b"", time.monotonic() + float(sys.argv[2])
-while time.monotonic() < end:
-    out += s.read(512)
-s.close()
-sys.stdout.write(out.decode("utf-8", "replace"))
+try:
+    while time.monotonic() < end:
+        out += s.read(512)
+    s.close()
+finally:
+    sys.stdout.write(out.decode("utf-8", "replace"))
 """
 
 
-#: Value: what the cure's open heard (None when it could not read the port), why it could not, and whether the board
-#: printed a restart.
-Cure = namedtuple("Cure", "heard why restart_heard")
+#: Value: what the cure's open heard (all of it, also when the read failed part way), why the read failed or None,
+#: whether the board printed a restart, and whether the port was there again after the wait.
+Cure = namedtuple("Cure", "heard why restart_heard port_back")
 
 
-def restarted(console):
+def shows_restart(console):
     """True when `console` holds the ROM's line of a restart."""
-    return RESTART in console
+    return RESTART.search(console) is not None
 
 
 class SystemClock:
@@ -69,24 +76,34 @@ class ConsoleProbe:
 
     def console(self):
         """(What the port printed in READ_S seconds, None), or (None, why) when it could not be read."""
+        printed, why = self._read()
+        return (None, why) if why else (printed, None)
+
+    def _read(self):
+        """(What the port printed, also when the read failed part way, why it failed or None)."""
         try:
             done = self.run(self.python + ["-c", READ_CONSOLE, self.port, str(READ_S)], capture_output=True, text=True,
                             timeout=READ_S + 10, check=True)
         except subprocess.CalledProcessError as failed:
-            return None, ((failed.stderr or "").strip().splitlines() or [str(failed)])[-1]
+            return printed_text(failed.stdout or ""), ((failed.stderr or "").strip().splitlines() or [str(failed)])[-1]
+        except subprocess.TimeoutExpired as failed:
+            return printed_text(failed.stdout or ""), str(failed)
         except (OSError, subprocess.SubprocessError) as failed:
-            return None, str(failed)
+            return "", str(failed)
         return printed_text(done.stdout), None
 
     def cure(self):
         """The Cure of a board whose USB output died at power-on (P251): the open with DTR and RTS off, which restarted
-        the XIAO C6 in AT187, what it printed, then a wait of at most PORT_BACK_S until the port is there again. It never
-        waits for the port to go: the restart comes during the read."""
-        heard, why = self.console()
+        the XIAO C6 in AT187, and what it printed. Then a wait of at most PORT_BACK_S until the port is there again, and
+        PORT_SETTLE_S more. It never waits for the port to go: the restart comes during the read."""
+        heard, why = self._read()
         end = self.clock.monotonic() + PORT_BACK_S
         while not self.port_exists(self.port) and self.clock.monotonic() < end:
             self.clock.sleep(POLL_S)
-        return Cure(heard, why, heard is not None and restarted(heard))
+        port_back = self.port_exists(self.port)
+        if port_back:
+            self.clock.sleep(PORT_SETTLE_S)
+        return Cure(heard, why, shows_restart(heard), port_back)
 
     def waits_in_download_mode(self):
         """(True when the console says DOWNLOAD_MODE, what it printed). A port it could not read is never download
