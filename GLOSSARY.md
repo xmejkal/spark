@@ -164,7 +164,7 @@ exactly the guards that the branch moved.
 And one line at the end: *the suite is green with the files restored*. Without it the whole run is
 untrustworthy — something is left mutated, or was already broken.
 
-**A mutant that cannot load is refused, never caught** (P186). A replacement that breaks a file's syntax, its import or a JSON file's format turns the suite red for a reason no test chose. A wrongly indented `pass` in a P124 row would have been scored caught that way on 2026-10-11; it was seen only by reading the row. `--anchors` shows a syntax or format error before a run. An import error shows only in a run.
+**A mutant that cannot load is refused, never caught** (P186), for a `.py` file that imports alone and a `.json` file. A replacement that breaks a file's syntax, its import or a JSON file's format turns the suite red for a reason no test chose. A wrongly indented `pass` in a P124 row would have been scored caught that way on 2026-10-11; it was seen only by reading the row. `--anchors` shows a syntax or format error before a run. An import error shows only in a run.
 
 **An escape is never closed by deleting the mutation** (W12). The defect was real; a fixture that
 cannot see it is itself the defect.

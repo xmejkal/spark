@@ -24,7 +24,7 @@ THE TABLE
 substitution that silently matched nothing was scored "caught" by an earlier hand-rolled
 harness, because the suite it ran was the unmutated one.
 
-THE FOUR RULES THE HAND-ROLLED HARNESSES LEARNED, built in:
+THE FOUR RULES BUILT IN (the first three learned from the hand-rolled harnesses):
 
   * stderr is captured. `unittest` writes its verdict there, and a harness that drops it prints
     nothing for every mutation — which reads as success.
