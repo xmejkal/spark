@@ -29,7 +29,7 @@ status: open, or retired with the date of its Results row.
 e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | query opened-within-48h | under 50 %, set 2026-10-06 | over 80 % | open |` -->
 | id | belief | type | evidence now | importance | cheapest test | pass line, dated | result that would change the decision | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A1 <!-- REQUIRED:assumptions --> | mpremote reaches a running C6 outside a deploy reliably enough that a live try works the first time | feasibility | E ★C3, ★C2 (the post-flash causes are known and acted on) | — (decider) | the reach rung: `exec "print(1)"` 10 times on the running firmware at least one minute after a passed deploy, and 10 after re-plugs, on P246's project | the PO sets it at Q1. Proposed: 19 of 20 answers, the facilitator's opinion, set 2026-10-15 | below the pass line: fix reach (P238 #235) before any live command | open |
+| A1 <!-- REQUIRED:assumptions --> | mpremote reaches a running C6 outside a deploy reliably enough that a live try works the first time | feasibility | E docs/observations/2026-10-15-p235-reach-test.md: 10 of 10 after a reset, 7 of 10 after a replug | high D4 | the reach rung: `exec "print(1)"` 10 times on the running firmware after `mpremote reset`, and 10 after replugs, on button-light (P246's project did not exist yet) | 19 of 20 answers, set 2026-10-15 before the run (D4, the facilitator's line, the PO chose to test it) | below the pass line: fix reach before any live command | retired 2026-10-15: missed, 17 of 20 (Results). The cause is AT187, the cure is P251 (D6), and A11 carries what is left |
 | A2 | the PO uses a spark live command instead of typing `mpremote` himself | value | H POA-28 | — (decider) | Q14, then a use log of slice 0 over his next 5 bench sessions | proposed by the facilitator: he uses it in 3 of his next 5 bench sessions (a session is one day at the bench with the board plugged in), set 2026-10-15 | he types `mpremote` himself in most sessions | open |
 | A3 | a restart per try is acceptable to the PO | usability | H ★C4 | — (decider) | Q9 and Q15 | — (a decision, not a count), set 2026-10-15 | he needs state kept between tries | open |
 | A4 | the firmware the conversation writes can always read its console without harm to its timing | feasibility | E ★C2 (two firmwares). The rule already stands in agents.md:577-578, so this is a check on new firmware | — (decider) | P246's project and button-light pass the reach rung | proposed: both reach in the rung, set 2026-10-15 | a firmware that cannot read its console | open |
@@ -39,14 +39,18 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 | A8 | live tries by the agent add trust beyond the simulation | value | H #204 ("connection with agents") | — (decider) | Q20 after slice 0 | — (an account), set 2026-10-15 | he does not read the agent's tries | open |
 | A9 | the PO wants pin reads before he has wires | value | E ★C11 | — (decider) | Q22 | — (an account), set 2026-10-15 | he wants them only with wires: slice 3 waits | open |
 | A10 | `mpremote resume` keeps values between two calls | feasibility | H ★C4 (TL-2) | — (decider) | on the bare board: `exec "x=5"`, then `resume exec "print(x)"` | — (an observation: 5 or an error), set 2026-10-15 | it does not: tries cannot build on each other | open |
+| A11 | a USB-side chip reset (a port open with DTR and RTS off) and one retry reach every board whose console went silent after a power-on | feasibility | E reach-test.md, the cause hunt: the cure worked 2 of 2 times (08:25, 08:48), AT187 | — (decider) | P251's proof: 10 replugs on the XIAO C6, a spark reach call after each | proposed by the facilitator: 10 of 10 reached, each cure named in the output and the log, set 2026-10-15 | a silent board the cure does not reach: P251 needs another cure, or the silence goes upstream only | open |
 
 ## Collection plan
 <!-- One row per gap. e.g. `| Do assignees open new tasks? | Q2 | Lena, from analytics | one query | this week |` -->
 | question | decision it blocks | who can answer | how | when |
 | --- | --- | --- | --- | --- |
-| Q14 to Q24, the account questions <!-- REQUIRED:collection --> | Q2, Q6, Q9, Q10 | the PO | AskUserQuestion, one at a time, past tense | this discovery, after Q1 |
-| A1, A5, A6, A10, the reach rung | Q2, Q3, Q5, Q9 | the PO's hands (presses, re-plugs) and Claude's runs | one bench session on P246's board-only project (P222 narrowed) | after Q3, once P246's project exists |
-| Q2 to Q13, the decisions | the first slice and its design | the PO | AskUserQuestion | this discovery, after Q1 |
+| Q14 to Q24, the account questions <!-- REQUIRED:collection --> | none for slice 0 (D9 to D17 were decided without them) | the PO | AskUserQuestion, one at a time, past tense | not asked: asked later only if a later slice rests on one |
+| A1, the reach rung | Q2 | the PO's hands (replugs) and Claude's runs | done 2026-10-15 on button-light, docs/observations/2026-10-15-p235-reach-test.md | done |
+| A5, A10, Q5, Q9: what a reset does to pins, whether values survive, what "ends with a reset" means | slice 0's design | the PO's hands and Claude's runs | D10's first story, a short bench session on the bare board | the first story of slice 0 |
+| A11, the cure | P251's done line | the PO's replugs and spark's reach call | P251's proof, 10 replugs | when P251 is built |
+| A6, the restart on a bare open | slice 1 (the monitor) | the PO's hands and Claude's runs | 20 bare opens | before slice 1 |
+| Q2 to Q13, Q25, the decisions | the first slice and its design | the PO | AskUserQuestion | done 2026-10-15: D9 to D17 |
 | the MicroPython reset page and the Seeed XIAO C6 schematic | Q5, Q8 | Claude | open both at their sources | at design |
 
 ## Results

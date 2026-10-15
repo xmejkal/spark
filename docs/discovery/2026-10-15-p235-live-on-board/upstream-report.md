@@ -11,6 +11,8 @@ the LED blinked). `mpremote exec` fails with `TransportError: could not enter ra
 A soft reset (Ctrl-D) does not bring the output back. A chip reset from the USB side does: opening the port with DTR
 and RTS set to False gave `rst:0x15 (USB_UART_HPSYS)`, and after that boot the output works.
 
+We have not ruled out a loss on the Mac's side: the chip reset also makes the Mac enumerate the port again.
+
 How often: 1, 3, 6 and 1 silent boots in rounds of 10, 10, 10 and 4 replugs, with the try 10 s after the port appears.
 
 To reproduce: a `main.py` that loops and polls `sys.stdin` without blocking. Replug the cable 10 times. After each
