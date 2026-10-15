@@ -118,5 +118,51 @@ class TheResetTest(unittest.TestCase):
         self.assertFalse(probe.wait_for_reset(timeout_s=1))
 
 
+class TheCureTest(unittest.TestCase):
+    """P251: the open with DTR and RTS off is the cure. It reads what the restart printed, then waits for the port."""
+
+    def probe(self, run, *here):
+        looks = list(here)
+        self.clock = FakeClock()
+        return board_console.ConsoleProbe(["/opt/python3"], PORT, run, clock=self.clock,
+                                          port_exists=lambda port: looks.pop(0) if looks else True)
+
+    def test_a_restart_heard_on_the_open_is_kept(self):
+        heard = "ESP-ROM:esp32c6-20220919\nrst:0x15 (USB_UART_HPSYS),boot:0x1e\nready\n"
+        self.assertEqual(self.probe(printing(heard, [])).cure(), board_console.Cure(heard, None, True))
+
+    def test_an_open_that_printed_no_restart_is_no_restart(self):
+        self.assertEqual(self.probe(printing("", [])).cure(), board_console.Cure("", None, False))
+
+    def test_a_read_that_failed_mid_restart_keeps_its_reason(self):
+        def fails(command, **kw):
+            raise subprocess.CalledProcessError(1, command, "", "serial.SerialException: device disconnected")
+        self.assertEqual(self.probe(fails).cure(),
+                         board_console.Cure(None, "serial.SerialException: device disconnected", False))
+
+    def test_a_read_that_timed_out_keeps_its_reason(self):
+        def stalls(command, **kw):
+            raise subprocess.TimeoutExpired(command, kw["timeout"])
+        cure = self.probe(stalls).cure()
+        self.assertEqual((cure.heard, cure.restart_heard), (None, False))
+        self.assertIn("timed out", cure.why)
+
+    def test_the_cure_waits_until_the_port_is_there_again(self):
+        probe = self.probe(printing("", []), False, False, True)
+        probe.cure()
+        self.assertEqual(len(self.clock.slept), 2)
+
+    def test_the_wait_for_the_port_ends_after_port_back_s(self):
+        probe = self.probe(printing("", []))
+        probe.port_exists = lambda port: False
+        probe.cure()
+        self.assertGreaterEqual(self.clock.now, board_console.PORT_BACK_S)
+        self.assertLess(self.clock.now, board_console.PORT_BACK_S + 1)
+
+    def test_a_restart_is_the_rom_s_rst_line(self):
+        self.assertTrue(board_console.restarted("rst:0x15 (USB_UART_HPSYS),boot:0x1e"))
+        self.assertFalse(board_console.restarted("ready\n"))
+
+
 if __name__ == "__main__":
     unittest.main()
