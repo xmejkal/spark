@@ -288,6 +288,62 @@ PAD_COUNT_FAMILIES = ("pinrow", "headermodule", "jst_ph_", "jst_sh_", "jst_xh_",
 #: nowhere else.
 PIN_LISTS = ("needs", "power", "unused_pins")
 
+
+class ListOf:
+    """A type in `RECORD_TYPES`: a list whose every item has the type `item`."""
+
+    def __init__(self, item):
+        self.item = item
+
+
+class MapOf:
+    """A type in `RECORD_TYPES`: an object whose every value has the type `value`, whatever its keys."""
+
+    def __init__(self, value):
+        self.value = value
+
+
+#: The type of each field that `validate`'s checks read (P263). An object here names the fields it checks, and a field
+#: it does not name is free. A null anywhere is absent, not wrong: that is for the checks that say what is owed or missing.
+#: A check that reads a new field adds its type here, or a record of the wrong type crashes it into one shape line.
+RECORD_TYPES = {
+    "needs": ListOf({"signal": str, "pin": str, "bus": str, "direction": str, "needs": ListOf(str)}),
+    "power": ListOf({"pin": str, "direction": str, "polarity": str}),  # `rail` has its own check (P87)
+    "unused_pins": ListOf({"pin": str}),
+    "host_parts": ListOf({"kind": str, "pin": str}),
+    "sourcing": ListOf(dict),
+    "facts": MapOf(dict),
+    "documents": MapOf(dict),
+    "pin_order": ListOf(str),
+}
+
+_TYPE_NAMES = {str: "a string", dict: "an object"}
+
+
+def type_problems(value, kind=None, where=""):
+    """
+    Each value in a part record whose type is not the one `RECORD_TYPES` says, as "needs[0] is 'a', but it is an
+    object" — so a wrong entry is named, not hidden in one shape line by the first check that reads it (P263).
+    """
+    kind = RECORD_TYPES if kind is None else kind
+    if value is None:
+        return []
+    if isinstance(kind, type):
+        return [] if isinstance(value, kind) else ["%s is %r, but it is %s" % (where, value, _TYPE_NAMES[kind])]
+    if isinstance(kind, ListOf):
+        if not isinstance(value, list):
+            return ["%s is %r, but it is a list" % (where, value)]
+        return [problem for index, item in enumerate(value)
+                for problem in type_problems(item, kind.item, "%s[%d]" % (where, index))]
+    if not isinstance(value, dict):
+        return ["%s is %r, but it is an object" % (where, value)]
+    if isinstance(kind, MapOf):
+        return [problem for key, inner in value.items()
+                for problem in type_problems(inner, kind.value, "%s.%s" % (where, key))]
+    return [problem for key, inner in kind.items()
+            for problem in type_problems(value.get(key), inner, "%s.%s" % (where, key) if where else key)]
+
+
 #: The buses a part may put a signal on, and the lines each has, by the board's label for the
 #: line with the names vendors print for it. THE definition: `assign_pins` imports it to find the
 #: board's pin for a line, and `validate` refuses a record naming a bus or a line not here — where
@@ -407,7 +463,7 @@ def document_problems(part: dict) -> list:
         elif not entry.get("file"):
             problems.append("documents.%s names no file" % key)
     problems += ["%s cites %r, which documents does not hold — a pointer to nothing" % (where, cited)
-                 for where, cited in _citations(part) if cited not in (part.get("documents") or {})]
+                 for where, cited in _citations(part) if not isinstance(cited, str) or cited not in (part.get("documents") or {})]
     return problems
 
 
@@ -576,6 +632,9 @@ def validate(part: dict, path: Path, owed=()) -> list:
         # P87's attribute half: `emit_board.component_name` capitalises the id's words and strips nothing, so the id is
         # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
         problems.append(NOT_A_PLAIN_ID % part["id"])
+    wrong_types = type_problems({key: value for key, value in part.items() if key not in owed})
+    if wrong_types:  # every check below reads these fields, so none of them can run
+        return problems + wrong_types
     for key, now in RETIRED.items():
         if key in part:
             problems.append("%r is retired: %s — delete the key (W16)" % (key, now))
@@ -759,7 +818,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
                 "%s direction is %r; a power pin is 'in' (it consumes a rail, and sharing one is "
                 "normal) or 'out' (it drives a load, and sharing a net is a short)"
                 % (where, direction))
-        elif direction == "out":
+        elif direction == "out" and isinstance(supply.get("rail"), (str, type(None))):  # any other rail is said above
             # Keyed on the NET it would land on, which for an output is the load plus which side
             # of it this pin drives. Two outputs on one load are the normal case — that is what a
             # differential pair is — and they are only a short if nothing distinguishes them.
@@ -771,7 +830,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
             problems.append(
                 "power pins %s are outputs driving %r with the same polarity (%r), so they would "
                 "land on one net and short into each other. Give each its own `polarity`, or they "
-                "are not separate outputs" % (", ".join(pins), rail, polarity))
+                "are not separate outputs" % (", ".join(map(str, pins)), rail, polarity))
 
     for name, fact in (part.get("facts") or {}).items():
         if not isinstance(fact, dict):
