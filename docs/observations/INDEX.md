@@ -925,3 +925,12 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT190 | The retro row read as if the process check were a third change, beyond "at most two" | P257 light council (Sonnet reviewer, PR #273), 2026-10-15 | acted | PR #273 |
 | AT191 | The habit "Plan as we go" does not repeat decision 6 (no second yes); the README's Build row carries it, so the habit stays short | P257 light council (Sonnet reviewer, PR #273), 2026-10-15 | rejected | PR #273 |
 | AT192 | The habit linked #262 for the PO's yes, but the yes is recorded in the card's move comment | P257 light council (Sonnet reviewer, PR #273), 2026-10-15 | acted | PR #273 |
+| AT193 | reach.py with no grant breaks D9 unless its scope is said | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | D24 |
+| AT194 | A new port class duplicates DownloadModeProbe.console() | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | reuse it as ConsoleProbe |
+| AT195 | AT187 does not prove the port open is the cure | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | called the likely cure |
+| AT196 | The retry came before the restarted port was back | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | wait, then retry |
+| AT197 | Retrying on any BoardUnreachableError retries a timeout and a missing port | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | only on could not enter raw repl |
+| AT198 | The plan did not say an exec leaves the firmware stopped | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | reach.py says so |
+| AT199 | The cured flag can count a boot that was not silent, and there are no cold-port runs | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | P251's bench protocol |
+| AT200 | RetryingBoardConsole needs P255's Decorator row | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | the rows land in P251's PR |
+| AT201 | Console and connection named the same thing (the PO) | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | one word, and a planning rule |
