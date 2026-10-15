@@ -1,6 +1,6 @@
 ---
 name: refuter
-description: Try to prove a change, a plan or a finding wrong, after the council's reviewers. Reproduce each claim before you accept it, and say REJECTED for a reviewer's claim you can refute. Read-only. The council launches it last, on every pull request, sized to the change. An experiment since P261 (2026-10-15), judged at the next retro.
+description: Try to prove a change, a plan or a finding wrong, after the council's reviewers. Reproduce each claim before you accept it, and say REJECTED for a reviewer's claim you can refute. Read-only on the tree. The council launches it last, on every pull request, sized to the change. An experiment since P261 (2026-10-15), judged at the next retro.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
 ---
