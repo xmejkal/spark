@@ -35,7 +35,9 @@ def describe(port, result):
     first = {None: "none: the cure came first", True: "did not answer", False: "answered"}[result.first_try_failed]
     out = ["port    %s" % port, "first   %s" % first]
     if cure is not None:
-        out.append("cure    %s, the port %s" % ("restart heard" if cure.restart_heard else "no restart heard",
+        heard = ("restart heard" if cure.restart_heard else "boot tail heard, no rst: line" if cure.boot_heard
+                 else "no restart heard")
+        out.append("cure    %s, the port %s" % (heard,
                                                 "was back" if cure.port_back else "was not back"))
         out += ["        its read failed: %s" % cure.why] if cure.why else []
         out += ["        %s" % line for line in (cure.heard.strip() or "nothing heard").splitlines()]

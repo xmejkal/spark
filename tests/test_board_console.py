@@ -129,7 +129,7 @@ class TheCureTest(unittest.TestCase):
 
     def test_a_restart_heard_on_the_open_is_kept_and_the_cure_settles_2_s(self):
         heard = "ESP-ROM:esp32c6-20220919\nrst:0x15 (USB_UART_HPSYS),boot:0x1e\nready\n"
-        self.assertEqual(self.probe(printing(heard, [])).cure(), board_console.Cure(heard, None, True, True))
+        self.assertEqual(self.probe(printing(heard, [])).cure(), board_console.Cure(heard, None, True, True, True))
         self.assertEqual(self.clock.slept, [2])
 
     def test_an_open_that_printed_no_restart_is_no_restart(self):
@@ -139,7 +139,7 @@ class TheCureTest(unittest.TestCase):
         def fails(command, **kw):
             raise subprocess.CalledProcessError(1, command, "rst:0x15 (USB_UART_HPSYS)\n", "serial.SerialException: device disconnected")
         self.assertEqual(self.probe(fails).cure(), board_console.Cure(
-            "rst:0x15 (USB_UART_HPSYS)\n", "serial.SerialException: device disconnected", True, True))
+            "rst:0x15 (USB_UART_HPSYS)\n", "serial.SerialException: device disconnected", True, True, True))
 
     def test_a_read_that_timed_out_keeps_its_reason(self):
         def stalls(command, **kw):
@@ -166,6 +166,18 @@ class TheCureTest(unittest.TestCase):
         self.assertTrue(board_console.shows_restart("ESP-ROM\nrst:0xc (SW_CPU),boot:0x8"))
         self.assertFalse(board_console.shows_restart("first: 1\nworst:0x\n"))
         self.assertFalse(board_console.shows_restart("ready\n"))
+
+    def test_a_boot_heard_from_its_middle_is_a_boot_tail_not_a_restart(self):
+        tail = "mode:DIO, clock div:2\r\nload:0x40875730,len:0xdbc\r\nentry 0x4086b910\r\nready\r\n"
+        self.assertTrue(board_console.shows_boot(tail))
+        self.assertFalse(board_console.shows_restart(tail))
+        self.assertTrue(board_console.shows_boot("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n"))
+        self.assertFalse(board_console.shows_boot("my entry 0x10 point\n"))
+        self.assertFalse(board_console.shows_boot("entry 0x10 point\n"))
+
+    def test_the_cure_keeps_a_boot_tail_apart_from_a_restart(self):
+        tail = "mode:DIO, clock div:2\nentry 0x4086b910\nready\n"
+        self.assertEqual(self.probe(printing(tail, [])).cure(), board_console.Cure(tail, None, False, True, True))
 
     def test_the_console_script_prints_what_it_read_when_the_port_drops(self):
         class Serial:

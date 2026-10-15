@@ -26,6 +26,10 @@ PORT_SETTLE_S = 2
 #: The ESP32 ROM's line of a restart, `rst:0x15 (USB_UART_HPSYS),boot:0x1e` on the XIAO C6 (AT187), and never a word
 #: such as `first:` inside the firmware's own lines.
 RESTART = re.compile(r"\brst:0x[0-9a-f]+")
+#: The ROM's last line of a boot, `entry 0x4086b910`, alone on its line. Heard without RESTART it is a boot tail: the
+#: read began after the first lines, or the lines were older output still in a buffer, so it is not proof that the
+#: cure restarted the board (P251's bench, AT233).
+BOOT_END = re.compile(r"^entry 0x[0-9a-f]+\s*$", re.MULTILINE)
 #: What the probe says of a port it could not read (P244): a could-not-run, never a silent console.
 UNREAD = "could not read the port: %s"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
@@ -45,13 +49,19 @@ finally:
 
 
 #: Value: what the cure's open heard (all of it, also when the read failed part way), why the read failed or None,
-#: whether the board printed a restart, and whether the port was there again after the wait.
-Cure = namedtuple("Cure", "heard why restart_heard port_back")
+#: whether the board printed a restart, whether the port was there again after the wait, and whether it heard the end
+#: of a boot (a restart, or only its tail).
+Cure = namedtuple("Cure", "heard why restart_heard port_back boot_heard", defaults=(False,))
 
 
 def shows_restart(console):
     """True when `console` holds the ROM's line of a restart."""
     return RESTART.search(console) is not None
+
+
+def shows_boot(console):
+    """True when `console` holds the ROM's line of a restart or of a boot's end."""
+    return shows_restart(console) or BOOT_END.search(console) is not None
 
 
 class SystemClock:
@@ -103,7 +113,7 @@ class ConsoleProbe:
         port_back = self.port_exists(self.port)
         if port_back:
             self.clock.sleep(PORT_SETTLE_S)
-        return Cure(heard, why, shows_restart(heard), port_back)
+        return Cure(heard, why, shows_restart(heard), port_back, shows_boot(heard))
 
     def waits_in_download_mode(self):
         """(True when the console says DOWNLOAD_MODE, what it printed). A port it could not read is never download
