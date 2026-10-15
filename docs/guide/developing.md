@@ -52,7 +52,8 @@ changed=$(git diff --name-only origin/main...HEAD)     # the files your branch c
 python3 tools/mutate.py tests/mutations/*.json --for $changed --copy
 ```
 
-A row reported *refused* is a guard whose code moved: re-anchor it, or delete it and give the reason.
+A row reported *refused* is a guard whose code moved, or whose replacement does not compile, import or parse.
+Re-anchor it or fix its `replace`, or delete it and give the reason.
 
 [`tools/mutate.py`](../../tools/mutate.py) puts each defect in a table back into the code, and must report every one
 caught. A mutation the suite does not notice is a missing test. A fixture too weak to see one is fixed, rather than the

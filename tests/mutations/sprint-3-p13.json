@@ -15,6 +15,6 @@
   "file": "scripts/check_physics.py",
   "name": "package_of taken from a second copy of check_footprints",
   "find": "from check_footprints import package_of  # noqa: E402\n",
-  "replace": "import importlib.util as _u; _s = _u.spec_from_file_location(\"check_footprints\", SCRIPTS / \"check_footprints.py\"); check_footprints = _u.module_from_spec(_s); _s.loader.exec_module(_m); package_of = _m.package_of\n"
+  "replace": "import importlib.util as _u; _s = _u.spec_from_file_location(\"check_footprints\", SCRIPTS / \"check_footprints.py\"); _m = _u.module_from_spec(_s); _s.loader.exec_module(_m); package_of = _m.package_of\n"
  }
 ]

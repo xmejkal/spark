@@ -149,7 +149,7 @@ like a pass.
 
 **When code moves, the anchors on it stop matching.** Since [P208](https://github.com/xmejkal/spark/issues/175), the push gate no longer checks anchors. So the
 1,418 rows in the 124 tables written before 2026-10-12 are history, and nobody keeps them current. A run names each row
-whose anchor moved as **refused**. You then **re-anchor** it (point it at the new code and run it again, to prove that
+whose anchor moved, or whose mutant does not load, as **refused**. You then **re-anchor** it (point it at the new code and run it again, to prove that
 it still bites), or you delete it and give the reason in the commit. `--for` over a branch's changed files shows
 exactly the guards that the branch moved.
 
@@ -159,10 +159,12 @@ exactly the guards that the branch moved.
 | --- | --- | --- |
 | **caught** | the suite went red | nothing — the test is real |
 | **escaped** | the suite stayed **green** | **a missing test.** Strengthen the fixture |
-| **refused** | the anchor did not match exactly once | nothing ran. Fix the table, or re-anchor or delete a row whose code moved |
+| **refused** | the anchor did not match exactly once, or the mutant does not compile, import or parse | nothing ran for it. Fix the table, or re-anchor or delete a row whose code moved |
 
 And one line at the end: *the suite is green with the files restored*. Without it the whole run is
 untrustworthy — something is left mutated, or was already broken.
+
+**A mutant that cannot load is refused, never caught** (P186), for a `.py` file that imports alone and a `.json` file. A replacement that breaks a file's syntax, its import or a JSON file's format turns the suite red for a reason no test chose. A wrongly indented `pass` in a P124 row would have been scored caught that way on 2026-10-11; it was seen only by reading the row. `--anchors` shows a syntax or format error before a run. An import error shows only in a run.
 
 **An escape is never closed by deleting the mutation** (W12). The defect was real; a fixture that
 cannot see it is itself the defect.
