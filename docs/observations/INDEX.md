@@ -954,3 +954,9 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT219 | The firmware claims rest on n = 1 and no power-on step | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
 | AT220 | "An exec stops the firmware" had no step behind it | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
 | AT221 | The risks-and-tests.md path was not a link | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
+| AT222 | P251's plan: the reset wait after the probe's own open sees no restart, and nine more gaps (L1 to L10) | P251 plan council, gaps lens (Sonnet), 2026-10-15 | acted | [reports.md](2026-10-15-p251-plan-council/reports.md) |
+| AT223 | P251's plan: a read that fails mid-restart, a dropped diagnostic listen, `reset_cause()` always 5, and five more (R1 to R8) | P251 plan council, refuter (Opus), 2026-10-15 | acted | [reports.md](2026-10-15-p251-plan-council/reports.md) |
+| AT224 | P251's fixed plan: a cure counted as none, a download-mode branch D22 does not need, and six more (B1 to B8) | P251 plan council, bloat check (Sonnet), 2026-10-15 | acted | [reports.md](2026-10-15-p251-plan-council/reports.md) |
+| AT225 | P251's fixed plan: platform strings in the Decorator, not a drop-in, a coined `MARKER`, and five more (N1 to N8) | P251 plan council, naming and architecture (Opus), 2026-10-15 | acted | [reports.md](2026-10-15-p251-plan-council/reports.md) |
+| AT226 | P251's plan after round 2: `reach.py` named on no page, an import loop, a cold arm that cannot run, and five more (G1 to G8) | P251 plan council, round 3 problems and gaps (Opus, the PO's standing rule), 2026-10-15 | acted | [reports.md](2026-10-15-p251-plan-council/reports.md) |
+| AT227 | Three rows of p243-download-mode.json were refused on main: two anchors gone from deploy.py, one found twice | P251 plan council, round 3 (G2), 2026-10-15 | acted | P251 step 1 |
