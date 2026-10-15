@@ -81,6 +81,19 @@ class PortFinderTest(LookCase):
             board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: failed).boards()
         self.assertEqual(str(stop.exception), "could not list the boards on USB: mpremote: no such command")
 
+    def test_one_port_is_required_and_the_stop_names_the_script_that_asked(self):
+        none = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(""))
+        with self.assertRaises(board_look.LookStop) as stop:
+            none.require_one_port("reach.py")
+        self.assertTrue(str(stop.exception).startswith("no board found."))
+        two = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-two.txt")))
+        with self.assertRaises(board_look.LookStop) as stop:
+            two.require_one_port("reach.py")
+        self.assertIn("2 boards on USB:", str(stop.exception))
+        self.assertIn("reach.py --port %s  (unplug one" % C6_PORT, str(stop.exception))
+        one = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-with-bluetooth.txt")))
+        self.assertEqual(one.require_one_port("reach.py"), C6_PORT)
+
     def test_both_commands_have_a_timeout_and_a_timeout_stops_with_the_boot_hint(self):
         seen = []
         self.look()
