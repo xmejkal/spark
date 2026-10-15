@@ -79,5 +79,25 @@ delta). The order follows the proposed map and changes with Q2 and Q3.
 - parent (the epic, as a sub-issue): P218 (#200), as today
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (Live 4), or the card's own Slice
 
+## P251 (new) — spark cures a board whose USB output died at power-on
+- type: story
+- needed by: "Both" (the PO, 2026-10-15, D6), after the cause hunt: spark detects the silence, does the USB-side reset, says so, and retries once
+- value proven by: on the XIAO C6 with button-light, 10 replugs, then a spark reach call after each: 10 of 10 reached, and each cured silence is named in the call's output and log (docs/observations/2026-10-15-p235-reach-test.md is the baseline: 1 to 6 silent of 10)
+- depends on: —
+- status: proposed
+- label (the repository's type label): story
+- parent (the epic, as a sub-issue): #224
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (Live 0), first in it
+
+## Upstream report to MicroPython — the C6's USB output dies on some power-on boots
+- type: chore (an outside report, its text in upstream-report.md)
+- needed by: "Both" (the PO, 2026-10-15, D6): "we also report it upstream to MicroPython, with your OK on the text"
+- value proven by: the issue's URL on MicroPython's tracker, after the PO's OK on the text
+- depends on: the PO's OK on upstream-report.md (posting is outward, core rule 8)
+- status: proposed
+- label (the repository's type label): chore
+- parent (the epic, as a sub-issue): #224
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one (Live 0)
+
 ## Board actions
 - none taken. Filing, the comments on #204, #249 and #260, and a new Slice option wait on the PO's yes to this list <!-- REQUIRED:board-actions -->
