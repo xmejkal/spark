@@ -1,4 +1,5 @@
-"""P243 (#252): after a flash, a board that waits in download mode is found, and a press of its R button is seen."""
+"""P243 (#252), P251 (#264): the board's console, read so that the open does not choose the boot mode: download mode
+found, a press of R seen."""
 
 import contextlib
 import io
@@ -14,6 +15,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_console  # noqa: E402
 import download_mode  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeClock  # noqa: E402
@@ -34,7 +36,7 @@ def printing(text, ran):
 class TheConsoleTest(unittest.TestCase):
     def test_the_rom_s_download_line_is_download_mode_and_its_words_are_kept(self):
         ran = []
-        waits, said = download_mode.DownloadModeProbe(["/opt/python3"], PORT, printing(ROM, ran)).waits_in_download_mode()
+        waits, said = board_console.ConsoleProbe(["/opt/python3"], PORT, printing(ROM, ran)).waits_in_download_mode()
         self.assertEqual((waits, said), (True, ROM))
         self.assertEqual(ran[0][:2] + ran[0][3:], ["/opt/python3", "-c", PORT, "2"])
         self.assertIn("s.dtr, s.rts = sys.argv[1], 115200, 0.1, False, False", ran[0][2])
@@ -58,7 +60,7 @@ class TheConsoleTest(unittest.TestCase):
         out = io.StringIO()
         with mock.patch.dict(sys.modules, {"serial": types.SimpleNamespace(Serial=Serial)}), \
                 mock.patch.object(sys, "argv", ["-c", PORT, "0.01"]), contextlib.redirect_stdout(out):
-            exec(download_mode.READ_CONSOLE, {})
+            exec(board_console.READ_CONSOLE, {})
         self.assertEqual(opened, [(PORT, 115200, False, False), "closed"])
         self.assertEqual(out.getvalue(), ROM + "\ufffd")
 
@@ -69,7 +71,7 @@ class TheConsoleTest(unittest.TestCase):
         self.assertTrue(download_mode.booted(" ready \n"))
 
     def test_a_firmware_s_lines_are_not_download_mode(self):
-        probe = download_mode.DownloadModeProbe(["/opt/python3"], PORT, printing("ready\n", []))
+        probe = board_console.ConsoleProbe(["/opt/python3"], PORT, printing("ready\n", []))
         self.assertFalse(probe.waits_in_download_mode()[0])
 
     def test_a_console_script_that_fails_is_not_download_mode_whatever_it_printed(self):
@@ -77,21 +79,21 @@ class TheConsoleTest(unittest.TestCase):
             if check:
                 raise subprocess.CalledProcessError(1, command, ROM, "no module named serial")
             return subprocess.CompletedProcess(command, 1, ROM, "no module named serial")
-        self.assertEqual(download_mode.DownloadModeProbe(["/opt/python3"], PORT, run).waits_in_download_mode(),
+        self.assertEqual(board_console.ConsoleProbe(["/opt/python3"], PORT, run).waits_in_download_mode(),
                          (False, "could not read the port: no module named serial"))
 
     def test_a_port_that_cannot_be_read_is_not_download_mode(self):
         def fails(command, **kw):
             raise subprocess.CalledProcessError(1, command, "", "could not open port")
-        self.assertEqual(download_mode.DownloadModeProbe(["/opt/python3"], PORT, fails).waits_in_download_mode(),
+        self.assertEqual(board_console.ConsoleProbe(["/opt/python3"], PORT, fails).waits_in_download_mode(),
                          (False, "could not read the port: could not open port"))
 
     def test_a_probe_needs_mpremote_as_a_python_package_and_a_port(self):
         python = tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote"}, ["/opt/python3"])
         command = tools.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
-        self.assertEqual(download_mode.DownloadModeProbe.for_tool(python, PORT).python, ["/opt/python3"])
-        self.assertIsNone(download_mode.DownloadModeProbe.for_tool(command, PORT))
-        self.assertIsNone(download_mode.DownloadModeProbe.for_tool(python, None))
+        self.assertEqual(board_console.ConsoleProbe.for_tool(python, PORT).python, ["/opt/python3"])
+        self.assertIsNone(board_console.ConsoleProbe.for_tool(command, PORT))
+        self.assertIsNone(board_console.ConsoleProbe.for_tool(python, None))
 
 
 class TheResetTest(unittest.TestCase):
@@ -99,7 +101,7 @@ class TheResetTest(unittest.TestCase):
         """A probe whose port is there or not at each look, in turn, then there for good."""
         looks = list(here)
         self.clock = FakeClock()
-        return download_mode.DownloadModeProbe(["/opt/python3"], PORT, clock=self.clock,
+        return board_console.ConsoleProbe(["/opt/python3"], PORT, clock=self.clock,
                                                port_exists=lambda port: looks.pop(0) if looks else True)
 
     def test_a_port_that_goes_and_comes_back_is_the_reset(self):

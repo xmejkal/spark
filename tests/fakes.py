@@ -53,19 +53,19 @@ class FakeClock:
         self.now += seconds
 
 
-class FakeDownloadModeProbe:
-    """A fake DownloadModeProbe: the console prints `console`, and wait_for_reset answers `reset` after it calls
+class FakeConsoleProbe:
+    """A fake ConsoleProbe: the console prints `printed`, and wait_for_reset answers `reset` after it calls
     `on_reset` (a test's way to make the board answer again), and the console read calls `on_console`. Keeps how often each was asked."""
 
-    def __init__(self, console="", reset=True, on_reset=None, on_console=None):
-        self.console, self.reset, self.on_reset, self.asked = console, reset, on_reset, []
+    def __init__(self, printed="", reset=True, on_reset=None, on_console=None):
+        self.printed, self.reset, self.on_reset, self.asked = printed, reset, on_reset, []
         self.on_console = on_console
 
     def waits_in_download_mode(self):
         self.asked.append("console")
         if self.on_console:
             self.on_console()
-        return "waiting for download" in self.console, self.console
+        return "waiting for download" in self.printed, self.printed
 
     def wait_for_reset(self):
         self.asked.append("reset")
