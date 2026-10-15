@@ -658,6 +658,77 @@ class TheDryRunSaysWhatItWouldDoTest(unittest.TestCase):
         self.assertEqual(ran, [])
 
 
+class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
+    """P214 (#194): a pinned Python tool's installed version is compared with its pin, as an npm tool's is."""
+
+    def setUp(self):
+        defaults = dict(DEFAULTS, **{
+            "roles": {"flasher": "pt", "packer": "lfs"},
+            "pt": {"kind": "python", "module": "pt", "version": "5.5.0",
+                   "install": {"pip": "python3 -m pip install --user pt=={version}"}},
+            "lfs": {"kind": "python", "module": "lfs", "install": {"pip": "python3 -m pip install --user lfs"}},
+        })
+        self.personal = Path(tempfile.mkdtemp()) / "absent.json"
+        for name, value in (("DEFAULTS", layer(defaults)), ("PERSONAL", self.personal)):
+            patcher = mock.patch.object(tools, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        for patcher in (mock.patch.object(tools.importlib.util, "find_spec", return_value=object()),
+                        mock.patch.object(tools.shutil, "which", side_effect=lambda exe: "/usr/bin/" + exe)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def patch_installed_version(self, version):
+        """Patch the version that pt's distribution reports (None: no metadata); any other distribution has none."""
+        def reported(distribution):
+            if distribution != "pt" or version is None:
+                raise tools.importlib.metadata.PackageNotFoundError(distribution)
+            return version
+        return mock.patch.object(tools.importlib.metadata, "version", side_effect=reported)
+
+    def row(self, label):
+        return next(text for state, named, text in tools.status() if named == label)
+
+    def test_an_older_version_is_named_beside_the_pin_and_the_pip_line_installs_the_pin(self):
+        with self.patch_installed_version("3.3"):
+            row, step = self.row("flasher"), tools.plan(["pt"])[0]
+        self.assertIn("version 3.3 here, the list pins 5.5.0", row)
+        self.assertEqual((step["here"], step["argv"]),
+                         (None, ["python3", "-m", "pip", "install", "--user", "pt==5.5.0"]))
+
+    def test_the_pinned_version_is_here(self):
+        with self.patch_installed_version("5.5.0"):
+            row, step = self.row("flasher"), tools.plan(["pt"])[0]
+        self.assertNotIn("pins", row)
+        self.assertEqual((step["here"], step["argv"]), ("the pt module of %s" % sys.executable, None))
+
+    def test_a_short_pin_is_the_same_release_as_pip_counts_it(self):
+        self.personal.write_text(json.dumps({"pt": {"version": "5.5"}}))
+        with self.patch_installed_version("5.5.0"):
+            row, step = self.row("flasher"), tools.plan(["pt"])[0]
+        self.assertNotIn("pins", row)
+        self.assertIsNone(step["argv"])
+
+    def test_a_tool_with_no_pin_is_never_read(self):
+        with self.patch_installed_version("9.9") as version:
+            entry = tools.merged()["tools"]["lfs"]
+            self.assertEqual(tools.pin_differences(entry, [sys.executable]), [])
+            self.assertEqual(tools.plan(["lfs"])[0]["here"], "the lfs module of %s" % sys.executable)
+        version.assert_not_called()
+
+    def test_a_module_with_no_metadata_is_an_unknown_version_and_the_pin_is_offered(self):
+        with self.patch_installed_version(None):
+            row, step = self.row("flasher"), tools.plan(["pt"])[0]
+        self.assertIn("version unknown here, the list pins 5.5.0", row)
+        self.assertEqual(step["argv"][-1], "pt==5.5.0")
+
+    def test_the_dry_run_prints_the_pip_line(self):
+        out = io.StringIO()
+        with self.patch_installed_version("3.3"), contextlib.redirect_stdout(out):
+            code = tools.main(["--install", "pt", "--dry-run"], run=lambda argv, **kw: self.fail("a dry run ran %s" % argv))
+        self.assertEqual((code, out.getvalue()), (tools.EXIT_OK, "  would run: python3 -m pip install --user pt==5.5.0\n"))
+
+
 class AnNpmInstallNeedsThePackageJsonTest(unittest.TestCase):
     """P113 (#47): with no package.json in the project, npm installs into the nearest folder above it that has one."""
 

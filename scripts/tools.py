@@ -22,6 +22,7 @@ A choice is written to the person's file, or to the project's with --project (--
 """
 
 import argparse
+import importlib.metadata
 import importlib.util
 import json
 import os
@@ -189,6 +190,26 @@ def locate(entry, project):
 
 
 def installed_versions(entry, command):
+    """{field: version} of an npm or a pinned Python tool as installed here; None for a version nobody can read."""
+    if entry.get("kind") == "python":
+        return _python_versions(entry)
+    return _npm_versions(entry, command)
+
+
+def _python_versions(entry):
+    """{"version": ...} of a Python tool that pins one, read from the metadata of this interpreter ({} with no pin).
+
+    The distribution is named like its module, as esptool and mpremote are.
+    """
+    if not entry.get("version"):
+        return {}
+    try:
+        return {"version": importlib.metadata.version(entry["module"])}
+    except importlib.metadata.PackageNotFoundError:
+        return {"version": None}
+
+
+def _npm_versions(entry, command):
     """{field: version} of an npm tool's packages as installed beside the command found ({} when not from node_modules)."""
     packages = entry.get("packages") or {}
     bin_dir = Path(command[0]).parent if command else None
@@ -203,10 +224,18 @@ def installed_versions(entry, command):
     return found
 
 
+def _release(version):
+    """A version without its trailing zero parts, so a pin of 5.5 is the 5.5.0 installed, as pip counts it."""
+    parts = str(version).split(".")
+    while len(parts) > 1 and parts[-1] == "0":
+        parts.pop()
+    return ".".join(parts)
+
+
 def pin_differences(entry, command):
     """[(field, installed, pinned)] for each package whose installed version is not the one the list pins."""
     return [(field, here, entry.get(field)) for field, here in installed_versions(entry, command).items()
-            if entry.get(field) and here != entry.get(field)]
+            if entry.get(field) and (here is None or _release(here) != _release(entry.get(field)))]
 
 
 def version_note(name, reported, field="version", project=None, personal=None):
@@ -295,7 +324,8 @@ def status(project=None, personal=None):
             else:
                 found = find(label, project, personal)
                 notes = "".join("; %s %s here, the list pins %s — /spark:setup installs the pinned one"
-                                % (field, here, pinned) for field, here, pinned in pin_differences(found.entry, found.command))
+                                % (field, here or "unknown", pinned)
+                                for field, here, pinned in pin_differences(found.entry, found.command))
                 rows.append(("ok", label, "%s — %s%s" % (name, " ".join(found.command), notes)))
         except ToolProblem as missing:
             rows.append(("missing", label, str(missing)))
