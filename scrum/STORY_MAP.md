@@ -41,7 +41,8 @@ generator. Steps 9–11 hold almost nothing from spark yet.
 | **3** | **Firmware fails on a Mac** | both | irrigation's firmware imports without running, and a check reports Valve4 never driven | P59 (#7, done in v0.9.0), **P74** (#8, parked, after v0.10) |
 | **4** | **Checks on two named projects** (stale: the old v1 is now the basic journey, v0.10; its open cards wait, none is in v0.10; the board's Slice is "4 Checks on two projects") | hobbyist | the documented example and irrigation: `check_spine` exits 0; `check_all` shows no `[FAIL]`; every `????` names its fact | **P64a** (#12), **P39** (#10), **P38** (#9), P78 (#14, closed), P80 (done), P83 (done), B13 (done), P43 (#11, closed), **P77** (#13) (its place is the council's) |
 | **5** | **A real stranger, to running firmware** | hobbyist, tested | a person outside the project, README only, own machine and board, keeps a diary nobody helps with; someone else scores it | R2.6 (#15, done); later, after v0.10: a stranger's first install |
-| **v0.13 and later** | **Later versions** — v0.13 is one core (P158 #94), the rest one epic each: live on the board (P235 #224, the REPL, WebREPL, a serial monitor, debugging), breadboard to perfboard to PCB, a board you can order, an enclosure, the store shared | hobbyist | one epic each, in the PO's words: [VISION.md's *Versions*](VISION.md#versions) | P79 (#16) stays the breadboard's epic, met by v0.10's walk |
+| **Live 0** | **Live on the board, the walking skeleton**: Claude runs a line of code on the PO's running board | hobbyist | on the bare XIAO C6 with P246's project, the PO types one grant in his terminal, and Claude's live call (sketch name `spark live --code ... --json`) reaches the board, cures a silent console after a power-on when one occurs, refuses the USB and flash pins, ends with the chosen reset, and keeps a log (`docs/discovery/2026-10-15-p235-live-on-board/story-map.md`) | P252 #263, P251 #264, P253 #265, P254 #266, P246 #260, P247 #267; beside it P256 #268, P255 #269; later P248 #270, P249 #271, P250 #272 |
+| **v0.13 and later** | **Later versions** — v0.13 is one core (P158 #94), the rest one epic each: live on the board beyond Live 0 (P235 #224: WebREPL and OTA, D31), breadboard to perfboard to PCB, a board you can order, an enclosure, the store shared | hobbyist | one epic each, in the PO's words: [VISION.md's *Versions*](VISION.md#versions) | P79 (#16) stays the breadboard's epic, met by v0.10's walk |
 | **6** | **Shared, not copied** | everyone | the bin builds with spark's converter, and its CI runs every check against public spark; claims checked against their sources | **P32b** (bin #6), P64b (parked), P64c (parked), B12 (done) |
 
 **The PO, 2026-10-03 — an overview, not a process:** slice 1b comes straight after going public — *"we first need to make it
@@ -64,8 +65,8 @@ The deploy journeys J1 to J7 are in [`jobs-and-journeys.md`](../docs/discovery/2
 - J3, the board is not the one the project is for: v0.10 (the stop) and v0.12 (what differs, and the offers).
 - J2, change the firmware and put it on again: v0.11.
 - J7, two near-identical boards: v0.12.
-- J4, debug on the board live: later, the epic P235 (#224), live on the board (spike P222, #204).
-- J6, try things live over USB or Wi-Fi: later, the epic P235 (#224).
+- J4, debug on the board live: the epic P235 (#224), slice Live 3 (P250 #272, a pin read by name); the spike P222 (#204) keeps its wide question.
+- J6, try things live over USB or Wi-Fi: the epic P235 (#224), slice Live 0 over USB (P247 #267); Wi-Fi later (D31 of P218's discovery).
 - J5, Arduino or PlatformIO: later (spike P221, #203).
 - Proposed, new, not yet in the discovery file: J8, a stranger takes the basic journey on their own machine: after v0.10.
 - Proposed, new, not yet in the discovery file: J9, the PCB and a printed body from the same conversation: later (the north star, P203 #163).
