@@ -406,7 +406,7 @@ UNSERVED = "unserved"
 #: The `why` of an unserved note: the codes `--requirements` writes and reads (C-2, F16). The values stay, because
 #: requirements.json keeps them.
 WHY_NO_PICK, WHY_GAP, WHY_NO_RECORD = "no pick", "a gap", "no record"
-#: What `--requirements` says of a need nothing on the board serves (C-2), by why: plainly, and what the person can do.
+#: What `parts.py --requirements` says of a need nothing on the board serves (C-2), by why: plainly, and what the person can do.
 NOT_ON_THE_BOARD = {WHY_NO_PICK: "no pick; --match lists its candidates",
                     WHY_GAP: "marked a gap: nothing like it is in the store yet; research it before it can be built",
                     WHY_NO_RECORD: "{picks} has no record: fine for what is wired off the board (a speaker, a battery); what sits on the "

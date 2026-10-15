@@ -10,7 +10,9 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 #: The str methods and `re` functions whose first argument is a text to look for.
-SEARCHES = {"startswith", "endswith", "find", "rfind", "index", "count", "search", "match", "fullmatch", "findall"}
+#: `re.compile` is not one: its pattern is a named constant once it is kept.
+SEARCHES = {"startswith", "endswith", "removeprefix", "removesuffix", "find", "rfind", "index", "count", "search", "match",
+            "fullmatch", "findall"}
 
 
 def _sentences(node):
@@ -30,6 +32,8 @@ def magic_strings(source, name):
             operands = [node.left] + node.comparators
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in SEARCHES:
             operands = node.args[:1]
+        elif isinstance(node, ast.MatchValue):
+            operands = [node.value]
         else:
             continue
         found += ["%s:%d %r" % (name, one.lineno, one.value) for operand in operands for one in _sentences(operand)]
@@ -43,8 +47,13 @@ class NoMagicStringsTest(unittest.TestCase):
         self.assertEqual(found, [], "name each as a constant beside its source (developing.md, P260)")
 
     def test_the_guard_sees_each_shape(self):
-        source = 'a == "x y"\n"x y" in a\na in ("b", "x y")\na.startswith("x y")\nre.search("x y", a)\na == X_Y\na == "xy"\n'
-        self.assertEqual([one.split(" ")[0] for one in magic_strings(source, "s")], ["s:1", "s:2", "s:3", "s:4", "s:5"])
+        source = ('a == "x y"\n"x y" in a\na in ("b", "x y")\na.startswith("x y")\nre.search("x y", a)\n'
+                  'a.startswith(("x y", "b"))\na in ["x y"]\na.find("x y")\nmatch a:\n    case "x y":\n        pass\n')
+        self.assertEqual([one.split(" ")[0] for one in magic_strings(source, "s")],
+                         ["s:1", "s:2", "s:3", "s:4", "s:5", "s:6", "s:7", "s:8", "s:10"])
+
+    def test_the_guard_passes_a_name_and_a_word(self):
+        self.assertEqual(magic_strings('a == X_Y\na == "xy"\na.startswith(X + " ")\nb = "x y"\n', "s"), [])
 
 
 if __name__ == "__main__":
