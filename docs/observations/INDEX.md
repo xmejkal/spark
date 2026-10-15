@@ -944,3 +944,13 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT209 | The naming check did not say which table rule makes ConsoleProbe an Adapter | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
 | AT210 | The two rejected council findings had no rows | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | AT202, AT203 |
 | AT211 | The order of work still listed writing the plan as a step to do, and the exit codes cited no source | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
+| AT212 | The XIAO C6's on-board LED (GPIO15) is active low, lit at 0; the board record does not say so | P252 bench (docs/observations/2026-10-15-p252-reset-bench.md), 2026-10-15 | raised | AT158's record change |
+| AT213 | GPIO15 stayed on through a hard reset (mpremote reset), 1 of 1; off could not be told from released; cause not known | P252 bench (docs/observations/2026-10-15-p252-reset-bench.md), 2026-10-15 | raised | P247 (#267): say which pins a try touched |
+| AT214 | A soft reset from mpremote neither starts the firmware nor clears the pins; a hard reset starts the firmware again | P252 bench (docs/observations/2026-10-15-p252-reset-bench.md), 2026-10-15 | raised | P252 (#263): the PO picks reset_at_end |
+| AT215 | A value survives into the next call only with mpremote resume; a plain exec soft-resets first (A10 holds) | P252 bench (docs/observations/2026-10-15-p252-reset-bench.md), 2026-10-15 | raised | P247 (#267) |
+| AT216 | Reset cause 5 cannot tell a chip restart from the check's own soft reset; only the uptime shows the restart | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
+| AT217 | "Loaded 3.3 s after the boot" misread the uptime at the check | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
+| AT218 | "Kept its value, on and off" claimed more than n = 1, and off looks like a released pin | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278, AT213 |
+| AT219 | The firmware claims rest on n = 1 and no power-on step | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
+| AT220 | "An exec stops the firmware" had no step behind it | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
+| AT221 | The risks-and-tests.md path was not a link | P252 bench log review (Sonnet, PR #278), 2026-10-15 | acted | PR #278 |
