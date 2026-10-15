@@ -224,10 +224,18 @@ def _npm_versions(entry, command):
     return found
 
 
+def _release(version):
+    """A version without its trailing zero parts, so a pin of 5.5 is the 5.5.0 installed, as pip counts it."""
+    parts = str(version).split(".")
+    while len(parts) > 1 and parts[-1] == "0":
+        parts.pop()
+    return ".".join(parts)
+
+
 def pin_differences(entry, command):
     """[(field, installed, pinned)] for each package whose installed version is not the one the list pins."""
     return [(field, here, entry.get(field)) for field, here in installed_versions(entry, command).items()
-            if entry.get(field) and here != entry.get(field)]
+            if entry.get(field) and (here is None or _release(here) != _release(entry.get(field)))]
 
 
 def version_note(name, reported, field="version", project=None, personal=None):
