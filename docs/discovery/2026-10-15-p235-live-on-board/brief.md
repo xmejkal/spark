@@ -90,7 +90,7 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? Is A1 the riskiest, or A2 (you use the command) or A7 (the grant) now that the post-flash reach is mostly fixed? · decides: importance, pass lines and the riskiest · status: queued <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? Is A1 the riskiest, or A2 (you use the command) or A7 (the grant) now that the post-flash reach is mostly fixed? · decides: importance, pass lines and the riskiest · status: answered D4 <!-- REQUIRED:q1 -->
 - Q2 · What is the first slice: reach and read, a bounded console read, or a file run? · decides: slice 0 · options: A, B, C in Options · unblocks: the items' order · opinion (the tech lead and the PO assistant: reach and read) · kind: decision · status: queued
 - Q3 · Does P222 shrink to four bench questions on P246's bare board and run before slice 0's build, become slice 0's first story, or run whole with belay and the MCP plugin first? · decides: the order · options: A, B, C in Options · unblocks: P222's card · opinion (the tech lead: narrow it, TL-16) · kind: decision · status: queued
 - Q4 · The rule "the firmware reads its console" already stands in docs/guide/agents.md:577-578. Is that enough before a live command, or does spark also look for it in a project's firmware before a live try? · decides: slice 0's scope · options: the rule as it is · a check before a try · unblocks: slice 0 · opinion (the user lens USR-3, reframed by the refuter) · kind: decision · status: queued
@@ -122,6 +122,7 @@ A yes covers only the actions and choices it names. A standing yes names its kin
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
 - D1 · Q0: the frame is right as proposed: the decision is P235's first slice and order, USB first, Wi-Fi (WebREPL, OTA) a later option, P222 may run first, TRIO depth · the PO · 2026-10-15 · this session, he picked "Yes, as proposed" · options considered: Wi-Fi in scope now, only the USB REPL and monitor, LIGHT depth
 - D2 · standing yes: the discovery folder lands by draft PR, committed as work lands · the PO · CLAUDE.local.md "Anything for his review is a PR" · covers commits and the PR only
+- D4 · Q1: A1 (reach) is the riskiest, test it now at the bench instead of rating the rest ("lets try it out, right?"); importance of A2-A10 stays unrated; the pass line is the facilitator's proposal, 19 of 20, written before the run · the PO · 2026-10-15 · this session · options considered: A2, A7 as riskiest
 - D3 · the row AT179 in docs/observations/INDEX.md is marked rejected, as the PO said no to a card for it · the PO · 2026-10-15 · this session, before the discovery began · options considered: a card
 
 ## Found on the way <!-- CLAIMS -->

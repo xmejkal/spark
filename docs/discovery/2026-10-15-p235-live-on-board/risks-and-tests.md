@@ -54,6 +54,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 with its pointer), the pass line met or missed, what it changes. -->
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
+| 2026-10-15 | docs/observations/2026-10-15-p235-reach-test.md | A1: 10 of 10 after `mpremote reset` with the firmware running; 7 of 10 after a replug, each miss `could not enter raw repl`; a port open restarted the board and the next try passed | missed: 17 of 20 against 19 of 20 (D4) | the reach after a power-on is fixed first; slice 0 starts with that cause; A1 stays open |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and
