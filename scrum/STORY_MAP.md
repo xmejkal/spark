@@ -4,7 +4,7 @@ The order of the work, from `VISION.md`. **Confirmed by the PO 2026-10-03** (P69
 journey a person takes. Down: slices, each a milestone that ends in something a command or a bench
 log proves. A card names its slice from Ready on (`tools/check_backlog.py`). **The order of the versions is
 [VISION.md's *Versions*](VISION.md#versions)** (2026-10-11): v0.10, the basic journey, item by item; later versions
-one epic each. The rows below are read by release. The rows v0.10 to v0.12 are the board's Slice values. The rows v0.9.0 and "v0.13 and later" are not, and most old numbered rows keep their Slice names: v0.9.0 is out, v0.10 to v0.12 are next, and the rest wait. The open cards of the old slices 1, 3 and 4 carry the Slice "parked, after v0.10" (the PO, 2026-10-13), P139 (#73) among them while the FireBeetle S3 is missing. The other old numbered slices stay as names on their cards.
+one epic each. The rows below are read by release. The rows v0.10 to v0.12 are the board's Slice values, and so is Live 0, which has no row here. The rows v0.9.0 and "v0.13 and later" are not, and most old numbered rows keep their Slice names: v0.9.0 is out, v0.10 to v0.12 are next, and the rest wait. The open cards of the old slices 1, 3 and 4 carry the Slice "parked, after v0.10" (the PO, 2026-10-13), P139 (#73) among them while the FireBeetle S3 is missing. The other old numbered slices stay as names on their cards.
 
 ## The journey, and what spark offers at each step
 
