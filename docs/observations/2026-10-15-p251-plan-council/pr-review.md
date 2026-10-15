@@ -20,3 +20,14 @@ one finding in short.
 | X5 | deploy's behaviour did not change in the move | note |
 | X6 | the tests only fed in the `Cure` they asserted | acted (a real probe through `reach()`) |
 | M1 | 12 planted, 11 caught; the escape: `--cure-first` with no probe | acted (a test; the table in `tests/mutations/p251-reach.json`, 18 rows, all 18 caught after the fixes) |
+
+## The bench log's review (Sonnet)
+
+| id | finding | verdict |
+| --- | --- | --- |
+| BL1 | the PASS rests on the minimum of 3 cures | acted |
+| BL2 | "refuted" is too strong: the plan's cold rule asked `rst:` in 5 of 5, and 3 of 5 heard it | acted |
+| BL3 | the replug, not the open, could have caused the boot lines heard | acted in part: a boot takes under a second and each read began seconds later, but the time was not measured, which the log now says |
+| BL4 | "the open restarts a board whose output was not dead" was not measured | acted (deleted) |
+| BL5 | the `entry 0x..` fix is not tested | acted |
+| BL6 | "does not explain" and "near" claim more than n allows | acted |
