@@ -376,7 +376,8 @@ def pin_order_problems(part: dict) -> list:
     A pin order says how it was read (P81): it is the field where a mistake reverses a supply, and
     it was the one fact whose source lived only in a prose note nothing checked.
     """
-    if not any(pad for pad in part.get("pin_order") or []):
+    order = part.get("pin_order")
+    if not isinstance(order, list) or not any(order):  # a pin_order that is no list is validate's own problem
         return []
     proof = part.get("pin_order_proof")
     if not isinstance(proof, dict):
@@ -525,7 +526,7 @@ def simulation_problems(part: dict, path: Path) -> list:
         # stage_chips copied from there) and is written into wokwi.toml (`x"⏎[[chip]]` was a table of its own)
         return problems + ["simulation.wokwi.chip is %r, but a chip's name is a name — letters, digits and _ (vl6180x, "
                            "l9110s): its files beside the record are named by it, and wokwi.toml is written with it" % (chip,)]
-    if chip:
+    if chip and isinstance(part.get("id"), str):  # with no plain id the files have no folder, and the id is its own problem
         folder = chip_folder(part, path)
         for suffix in CHIP_SOURCE_SUFFIXES:
             if not (folder / (chip + suffix)).is_file():

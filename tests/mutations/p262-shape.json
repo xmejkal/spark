@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/parts.py",
+  "name": "a pin_order that is no list is iterated",
+  "find": "    if not isinstance(order, list) or not any(order):",
+  "replace": "    if not any(order or []):"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a chip record with no plain id reads chip_folder",
+  "find": "    if chip and isinstance(part.get(\"id\"), str):",
+  "replace": "    if chip:"
+ }
+]
