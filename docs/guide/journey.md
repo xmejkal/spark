@@ -1107,6 +1107,29 @@ and then reads the board again ([P243](https://github.com/xmejkal/spark/issues/2
 [the bench log](../observations/2026-10-14-p243-bench.md)). The XIAO's R and B buttons are the small parts at the two top
 corners, beside the USB plug.
 
+### The button-and-LED firmware on the board
+
+On 2026-10-15 the PO flashed the button-and-LED project on the same XIAO
+([P215](https://github.com/xmejkal/spark/issues/196), [the bench log](../observations/2026-10-15-p215-bench-rerun.md)).
+The first two runs flashed and booted, but ended in `ready unknown` with mpremote's "could not enter raw repl". The
+firmware's loop never read the board's console, and the board ignored Ctrl-C, so mpremote could not stop it. The
+conversation added three lines to the loop: it reads the console without waiting and drops what it reads, as the
+blink does. The scenario passed again in Wokwi, the look gave a new token, and the third run printed `ready seen`.
+
+<!-- output: run 2026-10-15, spark 0.9.0 -->
+```text
+$ deploy.py --token xxxx-08bc
+...
+Hard resetting via RTS pin...
+  facts file spark.json sha256: cd926eeb3dd2081e8762341544d6e332dca7c92a1d63e57a92e933a479760756
+  ready seen: the firmware printed 'ready' and the board's 3 files match the run that passed
+  board log: sim/runs/board/2026-10-15T02-10-31.log
+  store record: <store>/boards/8c-bf-ea-xx-xx-xx.json
+```
+
+This firmware drives an LED on pad D8 while a button on pad D10 is held. The board's own LED stays dark, so the bare
+board shows nothing after a pass. Wire the breadboard from `breadboard.md` to see the LED.
+
 After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32
 brain. That plan is [P73](https://github.com/xmejkal/sisuo-brain-transplant/issues/2), first used in the bin's
