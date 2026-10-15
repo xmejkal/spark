@@ -298,7 +298,7 @@ actually start implementing and a small tech council to find gaps in the plan an
 implementing something, there should first be the journey/use cases/story map, technical refinement then plan,
 council finds gaps and then we can go"* and *"lets always evaluate during retrospectives, so that we keep improving
 our process to be agile enough, yet allowing for planning, just like as we go, not all at once in great detail"*. His
-yes to the three changes is on [#262](https://github.com/xmejkal/spark/issues/262).
+yes to the three changes is recorded on [#262](https://github.com/xmejkal/spark/issues/262#issuecomment-6187192413).
 
 **Never change a test to make it pass** (W4). Change the decision first; the test follows the decision. If the test
 is wrong, say why in the docstring and change its *premise*, not its assertion. Claude carries it, in the PO's words,
