@@ -277,7 +277,7 @@ sitting" is now the [service level](README.md#the-cadences-and-what-each-one-lea
 
 ## Habits — no command judges these
 
-Five rules no command can judge, so they live here, unnumbered. Two of them were W4 and W9 until 2026-10-09
+The rules no command can judge live here, unnumbered. Two of them were W4 and W9 until 2026-10-09
 (P146), and those headings above point here.
 
 **Generate the least code and text that works** (2026-10-12, P205). Code above all. MVP first, then add or change in
