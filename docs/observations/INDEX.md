@@ -932,5 +932,15 @@ two of nine findings was wrong in a way that would have buried real defects. A r
 | AT197 | Retrying on any BoardUnreachableError retries a timeout and a missing port | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | only on could not enter raw repl |
 | AT198 | The plan did not say an exec leaves the firmware stopped | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | reach.py says so |
 | AT199 | The cured flag can count a boot that was not silent, and there are no cold-port runs | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | P251's bench protocol |
-| AT200 | RetryingBoardConsole needs P255's Decorator row | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | the rows land in P251's PR |
+| AT200 | RetryingBoardConnection (RetryingBoardConsole in the draft) needs P255's Decorator row | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | the rows land in P251's PR |
 | AT201 | Console and connection named the same thing (the PO) | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | acted | one word, and a planning rule |
+| AT202 | Swap P251 before P252, since P251 does not depend on the spike | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | rejected | D10 makes P252 the first story |
+| AT203 | reach.py keeps a new sim/reach.log in the project | P235 slice 0 plan council (docs/observations/2026-10-15-p235-slice0-plan-council.md), 2026-10-15 | rejected | the bench collects --json lines into its log |
+| AT204 | The plan cited D25 for --port, but the P235 brief ends at D24 (D25 is P218's) | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
+| AT205 | FakeBoardConnection already raises an Exception answer, so it needs no silent-on-cue change | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
+| AT206 | ReachResult replaces D15's sketch name ConsoleResult without saying so | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
+| AT207 | The council report and AT200 kept the removed name RetryingBoardConsole | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
+| AT208 | No test planned for a missing probe (ConsoleProbe.for_tool gives None) | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
+| AT209 | The naming check did not say which table rule makes ConsoleProbe an Adapter | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
+| AT210 | The two rejected council findings had no rows | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | AT202, AT203 |
+| AT211 | The order of work still listed writing the plan as a step to do, and the exit codes cited no source | P235 slice 0 plan PR review (Sonnet, PR #274), 2026-10-15 | acted | PR #274 |
