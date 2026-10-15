@@ -1,0 +1,74 @@
+[
+ {
+  "file": "tools/mutate.py",
+  "name": "json branch off",
+  "find": "    if file.endswith(\".json\"):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "py branch off",
+  "find": "    elif file.endswith(\".py\"):",
+  "replace": "    elif False:"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "loads always refuses py",
+  "find": "            compile(text, file, \"exec\")\n        except SyntaxError as broken:",
+  "replace": "            compile(text, file, \"exec\")\n            return \"x\"\n        except SyntaxError as broken:"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "unloadable skips all",
+  "find": "        if text.count(mutation[\"find\"]) == 1:\n            why",
+  "replace": "        if False:\n            why"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "unloadable inverted",
+  "find": "            if why:\n                said",
+  "replace": "            if not why:\n                said"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "anchors drops broken",
+  "find": "        wrong += broken",
+  "replace": "        pass"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "run skips compile check",
+  "find": "refusal = _loads(file, path.read_text())",
+  "replace": "refusal = None"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "run skips import check",
+  "find": "if not refusal and imports_before.get(file):",
+  "replace": "if False:"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "import baseline always true",
+  "find": "path.is_file() and _import_error(root, file) is None",
+  "replace": "True"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "import failure not refused",
+  "find": "refusal = failed and \"the mutant of %s does not import",
+  "replace": "refusal = None and \"the mutant of %s does not import"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "import error never",
+  "find": "return None if done.returncode == 0 else",
+  "replace": "return None if True else"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "import wrong path",
+  "find": "str(path.parent), path.stem]",
+  "replace": "str(root / \"nowhere\"), path.stem]"
+ }
+]
