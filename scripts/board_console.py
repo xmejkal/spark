@@ -10,12 +10,17 @@ restarted a board whose USB output died at power-on (docs/observations/2026-10-1
 import os
 import subprocess
 import time
+from collections import namedtuple
 
 from download_mode import DOWNLOAD_MODE, RESET_WAIT_S
 from run_scenario import printed_text
 
 #: How long the console is read, and how often the port is looked at, in seconds.
 READ_S, POLL_S = 2, 0.1
+#: How long the cure waits for the port to be there again after its open restarted the board, in seconds.
+PORT_BACK_S = 10
+#: How the ESP32 ROM starts the line of a restart: `rst:0x15 (USB_UART_HPSYS),boot:0x1e` on the XIAO C6 (AT187).
+RESTART = "rst:"
 #: What the probe says of a port it could not read (P244): a could-not-run, never a silent console.
 UNREAD = "could not read the port: %s"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
@@ -30,6 +35,16 @@ while time.monotonic() < end:
 s.close()
 sys.stdout.write(out.decode("utf-8", "replace"))
 """
+
+
+#: Value: what the cure's open heard (None when it could not read the port), why it could not, and whether the board
+#: printed a restart.
+Cure = namedtuple("Cure", "heard why restart_heard")
+
+
+def restarted(console):
+    """True when `console` holds the ROM's line of a restart."""
+    return RESTART in console
 
 
 class SystemClock:
@@ -62,6 +77,16 @@ class ConsoleProbe:
         except (OSError, subprocess.SubprocessError) as failed:
             return None, str(failed)
         return printed_text(done.stdout), None
+
+    def cure(self):
+        """The Cure of a board whose USB output died at power-on (P251): the open with DTR and RTS off, which restarted
+        the XIAO C6 in AT187, what it printed, then a wait of at most PORT_BACK_S until the port is there again. It never
+        waits for the port to go: the restart comes during the read."""
+        heard, why = self.console()
+        end = self.clock.monotonic() + PORT_BACK_S
+        while not self.port_exists(self.port) and self.clock.monotonic() < end:
+            self.clock.sleep(POLL_S)
+        return Cure(heard, why, heard is not None and restarted(heard))
 
     def waits_in_download_mode(self):
         """(True when the console says DOWNLOAD_MODE, what it printed). A port it could not read is never download

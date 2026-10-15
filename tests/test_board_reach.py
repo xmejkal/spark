@@ -94,6 +94,14 @@ class TheRetryTest(unittest.TestCase):
         self.assertEqual(len(board.ran), 1)
 
 
+    def test_cure_first_that_does_not_reach_is_not_retried_and_names_both_causes(self):
+        board = FakeBoardConnection(REFUSED)
+        result = board_reach.reach(board, FakeConsoleProbe(cured=RESTART), cure_first=True)
+        self.assertEqual((result.reached, result.first_try_failed, result.cure), (False, True, RESTART))
+        self.assertTrue(result.why.startswith("after the cure: "))
+        self.assertIn(board_reach.BOTH_CAUSES, result.why)
+        self.assertEqual(len(board.ran), 1)
+
 class TheDecoratorTest(unittest.TestCase):
     def test_keep_running_for_reaches_the_wrapped_connection_on_both_tries(self):
         board = FakeBoardConnection(REFUSED, "ok")
