@@ -67,7 +67,8 @@ class FakeConsoleProbe:
         self.asked.append("console")
         if self.on_console:
             self.on_console()
-        return "waiting for download" in self.printed, self.printed
+        from download_mode import DOWNLOAD_MODE  # scripts/ is on the path once a test imports spark
+        return DOWNLOAD_MODE in self.printed, self.printed
 
     def wait_for_reset(self):
         self.asked.append("reset")

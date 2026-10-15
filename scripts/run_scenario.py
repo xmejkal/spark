@@ -39,6 +39,10 @@ READY = "ready"
 READY_STEP = '- wait-serial: "%s"' % READY
 #: wokwi-cli's line when a wait-serial step matched (0.27.1): the proof that the ready text arrived.
 MATCHED = "Expected text matched:"
+#: wokwi-cli's stderr: a line with ERROR_WORD is its reason, and API_ERROR in it means the simulator was lost (0.27.1).
+ERROR_WORD, API_ERROR = "Error", "API Error"
+#: A YAML list item, as a scenario's step begins.
+STEP_ITEM = "- "
 #: wokwi-cli's own exit code for a run that reached --timeout (its --timeout-exit-code default).
 TIMEOUT_EXIT = 42
 DEFAULT_TIMEOUT_MS = 60000
@@ -69,7 +73,7 @@ def with_ready_wait(scenario):
     start = next((i for i, line in enumerate(lines) if line.split("#")[0].rstrip() == "steps:"), None)
     first = None if start is None else next(
         (i for i in range(start + 1, len(lines)) if lines[i].strip() and not lines[i].lstrip().startswith("#")), None)
-    if first is None or not lines[first].lstrip().startswith("- "):
+    if first is None or not lines[first].lstrip().startswith(STEP_ITEM):
         raise ValueError("it has no steps: list with a '- ' item under it")
     steps = [line.split("#")[0] for line in lines[first:] if line.lstrip().startswith("-")]
     if any("wait-serial" in step and READY in step
@@ -99,8 +103,8 @@ def verdict(code, serial, out, err, timeout_ms):
     if code == 0:
         return OK, "passed"
     errors = err.strip().splitlines()
-    why = next((line for line in errors if "Error" in line), errors[-1] if errors else "no reason given")
-    if "API Error" in why:
+    why = next((line for line in errors if ERROR_WORD in line), errors[-1] if errors else "no reason given")
+    if API_ERROR in why:
         return COULD_NOT_RUN, "wokwi-cli lost the simulator (exit %d): %s" % (code, why)
     if not serial.strip():
         if code == TIMEOUT_EXIT:

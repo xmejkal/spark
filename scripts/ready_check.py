@@ -13,9 +13,11 @@ from run_scenario import READY
 #: How long the board's output is read for `ready`, in seconds. The firmware keeps running after it, so mpremote is
 #: stopped at the end, and what it printed until then is the board's log.
 READY_WAIT_S = 20
+#: The first word of each line HASH_FILES prints, and `ReadyCheck` reads the hashes by it.
+HASH_LINE = "file"
 #: Run on the board: one line per file, `file <sha256 or missing> <path>`. %r is the list of paths.
 HASH_FILES = """import hashlib, binascii
-for p in %r:
+for p in %%r:
     try:
         h = hashlib.sha256()
         with open(p, 'rb') as f:
@@ -24,10 +26,10 @@ for p in %r:
                 if not b:
                     break
                 h.update(b)
-        print('file', binascii.hexlify(h.digest()).decode(), p)
+        print('%s', binascii.hexlify(h.digest()).decode(), p)
     except OSError:
-        print('file', 'missing', p)
-"""
+        print('%s', 'missing', p)
+""" % (HASH_LINE, HASH_LINE)
 
 SEEN, NOT_SEEN, UNKNOWN = "ready seen", "ready not seen", "ready unknown"
 
@@ -46,7 +48,7 @@ class ReadyCheck:
             hashes = self.connection.run_code(HASH_FILES % sorted(expected))
         except (BoardUnreachableError, BoardCodeError) as cannot:
             return UNKNOWN, "mpremote could not read the board's files: %s" % cannot, cannot.output
-        read = dict(line.split(" ", 2)[1:][::-1] for line in hashes.splitlines() if line.startswith("file "))
+        read = dict(line.split(" ", 2)[1:][::-1] for line in hashes.splitlines() if line.startswith(HASH_LINE + " "))
         differ = [path for path in sorted(expected) if read.get(path) != expected[path]]
         stopped = None
         try:

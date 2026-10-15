@@ -22,6 +22,14 @@ from fakes import FakeBoardConnection  # noqa: E402
 MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
 
 
+
+class HashFilesTest(unittest.TestCase):
+    def test_the_board_prints_file_then_the_hash_then_the_path(self):
+        """P260: HASH_LINE names one word for the writer and the reader; this pins the word the board prints."""
+        code = ready_check.HASH_FILES % ["main.py"]
+        self.assertIn("print('file', binascii.hexlify(h.digest()).decode(), p)", code)
+        self.assertIn("print('file', 'missing', p)", code)
+
 class Unreachable:
     """mpremote with no board on the port: exit 1, nothing printed, as subprocess.run reports it. Keeps each command."""
 

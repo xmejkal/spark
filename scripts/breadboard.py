@@ -157,21 +157,25 @@ def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
                           ", ".join(sorted(wanted - built)) or "nothing", again))
 
 
+#: What the parts table's `have` column says of a part: the words the sheet prints, and the codes `_have` decides on.
+HAVE_YOURS, HAVE_IN_DRAWER, HAVE_TO_GET = "yours", "in your drawer", "to get"
+
+
 def _have(requirements_path, record_ids):
     """{record id: yours | in your drawer | to get}, from the drawer; None when the project is not on the list."""
     name = store.project_name(requirements_path.resolve().parent)
     if not name:
         return None
-    said = {record_id: "to get" for record_id in record_ids}
+    said = {record_id: HAVE_TO_GET for record_id in record_ids}
     for entry in drawer.entries().values():
         target = entry.get("is") if isinstance(entry.get("is"), dict) else {}
         if entry.get("skip"):
             continue
         for record_id in (value for value in target.values() if value in said):
             if (entry.get("used_in") or {}).get(name):
-                said[record_id] = "yours"
-            elif said[record_id] == "to get" and entry.get("count", 1):
-                said[record_id] = "in your drawer"
+                said[record_id] = HAVE_YOURS
+            elif said[record_id] == HAVE_TO_GET and entry.get("count", 1):
+                said[record_id] = HAVE_IN_DRAWER
     return said
 
 
@@ -182,7 +186,7 @@ def _natural(text):
 
 def _parts_table(board, design_parts, resistors, supplies, have):
     """The parts to buy or take from the drawer, as Markdown rows: equal parts and equal resistors totalled."""
-    status = (lambda record_id: have.get(record_id, "to get")) if have is not None else (lambda record_id: "")
+    status = (lambda record_id: have.get(record_id, HAVE_TO_GET)) if have is not None else (lambda record_id: "")
     rows = ["| qty | part | for | have |", "| --- | --- | --- | --- |",
             "| 1 | %s | the board | %s |" % (board.get("name"), status(board.get("id")))]
     by_record = collections.OrderedDict()
@@ -215,34 +219,34 @@ def _wiring(board, circuit, design_parts, resistors):
     records = {emit_board.component_name(part): part for part in design_parts}
 
     def end(component, port):
-        """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
-        differently (a resistor by its tag), so the board's ground pads are the only ends that read the same, and they
-        are one."""
+        """(on the board, the words): one end of a connection, as a person finds it on the bench. Every end of a part or
+        a resistor reads differently (a resistor by its tag), so the board's ground pads are the only ends that read the
+        same, and they are one."""
         if component["name"] == BOARD_COMPONENT:
-            return "board %s" % printed_label(board, port)
+            return True, "board %s" % printed_label(board, port)
         if component["name"] in resistors:
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
-            return "%s (%s %s), end %s" % (tag, value, purpose, number)
+            return False, "%s (%s %s), end %s" % (tag, value, purpose, number)
         leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
-        return "%s %s%s" % (component["name"], port.get("name"), " (%s)" % leg if leg else "")
+        return False, "%s %s%s" % (component["name"], port.get("name"), " (%s)" % leg if leg else "")
 
     said = []
     for point in points(circuit):
         ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
-        ends.sort(key=lambda one: (not one.startswith("board "), _natural(one)))
-        line = " · ".join(ends)
-        on_board = ends[0].startswith("board ")
+        ends.sort(key=lambda one: (not one[0], _natural(one[1])))
+        line = " · ".join(text for _, text in ends)
+        on_board, first = ends[0]
         if on_board and len(ends) == 1:
             continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
         if point.nets and not on_board:
             line += " · the %s supply, from off the board, not part of the parts list" % " / ".join(point.nets)
         if len(ends) > ROW_HOLES:  # a board pin's end is its jumper's end, in a hole of the free row
             line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
-                     % ends[0] if on_board else " — put these ends on one rail")
-        said.append(line)
-    said.sort(key=lambda line: (not line.startswith("board "), _natural(line)))
-    return ["%d. %s" % (number, line) for number, line in enumerate(said, 1)]
+                     % first if on_board else " — put these ends on one rail")
+        said.append((on_board, line))
+    said.sort(key=lambda one: (not one[0], _natural(one[1])))
+    return ["%d. %s" % (number, line) for number, (_, line) in enumerate(said, 1)]
 
 
 def _unwired(board, design):

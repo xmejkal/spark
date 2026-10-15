@@ -158,9 +158,9 @@ def tsci_version(toolchain):
     try:
         said = subprocess.run([str(toolchain), "--version"], capture_output=True, text=True,
                               timeout=60).stdout.strip().splitlines()
-        return said[-1].strip() if said else "unknown version"
+        return said[-1].strip() if said else tools.UNKNOWN_VERSION
     except (OSError, subprocess.TimeoutExpired):
-        return "unknown version"
+        return tools.UNKNOWN_VERSION
 
 
 #: Where the circuit.json -> Wokwi diagram.json converter might be. It is not part of this
@@ -328,7 +328,7 @@ def core_note(version):
     Silence means they agree. A build is never failed for this — a newer core may be perfectly
     good — but it is never passed in silence either.
     """
-    if version in ("unknown version", init_project.PINNED_CORE):
+    if version in (tools.UNKNOWN_VERSION, init_project.PINNED_CORE):
         return ""
     return "; the documents were measured on core %s" % init_project.PINNED_CORE
 
@@ -391,7 +391,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         return stages + [Stage("schematic", COULD_NOT_RUN, "emit_board.py crashed: %s" % (
             said[-1] if said else "exit %d, and nothing said" % emitted.returncode))]
     board_file.write_text(emitted.stdout)
-    traces_asked = emitted.stdout.count("<trace ")
+    traces_asked = emitted.stdout.count(emit_board.TRACE_TAG)
     stages.append(Stage("schematic", OK, "%d trace(s) written" % traces_asked))
     if emitted.stderr.strip():
         stages.append(Stage("schematic-notes", PROBLEMS, emitted.stderr.strip()))

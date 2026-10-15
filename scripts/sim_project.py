@@ -164,6 +164,10 @@ def stage_chips(chips, sim_dir, compiler=None):
     return staged, problems
 
 
+#: How a wokwi.toml line names the flash image: `wokwi_toml` writes it, and `firmware_in` reads it.
+FIRMWARE_LINE = "firmware = "
+
+
 def firmware_in(toml):
     """
     The flash image a kept wokwi.toml names, or None (P196's refuter): a rebuild with no --firmware keeps running it,
@@ -171,7 +175,7 @@ def firmware_in(toml):
     """
     try:
         lines = Path(toml).read_text().splitlines()
-        named = [line[len("firmware = "):] for line in lines if line.startswith("firmware = ")]
+        named = [line[len(FIRMWARE_LINE):] for line in lines if line.startswith(FIRMWARE_LINE)]
         return json.loads(named[0]) if named else None
     except (OSError, ValueError):
         return None
@@ -184,7 +188,7 @@ UNNAMED_FIRMWARE = '# firmware = "flash-with-firmware.bin"  # no image named yet
 def firmware_lines(firmware):
     """The two lines that name the flash image. Each value is a JSON string, which TOML reads as its basic string: a quote
     or a line break in the person's own --firmware stays inside its value, and the file keeps the structure written here."""
-    return ["firmware = %s" % json.dumps(firmware), "elf = %s" % json.dumps(firmware)]
+    return [FIRMWARE_LINE + json.dumps(firmware), "elf = %s" % json.dumps(firmware)]
 
 
 def wokwi_toml(chips, firmware=None):

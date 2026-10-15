@@ -44,6 +44,10 @@ import parts as parts_library  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
+#: The tag that opens each trace in a board file, after its indent: `check_spine` counts the traces by it, and
+#: `tests/test_routes.py` holds the count to the build guide's.
+TRACE_TAG = "<trace "
+
 #: Layout constants. Ordinal, not designed — they exist to produce something that does not
 #: overlap, so the checks have a board to run on.
 MARGIN_MM = 6
