@@ -2395,6 +2395,40 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertIn("pin_order_proof", parts.owes(unproven))
         self.assertEqual(parts.broken_problems(unproven, written(unproven)), [])
 
+    def test_validate_does_not_run_the_checks_of_an_owed_key(self):
+        empty = part(pin_order=["P"], pin_order_proof={}, simulation={}, body_mm={"height": 3, "verified": True, "source": "x"})
+        path = written(empty)
+        owed = ("pin_order_proof", "simulation", "body_mm")
+        self.assertTrue(all(any(p.startswith(key) for p in parts.validate(empty, path)) for key in owed))
+        self.assertEqual(parts.validate(empty, path, owed=owed), [])
+        self.assertEqual(parts.broken_problems(empty, path), [])
+        unordered = part(pin_order=[])
+        self.assertTrue(parts.validate(unordered, written(unordered))[0].startswith("pin_order must be"))
+        self.assertEqual(parts.validate(unordered, written(unordered), owed=("pin_order",)), [])
+
+    def test_validate_does_not_check_an_owed_required_key(self):
+        nameless = part(schema=2)
+        del nameless["kind"]
+        problems = parts.validate(nameless, written(nameless))
+        self.assertEqual([p[:9] for p in problems], ["schema is", "missing r"])
+        self.assertEqual(parts.validate(nameless, written(nameless), owed=("schema", "kind")), [])
+        anonymous = part()
+        path = written(anonymous)
+        del anonymous["id"]
+        self.assertTrue(any(p.startswith("id is None") for p in parts.validate(anonymous, path)))
+        self.assertEqual(parts.broken_problems(anonymous, path), [])
+
+    def test_a_problem_inside_a_present_list_is_broken_even_when_other_keys_are_owed(self):
+        unsignalled = part(needs=[{"pin": "P", "direction": "in"}])
+        self.assertIn("simulation", parts.owes(unsignalled))
+        self.assertEqual(parts.broken_problems(unsignalled, written(unsignalled)), ["needs[0] has no signal"])
+
+    def test_a_wrong_pin_order_is_named_when_its_proof_is_owed(self):
+        unlisted = part(pin_order=5)
+        del unlisted["pin_order_proof"]
+        self.assertIn("pin_order_proof", parts.owes(unlisted))
+        self.assertEqual(parts.broken_problems(unlisted, written(unlisted)), ["pin_order must be a list of pad names, pad 1 first"])
+
     def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):
         home = Path(tempfile.mkdtemp())
         (home / "catalog").mkdir()
