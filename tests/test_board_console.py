@@ -152,12 +152,12 @@ class TheCureTest(unittest.TestCase):
         probe.cure()
         self.assertEqual(len(self.clock.slept), 2)
 
-    def test_the_wait_for_the_port_ends_after_port_back_s(self):
+    def test_the_wait_for_the_port_ends_after_10_s(self):
         probe = self.probe(printing("", []))
         probe.port_exists = lambda port: False
         probe.cure()
-        self.assertGreaterEqual(self.clock.now, board_console.PORT_BACK_S)
-        self.assertLess(self.clock.now, board_console.PORT_BACK_S + 1)
+        self.assertGreaterEqual(self.clock.now, 10)
+        self.assertLess(self.clock.now, 11)
 
     def test_a_restart_is_the_rom_s_rst_line(self):
         self.assertTrue(board_console.restarted("rst:0x15 (USB_UART_HPSYS),boot:0x1e"))

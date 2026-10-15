@@ -12,9 +12,9 @@ from board_connection import RAW_REPL_REFUSED, BoardCodeError, BoardUnreachableE
 #: The code a reach runs when it is given none: one line that prints `reached`.
 PRINT_REACHED = 'print("reached")'
 #: Why no cure ran although mpremote could not enter the raw REPL.
-NO_PROBE = "no cure: mpremote is not a Python package here, so the console cannot be opened with DTR and RTS off"
+NO_PROBE_MESSAGE = "no cure: mpremote is not a Python package here, so the console cannot be opened with DTR and RTS off"
 #: The two causes a reach names when the board did not answer after a cure (D11).
-BOTH_CAUSES = ("its USB output may still be dead, or its firmware does not read its console (code that never reads "
+BOTH_CAUSES_MESSAGE = ("its USB output may still be dead, or its firmware does not read its console (code that never reads "
                "stdin keeps mpremote out)")
 
 #: Result: `reached` is True when the board answered, `first_try_failed` when the first run did not, `cure` the
@@ -36,7 +36,7 @@ def reach(connection, probe, code=PRINT_REACHED, cure_first=False):
     cure = cure if cure_first else runner.last_cure
     if not reached and cure is not None:
         first = "" if cure_first else "the first try: %s. " % RAW_REPL_REFUSED
-        why = "%safter the cure: %s. So %s" % (first, why, BOTH_CAUSES)
+        why = "%safter the cure: %s. So %s" % (first, why, BOTH_CAUSES_MESSAGE)
     elif not reached and probe is None and RAW_REPL_REFUSED in why:
-        why = "%s. %s" % (why, NO_PROBE)
+        why = "%s. %s" % (why, NO_PROBE_MESSAGE)
     return ReachResult(reached, output, not reached or (cure is not None and not cure_first), cure, why)

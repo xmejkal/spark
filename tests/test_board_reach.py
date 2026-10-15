@@ -84,7 +84,7 @@ class TheRetryTest(unittest.TestCase):
         result = board_reach.reach(FakeBoardConnection(REFUSED), None)
         self.assertFalse(result.reached)
         self.assertIsNone(result.cure)
-        self.assertIn(board_reach.NO_PROBE, result.why)
+        self.assertIn("no cure: mpremote is not a Python package", result.why)
 
     def test_cure_first_cures_then_runs_once(self):
         board, probe = FakeBoardConnection("reached\n"), FakeConsoleProbe(cured=RESTART)
@@ -99,7 +99,7 @@ class TheRetryTest(unittest.TestCase):
         result = board_reach.reach(board, FakeConsoleProbe(cured=RESTART), cure_first=True)
         self.assertEqual((result.reached, result.first_try_failed, result.cure), (False, True, RESTART))
         self.assertTrue(result.why.startswith("after the cure: "))
-        self.assertIn(board_reach.BOTH_CAUSES, result.why)
+        self.assertIn("does not read its console", result.why)
         self.assertEqual(len(board.ran), 1)
 
 class TheDecoratorTest(unittest.TestCase):
