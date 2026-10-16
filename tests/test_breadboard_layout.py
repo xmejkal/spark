@@ -207,8 +207,23 @@ class AnOldDrawingTest(unittest.TestCase):
         (project / "breadboard.json").write_text("{}")
         with in_store():
             written = breadboard.write(project / "requirements.json", project / "breadboard.md")
-        self.assertIsNone(written.drawing)
+        self.assertEqual(written.drawings, [])
+        self.assertIn("no Wokwi pin positions", written.why)
         self.assertFalse((project / "breadboard.json").exists())
+
+
+class OnePlanPerWriteTest(unittest.TestCase):
+    def test_the_sheet_and_every_drawing_come_from_one_plan(self):
+        # The tech lead (P270): the sheet planned the layout a second time, so its color line could differ from the
+        # drawing's wires.
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "xiao"
+        shutil.copytree(XIAO, project)
+        with in_store(), mock.patch.object(breadboard, "_plan_layout", wraps=breadboard._plan_layout) as planned:
+            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual(planned.call_count, 1)
+        self.assertEqual([path.name for path, _ in written.drawings],
+                         [renderer.FILE_NAME for renderer in breadboard.DRAWING_RENDERERS])
 
 
 class WhatIsNotDrawnTest(unittest.TestCase):

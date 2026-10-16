@@ -60,7 +60,6 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
-import breadboard_drawing  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
@@ -758,25 +757,27 @@ def keep_breadboard(requirements, destination, stages=()):
     board.
     """
     sheet = Path(destination) / breadboard.SHEET
-    drawn = Path(destination) / breadboard_drawing.DRAWING_FILE
+    drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in breadboard.DRAWING_RENDERERS]
     if not any(stage.name == "build" and stage.status == OK for stage in stages):
         why = ("board only: nothing to wire" if any(stage.status == SKIPPED for stage in stages)
                else "the build did not finish in this run")
-        return [_left_from_earlier(sheet, "breadboard sheet", why), _left_from_earlier(drawn, "drawn breadboard", why)]
+        return [_left_from_earlier(sheet, "breadboard sheet", why)] + [
+            _left_from_earlier(path, renderer.NOUN, why) for path, renderer in drawings]
     try:
         breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
         written = breadboard.write(requirements, sheet, Path(destination) / breadboard.CIRCUIT)
     except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
         return [{"file": str(sheet), "did": "not written", "why": str(stopped),
-                 "line": "no breadboard sheet: %s" % stopped},
-                _left_from_earlier(drawn, "drawn breadboard", "the sheet was not written")]
+                 "line": "no breadboard sheet: %s" % stopped}] + [
+            _left_from_earlier(path, renderer.NOUN, "the sheet was not written") for path, renderer in drawings]
     why = "the parts and how to wire them on a breadboard"
     kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why)}]
-    if written.drawing:
-        return kept + [{"file": str(written.drawing), "did": "wrote", "why": breadboard.DRAWING_WHY,
-                        "line": "wrote %s — %s" % (written.drawing, breadboard.DRAWING_WHY)}]
-    return kept + [{"file": str(drawn), "did": "not written", "why": written.why,
-                    "line": "no drawn breadboard: %s" % written.why}]
+    kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE,
+              "line": "wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE)} for path, renderer in written.drawings]
+    if written.why:
+        kept += [{"file": str(path), "did": "not written", "why": written.why,
+                  "line": "no %s: %s" % (renderer.NOUN, written.why)} for path, renderer in drawings]
+    return kept
 
 
 def _left_from_earlier(path, what, why):

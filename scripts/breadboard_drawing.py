@@ -17,7 +17,6 @@ from pathlib import Path
 import breadboard_steps
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
-DRAWING_FILE = "breadboard.json"
 
 #: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
 #: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).
@@ -304,7 +303,18 @@ class BreadboardPlanner:
 
 class WokwiBreadboardDiagram:
     """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
-    colors, so the sheet and the diagram share one palette."""
+    colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
+    below and `text(layout)`, which `breadboard.DRAWING_RENDERERS` and the build read."""
+
+    #: The file it writes, beside the sheet.
+    FILE_NAME = "breadboard.json"
+    #: What the build calls the file in a line that says it was not written or was removed.
+    NOUN = "drawn breadboard"
+    #: What the build says beside the file's path when it wrote it.
+    PURPOSE_MESSAGE = "an example layout of the steps on a breadboard: paste it into a new project on wokwi.com"
+    #: What the sheet says about the file, under its steps.
+    SHEET_MESSAGE = ("An example layout is in breadboard.json: paste it into the diagram.json of a new project on "
+                     "wokwi.com.")
 
     def __init__(self, colors=None, breadboard_id="bb1"):
         self.colors = colors or breadboard_steps.StepColors()
