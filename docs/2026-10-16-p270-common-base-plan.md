@@ -10,7 +10,7 @@ at the end.
 ## Context
 
 P269's discovery (PR #305, D7 and D8): step 1 is "a small common base, breadboard only", built as far as the
-breadboard and the picture need. Rework is accepted when the perfboard comes. The PO's words: "please also create
+breadboard and the picture need. When the perfboard comes, rework is accepted. The PO's words: "please also create
 some common base". The PR #303 review asked for the same seams (AT270): a parts catalog class, a table of drawings,
 and one write loop.
 
