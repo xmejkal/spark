@@ -151,7 +151,7 @@ These write:
 
 **To build someone else's project,** build a copy. Copy everything but `node_modules`
 (`rsync -a --exclude node_modules SRC/ COPY/`), then link the original's `node_modules` into the copy by its absolute
-path. A copy with no `node_modules` turns `npx tsci` into a download; see rule 5 below.
+path. A copy with no `node_modules` turns a bare `npx tsci` into a download; see rule 5 below.
 
 ### check_all's answer
 
@@ -534,8 +534,7 @@ Today's output also carries `"unmeasured": 0`, after `status`.
    `requirements.json`. To check `board.tsx` as it stands, build it with the project's own tscircuit:
    `npx --no tsci build board.tsx` ([commands/build.md](../../commands/build.md#the-steps-when-one-is-wanted-on-its-own)).
    `--no` refuses to fetch anything. Without it, a project with no `node_modules` makes npx look up `tsci` in the npm
-   registry, where that name belongs to an unrelated package, and run it. The note init writes into a project's
-   `package.json` still says a bare `npx tsci` ([P138](https://github.com/xmejkal/spark/issues/72)); do not follow it.
+   registry, where that name belongs to an unrelated package, and run it.
    Otherwise, tell the person the answer is about the last build.
 6. **check_all is not the whole answer.** It runs five checks on the last build. It does not run the generator's
    CONFLICT test ([P109](https://github.com/xmejkal/spark/issues/43)). It does not read the notes in `board.tsx` or

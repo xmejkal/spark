@@ -133,6 +133,9 @@ class WhatItWritesTest(unittest.TestCase):
         package = json.loads((self.root / "package.json").read_text())
         self.assertEqual((package["name"], package["private"], "@tscircuit/cli" in package["dependencies"]),
                          (self.root.name, True, True))
+        note = package["//"]
+        self.assertEqual(("npx --no tsci" in note, "bun" in note, note.replace("npx --no tsci", "").count("npx tsci")),
+                         (True, True, 0), "a bare `npx tsci` fetches npm's unrelated tsci package (P138)")
         (self.root / "package.json").write_text('{"name": "mine", "dependencies": {"tscircuit": "*"}}')
         init_project.main(["--project", str(self.root), "--force"])
         self.assertEqual(json.loads((self.root / "package.json").read_text())["name"], "mine",

@@ -374,17 +374,19 @@ PINNED_CORE = _TSCIRCUIT["core"]
 
 def package_file(project):
     """
-    What `npx tsci build` needs in a project. Without a package file it walks up looking for a
+    What `npx --no tsci build` needs in a project. Without a package file it walks up looking for a
     root, reaches the home folder and dies on a protected directory; with one, it resolves the
     board's imports from the project and needs the cli installed there (irrigation diary I9 —
     both were met in one evening). The one command never meets either: it builds in a temp
     directory, where a global tsci resolves from its own install. Never rewritten: a person may
-    add to it. `npm install` once, then `npx tsci build`.
+    add to it. `npm install` once, then `npx --no tsci build`.
     """
     pinned = tools.merged(project)["tools"]["tscircuit"]  # a project's own pin wins (P82)
     return {"name": project.name, "private": True,
             "dependencies": {"@tscircuit/cli": pinned["version"], "tscircuit": pinned["core"]},
-            "//": "written by /spark:init: `npm install` once, then `npx tsci build board.tsx` works here. "
+            "//": "written by /spark:init: `npm install` once, then `npx --no tsci build board.tsx` works here. "
+                  "`--no` refuses to fetch npm's unrelated `tsci` package. `tsci` runs on bun (spark's "
+                  "ts-runtime), so bun must be installed (npm or Homebrew). "
                   "BOTH are pinned: the cli, and the `tscircuit` core it takes as a `*` peer dependency "
                   "and would otherwise fetch newest. Every number in spark's documents was measured on "
                   "this core; see init_project.PINNED_TSCI and PINNED_CORE."}
