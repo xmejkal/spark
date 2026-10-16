@@ -214,3 +214,54 @@ Not ★ but checked:
 Not checked: C8 (the Artifact tool is not in my session), circuit-to-svg in a browser bundle, how the SVGs look,
   whether Wokwi's editor has schematic or PCB views (not opened), whether a project board id (`xiao-esp32-c6-fresh`)
   is drawn by P267's code.
+
+## Second pass, 2026-10-16
+
+Scope: the sections changed by 8b7de81 only (brief.md header, Riskiest, Test, Questions, D2 to D9, Hand-off;
+jobs-and-journeys.md Jobs; risks-and-tests.md ratings and Results; items.md).
+
+### 2. Summaries against their sources
+
+- A3 retired (risks-and-tests.md Results, brief.md Riskiest): the pass line set before the result is "he says he
+  wired from the picture". D4's source is "The picture", an answer to which he *would* look at most. That is intent,
+  not use; the Results row itself says "not of use", then marks the line met. The brief's own Test row keeps the real
+  line open ("he wires button-light from the picture"). Stronger than its source. Fix: A3 open, rated high, test = P268.
+- Riskiest names A3 (retired) while Stands on names A1 as the one high open assumption. The riskiest should be the
+  open high one, A1, with its test.
+- D9 "supersedes D2 for step 5": the quote is "3 yes, and it should stay where we move it". It does not mention a
+  rebuild; D2 asked about a rebuild. The supersession is an inference, unmarked. Also items.md Step 5 still cites
+  "D2: a lost move is annoying", not D9, and the Test row says the edit spike is "dropped by D2" while A1's row and
+  the Collection plan (row "Do edits survive a rebuild?") still point to that spike. Either D9 revives the spike for
+  step 5's plan, or A1 has no test. Dropped caveat: A1's rating rests on one reading of one phrase.
+- A5, A6, A8, A9, A10 rated "low D8": D8 says only that these "are checked in each step's own plan"; it rates none.
+  The template says Stands on is "—" while any is unrated. Stronger than the source; Stands on should be "10 H, —".
+- "Ready for: design" needs the frame (D1), the jobs (D9), a direction (D8) and the remaining risk accepted. D8 says
+  "the remaining risk" in the summary, but its quote is "Yes, this order", and A1 rose to high after D8, in D9. The
+  acceptance of risk predates the new high. Design for steps 1 to 4 follows; for step 5 it does not.
+- J1 dropped (D9), yet Hand-off's success proof (step 2: "he wires from it") and A3 are J1's own "so I can wire it
+  from a picture". The quote drops "see it on my real board" and keeps "parts should have pictures, photos". The
+  picture slice now serves J5/J7, and its proof still serves the dropped J1. story-map.md still tags S0, S1, S3 J1,
+  and Today they… still has a J1 row.
+- Items against D8: D8's step 8 is sharing; items.md's "Step 8" is the Fusion export (D9 says "after step 7"), so two
+  things are step 8. Name it step 9, or J8. Step 8's "depends on: step 3" disagrees with D9's "after step 7". Steps
+  1 to 7 match D8's order; 6 split into 6a/6b is not in D8 (fine, but unmarked). Slices "9 An enclosure" and
+  "7 Perfboard to PCB" exist on the board (checked with gh).
+- Q10 "answered in part by D2 to D5; the rest dropped": no D drops it. Dropped caveat: the account questions were the
+  only past-tense evidence (n = 1); now all value evidence is intent.
+
+### 3. Strongest rival explanation not ruled out
+
+"It should stay where we move it" means the editor holds a part where it is dropped (no snap back, saved with the
+file), not that it survives a rebuild from changed requirements. Under this reading D2 stands, A1 stays low, and
+step 5 needs only save and load. One question to the PO separates the two.
+
+### 4. Numbers without unit, population, period or provenance
+
+- "10 H, 1 of which": population is the open rows of risks-and-tests.md; fine, but it counts A3 as retired (above).
+- `cf3f8e53…` (items.md Step 1): no file path, no command, no commit; no `breadboard.json` is in the tree and the
+  hash appears nowhere else in the repository.
+- "n = 1" for A3: right population, but the period and the kind (one multiple-choice answer, intent) are the evidence.
+- "ten items": counted, correct (nine steps and one chore).
+
+Searches: none · the decision it served: none · not used. One `gh project field-list` for the Slice options.
+Not checked: the session's AskUserQuestion transcript; the D quotes are taken as written in brief.md.
