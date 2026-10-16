@@ -37,6 +37,7 @@ import design  # noqa: E402
 import emit_board  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
+from fakes import FakeTscircuitExport  # noqa: E402
 
 
 def stage(name, status):
@@ -956,6 +957,64 @@ class NothingToBuildIsNotAPassTest(unittest.TestCase):
         self.assertIn("nothing to build", stages[-1].detail)
         self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
         self.assertIn('"board_only": true', stages[-1].detail)
+
+
+class TheTabbedPageTest(unittest.TestCase):
+    """P271 (#307): page.html beside the kept board, its three tabs from the one circuit.json kept in this run."""
+
+    def setUp(self):
+        self.project = Path(tempfile.mkdtemp())
+        self.picture = self.project / "breadboard.svg"
+        self.picture.write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+        self.kept = [{"file": str(self.project / "dist"), "did": "wrote"},
+                     {"file": str(self.picture), "did": "wrote", "why": "a picture"}]
+        self.page = self.project / "page.html"
+
+    def keep(self, stages=(check_spine.Stage("build", check_spine.OK),), exporter=None):
+        self.exporter = exporter or FakeTscircuitExport()
+        return check_spine.keep_tabbed_page(self.project, list(stages), self.kept, self.exporter)
+
+    def test_a_build_that_finished_writes_three_tabs_from_the_kept_circuit(self):
+        entry = self.keep()
+        self.assertEqual((entry["file"], entry["did"]), (str(self.page), "wrote"))
+        circuit = str(self.project / "dist" / "board" / "circuit.json")
+        self.assertEqual(self.exporter.asked, [(circuit, "schematic-svg"), (circuit, "pcb-svg")])
+        self.assertEqual(3, self.page.read_text().count("data:image/svg+xml;base64,"))
+
+    def test_a_failed_build_removes_an_earlier_page(self):
+        self.page.write_text("old")
+        entry = self.keep(stages=[check_spine.Stage("build", check_spine.PROBLEMS)])
+        self.assertEqual(entry["did"], "removed")
+        self.assertIn("the build did not finish in this run", entry["why"])
+        self.assertFalse(self.page.exists())
+
+    def test_a_board_only_build_removes_an_earlier_page(self):
+        self.page.write_text("old")
+        entry = self.keep(stages=[check_spine.Stage("build", check_spine.SKIPPED)])
+        self.assertEqual((entry["did"], entry["line"].split(";")[0]), ("removed", "no page: board only: nothing to draw"))
+
+    def test_a_dist_that_was_not_kept_removes_an_earlier_page(self):
+        self.page.write_text("old")
+        self.kept = self.kept[1:]
+        entry = self.keep()
+        self.assertEqual(entry["did"], "removed")
+        self.assertIn("the build was not kept in this run", entry["why"])
+
+    def test_a_breadboard_picture_that_was_not_written_gives_its_why(self):
+        self.kept[1] = {"file": str(self.picture), "did": "not written", "why": "no layout fits"}
+        self.keep()
+        self.assertIn("<p>Breadboard: not drawn, because no layout fits.</p>", self.page.read_text())
+
+    def test_a_breadboard_picture_that_cannot_be_read_gives_its_why(self):
+        self.picture.write_bytes(b"\xff")
+        self.keep()
+        self.assertIn("Breadboard: not drawn, because breadboard.svg cannot be read", self.page.read_text())
+
+    def test_a_failed_export_still_writes_the_page_with_its_why(self):
+        import tabbed_page
+        failed = FakeTscircuitExport({"pcb-svg": tabbed_page.SvgExportResult(None, "tsci is not installed")})
+        self.assertEqual(self.keep(exporter=failed)["did"], "wrote")
+        self.assertIn("<p>PCB: not drawn, because tsci is not installed.</p>", self.page.read_text())
 
 
 class TheBoardAloneTest(unittest.TestCase):

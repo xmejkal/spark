@@ -86,11 +86,11 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - Q2 · Which slice comes first: the base, the SVG and the check (S0 to S2), a viewer, or a perfboard? · decides: the board order · options in Options · unblocks: P268 · opinion (the tech lead, the PO assistant: S0 to S2) · kind: decision · status: answered D8
 - Q3 · Who makes the routes on a perfboard or stripboard: spark plans and you edit, you route and spark checks, or an export to VeroRoute? · decides: S5 and S6's size · kind: decision · status: queued for step 6's plan
 - Q4 · Where are your edits kept: marked inside one layout file, or in a separate file the build never writes? · decides: the save format and the rebuild rule · kind: decision · status: queued for step 5's plan
-- Q5 · How does the editor draw: SVG with or without Vue, or a canvas library? · decides: the stack and the Artifact's libraries · kind: decision · status: queued for step 3's plan
-- Q6 · How does the browser check a layout: a small TS checker beside Python, or the Python core in the page (Pyodide)? · decides: whether logic lives in two languages · kind: decision · status: queued for step 3's plan
+- Q5 · How does the editor draw: SVG with or without Vue, or a canvas library? · decides: the stack and the Artifact's libraries · kind: decision · status: moved to step 5's plan (D16): step 3 only shows pictures, and step 4 needs no library
+- Q6 · How does the browser check a layout: a small TS checker beside Python, or the Python core in the page (Pyodide)? · decides: whether logic lives in two languages · kind: decision · status: moved to step 5's plan (D16): step 3 only shows pictures, and step 4 needs no library
 - Q7 · Pictures: keyed by the part's record, and may Fritzing's share-alike art be kept in your own store, never in spark? · decides: S1's and S7's picture source · kind: decision · status: queued for step 2's plan
 - Q8 · Is the catalogue editor part of P269, or of P160 inside the store epic P178? Is a battery its own kind of record? · decides: S7's home · kind: decision · status: queued for step 7's plan
-- Q9 · Do P199's walk-through page and this editor share one page? · decides: one web app or two · kind: decision · status: queued for step 3's plan
+- Q9 · Do P199's walk-through page and this editor share one page? · decides: one web app or two · kind: decision · status: moved to step 5's plan (D16): P199 has no code yet
 - Q10 · Your own use, ten short account questions (council/user.md Q-a to Q-j), for example: have you opened `breadboard.json` in Wokwi, and if so, did you move anything? · decides: which friction comes first · kind: account · status: answered in part by D2 to D5; the rest dropped
 
 ## Decisions
@@ -112,6 +112,8 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D13 · a new Slice option "Views and editors" for steps 1 to 5 · the PO · 2026-10-16 · AskUserQuestion in this session · options: a new slice, v0.10 The basic journey, parked after v0.10. The lead did not add it, because the API replaces the whole option list; the PO adds it by hand
 - D14 · the rows AT273 to AT276 in docs/observations/INDEX.md, outside this folder · the PO's standing rule · rules.md (CLAUDE.local.md): "The gaps and findings of every agent run become rows in spark's docs/observations/INDEX.md" · a standing yes for that kind of action
 - D15 · stripboard is dropped: "letd get rid of stripboard". Step 6 is plain perfboard only; #310 is closed as not planned. This narrows D-b · the PO · 2026-10-16 · his message in this session · options: none offered
+- D16 · step 3's page: "Plain HTML now": one page.html, each picture in its own <img>, no framework and no Node build; Q5, Q6 and Q9 move to step 5's plan · the PO · 2026-10-16 · AskUserQuestion in P271's plan session (#307) · options: plain HTML now, TS and Vue now, TS without a framework
+- D17 · the layout check: "One source now, check later": all three tabs come from the one kept circuit.json, and the check that each jumper joins the same pins as circuit.json is its own card, P279 (#317) · the PO · 2026-10-16 · same · options: one source now and the check later, both in step 3
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
