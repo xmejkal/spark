@@ -13,8 +13,10 @@ What it writes, each time from scratch:
   - the parts: the board, each part with how many, each resistor a part asks for (R1, R2, …, through-hole) and what
     it is for, and whether you have each: yours (your drawer holds it for this project), in your drawer (you own it,
     not held here), to get; blank when the project is not on your list (/spark:init puts it there);
-  - the wiring, one connection point per line: the board's printed label and each part's pin and leg. Put a point's
-    ends in one breadboard row, or join them with a wire; a point with more ends than a row holds goes on a rail;
+  - the wiring (P202): numbered steps, one connection each, by the board's printed label and each part's pin and leg
+    (each part in first, each pin in its own row, then each wire to the row of a part's pin, or to a rail for a point
+    with more ends than a row holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
+    line, as the check list after wiring (breadboard_steps.py holds the step rule);
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
 It reads the built circuit (dist/board/circuit.json), the same file every check reads, so the sheet is the board that
