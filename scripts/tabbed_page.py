@@ -76,7 +76,7 @@ class TabbedHtmlPage:
              "input{display:none}"
              "label{display:inline-block;padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent}"
              ".panel{display:none;padding:12px}"
-             ".panel img{max-width:100%;height:auto;background:#fff}")
+             ".panel img{width:100%;height:auto;max-height:88vh;object-fit:contain;background:#fff}")
 
     def text(self, tabs, title="spark"):
         radios, labels, panels, shown = [], [], [], []
@@ -95,7 +95,7 @@ class TabbedHtmlPage:
     @staticmethod
     def _picture(tab):
         if tab.svg is None:
-            return "<p>No %s: %s.</p>" % (html.escape(tab.title.lower()), html.escape(tab.why_missing or "not drawn"))
+            return "<p>%s: not drawn, because %s.</p>" % (html.escape(tab.title), html.escape(tab.why_missing))
         data = base64.b64encode(tab.svg.encode("utf-8")).decode("ascii")
         return '<img src="data:image/svg+xml;base64,%s" alt="%s">' % (data, html.escape(tab.title, quote=True))
 

@@ -60,6 +60,7 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
+import breadboard_drawing  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
@@ -67,6 +68,7 @@ import netlist  # noqa: E402
 import parts  # noqa: E402
 import sim_project  # noqa: E402
 import store  # noqa: E402
+import tabbed_page  # noqa: E402
 import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
@@ -688,7 +690,7 @@ def main(argv=None):
         except (store.StoreProblem, OSError) as unrecorded:
             print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
 
-    return report(stages, args, workdir, requirements)
+    return report(stages, args, workdir, requirements, tabbed_page.TscircuitExport(toolchain))
 
 
 def kept_into(workdir, destination):
@@ -780,6 +782,49 @@ def keep_breadboard(requirements, destination, stages=()):
     return kept
 
 
+def why_no_page(destination, stages, kept):
+    """Why the page (P271) cannot be drawn in this run, or None: its three tabs read the one circuit.json kept in this
+    run, so a build that did not finish, a board-only one, or a dist/ that was not copied leaves no page."""
+    if not any(stage.name == "build" and stage.status == OK for stage in stages):
+        return ("board only: nothing to draw" if any(stage.status == SKIPPED for stage in stages)
+                else "the build did not finish in this run")
+    if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] == "wrote" for entry in kept):
+        return "the build was not kept in this run"
+    return None
+
+
+def keep_tabbed_page(destination, stages, kept, exporter):
+    """
+    The page beside the kept board (P271, #307): the breadboard picture the sheet's step just wrote, and tscircuit's
+    schematic and PCB of the same kept circuit.json, as one kept entry {file, did, why, line}. A page left from an
+    earlier build is removed when this run cannot draw one, since it describes another board.
+    """
+    page = Path(destination) / tabbed_page.TabbedHtmlPage.FILE_NAME
+    why = why_no_page(destination, stages, kept)
+    if why:
+        return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)
+    circuit = Path(destination) / breadboard.CIRCUIT
+    tabs = [_breadboard_tab(destination, kept),
+            tabbed_page.exported_tab("Schematic", exporter.export_svg(circuit, "schematic-svg")),
+            tabbed_page.exported_tab("PCB", exporter.export_svg(circuit, "pcb-svg"))]
+    try:
+        page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=Path(destination).resolve().name),
+                        encoding="utf-8")
+    except OSError as refused:
+        return {"file": str(page), "did": "not written", "why": str(refused), "line": "no page: %s" % refused}
+    why = tabbed_page.TabbedHtmlPage.PURPOSE_MESSAGE
+    return {"file": str(page), "did": "wrote", "why": why, "line": "wrote %s — %s" % (page, why)}
+
+
+def _breadboard_tab(destination, kept):
+    """The breadboard tab: the picture this run wrote, or why it did not."""
+    picture = str(Path(destination) / breadboard_drawing.SvgBreadboardDiagram.FILE_NAME)
+    entry = next((entry for entry in kept if entry["file"] == picture), None)
+    if entry is not None and entry["did"] == "wrote":
+        return tabbed_page.Tab("Breadboard", Path(picture).read_text(encoding="utf-8"), None)
+    return tabbed_page.Tab("Breadboard", None, entry["why"] if entry else "the breadboard picture was not written")
+
+
 def _left_from_earlier(path, what, why):
     """One kept entry for a file this run did not write: removed when an earlier build left it, else not written."""
     if path.exists():
@@ -847,7 +892,7 @@ def keep_simulation(workdir, destination):
     return {"file": str(destination), "did": "wrote", "why": why, "line": "wrote %s — %s" % (destination, why)}
 
 
-def report(stages, args, workdir=None, requirements=None):
+def report(stages, args, workdir=None, requirements=None, exporter=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
     any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed. What
@@ -859,6 +904,7 @@ def report(stages, args, workdir=None, requirements=None):
         kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages)
         kept += drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
+        kept.append(keep_tabbed_page(Path(args.keep), stages, kept, exporter or tabbed_page.TscircuitExport(None)))
     simulation = keep_simulation(workdir, simulation_dir(args)) if workdir is not None and simulation_dir(args) else None
     if simulation is not None:
         kept = (kept or []) + [simulation]

@@ -56,7 +56,7 @@ class TabbedHtmlPageTest(unittest.TestCase):
 
     def test_a_missing_tab_says_why_escaped(self):
         page = TabbedHtmlPage().text(three_tabs(schematic=None)[:1] + [Tab("Schematic", None, "tsci said <b>no</b>")])
-        self.assertIn("<p>No schematic: tsci said &lt;b&gt;no&lt;/b&gt;.</p>", page)
+        self.assertIn("<p>Schematic: not drawn, because tsci said &lt;b&gt;no&lt;/b&gt;.</p>", page)
         self.assertEqual(1, len(pictures(page)))
 
     def test_the_same_tabs_give_the_same_bytes(self):
