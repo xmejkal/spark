@@ -42,6 +42,12 @@ def in_store(home):
     return mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
 
 
+def point_lines(text):
+    """The numbered lines of the sheet's Points section: one per connection point (the steps are numbered too)."""
+    section = text.split("### Points", 1)[1].split("\n## ", 1)[0]
+    return [line for line in section.splitlines() if re.match(r"^\d+\. ", line)]
+
+
 class TheSheetTest(unittest.TestCase):
     def setUp(self):
         self.project = a_copy()
@@ -50,7 +56,7 @@ class TheSheetTest(unittest.TestCase):
             self.text = breadboard.sheet(self.project / "requirements.json")
 
     def connections(self):
-        return [line for line in self.text.splitlines() if re.match(r"^\d+\. ", line)]
+        return point_lines(self.text)
 
     def test_each_point_of_the_built_circuit_is_one_line(self):
         # Four points: D3 with the button (the board's internal pull-up holds it, P204), ground with the button and the
@@ -80,7 +86,7 @@ class TheSheetTest(unittest.TestCase):
         self.assertNotIn("10kΩ", self.text, "P204: the button uses the board's internal pull-up")
         self.assertIn("TactileButton A has no resistor: the firmware must pull it up", self.text)
         self.assertIn("| 1 | 330Ω resistor, through-hole | R1 in series with LedRed5mm A |", self.text)
-        self.assertIn("run a jumper from that pin to a free", self.text, "the board covers the rows beside its pins")
+        self.assertIn("so a board pin always gets a", self.text, "the board covers the rows beside its pins")
         self.assertIn("a breadboard and jumper wires", self.text)
         self.assertIn("| qty | part | for | have |", self.text)
 
@@ -96,7 +102,7 @@ class TheMotorExampleTest(unittest.TestCase):
         shutil.copytree(MOTOR, self.project)
         with in_store(Path(tempfile.mkdtemp())):
             self.text = breadboard.sheet(self.project / "requirements.json")
-        self.wiring = [line for line in self.text.splitlines() if re.match(r"^\d+\. ", line)]
+        self.wiring = point_lines(self.text)
 
     def test_every_resistor_end_is_on_the_sheet_once(self):
         # Five reviewers found it: two pull-ups on 3V3 printed as one end, so one was never wired.
@@ -202,9 +208,9 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
             circuit += [{"type": "source_component", "source_component_id": "c%d" % n, "name": "Part%d" % n},
                         {"type": "source_port", "source_port_id": "p%d" % n, "source_component_id": "c%d" % n, "name": "A"}]
         joined = {"type": "source_trace", "connected_source_port_ids": ["d3", "p1", "p2", "p3", "p4"]}
-        self.assertNotIn("rail", breadboard._wiring(board, circuit + [joined], [], {})[0])
+        self.assertNotIn("rail", breadboard._wiring(board, circuit + [joined], [], {})[0][0])
         joined["connected_source_port_ids"].append("p5")
-        self.assertIn("join board D3 to a rail", breadboard._wiring(board, circuit + [joined], [], {})[0])
+        self.assertIn("join board D3 to a rail", breadboard._wiring(board, circuit + [joined], [], {})[0][0])
 
     def test_a_port_alone_on_a_supply_is_a_point_that_names_the_supply(self):
         circuit = [{"type": "source_component", "source_component_id": "c1", "name": "L9110sModule"},

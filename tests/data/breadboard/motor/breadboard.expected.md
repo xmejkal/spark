@@ -16,9 +16,92 @@
 
 ## Wiring
 
-Each line is one point: put its ends in one breadboard row, or join them with a wire. The board covers the
-rows beside its own pins, so for a line that starts with a board pin, run a jumper from that pin to a free
-row and put the line's other ends in that row.
+### Steps
+
+One connection per step. The board covers the rows beside its own pins, so a board pin always gets a
+jumper.
+
+1. Put L9110sModule in the breadboard, each pin in its own row.
+2. Put JstPh2PowerInlet in the breadboard, each pin in its own row.
+3. Put BtnOpen in the breadboard, each pin in its own row.
+4. Put BtnMode in the breadboard, each pin in its own row.
+5. Run a jumper from board A5 to the row of L9110sModule AIB.
+6. Put R2 (10kΩ pull-down on L9110sModule AIB), end 1, in the row of L9110sModule AIB.
+7. Run a jumper from board D3 to the row of L9110sModule AIA.
+8. Put R1 (10kΩ pull-down on L9110sModule AIA), end 1, in the row of L9110sModule AIA.
+9. Run a jumper from board D11 to the row of BtnMode A.
+10. Run a jumper from board D12 to the row of BtnOpen A.
+11. Run a jumper from board GND to a free rail. Mark it GND.
+12. Run a jumper from the row of BtnMode B (either leg of the other pair) to the GND rail.
+13. Run a jumper from the row of BtnOpen B (either leg of the other pair) to the GND rail.
+14. Run a jumper from the row of JstPh2PowerInlet GND to the GND rail.
+15. Run a jumper from the row of L9110sModule GND to the GND rail.
+16. Put R1 (10kΩ pull-down on L9110sModule AIA), end 2, in the GND rail.
+17. Put R2 (10kΩ pull-down on L9110sModule AIB), end 2, in the GND rail.
+18. Run a jumper from the row of L9110sModule VCC to the row of JstPh2PowerInlet VCC.
+19. Connect the MOTOR6V supply, from off the board, to the row of JstPh2PowerInlet VCC. Check its voltage first (Before you power it).
+
+### Diagram
+
+Each line is one step, with its number.
+
+```mermaid
+flowchart LR
+  subgraph g1["board"]
+    n1["board A5"]
+    n2["board D3"]
+    n3["board D11"]
+    n4["board D12"]
+    n5["board GND"]
+  end
+  subgraph g2["L9110sModule"]
+    n6["L9110sModule AIB"]
+    n7["L9110sModule AIA"]
+    n8["L9110sModule GND"]
+    n9["L9110sModule VCC"]
+  end
+  subgraph g3["R2"]
+    n10["R2 end 1"]
+    n11["R2 end 2"]
+  end
+  subgraph g4["R1"]
+    n12["R1 end 1"]
+    n13["R1 end 2"]
+  end
+  subgraph g5["BtnMode"]
+    n14["BtnMode A"]
+    n15["BtnMode B"]
+  end
+  subgraph g6["BtnOpen"]
+    n16["BtnOpen A"]
+    n17["BtnOpen B"]
+  end
+  subgraph g7["JstPh2PowerInlet"]
+    n18["JstPh2PowerInlet GND"]
+    n19["JstPh2PowerInlet VCC"]
+  end
+  n20["GND rail"]
+  n21["MOTOR6V supply"]
+  n1 ---|"5"| n6
+  n10 ---|"6"| n6
+  n2 ---|"7"| n7
+  n12 ---|"8"| n7
+  n3 ---|"9"| n14
+  n4 ---|"10"| n16
+  n5 ---|"11"| n20
+  n15 ---|"12"| n20
+  n17 ---|"13"| n20
+  n18 ---|"14"| n20
+  n8 ---|"15"| n20
+  n13 ---|"16"| n20
+  n11 ---|"17"| n20
+  n9 ---|"18"| n19
+  n21 ---|"19"| n19
+```
+
+### Points
+
+After the steps, each line is one point: its ends must be joined, and nothing else.
 
 1. board A5 · L9110sModule AIB · R2 (10kΩ pull-down on L9110sModule AIB), end 1
 2. board D3 · L9110sModule AIA · R1 (10kΩ pull-down on L9110sModule AIA), end 1

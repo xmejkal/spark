@@ -33,6 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assign_pins  # noqa: E402
+import breadboard_steps  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
 import emit_board  # noqa: E402
@@ -215,38 +216,47 @@ def _supplies(circuit):
 
 
 def _wiring(board, circuit, design_parts, resistors):
-    """One numbered line per connection point, board labels first."""
+    """The wiring: one numbered line per connection point, board labels first, and the same points as steps."""
     records = {emit_board.component_name(part): part for part in design_parts}
 
     def end(component, port):
-        """(on the board, the words): one end of a connection, as a person finds it on the bench. Every end of a part or
-        a resistor reads differently (a resistor by its tag), so the board's ground pads are the only ends that read the
-        same, and they are one."""
+        """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
+        differently (a resistor by its tag), so the board's ground pads are the only ends that read the same, and they
+        are one."""
         if component["name"] == BOARD_COMPONENT:
-            return True, "board %s" % printed_label(board, port)
+            label = "board %s" % printed_label(board, port)
+            return breadboard_steps.End(breadboard_steps.BOARD, "board", label, label)
         if component["name"] in resistors:
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
-            return False, "%s (%s %s), end %s" % (tag, value, purpose, number)
+            return breadboard_steps.End(breadboard_steps.RESISTOR, tag, "%s end %s" % (tag, number),
+                                        "%s (%s %s), end %s" % (tag, value, purpose, number))
         leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
-        return False, "%s %s%s" % (component["name"], port.get("name"), " (%s)" % leg if leg else "")
+        short = "%s %s" % (component["name"], port.get("name"))
+        return breadboard_steps.End(breadboard_steps.PART, component["name"], short,
+                                    short + (" (%s)" % leg if leg else ""))
 
     said = []
     for point in points(circuit):
         ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
-        ends.sort(key=lambda one: (not one[0], _natural(one[1])))
-        line = " · ".join(text for _, text in ends)
-        on_board, first = ends[0]
+        ends.sort(key=lambda one: (one.kind != breadboard_steps.BOARD, _natural(one.text)))
+        line = " · ".join(one.text for one in ends)
+        on_board = ends[0].kind == breadboard_steps.BOARD
         if on_board and len(ends) == 1:
             continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
-        if point.nets and not on_board:
-            line += " · the %s supply, from off the board, not part of the parts list" % " / ".join(point.nets)
-        if len(ends) > ROW_HOLES:  # a board pin's end is its jumper's end, in a hole of the free row
+        supply = " / ".join(point.nets) if point.nets and not on_board else None
+        if supply:
+            line += " · the %s supply, from off the board, not part of the parts list" % supply
+        rail = len(ends) > ROW_HOLES  # a board pin's end is its jumper's end, in a hole of the free row
+        if rail:
             line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
-                     % first if on_board else " — put these ends on one rail")
-        said.append((on_board, line))
+                     % ends[0].text if on_board else " — put these ends on one rail")
+        said.append((on_board, line, breadboard_steps.StepPoint(ends, supply, rail)))
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
-    return ["%d. %s" % (number, line) for number, (_, line) in enumerate(said, 1)]
+    placed = {one.component for _, _, step_point in said for one in step_point.ends}
+    steps = breadboard_steps.BreadboardSteps(
+        dict.fromkeys(name for name in records if name in placed), [step_point for _, _, step_point in said])
+    return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
 def _unwired(board, design):
@@ -303,11 +313,15 @@ def sheet(requirements_path, circuit_path=None):
     lines = ["# Breadboard: %s, on a %s" % (requirements_path.resolve().parent.name, built.board.get("name")), "",
              "## Parts", ""]
     lines += _parts_table(built.board, built.parts, resistors, supplies, have)
-    lines += ["", "## Wiring", "",
-              "Each line is one point: put its ends in one breadboard row, or join them with a wire. The board covers the",
-              "rows beside its own pins, so for a line that starts with a board pin, run a jumper from that pin to a free",
-              "row and put the line's other ends in that row.", ""]
-    lines += _wiring(built.board, circuit, built.parts, resistors)
+    point_lines, steps = _wiring(built.board, circuit, built.parts, resistors)
+    lines += ["", "## Wiring", "", "### Steps", "",
+              "One connection per step. The board covers the rows beside its own pins, so a board pin always gets a",
+              "jumper.", ""]
+    lines += steps.list_steps()
+    lines += ["", "### Diagram", "", "Each line is one step, with its number.", "", steps.draw_mermaid()]
+    lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
+              ""]
+    lines += point_lines
     unwired = _unwired(built.board, built)
     lines += (["", "Not wired:", ""] + unwired) if unwired else []
     lines += ["", "## Before you power it", ""] + _before_power(built.parts, supplies)
