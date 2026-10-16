@@ -109,6 +109,8 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D10 · the catalogue editor marks pins on the picture: "so to be able to add and edit where on the picture which holes and connectors etc are would be good" · the PO · 2026-10-16 · his message in this session · options: none offered, his own addition to J4 and step 7
 - D11 · "it should stay where we move it" means "Stays after a rebuild": a moved part keeps its position after spark rebuilds, or spark names why it could not. A1 is high for step 5, and this supersedes D2 · the PO · 2026-10-16 · AskUserQuestion in this session · options: stays after a rebuild, stays when saved
 - D12 · the remaining risk: "Yes, check them later": A5, A6, A8, A9 and A10 are each checked in their own step's plan, with no test now · the PO · 2026-10-16 · same · options: yes check them later, test some now
+- D13 · a new Slice option "Views and editors" for steps 1 to 5 · the PO · 2026-10-16 · AskUserQuestion in this session · options: a new slice, v0.10 The basic journey, parked after v0.10. The lead did not add it, because the API replaces the whole option list; the PO adds it by hand
+- D14 · the rows AT273 to AT276 in docs/observations/INDEX.md, outside this folder · the PO's standing rule · rules.md (CLAUDE.local.md): "The gaps and findings of every agent run become rows in spark's docs/observations/INDEX.md" · a standing yes for that kind of action
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -119,8 +121,8 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - P269 (#304) is in Discovery · taken before this discovery, by the PO's approval of the plan (D-a)
 - set "Waiting on: the PO" while Q1 waited · not needed, he answered in the session
-- a comment on #304 linking this brief · pending, after the PR
-- file the items in items.md under #304 · D8
+- a comment on #304 linking this brief · D8, done with the PR
+- filed the items in items.md under #304, #306 to #314 · D8, done
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
