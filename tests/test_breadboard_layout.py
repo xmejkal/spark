@@ -5,6 +5,7 @@ Wokwi diagram. The geometry is the one measured in Wokwi (docs/discovery/2026-10
     python3 -m unittest tests.test_breadboard_layout
 """
 
+import hashlib
 import json
 import os
 import sys
@@ -177,6 +178,14 @@ class TheXiaoLayoutTest(unittest.TestCase):
     def test_the_same_build_gives_the_same_bytes(self):
         once = breadboard_drawing.WokwiBreadboardDiagram().text(self.layout)
         self.assertEqual(once, breadboard_drawing.WokwiBreadboardDiagram().text(breadboard._plan_layout(xiao_read())))
+
+    def test_the_drawing_keeps_the_bytes_wokwi_showed(self):
+        # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
+        # A refactor must not move a part by a rounding step: P270 changes the units inside, never the file.
+        with in_store():
+            text = breadboard.drawing(XIAO / "requirements.json")
+        self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
+                         "cf3f8e5384d50a1d496be66784679810f8932b1576566ca6f8a9d8f59646c32d")
 
     def test_every_hole_named_exists_on_a_half_board(self):
         drawn = json.loads(breadboard_drawing.WokwiBreadboardDiagram().text(self.layout))
