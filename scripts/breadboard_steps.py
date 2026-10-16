@@ -16,17 +16,30 @@ import collections
 
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.
 BOARD, PART, RESISTOR = "board", "part", "resistor"
+#: The board, as an End's component and a placing step name it; a step says it as "the board". (The circuit calls
+#: the same board `breadboard.BOARD_COMPONENT`, "Mcu".)
+THE_BOARD = "board"
 #: Which end anchors a point first: a part's pin sits in a fixed row, a resistor end goes anywhere, and a board pad
 #: needs a jumper to a free row.
 ANCHOR_ORDER = (PART, RESISTOR, BOARD)
 
 #: One end of a connection: its kind, the component it belongs to (one diagram box each), its short name (in the
-#: diagram, and where another end joins it) and the full words a step says when it moves this end.
-End = collections.namedtuple("End", "kind component name words")
+#: diagram, and where another end joins it), the full words a step says when it moves this end, and its pin on the
+#: component (the board's printed label, the part's pin, the resistor's end number), which a drawing looks up.
+End = collections.namedtuple("End", "kind component name words pin")
 #: One connection point: its ends (the board's first), the supply from off the board on it, and whether it goes on a rail.
 StepPoint = collections.namedtuple("StepPoint", "ends supply rail")
 #: One step: its words, and the two diagram names it joins (None for a step that only places something).
 Step = collections.namedtuple("Step", "words edge")
+#: What a step does: put a component in, set a point's anchor up, join an end to the anchor, or connect a supply.
+PLACE, SETUP, JOIN, SUPPLY = "place", "setup", "join", "supply"
+#: One step with what it is about: what it does, its subject (the component placed, the End set up or joined, the
+#: supply's name), its point's anchor (None for a placing step), and whether it runs a jumper. A drawing reads these,
+#: never the step's words.
+Seated = collections.namedtuple("Seated", "step act subject anchor jumper")
+#: Where a point's ends meet: in the row of one end, or on a rail with a mark.
+ROW, RAIL = "row", "rail"
+Seat = collections.namedtuple("Seat", "kind end mark")
 
 
 class Anchor:
@@ -46,6 +59,10 @@ class Anchor:
     def others(self, ends):
         """The ends that join the anchor, one step each."""
         return list(ends)
+
+    def seat(self):
+        """Seat: where the ends meet, as a value a drawing reads."""
+        raise NotImplementedError
 
 
 class RowAnchor(Anchor):
@@ -70,6 +87,9 @@ class RowAnchor(Anchor):
     def others(self, ends):
         return [end for end in ends if end is not self.end]
 
+    def seat(self):
+        return Seat(ROW, self.end, None)
+
 
 class RailAnchor(Anchor):
     """A point with more ends than one row holds, whose ends meet on a rail marked with its name."""
@@ -82,6 +102,9 @@ class RailAnchor(Anchor):
         """The first end to arrive marks a free rail; the rest find it by its mark."""
         return ("a free rail. Mark it %s" % self.mark) if first else "the %s rail" % self.mark
 
+    def seat(self):
+        return Seat(RAIL, None, self.mark)
+
 
 def anchor_for(point):
     """The anchor of one point: a rail when the caller said so (it owns the row size), else its best end."""
@@ -91,9 +114,14 @@ def anchor_for(point):
     return RowAnchor(next(end for kind in ANCHOR_ORDER for end in point.ends if end.kind == kind))
 
 
+def needs_jumper(end):
+    """Whether an end reaches its destination by a jumper: a resistor leg goes in itself, everything else does not."""
+    return end.kind != RESISTOR
+
+
 def move(end, destination):
     """The words that bring one end to its destination: a resistor leg goes in, everything else gets a jumper."""
-    if end.kind == RESISTOR:
+    if not needs_jumper(end):
         return "Put %s, in %s." % (end.words, destination)
     if end.kind == BOARD:
         return "Run a jumper from %s to %s." % (end.words, destination)
@@ -110,16 +138,24 @@ class BreadboardSteps:
     def walk(self):
         """[Step], in order: each thing placed, then each point's anchor set up and its other ends joined, then its
         supply."""
-        walked = [Step("Put %s in the breadboard, each pin in its own row." % one, None) for one in self.placed]
+        return [seated.step for seated in self.anchored()]
+
+    def anchored(self):
+        """[Seated]: the steps of walk(), in its order, each with what it does, its subject and its anchor."""
+        walked = [Seated(Step("Put %s in the breadboard, each pin in its own row."
+                              % ("the board" if placed == THE_BOARD else placed), None), PLACE, placed, None, False)
+                  for placed in self.placed]
         for point in self.points:
             anchor = anchor_for(point)
-            walked += anchor.setup()
-            walked += [Step(move(end, anchor.destination(number == 0)), (end.name, anchor.name))
-                       for number, end in enumerate(anchor.others(point.ends))]
+            set_up = anchor.seat().end
+            walked += [Seated(step, SETUP, set_up, anchor, set_up.kind == BOARD) for step in anchor.setup()]
+            walked += [Seated(Step(move(end, anchor.destination(number == 0)), (end.name, anchor.name)), JOIN, end,
+                              anchor, needs_jumper(end)) for number, end in enumerate(anchor.others(point.ends))]
             if point.supply:
-                walked.append(Step("Connect the %s supply, from off the board, to %s. Check its voltage first (Before "
-                                   "you power it)." % (point.supply, anchor.destination(False)),
-                                   ("%s supply" % point.supply, anchor.name)))
+                walked.append(Seated(Step("Connect the %s supply, from off the board, to %s. Check its voltage first "
+                                          "(Before you power it)." % (point.supply, anchor.destination(False)),
+                                          ("%s supply" % point.supply, anchor.name)), SUPPLY, point.supply, anchor,
+                                     False))
         return walked
 
     def boxes(self):
@@ -162,3 +198,13 @@ class MermaidDiagram:
 def _quote(text):
     """Text a mermaid label holds: its own double quotes as the entity mermaid reads."""
     return text.replace('"', "#quot;")
+
+
+class StepColors:
+    """One color per step number, so a step's wire in a drawing and its line on the sheet match. Neighbouring steps
+    differ. The palette wraps after its last color, so step 9 has step 1's color again: the number tells them apart."""
+
+    PALETTE = ("red", "orange", "gold", "green", "cyan", "blue", "purple", "magenta")
+
+    def color(self, number):
+        return self.PALETTE[(number - 1) % len(self.PALETTE)]

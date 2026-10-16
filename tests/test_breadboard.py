@@ -92,6 +92,7 @@ class TheSheetTest(unittest.TestCase):
 
 
 MOTOR = ROOT / "tests" / "data" / "breadboard" / "motor"
+XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 
 
 class TheMotorExampleTest(unittest.TestCase):
@@ -146,6 +147,19 @@ class TheMotorExampleTest(unittest.TestCase):
         self.assertIn("parts.py --show l9110s-module", self.text)
         self.assertIn("L9110sModule BIA", self.text)
         self.assertIn("must not float", self.text)
+
+
+class TheXiaoExampleTest(unittest.TestCase):
+    """Button-light on the XIAO C6 (P267): the fixture the drawn breadboard reads, with the project's own board."""
+
+    def test_its_steps_read_as_built(self):
+        with in_store(Path(tempfile.mkdtemp())):
+            text = breadboard.sheet(XIAO / "requirements.json")
+        steps = [line for line in text.split("### Steps", 1)[1].split("### Diagram", 1)[0].splitlines()
+                 if re.match(r"^\d+\. ", line)]
+        self.assertEqual(len(steps), 9, text)
+        self.assertEqual(steps[4], "5. Run a jumper from board D8 to the row of R1 end 1.")
+        self.assertEqual(steps[5], "6. Run a jumper from board D10 to the row of TactileButton A.")
 
 
 class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):

@@ -188,7 +188,8 @@ out of the bag. Page: [`commands/identify.md`](../../commands/identify.md).
 A requirements file becomes a board that builds, with a Wokwi diagram generated from it, or it names the stage that
 stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey.md#build)).
 
-With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them),
+With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the
+XIAO ESP32-C6 today),
 `firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. An existing `board.tsx` is left
 alone, edited or not, and `dist/` is then built from the requirements file, not from your `board.tsx`
 ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with

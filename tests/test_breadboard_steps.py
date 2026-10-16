@@ -13,15 +13,16 @@ from breadboard_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, Merma
 
 
 def board(label):
-    return End(BOARD, "board", "board " + label, "board " + label)
+    return End(BOARD, "board", "board " + label, "board " + label, label)
 
 
 def pin(part, name, leg=""):
-    return End(PART, part, "%s %s" % (part, name), "%s %s%s" % (part, name, " (%s)" % leg if leg else ""))
+    return End(PART, part, "%s %s" % (part, name), "%s %s%s" % (part, name, " (%s)" % leg if leg else ""), name)
 
 
 def resistor(tag, number):
-    return End(RESISTOR, tag, "%s end %d" % (tag, number), "%s (330Ω in series with Led A), end %d" % (tag, number))
+    return End(RESISTOR, tag, "%s end %d" % (tag, number), "%s (330Ω in series with Led A), end %d" % (tag, number),
+               str(number))
 
 
 def numbered(placed, points):
@@ -33,7 +34,7 @@ def diagram(placed, points):
 
 
 #: The button-and-LED circuit: A5 to the resistor, D3 to the button, ground to the LED and the button, LED to resistor.
-BUTTON_LIGHT = (["the board", "Btn", "Led"], [
+BUTTON_LIGHT = (["board", "Btn", "Led"], [
     StepPoint([board("A5"), resistor("R1", 1)], None, False),
     StepPoint([board("D3"), pin("Btn", "A")], None, False),
     StepPoint([board("GND"), pin("Led", "K"), pin("Btn", "B")], None, False),

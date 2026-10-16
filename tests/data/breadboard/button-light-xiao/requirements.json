@@ -1,0 +1,7 @@
+{
+  "board": "xiao-esp32-c6-fresh",
+  "parts": [
+    "tactile-button",
+    "led-red-5mm"
+  ]
+}

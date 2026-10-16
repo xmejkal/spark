@@ -131,9 +131,12 @@ These write:
 - `init_project.py`: four project files, three files that AI tools read, plus the store's projects list.
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for
   what you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each),
-  a mermaid diagram whose edges are those steps, and the points as a check list.
+  a mermaid diagram whose edges are those steps, and the points as a check list. Beside it, new each time, it writes
+  `breadboard.json` (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi
+  diagram. Only a board in `data/wokwi-geometry.json` is drawn, today the XIAO ESP32-C6, and rails are not drawn yet.
+  Otherwise the sheet and stderr say `breadboard.json not written:` and the missing fact, and an old file is removed.
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
-  reads, writes `breadboard.md` after a build that finished, and creates `.tscircuit/cache/`. It also writes
+  reads, writes `breadboard.md` and `breadboard.json` after a build that finished, and creates `.tscircuit/cache/`. It also writes
   `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on

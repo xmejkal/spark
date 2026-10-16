@@ -441,6 +441,21 @@ rail when a point has more ends than a row holds. Today's steps for this project
 9. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.
 ```
 
+**The drawn breadboard.** Since 2026-10-16 the build also writes `breadboard.json` beside the sheet
+([P267](https://github.com/xmejkal/spark/issues/300)). It is a Wokwi diagram of the same steps on a half breadboard:
+each part's legs in holes, and each jumper in its step's color. The sheet names the colors under its steps. To see
+it, open a new project on wokwi.com, paste the file into its `diagram.json`, and compare the picture with your own
+breadboard. The file is new at each build, so a change you make to it in Wokwi is lost at the next build.
+
+Only the Seeed Studio XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the
+board. The board is the limit because spark knows where Wokwi draws its pins and the
+breadboard's holes only for the parts it measured (`data/wokwi-geometry.json`). For the FireBeetle above, the sheet
+says `breadboard.json not written: no Wokwi pin positions for board-esp32-s3-devkitc-1 in data/wokwi-geometry.json.`
+The same project on the XIAO, as Wokwi shows its `breadboard.json`
+([the measurement](../discovery/2026-10-16-p267-wokwi-holes/README.md)):
+
+![The button-and-LED project on a XIAO ESP32-C6, drawn on a Wokwi half breadboard](../discovery/2026-10-16-p267-wokwi-holes/button-light-xiao.png)
+
 **T — the tally.**
 
 ```sh

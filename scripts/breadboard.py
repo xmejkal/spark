@@ -18,6 +18,9 @@ What it writes, each time from scratch:
     else a resistor end's row, else a free row for a board pin's jumper, or a rail for a point with more ends than a row
     holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
     line, as the check list after wiring (breadboard_steps.py holds the step rule);
+  - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
+    to paste into a new project on wokwi.com. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
+    today), and rails are not drawn yet; otherwise the sheet says what is missing, and an old drawing is removed;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
 It reads the built circuit (dist/board/circuit.json), the same file every check reads, so the sheet is the board that
@@ -36,6 +39,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assign_pins  # noqa: E402
+import breadboard_drawing  # noqa: E402
 import breadboard_steps  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
@@ -49,6 +53,8 @@ CIRCUIT = Path("dist") / "board" / "circuit.json"
 #: What a build that finished was built from, written beside its circuit by `check_spine --keep` (the refuter, P191).
 BUILT_FROM = CIRCUIT.parent / "built-from.json"
 SHEET = "breadboard.md"
+#: What the drawn breadboard is, as the build and this script say it beside its path.
+DRAWING_WHY = "an example layout of the steps on a breadboard: paste it into a new project on wokwi.com"
 #: The component every generated design calls its dev board (emit_board, the converter's BOARD mapping).
 BOARD_COMPONENT = "Mcu"
 #: The holes of one breadboard row on one side of the gap: a point with more ends goes on a rail. The board covers the
@@ -65,6 +71,13 @@ WIRING_VIEWS = (
      breadboard_steps.NumberedList()),
     ("Diagram", "Each line is one step, with its number.", breadboard_steps.MermaidDiagram()),
 )
+
+#: The board record's `wokwi_pin_naming` when its Wokwi pins carry the printed labels, so a drawing can find them.
+PIN_NAMING_SILKSCREEN = "silkscreen"
+#: The one palette of step colors, for the sheet's color line and the drawing's jumpers alike.
+STEP_COLORS = breadboard_steps.StepColors()
+#: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
+OHMS = {"": 1, "k": 1000, "M": 1000000}
 
 #: One connection point: the (component, port) pairs it joins, and the names of the nets on it.
 Point = collections.namedtuple("Point", "members nets")
@@ -234,17 +247,18 @@ def _wiring(board, circuit, design_parts, resistors):
         differently (a resistor by its tag), so the board's ground pads are the only ends that read the same, and they
         are one."""
         if component["name"] == BOARD_COMPONENT:
-            label = "board %s" % printed_label(board, port)
-            return breadboard_steps.End(breadboard_steps.BOARD, "board", label, label)
+            pad = printed_label(board, port)
+            label = "board %s" % pad
+            return breadboard_steps.End(breadboard_steps.BOARD, breadboard_steps.THE_BOARD, label, label, pad)
         if component["name"] in resistors:
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
             return breadboard_steps.End(breadboard_steps.RESISTOR, tag, "%s end %s" % (tag, number),
-                                        "%s (%s %s), end %s" % (tag, value, purpose, number))
+                                        "%s (%s %s), end %s" % (tag, value, purpose, number), number)
         leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
         short = "%s %s" % (component["name"], port.get("name"))
         return breadboard_steps.End(breadboard_steps.PART, component["name"], short,
-                                    short + (" (%s)" % leg if leg else ""))
+                                    short + (" (%s)" % leg if leg else ""), port.get("name"))
 
     said = []
     for point in points(circuit):
@@ -266,7 +280,7 @@ def _wiring(board, circuit, design_parts, resistors):
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
     placed = {one.component for _, _, step_point in said for one in step_point.ends}
     steps = breadboard_steps.BreadboardSteps(
-        ["the board"] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
+        [breadboard_steps.THE_BOARD] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
     return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
@@ -301,8 +315,12 @@ def _before_power(design_parts, supplies):
     return lines + ["", "Each record whole, with what it asks of the board: %s." % shows]
 
 
-def sheet(requirements_path, circuit_path=None):
-    """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit)."""
+#: What one build gives the sheet and the drawing: the design, its circuit, its resistors and its steps.
+Read = collections.namedtuple("Read", "built circuit resistors point_lines steps")
+
+
+def _read_build(requirements_path, circuit_path=None):
+    """The built design and its steps, for a requirements file whose project has been built with --keep."""
     requirements_path = Path(requirements_path)
     circuit_path = Path(circuit_path) if circuit_path else requirements_path.resolve().parent / CIRCUIT
     if not circuit_path.is_file():
@@ -314,34 +332,104 @@ def sheet(requirements_path, circuit_path=None):
     except ValueError as broken:
         raise NotBuilt("%s is not JSON (%s): build again" % (circuit_path, broken)) from broken
     _check_fresh(circuit, built.parts, circuit_path, requirements_path)
-    supplies = _supplies(circuit)
     passives = _passives(built.parts)
     resistors = collections.OrderedDict(
         (c["name"], ("R%d" % number, c.get("display_resistance") or "", passives.get(c["name"], "")))
         for number, c in enumerate((c for c in circuit if c.get("type") == "source_component"
                                     and c.get("ftype") == "simple_resistor"), 1))
+    point_lines, steps = _wiring(built.board, circuit, built.parts, resistors)
+    return Read(built, circuit, resistors, point_lines, steps)
+
+
+def _to_ohms(resistance):
+    """'330Ω' or '10kΩ' as Wokwi's resistor value, in ohms."""
+    found = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([kM]?)\s*Ω?", resistance or "")
+    if not found:
+        return ""
+    ohms = float(found.group(1)) * OHMS[found.group(2)]
+    return str(int(ohms)) if ohms == int(ohms) else str(ohms)
+
+
+def _describe_parts(read, geometry):
+    """{component as the steps name it: how Wokwi draws it}, from the records. A board whose Wokwi pins are not its
+    printed labels names no pins, so the drawing says which pin it cannot find."""
+    board = read.built.board
+    catalog = {}
+    if board.get("wokwi_part_type"):
+        pins = (geometry.data["parts"].get(board["wokwi_part_type"]) or {}).get("pins") or {}
+        named = board.get("wokwi_pin_naming") == PIN_NAMING_SILKSCREEN
+        catalog[breadboard_steps.THE_BOARD] = breadboard_drawing.DrawnPart(board["wokwi_part_type"], {},
+                                                        {pin: pin for pin in pins} if named else {})
+    for part in read.built.parts:
+        wokwi = (part.get("simulation") or {}).get("wokwi") or {}
+        if wokwi.get("part"):
+            catalog[emit_board.component_name(part)] = breadboard_drawing.DrawnPart(
+                wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {})
+    for tag, value, _ in read.resistors.values():
+        catalog[tag] = breadboard_drawing.DrawnPart("wokwi-resistor", {"value": _to_ohms(value)}, {"1": "1", "2": "2"})
+    return catalog
+
+
+def _plan_layout(read):
+    geometry = breadboard_drawing.WokwiGeometry.load()
+    return breadboard_drawing.BreadboardPlanner(geometry, _describe_parts(read, geometry)).plan(read.steps)
+
+
+def drawing(requirements_path, circuit_path=None, read=None):
+    """The drawn breadboard as Wokwi diagram text, or NotDrawn with what stopped it."""
+    return breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS).text(
+        _plan_layout(read or _read_build(requirements_path, circuit_path)))
+
+
+def sheet(requirements_path, circuit_path=None, read=None):
+    """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit)."""
+    requirements_path = Path(requirements_path)
+    read = read or _read_build(requirements_path, circuit_path)
+    built, circuit, resistors, steps = read.built, read.circuit, read.resistors, read.steps
+    supplies = _supplies(circuit)
     have = _have(requirements_path, {part["id"] for part in built.parts} | {built.board.get("id")})
     lines = ["# Breadboard: %s, on a %s" % (requirements_path.resolve().parent.name, built.board.get("name")), "",
              "## Parts", ""]
     lines += _parts_table(built.board, built.parts, resistors, supplies, have)
-    point_lines, steps = _wiring(built.board, circuit, built.parts, resistors)
     lines += ["", "## Wiring"]
     for heading, intro, renderer in WIRING_VIEWS:
         lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
+    try:
+        layout = _plan_layout(read)
+        lines += ["", "An example layout is in %s: paste it into the diagram.json of a new project on wokwi.com. "
+                  "Each jumper has its step's color: %s." % (breadboard_drawing.DRAWING_FILE, ", ".join(
+                      "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step))
+                      for jumper in layout.jumpers))]
+    except breadboard_drawing.NotDrawn as stopped:
+        lines += ["", "%s not written: %s." % (breadboard_drawing.DRAWING_FILE, stopped)]
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
-    lines += point_lines
+    lines += read.point_lines
     unwired = _unwired(built.board, built)
     lines += (["", "Not wired:", ""] + unwired) if unwired else []
     lines += ["", "## Before you power it", ""] + _before_power(built.parts, supplies)
     return "\n".join(lines) + "\n"
 
 
+#: What write() wrote: the sheet's path, the drawing's path (None when it was not drawn) and why it was not.
+Written = collections.namedtuple("Written", "sheet drawing why")
+
+
 def write(requirements_path, out, circuit_path=None):
-    """Write the sheet to `out` and return the path; what `check_spine --keep` calls beside the kept board."""
-    text = sheet(requirements_path, circuit_path)
-    Path(out).write_text(text)
-    return Path(out)
+    """Write the sheet to `out`, and the drawn breadboard beside it when it can be drawn; what `check_spine --keep`
+    calls beside the kept board. A drawing left from an earlier build is removed, since it describes another one."""
+    read = _read_build(requirements_path, circuit_path)
+    Path(out).write_text(sheet(requirements_path, read=read))
+    drawn = Path(out).parent / breadboard_drawing.DRAWING_FILE
+    try:
+        drawn.write_text(drawing(requirements_path, read=read))
+    except breadboard_drawing.NotDrawn as stopped:
+        drawn.unlink(missing_ok=True)
+        return Written(Path(out), None, str(stopped))
+    except Exception:
+        drawn.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
+        raise
+    return Written(Path(out), drawn, None)
 
 
 def main(argv=None):
@@ -357,8 +445,10 @@ def main(argv=None):
     except (NotBuilt, design.DesignError, store.StoreProblem, OSError) as stopped:
         print("breadboard.py: could not run — %s" % stopped, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    print(written.read_text(), end="")
-    print("wrote %s" % written, file=sys.stderr)
+    print(written.sheet.read_text(), end="")
+    print("wrote %s" % written.sheet, file=sys.stderr)
+    print(("wrote %s — %s" % (written.drawing, DRAWING_WHY)) if written.drawing
+          else "%s not written: %s" % (breadboard_drawing.DRAWING_FILE, written.why), file=sys.stderr)
     return EXIT_OK
 
 

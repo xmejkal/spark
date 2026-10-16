@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "author": "spark P267",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-breadboard-half", "id": "bb1", "top": 0, "left": 0, "attrs": {} },
+    { "type": "board-xiao-esp32-c6", "id": "esp", "top": 45.182, "left": 43.435, "rotate": 90, "attrs": {} },
+    { "type": "wokwi-resistor", "id": "r1", "top": 141.35, "left": 83.6, "attrs": { "value": "330" } },
+    { "type": "wokwi-led", "id": "led1", "top": 95.4, "left": 116.2, "attrs": { "color": "red" } }
+  ],
+  "connections": [ [ "bb1:12b.j", "bb1:8b.j", "black", [] ] ],
+  "dependencies": {}
+}

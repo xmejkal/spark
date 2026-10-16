@@ -357,6 +357,43 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("board D3", (into / "breadboard.md").read_text())
         self.assertIn("the parts and how to wire them on a breadboard", err.getvalue())
 
+    def keep_a_build_of(self, fixture_name):
+        """`report` keeping one breadboard fixture's built circuit into a new project folder: the folder, and stderr."""
+        import argparse, contextlib, io, shutil
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / fixture_name
+        work = self.workdir()
+        shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        into = Path(tempfile.mkdtemp()) / "project"
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        return into, err.getvalue()
+
+    def test_keeping_a_xiao_build_writes_its_drawn_breadboard_beside_the_sheet(self):
+        # P267 (#300): the sheet's steps on a Wokwi breadboard, and the build says where.
+        into, said = self.keep_a_build_of("button-light-xiao")
+        drawn = json.loads((into / "breadboard.json").read_text())
+        self.assertEqual(drawn["parts"][0]["type"], "wokwi-breadboard-half")
+        self.assertIn("wrote %s — an example layout" % (into / "breadboard.json"), said)
+        self.assertIn("An example layout is in breadboard.json", (into / "breadboard.md").read_text())
+
+    def test_a_board_spark_cannot_draw_gets_its_sheet_and_the_reason(self):
+        into, said = self.keep_a_build_of("button-light")
+        self.assertFalse((into / "breadboard.json").exists())
+        self.assertIn("no drawn breadboard: no Wokwi pin positions for board-esp32-s3-devkitc-1", said)
+        self.assertIn("breadboard.json not written: no Wokwi pin positions", (into / "breadboard.md").read_text())
+
+    def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
+        import argparse, contextlib, io
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
+        into = Path(tempfile.mkdtemp()) / "project"
+        into.mkdir(); (into / "breadboard.json").write_text("{}")
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+        self.assertFalse((into / "breadboard.json").exists())
+        self.assertIn("no drawn breadboard: the build did not finish in this run; removed", err.getvalue())
+
     def test_a_build_that_did_not_finish_writes_no_sheet_and_says_why(self):
         # P191's council: a failed build wrote a sheet from the earlier dist/, wiring parts the requirements had dropped.
         import argparse, contextlib, io
@@ -953,7 +990,8 @@ class TheBoardAloneTest(unittest.TestCase):
     def test_the_breadboard_line_says_there_is_nothing_to_wire(self):
         workdir, stages = self.run_alone()
         kept = check_spine.keep_breadboard(workdir / "requirements.json", workdir, stages)
-        self.assertEqual(kept["line"], "no breadboard sheet: board only: nothing to wire")
+        self.assertEqual([entry["line"] for entry in kept], ["no breadboard sheet: board only: nothing to wire",
+                                                             "no drawn breadboard: board only: nothing to wire"])
 
     def test_the_store_is_never_told_a_board_alone_was_built(self):
         _, stages = self.run_alone()
