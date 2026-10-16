@@ -456,6 +456,13 @@ The same project on the XIAO, as Wokwi shows its `breadboard.json`
 
 ![The button-and-LED project on a XIAO ESP32-C6, drawn on a Wokwi half breadboard](../discovery/2026-10-16-p267-wokwi-holes/button-light-xiao.png)
 
+Since 2026-10-16 the sheet also shows the layout itself, so you need no website to see it
+([P268](https://github.com/xmejkal/spark/issues/302)). The build writes `breadboard.svg` beside the sheet, and
+`breadboard.md` shows it under the steps. Each part is a plain pictogram of its kind, and each jumper runs along the
+holes in its step's color, with its step number at the corner. Pictures from online come later. The same project:
+
+![The button-and-LED project as the sheet shows it](img/button-light-xiao-breadboard.svg)
+
 **T — the tally.**
 
 ```sh

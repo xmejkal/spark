@@ -6,7 +6,9 @@
   "tolerance_px": 1.5,
   "parts": {
     "//board-xiao-esp32-c6": "wokwi/wokwi-boards boards/xiao-esp32-c6/board.json (read 2026-10-16, sha256 e5200e012416f096bcc188f9cb4fe8f292cd9d973dc0249513624bf5768856a8), its mm times 96 / 25.4. Its 18.1 x 23.4 mm is drawn as 68 x 88 px, and the turn goes about (34, 44), measured.",
+    "//size": "Each type's drawn size in px, for a picture of it. Not derived from the center: the button's published size is not twice its measured center. XIAO: board.json's 18.1 x 23.4 mm drawn as 68 x 88 px (measured). LED: wokwi-elements src/led-element.ts, 40 x 50. Resistor: 15.645 x 3 mm in wokwi-elements, 59.13 x 11.34 px. Pushbutton: wokwi-elements, 67.28 x 45.35 px. Read by P267's refuter on 2026-10-16 (docs/discovery/2026-10-16-p267-drawn-breadboard/review/refuter.md).",
     "board-xiao-esp32-c6": {
+      "size": [68, 88],
       "center": [34, 44],
       "covers_holes": true,
       "pins": {
@@ -17,11 +19,11 @@
       }
     },
     "//wokwi-led": "Measured from the editor's pin overlays. Names as in wokwi-elements: A is the anode, C the cathode. Its center is (20, 25): wokwi-elements src/led-element.ts draws it 40 wide and 50 high, and the pins measured at 90 degrees agree (P267's refuter found (25, 20) recorded, transposed).",
-    "wokwi-led": {"center": [20, 25], "covers_holes": false, "pins": {"A": [25, 42], "C": [15, 42]}},
+    "wokwi-led": {"size": [40, 50], "center": [20, 25], "covers_holes": false, "pins": {"A": [25, 42], "C": [15, 42]}},
     "//wokwi-resistor": "Measured from the editor's pin overlays.",
-    "wokwi-resistor": {"center": [29.5, 5.5], "covers_holes": false, "pins": {"1": [0, 5.65], "2": [58.8, 5.65]}},
+    "wokwi-resistor": {"size": [59.13, 11.34], "center": [29.5, 5.5], "covers_holes": false, "pins": {"1": [0, 5.65], "2": [58.8, 5.65]}},
     "//wokwi-pushbutton": "Measured from the editor's pin overlays. 1.l and 1.r are one contact, and 2.l and 2.r the other.",
-    "wokwi-pushbutton": {"center": [33.5, 24.5], "covers_holes": false,
+    "wokwi-pushbutton": {"size": [67.28, 45.35], "center": [33.5, 24.5], "covers_holes": false,
                          "pins": {"1.l": [0, 13], "2.l": [0, 32], "1.r": [67, 13], "2.r": [67, 32]}}
   },
   "//breadboard": "wokwi-breadboard-half. A row is the five joined holes of one column on one side of the gap: {column}t.{a-e} above it and {column}b.{f-j} below. A rail hole is {rail}.{1-25}, in five blocks of five with one empty pitch between blocks.",

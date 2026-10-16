@@ -99,7 +99,7 @@ flowchart LR
   n21 ---|"20"| n19
 ```
 
-breadboard.json not written: no Wokwi pin positions for board-esp32-s3-devkitc-1 in data/wokwi-geometry.json.
+breadboard.json and breadboard.svg not written: no Wokwi pin positions for board-esp32-s3-devkitc-1 in data/wokwi-geometry.json.
 
 ### Points
 

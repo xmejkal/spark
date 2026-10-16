@@ -19,7 +19,8 @@ What it writes, each time from scratch:
     holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
     line, as the check list after wiring (breadboard_steps.py holds the step rule);
   - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
-    to paste into a new project on wokwi.com. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
+    to paste into a new project on wokwi.com; and breadboard.svg (P268), the same layout as a picture the sheet
+    shows, each part as spark's own pictogram (data/pictograms/). Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
     today), and rails are not drawn yet; otherwise the sheet says what is missing, and an old drawing is removed;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
@@ -77,7 +78,8 @@ PIN_NAMING_SILKSCREEN = "silkscreen"
 STEP_COLORS = breadboard_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
-DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),)
+DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),
+                     breadboard_drawing.SvgBreadboardDiagram(breadboard_drawing.WokwiGeometry.load(), STEP_COLORS))
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}
 
@@ -413,9 +415,12 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None):
     if planned.layout:
         colors = "Each jumper has its step's color: %s." % ", ".join(
             "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
-        lines += ["", " ".join([renderer.SHEET_MESSAGE for renderer in DRAWING_RENDERERS] + [colors])]
+        first, *others = DRAWING_RENDERERS
+        lines += ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
+        lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
     else:
-        lines += [""] + ["%s not written: %s." % (renderer.FILE_NAME, planned.why) for renderer in DRAWING_RENDERERS]
+        lines += ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
+                                                planned.why)]
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += read.point_lines
