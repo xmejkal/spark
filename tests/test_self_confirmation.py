@@ -65,6 +65,8 @@ MAY_READ = {
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
+    "breadboard_steps.JOIN": "a kind of step, which picks the steps the test counts: vocabulary, not a value",
+    "breadboard_steps.RESISTOR": "a kind of end, which picks the steps the test counts: vocabulary, not a value",
     "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
 }
 

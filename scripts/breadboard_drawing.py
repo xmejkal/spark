@@ -19,8 +19,14 @@ import breadboard_steps
 GEOMETRY = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
 FILE = "breadboard.json"
 
-#: One hole: its Wokwi name (12t.a, tp.3), its center in px, and its row (the holes joined with it: 12t, or tp).
-Hole = collections.namedtuple("Hole", "name x y row")
+class Hole(collections.namedtuple("Hole", "name x y row")):
+    """Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, and its row (the holes joined with it: 12t,
+    or tp)."""
+
+    @property
+    def column(self):
+        """The column of a terminal hole, from 1; a rail hole has none, 0."""
+        return int(self.row[:-1]) if self.row[-1] in "tb" else 0
 #: What the planner draws for one component: its Wokwi type and attrs, and {its pin as the steps name it: Wokwi pin}.
 DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins")
 #: One component on the breadboard: its id, type, attrs, top-left corner in px, its turn, and {Wokwi pin: Hole}.
@@ -57,7 +63,7 @@ class WokwiGeometry:
         #: The terminal holes column by column, nearest the gap first: a part sits by the gap, clear of the rails.
         gap = (max(board["letters_y"][letter] for letter in board["top_letters"])
                + min(y for letter, y in board["letters_y"].items() if letter not in board["top_letters"])) / 2
-        self.by_gap = sorted(self.terminal, key=lambda hole: (column(hole), abs(hole.y - gap), hole.y))
+        self.by_gap = sorted(self.terminal, key=lambda hole: (hole.column, abs(hole.y - gap), hole.y))
         self.rails = list(board["rails_y"])
 
     @classmethod
@@ -86,10 +92,6 @@ def rotate(pins, center, degrees):
             x, y = cx + cy - y, cy - cx + x
         turned[pin] = (x, y)
     return turned
-
-
-def column(hole):
-    return int(hole.row[:-1]) if hole.row[-1] in "tb" else 0
 
 
 class HoleLedger:
@@ -121,7 +123,7 @@ class HoleLedger:
     def free_row(self, after, by):
         """Claim a hole in the first row right of column `after` with nothing in it, or NotDrawn: the board is full."""
         for hole in self.geometry.terminal:
-            if column(hole) > after and self.row_is_free(hole.row):
+            if hole.column > after and self.row_is_free(hole.row):
                 self.claim(hole, by)
                 return hole
         raise NotDrawn("the half breadboard has no free row left for %s" % by)
@@ -134,7 +136,7 @@ class PartPlacement:
         raise NotImplementedError
 
 
-class FirstFitPlacement(PartPlacement):
+class FirstFitPartPlacement(PartPlacement):
     """
     The first turn and position, left to right, where every pin lies over a free hole, each pin in a row of its own
     that holds nothing else, and every hole the part covers is free. A board that straddles the gap fits only when
@@ -143,7 +145,7 @@ class FirstFitPlacement(PartPlacement):
     """
 
     #: Flat first, so a resistor lies along a row of holes before it stands across the gap.
-    TURNS = (0, 180, 90, 270)
+    TURNS_DEGREES = (0, 180, 90, 270)
 
     def __init__(self, geometry):
         self.geometry = geometry
@@ -153,7 +155,7 @@ class FirstFitPlacement(PartPlacement):
         wanted = [pin for pin in drawn.pins.values() if pin not in shape["pins"]]
         if wanted:
             raise NotDrawn("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type))
-        for degrees in self.TURNS:
+        for degrees in self.TURNS_DEGREES:
             turned = rotate(shape["pins"], shape["center"], degrees)
             first = pinned[0] if pinned else next(iter(turned))
             candidates = [hole for hole in self.geometry.by_gap if not pinned or hole.row == pinned[1]]
@@ -163,7 +165,7 @@ class FirstFitPlacement(PartPlacement):
                 if holes is None:
                     continue
                 covered = self._covered(shape, degrees, left, top, holes) if shape.get("covers_holes") else []
-                if any(not ledger.is_free(one) or column(one) <= after for one in covered):
+                if any(not ledger.is_free(one) or one.column <= after for one in covered):
                     continue
                 for pin, one in holes.items():
                     ledger.claim(one, "%s %s" % (part_id, pin))
@@ -176,7 +178,7 @@ class FirstFitPlacement(PartPlacement):
         holes = {}
         for pin, (x, y) in turned.items():
             hole = self.geometry.hole_at(left + x, top + y)
-            if hole is None or not ledger.is_free(hole) or (column(hole) <= after and not pinned):
+            if hole is None or not ledger.is_free(hole) or (hole.column <= after and not pinned):
                 return None
             if pinned and pin == pinned[0]:
                 holes[pin] = hole
@@ -199,12 +201,12 @@ class BreadboardPlanner:
     """Pure: the steps, the geometry and what to draw for each component in, a BreadboardLayout out."""
 
     #: Columns from one part's last pin to the next part's first: one empty column between them, for the jumpers.
-    SPACING = 2
+    SPACING_COLUMNS = 2
 
     def __init__(self, geometry, catalog, placement=None):
         self.geometry = geometry
         self.catalog = catalog
-        self.placement = placement or FirstFitPlacement(geometry)
+        self.placement = placement or FirstFitPartPlacement(geometry)
 
     def plan(self, steps):
         """Each part placed in step order, then each resistor with a leg in the row it joins, then each jumper."""
@@ -213,9 +215,8 @@ class BreadboardPlanner:
         placed, after = {}, 1
         for one in seated:
             if one.act == breadboard_steps.PLACE:
-                component = "board" if one.subject == "the board" else one.subject
-                placed[component] = self.placement.place(component, self._drawn(component), ledger, after)
-                after = max(column(hole) for hole in placed[component].holes.values()) + self.SPACING
+                placed[one.subject] = self.placement.place(one.subject, self._drawn(one.subject), ledger, after)
+                after = max(hole.column for hole in placed[one.subject].holes.values()) + self.SPACING_COLUMNS
         for one in seated:
             if one.act != breadboard_steps.PLACE and one.anchor.seat().kind == breadboard_steps.RAIL:
                 raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % one.anchor.seat().mark)
@@ -282,7 +283,7 @@ class WokwiBreadboardDiagram:
     def render(self, layout):
         parts = [{"type": layout.breadboard, "id": self.breadboard_id, "top": 0, "left": 0, "attrs": {}}]
         for part in layout.parts:
-            drawn = {"type": part.type, "id": part.id, "top": _px(part.top), "left": _px(part.left)}
+            drawn = {"type": part.type, "id": part.id, "top": _round_px(part.top), "left": _round_px(part.left)}
             drawn.update({"rotate": part.rotate} if part.rotate else {})
             drawn["attrs"] = dict(part.attrs or {})
             parts.append(drawn)
@@ -296,7 +297,7 @@ class WokwiBreadboardDiagram:
         return json.dumps(self.render(layout), indent=2, ensure_ascii=False) + "\n"
 
 
-def _px(value):
+def _round_px(value):
     """A position as the file holds it: rounded once, here, and whole when it is whole."""
     value = round(value, 3)
     return int(value) if value == int(value) else value

@@ -630,7 +630,9 @@ def main(argv=None):
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
                              "left alone and named; with --json, each file is listed under kept. With a requirements "
-                             "file it also writes breadboard.md, the parts and how to wire them on a breadboard, and "
+                             "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
+                             "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today), "
+                             "and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")

@@ -34,7 +34,7 @@ def diagram(placed, points):
 
 
 #: The button-and-LED circuit: A5 to the resistor, D3 to the button, ground to the LED and the button, LED to resistor.
-BUTTON_LIGHT = (["the board", "Btn", "Led"], [
+BUTTON_LIGHT = (["board", "Btn", "Led"], [
     StepPoint([board("A5"), resistor("R1", 1)], None, False),
     StepPoint([board("D3"), pin("Btn", "A")], None, False),
     StepPoint([board("GND"), pin("Led", "K"), pin("Btn", "B")], None, False),

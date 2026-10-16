@@ -66,12 +66,14 @@
 <text x="1214" y="520" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">file.</text>
 <text x="1214" y="564" font-size="20" font-weight="bold" fill="#305bab" text-anchor="start">You get</text>
 <text x="1214" y="598" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">A board that builds, a</text>
-<text x="1214" y="632" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Wokwi diagram and a</text>
-<text x="1214" y="666" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">breadboard sheet.</text>
+<text x="1214" y="632" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Wokwi diagram, a breadboard</text>
+<text x="1214" y="666" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">sheet and its drawing.</text>
 <rect x="1214" y="696" width="96" height="36" rx="18" fill="#adf0c7"/>
 <text x="1262" y="721" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
 <text x="1214" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Ran end to end on</text>
-<text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11.</text>
+<text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11. The drawing is</text>
+<text x="1214" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">on the XIAO C6 only, since</text>
+<text x="1214" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16.</text>
 <line x1="227" y1="1046" x2="1373" y2="1046" stroke="#b0b0b0" stroke-width="4"/>
 <circle cx="227" cy="1046" r="36" fill="#2dc75c"/>
 <text x="227" y="1057" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>

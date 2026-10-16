@@ -77,8 +77,12 @@ a board that built perfectly (backlog P51). An existing `.tsx` is left alone and
 not; delete it to have it regenerated. With `--json`, each file is listed under `kept`, with what was done to it and
 why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask
 for, numbered wiring steps (one connection each) and a mermaid diagram of them, by the board's printed labels and the parts' legs, and what each record says to check before power
-([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. A line
-`no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
+([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. Beside it,
+`breadboard.json` is an example layout of the same steps on a half breadboard, each jumper in its step's color
+([P267](https://github.com/xmejkal/spark/issues/300)). The person pastes it into the `diagram.json` of a new project
+on wokwi.com and compares it with their own breadboard. It is new each time, so a change made to it in Wokwi is
+lost at the next build. Only the XIAO ESP32-C6 is drawn yet; for any other board, `no drawn breadboard: …` names the
+missing fact. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.

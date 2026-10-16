@@ -16,6 +16,8 @@ import collections
 
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.
 BOARD, PART, RESISTOR = "board", "part", "resistor"
+#: The component the board is, as an End and a placing step name it; a step says it as "the board".
+BOARD_COMPONENT = "board"
 #: Which end anchors a point first: a part's pin sits in a fixed row, a resistor end goes anywhere, and a board pad
 #: needs a jumper to a free row.
 ANCHOR_ORDER = (PART, RESISTOR, BOARD)
@@ -133,7 +135,8 @@ class BreadboardSteps:
 
     def anchored(self):
         """[Seated]: the steps of walk(), in its order, each with what it does, its subject and its anchor."""
-        walked = [Seated(Step("Put %s in the breadboard, each pin in its own row." % one, None), PLACE, one, None)
+        walked = [Seated(Step("Put %s in the breadboard, each pin in its own row."
+                              % ("the board" if one == BOARD_COMPONENT else one), None), PLACE, one, None)
                   for one in self.placed]
         for point in self.points:
             anchor = anchor_for(point)

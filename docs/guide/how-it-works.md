@@ -59,6 +59,7 @@ The files that join the steps:
 | `parts/<id>.json` | research | the chain, which takes a project's own record first |
 | `firmware/pins.py` | `check_spine.py --keep`, or `assign_pins.py --emit-pins` | your firmware |
 | `breadboard.md`, the parts and how to wire them | `check_spine.py --keep .` after a build that finished, or `breadboard.py` | you, at the bench |
+| `breadboard.json`, the same steps drawn on a Wokwi half breadboard | the same, when the board is in `data/wokwi-geometry.json` | you, in a new project on wokwi.com |
 
 The converter's own [ARCHITECTURE.md](../../tools/circuit-to-wokwi/ARCHITECTURE.md) shows its part of the path.
 

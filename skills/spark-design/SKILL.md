@@ -69,7 +69,9 @@ a rule checklist in the loop. Follow it.
      `idea → parts → pin map → schematic → footprint → build → simulation`, and the stage that
      stopped it. `????` is could-not-run and never a pass; `!!` is a defect in the design. With `--keep .`
      it also writes `breadboard.md`: the parts and how to wire them on a breadboard, which is what the
-     person builds first. Give it to them, with its *Before you power it* lines.
+     person builds first. Give it to them, with its *Before you power it* lines. For a XIAO ESP32-C6 it
+     also writes `breadboard.json`, the same steps drawn on a Wokwi breadboard: tell them to paste it
+     into a new project on wokwi.com.
 
    The project is found up from the requirements file, so this works from anywhere — and from
    nowhere: a file inside no project is built from the plugin's library, with no rules, and the
