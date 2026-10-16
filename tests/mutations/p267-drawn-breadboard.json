@@ -7,7 +7,7 @@
  },
  {
   "file": "scripts/breadboard_drawing.py",
-  "name": "rail groups ignored in x",
+  "name": "rail blocks ignored in x",
   "find": " + (number - 1) // board[\"rail_block\"])",
   "replace": ")"
  },
