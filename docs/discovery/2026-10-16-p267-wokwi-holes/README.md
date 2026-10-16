@@ -32,7 +32,7 @@ Pin centers in px from the part's top-left, unturned, and the center that a turn
 | type | pins | center |
 | --- | --- | --- |
 | `board-xiao-esp32-c6` | D0 (5.418, 18.635) to D6 (5.418, 76.235) and D7 (62.4, 76.235) to 5V (62.4, 18.635), 9.6 apart | (34, 44) |
-| `wokwi-led` | A (25, 42), C (15, 42) | (25, 20) |
+| `wokwi-led` | A (25, 42), C (15, 42) | (20, 25), corrected on 2026-10-16: it was first written (25, 20) by a slip in the arithmetic |
 | `wokwi-resistor` | 1 (0, 5.65), 2 (58.8, 5.65) | (29.5, 5.5) |
 | `wokwi-pushbutton` | 1.l (0, 13), 2.l (0, 32), 1.r (67, 13), 2.r (67, 32) | (33.5, 24.5) |
 

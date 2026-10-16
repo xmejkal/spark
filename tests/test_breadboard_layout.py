@@ -48,6 +48,13 @@ class TheTurnTest(unittest.TestCase):
             got = rotate(GEOMETRY.part("wokwi-pushbutton")["pins"], [33.5, 24.5], 90)[pin]
             self.assertEqual(tuple(_rounded(v) for v in got), at, pin)
 
+    def test_a_turned_led_gives_the_pins_wokwi_drew(self):
+        # The refuter: the LED is 40 wide and 50 high, so it turns about (20, 25); Wokwi drew A at (3, 30) turned 90.
+        shape = GEOMETRY.part("wokwi-led")
+        turned = rotate(shape["pins"], shape["center"], 90)
+        self.assertEqual({pin: tuple(_rounded(v) for v in at) for pin, at in turned.items()},
+                         {"A": (3, 30), "C": (3, 20)})
+
     def test_four_turns_come_back_and_two_are_a_half_turn(self):
         shape = GEOMETRY.part("wokwi-resistor")
         for degrees in (0, 360):
@@ -121,8 +128,8 @@ class TheXiaoLayoutTest(unittest.TestCase):
         self.assertEqual({hole.row[-1] for hole in board.holes.values()}, {"t", "b"})
 
     def test_no_row_holds_the_ends_of_two_points(self):
-        # Each row's ends, by point: a part pin, a jumper end, a resistor leg. The button's two pins of one contact
-        # sit in two rows, so each row still holds one point.
+        # Each row's ends, by point: a part pin, a resistor leg, and each jumper's two ends (the refuter: jumper ends
+        # count too). The button's two pins of one contact sit in two rows, so each row still holds one point.
         point_of = {}
         for number, point in enumerate(self.read.steps.points):
             for end in point.ends:
@@ -135,6 +142,11 @@ class TheXiaoLayoutTest(unittest.TestCase):
                 end = next((e for p in self.read.steps.points for e in p.ends
                             if e.component == part.id and e.pin == pins.get(pin)), None)
                 rows.setdefault(hole.row, set()).add(point_of[end.name] if end else (part.id, pin))
+        seated = list(self.read.steps.anchored())
+        for jumper in self.layout.jumpers:
+            point = point_of[seated[jumper.step - 1].subject.name]
+            for hole in (jumper.one, jumper.other):
+                rows.setdefault(hole.row, set()).add(point)
         for row, held in rows.items():
             self.assertEqual(len(held), 1, (row, held))
 
@@ -166,6 +178,35 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY))
         with self.assertRaisesRegex(NotDrawn, "goes on a rail, and rails are not drawn yet"):
             planner.plan(steps)
+
+    def test_a_supply_from_off_the_board_is_said_not_drawn(self):
+        # The refuter: a supply step was skipped without a word, so the drawing lacked a wire the sheet has.
+        read = xiao_read()
+        last = read.steps.points[-1]
+        supplied = breadboard_steps.StepPoint(last.ends, "VBAT", False)
+        steps = breadboard_steps.BreadboardSteps(read.steps.placed, read.steps.points[:-1] + [supplied])
+        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY))
+        with self.assertRaisesRegex(NotDrawn, "the VBAT supply comes from off the board"):
+            planner.plan(steps)
+
+    def test_a_resistor_that_joins_a_later_resistor_s_row_waits_for_it(self):
+        # The correctness lens: R2 is set up first, but its other leg joins R1's row, which R1 places later.
+        read = xiao_read()
+        board_d8 = next(end for point in read.steps.points for end in point.ends if end.name == "board D8")
+        led_a = next(end for point in read.steps.points for end in point.ends if end.name == "LedRed5mm A")
+
+        def leg(tag, number):
+            return breadboard_steps.End(breadboard_steps.RESISTOR, tag, "%s end %d" % (tag, number),
+                                        "%s, end %d" % (tag, number), str(number))
+
+        points = [breadboard_steps.StepPoint([board_d8, leg("R2", 1)], None, False),
+                  breadboard_steps.StepPoint([leg("R1", 1), leg("R2", 2)], None, False),
+                  breadboard_steps.StepPoint([led_a, leg("R1", 2)], None, False)]
+        steps = breadboard_steps.BreadboardSteps(read.steps.placed, points)
+        catalog = breadboard._describe_parts(read, GEOMETRY)
+        catalog["R2"] = catalog["R1"]
+        layout = breadboard_drawing.BreadboardPlanner(GEOMETRY, catalog).plan(steps)
+        self.assertLessEqual({"R1", "R2"}, {part.id for part in layout.parts})
 
     def test_a_part_with_no_wokwi_drawing_is_named(self):
         read = xiao_read()

@@ -72,6 +72,10 @@ WIRING_VIEWS = (
     ("Diagram", "Each line is one step, with its number.", breadboard_steps.MermaidDiagram()),
 )
 
+#: The board record's `wokwi_pin_naming` when its Wokwi pins carry the printed labels, so a drawing can find them.
+PIN_NAMING_SILKSCREEN = "silkscreen"
+#: The one palette of step colors, for the sheet's color line and the drawing's jumpers alike.
+STEP_COLORS = breadboard_steps.StepColors()
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}
 
@@ -245,7 +249,7 @@ def _wiring(board, circuit, design_parts, resistors):
         if component["name"] == BOARD_COMPONENT:
             pad = printed_label(board, port)
             label = "board %s" % pad
-            return breadboard_steps.End(breadboard_steps.BOARD, breadboard_steps.BOARD_COMPONENT, label, label, pad)
+            return breadboard_steps.End(breadboard_steps.BOARD, breadboard_steps.THE_BOARD, label, label, pad)
         if component["name"] in resistors:
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
@@ -276,7 +280,7 @@ def _wiring(board, circuit, design_parts, resistors):
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
     placed = {one.component for _, _, step_point in said for one in step_point.ends}
     steps = breadboard_steps.BreadboardSteps(
-        [breadboard_steps.BOARD_COMPONENT] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
+        [breadboard_steps.THE_BOARD] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
     return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
@@ -339,7 +343,7 @@ def _read_build(requirements_path, circuit_path=None):
 
 def _to_ohms(resistance):
     """'330Ω' or '10kΩ' as Wokwi's resistor value, in ohms."""
-    found = re.fullmatch(r"([\d.]+)\s*([kM]?)\s*Ω?", resistance or "")
+    found = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([kM]?)\s*Ω?", resistance or "")
     if not found:
         return ""
     ohms = float(found.group(1)) * OHMS[found.group(2)]
@@ -353,8 +357,8 @@ def _describe_parts(read, geometry):
     catalog = {}
     if board.get("wokwi_part_type"):
         pins = (geometry.data["parts"].get(board["wokwi_part_type"]) or {}).get("pins") or {}
-        named = board.get("wokwi_pin_naming") == "silkscreen"
-        catalog[breadboard_steps.BOARD_COMPONENT] = breadboard_drawing.DrawnPart(board["wokwi_part_type"], {},
+        named = board.get("wokwi_pin_naming") == PIN_NAMING_SILKSCREEN
+        catalog[breadboard_steps.THE_BOARD] = breadboard_drawing.DrawnPart(board["wokwi_part_type"], {},
                                                         {pin: pin for pin in pins} if named else {})
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
@@ -373,7 +377,8 @@ def _plan_layout(read):
 
 def drawing(requirements_path, circuit_path=None, read=None):
     """The drawn breadboard as Wokwi diagram text, or NotDrawn with what stopped it."""
-    return breadboard_drawing.WokwiBreadboardDiagram().text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
+    return breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS).text(
+        _plan_layout(read or _read_build(requirements_path, circuit_path)))
 
 
 def sheet(requirements_path, circuit_path=None, read=None):
@@ -392,11 +397,11 @@ def sheet(requirements_path, circuit_path=None, read=None):
     try:
         layout = _plan_layout(read)
         lines += ["", "An example layout is in %s: paste it into the diagram.json of a new project on wokwi.com. "
-                  "Each jumper has its step's color: %s." % (breadboard_drawing.FILE, ", ".join(
-                      "%d %s" % (jumper.step, breadboard_steps.StepColors().color(jumper.step))
+                  "Each jumper has its step's color: %s." % (breadboard_drawing.DRAWING_FILE, ", ".join(
+                      "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step))
                       for jumper in layout.jumpers))]
     except breadboard_drawing.NotDrawn as stopped:
-        lines += ["", "%s not written: %s." % (breadboard_drawing.FILE, stopped)]
+        lines += ["", "%s not written: %s." % (breadboard_drawing.DRAWING_FILE, stopped)]
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += read.point_lines
@@ -415,13 +420,15 @@ def write(requirements_path, out, circuit_path=None):
     calls beside the kept board. A drawing left from an earlier build is removed, since it describes another one."""
     read = _read_build(requirements_path, circuit_path)
     Path(out).write_text(sheet(requirements_path, read=read))
-    drawn = Path(out).parent / breadboard_drawing.FILE
+    drawn = Path(out).parent / breadboard_drawing.DRAWING_FILE
     try:
         drawn.write_text(drawing(requirements_path, read=read))
     except breadboard_drawing.NotDrawn as stopped:
-        if drawn.exists():
-            drawn.unlink()
+        drawn.unlink(missing_ok=True)
         return Written(Path(out), None, str(stopped))
+    except Exception:
+        drawn.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
+        raise
     return Written(Path(out), drawn, None)
 
 
@@ -441,7 +448,7 @@ def main(argv=None):
     print(written.sheet.read_text(), end="")
     print("wrote %s" % written.sheet, file=sys.stderr)
     print(("wrote %s — %s" % (written.drawing, DRAWING_WHY)) if written.drawing
-          else "%s not written: %s" % (breadboard_drawing.FILE, written.why), file=sys.stderr)
+          else "%s not written: %s" % (breadboard_drawing.DRAWING_FILE, written.why), file=sys.stderr)
     return EXIT_OK
 
 

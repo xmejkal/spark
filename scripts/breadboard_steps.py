@@ -16,8 +16,9 @@ import collections
 
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.
 BOARD, PART, RESISTOR = "board", "part", "resistor"
-#: The component the board is, as an End and a placing step name it; a step says it as "the board".
-BOARD_COMPONENT = "board"
+#: The board, as an End's component and a placing step name it; a step says it as "the board". (The circuit calls
+#: the same board `breadboard.BOARD_COMPONENT`, "Mcu".)
+THE_BOARD = "board"
 #: Which end anchors a point first: a part's pin sits in a fixed row, a resistor end goes anywhere, and a board pad
 #: needs a jumper to a free row.
 ANCHOR_ORDER = (PART, RESISTOR, BOARD)
@@ -33,8 +34,9 @@ Step = collections.namedtuple("Step", "words edge")
 #: What a step does: put a component in, set a point's anchor up, join an end to the anchor, or connect a supply.
 PLACE, SETUP, JOIN, SUPPLY = "place", "setup", "join", "supply"
 #: One step with what it is about: what it does, its subject (the component placed, the End set up or joined, the
-#: supply's name) and its point's anchor (None for a placing step). A drawing reads these, never the step's words.
-Seated = collections.namedtuple("Seated", "step act subject anchor")
+#: supply's name), its point's anchor (None for a placing step), and whether it runs a jumper. A drawing reads these,
+#: never the step's words.
+Seated = collections.namedtuple("Seated", "step act subject anchor jumper")
 #: Where a point's ends meet: in the row of one end, or on a rail with a mark.
 ROW, RAIL = "row", "rail"
 Seat = collections.namedtuple("Seat", "kind end mark")
@@ -112,9 +114,14 @@ def anchor_for(point):
     return RowAnchor(next(end for kind in ANCHOR_ORDER for end in point.ends if end.kind == kind))
 
 
+def needs_jumper(end):
+    """Whether an end reaches its destination by a jumper: a resistor leg goes in itself, everything else does not."""
+    return end.kind != RESISTOR
+
+
 def move(end, destination):
     """The words that bring one end to its destination: a resistor leg goes in, everything else gets a jumper."""
-    if end.kind == RESISTOR:
+    if not needs_jumper(end):
         return "Put %s, in %s." % (end.words, destination)
     if end.kind == BOARD:
         return "Run a jumper from %s to %s." % (end.words, destination)
@@ -136,17 +143,19 @@ class BreadboardSteps:
     def anchored(self):
         """[Seated]: the steps of walk(), in its order, each with what it does, its subject and its anchor."""
         walked = [Seated(Step("Put %s in the breadboard, each pin in its own row."
-                              % ("the board" if one == BOARD_COMPONENT else one), None), PLACE, one, None)
-                  for one in self.placed]
+                              % ("the board" if placed == THE_BOARD else placed), None), PLACE, placed, None, False)
+                  for placed in self.placed]
         for point in self.points:
             anchor = anchor_for(point)
-            walked += [Seated(step, SETUP, anchor.seat().end, anchor) for step in anchor.setup()]
+            set_up = anchor.seat().end
+            walked += [Seated(step, SETUP, set_up, anchor, set_up.kind == BOARD) for step in anchor.setup()]
             walked += [Seated(Step(move(end, anchor.destination(number == 0)), (end.name, anchor.name)), JOIN, end,
-                              anchor) for number, end in enumerate(anchor.others(point.ends))]
+                              anchor, needs_jumper(end)) for number, end in enumerate(anchor.others(point.ends))]
             if point.supply:
                 walked.append(Seated(Step("Connect the %s supply, from off the board, to %s. Check its voltage first "
                                           "(Before you power it)." % (point.supply, anchor.destination(False)),
-                                          ("%s supply" % point.supply, anchor.name)), SUPPLY, point.supply, anchor))
+                                          ("%s supply" % point.supply, anchor.name)), SUPPLY, point.supply, anchor,
+                                     False))
         return walked
 
     def boxes(self):

@@ -16,8 +16,8 @@ from pathlib import Path
 
 import breadboard_steps
 
-GEOMETRY = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
-FILE = "breadboard.json"
+WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
+DRAWING_FILE = "breadboard.json"
 
 class Hole(collections.namedtuple("Hole", "name x y row")):
     """Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, and its row (the holes joined with it: 12t,
@@ -67,7 +67,7 @@ class WokwiGeometry:
         self.rails = list(board["rails_y"])
 
     @classmethod
-    def load(cls, path=GEOMETRY):
+    def load(cls, path=WOKWI_GEOMETRY_FILE):
         return cls(json.loads(Path(path).read_text()))
 
     def part(self, wokwi_type):
@@ -159,18 +159,18 @@ class FirstFitPartPlacement(PartPlacement):
             turned = rotate(shape["pins"], shape["center"], degrees)
             first = pinned[0] if pinned else next(iter(turned))
             candidates = [hole for hole in self.geometry.by_gap if not pinned or hole.row == pinned[1]]
-            for hole in candidates:
-                left, top = hole.x - turned[first][0], hole.y - turned[first][1]
+            for start in candidates:
+                left, top = start.x - turned[first][0], start.y - turned[first][1]
                 holes = self._fit(turned, left, top, ledger, after, pinned)
                 if holes is None:
                     continue
                 covered = self._covered(shape, degrees, left, top, holes) if shape.get("covers_holes") else []
-                if any(not ledger.is_free(one) or one.column <= after for one in covered):
+                if any(not ledger.is_free(hole) or hole.column <= after for hole in covered):
                     continue
-                for pin, one in holes.items():
-                    ledger.claim(one, "%s %s" % (part_id, pin))
-                for one in covered:
-                    ledger.claim(one, "%s, which covers it" % part_id)
+                for pin, hole in holes.items():
+                    ledger.claim(hole, "%s %s" % (part_id, pin))
+                for hole in covered:
+                    ledger.claim(hole, "%s, which covers it" % part_id)
                 return PlacedPart(part_id, drawn.type, drawn.attrs, left, top, degrees, holes)
         raise NotDrawn("%s does not fit on the half breadboard" % part_id)
 
@@ -213,24 +213,28 @@ class BreadboardPlanner:
         ledger = HoleLedger(self.geometry)
         seated = list(steps.anchored())
         placed, after = {}, 1
-        for one in seated:
-            if one.act == breadboard_steps.PLACE:
-                placed[one.subject] = self.placement.place(one.subject, self._drawn(one.subject), ledger, after)
-                after = max(hole.column for hole in placed[one.subject].holes.values()) + self.SPACING_COLUMNS
-        for one in seated:
-            if one.act != breadboard_steps.PLACE and one.anchor.seat().kind == breadboard_steps.RAIL:
-                raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % one.anchor.seat().mark)
+        for step in seated:
+            if step.act == breadboard_steps.PLACE:
+                placed[step.subject] = self.placement.place(step.subject, self._drawn(step.subject), ledger, after)
+                after = max(hole.column for hole in placed[step.subject].holes.values()) + self.SPACING_COLUMNS
+        for step in seated:
+            if step.act != breadboard_steps.PLACE and step.anchor.seat().kind == breadboard_steps.RAIL:
+                raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % step.anchor.seat().mark)
+            if step.act == breadboard_steps.SUPPLY:
+                raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject)
         self._place_resistors(seated, placed, ledger, after)
         rows, jumpers = {}, []
-        for number, one in enumerate(seated, 1):
-            end = one.subject
-            if one.act == breadboard_steps.SETUP and end.kind == breadboard_steps.BOARD:
+        for number, step in enumerate(seated, 1):
+            end = step.subject
+            if not step.jumper:
+                continue
+            if step.act == breadboard_steps.SETUP:
                 jumper = Jumper(ledger.free_hole(self._row(end, placed, rows), end.name),
                                 ledger.free_row(after, end.name), number)
                 rows[end.name] = jumper.other.row
                 jumpers.append(jumper)
-            elif one.act == breadboard_steps.JOIN and end.kind != breadboard_steps.RESISTOR:
-                anchor = one.anchor.seat().end
+            else:
+                anchor = step.anchor.seat().end
                 jumpers.append(Jumper(ledger.free_hole(self._row(end, placed, rows), end.name),
                                       ledger.free_hole(self._row(anchor, placed, rows), anchor.name), number))
         return BreadboardLayout(self.geometry.type, list(placed.values()), jumpers)
@@ -238,18 +242,28 @@ class BreadboardPlanner:
     def _place_resistors(self, seated, placed, ledger, after):
         """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row."""
         resistors = collections.OrderedDict()
-        for one in seated:
-            if one.act in (breadboard_steps.SETUP, breadboard_steps.JOIN) and one.subject.kind == breadboard_steps.RESISTOR:
-                pinned = resistors.setdefault(one.subject.component, [])
-                if one.act == breadboard_steps.JOIN:
-                    pinned.append((one.subject, one.anchor.seat().end))
-        for component, pinned in resistors.items():
-            if len(pinned) > 1:
-                raise NotDrawn("both ends of %s join other rows, and a drawn resistor has a fixed length" % component)
-            drawn = self._drawn(component)
-            row = [(self._pin(end), self._row(anchor, placed, {})) for end, anchor in pinned]
-            placed[component] = self.placement.place(component, drawn, ledger, after if not row else 0,
-                                                     row[0] if row else None)
+        for step in seated:
+            if (step.act in (breadboard_steps.SETUP, breadboard_steps.JOIN)
+                    and step.subject.kind == breadboard_steps.RESISTOR):
+                pinned = resistors.setdefault(step.subject.component, [])
+                if step.act == breadboard_steps.JOIN:
+                    pinned.append((step.subject, step.anchor.seat().end))
+        waiting = list(resistors.items())
+        while waiting:
+            # a resistor whose leg joins another resistor's row waits until that resistor is in
+            ready = [(component, pinned) for component, pinned in waiting
+                     if all(anchor.component in placed for _, anchor in pinned)]
+            if not ready:
+                raise NotDrawn("%s joins a row that is never placed" % waiting[0][0])
+            for component, pinned in ready:
+                if len(pinned) > 1:
+                    raise NotDrawn("both ends of %s join other rows, and a drawn resistor has a fixed length"
+                                   % component)
+                drawn = self._drawn(component)
+                row = [(self._pin(end), self._row(anchor, placed, {})) for end, anchor in pinned]
+                placed[component] = self.placement.place(component, drawn, ledger, after if not row else 0,
+                                                         row[0] if row else None)
+            waiting = [one for one in waiting if one[0] not in placed]
 
     def _drawn(self, component):
         drawn = self.catalog.get(component)
@@ -274,7 +288,8 @@ class BreadboardPlanner:
 
 
 class WokwiBreadboardDiagram:
-    """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color."""
+    """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
+    colors, so the sheet and the diagram share one palette."""
 
     def __init__(self, colors=None, breadboard_id="bb1"):
         self.colors = colors or breadboard_steps.StepColors()

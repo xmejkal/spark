@@ -447,7 +447,8 @@ each part's legs in holes, and each jumper in its step's color. The sheet names 
 it, open a new project on wokwi.com, paste the file into its `diagram.json`, and compare the picture with your own
 breadboard. The file is new at each build, so a change you make to it in Wokwi is lost at the next build.
 
-Only the Seeed Studio XIAO ESP32-C6 is drawn yet, because spark knows where Wokwi draws its pins and the
+Only the Seeed Studio XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the
+board. The board is the limit because spark knows where Wokwi draws its pins and the
 breadboard's holes only for the parts it measured (`data/wokwi-geometry.json`). For the FireBeetle above, the sheet
 says `breadboard.json not written: no Wokwi pin positions for board-esp32-s3-devkitc-1 in data/wokwi-geometry.json.`
 The same project on the XIAO, as Wokwi shows its `breadboard.json`

@@ -16,8 +16,8 @@
         "3V3": [62.4, 37.835], "GND": [62.4, 28.235], "5V": [62.4, 18.635]
       }
     },
-    "//wokwi-led": "Measured from the editor's pin overlays. Names as in wokwi-elements: A is the anode, C the cathode.",
-    "wokwi-led": {"center": [25, 20], "covers_holes": false, "pins": {"A": [25, 42], "C": [15, 42]}},
+    "//wokwi-led": "Measured from the editor's pin overlays. Names as in wokwi-elements: A is the anode, C the cathode. Its center is (20, 25): wokwi-elements src/led-element.ts draws it 40 wide and 50 high, and the pins measured at 90 degrees agree (P267's refuter found (25, 20) recorded, transposed).",
+    "wokwi-led": {"center": [20, 25], "covers_holes": false, "pins": {"A": [25, 42], "C": [15, 42]}},
     "//wokwi-resistor": "Measured from the editor's pin overlays.",
     "wokwi-resistor": {"center": [29.5, 5.5], "covers_holes": false, "pins": {"1": [0, 5.65], "2": [58.8, 5.65]}},
     "//wokwi-pushbutton": "Measured from the editor's pin overlays. 1.l and 1.r are one contact, and 2.l and 2.r the other.",

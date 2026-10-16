@@ -758,7 +758,7 @@ def keep_breadboard(requirements, destination, stages=()):
     board.
     """
     sheet = Path(destination) / breadboard.SHEET
-    drawn = Path(destination) / breadboard_drawing.FILE
+    drawn = Path(destination) / breadboard_drawing.DRAWING_FILE
     if not any(stage.name == "build" and stage.status == OK for stage in stages):
         why = ("board only: nothing to wire" if any(stage.status == SKIPPED for stage in stages)
                else "the build did not finish in this run")
