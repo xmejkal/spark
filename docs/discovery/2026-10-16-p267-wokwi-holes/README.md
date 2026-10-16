@@ -42,8 +42,8 @@ e5200e012416f096bcc188f9cb4fe8f292cd9d973dc0249513624bf5768856a8). Its center is
 18.1 x 23.4 mm rounded to whole px, the same size as the board record's `wokwi_size_px`.
 
 A turn of 90 degrees maps a pin (x, y) to (cx + cy - y, cy - cx + x), with (cx, cy) the center. Each part was read at
-0 and 90 degrees, and every pin agrees with this rule. The LED and resistor pin names come from wokwi-elements, and
-the order of the overlays agrees with them. The center comes from the turn, not from a published size.
+0 and 90 degrees, and every pin agrees with this rule. The LED, resistor and button pin names are wokwi-elements' names as the plan's research read
+them, matched to the overlays by position, not read from the page. The center comes from the turn, not from a published size.
 
 ## A leg over a hole connects
 
