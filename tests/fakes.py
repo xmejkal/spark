@@ -91,3 +91,18 @@ class FakePartPictures:
         import part_pictures
         return part_pictures.Picture('<rect width="10" height="10" fill="#123456"/>', (0.0, 0.0, 10.0, 10.0),
                                      "fake picture of %s" % wokwi_type)
+
+
+class FakeTscircuitExport:
+    """Fake: stands in for tabbed_page.TscircuitExport, giving each form the result a test sets, or a small marked SVG,
+    and keeping the circuit paths it was asked for."""
+
+    def __init__(self, results=None):
+        self.results = results or {}
+        self.asked = []
+
+    def export_svg(self, circuit_path, form):
+        import tabbed_page
+        self.asked.append((str(circuit_path), form))
+        return self.results.get(form, tabbed_page.SvgExportResult(
+            '<svg xmlns="http://www.w3.org/2000/svg"><title>fake %s</title></svg>' % form, None))

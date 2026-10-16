@@ -1,0 +1,113 @@
+"""
+The page (P271, #307): page.html, the breadboard, schematic and PCB in three tabs, each picture in its own <img>.
+
+    python3 -m unittest tests.test_tabbed_page
+"""
+
+import base64
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import suite_temp  # noqa: E402,F401
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import tabbed_page  # noqa: E402
+from tabbed_page import SvgExportResult, Tab, TabbedHtmlPage, TscircuitExport  # noqa: E402
+
+SVG = '<svg xmlns="http://www.w3.org/2000/svg"><style>.boundary{fill:beige}</style><rect class="boundary"/></svg>'
+CIRCUIT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao" / "dist" / "board" / "circuit.json"
+
+
+def three_tabs(schematic=SVG):
+    return [Tab("Breadboard", SVG, None), Tab("Schematic", schematic, None), Tab("PCB", SVG, None)]
+
+
+def pictures(page):
+    return [base64.b64decode(data).decode("utf-8") for data in re.findall(r'data:image/svg\+xml;base64,([^"]+)', page)]
+
+
+class TabbedHtmlPageTest(unittest.TestCase):
+    def test_three_tabs_give_one_page_with_three_pictures(self):
+        page = TabbedHtmlPage().text(three_tabs())
+        self.assertEqual(3, page.count('type="radio"'))
+        self.assertEqual(["Breadboard", "Schematic", "PCB"], re.findall(r'<label for="tab\d">([^<]+)</label>', page))
+        self.assertEqual([SVG] * 3, pictures(page))
+        self.assertIn('<meta charset="utf-8">', page)
+
+    def test_no_svg_is_pasted_inline_so_its_styles_stay_in_its_picture(self):
+        page = TabbedHtmlPage().text(three_tabs())
+        self.assertNotIn("<svg", page)
+        self.assertNotIn(".boundary", page)
+        self.assertTrue(all('xmlns="http://www.w3.org/2000/svg"' in svg for svg in pictures(page)))
+
+    def test_the_page_loads_nothing_and_runs_nothing(self):
+        page = TabbedHtmlPage().text(three_tabs())
+        self.assertNotIn("<script", page)
+        self.assertNotIn("http", page.replace('xmlns="http://www.w3.org/2000/svg"', ""))
+
+    def test_a_missing_tab_says_why_escaped(self):
+        page = TabbedHtmlPage().text(three_tabs(schematic=None)[:1] + [Tab("Schematic", None, "tsci said <b>no</b>")])
+        self.assertIn("<p>No schematic: tsci said &lt;b&gt;no&lt;/b&gt;.</p>", page)
+        self.assertEqual(1, len(pictures(page)))
+
+    def test_the_same_tabs_give_the_same_bytes(self):
+        self.assertEqual(TabbedHtmlPage().text(three_tabs()), TabbedHtmlPage().text(three_tabs()))
+
+
+class TscircuitExportTest(unittest.TestCase):
+    def run_with(self, returncode=0, writes="<svg/>", stderr="", side_effect=None):
+        def fake_run(command, **kwargs):
+            if side_effect:
+                raise side_effect
+            out = Path(command[command.index("-o") + 1])
+            if writes is not None:
+                out.write_text(writes, encoding="utf-8")
+            self.command, self.timeout = command, kwargs["timeout"]
+            return subprocess.CompletedProcess(command, returncode, "", stderr)
+        with mock.patch.object(tabbed_page.subprocess, "run", fake_run):
+            return TscircuitExport("/bin/tsci").export_svg("circuit.json", "pcb-svg")
+
+    def test_it_returns_the_svg_and_passes_an_absolute_path_and_its_own_timeout(self):
+        self.assertEqual(SvgExportResult("<svg/>", None), self.run_with())
+        self.assertTrue(Path(self.command[2]).is_absolute())
+        self.assertEqual(["-f", "pcb-svg"], self.command[3:5])
+        self.assertEqual(60, self.timeout)
+
+    def test_no_tsci_says_so(self):
+        self.assertEqual(SvgExportResult(None, "tsci is not installed"),
+                         TscircuitExport(None).export_svg("circuit.json", "pcb-svg"))
+
+    def test_a_failed_export_says_its_exit_code_and_last_line(self):
+        self.assertEqual("tsci export -f pcb-svg exited 1: Element type is invalid",
+                         self.run_with(returncode=1, writes=None, stderr="trace\nElement type is invalid\n").why_missing)
+
+    def test_an_empty_output_is_a_failure_even_with_exit_0(self):
+        self.assertEqual("tsci export -f pcb-svg wrote nothing", self.run_with(writes="  \n").why_missing)
+        self.assertEqual("tsci export -f pcb-svg wrote nothing", self.run_with(writes=None).why_missing)
+
+    def test_a_timeout_says_so(self):
+        result = self.run_with(side_effect=subprocess.TimeoutExpired("tsci", 60))
+        self.assertEqual("tsci export -f pcb-svg took over 60 s", result.why_missing)
+
+    @unittest.skipUnless(shutil.which("tsci"), "tsci is not installed")
+    def test_the_real_tsci_exports_a_circuit(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            circuit = Path(scratch) / "circuit.json"
+            shutil.copy(CIRCUIT, circuit)
+            for form in ("schematic-svg", "pcb-svg"):
+                result = TscircuitExport(shutil.which("tsci")).export_svg(circuit, form)
+                self.assertIsNone(result.why_missing, form)
+                self.assertIn("<svg", result.svg)
+
+
+if __name__ == "__main__":
+    unittest.main()
