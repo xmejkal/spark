@@ -424,19 +424,21 @@ Each record whole, with what it asks of the board: `parts.py --show led-red-5mm`
 
 Since 2026-10-16 the Wiring section has three parts ([P202](https://github.com/xmejkal/spark/issues/161)). The lines
 above are now its last part, the points, a check list after the wiring. Before them come numbered steps, one
-connection each, and a mermaid diagram whose numbered lines are those steps. Each part goes in first, each pin in its
-own row, and then every wire goes to the row of a part's pin. Today's steps for this project:
+connection each, and a mermaid diagram whose numbered lines are those steps. The board and each part go in first,
+each pin in its own row. Then each wire goes to its point's anchor, the row or rail where its ends meet: a part's pin row, else a resistor end's row, or a
+rail when a point has more ends than a row holds. Today's steps for this project:
 
 <!-- output: run 2026-10-16, spark 0.9.0 -->
 ```text
-1. Put TactileButton in the breadboard, each pin in its own row.
-2. Put LedRed5mm in the breadboard, each pin in its own row.
-3. Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row.
-4. Run a jumper from board A5 to the row of R1 end 1.
-5. Run a jumper from board D3 to the row of TactileButton A.
-6. Run a jumper from board GND to the row of LedRed5mm K.
-7. Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K.
-8. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.
+1. Put the board in the breadboard, each pin in its own row.
+2. Put TactileButton in the breadboard, each pin in its own row.
+3. Put LedRed5mm in the breadboard, each pin in its own row.
+4. Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row.
+5. Run a jumper from board A5 to the row of R1 end 1.
+6. Run a jumper from board D3 to the row of TactileButton A.
+7. Run a jumper from board GND to the row of LedRed5mm K.
+8. Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K.
+9. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.
 ```
 
 **T — the tally.**

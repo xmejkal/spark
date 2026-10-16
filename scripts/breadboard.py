@@ -14,8 +14,9 @@ What it writes, each time from scratch:
     it is for, and whether you have each: yours (your drawer holds it for this project), in your drawer (you own it,
     not held here), to get; blank when the project is not on your list (/spark:init puts it there);
   - the wiring (P202): numbered steps, one connection each, by the board's printed label and each part's pin and leg
-    (each part in first, each pin in its own row, then each wire to the row of a part's pin, or to a rail for a point
-    with more ends than a row holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
+    (the board and each part in first, each pin in its own row, then each wire to its point's anchor: a part's pin row,
+    else a resistor end's row, else a free row for a board pin's jumper, or a rail for a point with more ends than a row
+    holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
     line, as the check list after wiring (breadboard_steps.py holds the step rule);
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
@@ -57,6 +58,13 @@ ROW_HOLES = 5
 PURPOSE = {"pullup": "pull-up on", "pulldown": "pull-down on", "series": "in series with", "divider": "divider on"}
 LEGEND = ("*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · "
           "to get = not in your drawer · blank = this project is not on your list (`/spark:init` puts it there)")
+
+#: The views of the wiring steps the sheet shows, in order: (heading, one line that says how to read it, renderer).
+WIRING_VIEWS = (
+    ("Steps", "One connection per step. The board's pins take the rows beside them, so a board pin always gets a jumper.",
+     breadboard_steps.NumberedList()),
+    ("Diagram", "Each line is one step, with its number.", breadboard_steps.MermaidDiagram()),
+)
 
 #: One connection point: the (component, port) pairs it joins, and the names of the nets on it.
 Point = collections.namedtuple("Point", "members nets")
@@ -241,23 +249,24 @@ def _wiring(board, circuit, design_parts, resistors):
     said = []
     for point in points(circuit):
         ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
-        ends.sort(key=lambda one: (one.kind != breadboard_steps.BOARD, _natural(one.text)))
-        line = " · ".join(one.text for one in ends)
+        ends.sort(key=lambda one: (one.kind != breadboard_steps.BOARD, _natural(one.words)))
+        line = " · ".join(one.words for one in ends)
         on_board = ends[0].kind == breadboard_steps.BOARD
         if on_board and len(ends) == 1:
             continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
         supply = " / ".join(point.nets) if point.nets and not on_board else None
         if supply:
             line += " · the %s supply, from off the board, not part of the parts list" % supply
-        rail = len(ends) > ROW_HOLES  # a board pin's end is its jumper's end, in a hole of the free row
+        # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too
+        rail = len(ends) + bool(supply) > ROW_HOLES
         if rail:
             line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
-                     % ends[0].text if on_board else " — put these ends on one rail")
+                     % ends[0].words if on_board else " — put these ends on one rail")
         said.append((on_board, line, breadboard_steps.StepPoint(ends, supply, rail)))
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
     placed = {one.component for _, _, step_point in said for one in step_point.ends}
     steps = breadboard_steps.BreadboardSteps(
-        dict.fromkeys(name for name in records if name in placed), [step_point for _, _, step_point in said])
+        ["the board"] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
     return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
@@ -316,11 +325,9 @@ def sheet(requirements_path, circuit_path=None):
              "## Parts", ""]
     lines += _parts_table(built.board, built.parts, resistors, supplies, have)
     point_lines, steps = _wiring(built.board, circuit, built.parts, resistors)
-    lines += ["", "## Wiring", "", "### Steps", "",
-              "One connection per step. The board covers the rows beside its own pins, so a board pin always gets a",
-              "jumper.", ""]
-    lines += steps.list_steps()
-    lines += ["", "### Diagram", "", "Each line is one step, with its number.", "", steps.draw_mermaid()]
+    lines += ["", "## Wiring"]
+    for heading, intro, renderer in WIRING_VIEWS:
+        lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += point_lines
