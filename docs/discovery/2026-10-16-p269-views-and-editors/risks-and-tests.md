@@ -29,17 +29,17 @@ status: open, or retired with the date of its Results row.
 e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | query opened-within-48h | under 50 %, set 2026-10-06 | over 80 % | open |` -->
 | id | belief | type | evidence now | importance | cheapest test | pass line, dated | result that would change the decision | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A1 <!-- REQUIRED:assumptions --> | A person's edit to a layout survives the next build, or is reported by name | feasibility | H ★C5 | — (decider) | the spike in brief.md | 3 of 3 cases survive or are reported, set 2026-10-16 | an edit lost silently in any case | open |
-| A2 | One model of holes, join groups, placements and connections fits breadboard, stripboard, perfboard and PCB | feasibility | H ★C1 | — (decider) | S0, and a stripboard surface sketched on paper against it | breadboard.json byte-equal and a strip cut expressed without a new class, set 2026-10-16 | a stage that needs its own model | open |
-| A3 | A picture in the sheet helps the PO wire more than the numbered steps alone | value | H council/user.md USER-25 | — (decider) | S1 shown to the PO, and Q10's Q-b | he says he wired from the picture, set 2026-10-16 | he keeps to the steps | open |
-| A4 | The PO will solder a perfboard or stripboard from spark's layout | value | H ★C6 | — (decider) | Q10's Q-d and Q-e | he names a board in his drawer and a project for it, set 2026-10-16 | no perfboard project in sight | open |
-| A5 | Pin positions in mm can be filled for the parts he owns from the KiCad footprints and datasheets | feasibility | H ★C2 | — (decider) | fill one module and the XIAO by hand | both in under an hour each, set 2026-10-16 | a part with no source for its pins | open |
-| A6 | tscircuit's circuit-to-svg is good enough for the schematic and PCB tabs | usability | H ★C3 | — (decider) | render button-light's schematic and PCB once | readable to the PO, set 2026-10-16 | he finds it unreadable | open |
-| A7 | One bundled TS file runs as a local page and as an Artifact | feasibility | H C8 | — (decider) | publish a one-file viewer as an Artifact | it opens and reads a layout, set 2026-10-16 | the Artifact refuses it | open |
-| A8 | Pictures from the web can be kept in the person's store with their credit, legally, for personal use | viability | H ★C7 | — (decider) | read the upstream licence files of Fritzing, wokwi-boards and one vendor | each allows a personal copy with credit, set 2026-10-16 | a source forbids it | open |
-| A9 | A grid planner routes button-light on plain perfboard well enough to edit | feasibility | H TL-35 | — (decider) | a Lee-routing spike on the button-light netlist | all points routed with no crossing on one side, set 2026-10-16 | it needs a person for a basic circuit | open |
-| A10 | Each slice fits a few days of work and keeps the build green | viability | H TL-35 | — (decider) | S0's size after it merges | under 400 lines of code changed, set 2026-10-16 | S0 grows past that | open |
-| A11 | Sharing can wait for the store epic P178 | viability | H council/data.md | — (decider) | Q8 and Q9 | the PO agrees, set 2026-10-16 | he wants sharing in the first slices | open |
+| A1 <!-- REQUIRED:assumptions --> | A person's edit to a layout survives the next build, or is reported by name | feasibility | H ★C5 | high D9, for step 5 (low D2 before) | the spike in brief.md | 3 of 3 cases survive or are reported, set 2026-10-16 | an edit lost silently in any case | open |
+| A2 | One model of holes, join groups, placements and connections fits breadboard, stripboard, perfboard and PCB | feasibility | H ★C1 | low D7 | S0, and a stripboard surface sketched on paper against it | breadboard.json byte-equal and a strip cut expressed without a new class, set 2026-10-16 | a stage that needs its own model | open |
+| A3 | A picture in the sheet helps the PO wire more than the numbered steps alone | value | H council/user.md USER-25 | high D4 | S1 shown to the PO, and Q10's Q-b | he says he wired from the picture, set 2026-10-16 | he keeps to the steps | retired 2026-10-16 |
+| A4 | The PO will solder a perfboard or stripboard from spark's layout | value | H ★C6 | low D3 | Q10's Q-d and Q-e | he names a board in his drawer and a project for it, set 2026-10-16 | no perfboard project in sight | open |
+| A5 | Pin positions in mm can be filled for the parts he owns from the KiCad footprints and datasheets | feasibility | H ★C2 | low D8 | fill one module and the XIAO by hand | both in under an hour each, set 2026-10-16 | a part with no source for its pins | open |
+| A6 | tscircuit's circuit-to-svg is good enough for the schematic and PCB tabs | usability | H ★C3 | low D8 | render button-light's schematic and PCB once | readable to the PO, set 2026-10-16 | he finds it unreadable | open |
+| A7 | One bundled TS file runs as a local page and as an Artifact | feasibility | H C8 | low D5 | publish a one-file viewer as an Artifact | it opens and reads a layout, set 2026-10-16 | the Artifact refuses it | open |
+| A8 | Pictures from the web can be kept in the person's store with their credit, legally, for personal use | viability | H ★C7 | low D8 | read the upstream licence files of Fritzing, wokwi-boards and one vendor | each allows a personal copy with credit, set 2026-10-16 | a source forbids it | open |
+| A9 | A grid planner routes button-light on plain perfboard well enough to edit | feasibility | H TL-35 | low D8 | a Lee-routing spike on the button-light netlist | all points routed with no crossing on one side, set 2026-10-16 | it needs a person for a basic circuit | open |
+| A10 | Each slice fits a few days of work and keeps the build green | viability | H TL-35 | low D8 | S0's size after it merges | under 400 lines of code changed, set 2026-10-16 | S0 grows past that | open |
+| A11 | Sharing can wait for the store epic P178 | viability | H council/data.md | low D6 | Q8 and Q9 | the PO agrees, set 2026-10-16 | he wants sharing in the first slices | open |
 
 ## Collection plan
 <!-- One row per gap. e.g. `| Do assignees open new tasks? | Q2 | Lena, from analytics | one query | this week |` -->
@@ -55,6 +55,7 @@ e.g. `| A2 | Assignees never see new tasks | value | H ★C2 | — (decider) | q
 with its pointer), the pass line met or missed, what it changes. -->
 | date | source and pointer | what was seen | pass line met or missed | what it changes |
 | --- | --- | --- | --- | --- |
+| 2026-10-16 | the PO, AskUserQuestion in this session (D4) | "The picture": he would look at the picture most when wiring | A3's pass line met, n = 1, an account of his intent, not of use | the picture slice comes first |
 
 ## Budgets <!-- REQUIRED:electronics-firmware:budgets -->
 <!-- Energy per mode · peaks per rail against the source · dissipation per part, each number with its provenance and

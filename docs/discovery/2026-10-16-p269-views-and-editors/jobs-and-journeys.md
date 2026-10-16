@@ -7,13 +7,14 @@
 - The agent at the keyboard: reads spark's files and answers, never the source · E scrum/VISION.md:40 · it counts only through the two above
 
 ## Jobs
-- J1 <!-- REQUIRED:jobs -->: When my circuit is built [E PR #303], I want to see it on my real board [D-b], so I can wire it from a picture [H the request: "a really nice editor"]
+- J1 <!-- REQUIRED:jobs -->: dropped by the PO, 2026-10-16 (D9): "Number one is not necessary, just that parts should have pictures, photos". It was: see the built circuit on my real board
 - J2: When I move from the breadboard to a perfboard [D-b], I want the same circuit laid out and routed for that board [E the request: "how making routes works there"], so I can solder it once, right [H]
-- J3: When a layout is not how I want it [H], I want to move parts and wires in an editor like Wokwi's [E the request: "wokwi is actually quite a good inspiration"], so I can make it fit my board and my taste [H]
+- J3: When a layout is not how I want it [H], I want to move parts and wires in an editor like Wokwi's [E the request: "wokwi is actually quite a good inspiration"], so I can make it fit my board and my taste [H], and it stays where I move it [D9]
 - J4: When a part, module, board or battery is missing or wrong in the catalogue [E the request: "the catalogue editing app"], I want to edit its record with its pins, size and picture [E the request: "what other data"], so I can use it in every view [H]
-- J5: When I see a part in a view [H], I want a real picture of it, imported from the web [E the request: "import images from web, sooner or later"], so I can recognise it in my drawer [H]
+- J5: When I see a part in a view [H], I want a real picture or photo of it [D9], imported from the web [E the request: "import images from web, sooner or later"], so I can recognise it in my drawer [H]
 - J6: When a layout or a catalogue entry is ready [H], I want to save it, load it later and share it [E the request: "saving and loading, sharing"], so I can go on another day or show a friend [H]
-- J7: When I look at one circuit [H], I want the same circuit as a schematic, a breadboard, a perfboard and a PCB [E the request: "displaying the schema in different stages"], so I can trust that each stage is the same circuit [H]
+- J7, the most important (D9): When I look at one circuit [H], I want the same circuit as a schematic, a breadboard, a perfboard and a PCB [E the request: "displaying the schema in different stages"], so I can trust that each stage is the same circuit [H]
+- J8 (D9): When the circuit works [H], I want to export it, ultimately with whatever Fusion 360 needs for a 3D model of the PCB and the parts [D9: "export should be possible, ultimately whatever is needed for fusion"], so I can design its enclosure [H the north star, memory spark-north-star-rc-cars]
 
 ## Today they…
 - J1 <!-- REQUIRED:today --> · the sheet's steps and diagram. Since P267, also `breadboard.json`, pasted into wokwi.com by hand, XIAO C6 only · E PR #303

@@ -7,9 +7,9 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence <!-- REQUIRED:ready -->
-**Stands on:** 11 H, — of which would change the decision <!-- REQUIRED:debt -->
-**Decision needed:** Q1, the importance of each assumption and the pass line of the riskiest; then the queue below, first the slice order <!-- REQUIRED:decision-needed -->
+**Ready for:** design <!-- REQUIRED:ready -->
+**Stands on:** 10 H, 1 of which would change the decision (A1, edits that stay, high for step 5 by D9) <!-- REQUIRED:debt -->
+**Decision needed:** none now: the PO chose the direction (D8); each step's plan decides its own technical questions <!-- REQUIRED:decision-needed -->
 
 ## Frame
 - Request, verbatim (corrections marked): the PO, 2026-10-16, on P269 (#304): "probably we will want to reuse code for the perfboard stagte, so please also create some common base, think about what the differences are, how making routes works there, etc, what other data we would nreed to store for parts/modules/boars to also enable the perfboard visualisation and editing. In the end we will want to have a really nice editor, wokwi is actually quite a good inspiration how it dowa its breadboare and also pcb and schema, so just keep that in mind, so me good thought through way of siplaying the schema in different stategs will be good to have and we will want to in the end have it really nicely made ux and graphics wise." His answers the same day: plain perfboard and stripboard, both; "Discovery first"; "It would be grteat to have the system made so that its easy to add more, we'de in the end ideally want to enable all these views, we can start by a webpage, vue probably, or some canvas and 3js typescript libraries maybe, ideally if reusable for the artifact and later even some electron version of the page for example. We will also want to enable the catalogue editing app for the parts and modules and boards and batteries, etc."; "it would be great if it could import images from web, sooner or later, of the parts etc. And think of saving and loading, sharing.." <!-- REQUIRED:request -->
@@ -73,8 +73,8 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 - Proposed no-gos and rabbit holes (proposals until the decider confirms): no Fritzing art and no vendor picture in the public repository (★C7 (share-alike), AGENTS.md); no copying of VeroRoute's code (★C7); Electron only if the local page falls short (TL-35); no current or heat check on a stripboard until each loaded part records its current (C10); the PCB's own routing stays with tscircuit (the frame) · H the lenses, proposals · caveat: none confirmed by the PO <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: A1: a person's edit to a layout survives the next build, or is reported, never lost (★C5) · proposed — the PO assistant and the tech lead, pending Q1 <!-- REQUIRED:riskiest -->
-- Test · kind · pass line, dated before any result · proposed | D<n>: a spike, two hours: move a part and a jumper in a button-light layout, change the requirements, rebuild with a merge rule like `merge.ts`, and read the result · pass line: in 3 of 3 cases (a moved part, a moved jumper, an edit the new circuit breaks) the edit survives or is reported by name, with a merge rule the spike writes, since none runs today (★C5 (a person's edit)), set 2026-10-16 · proposed — the lead, from the PO assistant and the tech lead <!-- REQUIRED:test -->
+- Riskiest: A3, a picture in the sheet helps him wire more than the steps alone, rated high (D4) and met as his account, n = 1; A1 (edits survive) was proposed first and rated low (D2) · D4 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line, dated before any result · proposed | D<n>: the picture slice itself (P268) shown to the PO; pass line: he wires button-light from the picture, set 2026-10-16; the edit spike is dropped by D2 · D8 <!-- REQUIRED:test -->
 
 ## Questions
 <!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
@@ -82,22 +82,30 @@ opinion (whose) · kind: decision | account (a past-tense question about the dec
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
-- Q2 · Which slice comes first: the base, the SVG and the check (S0 to S2), a viewer, or a perfboard? · decides: the board order · options in Options · unblocks: P268 · opinion (the tech lead, the PO assistant: S0 to S2) · kind: decision · status: queued
-- Q3 · Who makes the routes on a perfboard or stripboard: spark plans and you edit, you route and spark checks, or an export to VeroRoute? · decides: S5 and S6's size · kind: decision · status: queued
-- Q4 · Where are your edits kept: marked inside one layout file, or in a separate file the build never writes? · decides: the save format and the rebuild rule · kind: decision · status: queued
-- Q5 · How does the editor draw: SVG with or without Vue, or a canvas library? · decides: the stack and the Artifact's libraries · kind: decision · status: queued
-- Q6 · How does the browser check a layout: a small TS checker beside Python, or the Python core in the page (Pyodide)? · decides: whether logic lives in two languages · kind: decision · status: queued
-- Q7 · Pictures: keyed by the part's record, and may Fritzing's share-alike art be kept in your own store, never in spark? · decides: S1's and S7's picture source · kind: decision · status: queued
-- Q8 · Is the catalogue editor part of P269, or of P160 inside the store epic P178? Is a battery its own kind of record? · decides: S7's home · kind: decision · status: queued
-- Q9 · Do P199's walk-through page and this editor share one page? · decides: one web app or two · kind: decision · status: queued
-- Q10 · Your own use, ten short account questions (council/user.md Q-a to Q-j), for example: have you opened `breadboard.json` in Wokwi, and if so, did you move anything? · decides: which friction comes first · kind: account · status: queued
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D2 to D7, walked through as six short questions <!-- REQUIRED:q1 -->
+- Q2 · Which slice comes first: the base, the SVG and the check (S0 to S2), a viewer, or a perfboard? · decides: the board order · options in Options · unblocks: P268 · opinion (the tech lead, the PO assistant: S0 to S2) · kind: decision · status: answered D8
+- Q3 · Who makes the routes on a perfboard or stripboard: spark plans and you edit, you route and spark checks, or an export to VeroRoute? · decides: S5 and S6's size · kind: decision · status: queued for step 6's plan
+- Q4 · Where are your edits kept: marked inside one layout file, or in a separate file the build never writes? · decides: the save format and the rebuild rule · kind: decision · status: queued for step 5's plan
+- Q5 · How does the editor draw: SVG with or without Vue, or a canvas library? · decides: the stack and the Artifact's libraries · kind: decision · status: queued for step 3's plan
+- Q6 · How does the browser check a layout: a small TS checker beside Python, or the Python core in the page (Pyodide)? · decides: whether logic lives in two languages · kind: decision · status: queued for step 3's plan
+- Q7 · Pictures: keyed by the part's record, and may Fritzing's share-alike art be kept in your own store, never in spark? · decides: S1's and S7's picture source · kind: decision · status: queued for step 2's plan
+- Q8 · Is the catalogue editor part of P269, or of P160 inside the store epic P178? Is a battery its own kind of record? · decides: S7's home · kind: decision · status: queued for step 7's plan
+- Q9 · Do P199's walk-through page and this editor share one page? · decides: one web app or two · kind: decision · status: queued for step 3's plan
+- Q10 · Your own use, ten short account questions (council/user.md Q-a to Q-j), for example: have you opened `breadboard.json` in Wokwi, and if so, did you move anything? · decides: which friction comes first · kind: account · status: answered in part by D2 to D5; the rest dropped
 
 ## Decisions
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
 - D1 · the frame is right: the decision, start and reach, scope, the five lenses and the budget of 16 searches · the PO · 2026-10-16 · AskUserQuestion Q0 in this session · options: the frame, change the scope, fewer lenses
+- D2 · a lost edit after a rebuild is "Annoying, but OK": A1 is low · the PO · 2026-10-16 · AskUserQuestion, a walk through Q1 · options: deal-breaker, annoying but OK, I do not care
+- D3 · he will solder a perfboard or stripboard "Yes, but later": A4 is low for now · the PO · 2026-10-16 · same · options: yes soon, yes but later, not sure
+- D4 · when wiring he would look at "The picture" most: A3 is high, and its pass line is met as an account · the PO · 2026-10-16 · same · options: the picture, both, the steps
+- D5 · where to open it: "All, in that order": the sheet, then a page on his Mac, then an Artifact; A7 is low for now · the PO · 2026-10-16 · same · options: in the sheet, a page on my Mac, an Artifact link, all in that order
+- D6 · sharing: "Later is fine", with the store epic P178; A11 is low · the PO · 2026-10-16 · same · options: later is fine, early
+- D7 · the base: "OK, rework later": build it as far as the breadboard and the picture need, check it against the perfboard on paper only; A2 is low · the PO · 2026-10-16 · same · options: rework later, prove it now
+- D8 · the direction, the remaining risk and items.md: "Yes, this order": 1 a small base, breadboard only; 2 the picture in breadboard.md (P268); 3 a page on his Mac with schematic and PCB tabs; 4 the same page as an Artifact; later 5 editing that keeps moves, 6 stripboard and perfboard, 7 the catalogue editor with web pictures, 8 sharing. The five unrated technical guesses (A5, A6, A8, A9, A10) are checked in each step's own plan. Filing the items in items.md is yes · the PO · 2026-10-16 · AskUserQuestion in this session · options: yes this order, yes but change it
+- D9 · the jobs, confirmed with changes: "number 7 is the most importatnt, in steps is ok, mvp first, 2 is nice, 3 yes, and it should stay where we move it, export should be possible, ultimately whatever is needed for fusion , if possoble to have it 3d made there, including pcb and parts ? Number one is not necessary, just that parts should have pictures, photos". So J7 is the most important, J1 is dropped, J5 says photos, J3 needs edits that stay (A1 becomes high for step 5, which supersedes D2 there), and J8 export for Fusion 360 is new, after step 7 · the PO · 2026-10-16 · AskUserQuestion in this session · options: yes these are my jobs, change one
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -107,15 +115,16 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
 - P269 (#304) is in Discovery · taken before this discovery, by the PO's approval of the plan (D-a)
-- set "Waiting on: the PO" and "Waiting since" while Q1 waits · pending
-- a comment on #304 linking this brief · pending
+- set "Waiting on: the PO" while Q1 waited · not needed, he answered in the session
+- a comment on #304 linking this brief · pending, after the PR
+- file the items in items.md under #304 · D8
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the jobs, a direction and the remaining risk are unconfirmed <!-- REQUIRED:handoff -->
+Outcome: the maker sees one circuit in every stage, step by step, MVP first (J7, the most important by D9): the picture in the sheet, then a page with the breadboard, schematic and PCB, then an editor whose moves stay (J3, D9), then the boards he solders (J2), then the catalogue with photos (J4, J5), then an export for Fusion 360 (J8, D9). Who: the PO, n = 1. Success and its proof: step 2 (P268) puts `breadboard.svg` in `breadboard.md` for button-light, and he wires from it (A3, D4). Constraints: the order in D8; the base only as far as the breadboard and the picture need (D7); no share-alike or vendor art in the repository (★C7 (share-alike)); the one bar of AGENTS.md. What he said (D2 to D8) against what we assume: A5, A6, A8, A9 and A10 stay H, each checked in its step's plan. Links: [jobs](jobs-and-journeys.md), [map](story-map.md), [risks](risks-and-tests.md), [items](items.md). Options considered: in Options; the first-slice split (base first against picture first) is settled by D7 and D8: a small base, then the picture. <!-- REQUIRED:handoff -->
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
