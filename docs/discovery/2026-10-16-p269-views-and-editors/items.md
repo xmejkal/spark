@@ -56,7 +56,7 @@
 - needed by: "Plain perfboard, Stripboard, Both" (the PO, 2026-10-16); D3: later
 - value proven by: a button-light stripboard layout that the circuit check accepts
 - depends on: step 3
-- status: filed D8, #310 P274
+- status: filed D8, #310 P274, closed by D15 (stripboard dropped)
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P269 (#304)
 - slice (one Slice option of the board, or "ask the decider for a new one"): 7 Perfboard to PCB
@@ -65,7 +65,7 @@
 - type: story
 - needed by: "how making routes works there" (the PO, 2026-10-16); D3
 - value proven by: a button-light perfboard layout that the circuit check accepts
-- depends on: step 6a
+- depends on: step 3 (stripboard dropped, D15)
 - status: filed D8, #311 P275
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P269 (#304)

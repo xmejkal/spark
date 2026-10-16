@@ -111,6 +111,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D12 · the remaining risk: "Yes, check them later": A5, A6, A8, A9 and A10 are each checked in their own step's plan, with no test now · the PO · 2026-10-16 · same · options: yes check them later, test some now
 - D13 · a new Slice option "Views and editors" for steps 1 to 5 · the PO · 2026-10-16 · AskUserQuestion in this session · options: a new slice, v0.10 The basic journey, parked after v0.10. The lead did not add it, because the API replaces the whole option list; the PO adds it by hand
 - D14 · the rows AT273 to AT276 in docs/observations/INDEX.md, outside this folder · the PO's standing rule · rules.md (CLAUDE.local.md): "The gaps and findings of every agent run become rows in spark's docs/observations/INDEX.md" · a standing yes for that kind of action
+- D15 · stripboard is dropped: "letd get rid of stripboard". Step 6 is plain perfboard only; #310 is closed as not planned. This narrows D-b · the PO · 2026-10-16 · his message in this session · options: none offered
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
