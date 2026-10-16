@@ -71,6 +71,12 @@ def _rounded(value):
     return round(value, 3)
 
 
+class TheStepColorsTest(unittest.TestCase):
+    def test_step_one_is_the_palette_s_first_and_step_nine_wraps_to_it(self):
+        colors = breadboard_steps.StepColors()
+        self.assertEqual([colors.color(n) for n in (1, 2, 8, 9)], ["red", "orange", "magenta", "red"])
+
+
 class TheBreadboardTest(unittest.TestCase):
     def test_the_half_board_has_300_holes_in_rows_of_five_and_four_rails_of_25(self):
         self.assertEqual(len(GEOMETRY.terminal), 300)
@@ -94,6 +100,9 @@ class TheLedgerTest(unittest.TestCase):
         ledger.claim(hole, "board D0")
         with self.assertRaisesRegex(NotDrawn, "hole 1t.a is taken by board D0"):
             ledger.claim(hole, "LedRed5mm A")
+
+    def test_a_free_row_lies_right_of_the_column_it_is_given(self):
+        self.assertEqual(HoleLedger(GEOMETRY).free_row(5, "a jumper").column, 6)
 
     def test_a_full_row_and_a_full_board_are_refused(self):
         ledger = HoleLedger(GEOMETRY)
@@ -159,6 +168,12 @@ class TheXiaoLayoutTest(unittest.TestCase):
         self.assertEqual([wire[2] for wire in drawn["connections"]],
                          [breadboard_steps.StepColors().color(number) for number in jumper_steps])
 
+    def test_one_empty_column_parts_the_board_s_body_from_the_next_part(self):
+        # The board's pins are in columns 3 to 9 and its body covers 10; column 11 stays empty, so the button is in 12.
+        board, button = self.layout.parts[0], self.layout.parts[1]
+        self.assertEqual(max(hole.column for hole in board.holes.values()), 9)
+        self.assertEqual(min(hole.column for hole in button.holes.values()), 12)
+
     def test_the_same_build_gives_the_same_bytes(self):
         once = breadboard_drawing.WokwiBreadboardDiagram().text(self.layout)
         self.assertEqual(once, breadboard_drawing.WokwiBreadboardDiagram().text(breadboard._plan_layout(xiao_read())))
@@ -168,6 +183,18 @@ class TheXiaoLayoutTest(unittest.TestCase):
         names = {"bb1:" + hole.name for hole in GEOMETRY.holes}
         for wire in drawn["connections"]:
             self.assertLessEqual(set(wire[:2]), names)
+
+
+class AnOldDrawingTest(unittest.TestCase):
+    def test_write_removes_a_drawing_an_earlier_build_left_when_this_one_cannot_be_drawn(self):
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "motor"
+        shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "motor", project)
+        (project / "breadboard.json").write_text("{}")
+        with in_store():
+            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+        self.assertIsNone(written.drawing)
+        self.assertFalse((project / "breadboard.json").exists())
 
 
 class WhatIsNotDrawnTest(unittest.TestCase):
@@ -207,6 +234,31 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         catalog["R2"] = catalog["R1"]
         layout = breadboard_drawing.BreadboardPlanner(GEOMETRY, catalog).plan(steps)
         self.assertLessEqual({"R1", "R2"}, {part.id for part in layout.parts})
+
+    def leg(self, tag, number):
+        return breadboard_steps.End(breadboard_steps.RESISTOR, tag, "%s end %d" % (tag, number),
+                                    "%s, end %d" % (tag, number), str(number))
+
+    def end_named(self, read, name):
+        return next(end for point in read.steps.points for end in point.ends if end.name == name)
+
+    def test_a_resistor_whose_both_legs_join_rows_is_said_not_drawn(self):
+        read = xiao_read()
+        points = [breadboard_steps.StepPoint([self.end_named(read, "LedRed5mm A"), self.leg("R1", 1)], None, False),
+                  breadboard_steps.StepPoint([self.end_named(read, "TactileButton A"), self.leg("R1", 2)], None, False)]
+        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY))
+        with self.assertRaisesRegex(NotDrawn, "both ends of R1 join other rows"):
+            planner.plan(breadboard_steps.BreadboardSteps(read.steps.placed, points))
+
+    def test_a_resistor_with_no_leg_joined_goes_right_of_the_parts(self):
+        read = xiao_read()
+        points = [breadboard_steps.StepPoint([self.end_named(read, "board D8"), self.leg("R1", 1)], None, False),
+                  breadboard_steps.StepPoint([self.end_named(read, "board D10"), self.leg("R1", 2)], None, False)]
+        layout = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY)).plan(
+            breadboard_steps.BreadboardSteps(read.steps.placed, points))
+        parts = {part.id: part for part in layout.parts}
+        last = max(hole.column for part in layout.parts if part.id != "R1" for hole in part.holes.values())
+        self.assertGreater(min(hole.column for hole in parts["R1"].holes.values()), last + 1)
 
     def test_a_part_with_no_wokwi_drawing_is_named(self):
         read = xiao_read()

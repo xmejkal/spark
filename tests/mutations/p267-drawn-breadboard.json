@@ -1,0 +1,74 @@
+[
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "rotate counter-clockwise",
+  "find": "x, y = cx + cy - y, cy - cx + x",
+  "replace": "x, y = cx - cy + y, cy + cx - x"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "rail groups ignored in x",
+  "find": " + (number - 1) // board[\"rail_group\"])",
+  "replace": ")"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "free_row may reuse column after",
+  "find": "hole.column > after and self.row_is_free",
+  "replace": "hole.column >= after and self.row_is_free"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "pins may share a row",
+  "find": "or hole.row in {one.row for one in holes.values()}",
+  "replace": "or False"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "covered box not turned",
+  "find": "(cy, cx) if degrees % 180",
+  "replace": "(cx, cy) if degrees % 180"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "no empty column between parts",
+  "find": "+ self.SPACING_COLUMNS",
+  "replace": "+ 1"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "both-ends resistor allowed",
+  "find": "if len(pinned) > 1:",
+  "replace": "if len(pinned) > 5:"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "resistor not kept right of after",
+  "find": "after if not row else 0",
+  "replace": "0"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "M is thousand",
+  "find": "\"M\": 1000000}",
+  "replace": "\"M\": 1000}"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "stale drawing kept",
+  "find": "        drawn.unlink(missing_ok=True)\n        return Written(Path(out), None, str(stopped))",
+  "replace": "        return Written(Path(out), None, str(stopped))"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "stale file kept by _left_from_earlier",
+  "find": "    if path.exists():\n        path.unlink()",
+  "replace": "    if path.exists():\n        pass"
+ },
+ {
+  "file": "scripts/breadboard_steps.py",
+  "name": "color palette off by one",
+  "find": "self.PALETTE[(number - 1) % len(self.PALETTE)]",
+  "replace": "self.PALETTE[number % len(self.PALETTE)]"
+ }
+]
