@@ -13,15 +13,16 @@ from breadboard_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, Merma
 
 
 def board(label):
-    return End(BOARD, "board", "board " + label, "board " + label)
+    return End(BOARD, "board", "board " + label, "board " + label, label)
 
 
 def pin(part, name, leg=""):
-    return End(PART, part, "%s %s" % (part, name), "%s %s%s" % (part, name, " (%s)" % leg if leg else ""))
+    return End(PART, part, "%s %s" % (part, name), "%s %s%s" % (part, name, " (%s)" % leg if leg else ""), name)
 
 
 def resistor(tag, number):
-    return End(RESISTOR, tag, "%s end %d" % (tag, number), "%s (330Ω in series with Led A), end %d" % (tag, number))
+    return End(RESISTOR, tag, "%s end %d" % (tag, number), "%s (330Ω in series with Led A), end %d" % (tag, number),
+               str(number))
 
 
 def numbered(placed, points):

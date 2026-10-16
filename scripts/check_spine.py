@@ -60,6 +60,7 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
+import breadboard_drawing  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
@@ -749,26 +750,40 @@ def drop_an_older_build(destination, stages):
 
 def keep_breadboard(requirements, destination, stages=()):
     """
-    The breadboard sheet beside the kept board (P191, #143), as one kept entry {file, did, why, line}. Only from a build
-    that finished in this run, which it records (dist/board/built-from.json) for breadboard.py to compare; a sheet left
-    from an earlier build is removed, since it describes another board.
+    The breadboard sheet beside the kept board (P191, #143), and its drawn breadboard (P267), as kept entries {file,
+    did, why, line}. Only from a build that finished in this run, which it records (dist/board/built-from.json) for
+    breadboard.py to compare; a sheet or a drawing left from an earlier build is removed, since it describes another
+    board.
     """
     sheet = Path(destination) / breadboard.SHEET
+    drawn = Path(destination) / breadboard_drawing.FILE
     if not any(stage.name == "build" and stage.status == OK for stage in stages):
         why = ("board only: nothing to wire" if any(stage.status == SKIPPED for stage in stages)
                else "the build did not finish in this run")
-        if sheet.exists():
-            sheet.unlink()
-            return {"file": str(sheet), "did": "removed", "why": why + ", and it described an earlier build",
-                    "line": "no breadboard sheet: %s; removed %s, which described an earlier build" % (why, sheet)}
-        return {"file": str(sheet), "did": "not written", "why": why, "line": "no breadboard sheet: %s" % why}
+        return [_left_from_earlier(sheet, "breadboard sheet", why), _left_from_earlier(drawn, "drawn breadboard", why)]
     try:
         breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
         written = breadboard.write(requirements, sheet, Path(destination) / breadboard.CIRCUIT)
     except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
-        return {"file": str(sheet), "did": "not written", "why": str(stopped), "line": "no breadboard sheet: %s" % stopped}
+        return [{"file": str(sheet), "did": "not written", "why": str(stopped),
+                 "line": "no breadboard sheet: %s" % stopped},
+                _left_from_earlier(drawn, "drawn breadboard", "the sheet was not written")]
     why = "the parts and how to wire them on a breadboard"
-    return {"file": str(written), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written, why)}
+    kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why)}]
+    if written.drawing:
+        return kept + [{"file": str(written.drawing), "did": "wrote", "why": breadboard.DRAWING_WHY,
+                        "line": "wrote %s — %s" % (written.drawing, breadboard.DRAWING_WHY)}]
+    return kept + [{"file": str(drawn), "did": "not written", "why": written.why,
+                    "line": "no drawn breadboard: %s" % written.why}]
+
+
+def _left_from_earlier(path, what, why):
+    """One kept entry for a file this run did not write: removed when an earlier build left it, else not written."""
+    if path.exists():
+        path.unlink()
+        return {"file": str(path), "did": "removed", "why": why + ", and it described an earlier build",
+                "line": "no %s: %s; removed %s, which described an earlier build" % (what, why, path)}
+    return {"file": str(path), "did": "not written", "why": why, "line": "no %s: %s" % (what, why)}
 
 
 def keep_pins(requirements, destination):
@@ -838,7 +853,7 @@ def report(stages, args, workdir=None, requirements=None):
     code = verdict(stages)
     kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
     if kept is not None and getattr(args, "requirements", None):
-        kept.append(keep_breadboard(Path(args.requirements), Path(args.keep), stages))
+        kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages)
         kept += drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
     simulation = keep_simulation(workdir, simulation_dir(args)) if workdir is not None and simulation_dir(args) else None
