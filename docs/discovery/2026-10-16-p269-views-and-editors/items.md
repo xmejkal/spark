@@ -26,7 +26,7 @@
 - needed by: "we can start by a webpage" (the PO, 2026-10-16); D5
 - value proven by: the page opens the layout of button-light, with all three tabs, and one circuit source checks the layout
 - depends on: step 2
-- status: filed D8, #307 P271
+- status: filed D8, #307 P271; built 2026-10-16: `check_spine --keep` writes `page.html`, all three tabs from the one kept circuit.json (D16, D17); the layout check is P279 (#317)
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P269 (#304)
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider for a new one
@@ -34,7 +34,7 @@
 ## Step 4: the same page as an Artifact
 - type: story
 - needed by: "reusable for the artifact" (the PO, 2026-10-16); D5
-- value proven by: the same bundled file opens as an Artifact
+- value proven by: the same `page.html` opens as an Artifact (D16)
 - depends on: step 3
 - status: filed D8, #308 P272
 - label (the repository's type label): story

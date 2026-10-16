@@ -82,7 +82,9 @@ for, numbered wiring steps (one connection each) and a mermaid diagram of them, 
 ([P267](https://github.com/xmejkal/spark/issues/300)). The person pastes it into the `diagram.json` of a new project
 on wokwi.com and compares it with their own breadboard. `breadboard.svg` is the same layout as a picture, which the
 sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). It is new each time, so a change made to it in Wokwi is
-lost at the next build. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
+lost at the next build. `page.html` shows the same circuit in three tabs: the breadboard picture, and tscircuit's
+schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a
+browser. It has no script and loads nothing from the web. A tab that could not be drawn, for example with no `tsci`, says why. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with

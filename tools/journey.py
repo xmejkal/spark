@@ -31,7 +31,7 @@ STEPS = [
     ("Research", "/spark:research", "Pick a part for a real gap.", "A part record with a source for every fact.",
      "The library search runs. Research by agents was not run.", "partly"),
     ("Build", "/spark:build", "Run it on the requirements file.",
-     "A board that builds, a Wokwi diagram, a breadboard sheet with its picture.",
+     "A board that builds, a Wokwi diagram, a sheet, a page of tabs.",
      "Ran end to end on 2026-10-11. The drawing is on the XIAO C6 only, since 2026-10-16.", "works"),
     ("Checks", "check_all.py", "Run the checks on the project.", "What holds, and what a check could not look at.",
      "A fresh button-and-LED project passes.", "works"),

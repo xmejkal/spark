@@ -633,7 +633,8 @@ def main(argv=None):
                              "left alone and named; with --json, each file is listed under kept. With a requirements "
                              "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today), "
-                             "and "
+                             "breadboard.svg, that drawing as a picture, page.html, the breadboard, schematic and PCB "
+                             "in three tabs to open in a browser, and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")

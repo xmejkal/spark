@@ -463,6 +463,13 @@ holes in its step's color, with its step number at the corner. Pictures from onl
 
 ![The button-and-LED project as the sheet shows it](img/button-light-xiao-breadboard.svg)
 
+Since 2026-10-16 the build also writes `page.html`, the same circuit in three tabs: the breadboard, the schematic
+and the PCB ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a browser on your Mac and click a tab.
+The schematic and the PCB are tscircuit's own pictures, from `tsci export` on the kept circuit. The PCB tab of the
+same project:
+
+![The PCB tab of page.html for the button-and-LED project](../discovery/2026-10-16-p271-page/tab-pcb.jpg)
+
 **T — the tally.**
 
 ```sh
