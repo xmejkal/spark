@@ -49,11 +49,10 @@ runs in [the journey guide](docs/guide/journey.md):
 - **A breadboard sheet.** After a build, `breadboard.md` lists the parts and gives numbered steps, one connection each,
   by the board's printed labels: `Run a jumper from board D3 to the row of TactileButton A.` A mermaid diagram shows
   the same steps as numbered lines, and a check list of the points follows ([P202](https://github.com/xmejkal/spark/issues/161)).
-  For a XIAO ESP32-C6, `breadboard.json` draws the same steps on a Wokwi breadboard, each jumper in its step's color,
-  when no point needs a rail, and the sheet shows the same layout as a picture
-  ([P268](https://github.com/xmejkal/spark/issues/302)). `page.html` shows the breadboard, schematic and PCB in three tabs
-  ([P271](https://github.com/xmejkal/spark/issues/307))
-  ([P267](https://github.com/xmejkal/spark/issues/300)).
+  For a XIAO ESP32-C6, `breadboard.json` draws the same steps on a Wokwi breadboard, each jumper in its step's color
+  ([P267](https://github.com/xmejkal/spark/issues/300)), when no point needs a rail, and the sheet shows the same layout
+  as a picture ([P268](https://github.com/xmejkal/spark/issues/302)). `page.html` shows the breadboard, schematic and PCB
+  in three tabs ([P271](https://github.com/xmejkal/spark/issues/307)).
 - **A conflict between two parts.** The board's 10 kΩ pull-downs, against the L9110S module's own 10 kΩ pull-ups, hold
   both motor inputs HIGH at idle on a supply above 5 V. `parts.py --show` reports it; `check_all` does not yet
   ([P109](https://github.com/xmejkal/spark/issues/43)).

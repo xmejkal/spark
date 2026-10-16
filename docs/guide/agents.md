@@ -142,8 +142,8 @@ These write:
   reads, writes `breadboard.md`, `breadboard.json`, `breadboard.svg` and `page.html` after a build that finished, and creates `.tscircuit/cache/`.
   `page.html` (P271) shows the breadboard picture and tscircuit's schematic and PCB in three tabs, each from
   `tsci export` on the kept `dist/board/circuit.json`. A tab that could not be drawn says why. With no build in this
-  run, a board-only build, or a `dist/` that was not kept, an old `page.html` is removed and the kept entry says why. It also writes
-  `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
+  run, a board-only build, or a `dist/` that was not kept, an old `page.html` is removed and the kept entry says why.
+  `check_spine.py` also writes `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).

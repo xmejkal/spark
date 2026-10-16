@@ -3,7 +3,8 @@ The page (P271, #307): one circuit in three tabs, the breadboard, the schematic 
 `page.html`, beside the sheet. The breadboard is spark's own picture (P268); the schematic and the PCB are tscircuit's,
 from `tsci export` on the same kept circuit.json.
 
-    TscircuitExport(toolchain).export_svg(circuit, "schematic-svg")  ->  Tab  ->  TabbedHtmlPage().text(tabs)
+    TscircuitExport(toolchain).export_svg(circuit, "schematic-svg")  ->  SvgExportResult
+    exported_tab("Schematic", result)  ->  Tab  ->  TabbedHtmlPage().text(tabs)
 
 Each picture sits in its own <img>, so one SVG's <style> and ids cannot reach another: inline, the schematic's
 `.boundary` rule turns the PCB's black background beige (P271's council, round 1). The page has no script and loads
@@ -43,7 +44,7 @@ class TscircuitExport:
             # tsci 0.0.2600 fails on a bare relative "circuit.json", so the path is always absolute.
             command = [str(self.toolchain), "export", str(Path(circuit_path).resolve()), "-f", form, "-o", str(out)]
             try:
-                run = subprocess.run(command, capture_output=True, text=True, timeout=self.TIMEOUT_S)
+                run = subprocess.run(command, capture_output=True, text=True, errors="replace", timeout=self.TIMEOUT_S)
             except subprocess.TimeoutExpired:
                 return SvgExportResult(None, "tsci export -f %s took over %d s" % (form, self.TIMEOUT_S))
             except OSError as refused:
@@ -52,7 +53,10 @@ class TscircuitExport:
                 said = (run.stderr or run.stdout).strip().splitlines()
                 return SvgExportResult(None, "tsci export -f %s exited %d%s" % (
                     form, run.returncode, ": " + said[-1] if said else ""))
-            svg = out.read_text(encoding="utf-8") if out.is_file() else ""
+            try:
+                svg = out.read_text(encoding="utf-8") if out.is_file() else ""
+            except (OSError, ValueError) as unread:
+                return SvgExportResult(None, "tsci export -f %s wrote a file spark cannot read: %s" % (form, unread))
             if not svg.strip():
                 return SvgExportResult(None, "tsci export -f %s wrote nothing" % form)
             return SvgExportResult(svg, None)
@@ -73,7 +77,7 @@ class TabbedHtmlPage:
     PURPOSE_MESSAGE = "the breadboard, schematic and PCB in three tabs: open it in a browser"
 
     STYLE = ("body{margin:0;font:15px system-ui,sans-serif;background:#f6f3ee;color:#222}"
-             "input{display:none}"
+             "input{position:absolute;opacity:0}"
              "label{display:inline-block;padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent}"
              ".panel{display:none;padding:12px}"
              ".panel img{width:100%;height:auto;max-height:88vh;object-fit:contain;background:#fff}")

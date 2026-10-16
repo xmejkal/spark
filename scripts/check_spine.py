@@ -822,7 +822,10 @@ def _breadboard_tab(destination, kept):
     picture = str(Path(destination) / breadboard_drawing.SvgBreadboardDiagram.FILE_NAME)
     entry = next((entry for entry in kept if entry["file"] == picture), None)
     if entry is not None and entry["did"] == "wrote":
-        return tabbed_page.Tab("Breadboard", Path(picture).read_text(encoding="utf-8"), None)
+        try:
+            return tabbed_page.Tab("Breadboard", Path(picture).read_text(encoding="utf-8"), None)
+        except (OSError, ValueError) as unread:
+            return tabbed_page.Tab("Breadboard", None, "breadboard.svg cannot be read: %s" % unread)
     return tabbed_page.Tab("Breadboard", None, entry["why"] if entry else "the breadboard picture was not written")
 
 

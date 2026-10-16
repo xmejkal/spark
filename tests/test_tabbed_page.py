@@ -94,6 +94,14 @@ class TscircuitExportTest(unittest.TestCase):
         self.assertEqual("tsci export -f pcb-svg wrote nothing", self.run_with(writes="  \n").why_missing)
         self.assertEqual("tsci export -f pcb-svg wrote nothing", self.run_with(writes=None).why_missing)
 
+    def test_an_output_that_is_not_utf8_says_why(self):
+        def fake_run(command, **kwargs):
+            Path(command[command.index("-o") + 1]).write_bytes(b"<svg>\xff</svg>")
+            return subprocess.CompletedProcess(command, 0, "", "")
+        with mock.patch.object(tabbed_page.subprocess, "run", fake_run):
+            result = TscircuitExport("/bin/tsci").export_svg("circuit.json", "pcb-svg")
+        self.assertTrue(result.why_missing.startswith("tsci export -f pcb-svg wrote a file spark cannot read"))
+
     def test_a_timeout_says_so(self):
         result = self.run_with(side_effect=subprocess.TimeoutExpired("tsci", 60))
         self.assertEqual("tsci export -f pcb-svg took over 60 s", result.why_missing)

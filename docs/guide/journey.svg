@@ -72,8 +72,9 @@
 <text x="1262" y="721" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
 <text x="1214" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Ran end to end on</text>
 <text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11. The drawing is</text>
-<text x="1214" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">on the XIAO C6 only, since</text>
-<text x="1214" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16.</text>
+<text x="1214" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">on the XIAO C6 only. The</text>
+<text x="1214" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">page of tabs ran,</text>
+<text x="1214" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16.</text>
 <line x1="227" y1="1046" x2="1373" y2="1046" stroke="#b0b0b0" stroke-width="4"/>
 <circle cx="227" cy="1046" r="36" fill="#2dc75c"/>
 <text x="227" y="1057" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>

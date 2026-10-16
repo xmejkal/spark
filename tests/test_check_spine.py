@@ -1005,6 +1005,11 @@ class TheTabbedPageTest(unittest.TestCase):
         self.keep()
         self.assertIn("<p>Breadboard: not drawn, because no layout fits.</p>", self.page.read_text())
 
+    def test_a_breadboard_picture_that_cannot_be_read_gives_its_why(self):
+        self.picture.write_bytes(b"\xff")
+        self.keep()
+        self.assertIn("Breadboard: not drawn, because breadboard.svg cannot be read", self.page.read_text())
+
     def test_a_failed_export_still_writes_the_page_with_its_why(self):
         import tabbed_page
         failed = FakeTscircuitExport({"pcb-svg": tabbed_page.SvgExportResult(None, "tsci is not installed")})
