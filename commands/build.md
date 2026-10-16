@@ -76,7 +76,7 @@ would hold only `requirements.json`, and `check_all --project .` would answer "n
 a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, edited or
 not; delete it to have it regenerated. With `--json`, each file is listed under `kept`, with what was done to it and
 why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask
-for, every wire by the board's printed labels and the parts' legs, and what each record says to check before power
+for, numbered wiring steps (one connection each) and a mermaid diagram of them, by the board's printed labels and the parts' legs, and what each record says to check before power
 ([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. A line
 `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `dist/` is still replaced with a build of the freshly generated board, not of

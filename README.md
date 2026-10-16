@@ -46,9 +46,9 @@ does not hold yet, [what never to assume](docs/guide/agents.md#what-never-to-ass
 On the documented example (a FireBeetle 2 ESP32-S3, an L9110S motor driver, a power inlet and two buttons), from the
 runs in [the journey guide](docs/guide/journey.md):
 
-- **A breadboard sheet.** After a build, `breadboard.md` lists the parts and every wire by the board's printed labels:
-  `board A5 · R1 (330Ω in series with LedRed5mm A), end 1`, then
-  `LedRed5mm A (the anode, the longer leg) · R1 (330Ω in series with LedRed5mm A), end 2`.
+- **A breadboard sheet.** After a build, `breadboard.md` lists the parts and gives numbered steps, one connection each,
+  by the board's printed labels: `Run a jumper from board D3 to the row of TactileButton A.` A mermaid diagram shows
+  the same steps as numbered lines, and a check list of the points follows ([P202](https://github.com/xmejkal/spark/issues/161)).
 - **A conflict between two parts.** The board's 10 kΩ pull-downs, against the L9110S module's own 10 kΩ pull-ups, hold
   both motor inputs HIGH at idle on a supply above 5 V. `parts.py --show` reports it; `check_all` does not yet
   ([P109](https://github.com/xmejkal/spark/issues/43)).
