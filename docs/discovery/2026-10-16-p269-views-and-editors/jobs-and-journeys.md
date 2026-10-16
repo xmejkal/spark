@@ -2,9 +2,9 @@
 <!-- Tags as in the brief: E with a pointer, H with its source, D with who and when; an unknown is —. -->
 
 ## Who
-- The maker, Petr, the PO: <!-- REQUIRED:who --> builds gadgets from an ESP32 board and the modules in his drawer. He directs Claude and buys from Czech shops · E scrum/VISION.md:44 ("The test bench"), the request in brief.md · n = 1, the decider as a user
-- The hobbyist, spark's primary persona: no EDA, at home in a terminal · H scrum/VISION.md:43, the PO's choice. No person outside the project used spark yet
-- The agent at the keyboard: reads spark's files and answers, never the source · E scrum/VISION.md:45 · it counts only through the two above
+- The maker, Petr, the PO: <!-- REQUIRED:who --> builds gadgets from an ESP32 board and the modules in his drawer. He directs Claude and buys from Czech shops · E scrum/VISION.md:39 ("The test bench"), the request in brief.md · n = 1, the decider as a user
+- The hobbyist, spark's primary persona: no EDA, at home in a terminal · H scrum/VISION.md:38, the PO's choice. No person outside the project used spark yet
+- The agent at the keyboard: reads spark's files and answers, never the source · E scrum/VISION.md:40 · it counts only through the two above
 
 ## Jobs
 - J1 <!-- REQUIRED:jobs -->: When my circuit is built [E PR #303], I want to see it on my real board [D-b], so I can wire it from a picture [H the request: "a really nice editor"]
@@ -46,7 +46,7 @@ flowchart LR
 ### The maker — a part that is not in the catalogue yet
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 1 | finds a module in his drawer that spark does not know | E scrum/VISION.md:44 | — | partly (`/spark:identify` from a photo) | — |
+| 1 | finds a module in his drawer that spark does not know | E scrum/VISION.md:39 | — | partly (`/spark:identify` from a photo) | — |
 | 2 | opens it in the catalogue editor | E the request | no editor | not yet | which fields are needed for every view (Q3) |
 | 3 | sets its pins, size and joined pins | H | measured by hand | not yet | what can come from a datasheet or Wokwi |
 | 4 | imports a picture from the web | E the request | license, kept where | not yet | Q6 |
