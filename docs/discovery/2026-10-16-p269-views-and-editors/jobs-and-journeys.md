@@ -2,12 +2,12 @@
 <!-- Tags as in the brief: E with a pointer, H with its source, D with who and when; an unknown is —. -->
 
 ## Who
-- The maker, Petr, the PO: builds gadgets from an ESP32 board and the modules in his drawer. He directs Claude and buys from Czech shops · E scrum/VISION.md:44 ("The test bench"), the request in brief.md · n = 1, the decider as a user
+- The maker, Petr, the PO: <!-- REQUIRED:who --> builds gadgets from an ESP32 board and the modules in his drawer. He directs Claude and buys from Czech shops · E scrum/VISION.md:44 ("The test bench"), the request in brief.md · n = 1, the decider as a user
 - The hobbyist, spark's primary persona: no EDA, at home in a terminal · H scrum/VISION.md:43, the PO's choice. No person outside the project used spark yet
 - The agent at the keyboard: reads spark's files and answers, never the source · E scrum/VISION.md:45 · it counts only through the two above
 
 ## Jobs
-- J1: When my circuit is built [E PR #303], I want to see it on my real board [D-b], so I can wire it from a picture [H the request: "a really nice editor"]
+- J1 <!-- REQUIRED:jobs -->: When my circuit is built [E PR #303], I want to see it on my real board [D-b], so I can wire it from a picture [H the request: "a really nice editor"]
 - J2: When I move from the breadboard to a perfboard [D-b], I want the same circuit laid out and routed for that board [E the request: "how making routes works there"], so I can solder it once, right [H]
 - J3: When a layout is not how I want it [H], I want to move parts and wires in an editor like Wokwi's [E the request: "wokwi is actually quite a good inspiration"], so I can make it fit my board and my taste [H]
 - J4: When a part, module, board or battery is missing or wrong in the catalogue [E the request: "the catalogue editing app"], I want to edit its record with its pins, size and picture [E the request: "what other data"], so I can use it in every view [H]
@@ -16,7 +16,7 @@
 - J7: When I look at one circuit [H], I want the same circuit as a schematic, a breadboard, a perfboard and a PCB [E the request: "displaying the schema in different stages"], so I can trust that each stage is the same circuit [H]
 
 ## Today they…
-- J1 · the sheet's steps and diagram. Since P267, also `breadboard.json`, pasted into wokwi.com by hand, XIAO C6 only · E PR #303
+- J1 <!-- REQUIRED:today --> · the sheet's steps and diagram. Since P267, also `breadboard.json`, pasted into wokwi.com by hand, XIAO C6 only · E PR #303
 - J2 · nothing in spark. A perfboard layout is made by hand or in another tool · H no perfboard code known, to check in the lenses
 - J3 · Wokwi's own editor on the pasted diagram. spark never reads its changes back · E docs/guide/journey.md, "The drawn breadboard"
 - J4 · records written by hand in JSON, or by `/spark:research` and `/spark:identify` · E the skills list
@@ -26,7 +26,7 @@
 
 ## Journeys
 
-### The maker — from a built circuit to a soldered perfboard
+### The maker — from a built circuit to a soldered perfboard <!-- REQUIRED:journey -->
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
 | 1 | builds the circuit with `/spark:build` | E PR #303 | — | works | — |

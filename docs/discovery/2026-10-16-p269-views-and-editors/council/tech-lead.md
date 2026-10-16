@@ -196,7 +196,7 @@ C4Container
   tools/circuit-to-wokwi/ARCHITECTURE.md:50-53 · supports Q4: a stage-neutral `Circuit` must have one source of
   points. Today it has two.
 - TL-8 · The kept build already holds a schematic and a PCB with positions in mm. In
-  /Users/petr/Development/button-light/dist/board/circuit.json: 4 `schematic_component`, 7 `schematic_trace`, 4
+  ~/Development/button-light/dist/board/circuit.json: 4 `schematic_component`, 7 `schematic_trace`, 4
   `pcb_component`, 20 `pcb_plated_hole` (each with x, y in mm, a `pcb_port_id` and `port_hints` such as "D6"), 5
   `pcb_trace`, 1 `pcb_board` (47 x 33 mm). · E command: a Python Counter over that file, run 2026-10-16 · supports Q4:
   schematic and PCB views need no new planning in spark.

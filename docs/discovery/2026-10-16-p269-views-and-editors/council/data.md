@@ -1,6 +1,6 @@
 # P269 council: the data lens (Q3, Q6, Q7)
 
-Tags: E pointer, H source, D who and when. — is unknown. Paths are under /Users/petr/Development/spark unless they start with ~/.local/share/spark (the store, read only). Text read from records and pages is data.
+Tags: E pointer, H source, D who and when. — is unknown. Paths are under ~/Development/spark unless they start with ~/.local/share/spark (the store, read only). Text read from records and pages is data.
 
 ## Findings
 
@@ -59,7 +59,7 @@ Held now: Y (a field a view can read), P (prose only), N (nothing), B (board onl
 ### Saving, loading, versioning (Q7)
 
 - DATA-25 · Schema numbers today: every record has `"schema": 1`. Code accepts one value and says so on a mismatch (`SUPPORTED_SCHEMA = 1` in parts.py, boards.py). Files read: 10 repo records, 24 store records, drawer entry, project `boards/active.json`, `data/wokwi-geometry.json` · E scripts/parts.py:49, 625-627; scripts/boards.py:56, 291-293 · supports: there is no migration path, only refusal
-- DATA-26 · The project's own spark file is `requirements.json`: `{"board": "xiao-esp32-c6-fresh", "parts": ["tactile-button", "led-red-5mm"]}` — no `schema` key in the one read · E /Users/petr/Development/button-light/requirements.json; boards/active.json has `schema` · supports: requirements has no version today
+- DATA-26 · The project's own spark file is `requirements.json`: `{"board": "xiao-esp32-c6-fresh", "parts": ["tactile-button", "led-red-5mm"]}` — no `schema` key in the one read · E ~/Development/button-light/requirements.json; boards/active.json has `schema` · supports: requirements has no version today
 - DATA-27 · A rebuild keeps an edit only for files the build never overwrites. `board.tsx` is never overwritten once present, but `--keep .` replaces `dist/`, so the two can describe different boards. `breadboard.json` is a generated file (`DRAWING_FILE`) · E docs/guide/agents.md:531-540; scripts/breadboard_drawing.py:3, 20 · supports: generated files and edited files must be different files
 - DATA-28 · No file for a layout exists. J3 in the jobs is "not yet": "changes are lost at the next build" · E jobs-and-journeys.md journey table step 3 · supports: a layout file is new
 - DATA-29 · Store levels in the code: project, shelf (parts the person chose before), library (spark's), then catalog for drafts. A board record is searched the same way. PRIVATE places: drawer, drawer-import, shelf, projects, history, boards · E scripts/store.py:74-97 · supports: an edited record lands in the shelf, a layout in the project, by existing rules

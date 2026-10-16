@@ -78,4 +78,4 @@ Format: PO-n · claim · tag · pointer · supports only.
 1. `wokwi-elements wokwi-boards GitHub license MIT breadboard element` · decision: whether Wokwi part pictures can be reused under MIT (Q5, Q6) · used. It returned a fork as top result, so the upstream repo is unchecked.
 2. `VeroRoute stripboard perfboard layout software license open source` · decision: what already does stripboard and perfboard layout, and under what licence (Q2, reuse) · used.
 3. `fritzing-parts license CC-BY-SA fzp svg breadboard schematic pcb` · decision: whether Fritzing's part format and art can be reused (Q3, Q6) · used.
-4. Not run. The budget was left for a licence check of runframe and Wokwi's diagram format; I stopped to avoid widening the ask.
+4. Not run · decision: none, the budget was left unused · not used.
