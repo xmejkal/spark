@@ -8,19 +8,19 @@
  {
   "file": "scripts/breadboard_drawing.py",
   "name": "rail groups ignored in x",
-  "find": " + (number - 1) // board[\"rail_group\"])",
+  "find": " + (number - 1) // board[\"rail_block\"])",
   "replace": ")"
  },
  {
   "file": "scripts/breadboard_drawing.py",
   "name": "free_row may reuse column after",
-  "find": "hole.column > after and self.row_is_free",
-  "replace": "hole.column >= after and self.row_is_free"
+  "find": "hole.column > after and self.group_is_free",
+  "replace": "hole.column >= after and self.group_is_free"
  },
  {
   "file": "scripts/breadboard_drawing.py",
   "name": "pins may share a row",
-  "find": "or hole.row in {one.row for one in holes.values()}",
+  "find": "or hole.group in {one.group for one in holes.values()}",
   "replace": "or False"
  },
  {
@@ -56,8 +56,8 @@
  {
   "file": "scripts/breadboard.py",
   "name": "stale drawing kept",
-  "find": "        drawn.unlink(missing_ok=True)\n        return Written(Path(out), None, str(stopped))",
-  "replace": "        return Written(Path(out), None, str(stopped))"
+  "find": "        for path, _ in paths:\n            path.unlink(missing_ok=True)\n        return WriteResult(Path(out), [], planned.why)",
+  "replace": "        return WriteResult(Path(out), [], planned.why)"
  },
  {
   "file": "scripts/check_spine.py",
@@ -70,5 +70,17 @@
   "name": "color palette off by one",
   "find": "self.PALETTE[(number - 1) % len(self.PALETTE)]",
   "replace": "self.PALETTE[number % len(self.PALETTE)]"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "the sheet plans a second time",
+  "find": "    planned = planned or _plan_once(read)",
+  "replace": "    planned = _plan_once(read)"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "below and above the gap swapped",
+  "find": "rank = {letter: (index, 1) for index, letter in enumerate(reversed(top))}",
+  "replace": "rank = {letter: (index, 0) for index, letter in enumerate(reversed(top))}"
  }
 ]
