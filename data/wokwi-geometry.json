@@ -24,7 +24,7 @@
     "wokwi-pushbutton": {"center": [33.5, 24.5], "covers_holes": false,
                          "pins": {"1.l": [0, 13], "2.l": [0, 32], "1.r": [67, 13], "2.r": [67, 32]}}
   },
-  "//breadboard": "wokwi-breadboard-half. A row is the five joined holes of one column on one side of the gap: {column}t.{a-e} above it and {column}b.{f-j} below. A rail hole is {rail}.{1-25}, in five groups of five with one empty pitch between groups.",
+  "//breadboard": "wokwi-breadboard-half. A row is the five joined holes of one column on one side of the gap: {column}t.{a-e} above it and {column}b.{f-j} below. A rail hole is {rail}.{1-25}, in five blocks of five with one empty pitch between blocks.",
   "breadboard": {
     "type": "wokwi-breadboard-half",
     "columns": 30,
@@ -36,6 +36,6 @@
     "rails_y": {"tp": 12.3, "tn": 22.3, "bp": 186.3, "bn": 196.3},
     "rail_holes": 25,
     "first_rail_x": 34,
-    "rail_group": 5
+    "rail_block": 5
   }
 }

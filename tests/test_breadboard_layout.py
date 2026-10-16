@@ -5,6 +5,7 @@ Wokwi diagram. The geometry is the one measured in Wokwi (docs/discovery/2026-10
     python3 -m unittest tests.test_breadboard_layout
 """
 
+import hashlib
 import json
 import os
 import sys
@@ -79,15 +80,20 @@ class TheStepColorsTest(unittest.TestCase):
 
 class TheBreadboardTest(unittest.TestCase):
     def test_the_half_board_has_300_holes_in_rows_of_five_and_four_rails_of_25(self):
-        self.assertEqual(len(GEOMETRY.terminal), 300)
+        self.assertEqual(len(GEOMETRY.surface.terminal), 300)
         rows = {}
-        for hole in GEOMETRY.holes:
-            rows.setdefault(hole.row, []).append(hole)
-        self.assertEqual({len(holes) for row, holes in rows.items() if row not in GEOMETRY.rails}, {5})
-        self.assertEqual({len(rows[rail]) for rail in GEOMETRY.rails}, {25})
+        for hole in GEOMETRY.surface.holes:
+            rows.setdefault(hole.group, []).append(hole)
+        self.assertEqual({len(holes) for row, holes in rows.items() if row not in GEOMETRY.surface.rails}, {5})
+        self.assertEqual({len(rows[rail]) for rail in GEOMETRY.surface.rails}, {25})
+
+    def test_a_column_is_tried_nearest_the_gap_first_and_below_it_before_above(self):
+        # The tech lead (P270): ranked by letter, never by float distance, whose ties in mm would move a part.
+        first_column = [hole.name.rsplit(".", 1)[1] for hole in GEOMETRY.surface.by_gap[:10]]
+        self.assertEqual(first_column, list("fegdhcibja"))
 
     def test_measured_holes_lie_where_wokwi_drew_them(self):
-        found = {hole.name: (round(hole.x, 3), round(hole.y, 3)) for hole in GEOMETRY.holes}
+        found = {hole.name: (round(hole.x, 3), round(hole.y, 3)) for hole in GEOMETRY.surface.holes}
         for name, at in {"1t.a": (26, 51), "15t.c": (160.4, 70.2), "30b.j": (304.4, 156.6), "tp.1": (34, 12.3),
                          "tp.25": (302.8, 12.3), "tn.1": (34, 22.3), "bp.1": (34, 186.3), "bn.1": (34, 196.3)}.items():
             self.assertEqual(found[name], at, name)
@@ -95,25 +101,25 @@ class TheBreadboardTest(unittest.TestCase):
 
 class TheLedgerTest(unittest.TestCase):
     def test_a_taken_hole_is_refused_and_named(self):
-        ledger = HoleLedger(GEOMETRY)
-        hole = GEOMETRY.terminal[0]
+        ledger = HoleLedger(GEOMETRY.surface)
+        hole = GEOMETRY.surface.terminal[0]
         ledger.claim(hole, "board D0")
         with self.assertRaisesRegex(NotDrawn, "hole 1t.a is taken by board D0"):
             ledger.claim(hole, "LedRed5mm A")
 
-    def test_a_free_row_lies_right_of_the_column_it_is_given(self):
-        self.assertEqual(HoleLedger(GEOMETRY).free_row(5, "a jumper").column, 6)
+    def test_a_free_group_lies_right_of_the_column_it_is_given(self):
+        self.assertEqual(HoleLedger(GEOMETRY.surface).claim_free_group(5, "a jumper").column, 6)
 
-    def test_a_full_row_and_a_full_board_are_refused(self):
-        ledger = HoleLedger(GEOMETRY)
+    def test_a_full_group_and_a_full_board_are_refused(self):
+        ledger = HoleLedger(GEOMETRY.surface)
         for _ in range(5):
-            ledger.free_hole("1t", "a jumper")
+            ledger.claim_free_hole("1t", "a jumper")
         with self.assertRaisesRegex(NotDrawn, "row 1t has no free hole"):
-            ledger.free_hole("1t", "a jumper")
+            ledger.claim_free_hole("1t", "a jumper")
         for _ in range(59):
-            ledger.free_row(0, "a part")
+            ledger.claim_free_group(0, "a part")
         with self.assertRaisesRegex(NotDrawn, "no free row left"):
-            ledger.free_row(0, "one more")
+            ledger.claim_free_group(0, "one more")
 
 
 class TheXiaoLayoutTest(unittest.TestCase):
@@ -134,7 +140,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
     def test_the_board_straddles_the_gap_turned(self):
         board = self.layout.parts[0]
         self.assertEqual((board.id, board.rotate), ("board", 90))
-        self.assertEqual({hole.row[-1] for hole in board.holes.values()}, {"t", "b"})
+        self.assertEqual({hole.group[-1] for hole in board.holes.values()}, {"t", "b"})
 
     def test_no_row_holds_the_ends_of_two_points(self):
         # Each row's ends, by point: a part pin, a resistor leg, and each jumper's two ends (the refuter: jumper ends
@@ -150,12 +156,12 @@ class TheXiaoLayoutTest(unittest.TestCase):
             for pin, hole in part.holes.items():
                 end = next((e for p in self.read.steps.points for e in p.ends
                             if e.component == part.id and e.pin == pins.get(pin)), None)
-                rows.setdefault(hole.row, set()).add(point_of[end.name] if end else (part.id, pin))
+                rows.setdefault(hole.group, set()).add(point_of[end.name] if end else (part.id, pin))
         seated = list(self.read.steps.anchored())
         for jumper in self.layout.jumpers:
             point = point_of[seated[jumper.step - 1].subject.name]
             for hole in (jumper.one, jumper.other):
-                rows.setdefault(hole.row, set()).add(point)
+                rows.setdefault(hole.group, set()).add(point)
         for row, held in rows.items():
             self.assertEqual(len(held), 1, (row, held))
 
@@ -178,9 +184,17 @@ class TheXiaoLayoutTest(unittest.TestCase):
         once = breadboard_drawing.WokwiBreadboardDiagram().text(self.layout)
         self.assertEqual(once, breadboard_drawing.WokwiBreadboardDiagram().text(breadboard._plan_layout(xiao_read())))
 
+    def test_the_drawing_keeps_the_bytes_wokwi_showed(self):
+        # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
+        # A refactor must not move a part by a rounding step: P270 changes the units inside, never the file.
+        with in_store():
+            text = breadboard.drawing(XIAO / "requirements.json")
+        self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
+                         "cf3f8e5384d50a1d496be66784679810f8932b1576566ca6f8a9d8f59646c32d")
+
     def test_every_hole_named_exists_on_a_half_board(self):
         drawn = json.loads(breadboard_drawing.WokwiBreadboardDiagram().text(self.layout))
-        names = {"bb1:" + hole.name for hole in GEOMETRY.holes}
+        names = {"bb1:" + hole.name for hole in GEOMETRY.surface.holes}
         for wire in drawn["connections"]:
             self.assertLessEqual(set(wire[:2]), names)
 
@@ -193,8 +207,23 @@ class AnOldDrawingTest(unittest.TestCase):
         (project / "breadboard.json").write_text("{}")
         with in_store():
             written = breadboard.write(project / "requirements.json", project / "breadboard.md")
-        self.assertIsNone(written.drawing)
+        self.assertEqual(written.drawings, [])
+        self.assertIn("no Wokwi pin positions", written.why)
         self.assertFalse((project / "breadboard.json").exists())
+
+
+class OnePlanPerWriteTest(unittest.TestCase):
+    def test_the_sheet_and_every_drawing_come_from_one_plan(self):
+        # The tech lead (P270): the sheet planned the layout a second time, so its color line could differ from the
+        # drawing's wires.
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "xiao"
+        shutil.copytree(XIAO, project)
+        with in_store(), mock.patch.object(breadboard, "_plan_layout", wraps=breadboard._plan_layout) as planned:
+            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual(planned.call_count, 1)
+        self.assertEqual([path.name for path, _ in written.drawings],
+                         [renderer.FILE_NAME for renderer in breadboard.DRAWING_RENDERERS])
 
 
 class WhatIsNotDrawnTest(unittest.TestCase):

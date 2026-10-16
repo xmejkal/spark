@@ -17,16 +17,10 @@ from pathlib import Path
 import breadboard_steps
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
-DRAWING_FILE = "breadboard.json"
 
-class Hole(collections.namedtuple("Hole", "name x y row")):
-    """Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, and its row (the holes joined with it: 12t,
-    or tp)."""
-
-    @property
-    def column(self):
-        """The column of a terminal hole, from 1; a rail hole has none, 0."""
-        return int(self.row[:-1]) if self.row[-1] in "tb" else 0
+#: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
+#: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).
+Hole = collections.namedtuple("Hole", "name x y group column")
 #: What the planner draws for one component: its Wokwi type and attrs, and {its pin as the steps name it: Wokwi pin}.
 DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins")
 #: One component on the breadboard: its id, type, attrs, top-left corner in px, its turn, and {Wokwi pin: Hole}.
@@ -41,30 +35,49 @@ class NotDrawn(Exception):
     """The steps cannot be drawn: a fact the drawing needs is missing, or the half breadboard has no room."""
 
 
-class WokwiGeometry:
-    """Value: the measured geometry of Wokwi's half breadboard and parts (data/wokwi-geometry.json)."""
+class Surface:
+    """
+    Value: the holes of a board and which are joined inside it, from data/wokwi-geometry.json. A group is the holes
+    joined inside the board: on a breadboard a row of five or a rail, on a perfboard later a single hole. (netlist.py
+    says net only once something is wired.)
+    """
 
-    def __init__(self, data):
-        self.data = data
-        board = data["breadboard"]
+    def __init__(self, board):
         self.type = board["type"]
-        self.tolerance = data["tolerance_px"]
         self.holes = []
         for number in range(1, board["columns"] + 1):
             x = board["first_column_x"] + board["pitch"] * (number - 1)
             for letter, y in board["letters_y"].items():
-                row = "%d%s" % (number, "t" if letter in board["top_letters"] else "b")
-                self.holes.append(Hole("%s.%s" % (row, letter), x, y, row))
+                group = "%d%s" % (number, "t" if letter in board["top_letters"] else "b")
+                self.holes.append(Hole("%s.%s" % (group, letter), x, y, group, number))
         for rail, y in board["rails_y"].items():
             for number in range(1, board["rail_holes"] + 1):
-                x = board["first_rail_x"] + board["pitch"] * (number - 1 + (number - 1) // board["rail_group"])
-                self.holes.append(Hole("%s.%d" % (rail, number), x, y, rail))
-        self.terminal = [hole for hole in self.holes if hole.row not in board["rails_y"]]
-        #: The terminal holes column by column, nearest the gap first: a part sits by the gap, clear of the rails.
-        gap = (max(board["letters_y"][letter] for letter in board["top_letters"])
-               + min(y for letter, y in board["letters_y"].items() if letter not in board["top_letters"])) / 2
-        self.by_gap = sorted(self.terminal, key=lambda hole: (hole.column, abs(hole.y - gap), hole.y))
+                x = board["first_rail_x"] + board["pitch"] * (number - 1 + (number - 1) // board["rail_block"])
+                self.holes.append(Hole("%s.%d" % (rail, number), x, y, rail, 0))
+        self.terminal = [hole for hole in self.holes if hole.column]
         self.rails = list(board["rails_y"])
+        #: The terminal holes column by column, nearest the gap first and the side below the gap before the side above
+        #: it at the same distance: ranked by letter, never by float distance, whose ties would move a part.
+        top = board["top_letters"]
+        bottom = [letter for letter in board["letters_y"] if letter not in top]
+        rank = {letter: (index, 1) for index, letter in enumerate(reversed(top))}
+        rank.update({letter: (index, 0) for index, letter in enumerate(bottom)})
+        self.by_gap = sorted(self.terminal, key=lambda hole: (hole.column,) + rank[hole.name.rsplit(".", 1)[1]])
+
+    def hole_at(self, x, y, tolerance):
+        """The terminal hole whose center lies within the tolerance of (x, y), else None."""
+        return next((hole for hole in self.terminal if abs(hole.x - x) <= tolerance and abs(hole.y - y) <= tolerance),
+                    None)
+
+
+class WokwiGeometry:
+    """Value: where Wokwi draws each part's pins, and the surface of its half breadboard
+    (data/wokwi-geometry.json)."""
+
+    def __init__(self, data):
+        self.data = data
+        self.surface = Surface(data["breadboard"])
+        self.tolerance = data["tolerance_px"]
 
     @classmethod
     def load(cls, path=WOKWI_GEOMETRY_FILE):
@@ -78,9 +91,8 @@ class WokwiGeometry:
         return found
 
     def hole_at(self, x, y):
-        """The terminal hole whose center lies within the tolerance of (x, y), else None."""
-        return next((hole for hole in self.terminal
-                     if abs(hole.x - x) <= self.tolerance and abs(hole.y - y) <= self.tolerance), None)
+        """The terminal hole under a pin at (x, y), within the measured tolerance, else None."""
+        return self.surface.hole_at(x, y, self.tolerance)
 
 
 def rotate(pins, center, degrees):
@@ -95,10 +107,11 @@ def rotate(pins, center, degrees):
 
 
 class HoleLedger:
-    """The taken holes. A claim of a taken hole is refused and names it."""
+    """The taken holes of one surface. A claim of a taken hole is refused and names it. (Its messages say row, the word
+    a person reads on the sheet.)"""
 
-    def __init__(self, geometry):
-        self.geometry = geometry
+    def __init__(self, surface):
+        self.surface = surface
         self.taken = {}
 
     def claim(self, hole, by):
@@ -109,21 +122,22 @@ class HoleLedger:
     def is_free(self, hole):
         return hole.name not in self.taken
 
-    def row_is_free(self, row):
-        return all(self.is_free(hole) for hole in self.geometry.holes if hole.row == row)
+    def group_is_free(self, group):
+        return all(self.is_free(hole) for hole in self.surface.holes if hole.group == group)
 
-    def free_hole(self, row, by):
-        """Claim the first free hole of one row, or NotDrawn: the row is full."""
-        hole = next((hole for hole in self.geometry.holes if hole.row == row and self.is_free(hole)), None)
+    def claim_free_hole(self, group, by):
+        """Claim the first free hole of one group, or NotDrawn: the group is full."""
+        hole = next((hole for hole in self.surface.holes if hole.group == group and self.is_free(hole)), None)
         if hole is None:
-            raise NotDrawn("row %s has no free hole for %s" % (row, by))
+            raise NotDrawn("row %s has no free hole for %s" % (group, by))
         self.claim(hole, by)
         return hole
 
-    def free_row(self, after, by):
-        """Claim a hole in the first row right of column `after` with nothing in it, or NotDrawn: the board is full."""
-        for hole in self.geometry.terminal:
-            if hole.column > after and self.row_is_free(hole.row):
+    def claim_free_group(self, after, by):
+        """Claim a hole in the first group right of column `after` with nothing in it, or NotDrawn: the board is
+        full."""
+        for hole in self.surface.terminal:
+            if hole.column > after and self.group_is_free(hole.group):
                 self.claim(hole, by)
                 return hole
         raise NotDrawn("the half breadboard has no free row left for %s" % by)
@@ -138,10 +152,10 @@ class PartPlacement:
 
 class FirstFitPartPlacement(PartPlacement):
     """
-    The first turn and position, left to right, where every pin lies over a free hole, each pin in a row of its own
+    The first turn and position, left to right, where every pin lies over a free hole, each pin in a group of its own
     that holds nothing else, and every hole the part covers is free. A board that straddles the gap fits only when
-    turned, because its pins in one line would share a row. `pinned` (pin, row) puts one pin in a row that already
-    holds something: a resistor's leg in the row of the pin it joins.
+    turned, because its pins in one line would share a group. `pinned` (pin, group) puts one pin in a group that already
+    holds something: a resistor's leg in the group of the pin it joins.
     """
 
     #: Flat first, so a resistor lies along a row of holes before it stands across the gap.
@@ -158,7 +172,7 @@ class FirstFitPartPlacement(PartPlacement):
         for degrees in self.TURNS_DEGREES:
             turned = rotate(shape["pins"], shape["center"], degrees)
             first = pinned[0] if pinned else next(iter(turned))
-            candidates = [hole for hole in self.geometry.by_gap if not pinned or hole.row == pinned[1]]
+            candidates = [hole for hole in self.geometry.surface.by_gap if not pinned or hole.group == pinned[1]]
             for start in candidates:
                 left, top = start.x - turned[first][0], start.y - turned[first][1]
                 holes = self._fit(turned, left, top, ledger, after, pinned)
@@ -183,7 +197,7 @@ class FirstFitPartPlacement(PartPlacement):
             if pinned and pin == pinned[0]:
                 holes[pin] = hole
                 continue
-            if not ledger.row_is_free(hole.row) or hole.row in {one.row for one in holes.values()}:
+            if not ledger.group_is_free(hole.group) or hole.group in {one.group for one in holes.values()}:
                 return None
             holes[pin] = hole
         return holes
@@ -193,7 +207,7 @@ class FirstFitPartPlacement(PartPlacement):
         cx, cy = shape["center"]
         half_w, half_h = (cy, cx) if degrees % 180 else (cx, cy)
         mine = {hole.name for hole in holes.values()}
-        return [hole for hole in self.geometry.terminal if hole.name not in mine
+        return [hole for hole in self.geometry.surface.terminal if hole.name not in mine
                 and abs(hole.x - (left + cx)) < half_w and abs(hole.y - (top + cy)) < half_h]
 
 
@@ -210,7 +224,7 @@ class BreadboardPlanner:
 
     def plan(self, steps):
         """Each part placed in step order, then each resistor with a leg in the row it joins, then each jumper."""
-        ledger = HoleLedger(self.geometry)
+        ledger = HoleLedger(self.geometry.surface)
         seated = list(steps.anchored())
         placed, after = {}, 1
         for step in seated:
@@ -223,21 +237,21 @@ class BreadboardPlanner:
             if step.act == breadboard_steps.SUPPLY:
                 raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject)
         self._place_resistors(seated, placed, ledger, after)
-        rows, jumpers = {}, []
+        groups, jumpers = {}, []
         for number, step in enumerate(seated, 1):
             end = step.subject
             if not step.jumper:
                 continue
             if step.act == breadboard_steps.SETUP:
-                jumper = Jumper(ledger.free_hole(self._row(end, placed, rows), end.name),
-                                ledger.free_row(after, end.name), number)
-                rows[end.name] = jumper.other.row
+                jumper = Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
+                                ledger.claim_free_group(after, end.name), number)
+                groups[end.name] = jumper.other.group
                 jumpers.append(jumper)
             else:
                 anchor = step.anchor.seat().end
-                jumpers.append(Jumper(ledger.free_hole(self._row(end, placed, rows), end.name),
-                                      ledger.free_hole(self._row(anchor, placed, rows), anchor.name), number))
-        return BreadboardLayout(self.geometry.type, list(placed.values()), jumpers)
+                jumpers.append(Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
+                                      ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number))
+        return BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers)
 
     def _place_resistors(self, seated, placed, ledger, after):
         """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row."""
@@ -260,9 +274,9 @@ class BreadboardPlanner:
                     raise NotDrawn("both ends of %s join other rows, and a drawn resistor has a fixed length"
                                    % component)
                 drawn = self._drawn(component)
-                row = [(self._pin(end), self._row(anchor, placed, {})) for end, anchor in pinned]
-                placed[component] = self.placement.place(component, drawn, ledger, after if not row else 0,
-                                                         row[0] if row else None)
+                joined = [(self._pin(end), self._group_of(anchor, placed, {})) for end, anchor in pinned]
+                placed[component] = self.placement.place(component, drawn, ledger, after if not joined else 0,
+                                                         joined[0] if joined else None)
             waiting = [one for one in waiting if one[0] not in placed]
 
     def _drawn(self, component):
@@ -271,13 +285,13 @@ class BreadboardPlanner:
             raise NotDrawn("nothing says how to draw %s in Wokwi" % component)
         return drawn
 
-    def _row(self, end, placed, rows):
-        """The row an end sits in: its pin's row, or the free row its board pad's jumper took."""
-        if end.name in rows:
-            return rows[end.name]
+    def _group_of(self, end, placed, groups):
+        """The group an end sits in: its pin's group, or the free group its board pad's jumper took."""
+        if end.name in groups:
+            return groups[end.name]
         if end.component not in placed:
             raise NotDrawn("%s is joined before it is placed" % end.name)
-        return placed[end.component].holes[self._pin(end)].row
+        return placed[end.component].holes[self._pin(end)].group
 
     def _pin(self, end):
         """The Wokwi pin of one end, or NotDrawn naming it."""
@@ -289,7 +303,18 @@ class BreadboardPlanner:
 
 class WokwiBreadboardDiagram:
     """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
-    colors, so the sheet and the diagram share one palette."""
+    colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
+    below and `text(layout)`, which `breadboard.DRAWING_RENDERERS` and the build read."""
+
+    #: The file it writes, beside the sheet.
+    FILE_NAME = "breadboard.json"
+    #: What the build calls the file in a line that says it was not written or was removed.
+    NOUN = "drawn breadboard"
+    #: What the build says beside the file's path when it wrote it.
+    PURPOSE_MESSAGE = "an example layout of the steps on a breadboard: paste it into a new project on wokwi.com"
+    #: What the sheet says about the file, under its steps.
+    SHEET_MESSAGE = ("An example layout is in breadboard.json: paste it into the diagram.json of a new project on "
+                     "wokwi.com.")
 
     def __init__(self, colors=None, breadboard_id="bb1"):
         self.colors = colors or breadboard_steps.StepColors()

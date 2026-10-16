@@ -54,7 +54,6 @@ CIRCUIT = Path("dist") / "board" / "circuit.json"
 BUILT_FROM = CIRCUIT.parent / "built-from.json"
 SHEET = "breadboard.md"
 #: What the drawn breadboard is, as the build and this script say it beside its path.
-DRAWING_WHY = "an example layout of the steps on a breadboard: paste it into a new project on wokwi.com"
 #: The component every generated design calls its dev board (emit_board, the converter's BOARD mapping).
 BOARD_COMPONENT = "Mcu"
 #: The holes of one breadboard row on one side of the gap: a point with more ends goes on a rail. The board covers the
@@ -76,6 +75,9 @@ WIRING_VIEWS = (
 PIN_NAMING_SILKSCREEN = "silkscreen"
 #: The one palette of step colors, for the sheet's color line and the drawing's jumpers alike.
 STEP_COLORS = breadboard_steps.StepColors()
+#: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
+#: new entry here, and nothing else changes.
+DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),)
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}
 
@@ -376,15 +378,29 @@ def _plan_layout(read):
 
 
 def drawing(requirements_path, circuit_path=None, read=None):
-    """The drawn breadboard as Wokwi diagram text, or NotDrawn with what stopped it."""
-    return breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS).text(
-        _plan_layout(read or _read_build(requirements_path, circuit_path)))
+    """The Wokwi diagram's text, or NotDrawn with what stopped it."""
+    wokwi = next(renderer for renderer in DRAWING_RENDERERS
+                 if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
+    return wokwi.text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
 
 
-def sheet(requirements_path, circuit_path=None, read=None):
-    """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit)."""
+#: One plan of the layout for a sheet and its drawings: the layout, or why it could not be planned.
+PlannedLayout = collections.namedtuple("PlannedLayout", "layout why")
+
+
+def _plan_once(read):
+    try:
+        return PlannedLayout(_plan_layout(read), None)
+    except breadboard_drawing.NotDrawn as stopped:
+        return PlannedLayout(None, str(stopped))
+
+
+def sheet(requirements_path, circuit_path=None, read=None, planned=None):
+    """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit).
+    `planned` is the layout `write()` already planned, so the sheet says what the drawings show."""
     requirements_path = Path(requirements_path)
     read = read or _read_build(requirements_path, circuit_path)
+    planned = planned or _plan_once(read)
     built, circuit, resistors, steps = read.built, read.circuit, read.resistors, read.steps
     supplies = _supplies(circuit)
     have = _have(requirements_path, {part["id"] for part in built.parts} | {built.board.get("id")})
@@ -394,14 +410,12 @@ def sheet(requirements_path, circuit_path=None, read=None):
     lines += ["", "## Wiring"]
     for heading, intro, renderer in WIRING_VIEWS:
         lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
-    try:
-        layout = _plan_layout(read)
-        lines += ["", "An example layout is in %s: paste it into the diagram.json of a new project on wokwi.com. "
-                  "Each jumper has its step's color: %s." % (breadboard_drawing.DRAWING_FILE, ", ".join(
-                      "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step))
-                      for jumper in layout.jumpers))]
-    except breadboard_drawing.NotDrawn as stopped:
-        lines += ["", "%s not written: %s." % (breadboard_drawing.DRAWING_FILE, stopped)]
+    if planned.layout:
+        colors = "Each jumper has its step's color: %s." % ", ".join(
+            "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
+        lines += ["", " ".join([renderer.SHEET_MESSAGE for renderer in DRAWING_RENDERERS] + [colors])]
+    else:
+        lines += [""] + ["%s not written: %s." % (renderer.FILE_NAME, planned.why) for renderer in DRAWING_RENDERERS]
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += read.point_lines
@@ -411,25 +425,38 @@ def sheet(requirements_path, circuit_path=None, read=None):
     return "\n".join(lines) + "\n"
 
 
-#: What write() wrote: the sheet's path, the drawing's path (None when it was not drawn) and why it was not.
-Written = collections.namedtuple("Written", "sheet drawing why")
+#: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, and why none was (the
+#: plan fails for every drawing at once), else None.
+WriteResult = collections.namedtuple("WriteResult", "sheet drawings why")
 
 
 def write(requirements_path, out, circuit_path=None):
-    """Write the sheet to `out`, and the drawn breadboard beside it when it can be drawn; what `check_spine --keep`
-    calls beside the kept board. A drawing left from an earlier build is removed, since it describes another one."""
+    """Write the sheet to `out`, and each drawing beside it when the layout can be planned; what `check_spine --keep`
+    calls beside the kept board. The layout is planned once. A drawing left from an earlier build is removed, since it
+    describes another one."""
     read = _read_build(requirements_path, circuit_path)
-    Path(out).write_text(sheet(requirements_path, read=read))
-    drawn = Path(out).parent / breadboard_drawing.DRAWING_FILE
+    planned = _plan_once(read)
+    paths = [(Path(out).parent / renderer.FILE_NAME, renderer) for renderer in DRAWING_RENDERERS]
     try:
-        drawn.write_text(drawing(requirements_path, read=read))
-    except breadboard_drawing.NotDrawn as stopped:
-        drawn.unlink(missing_ok=True)
-        return Written(Path(out), None, str(stopped))
+        # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
+        texts = [renderer.text(planned.layout) for renderer in DRAWING_RENDERERS] if planned.layout else []
     except Exception:
-        drawn.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
+        for path, _ in paths:
+            path.unlink(missing_ok=True)
         raise
-    return Written(Path(out), drawn, None)
+    Path(out).write_text(sheet(requirements_path, read=read, planned=planned))
+    if not planned.layout:
+        for path, _ in paths:
+            path.unlink(missing_ok=True)
+        return WriteResult(Path(out), [], planned.why)
+    try:
+        for (path, _), text in zip(paths, texts):
+            path.write_text(text)
+    except Exception:
+        for path, _ in paths:
+            path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
+        raise
+    return WriteResult(Path(out), paths, None)
 
 
 def main(argv=None):
@@ -447,8 +474,11 @@ def main(argv=None):
         return EXIT_COULD_NOT_RUN
     print(written.sheet.read_text(), end="")
     print("wrote %s" % written.sheet, file=sys.stderr)
-    print(("wrote %s — %s" % (written.drawing, DRAWING_WHY)) if written.drawing
-          else "%s not written: %s" % (breadboard_drawing.DRAWING_FILE, written.why), file=sys.stderr)
+    for path, renderer in written.drawings:
+        print("wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE), file=sys.stderr)
+    if written.why:
+        for renderer in DRAWING_RENDERERS:
+            print("%s not written: %s" % (renderer.FILE_NAME, written.why), file=sys.stderr)
     return EXIT_OK
 
 

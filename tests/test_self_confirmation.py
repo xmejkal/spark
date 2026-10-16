@@ -67,6 +67,7 @@ MAY_READ = {
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
     "breadboard_steps.JOIN": "a kind of step, which picks the steps the test counts: vocabulary, not a value",
     "breadboard_steps.RESISTOR": "a kind of end, which picks the steps the test counts: vocabulary, not a value",
+    "breadboard.DRAWING_RENDERERS": STRUCTURE,
     "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
 }
 
