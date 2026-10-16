@@ -381,7 +381,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into, said = self.keep_a_build_of("button-light")
         self.assertFalse((into / "breadboard.json").exists())
         self.assertIn("no drawn breadboard: no Wokwi pin positions for board-esp32-s3-devkitc-1", said)
-        self.assertIn("breadboard.json not written: no Wokwi pin positions", (into / "breadboard.md").read_text())
+        self.assertIn("breadboard.json and breadboard.svg not written: no Wokwi pin positions",
+                      (into / "breadboard.md").read_text())
 
     def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
         import argparse, contextlib, io
@@ -991,7 +992,8 @@ class TheBoardAloneTest(unittest.TestCase):
         workdir, stages = self.run_alone()
         kept = check_spine.keep_breadboard(workdir / "requirements.json", workdir, stages)
         self.assertEqual([entry["line"] for entry in kept], ["no breadboard sheet: board only: nothing to wire",
-                                                             "no drawn breadboard: board only: nothing to wire"])
+                                                             "no drawn breadboard: board only: nothing to wire",
+                                                             "no breadboard picture: board only: nothing to wire"])
 
     def test_the_store_is_never_told_a_board_alone_was_built(self):
         _, stages = self.run_alone()

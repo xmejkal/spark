@@ -68,6 +68,9 @@ MAY_READ = {
     "breadboard_steps.JOIN": "a kind of step, which picks the steps the test counts: vocabulary, not a value",
     "breadboard_steps.RESISTOR": "a kind of end, which picks the steps the test counts: vocabulary, not a value",
     "breadboard.DRAWING_RENDERERS": STRUCTURE,
+    "part_pictures.PICTOGRAMS": STRUCTURE,
+    "breadboard_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
+    "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",
     "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
 }
 

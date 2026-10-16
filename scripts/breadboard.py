@@ -77,7 +77,8 @@ PIN_NAMING_SILKSCREEN = "silkscreen"
 STEP_COLORS = breadboard_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
-DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),)
+DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),
+                     breadboard_drawing.SvgBreadboardDiagram(breadboard_drawing.WokwiGeometry.load(), STEP_COLORS))
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}
 
@@ -413,9 +414,12 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None):
     if planned.layout:
         colors = "Each jumper has its step's color: %s." % ", ".join(
             "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
-        lines += ["", " ".join([renderer.SHEET_MESSAGE for renderer in DRAWING_RENDERERS] + [colors])]
+        first, *others = DRAWING_RENDERERS
+        lines += ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
+        lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
     else:
-        lines += [""] + ["%s not written: %s." % (renderer.FILE_NAME, planned.why) for renderer in DRAWING_RENDERERS]
+        lines += ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
+                                                planned.why)]
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += read.point_lines
