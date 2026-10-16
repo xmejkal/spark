@@ -71,6 +71,8 @@ class TheSvgTest(unittest.TestCase):
 
     def test_it_is_svg_with_no_link_outside_and_small(self):
         self.assertEqual(self.root.tag, "{http://www.w3.org/2000/svg}svg")
+        self.assertTrue(self.text.startswith('<svg xmlns="http://www.w3.org/2000/svg"'), self.text[:80])
+        self.assertNotIn("ns0:", self.text)
         self.assertEqual(re.findall(r"https?://[^\"' ]+", self.text), ["http://www.w3.org/2000/svg"])
         self.assertLess(len(self.text.encode()), 30000)
         for attribute in ("width", "height", "viewBox"):
@@ -79,6 +81,19 @@ class TheSvgTest(unittest.TestCase):
     def test_the_same_layout_gives_the_same_bytes(self):
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
                          hashlib.sha256(xiao_svg()[0].encode()).hexdigest())
+
+    def test_the_bytes_are_the_ones_reviewed(self):
+        # Seen in a render on 2026-10-16 (P268): a change to the picture is a decision, made by updating this number.
+        self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
+                         "354a314c3f8de47efd7720833e9459f64191d0526c4d53c9ab8a80ff43851031")
+
+    def test_no_jumper_bends_on_a_hole(self):
+        # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
+        holes = [(hole.x, hole.y) for hole in breadboard_drawing.WokwiGeometry.load().surface.holes]
+        for path in (p for p in self.root.findall("svg:path", NS) if p.get("fill") == "none"):
+            numbers = [float(n) for n in re.findall(r"-?[\d.]+", path.get("d"))]
+            for x, y in zip(numbers[2:-2:2], numbers[3:-2:2]):
+                self.assertFalse(any(abs(x - hx) < 1 and abs(y - hy) < 1 for hx, hy in holes), (x, y))
 
     def test_each_part_is_named_once(self):
         names = [text.text for text in self.root.findall("svg:text", NS)]
@@ -141,6 +156,7 @@ class TheSheetShowsItTest(unittest.TestCase):
         with in_store():
             breadboard.write(project / "requirements.json", project / "breadboard.md")
         self.assertNotIn("![", (project / "breadboard.md").read_text())
+        self.assertIn("breadboard.json and breadboard.svg not written: ", (project / "breadboard.md").read_text())
         self.assertFalse((project / "breadboard.svg").exists())
 
 

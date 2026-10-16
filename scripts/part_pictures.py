@@ -37,13 +37,13 @@ class PictogramPartPictures(PartPictures):
 
     def __init__(self, folder=PICTOGRAMS):
         self.folder = Path(folder)
-        self.found = {}
+        self.pictures_by_type = {}
 
     def picture(self, wokwi_type):
-        if wokwi_type not in self.found:
+        if wokwi_type not in self.pictures_by_type:
             path = self.folder / ("%s.svg" % wokwi_type)
-            self.found[wokwi_type] = read_pictogram(path if path.is_file() else self.folder / ("%s.svg" % FALLBACK))
-        return self.found[wokwi_type]
+            self.pictures_by_type[wokwi_type] = read_pictogram(path if path.is_file() else self.folder / ("%s.svg" % FALLBACK))
+        return self.pictures_by_type[wokwi_type]
 
 
 def read_pictogram(path):

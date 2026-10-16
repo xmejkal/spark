@@ -377,12 +377,21 @@ class SvgBreadboardDiagram:
         holes = "".join("M%s %sh0" % (_round_px(hole.x), _round_px(hole.y)) for hole in surface.holes)
         ElementTree.SubElement(root, _svg("path"), {"d": holes, "stroke": "#a8a8a8", "stroke-width": "3.5",
                                                     "stroke-linecap": "round"})
+        for rail in surface.rails:
+            row = [hole for hole in surface.holes if hole.group == rail]
+            # a red line above each + rail and a blue one below each - rail, as Wokwi draws them
+            first, last = min(hole.x for hole in row), max(hole.x for hole in row)
+            outer = -1 if rail.endswith("p") else 1
+            y = _round_px(row[0].y + outer * 5)
+            ElementTree.SubElement(root, _svg("line"), {"x1": str(_round_px(first)), "y1": str(y),
+                                                        "x2": str(_round_px(last)), "y2": str(y), "stroke-width": "1",
+                                                        "stroke": "#e53935" if rail.endswith("p") else "#1e88e5"})
         for part in layout.parts:
             self._part(root, part)
         for jumper in layout.jumpers:
             self._jumper(root, jumper)
         for part in layout.parts:
-            self._label(root, part)  # last, so no wire covers a part's name
+            self._label(root, part)  # last, so no wire or other part covers a pin or a name
         return ElementTree.tostring(root, encoding="unicode") + "\n"
 
     def _part(self, root, part):
@@ -392,7 +401,7 @@ class SvgBreadboardDiagram:
         group = ElementTree.SubElement(root, _svg("g"), {
             "transform": "translate(%s %s) rotate(%s %s %s)" % (_round_px(part.left), _round_px(part.top),
                                                                 part.rotate, _round_px(cx), _round_px(cy))})
-        width, height = shape.get("size") or (2 * cx, 2 * cy)
+        width, height = shape["size"]
         x, y, view_width, view_height = picture.view_box
         inner = ElementTree.SubElement(group, _svg("g"), {"transform": "scale(%s %s) translate(%s %s)" % (
             _round_px(width / view_width), _round_px(height / view_height), _round_px(-x), _round_px(-y))})
@@ -400,11 +409,11 @@ class SvgBreadboardDiagram:
             inner.append(child)
         if picture.credit:
             ElementTree.SubElement(group, _svg("title")).text = picture.credit
+
+    def _label(self, root, part):
         for hole in part.holes.values():
             ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),
                                                           "r": "2.5", "fill": "#2e7d32"})
-
-    def _label(self, root, part):
         cx, cy = self.geometry.part(part.type)["center"]
         label = ElementTree.SubElement(root, _svg("text"), {
             "x": str(_round_px(part.left + cx)), "y": str(_round_px(part.top + cy)), "font-size": "8",
@@ -413,17 +422,21 @@ class SvgBreadboardDiagram:
         label.text = part.id
 
     def _jumper(self, root, jumper):
-        """One jumper as an L, first along its column, then along the row of holes it ends in, as Wokwi draws one."""
+        """One jumper along the holes: out of its first hole along the column, across between two rows of holes, and
+        into its last hole. Its bends sit half a pitch off the holes, so no bend looks like a joint with a hole of
+        another group."""
         color = self.colors.color(jumper.step)
         one, other = jumper.one, jumper.other
-        corner = (other.x, one.y) if one.column == 0 else (one.x, other.y)
+        half = self.geometry.data["breadboard"]["pitch"] / 2
+        across = other.y - half if other.y > one.y else other.y + half
         ElementTree.SubElement(root, _svg("path"), {
-            "d": "M%s %sL%s %sL%s %s" % (_round_px(one.x), _round_px(one.y), _round_px(corner[0]), _round_px(corner[1]),
-                                         _round_px(other.x), _round_px(other.y)),
+            "d": "M%s %sL%s %sL%s %sL%s %s" % (
+                _round_px(one.x), _round_px(one.y), _round_px(one.x), _round_px(across), _round_px(other.x),
+                _round_px(across), _round_px(other.x), _round_px(other.y)),
             "fill": "none", "stroke": color, "stroke-width": "2.5", "stroke-linecap": "round",
             "stroke-linejoin": "round"})
         number = ElementTree.SubElement(root, _svg("text"), {
-            "x": str(_round_px(corner[0] + 3)), "y": str(_round_px(corner[1] - 3)), "font-size": "9",
+            "x": str(_round_px(one.x + 3)), "y": str(_round_px(across - 2)), "font-size": "9",
             "font-family": "sans-serif", "font-weight": "bold", "fill": color})
         number.text = str(jumper.step)
 

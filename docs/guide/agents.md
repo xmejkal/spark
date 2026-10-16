@@ -139,7 +139,7 @@ These write:
   `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
   from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
-  reads, writes `breadboard.md` and `breadboard.json` after a build that finished, and creates `.tscircuit/cache/`. It also writes
+  reads, writes `breadboard.md`, `breadboard.json` and `breadboard.svg` after a build that finished, and creates `.tscircuit/cache/`. It also writes
   `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
