@@ -135,7 +135,9 @@ These write:
   `breadboard.json` (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi
   diagram. Only a board in `data/wokwi-geometry.json` is drawn, today the XIAO ESP32-C6, and rails are not drawn yet.
   Otherwise the sheet and stderr say `breadboard.json not written:` and the missing fact, and an old file is removed.
-  Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270).
+  Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
+  `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
+  from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
   reads, writes `breadboard.md` and `breadboard.json` after a build that finished, and creates `.tscircuit/cache/`. It also writes
   `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a

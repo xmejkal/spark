@@ -19,7 +19,8 @@ What it writes, each time from scratch:
     holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
     line, as the check list after wiring (breadboard_steps.py holds the step rule);
   - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
-    to paste into a new project on wokwi.com. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
+    to paste into a new project on wokwi.com; and breadboard.svg (P268), the same layout as a picture the sheet
+    shows, each part as spark's own pictogram (data/pictograms/). Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
     today), and rails are not drawn yet; otherwise the sheet says what is missing, and an old drawing is removed;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 

@@ -80,7 +80,8 @@ for, numbered wiring steps (one connection each) and a mermaid diagram of them, 
 ([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. Beside it,
 `breadboard.json` is an example layout of the same steps on a half breadboard, each jumper in its step's color
 ([P267](https://github.com/xmejkal/spark/issues/300)). The person pastes it into the `diagram.json` of a new project
-on wokwi.com and compares it with their own breadboard. It is new each time, so a change made to it in Wokwi is
+on wokwi.com and compares it with their own breadboard. `breadboard.svg` is the same layout as a picture, which the
+sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). It is new each time, so a change made to it in Wokwi is
 lost at the next build. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `dist/` is still replaced with a build of the freshly generated board, not of
