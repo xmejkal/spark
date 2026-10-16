@@ -378,8 +378,10 @@ def _plan_layout(read):
 
 
 def drawing(requirements_path, circuit_path=None, read=None):
-    """The first drawing's text (the Wokwi diagram), or NotDrawn with what stopped it."""
-    return DRAWING_RENDERERS[0].text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
+    """The Wokwi diagram's text, or NotDrawn with what stopped it."""
+    wokwi = next(renderer for renderer in DRAWING_RENDERERS
+                 if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
+    return wokwi.text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
 
 
 #: One plan of the layout for a sheet and its drawings: the layout, or why it could not be planned.
@@ -434,15 +436,22 @@ def write(requirements_path, out, circuit_path=None):
     describes another one."""
     read = _read_build(requirements_path, circuit_path)
     planned = _plan_once(read)
-    Path(out).write_text(sheet(requirements_path, read=read, planned=planned))
     paths = [(Path(out).parent / renderer.FILE_NAME, renderer) for renderer in DRAWING_RENDERERS]
+    try:
+        # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
+        texts = [renderer.text(planned.layout) for renderer in DRAWING_RENDERERS] if planned.layout else []
+    except Exception:
+        for path, _ in paths:
+            path.unlink(missing_ok=True)
+        raise
+    Path(out).write_text(sheet(requirements_path, read=read, planned=planned))
     if not planned.layout:
         for path, _ in paths:
             path.unlink(missing_ok=True)
         return WriteResult(Path(out), [], planned.why)
     try:
-        for path, renderer in paths:
-            path.write_text(renderer.text(planned.layout))
+        for (path, _), text in zip(paths, texts):
+            path.write_text(text)
     except Exception:
         for path, _ in paths:
             path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet

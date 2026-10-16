@@ -274,9 +274,9 @@ class BreadboardPlanner:
                     raise NotDrawn("both ends of %s join other rows, and a drawn resistor has a fixed length"
                                    % component)
                 drawn = self._drawn(component)
-                row = [(self._pin(end), self._group_of(anchor, placed, {})) for end, anchor in pinned]
-                placed[component] = self.placement.place(component, drawn, ledger, after if not row else 0,
-                                                         row[0] if row else None)
+                joined = [(self._pin(end), self._group_of(anchor, placed, {})) for end, anchor in pinned]
+                placed[component] = self.placement.place(component, drawn, ledger, after if not joined else 0,
+                                                         joined[0] if joined else None)
             waiting = [one for one in waiting if one[0] not in placed]
 
     def _drawn(self, component):
@@ -286,7 +286,7 @@ class BreadboardPlanner:
         return drawn
 
     def _group_of(self, end, placed, groups):
-        """The row an end sits in: its pin's row, or the free row its board pad's jumper took."""
+        """The group an end sits in: its pin's group, or the free group its board pad's jumper took."""
         if end.name in groups:
             return groups[end.name]
         if end.component not in placed:

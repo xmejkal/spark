@@ -13,13 +13,13 @@
  },
  {
   "file": "scripts/breadboard_drawing.py",
-  "name": "free_row may reuse column after",
+  "name": "claim_free_group may reuse column after",
   "find": "hole.column > after and self.group_is_free",
   "replace": "hole.column >= after and self.group_is_free"
  },
  {
   "file": "scripts/breadboard_drawing.py",
-  "name": "pins may share a row",
+  "name": "pins may share a group",
   "find": "or hole.group in {one.group for one in holes.values()}",
   "replace": "or False"
  },
@@ -44,7 +44,7 @@
  {
   "file": "scripts/breadboard_drawing.py",
   "name": "resistor not kept right of after",
-  "find": "after if not row else 0",
+  "find": "after if not joined else 0",
   "replace": "0"
  },
  {

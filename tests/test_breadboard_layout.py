@@ -107,10 +107,10 @@ class TheLedgerTest(unittest.TestCase):
         with self.assertRaisesRegex(NotDrawn, "hole 1t.a is taken by board D0"):
             ledger.claim(hole, "LedRed5mm A")
 
-    def test_a_free_row_lies_right_of_the_column_it_is_given(self):
+    def test_a_free_group_lies_right_of_the_column_it_is_given(self):
         self.assertEqual(HoleLedger(GEOMETRY.surface).claim_free_group(5, "a jumper").column, 6)
 
-    def test_a_full_row_and_a_full_board_are_refused(self):
+    def test_a_full_group_and_a_full_board_are_refused(self):
         ledger = HoleLedger(GEOMETRY.surface)
         for _ in range(5):
             ledger.claim_free_hole("1t", "a jumper")
