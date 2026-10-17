@@ -19,10 +19,11 @@ import datetime
 import getpass
 import json
 from collections import namedtuple
+from pathlib import Path
 
 import board_look
 import store
-from deploy_gate import GateClosedError
+from deploy_gate import GateClosedError, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 
 #: The grant as the store keeps it. The times are ISO 8601 in UTC, with the zone.
@@ -36,11 +37,13 @@ WHY_NO_GRANT, WHY_EXPIRED, WHY_NO_ZONE, WHY_NOT_A_GRANT = "no grant", "expired",
 WHY_SERIAL_NOT_MAC, WHY_NO_MAC, WHY_BAD_MINUTES, WHY_ANSWERED_NO = "serial not mac", "no mac", "bad minutes", "answered no"
 #: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
 WHY_COULD_NOT_RUN = "could not run"
+#: The command a person types for a grant, by grant.py's whole path, so it runs from any folder (P283).
+GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / "grant.py", ["--minutes", "N"])
 #: The sentence a person reads for each code.
 MESSAGE_FOR = {
-    WHY_NO_GRANT: "no grant for this board: the person runs grant.py --minutes N in their own terminal",
-    WHY_EXPIRED: "the grant for this board ended: the person runs grant.py --minutes N again",
-    WHY_NO_ZONE: "the grant's time has no zone, so it was not trusted: the person runs grant.py --minutes N again",
+    WHY_NO_GRANT: "no grant for this board: the person runs %s in their own terminal" % GRANT_COMMAND,
+    WHY_EXPIRED: "the grant for this board ended: the person runs %s again" % GRANT_COMMAND,
+    WHY_NO_ZONE: "the grant's time has no zone, so it was not trusted: the person runs %s again" % GRANT_COMMAND,
     WHY_NOT_A_GRANT: "the store's grant file for this board is not a grant for it, so it was not trusted",
     WHY_SERIAL_NOT_MAC: "the board's USB serial is not its MAC, so a later call could not tell it is the same board. "
                         "The grant works only on a board with a built-in USB port, like the ESP32-C6's",

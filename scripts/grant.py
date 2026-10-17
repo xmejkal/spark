@@ -11,7 +11,7 @@ import board_doctor
 import board_grant
 import board_look
 import tools
-from deploy_gate import GateClosedError, TerminalConsentStrategy
+from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
 RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
@@ -74,7 +74,8 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
             print(to_json(result) if args.json else describe(result))
             return EXIT_OK if result.granted else EXIT_PROBLEMS
         reader = board_look.EsptoolReader(tools.find("flasher", args.project), run)
-        line = " ".join(["grant.py", "--minutes", str(args.minutes)] + (["--port", args.port] if args.port else []))
+        line = format_rerun_line(__file__, ["--minutes", args.minutes, "--project", args.project.resolve()]
+                                 + (["--port", args.port] if args.port else []))
         grant = board_grant.GrantService(finder, reader, now=now).issue(
             args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print("  " + RESTART))
     except GateClosedError as closed:
