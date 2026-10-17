@@ -1178,7 +1178,7 @@ Hard resetting via RTS pin...
 This firmware drives an LED on pad D8 while a button on pad D10 is held. The board's own LED stays dark, so the bare
 board shows nothing after a pass. Wire the breadboard from `breadboard.md` to see the LED.
 
-### Let Claude try code on the board: the grant (no try yet)
+### Let Claude try code on the board: the grant and the live try
 
 A live try is a short line of code that Claude runs on your running board. Before Claude can run one, you give a grant
 in your own terminal ([P253](https://github.com/xmejkal/spark/issues/265)):
@@ -1190,8 +1190,20 @@ grant.py --minutes 30
 It reads the board once with esptool, so the board restarts. Then it asks you to let Claude run code on that board
 for 30 minutes from your yes (one day at most). Type `yes`. Your store keeps the grant in a file named by the MAC with
 dashes, for example `grants/8c-bf-ea-cc-97-70.json`. To end it early, delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
-The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's. The live try itself comes with
-[P247](https://github.com/xmejkal/spark/issues/267), so today a grant lets Claude do nothing more.
+The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's.
+
+While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal/spark/issues/267)):
+
+```sh
+live.py --code 'print(1)'
+```
+
+It checks the grant without touching the board, and it refuses code that writes a number of the board's USB or flash
+pins. Then it runs the code with mpremote, which stops your firmware. At the end it restarts the chip with
+`mpremote reset`, so the firmware starts again from boot. It prints the answer (`ran`, `raised`, `not_reached` or a
+refusal), what the board printed, and the GPIO numbers that the code writes. A pin that the code set and your
+firmware never sets can keep its value through the reset. If the board does not answer, it names the two causes: a
+dead USB output, or firmware that does not read its console.
 
 After that walk, a bench session that leaves a verdict a command can read is planned in a separate project's repository:
 [sisuo-brain-transplant](https://github.com/xmejkal/sisuo-brain-transplant), a sensor trash can given a new ESP32

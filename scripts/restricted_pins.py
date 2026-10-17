@@ -2,7 +2,7 @@
 The pins a live try must not touch (P254, #266, D14): a board record's `usb` and `flash` roles, and the reason code is
 refused when it writes one of their numbers.
 
-A library. P247 (#267) calls `RestrictedPins.from_board(record).why_refused(code)` before a live try runs anything.
+A library. board_live.py (P247, #267) calls `RestrictedPins.from_board(record).why_refused(code)` before a live try runs anything.
 
     RestrictedPins    a Value with one lookup method: each restricted GPIO with its role and note, from a board record.
     whole_numbers_in  every whole number written in the code, read with Python's own parser (ast).

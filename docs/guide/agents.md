@@ -125,15 +125,24 @@ These only read:
 - `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. It says whether the board on USB has
   a live grant now: exit 0 granted, 1 not (no grant, it ended, a grant file that is not this board's), 2 it could not
   run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes`:
-  that is the person's yes, typed in their own terminal. A grant lets you run nothing yet. The live try behind it is
-  [P247](https://github.com/xmejkal/spark/issues/267), and `reach.py` stays the person's bench tool until then. The
+  that is the person's yes, typed in their own terminal. While the board has a grant, you can run `live.py` (below). The
   grant works only on a board whose USB serial is its MAC (a built-in USB port, like the ESP32-C6's). The person ends a
   grant early by deleting its file in the store, named by the MAC with dashes (`grants/8c-bf-ea-cc-97-70.json`). The grant is a file in the person's store, and you can
   write that file. The PO accepts that risk, as for every store record. Never write or change a grant file;
-- `restricted_pins.py` is a library with no command yet. When P247 adds the live try, it will refuse code that
-  writes a number of the board's USB or flash pins ([P254](https://github.com/xmejkal/spark/issues/266)). It refuses
-  any such number anywhere in the code, `time.sleep(12)` too, and a number computed at run time passes. Only the XIAO
-  C6 record names these pins so far;
+- `live.py --code '...'` runs a short piece of code on the running board and ends with `mpremote reset`, so the
+  firmware starts again from boot ([P247](https://github.com/xmejkal/spark/issues/267)). Run it only while
+  `grant.py --check` says granted, and say first that the firmware stops while the code runs. Before it sends
+  anything, it checks the grant and refuses code that writes a number of the board's USB or flash pins
+  ([P254](https://github.com/xmejkal/spark/issues/266)): any such number anywhere in the code, `time.sleep(12)` too.
+  A number computed at run time passes. Only the XIAO C6 record names these pins so far. `--json` gives `answer`
+  (`ran`, `raised`, `not_reached`, `refused_no_grant`, `refused_pin`, `refused_no_parse`, or `could-not-run`),
+  `grant_why`, `why`, `output`, `cure`, `reset` (`done`, `failed` or null), `pins_checked`, `gpio_numbers_in_code`
+  and `port`. Exit 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset
+  failed, or it could not run. `ran` means the board ran the code: an empty output still counts, so read `output`.
+  A `reset` of `failed`, or null after code that ran, means the firmware may be stopped: tell the person to press R
+  or replug. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
+  code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
+  candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.
@@ -380,7 +389,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 ```
 
 **Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
-`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `grant.py` (with `--check`), `import_firmware.py` and `parts.py`. These do not take
+`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py` and `parts.py`. These do not take
 it: `boards.py`, `breadboard.py`, `check_bom.py`, `deploy.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `look.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
