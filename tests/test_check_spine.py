@@ -876,6 +876,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
                                                                {"part": "tactile-button", "name": "Openlid"}]}))
         _, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
         self.assertFalse((project / "page.html").exists())
+        self.assertFalse((project / "firmware" / "pins.py").exists())
         page_line = next(line for line in err.splitlines() if "no page: " in line)
         self.assertIn("parts[0] is called OpenLid and parts[1] Openlid", page_line)
 
