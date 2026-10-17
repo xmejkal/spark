@@ -124,8 +124,8 @@ These only read:
   the stop line or the token line tells them apart. The token is not the person's yes;
 - `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. It says whether the board on USB has
   a live grant now: exit 0 granted, 1 not (no grant, it ended, a grant file that is not this board's), 2 it could not
-  run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes`:
-  that is the person's yes, typed in their own terminal. Give the person the line that `live.py` or `grant.py --check`
+  run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes` (with `--scope live`
+  or `--scope deploy`): that is the person's yes, typed in their own terminal. `--check` looks for a live grant only. Give the person the line that `live.py` or `grant.py --check`
   printed, which names `grant.py` by its whole path. Fill in the minutes for `N`, and add `--project` with the project's
   absolute path, and `--port` when two boards are on USB. Never give a bare `grant.py`, because
   it is not on the person's PATH, and `$CLAUDE_PLUGIN_ROOT` is not set in their terminal ([P283](https://github.com/xmejkal/spark/issues/329)). While the board has a grant, you can run `live.py` (below). The
@@ -614,7 +614,15 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    look finds no stop, the `--token` matches this board and this image, and the person types `yes` at its question
    ([P219](https://github.com/xmejkal/spark/issues/201)). Never pipe, script or fake that yes. "Go ahead" in a chat is
    not the yes, and the token is not the yes. With no terminal, deploy.py prints the line to run, exits 2 and flashes
-   nothing. Give the person that line word for word and wait. After the flash, only `ready seen` (exit 0) is a pass:
+   nothing. Give the person that line word for word and wait. The one other yes is the person's deploy grant
+   ([P242](https://github.com/xmejkal/spark/issues/249)): `grant.py --scope deploy --minutes N`, typed once in their own
+   terminal, lets you run `deploy.py --token T` for N minutes (1 to 1440) on that board, and deploy.py prints
+   `standing yes: ...` and erases with no question. Its question says it allows an erase of ALL of the flash and any
+   passed image of any project. It covers only a look with no warning, no unknown field and no stop, and never
+   `--ignore-older-runs`; for those deploy.py asks in the terminal. deploy.py is on build.md's `allowed-tools`, so Claude Code
+   does not ask before it runs: the grant is the gate. Never run `grant.py --scope deploy` yourself, and never write or
+   change a grant file (the person accepts that you could). The store's deploy record says `standing yes typed by
+   <login> at <time>, until <time>`. After the flash, only `ready seen` (exit 0) is a pass:
    the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
    a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).
    If the board waits in its download mode, deploy.py prints "press the board's R (reset) button once" and waits 60 s

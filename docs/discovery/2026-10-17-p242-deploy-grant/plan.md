@@ -6,9 +6,25 @@
 
 ## Council
 
-Not run yet. Round 1: a tech lead (Sonnet) and the refuter (Opus). Round 2: a tech lead and a PO assistant (Sonnet).
-The design is decided in [the P218 brief](../2026-10-17-p218-finish/brief.md) and its council files; this plan only
-turns it into steps.
+Round 1 (2026-10-17): a tech lead (Sonnet) and the refuter (Opus). The design is decided in
+[the P218 brief](../2026-10-17-p218-finish/brief.md); this plan turns it into steps. Round 1 changed:
+
+- Refuter, confirmed: `deploy.main`'s clock has no zone, and a grant time has one, so a subtraction would crash. The
+  standing yes gets `board_grant.utc_now`, and `why_not_valid` returns `WHY_NO_ZONE` for a clock with no zone (test).
+- Refuter, confirmed: a hand-written `expires_at` a year away turned valid in its last day. `why_not_valid` also reads
+  `granted_at`: it must be a time with a zone, not in the future, and at most a day before `expires_at` (tests).
+- Refuter, confirmed: the grant is not tied to a project or an image. Decision 6 below: the question and the docs say
+  "any passed image of any project"; the PO can ask for a project binding later.
+- Tech lead: a `consent` given to `main` wins and the grant is never read (test); `Grant` has `defaults=(SCOPE_LIVE,)`;
+  hand-edited files (no zone, over a day, garbage date, unknown scope, a file that is no grant) fall back, never crash
+  (tests); a deploy file alone opens no live grant, and the reverse (tests); `--scope` with `--check` and an unknown
+  scope are refused (tests); `StandingConsentStrategy.require_ready` checks the expiry too; the fallback says why: new
+  `DeployConsentResult(consent, why)` and the line `standing yes: not used: <why>`; the verdict constants replace every
+  bare string; `FakeUtcClock` is used by the tests; the docs list adds how-it-works.md (setup.md and idea.md say nothing
+  about deploy) and the press-R relay goes into build.md and agents.md.
+- Rejected by the refuter: a `<mac>.json` and `<mac>-deploy.json` mix-up, MAC case, and a time-of-check gap.
+
+Round 2: not run yet (tech lead and PO assistant, Sonnet).
 
 ## Decisions taken without the PO (routine; he can overrule)
 
@@ -20,6 +36,10 @@ turns it into steps.
 4. `board_look` gets `VERDICT_STOP`, `VERDICT_WARNING`, `VERDICT_MATCH` (no bare strings, the no-magic-strings rule).
 5. When deploy.py falls back to the terminal for a clean look, its no-terminal line adds the deploy grant line, so
    Claude can relay it to the PO.
+6. A deploy grant is for a board, not a project or an image: the token and the passed-run check still gate each
+   image. Its question says so.
+7. The bench run on the XIAO ESP32-C6 (the card's last done-when) is not done by this agent: step 9 is a hand run with
+   a fake MAC. The PR says the bench run waits for the PO.
 
 ## Tests first (each fails before the code)
 

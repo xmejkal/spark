@@ -46,7 +46,7 @@ def lines(report, token=True):
         out.append("%d field%s unknown (%s): deploy.py will ask you to accept it."
                    % (len(report.unknown), "" if len(report.unknown) == 1 else "s",
                       ", ".join("%s: %s" % each for each in report.unknown.items())))
-    if report.verdict == "match":
+    if report.verdict == board_look.VERDICT_MATCH:
         out.append("all fields match the board record %s." % name)
     if token:
         mine = report.token()

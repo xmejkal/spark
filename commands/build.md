@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram and a breadboard sheet (the parts and how to wire them) generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *)
 ---
 
 # spark:build
@@ -280,7 +280,9 @@ changes no flash. It compares the board's chip and flash size with the board in 
 `same`, `differs` or `unknown`, with the board's MAC and a token. With two boards on USB, it lists them and needs
 `--port <the board's serial port>`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Relay its lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
-`allowed-tools` and `deploy.py` is not, on purpose: running deploy.py is the person's decision, so Claude Code asks them.
+`allowed-tools`, and so is `deploy.py` (P242): Claude Code does not ask before it runs deploy.py. The gate is inside
+deploy.py. With no deploy grant, it asks for a yes in a real terminal, Claude's shell has none, and deploy.py exits 2
+and erases nothing. The person's deploy grant, below, is the only other yes.
 
 Once a scenario passed, one command puts that same flash image on the board
 ([P192](https://github.com/xmejkal/spark/issues/144)). Plug the board in over USB, then run in the project folder:
@@ -294,9 +296,18 @@ the board's flash. The second writes the image at `0x0`, where the simulator loa
 order: the look, its token, then the person's yes.
 
 1. Run `look.py` and relay its lines. A stop means do not propose the flash.
-2. Give the person the line `deploy.py --token <the token>`, with `--port` only when two boards are on USB.
-3. Wait. The person runs it in their own terminal window. deploy.py looks at the board again (the board restarts),
-   names every warning in its question and erases only after they type `yes`.
+2. Run `deploy.py --token <the token>`, with `--port` only when two boards are on USB. If deploy.py prints
+   `standing yes: standing yes typed by ...`, the person's deploy grant is the yes and it erases at once. Relay that line.
+   If it prints `standing yes: not used: <why>` and `no terminal to ask you in`, it erased nothing. Give the person the line
+   it printed to run in their own terminal window, word for word, and wait. deploy.py looks at the board again (the
+   board restarts), names every warning in its question and erases only after they type `yes`.
+3. If the person wants you to deploy without a yes each time, offer the deploy grant line that deploy.py printed:
+   `grant.py --scope deploy --minutes N`. Say first that it lets you erase ALL of the board's flash and write any passed
+   image of any project for N minutes (1 to 1440). Never run it yourself: it is the person's yes in their own terminal.
+   A deploy grant covers only a look with no warning, no unknown field and no stop, and never `--ignore-older-runs`;
+   deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
+4. When deploy.py prints "press the board's R (reset) button once", relay that line to the person at once: only a hand
+   on the board can do it.
 
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. On macOS the board

@@ -1194,6 +1194,24 @@ for 30 minutes from your yes (one day at most). Type `yes`. Your store keeps the
 dashes, for example `grants/8c-bf-ea-cc-97-70.json`. To end it early, delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
 The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's.
 
+### Let Claude deploy: the deploy grant
+
+By default every deploy waits for a yes that you type in your own terminal. If you want Claude to deploy to one board
+without that yes each time, give a deploy grant ([P242](https://github.com/xmejkal/spark/issues/249)):
+
+```sh
+<spark>/scripts/grant.py --scope deploy --minutes 60 --project <project>
+```
+
+Its question says that it lets Claude erase ALL of that board's flash and write any passed image of any project,
+for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file in your store,
+`grants/8c-bf-ea-cc-97-70-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
+While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `standing yes: ...` instead of asking. It still
+looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
+record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
+terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
+If the board then waits in its download mode, Claude tells you to press its R button once.
+
 While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal/spark/issues/267)):
 
 ```sh
