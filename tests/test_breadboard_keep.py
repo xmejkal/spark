@@ -224,6 +224,25 @@ class OtherEditsTest(unittest.TestCase):
             next(i for i, one in enumerate(drawn["parts"]) if one["id"] == "LedRed5mm"))))
         self.assertEqual(codes(build(project)), {"board": "hole-taken"})
 
+    def test_a_part_with_two_pins_in_one_row_is_named(self):
+        project = new_project(FULL)
+        build(project)
+        free = next(hole for hole in GEOMETRY.surface.terminal if hole.column == 25 and hole.name.endswith("t.b"))
+        # turned 90 degrees, the LED's pin A lies 10 px below its pin C: both in column 25, above the gap
+        edit(project, lambda drawn: next(one for one in drawn["parts"] if one["id"] == "LedRed5mm")
+             .update(rotate=90, left=round(free.x - 3, 3), top=round(free.y - 30, 3)))
+        self.assertEqual(codes(build(project)), {"LedRed5mm": "row-shared"})
+
+    def test_the_first_of_two_parts_with_one_id_is_the_one_kept(self):
+        project = new_project(FULL)
+        build(project)
+        edit(project, move("LedRed5mm", dx=2 * PITCH_PX))
+        moved = place_of(project, "LedRed5mm")
+        edit(project, lambda drawn: drawn["parts"].append(dict(next(one for one in drawn["parts"] if one["id"] == "R1"),
+                                                               id="LedRed5mm", type="wokwi-led")))
+        build(project)
+        self.assertEqual(place_of(project, "LedRed5mm"), moved)
+
     def test_a_kept_part_far_right_leaves_room_for_a_new_part(self):
         project = new_project(BUTTON_ONLY)
         build(project)

@@ -102,6 +102,8 @@ then break `requirements.json`; the next `--keep` removes your file. Fix in this
 1. Keep a moved jumper's holes and route. 2. Keep a moved resistor, after resistor ids come from the circuit name.
 3. Read a diagram edited and exported from Wokwi's web editor. 4. Warn when a kept part far right crowds the board.
 5. Keep the person's file when a build fails.
+6. A board-pad jumper after a far-right kept part can give a false `no room` (`claim_free_group` has no retry from
+   column 0).
 
 ## Docs and gates
 
