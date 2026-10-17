@@ -59,9 +59,10 @@ def home():
 #: `catalog`: everything research has read and not chosen (P83) — a candidate keeps its part facts (pinout, power,
 #: body, the cited facts: the PO, 2026-10-04) and no seller listings, which go stale before anyone reads them (W21).
 #: `boards`: one record per physical board the person deployed to, by its MAC (P215, D23, D44).
+#: `grants`: one live grant per physical board, by its MAC: the yes the person typed for a time limit (P253, D12).
 PLACES = {"sources": "sources", "catalog": "catalog", "downloads": "downloads", "tools": "tools.json",
           "drawer": "drawer", "drawer-import": "drawer-import", "shelf": "shelf", "projects": "projects.json",
-          "history": "history.jsonl", "boards": "boards"}
+          "history": "history.jsonl", "boards": "boards", "grants": "grants"}
 
 
 def place(name):
@@ -94,7 +95,7 @@ def records(kind, library, project=None, drafts=False, skip=()):
 
 #: The places only the person should see (§5.8): files 0600 in folders 0700, and never inside a git work tree,
 #: where one `git add .` would publish them.
-PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history", "boards")
+PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history", "boards", "grants")
 
 #: A key names one file inside a place, and only that: lower-case letters, digits and '-'.
 PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")

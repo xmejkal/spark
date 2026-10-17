@@ -19,6 +19,7 @@ import contextlib
 import io
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -39,9 +40,11 @@ import check_spine  # noqa: E402
 import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
 import emit_footprint  # noqa: E402
+import grant  # noqa: E402
 import import_firmware  # noqa: E402
 import outcomes  # noqa: E402
 import parts  # noqa: E402
+import tools  # noqa: E402
 
 BOARD = "firebeetle2-esp32s3"
 
@@ -199,6 +202,14 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         with mock.patch.object(check_spine, "find_toolchain", return_value=None):
             self._check("check_spine", lambda: check_spine.main([self.requirements, "--json"]),
                         ["check", "stages", "status"])
+
+    def test_grant_check(self):
+        """P253: grant.py --check --json, here for a board with no grant. No status word: granted is the answer."""
+        devs = "/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit\n"
+        run = lambda argv, **kw: subprocess.CompletedProcess(argv, 0, devs, "")  # noqa: E731
+        with mock.patch.object(tools, "find"), mock.patch.dict("os.environ", {"SPARK_HOME": tempfile.mkdtemp()}):
+            self._check("grant", lambda: grant.main(["--check", "--json"], run=run), ["granted", "grant", "why"],
+                        status_expected=False)
 
     def test_the_flag_is_honoured_wherever_it_is_offered(self):
         """`parts.py --catalog --json` printed prose and ignored the flag (P43); since P95 it is the envelope."""

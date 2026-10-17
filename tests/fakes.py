@@ -35,6 +35,9 @@ class FakeConsent:
     def __init__(self, answer):
         self.answer, self.asked = answer, []
 
+    def require_ready(self):
+        """The fake can always ask."""
+
     def ask(self, question):
         self.asked.append(question)
         return self.answer
