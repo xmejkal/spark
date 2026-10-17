@@ -36,6 +36,11 @@ MB = 1024 * 1024
 LIST_TIMEOUT_S, READ_TIMEOUT_S = 15, 60
 
 
+def board_token(mac):
+    """The board half of the look's token: 4 hex of sha256(MAC). It shows a look was made on this board; it is no secret."""
+    return hashlib.sha256(mac.encode()).hexdigest()[:4]
+
+
 class LookStop(Exception):
     """The look cannot go on. The message is the whole sentence."""
 
@@ -63,14 +68,24 @@ class PortFinder:
     def require_one_port(self, script):
         """The port of the one board on USB. LookStop when there is none, or when there are two or more: it lists them
         and names `script`'s --port (P218's D25)."""
+        return self.require_one_board(script).device
+
+    def require_one_board(self, script, port=None):
+        """The Port row of the one board on USB, or of `port` when it is given. LookStop as require_one_port says, and
+        when `port` is not in the list."""
         found = self.boards()
+        if port:
+            named = [each for each in found if each.device == port]
+            if not named:
+                raise LookStop("no board on %s: mpremote devs does not list it." % port)
+            return named[0]
         if not found:
             raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only.")
         if len(found) > 1:
             lines = ["  %s  %s  %s" % (each.device, each.serial, each.product) for each in found]
             raise LookStop("%d boards on USB:\n%s\n%s --port %s  (unplug one to tell them apart)"
                            % (len(found), "\n".join(lines), script, found[0].device))
-        return found[0].device
+        return found[0]
 
 
 class BoardReader:
@@ -181,8 +196,7 @@ class Report:
         """4 hex of sha256(MAC), a dash, 4 hex of sha256(image): this board, this image. None when there is no_token_reason."""
         if self.no_token_reason():
             return None
-        return "%s-%s" % (hashlib.sha256(self.reading.mac.encode()).hexdigest()[:4],
-                          hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
+        return "%s-%s" % (board_token(self.reading.mac), hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
 
 
 class Look:
