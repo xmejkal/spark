@@ -1082,7 +1082,7 @@ per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
-**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after the person types yes in their own terminal ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:build`'s page ([Put it on the board](../../commands/build.md#put-it-on-the-board)). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v0.10](../../scrum/VISION.md#versions)).
 
@@ -1111,7 +1111,7 @@ line is the token.
 
 ### The gate
 
-`deploy.py --token` looks at the board again, then asks the person in their own terminal before it erases
+`deploy.py --token` looks at the board again, then asks the person in their own terminal (or reads their deploy grant) before it erases
 ([P219](https://github.com/xmejkal/spark/issues/201)). On 2026-10-14 the same XIAO ran the button-and-LED project,
 whose scenario passed in Wokwi. Its board record `xiao-esp32-c6-fresh` holds no flash size, so the look gave the flash
 as `unknown` and a token. From Claude Code's shell, which has no terminal, deploy.py printed the look and the line to
@@ -1200,6 +1200,26 @@ It reads the board once with esptool, so the board restarts. Then it asks you to
 for 30 minutes from your yes (one day at most). Type `yes`. Your store keeps the grant in a file named by the MAC with
 dashes, for example `grants/8c-bf-ea-cc-97-70.json`. To end it early, delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
 The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's.
+
+### Let Claude deploy: the deploy grant
+
+By default every deploy waits for a yes that you type in your own terminal. If you want Claude to deploy to one board
+without that yes each time, give a deploy grant ([P242](https://github.com/xmejkal/spark/issues/249)):
+
+```sh
+<spark>/scripts/grant.py --scope deploy --minutes 60 --project <project>
+```
+
+Its question says that it lets Claude erase ALL of that board's flash and write any passed image of any project,
+for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file in your store,
+`grants/8c-bf-ea-cc-97-70-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
+While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: standing yes typed by ...` instead of asking. It still
+looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
+record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
+terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
+If the board then waits in its download mode, Claude tells you to press its R button once.
+If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` is set), Claude stops, tells you why,
+and gives you the line to run in your own terminal. grant.py prints the file's full path and the `rm` line that ends the grant.
 
 While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal/spark/issues/267)):
 

@@ -32,8 +32,8 @@
  {
   "file": "scripts/grant.py",
   "name": "grant-script-name",
-  "find": "format_rerun_line(__file__, [\"--minutes\"",
-  "replace": "format_rerun_line(\"grant.py\", [\"--minutes\""
+  "find": "format_rerun_line(__file__, ([\"--scope\"",
+  "replace": "format_rerun_line(\"grant.py\", ([\"--scope\""
  },
  {
   "file": "scripts/board_grant.py",
@@ -44,8 +44,8 @@
  {
   "file": "scripts/board_grant.py",
   "name": "cmd-parent",
-  "find": "Path(__file__).resolve().parent / \"grant.py\"",
-  "replace": "Path(\"grant.py\")"
+  "find": "\nGRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / \"grant.py\"",
+  "replace": "\nGRANT_COMMAND = format_rerun_line(Path(\"grant.py\")"
  },
  {
   "file": "scripts/board_grant.py",
