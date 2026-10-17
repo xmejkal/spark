@@ -26,7 +26,7 @@ and the line says why.
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a
 token even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it.
 
-When esptool cannot read the board, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board.
 

@@ -122,10 +122,10 @@ class EsptoolReader(BoardReader):
         try:
             done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:
-            raise LookStop("could not read the board on %s: %s" % (port, cannot))
+            raise LookStop("could not read the board on %s: %s" % (port, cannot), port)
         except subprocess.TimeoutExpired:
             raise LookStop("could not read the board on %s: esptool took more than %d s. %s"
-                           % (port, READ_TIMEOUT_S, image_check.BOOT_HINT))
+                           % (port, READ_TIMEOUT_S, image_check.BOOT_HINT), port)
         if done.returncode:
             raise LookStop("could not read the board on %s. %s" % (port, image_check.BOOT_HINT), port,
                            esptool_said(done.stderr))

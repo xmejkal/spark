@@ -8,7 +8,8 @@ board answered, what it printed, whether the first try failed, and the Cure when
 from collections import namedtuple
 
 from board_console import PORT_BACK_S
-from board_connection import RAW_REPL_REFUSED, BoardCodeError, BoardUnreachableError, RetryingBoardConnection
+from board_connection import (PORT_NOT_OPENED, RAW_REPL_REFUSED, BoardCodeError, BoardUnreachableError,
+                              RetryingBoardConnection)
 
 #: The code a reach runs when it is given none: one line that prints `reached`.
 PRINT_REACHED = 'print("reached")'
@@ -20,10 +21,15 @@ BOTH_CAUSES_MESSAGE = ("its USB output may still be dead, or its firmware does n
 
 #: Result: `reached` is True when the board answered (with PRINT_REACHED: printed `reached`), `first_try_failed`
 #: when the first run did not answer (None with cure_first: there is no first try), `cure` the board_console.Cure when
-#: one ran, `why` what went wrong, else None. `entered` is False only when mpremote said it could not enter the raw
-#: REPL, so the code never ran. Any other failure may come after the code started (a timeout, a link that dropped),
+#: one ran, `why` what went wrong, else None. `entered` is False only when mpremote said it could not open the port or
+#: could not enter the raw REPL, so the code never ran. Any other failure may come after the code started (a timeout, a link that dropped),
 #: so `entered` is True then, and P247 resets the board.
 ReachResult = namedtuple("ReachResult", "reached output first_try_failed cure why entered")
+
+
+def never_entered(why):
+    """True when mpremote's words in `why` say the code never ran: it could not open the port, or not enter the raw REPL."""
+    return PORT_NOT_OPENED in why or RAW_REPL_REFUSED in why
 
 
 def reach(connection, probe, code=PRINT_REACHED, cure_first=False):
@@ -36,7 +42,7 @@ def reach(connection, probe, code=PRINT_REACHED, cure_first=False):
     except BoardCodeError as raised:
         output, why = raised.output, "the code raised: %s" % raised
     except BoardUnreachableError as refused:
-        output, reached, why, entered = refused.output, False, str(refused), RAW_REPL_REFUSED not in str(refused)
+        output, reached, why, entered = refused.output, False, str(refused), not never_entered(str(refused))
     if why is None and code == PRINT_REACHED and "reached" not in output.split():
         reached, why = False, "the board answered without printing reached: %s" % (output.strip() or "nothing")
     cure = cure if cure_first else runner.last_cure

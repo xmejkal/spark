@@ -1198,7 +1198,7 @@ While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal
 live.py --code 'print(1)'
 ```
 
-If the board does not answer `grant.py` or `live.py`, the script says why: esptool's or mpremote's own error, whether
+If the board does not answer `grant.py`'s read or `live.py`, the script says why: esptool's or mpremote's own error, whether
 the port is listed, what the console said, and one step for your hands, such as pressing R
 ([P282](https://github.com/xmejkal/spark/issues/326)).
 

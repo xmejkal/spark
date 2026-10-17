@@ -72,10 +72,11 @@ class StepTest(unittest.TestCase):
         result, _ = examine(ConsoleReadResult("busy", "", "Could not exclusively lock port"))
         self.assertEqual(result.next_step, "close_other")
 
-    def test_download_mode_is_press_reset(self):
+    def test_download_mode_is_press_reset_for_mpremote_and_run_again_for_esptool(self):
         rom = "ESP-ROM:esp32c6-20220919\nboot:0x4 (DOWNLOAD(USB/UART0/SDIO_FEI_FEO))\nwaiting for download\n"
-        result, _ = examine(ConsoleReadResult("read", rom, None))
-        self.assertEqual(result.next_step, "press_reset")
+        after_mpremote, _ = examine(ConsoleReadResult("read", rom, None), tool=MPREMOTE)
+        after_esptool, _ = examine(ConsoleReadResult("read", rom, None))
+        self.assertEqual((after_mpremote.next_step, after_esptool.next_step), ("press_reset", "run_again"))
 
     def test_a_boot_heard_on_the_doctor_s_open_is_run_again(self):
         result, _ = examine(ConsoleReadResult("read", "rst:0x15 (USB_UART_HPSYS),boot:0x1e\nready\n", None))
@@ -107,11 +108,30 @@ class ConfigurationTest(unittest.TestCase):
         result, _ = examine(ConsoleReadResult("read", "", None), tool=mine)
         self.assertEqual(result.next_step, "press_reset")
 
-    def test_an_unknown_or_missing_silent_step_is_an_error_that_names_the_tool(self):
-        for entry in (dict(DEFAULTS["esptool"], silent_step="erase"), {"kind": "python"}):
-            with self.assertRaises(board_doctor.UnknownStepError) as stop:
-                examine(ConsoleReadResult("read", "", None), tool=tools.Tool("esptool", "flasher", entry, []))
-            self.assertIn("esptool", str(stop.exception))
+    def test_an_unknown_silent_step_is_an_error_that_names_the_tool(self):
+        with self.assertRaises(board_doctor.UnknownStepError) as stop:
+            examine(ConsoleReadResult("read", "", None),
+                    tool=tools.Tool("esptool", "flasher", dict(DEFAULTS["esptool"], silent_step="erase"), []))
+        self.assertIn("esptool", str(stop.exception))
+
+    def test_a_tool_of_the_person_s_own_with_no_silent_step_still_gets_the_checks(self):
+        own = tools.Tool("my-shell", "board-shell", {"kind": "path"}, [])
+        busy, _ = examine(ConsoleReadResult("busy", "", "locked"), tool=own)
+        silent, _ = examine(ConsoleReadResult("read", "", None), tool=own)
+        self.assertEqual((busy.next_step, silent.next_step), ("close_other", None))
+
+
+class EsptoolStopTest(unittest.TestCase):
+    def test_a_stop_with_no_port_prints_only_the_stop(self):
+        self.assertEqual(board_doctor.stop_lines("look.py", LookStop("requirements.json names no board"), ".", None),
+                         ["look.py: requirements.json names no board"])
+
+    def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
+        from unittest import mock
+        stop = LookStop("could not read the board on %s" % PORT, PORT, SAID)
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("mpremote is not installed")):
+            lines = board_doctor.stop_lines("grant.py", stop, ".", None)
+        self.assertEqual(lines, ["grant.py: could not read the board on %s (no doctor: mpremote is not installed)" % PORT])
 
 
 class OutputTest(unittest.TestCase):

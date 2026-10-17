@@ -34,7 +34,7 @@ MESSAGE_FOR = {
     NEXT_PLUG_IN: "plug the board straight into the computer with a data cable, not a hub that gives power only, "
                   "and run it again",
     # mpremote and esptool lock the port while they run (mpremote 1.29 transport_serial.py:52).
-    NEXT_CLOSE_OTHER: "another program holds the port: close it (a serial monitor, mpremote, esptool) and run it again",
+    NEXT_CLOSE_OTHER: "another program holds the port, for example mpremote or esptool: close it and run it again",
     # A board that waited in download mode booted after one press of R (the P236 bench, AT157).
     NEXT_PRESS_RESET: "press the board's R (reset) button once and run it again",
     # The doctor's own open restarted the board (the P251 cure, AT187), so the first failure tells little now.
@@ -42,7 +42,8 @@ MESSAGE_FOR = {
     # esptool got in after the PO pressed BOOT and R (p238 finding.md:52, n = 1).
     NEXT_HOLD_BOOT: "hold the board's BOOT (B) button, press and release R, release BOOT, and run it again. After "
                     "it, press R once so the firmware starts",
-    # 7 of 10 replugs reached a silent board (the P235 reach test); a replug also wakes a C6 from light sleep (esp-idf).
+    # 7 of 10 tries after a replug reached the board (the P235 reach test); a replug also wakes a C6 from light sleep
+    # (the esp-idf USB-Serial/JTAG console guide).
     NEXT_REPLUG: "unplug the board, plug it in again, and run it again",
 }
 #: The step to take when a step did not help. Only where a source backs it; every other step has none.
@@ -60,9 +61,10 @@ class UnknownStepError(ValueError):
 
 
 def silent_step_of(tool):
-    """The tool entry's `silent_step`, one of STEP_CODES. UnknownStepError for any other value or none."""
+    """The tool entry's `silent_step`, one of STEP_CODES, or None when the entry names none (a person's own tool): the
+    checks still run, and a silent board gets no step. UnknownStepError for any other value."""
     step = tool.entry.get("silent_step")
-    if step not in STEP_CODES:
+    if step is not None and step not in STEP_CODES:
         raise UnknownStepError("the tools list gives %s the silent_step %r, and it must be one of %s"
                                % (tool.name, step, ", ".join(STEP_CODES)))
     return step
@@ -116,7 +118,9 @@ class ConsoleBoardCheck(BoardCheckStrategy):
         if read.kind != KIND_READ:
             return CheckResult(self.name, False, "could not read the console: %s" % read.why, None)
         if DOWNLOAD_MODE in read.printed:
-            return CheckResult(self.name, False, "the board waits in download mode", NEXT_PRESS_RESET)
+            # A tool whose silent step is download mode (esptool) can read the board now; any other needs R first.
+            step = NEXT_RUN_AGAIN if silent_step == NEXT_HOLD_BOOT else NEXT_PRESS_RESET
+            return CheckResult(self.name, False, "the board waits in download mode", step)
         if shows_boot(read.printed):
             return CheckResult(self.name, False, "the board booted when the doctor opened its port", NEXT_RUN_AGAIN)
         heard = read.printed.strip()

@@ -60,12 +60,13 @@ class TheRetryTest(unittest.TestCase):
         self.assertIn("no answer in 20 s", result.why)
 
     def test_other_first_failures_are_not_retried(self):
-        for error in (BoardUnreachableError("no answer in 20 s"),
-                      BoardUnreachableError("failed to access /dev/cu.usbmodem101 (it may be in use by another program)"),
-                      BoardUnreachableError("[Errno 2] No such file or directory: 'mpremote'")):
+        for error, entered in ((BoardUnreachableError("no answer in 20 s"), True),
+                               (BoardUnreachableError("failed to access /dev/cu.usbmodem101 (it may be in use by another "
+                                                      "program)"), False),
+                               (BoardUnreachableError("[Errno 2] No such file or directory: 'mpremote'"), True)):
             probe = FakeConsoleProbe(cured=RESTART)
             result = board_reach.reach(FakeBoardConnection(error), probe)
-            self.assertEqual(result, board_reach.ReachResult(False, "", True, None, str(error), True))
+            self.assertEqual(result, board_reach.ReachResult(False, "", True, None, str(error), entered))
             self.assertEqual(probe.asked, [])
 
     def test_code_with_no_answer_in_time_may_have_entered_the_board_and_is_not_retried(self):

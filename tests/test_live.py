@@ -136,6 +136,24 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual((code, doctor["next_step"], doctor["if_not_helped"]), (2, "press_reset", "replug"))
         self.assertEqual([check["name"] for check in doctor["checks"]], ["port-listed", "console"])
 
+    def test_a_port_mpremote_could_not_open_gets_the_doctor_and_no_reset(self):
+        busy = subprocess.CalledProcessError(1, [], "", "failed to access %s (it may be in use by another program)\n" % C6_PORT)
+        code, said, _, ran = self.go("--code", "print(1)", "--json", answers=(busy,))
+        line = json.loads(said)
+        self.assertEqual((code, line["reset"]), (2, None))
+        self.assertEqual(line["doctor"]["checks"][0]["name"], "port-listed")
+        self.assertEqual([command for command in ran if "reset" in command], [])
+
+    def test_an_unknown_silent_step_keeps_the_try_s_answer_and_says_no_doctor(self):
+        refused = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        shell = tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote", "silent_step": "erase"},
+                           ["/opt/python3"])
+        with mock.patch.dict(found.__globals__["FOUND"], {"board-shell": shell}):
+            code, said, _, _ = self.go("--code", "print(1)", "--json", answers=(refused, refused))
+        line = json.loads(said)
+        self.assertEqual((code, line["answer"], line["doctor"]), (2, "not_reached", None))
+        self.assertIn("No doctor:", line["why"])
+
     def test_the_text_lists_the_gpio_numbers_in_the_code(self):
         code, said, _, _ = self.go("--code", "from machine import Pin\nPin(15, Pin.OUT).value(1)", answers=("", ""))
         self.assertEqual(code, 0)

@@ -9,12 +9,14 @@ A library: live.py only parses arguments, calls `LiveTryService` and prints.
                      and restarts the chip after any code that may have got in (P252's pick, a hard reset).
 
 Nothing reaches the board without a grant: the grant check runs only `mpremote devs`, and every refusal comes before
-the run. The reset runs unless mpremote said it could not enter the raw REPL, so code that never ends is stopped too.
+the run. The reset runs unless mpremote said it could not open the port or enter the raw REPL, so code that never
+ends is stopped too.
 A Ctrl-C during the run stops live.py before the reset.
 """
 
 from collections import namedtuple
 
+import board_doctor
 import board_reach
 from board_connection import BoardUnreachableError
 from board_grant import MESSAGE_FOR
@@ -92,5 +94,8 @@ class LiveTryService:
                 reset, why = RESET_FAILED, ". ".join(filter(None, [why, RESET_FAILED_MESSAGE % failed]))
         examined = None
         if not reached.entered and self.doctor is not None:
-            examined = self.doctor.examine(port, self.shell, reached.why)
+            try:
+                examined = self.doctor.examine(port, self.shell, reached.why)
+            except board_doctor.UnknownStepError as cannot:
+                why = "%s. No doctor: %s" % (why, cannot)
         return LiveTryResult(answer, None, why, reached.output, reached.cure, reset, doctor=examined, **facts)

@@ -140,11 +140,12 @@ These only read:
   and `port`. Exit 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset
   failed, or it could not run. `ran` means the board ran the code: an empty output still counts, so read `output`.
   A `reset` of `failed` means the firmware may be stopped: tell the person to press R or replug. `reset` is null only
-  after a refusal, or after a `not_reached` where mpremote could not enter the raw REPL, so the code never ran. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
+  after a refusal, or after a `not_reached` where mpremote could not open the port or enter the raw REPL, so the code
+  never ran. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
   code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
   candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool;
-- the board doctor ([P282](https://github.com/xmejkal/spark/issues/326)). When esptool cannot read the board
-  (`look.py`, `grant.py`) or mpremote never gets in (`reach.py`, `live.py`), the script adds the doctor's lines:
+- the board doctor ([P282](https://github.com/xmejkal/spark/issues/326)). When esptool's read fails
+  (`look.py`, `grant.py --minutes`) or mpremote cannot open the port or enter the REPL (`reach.py`, `live.py`), the script adds the doctor's lines:
   `said` (the tool's own error line, a fact you show and never decide on), one `check` line per check
   (`port-listed`, `console`), and `next`, one step for the person's hands. `live.py --json` and `reach.py --json`
   carry it as `doctor`: `checks`, `tool_said`, `next_step` and `if_not_helped`. The codes are `plug_in`,
