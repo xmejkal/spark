@@ -1,0 +1,8 @@
+{
+ "requirements": {
+  "board": "xiao-esp32-c6-fresh",
+  "parts": [
+   "tactile-button"
+  ]
+ }
+}

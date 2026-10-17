@@ -445,7 +445,11 @@ rail when a point has more ends than a row holds. Today's steps for this project
 ([P267](https://github.com/xmejkal/spark/issues/300)). It is a Wokwi diagram of the same steps on a half breadboard:
 each part's legs in holes, and each jumper in its step's color. The sheet names the colors under its steps. To see
 it, open a new project on wokwi.com, paste the file into its `diagram.json`, and compare the picture with your own
-breadboard. The file is new at each build, so a change you make to it in Wokwi is lost at the next build.
+breadboard. Since 2026-10-17 a part you move in the file stays where you put it at the next build
+([P273](https://github.com/xmejkal/spark/issues/309)), even after you change the requirements, if it still fits. A
+part that cannot stay is named on the screen, with why: for example `LedRed5mm: its pin A is not over a hole`, or
+`LedRed5mm: it is not in the new circuit`. Its jumpers follow it, so the diagram stays wired. A resistor you move
+is named, not kept, and a jumper you move is re-drawn. A build that fails leaves the file, with your moves, and says so.
 
 Only the Seeed Studio XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the
 board. The board is the limit because spark knows where Wokwi draws its pins and the

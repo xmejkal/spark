@@ -89,6 +89,8 @@ PIN_MODULE = Path("firmware") / "pins.py"
 
 #: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
 REQUIREMENTS_STAGE = "requirements"
+#: The `did` of a kept entry for a part the person moved in breadboard.json that the build could not keep (P273).
+MOVE_NOT_KEPT = "move not kept"
 
 
 class Stage:
@@ -635,7 +637,8 @@ def main(argv=None):
                              "dist/, where every check already looks. Existing .tsx files are "
                              "left alone and named; with --json, each file is listed under kept. With a requirements "
                              "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
-                             "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today), "
+                             "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
+                             "you moved in it stays where you put it, or the build names it as `move not kept`), "
                              "breadboard.svg, that drawing as a picture, page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser, and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
@@ -767,14 +770,14 @@ def keep_breadboard(requirements, destination, stages=()):
     why = why_not_built(stages, "board only: nothing to wire")
     if why:
         return [_left_from_earlier(sheet, "breadboard sheet", why)] + [
-            _left_from_earlier(path, renderer.NOUN, why) for path, renderer in drawings]
+            _left_from_earlier_drawing(path, renderer, why) for path, renderer in drawings]
     try:
         breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
         written = breadboard.write(requirements, sheet, Path(destination) / breadboard.CIRCUIT)
     except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
         return [{"file": str(sheet), "did": "not written", "why": str(stopped),
                  "line": "no breadboard sheet: %s" % stopped}] + [
-            _left_from_earlier(path, renderer.NOUN, "the sheet was not written") for path, renderer in drawings]
+            _left_from_earlier_drawing(path, renderer, "the sheet was not written") for path, renderer in drawings]
     why = "the parts and how to wire them on a breadboard"
     kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why)}]
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE,
@@ -782,6 +785,10 @@ def keep_breadboard(requirements, destination, stages=()):
     if written.why:
         kept += [{"file": str(path), "did": "not written", "why": written.why,
                   "line": "no %s: %s" % (renderer.NOUN, written.why)} for path, renderer in drawings]
+    # a part the person moved in breadboard.json that the build could not keep (P273)
+    kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
+              "part": named.subject, "code": named.code, "why": named.why,
+              "line": "move not kept: %s" % named.line} for named in written.not_kept]
     return kept
 
 
@@ -843,6 +850,16 @@ def _breadboard_tab(destination, kept):
         except (OSError, ValueError) as unread:
             return tabbed_page.Tab("Breadboard", None, "breadboard.svg cannot be read: %s" % unread)
     return tabbed_page.Tab("Breadboard", None, entry["why"] if entry else "the breadboard picture was not written")
+
+
+def _left_from_earlier_drawing(path, renderer, why):
+    """`_left_from_earlier` for a drawing, except the one a person edits: breadboard.json is left in place when it holds
+    parts, since it may hold their moves, which the next build that finishes keeps where they still fit (P273)."""
+    if renderer is breadboard.EDITABLE_DRAWING and path.exists() and breadboard.holds_parts(path):
+        return {"file": str(path), "did": "left alone", "why": "no %s: %s; it may hold your moves, which the next build "
+                "keeps where they fit" % (renderer.NOUN, why),
+                "line": "left alone: %s (it may hold your moves; no %s: %s)" % (path, renderer.NOUN, why)}
+    return _left_from_earlier(path, renderer.NOUN, why)
 
 
 def _left_from_earlier(path, what, why):

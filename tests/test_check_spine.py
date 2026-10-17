@@ -396,6 +396,23 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertFalse((into / "breadboard.json").exists())
         self.assertIn("no drawn breadboard: the build did not finish in this run; removed", err.getvalue())
 
+    def test_a_breadboard_json_that_holds_parts_is_left_when_a_build_does_not_finish(self):
+        # P273: it may hold the person's moves, and a typo in requirements.json must not wipe them.
+        import argparse, shutil
+        import breadboard
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
+        into = Path(tempfile.mkdtemp()) / "project"
+        shutil.copytree(fixture, into)
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+            breadboard.write(into / "requirements.json", into / "breadboard.md")
+        earlier = (into / "breadboard.json").read_text()
+        args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+        self.assertEqual((into / "breadboard.json").read_text(), earlier)
+        self.assertIn("left alone: %s (it may hold your moves" % (into / "breadboard.json"), err.getvalue())
+        self.assertFalse((into / "breadboard.svg").exists())
+
     def test_a_build_that_did_not_finish_writes_no_sheet_and_says_why(self):
         # P191's council: a failed build wrote a sheet from the earlier dist/, wiring parts the requirements had dropped.
         import argparse, contextlib, io

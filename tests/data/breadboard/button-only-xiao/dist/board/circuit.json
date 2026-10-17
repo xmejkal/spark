@@ -1,0 +1,330 @@
+[
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_0",
+  "name": "pin1",
+  "pin_number": 1,
+  "port_hints": [
+   "pin1",
+   "D6",
+   "1"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_1",
+  "name": "pin2",
+  "pin_number": 2,
+  "port_hints": [
+   "pin2",
+   "D5",
+   "2"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_2",
+  "name": "pin3",
+  "pin_number": 3,
+  "port_hints": [
+   "pin3",
+   "D4",
+   "3"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_3",
+  "name": "pin4",
+  "pin_number": 4,
+  "port_hints": [
+   "pin4",
+   "D3",
+   "4"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_4",
+  "name": "pin5",
+  "pin_number": 5,
+  "port_hints": [
+   "pin5",
+   "D2",
+   "5"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_5",
+  "name": "pin6",
+  "pin_number": 6,
+  "port_hints": [
+   "pin6",
+   "D1",
+   "6"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_6",
+  "name": "pin7",
+  "pin_number": 7,
+  "port_hints": [
+   "pin7",
+   "D0",
+   "7"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_7",
+  "name": "pin8",
+  "pin_number": 8,
+  "port_hints": [
+   "pin8",
+   "D7",
+   "8"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_8",
+  "name": "pin9",
+  "pin_number": 9,
+  "port_hints": [
+   "pin9",
+   "D8",
+   "9"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_9",
+  "name": "pin10",
+  "pin_number": 10,
+  "port_hints": [
+   "pin10",
+   "D9",
+   "10"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_10",
+  "name": "pin11",
+  "pin_number": 11,
+  "port_hints": [
+   "pin11",
+   "D10",
+   "11"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_11",
+  "name": "pin12",
+  "pin_number": 12,
+  "port_hints": [
+   "pin12",
+   "3V3",
+   "12"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net1"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_12",
+  "name": "pin13",
+  "pin_number": 13,
+  "port_hints": [
+   "pin13",
+   "GND",
+   "13"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net2"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_13",
+  "name": "pin14",
+  "pin_number": 14,
+  "port_hints": [
+   "pin14",
+   "5V",
+   "14"
+  ],
+  "source_component_id": "source_component_0",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_0",
+  "ftype": "simple_chip",
+  "name": "Mcu",
+  "supplier_part_numbers": {},
+  "source_group_id": "source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_14",
+  "name": "A",
+  "pin_number": 1,
+  "port_hints": [
+   "A",
+   "pin1",
+   "1"
+  ],
+  "source_component_id": "source_component_1",
+  "subcircuit_id": "subcircuit_source_group_0",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_15",
+  "name": "B",
+  "pin_number": 2,
+  "port_hints": [
+   "B",
+   "pin2",
+   "2"
+  ],
+  "source_component_id": "source_component_1",
+  "subcircuit_id": "subcircuit_source_group_0",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net2"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_16",
+  "name": "pin3",
+  "pin_number": 3,
+  "port_hints": [
+   "pin3",
+   "3"
+  ],
+  "source_component_id": "source_component_1",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_port",
+  "source_port_id": "source_port_17",
+  "name": "pin4",
+  "pin_number": 4,
+  "port_hints": [
+   "pin4",
+   "4"
+  ],
+  "source_component_id": "source_component_1",
+  "subcircuit_id": "subcircuit_source_group_0"
+ },
+ {
+  "type": "source_component",
+  "source_component_id": "source_component_1",
+  "ftype": "simple_chip",
+  "name": "TactileButton",
+  "supplier_part_numbers": {
+   "jlcpcb": []
+  },
+  "source_group_id": "source_group_0"
+ },
+ {
+  "type": "source_net",
+  "source_net_id": "source_net_0",
+  "name": "V33",
+  "member_source_group_ids": [],
+  "is_ground": false,
+  "is_power": true,
+  "is_positive_voltage_source": true,
+  "subcircuit_id": "subcircuit_source_group_0",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net1"
+ },
+ {
+  "type": "source_net",
+  "source_net_id": "source_net_1",
+  "name": "GND",
+  "member_source_group_ids": [],
+  "is_ground": true,
+  "is_power": false,
+  "is_positive_voltage_source": false,
+  "subcircuit_id": "subcircuit_source_group_0",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net2"
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_0",
+  "connected_source_port_ids": [
+   "source_port_10",
+   "source_port_14"
+  ],
+  "connected_source_net_ids": [],
+  "subcircuit_id": "subcircuit_source_group_0",
+  "display_name": ".Mcu > .D10 to .TactileButton > .A",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net0"
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_1",
+  "connected_source_port_ids": [
+   "source_port_11"
+  ],
+  "connected_source_net_ids": [
+   "source_net_0"
+  ],
+  "subcircuit_id": "subcircuit_source_group_0",
+  "display_name": ".Mcu > .3V3 to net.V33",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net1"
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_2",
+  "connected_source_port_ids": [
+   "source_port_12"
+  ],
+  "connected_source_net_ids": [
+   "source_net_1"
+  ],
+  "subcircuit_id": "subcircuit_source_group_0",
+  "display_name": ".Mcu > .GND to net.GND",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net2"
+ },
+ {
+  "type": "source_trace",
+  "source_trace_id": "source_trace_3",
+  "connected_source_port_ids": [
+   "source_port_15"
+  ],
+  "connected_source_net_ids": [
+   "source_net_1"
+  ],
+  "subcircuit_id": "subcircuit_source_group_0",
+  "display_name": ".TactileButton > .B to net.GND",
+  "subcircuit_connectivity_map_key": "unnamedsubcircuitsubcircuit_source_group_0_connectivity_net2"
+ }
+]
