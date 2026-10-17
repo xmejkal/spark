@@ -14,7 +14,20 @@ main at 7554792. `--help`, exit codes and the store record do not change. No pri
 
 ## Council
 
-(Filled in after each round.)
+Round 1 ran: tech lead (Sonnet) and refuter (Opus). It changed:
+- The constructor does only `image_of`'s two checks (toml, image file). It never reads `sim/runs/`, so `put_facts` and the
+  gate cannot get a new error path from an unreadable log.
+- `sha256` is a `cached_property`. The "old hash" test is dropped: staleness is not a contract. Only "a new `ProjectImage`
+  gives the new hash" is tested. The logs are read on each call (not cached); `why_untested` and `why_other_runs` stay
+  separate from `passed_log`.
+- Role: Value fits only if a method may read. The Value row in developing.md says so (reads, never writes).
+- `main` builds a fresh `ProjectImage` after the flash and for `put_facts`. `board_facts.facts` still hashes the file
+  itself: deliberate, it is facts' own job and PR 5 does not change it.
+- Callers added: tests/test_ready_check.py:19,95 (rebuilt on a project fixture); the re-exports in deploy.py:44 go.
+  `Look.run` keeps two tests: no image (image None) and an unreadable log (image set). `deploy.py:204, 222, 235` catch
+  `DeployError`. `project_image.py` calls `run_scenario.run_record` through the module, so the patches work.
+- p219-de2.json finds change text (`DeployError`, `.why_other_runs()`), not only lines.
+- `BOOT_HINT` in board_look.py differs from the synthesis ("beside the flasher"): deliberate, until PR 7.
 
 ## Design
 
@@ -31,7 +44,7 @@ main at 7554792. `--help`, exit codes and the store record do not change. No pri
 
 | Name | Role word | File | Job |
 |---|---|---|---|
-| `ProjectImage` | Value | project_image.py | The flash image `sim/wokwi.toml` names and the run logs in `sim/runs/` that name it. Built from the project. Its `why_` methods only read. |
+| `ProjectImage` | Value | project_image.py | The flash image `sim/wokwi.toml` names and the run logs in `sim/runs/` that name it. Built from the project. Its methods read the project's files and never write. |
 | `DeployError` | Error | project_image.py | Why the image cannot go on the board yet. The message is the whole sentence. Replaces `DeployProblem`. |
 | `command_for` | function | tools.py | The command that runs a Tool. Replaces `runnable`. |
 | `BOOT_HINT` | constant | board_look.py | What to try when esptool cannot reach the board. |
@@ -55,7 +68,7 @@ Method map (old to new):
 | `tested_another(image, runs)` | `.why_other_runs()` |
 | `passed_log(image, runs)` | `.passed_log()` |
 
-`sha256` is read from the file once, when first asked, and cached. A caller that must see a changed file builds a new
+`sha256` is read from the file once, when first asked, and cached (the constructor reads no log). A caller that must see a changed file builds a new
 `ProjectImage` (`plan()` does, and `main` builds one after the flash). The five functions hashed the file each call.
 
 Callers: `deploy.plan` builds one image and calls its methods. `put_facts` and `main` use `.path`. `Look.run` builds one,
@@ -67,12 +80,14 @@ stays set for the fit check). The `Report` keeps carrying a `Path`, so look.py, 
 1. tests/test_project_image.py (new): the five old behaviours by name on the class. No toml, no image, an image with a
    passed log, a failed log, a log of another image, a log of an older spark (no sha256), an unreadable log, a path that
    is no file. Red today: the module does not exist.
-2. The same file: `sha256` is the file's hash and is read once (the file changed after the first ask gives the old hash;
-   a new `ProjectImage` gives the new one).
+2. The same file: `sha256` is the file's hash, and a new `ProjectImage` after the file changed gives the new hash. A
+   constructor test: an unreadable log does not stop `ProjectImage(project)`.
 3. test_tools.py: `command_for` gives `command + ["-m", module]` for a Python tool and the command for any other.
 4. test_board_look.py: `board_look.BOOT_HINT` is shown in the two esptool refusals (the tests already read the text).
-5. The existing tests move to the new names: `deploy.DeployError`, `project_image.run_scenario.run_record`, and the
-   `passed_log` patch in test_deploy_gate.py patches `ProjectImage.passed_log`.
+5. The existing tests move to the new names: `deploy.DeployError`, `project_image.run_scenario.run_record`, the
+   `passed_log` patch in test_deploy_gate.py patches `ProjectImage.passed_log`, and test_ready_check.py's `PassedLogTest`
+   builds a project with a toml.
+   test_board_look.py pins both `Look.run` cases (no image; an unreadable log keeps the image).
 6. `DeployError` is an `Exception` whose name ends in `Error`, and `DeployProblem` no longer exists anywhere.
 7. Mutation file tests/mutations/p239-pr5.json: `sha256` re-read each time is not a defect, so the finds are: passed_log
    ignores the verdict (moved from p215-ready.json), why_untested accepts a failed log, why_other_runs ignores an older
