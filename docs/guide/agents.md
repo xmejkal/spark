@@ -125,7 +125,9 @@ These only read:
 - `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. It says whether the board on USB has
   a live grant now: exit 0 granted, 1 not (no grant, it ended, a grant file that is not this board's), 2 it could not
   run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes`:
-  that is the person's yes, typed in their own terminal. While the board has a grant, you can run `live.py` (below). The
+  that is the person's yes, typed in their own terminal. Give the person the line that `live.py` or `grant.py --check`
+  printed, which names `grant.py` by its whole path, with the minutes filled in. Never give a bare `grant.py`, because
+  it is not on the person's PATH, and `$CLAUDE_PLUGIN_ROOT` is not set in their terminal ([P283](https://github.com/xmejkal/spark/issues/329)). While the board has a grant, you can run `live.py` (below). The
   grant works only on a board whose USB serial is its MAC (a built-in USB port, like the ESP32-C6's). The person ends a
   grant early by deleting its file in the store, named by the MAC with dashes (`grants/8c-bf-ea-cc-97-70.json`). The grant is a file in the person's store, and you can
   write that file. The PO accepts that risk, as for every store record. Never write or change a grant file;

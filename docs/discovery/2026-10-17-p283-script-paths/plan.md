@@ -23,7 +23,15 @@ Round 1 ran: tech lead (Sonnet) and refuter (Opus, reproduced the bare line from
 - Rejected after a run: a path with a space or a quote survives `shlex.join` in `zsh`. The script runs without
   `python3` in front (mode 100755, `#!/usr/bin/env python3`). An absolute `--project` changes nothing in `grant.py`.
 
-Round 2: (pending).
+Round 2 ran: tech lead and PO assistant (Sonnet). No real gap. It changed:
+
+- The tests build the expected path from the checkout, never a literal.
+- The constant is `GRANT_COMMAND`: it holds a command, not a sentence. The "N" stays a placeholder in it.
+- `journey.md` says that Claude prints the real line. `<spark>` is only the line's form.
+- A guard for `deploy.py`'s line already exists (`tests/test_deploy_gate.py:519`), so no new deploy test.
+- The short command (a PATH line) becomes a proposed card for the PO, not a question that waits. The card's
+  "Value proven by" is partly met, and the PR says so. Lines that Claude runs get no card, because Claude knows
+  the path.
 
 ## Context
 

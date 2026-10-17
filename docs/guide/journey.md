@@ -1181,10 +1181,12 @@ board shows nothing after a pass. Wire the breadboard from `breadboard.md` to se
 ### Let Claude try code on the board: the grant and the live try
 
 A live try is a short line of code that Claude runs on your running board. Before Claude can run one, you give a grant
-in your own terminal ([P253](https://github.com/xmejkal/spark/issues/265)):
+in your own terminal ([P253](https://github.com/xmejkal/spark/issues/265)). Claude gives you the line with the
+paths written out, so it runs from any folder ([P283](https://github.com/xmejkal/spark/issues/329)). Paste the line
+that Claude prints. The line below shows its form, and `<spark>` and `<project>` stand for the real folders:
 
 ```sh
-grant.py --minutes 30
+<spark>/scripts/grant.py --minutes 30 --project <project>
 ```
 
 It reads the board once with esptool, so the board restarts. Then it asks you to let Claude run code on that board
