@@ -20,6 +20,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_grant  # noqa: E402
 import grant  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent  # noqa: E402
@@ -204,6 +205,18 @@ class CheckTest(GrantCase):
     def test_no_board_still_gives_json(self):
         self.devs = ""
         self.assertEqual(self.check(), (2, {"granted": False, "why": "could not run", "grant": None}))
+
+    def test_an_empty_serial_never_reads_a_stray_file(self):
+        (self.home / "grants" / "entry.json").write_text(json.dumps(dict(self.kept(), mac="")))
+        self.assertIsNone(board_grant.GrantStore().find(" "))
+
+    def test_the_mac_compares_in_any_case(self):
+        self.esptool = self.esptool.replace("8c:bf:ea:xx:xx:xx", "8C:BF:EA:XX:XX:XX")
+        (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").unlink()
+        self.assertEqual(self.grant("--minutes", "30", consent=FakeConsent(True))[0], 0)
+        self.assertEqual(self.kept()["mac"], MAC)
+        self.devs = self.devs.replace("8c:bf:ea:xx:xx:xx", "8C:BF:EA:XX:XX:XX")
+        self.assertEqual(self.check()[0], 0)
 
     def test_a_new_grant_replaces_the_old_one(self):
         self.now = START + datetime.timedelta(minutes=40)

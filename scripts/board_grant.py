@@ -111,7 +111,7 @@ class GrantService:
         """The Grant kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and a yes from
         `consent`. `before_look` runs just before the board restarts. Raises GrantRefusedError, board_look.LookStop, or
         GateClosedError when consent cannot ask. It saves nothing then."""
-        if not isinstance(minutes, int) or isinstance(minutes, bool) or not 1 <= minutes <= MAX_MINUTES:
+        if not 1 <= minutes <= MAX_MINUTES:
             raise GrantRefusedError(WHY_BAD_MINUTES)
         board = self.finder.require_one_board(script, port)
         consent.require_ready()
