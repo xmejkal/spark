@@ -25,5 +25,7 @@
  {"file": "scripts/breadboard_keep.py", "name": "a breadboard dragged from the corner is ignored", "find": "                    if float(one[\"left\"]) != 0 or float(one[\"top\"]) != 0:", "replace": "                    if False:"},
  {"file": "scripts/check_spine.py", "name": "the build entry does not say which part", "find": "\"part\": named.subject, ", "replace": ""},
  {"file": "scripts/breadboard_keep.py", "name": "two pins of a part may share a row", "find": "len(set(groups)) < len(groups) or ", "replace": ""},
- {"file": "scripts/breadboard_keep.py", "name": "the last of two parts with one id wins", "find": "parts.setdefault(one[\"id\"], one)", "replace": "parts[one[\"id\"]] = one"}
+ {"file": "scripts/breadboard_keep.py", "name": "the last of two parts with one id wins", "find": "parts.setdefault(one[\"id\"], one)", "replace": "parts[one[\"id\"]] = one"},
+ {"file": "scripts/check_spine.py", "name": "a build that did not finish removes the person's moves", "find": "    if renderer is breadboard.EDITABLE_DRAWING and path.exists() and breadboard.holds_parts(path):", "replace": "    if False:"},
+ {"file": "scripts/breadboard.py", "name": "any breadboard.json is left, even one that holds nothing", "find": "    return bool(earlier and earlier.parts)", "replace": "    return True"}
 ]

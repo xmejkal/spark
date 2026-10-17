@@ -425,6 +425,13 @@ def _plan_once(read, earlier_path=None):
     return PlannedLayout(layout, None, named)
 
 
+def holds_parts(path):
+    """True when `path` is a breadboard.json of spark's kind with at least one part on it: a diagram that may hold a
+    person's moves (P273), which a build that did not finish leaves alone."""
+    earlier = breadboard_keep.EarlierDiagram.read(path, breadboard_drawing.WokwiGeometry.load().surface.type)
+    return bool(earlier and earlier.parts)
+
+
 def sheet(requirements_path, circuit_path=None, read=None, planned=None):
     """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit).
     `planned` is the layout `write()` already planned, so the sheet says what the drawings show."""

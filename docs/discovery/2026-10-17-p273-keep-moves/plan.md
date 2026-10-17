@@ -92,16 +92,15 @@ check_spine --keep -> breadboard.write(req, sheet, circuit)
 - A file that is not spark's diagram is named `unreadable`, and the build goes on with a fresh plan.
 - Docs say "a part other than a resistor stays", never "a move stays".
 
-## Question for the PO
+## Question for the PO, settled
 
-A refused or failed build (`_left_from_earlier`) deletes `breadboard.json`, edit included. Example: you move the LED,
-then break `requirements.json`; the next `--keep` removes your file. Fix in this slice, or the next? Default: next.
+A refused or failed build (`_left_from_earlier`) deleted `breadboard.json`, edit included. The tech lead and the
+PO-assistant both said fix now: such a build leaves a `breadboard.json` that holds parts, with a `left alone` entry.
 
 ## Follow-ups to propose, not built
 
 1. Keep a moved jumper's holes and route. 2. Keep a moved resistor, after resistor ids come from the circuit name.
 3. Read a diagram edited and exported from Wokwi's web editor. 4. Warn when a kept part far right crowds the board.
-5. Keep the person's file when a build fails.
 6. A board-pad jumper after a far-right kept part can give a false `no room` (`claim_free_group` has no retry from
    column 0).
 

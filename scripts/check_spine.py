@@ -770,14 +770,14 @@ def keep_breadboard(requirements, destination, stages=()):
     why = why_not_built(stages, "board only: nothing to wire")
     if why:
         return [_left_from_earlier(sheet, "breadboard sheet", why)] + [
-            _left_from_earlier(path, renderer.NOUN, why) for path, renderer in drawings]
+            _left_from_earlier_drawing(path, renderer, why) for path, renderer in drawings]
     try:
         breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
         written = breadboard.write(requirements, sheet, Path(destination) / breadboard.CIRCUIT)
     except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
         return [{"file": str(sheet), "did": "not written", "why": str(stopped),
                  "line": "no breadboard sheet: %s" % stopped}] + [
-            _left_from_earlier(path, renderer.NOUN, "the sheet was not written") for path, renderer in drawings]
+            _left_from_earlier_drawing(path, renderer, "the sheet was not written") for path, renderer in drawings]
     why = "the parts and how to wire them on a breadboard"
     kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why)}]
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE,
@@ -850,6 +850,16 @@ def _breadboard_tab(destination, kept):
         except (OSError, ValueError) as unread:
             return tabbed_page.Tab("Breadboard", None, "breadboard.svg cannot be read: %s" % unread)
     return tabbed_page.Tab("Breadboard", None, entry["why"] if entry else "the breadboard picture was not written")
+
+
+def _left_from_earlier_drawing(path, renderer, why):
+    """`_left_from_earlier` for a drawing, except the one a person edits: breadboard.json is left in place when it holds
+    parts, since it may hold their moves, which the next build that finishes keeps where they still fit (P273)."""
+    if renderer is breadboard.EDITABLE_DRAWING and path.exists() and breadboard.holds_parts(path):
+        return {"file": str(path), "did": "left alone", "why": "no %s: %s; it may hold your moves, which the next build "
+                "keeps where they fit" % (renderer.NOUN, why),
+                "line": "left alone: %s (it may hold your moves; no %s: %s)" % (path, renderer.NOUN, why)}
+    return _left_from_earlier(path, renderer.NOUN, why)
 
 
 def _left_from_earlier(path, what, why):

@@ -176,8 +176,9 @@ These write:
   earlier file before it writes, and a part that is not a resistor keeps its place if its pins are over free holes, one
   row each. `WriteResult.not_kept` lists `NotKeptResult(subject, code, why)` for each part it could not keep (codes in
   `breadboard_keep.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under `kept` with
-  `did` `move not kept`, `part`, `code` and `why`. A resistor is placed by spark and named when it differs; jumpers are planned fresh. A failed
-  or refused build still removes the file. Never read a missing `not kept` line as proof that a jumper's move was kept.
+  `did` `move not kept`, `part`, `code` and `why`. A resistor is placed by spark and named when it differs; jumpers are planned fresh. A build
+  that did not finish (failed or refused) leaves a `breadboard.json` that holds parts, with a `left alone` entry, since it
+  may hold moves; one that holds none, or is not readable, is removed. Never read a missing `not kept` line as proof that a jumper's move was kept.
   Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
   `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
   from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).
