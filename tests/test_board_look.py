@@ -384,6 +384,15 @@ class LookReportToDictTest(LookCase):
         self.assertEqual(as_dict["stops"], ["this board is an esp32c6, the project is for an esp32s3"])
         json.dumps(as_dict)
 
+    def test_changing_the_dict_leaves_the_report_alone(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        report = self.look()
+        as_dict = report.to_dict()
+        as_dict["stops"].clear()
+        as_dict["fields"].clear()
+        self.assertEqual((len(report.stops), len(report.fields)), (1, 2))
+
     def test_an_unknown_field_with_no_scenario_run(self):
         report = self.look(esptool="c6-flash-id-garbled.txt")
         as_dict = report.to_dict()
