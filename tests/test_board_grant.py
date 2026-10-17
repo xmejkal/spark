@@ -69,8 +69,8 @@ class IssueTest(GrantCase):
         consent = FakeConsent(True)
         code, out, _ = self.grant("--minutes", "30", consent=consent)
         self.assertEqual(code, 0)
-        self.assertEqual(consent.asked, ["let Claude run code on the board 8c:bf:ea:xx:xx:xx (token %s) until "
-                                         "2026-10-17 09:30 UTC?" % self.kept()["board_token"]])
+        self.assertEqual(consent.asked, ["let Claude run code on the board 8c:bf:ea:xx:xx:xx (token %s) for 30 minutes "
+                                         "from your yes?" % self.kept()["board_token"]])
         kept = self.kept()
         self.assertEqual((kept["mac"], kept["granted_at"], kept["expires_at"]),
                          (MAC, "2026-10-17T09:00:00+00:00", "2026-10-17T09:30:00+00:00"))
@@ -85,7 +85,7 @@ class IssueTest(GrantCase):
     def test_no_saves_nothing(self):
         code, _, err = self.grant("--minutes", "30", consent=FakeConsent(False))
         self.assertEqual(code, 1)
-        self.assertIn("no grant: you answered no.", err)
+        self.assertIn("no grant: the person answered no", err)
         self.assertFalse((self.home / "grants").exists())
 
     def test_no_terminal_names_the_line_to_run_and_saves_nothing(self):
@@ -98,12 +98,31 @@ class IssueTest(GrantCase):
         self.assertEqual(code, 2)
         self.assertIn("grant.py --minutes 30", err)
         self.assertFalse((self.home / "grants").exists())
+        self.assertEqual([argv[-1] for argv in self.ran], ["devs"], "the board restarted for nothing")
 
-    def test_zero_minutes_is_refused_before_the_board_is_touched(self):
-        code, _, err = self.grant("--minutes", "0", consent=FakeConsent(True))
-        self.assertEqual(code, 1)
-        self.assertIn("--minutes must be a whole number of 1 or more", err)
+    def test_minutes_out_of_range_are_refused_before_the_board_is_touched(self):
+        for minutes in ("0", "1441", "99999999999"):
+            code, out, err = self.grant("--minutes", minutes, consent=FakeConsent(True))
+            self.assertEqual(code, 2, minutes)
+            self.assertIn("--minutes must be a whole number from 1 to 1440", err)
+            self.assertNotIn("restarts", out)
         self.assertEqual(self.ran, [])
+        self.assertEqual(self.grant("--minutes", "1440", consent=FakeConsent(True))[0], 0)
+
+    def test_the_limit_counts_from_the_yes(self):
+        test = self
+
+        class Slow(FakeConsent):
+            def ask(self, question):
+                test.now = START + datetime.timedelta(minutes=10)
+                return super().ask(question)
+
+        self.grant("--minutes", "30", consent=Slow(True))
+        self.assertEqual(self.kept()["expires_at"], "2026-10-17T09:40:00+00:00")
+
+    def test_json_goes_with_check_only(self):
+        with self.assertRaises(SystemExit):
+            self.grant("--minutes", "30", "--json", consent=FakeConsent(True))
 
     def test_a_serial_that_is_not_the_mac_gets_no_grant(self):
         self.devs = "/dev/cu.usbserial-1410 None 1a86:7523 USB Serial\n"
@@ -117,7 +136,7 @@ class IssueTest(GrantCase):
     def test_no_mac_read_gets_no_grant(self):
         self.esptool = data("c6-flash-id-no-mac.txt")
         code, _, err = self.grant("--minutes", "30", consent=FakeConsent(True))
-        self.assertEqual(code, 1)
+        self.assertEqual(code, 2)
         self.assertIn("the board's MAC could not be read", err)
         self.assertFalse((self.home / "grants").exists())
 
@@ -169,6 +188,22 @@ class CheckTest(GrantCase):
     def test_a_file_that_is_no_grant_is_not_trusted(self):
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").write_text("{}")
         self.assertEqual(self.check(), (1, {"granted": False, "why": "not a grant", "grant": None}))
+
+    def test_another_boards_grant_copied_under_this_name_is_not_trusted(self):
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
+        path.write_text(json.dumps(dict(self.kept(), mac="aa:bb:cc:dd:ee:ff")))
+        self.assertEqual(self.check()[1]["why"], "not a grant")
+        path.write_text(json.dumps(dict(self.kept(), board_token="0000")))
+        self.assertEqual(self.check()[1]["why"], "not a grant")
+
+    def test_a_grant_longer_than_a_day_is_not_trusted(self):
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
+        path.write_text(json.dumps(dict(self.kept(), expires_at="2099-01-01T00:00:00+00:00")))
+        self.assertEqual(self.check()[1]["why"], "not a grant")
+
+    def test_no_board_still_gives_json(self):
+        self.devs = ""
+        self.assertEqual(self.check(), (2, {"granted": False, "why": "could not run", "grant": None}))
 
     def test_a_new_grant_replaces_the_old_one(self):
         self.now = START + datetime.timedelta(minutes=40)

@@ -123,12 +123,12 @@ These only read:
   Exit 1 is a stop (deploy.py will refuse, no token) or a field that differs but that the person can accept (with a token):
   the stop line or the token line tells them apart. The token is not the person's yes;
 - `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. It says whether the board on USB has
-  a live grant now: exit 0 granted, 1 not (no grant, it ended), 2 it could not run. `--json` gives `granted`, `why` (a
-  code, or null) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes`:
+  a live grant now: exit 0 granted, 1 not (no grant, it ended, a grant file that is not this board's), 2 it could not
+  run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes`:
   that is the person's yes, typed in their own terminal. A grant lets you run nothing yet. The live try behind it is
   [P247](https://github.com/xmejkal/spark/issues/267), and `reach.py` stays the person's bench tool until then. The
   grant works only on a board whose USB serial is its MAC (a built-in USB port, like the ESP32-C6's). The person ends a
-  grant early by deleting `grants/<the MAC>.json` in the store. The grant is a file in the person's store, and you can
+  grant early by deleting its file in the store, named by the MAC with dashes (`grants/8c-bf-ea-cc-97-70.json`). The grant is a file in the person's store, and you can
   write that file. The PO accepts that risk, as for every store record. Never write or change a grant file;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches

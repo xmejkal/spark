@@ -1188,8 +1188,8 @@ grant.py --minutes 30
 ```
 
 It reads the board once with esptool, so the board restarts. Then it asks you to let Claude run code on that board
-until a time 30 minutes from now. Type `yes`. Your store keeps the grant as `grants/<the MAC>.json`. To end it early,
-delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
+for 30 minutes from your yes (one day at most). Type `yes`. Your store keeps the grant in a file named by the MAC with
+dashes, for example `grants/8c-bf-ea-cc-97-70.json`. To end it early, delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
 The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's. The live try itself comes with
 [P247](https://github.com/xmejkal/spark/issues/267), so today a grant lets Claude do nothing more.
 

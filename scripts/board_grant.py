@@ -23,27 +23,33 @@ from collections import namedtuple
 import board_look
 import store
 from deploy_gate import GateClosedError
-from outcomes import EXIT_PROBLEMS
+from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 
 #: The grant as the store keeps it. The times are ISO 8601 in UTC, with the zone.
 Grant = namedtuple("Grant", "mac board_token granted_by granted_at expires_at")
 #: `granted` is True or False, `grant` the Grant found or None, `why` one of the WHY_ codes or None.
 GrantCheckResult = namedtuple("GrantCheckResult", "granted grant why")
+#: The longest grant, in minutes: one day. No D names a limit; this one keeps the time a date can hold (P253's review).
+MAX_MINUTES = 24 * 60
 
 WHY_NO_GRANT, WHY_EXPIRED, WHY_NO_ZONE, WHY_NOT_A_GRANT = "no grant", "expired", "no zone", "not a grant"
 WHY_SERIAL_NOT_MAC, WHY_NO_MAC, WHY_BAD_MINUTES, WHY_ANSWERED_NO = "serial not mac", "no mac", "bad minutes", "answered no"
+#: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
+WHY_COULD_NOT_RUN = "could not run"
 #: The sentence a person reads for each code.
 MESSAGE_FOR = {
     WHY_NO_GRANT: "no grant for this board: the person runs grant.py --minutes N in their own terminal",
     WHY_EXPIRED: "the grant for this board ended: the person runs grant.py --minutes N again",
     WHY_NO_ZONE: "the grant's time has no zone, so it was not trusted: the person runs grant.py --minutes N again",
-    WHY_NOT_A_GRANT: "the store's grant file for this board is not a grant, so it was not trusted",
+    WHY_NOT_A_GRANT: "the store's grant file for this board is not a grant for it, so it was not trusted",
     WHY_SERIAL_NOT_MAC: "the board's USB serial is not its MAC, so a later call could not tell it is the same board. "
                         "The grant works only on a board with a built-in USB port, like the ESP32-C6's",
     WHY_NO_MAC: "the board's MAC could not be read",
-    WHY_BAD_MINUTES: "--minutes must be a whole number of 1 or more",
-    WHY_ANSWERED_NO: "no grant: you answered no.",
+    WHY_BAD_MINUTES: "--minutes must be a whole number from 1 to %d" % MAX_MINUTES,
+    WHY_ANSWERED_NO: "no grant: the person answered no",
 }
+#: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.
+COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES)
 
 
 def mac_key(mac):
@@ -56,9 +62,18 @@ def utc_now():
     return datetime.datetime.now(datetime.timezone.utc)
 
 
+class GrantRefusedError(GateClosedError):
+    """Error: no grant, for one of the WHY_ codes. Its exit code is 1, a refusal, as the deploy gate's stops are, or 2
+    for a code in COULD_NOT_RUN_WHYS."""
+
+    def __init__(self, why):
+        super().__init__(MESSAGE_FOR[why], EXIT_COULD_NOT_RUN if why in COULD_NOT_RUN_WHYS else EXIT_PROBLEMS)
+        self.why = why
+
+
 class GrantStore:
-    """Reads and writes the store's grants place: one JSON file per board, named by its MAC. A new grant replaces the
-    old one. Deleting the file ends the grant."""
+    """Reads and writes the store's grants place: one JSON file per board, named by its MAC with dashes, for example
+    grants/8c-bf-ea-cc-97-70.json. A new grant replaces the old one. Deleting the file ends the grant."""
 
     @staticmethod
     def key(mac):
@@ -72,22 +87,17 @@ class GrantStore:
 
     def find(self, mac):
         """The Grant kept for this MAC, or None when there is none. GrantRefusedError(WHY_NOT_A_GRANT) when the file is
-        there but holds no grant."""
+        there but holds no grant for this MAC."""
         path = store.place("grants") / (self.key(mac) + ".json")
         if not mac_key(mac) or not path.is_file():
             return None
         try:
-            return Grant(**json.loads(path.read_text()))
+            grant = Grant(**json.loads(path.read_text()))
         except (ValueError, TypeError):
             raise GrantRefusedError(WHY_NOT_A_GRANT)
-
-
-class GrantRefusedError(GateClosedError):
-    """Error: no grant, for one of the WHY_ codes. Its exit code is 1, a refusal, as the deploy gate's stops are."""
-
-    def __init__(self, why):
-        super().__init__(MESSAGE_FOR[why], EXIT_PROBLEMS)
-        self.why = why
+        if mac_key(grant.mac) != mac_key(mac) or grant.board_token != board_look.board_token(mac_key(mac)):
+            raise GrantRefusedError(WHY_NOT_A_GRANT)
+        return grant
 
 
 class GrantService:
@@ -97,26 +107,27 @@ class GrantService:
     def __init__(self, finder, reader=None, grants=None, now=utc_now):
         self.finder, self.reader, self.grants, self.now = finder, reader, grants or GrantStore(), now
 
-    def issue(self, port, minutes, consent, script="grant.py"):
-        """The Grant kept for the board on USB (or on `port`) for `minutes`, after one look and a yes from `consent`.
-        Raises GrantRefusedError, board_look.LookStop, or GateClosedError when consent cannot ask. It saves nothing then."""
-        if not isinstance(minutes, int) or isinstance(minutes, bool) or minutes < 1:
+    def issue(self, port, minutes, consent, before_look=lambda: None, script="grant.py"):
+        """The Grant kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and a yes from
+        `consent`. `before_look` runs just before the board restarts. Raises GrantRefusedError, board_look.LookStop, or
+        GateClosedError when consent cannot ask. It saves nothing then."""
+        if not isinstance(minutes, int) or isinstance(minutes, bool) or not 1 <= minutes <= MAX_MINUTES:
             raise GrantRefusedError(WHY_BAD_MINUTES)
         board = self.finder.require_one_board(script, port)
+        consent.require_ready()
+        before_look()
         mac = mac_key(self.reader.read(board.device).mac)
         if not mac:
             raise GrantRefusedError(WHY_NO_MAC)
         if mac_key(board.serial) != mac:
             raise GrantRefusedError(WHY_SERIAL_NOT_MAC)
-        now = self.now()
-        until = now + datetime.timedelta(minutes=minutes)
         token = board_look.board_token(mac)
-        question = ("let Claude run code on the board %s (token %s) until %s UTC?"
-                    % (mac, token, until.strftime("%Y-%m-%d %H:%M")))
-        if not consent.ask(question):
+        if not consent.ask("let Claude run code on the board %s (token %s) for %d minutes from your yes?"
+                           % (mac, token, minutes)):
             raise GrantRefusedError(WHY_ANSWERED_NO)
+        now = self.now()
         grant = Grant(mac, token, getpass.getuser(), now.isoformat(timespec="seconds"),
-                      until.isoformat(timespec="seconds"))
+                      (now + datetime.timedelta(minutes=minutes)).isoformat(timespec="seconds"))
         self.grants.save(grant)
         return grant
 
@@ -136,6 +147,9 @@ class GrantService:
             return GrantCheckResult(False, grant, WHY_NOT_A_GRANT)
         if until.tzinfo is None:
             return GrantCheckResult(False, grant, WHY_NO_ZONE)
-        if self.now() >= until:
+        now = self.now()
+        if until - now > datetime.timedelta(minutes=MAX_MINUTES):
+            return GrantCheckResult(False, grant, WHY_NOT_A_GRANT)
+        if now >= until:
             return GrantCheckResult(False, grant, WHY_EXPIRED)
         return GrantCheckResult(True, grant, None)
