@@ -21,6 +21,7 @@ esptool and mpremote are the tools list's `flasher` and `board-shell`, which /sp
 """
 
 import argparse
+import collections
 import datetime
 import hashlib
 import json
@@ -109,20 +110,33 @@ def flash_commands(flasher, chip, image, port=None):
     return [base + [ERASE], base + [WRITE, IMAGE_OFFSET, str(image)]]
 
 
-def keep_board_log(project, port, image, verdict, sentence, said, facts_line):
-    """The board's log after a flash, in sim/runs/board/ beside the run logs (whose *.log glob does not reach it)."""
-    now = datetime.datetime.now()
-    log = project / "sim" / "runs" / "board" / ("%s.log" % now.strftime("%Y-%m-%dT%H-%M-%S"))
-    log.parent.mkdir(parents=True, exist_ok=True)
-    log.write_text("# deploy %s on %s\nimage sha256: %s\n%s\n%s: %s\n\n%s\n" % (
-        now.isoformat(timespec="seconds"), port, hashlib.sha256(image.read_bytes()).hexdigest(), facts_line, verdict,
-        sentence, said))
-    return log
+#: Result: what `plan` returns. `commands` are the two flash commands, `mpremote` is mpremote's command, and `notes` are
+#: sentences for the person.
+DeployPlan = collections.namedtuple("DeployPlan", "commands mpremote notes")
 
 
-def put_facts(project, report, connection, expected):
+class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard")):
+    """Value: the facts of the board's log after a flash. `heard` is the console text, then what the board printed."""
+
+    def text(self):
+        """The log file's text."""
+        return "# deploy %s on %s\nimage sha256: %s\n%s\n%s: %s\n\n%s\n" % (
+            self.moment.isoformat(timespec="seconds"), self.port, self.image_sha256, self.facts_line, self.verdict,
+            self.sentence, self.heard)
+
+
+def write_board_log(project, log, moment):
+    """The board's log (a BoardLog) in sim/runs/board/ beside the run logs, whose *.log glob does not reach it. Returns
+    its path."""
+    path = project / "sim" / "runs" / "board" / ("%s.log" % moment.strftime("%Y-%m-%dT%H-%M-%S"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(log.text())
+    return path
+
+
+def put_facts(project, report, connection, expected, moment):
     """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
-    said = board_facts.facts(project, board_of(project), report.reading.mac, image_of(project), expected)
+    said = board_facts.facts(project, board_of(project), report.reading.mac, image_of(project), expected, moment)
     why = board_facts.FactsFile(connection).write(said)
     if why:
         return said, "facts file: not written: %s" % why
@@ -132,7 +146,7 @@ def put_facts(project, report, connection, expected):
 
 def plan(project, port=None, ignore_older_runs=False):
     """
-    (the flash commands, mpremote's command, notes) for this project. Nothing runs here. A DeployProblem or a
+    A DeployPlan (the flash commands, mpremote's command, notes) for this project. Nothing runs here. A DeployProblem or a
     tools.ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
     A run log that tested another image refuses the flash, unless `ignore_older_runs` makes it a note.
     """
@@ -150,7 +164,7 @@ def plan(project, port=None, ignore_older_runs=False):
     notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
              "scenario again to test it." % ", ".join(changed)] if changed else []
     notes += [other] if other else []
-    return flash_commands(flasher, chip, image, port), runnable(mpremote), notes
+    return DeployPlan(flash_commands(flasher, chip, image, port), runnable(mpremote), notes)
 
 
 def rerun_line(args, port):
@@ -159,17 +173,18 @@ def rerun_line(args, port):
     return deploy_gate.format_rerun_line(__file__, line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
 
 
-def read_board(project, report, connection, expected):
-    """(the facts, the facts line, the verdict, its sentence, the board's log) after a flash: the facts, then ready."""
-    facts, facts_line = put_facts(project, report, connection, expected)
-    return (facts, facts_line) + ready_check.ReadyCheck(connection).check(expected)
+def read_board(project, report, connection, expected, moment):
+    """(the facts, the facts line, a ReadyResult) after a flash: the facts, then ready."""
+    facts, facts_line = put_facts(project, report, connection, expected, moment)
+    return facts, facts_line, ready_check.ReadyCheck(connection).check(expected)
 
 
-def main(argv=None, run=None, consent=None, probe=None):
+def main(argv=None, run=None, consent=None, probe=None, clock=None):
     """
     Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
     `consent` how the person says yes (default: in this terminal), `probe` how a board in download mode is found
-    (default: board_console.ConsoleProbe). Returns the exit code.
+    (default: board_console.ConsoleProbe), `clock` how the time is read (default: datetime.datetime.now, called once).
+    Returns the exit code.
     """
     parser = argparse.ArgumentParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -185,23 +200,23 @@ def main(argv=None, run=None, consent=None, probe=None):
     args = parser.parse_args(argv)
     run = run or subprocess.run
     try:
-        commands, mpremote, notes = plan(args.project, args.port, args.ignore_older_runs)
+        planned = plan(args.project, args.port, args.ignore_older_runs)
     except (DeployProblem, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    for note in notes:
+    for note in planned.notes:
         print("  note: %s" % note)
     if args.dry_run:
-        print("\n".join("  would run: %s" % shlex.join(command) for command in commands))
+        print("\n".join("  would run: %s" % shlex.join(command) for command in planned.commands))
         print("  board: not looked at: run look.py")
-        print("  " + WATCH % shlex.join(board_connection.BoardConnection(mpremote, args.port).repl_command()))
+        print("  " + WATCH % shlex.join(board_connection.BoardConnection(planned.mpremote, args.port).repl_command()))
         return EXIT_OK
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
         print("\n".join(look.lines(report, token=False)), flush=True)
         consent = consent or deploy_gate.TerminalConsentStrategy(rerun_line(args, report.port))
         deploy_gate.require_open_gate(report, args.token, consent, image_of(args.project).relative_to(args.project))
-        commands, mpremote, _ = plan(args.project, report.port, args.ignore_older_runs)
+        planned = plan(args.project, report.port, args.ignore_older_runs)
         if report.token() != args.token:  # AT116: the image changed while the person answered
             raise DeployProblem("the image changed after your yes: run look.py again. not flashed.")
     except (board_look.LookStop, DeployProblem, tools.ToolProblem) as cannot:
@@ -210,7 +225,7 @@ def main(argv=None, run=None, consent=None, probe=None):
     except deploy_gate.GateClosedError as shut:
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code
-    for command in commands:
+    for command in planned.commands:
         print("  running: %s" % shlex.join(command), flush=True)
         try:
             run(command, check=True)
@@ -220,9 +235,11 @@ def main(argv=None, run=None, consent=None, probe=None):
     image = image_of(args.project)
     passed = passed_log(image, args.project / "sim" / "runs")
     expected = file_hashes(passed) if passed else {}
-    connection = board_connection.BoardConnection(mpremote, report.port, run)
-    facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
-    if verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
+    connection = board_connection.BoardConnection(planned.mpremote, report.port, run)
+    moment = (clock or datetime.datetime.now)()  # once: the facts file and the board log share it
+    facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)
+    heard = ""
+    if ready.verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
         probe = probe or board_console.ConsoleProbe.for_tool(tools.find("board-shell", args.project),
                                                                     report.port, run)
         if probe:  # P244: what the console said goes in the log, download mode or not
@@ -232,24 +249,24 @@ def main(argv=None, run=None, consent=None, probe=None):
                 print("  %s" % download_mode.PRESS_RESET, flush=True)
                 reset = probe.wait_for_reset()
                 if reset:
-                    facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
+                    facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)
                 else:
-                    sentence = download_mode.NO_RESET
+                    ready = ready._replace(sentence=download_mode.NO_RESET)
                 heard += "reset seen\n" if reset else "no reset\n"
             elif download_mode.booted(console):  # P245: mpremote asked while the board still restarted
-                facts, facts_line, verdict, sentence, said = read_board(args.project, report, connection, expected)
+                facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)
                 heard += download_mode.READ_AGAIN + "\n"
-            said = heard + said
-    log = keep_board_log(args.project, report.port, image, verdict, sentence, said, facts_line)
-    print("  %s\n  %s: %s\n  board log: %s" % (facts_line, verdict, sentence, log))
+    log = write_board_log(args.project, BoardLog(moment, report.port, hashlib.sha256(image.read_bytes()).hexdigest(),
+                                                 facts_line, ready.verdict, ready.sentence, heard + ready.log), moment)
+    print("  %s\n  %s: %s\n  board log: %s" % (facts_line, ready.verdict, ready.sentence, log))
     try:
-        print("  store record: %s" % board_facts.record_deploy(facts, verdict))
+        print("  store record: %s" % board_facts.record_deploy(facts, ready.verdict, consent.who))
     except (OSError, store.StoreProblem) as cannot:
         print("  store record: not written: %s" % cannot)
-    if verdict == ready_check.UNKNOWN:
+    if ready.verdict == ready_check.UNKNOWN:
         print("  " + WATCH % shlex.join(connection.repl_command()))
         return EXIT_COULD_NOT_RUN
-    return EXIT_OK if verdict == ready_check.SEEN else EXIT_PROBLEMS
+    return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
 
 
 if __name__ == "__main__":
