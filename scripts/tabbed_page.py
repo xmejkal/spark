@@ -14,6 +14,7 @@ nothing from the web.
 import base64
 import collections
 import html
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -74,13 +75,34 @@ class TabbedHtmlPage:
     #: What the build calls the file in a line that says it was not written or was removed.
     NOUN = "page"
     #: What the build says beside the file's path when it wrote it.
-    PURPOSE_MESSAGE = "the breadboard, schematic and PCB in three tabs: open it in a browser"
+    PURPOSE_MESSAGE = ("the breadboard, schematic and PCB in three tabs: open it in a browser, "
+                       "and Claude can publish it as an Artifact")
 
-    STYLE = ("body{margin:0;font:15px system-ui,sans-serif;background:#f6f3ee;color:#222}"
+    #: The page's colors (P272, #308), by token. The page uses only these names, so the Artifact host's light and dark
+    #: themes, and a browser's, repaint all of it. The picture ground stays white in both: spark's breadboard and
+    #: tscircuit's SVGs are drawn for a light ground.
+    TOKENS_LIGHT = {"--paper": "#f6f3ee", "--ink": "#222", "--backdrop": "#fff", "--accent": "#c33"}
+    TOKENS_DARK = {"--paper": "#1d1c1a", "--ink": "#e8e4dc", "--backdrop": "#fff", "--accent": "#ff7a70"}
+
+    STYLE = ("body{margin:0;font:15px system-ui,sans-serif;background:var(--paper);color:var(--ink)}"
              "input{position:absolute;opacity:0}"
+             "nav{padding:0 16px}"
              "label{display:inline-block;padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent}"
-             ".panel{display:none;padding:12px}"
-             ".panel img{width:100%;height:auto;max-height:88vh;object-fit:contain;background:#fff}")
+             ".panel{display:none;padding:12px 16px}"
+             "p{overflow-wrap:anywhere}"
+             ".panel img{width:100%;max-width:100%;height:auto;max-height:88vh;object-fit:contain;"
+             "background:var(--backdrop)}")
+
+    @classmethod
+    def _token_styles(cls):
+        """The token blocks the Artifact rules ask for: light on :root, dark under the media query (unless the viewer
+        chose light) and under :root[data-theme="dark"], so a chosen theme wins both ways."""
+        def block(values, scheme):
+            return "".join("%s:%s;" % pair for pair in values.items()) + "color-scheme:%s" % scheme
+        dark = block(cls.TOKENS_DARK, "dark")
+        return (":root{%s}" % block(cls.TOKENS_LIGHT, "light")
+                + '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){%s}}' % dark
+                + ':root[data-theme="dark"]{%s}' % dark)
 
     def text(self, tabs, title="spark"):
         radios, labels, panels, shown = [], [], [], []
@@ -89,11 +111,11 @@ class TabbedHtmlPage:
             labels.append('<label for="tab%d">%s</label>' % (number, html.escape(tab.title)))
             panels.append('<div class="panel panel%d">%s</div>' % (number, self._picture(tab)))
             shown.append("#tab%d:checked~.panel%d{display:block}"
-                         "#tab%d:checked~nav label[for=tab%d]{border-color:#c33}" % (number, number, number, number))
+                         "#tab%d:checked~nav label[for=tab%d]{border-color:var(--accent)}" % (number, number, number, number))
         return "\n".join(['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
                           '<meta name="viewport" content="width=device-width, initial-scale=1">',
                           '<title>%s</title>' % html.escape(title),
-                          '<style>%s</style>' % (self.STYLE + "".join(shown)), '</head>', '<body>']
+                          '<style>%s</style>' % (self._token_styles() + self.STYLE + "".join(shown)), '</head>', '<body>']
                          + radios + ['<nav>' + "".join(labels) + '</nav>'] + panels + ['</body>', '</html>']) + "\n"
 
     @staticmethod
@@ -102,6 +124,18 @@ class TabbedHtmlPage:
             return "<p>%s: not drawn, because %s.</p>" % (html.escape(tab.title), html.escape(tab.why_missing))
         data = base64.b64encode(tab.svg.encode("utf-8")).decode("ascii")
         return '<img src="data:image/svg+xml;base64,%s" alt="%s">' % (data, html.escape(tab.title, quote=True))
+
+
+#: Most words of a project's name that its page title keeps, and most letters of each (the title has 2 to 4 words).
+TITLE_NAME_WORDS = 3
+TITLE_WORD_LETTERS = 20
+
+
+def page_title(name):
+    """The page's title (P272, #308): the Artifact rules want a name of two to four words, and a project folder is one
+    word, `keep`, or a hyphen slug. The name's first three words and "circuit"; "spark circuit" for a name of none."""
+    words = [word[:TITLE_WORD_LETTERS] for word in re.split(r"[\s\-_.]+", name) if word]
+    return " ".join(words[:TITLE_NAME_WORDS] or ["spark"]) + " circuit"
 
 
 def exported_tab(title, result):

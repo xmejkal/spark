@@ -90,7 +90,12 @@ parts, with a `left alone` entry, so a typo does not wipe your moves. Only the X
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `page.html` shows the same circuit in three tabs: the breadboard picture, and tscircuit's
 schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a
-browser. It has no script and loads nothing from the web. A tab that could not be drawn, for example when `tsci export`
+browser. It has no script and loads nothing from the web. Its colors are tokens with a dark mode, and its title has two to
+four words (P272), so it also follows the Artifact page rules. Publish it as an Artifact (P272, #308) only if the person says yes; spark never does. Ask first: "Publish this page as an
+Artifact?" On a yes, call the Artifact tool with `file_path` set to the full path of `page.html` and `icon` set to
+`circuit`; the page is private until the person shares it, so give them the link. To update it after a rebuild, call
+the tool again with the same `file_path` and no `icon`. If the tool is not there, or it refuses the page (too big, or
+the host blocks the pictures), say so and stop; do not retry in a loop. A tab that could not be drawn, for example when `tsci export`
 fails, says why. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
 `npx --no tsci build board.tsx`.

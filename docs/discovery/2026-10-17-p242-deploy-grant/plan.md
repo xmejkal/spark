@@ -41,7 +41,7 @@ Final review (2026-10-17): a reviewer (Sonnet), the refuter (Opus) and the mutat
 file that is no text falls back and does not crash; `consent_for_deploy` reads the grant file first, so the "not used"
 line never shows when no grant exists; the printed line is `yes: standing yes typed by ...`; the `grants` parameter is
 `grant_service`; an unknown scope is `WHY_BAD_SCOPE`; four tests for the mutants that escaped (the relative deploy line,
-an unknown scope, the day cap counted from now, grant.py's message). Rows AT380 to AT383 in docs/observations/INDEX.md.
+an unknown scope, the day cap counted from now, grant.py's message). Rows AT383 to AT386 in docs/observations/INDEX.md.
 
 ## Decisions taken without the PO (routine; he can overrule)
 
