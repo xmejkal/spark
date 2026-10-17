@@ -93,7 +93,7 @@ class GrantStore:
             return None
         try:
             grant = Grant(**json.loads(path.read_text()))
-        except (ValueError, TypeError):
+        except (OSError, ValueError, TypeError):
             raise GrantRefusedError(WHY_NOT_A_GRANT)
         if mac_key(grant.mac) != mac_key(mac) or grant.board_token != board_look.board_token(mac_key(mac)):
             raise GrantRefusedError(WHY_NOT_A_GRANT)

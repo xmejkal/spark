@@ -16,6 +16,7 @@ from board_connection import BoardConnection
 from board_console import ConsoleProbe
 from image_check import runnable
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
+from restricted_pins import BrokenRecordError
 
 EPILOG = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
 touch the board. First, the board must have a grant now: the person runs grant.py --minutes N in their own terminal,
@@ -25,15 +26,15 @@ nothing to the board.
 
 If mpremote cannot enter the board's raw REPL, live.py cures the board once, as reach.py does, and tries again. When
 it still cannot get in, it names both causes: a dead USB output, or firmware that does not read its console. The exec
-stops the firmware that ran. So after any code that got into the board, even code that never ends, live.py restarts
-the chip with `mpremote reset`, and the firmware starts from boot. A pin that the code set and the firmware never sets
+stops the firmware that ran. So unless mpremote said it could not enter the raw REPL, live.py restarts the chip with
+`mpremote reset`, even after code that never ends, and the firmware starts from boot. A pin that the code set and the firmware never sets
 can keep its value through that reset (P252's bench), so live.py lists the GPIO numbers written in the code. That list
 over-claims: print(1) lists GPIO1.
 
 The record is the project's active board (boards/active.json). live.py does not match it against the board on USB.
 
---json prints one line: answer (ran, raised, not_reached, refused_no_grant, refused_pin, refused_no_parse, or
-could-not-run), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
+--json prints one line with every field, null where it has none: answer (ran, raised, not_reached, refused_no_grant,
+refused_pin, refused_no_parse, or could-not-run, the word outcomes.py shares), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
 pins_checked (false when the record names no usb or flash pin) and gpio_numbers_in_code, with port.
 
 Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed, or
@@ -80,9 +81,10 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.utc_now):
                                             BoardConnection(runnable(shell), port, run),
                                             probe or ConsoleProbe.for_tool(shell, port, run), boards.load(args.project))
         result = service.run(args.code, port)
-    except (tools.ToolProblem, board_look.LookStop, boards.BoardError, ValueError) as cannot:
+    except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError) as cannot:
         if args.json:
-            print(json.dumps({"answer": COULD_NOT_RUN, "why": str(cannot), "port": port}))
+            empty = dict.fromkeys(board_live.LiveTryResult._fields)
+            print(json.dumps(dict(empty, answer=COULD_NOT_RUN, why=str(cannot), port=port)))
         print("live.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print(to_json(port, result) if args.json else describe(result))

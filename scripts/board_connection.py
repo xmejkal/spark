@@ -35,10 +35,6 @@ class BoardUnreachableError(Exception):
         self.output = output
 
 
-class BoardTimeoutError(BoardUnreachableError):
-    """Error: mpremote got into the board, and the code gave no answer in time. The code may still run there (P247)."""
-
-
 class BoardCodeError(Exception):
     """Error: the board answered, and the code raised there. The message is the board's last line, `output` all it
     printed."""
@@ -67,7 +63,7 @@ class BoardConnection:
         except subprocess.TimeoutExpired as going:
             if keep_running_for:
                 return printed_text(going.stdout)
-            raise BoardTimeoutError("no answer in %d s" % self.timeout_s, printed_text(going.stdout)) from None
+            raise BoardUnreachableError("no answer in %d s" % self.timeout_s, printed_text(going.stdout)) from None
 
     def copy_to_board(self, local, remote):
         """Copy the file at `local` to `remote` on the board's filesystem."""

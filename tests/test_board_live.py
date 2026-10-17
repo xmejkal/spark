@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_grant  # noqa: E402
 import board_live  # noqa: E402
-from board_connection import BoardCodeError, BoardTimeoutError, BoardUnreachableError  # noqa: E402
+from board_connection import BoardCodeError, BoardUnreachableError  # noqa: E402
 from board_console import Cure  # noqa: E402
 from fakes import FakeBoardConnection, FakeConsoleProbe  # noqa: E402
 
@@ -104,7 +104,7 @@ class RunTest(unittest.TestCase):
         self.assertEqual(board_live.exit_code(result), 1)
 
     def test_code_that_never_ends_is_not_reached_but_still_reset(self):
-        result, connection, _ = live("while True: pass", BoardTimeoutError("no answer in 20 s"))
+        result, connection, _ = live("while True: pass", BoardUnreachableError("no answer in 20 s"))
         self.assertEqual((result.answer, connection.resets), ("not_reached", 1))
         self.assertEqual(board_live.exit_code(result), 2)
 
@@ -116,10 +116,18 @@ class RunTest(unittest.TestCase):
         self.assertIn("does not read its console", result.why)
         self.assertEqual(board_live.exit_code(result), 2)
 
-    def test_a_busy_port_is_not_reached_with_mpremote_s_words_and_no_reset(self):
-        busy = BoardUnreachableError("failed to access /dev/cu.usbmodem1101 (it may be in use by another program)")
-        result, connection, _ = live("print(1)", busy)
-        self.assertEqual((result.answer, result.why, connection.resets), ("not_reached", str(busy), 0))
+    def test_a_link_that_dropped_after_the_code_started_is_not_reached_and_still_reset(self):
+        dropped = BoardUnreachableError("SerialException: device reports readiness to read but returned no data")
+        result, connection, _ = live("import machine\nmachine.lightsleep(5000)", dropped)
+        self.assertEqual((result.answer, result.why, connection.resets), ("not_reached", str(dropped), 1))
+
+    def test_a_failed_reset_after_code_that_raised_says_both(self):
+        result, _, _ = live("x", BoardCodeError("Traceback\nNameError: name 'x' isn't defined\n", 1),
+                            reset_raises=BoardUnreachableError("[Errno 6] Device not configured"))
+        self.assertEqual((result.answer, result.reset), ("raised", "failed"))
+        self.assertIn("NameError", result.why)
+        self.assertIn("the firmware may be stopped", result.why)
+        self.assertEqual(board_live.exit_code(result), 2)
 
     def test_a_failed_reset_after_a_clean_run_exits_2_and_says_the_firmware_may_be_stopped(self):
         result, _, _ = live("print(1)", "1\n", reset_raises=BoardUnreachableError("[Errno 6] Device not configured"))

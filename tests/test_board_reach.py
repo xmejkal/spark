@@ -46,7 +46,7 @@ class TheRetryTest(unittest.TestCase):
 
     def test_silent_twice_is_not_reached_and_names_both_causes(self):
         result = board_reach.reach(FakeBoardConnection(REFUSED, REFUSED), FakeConsoleProbe(cured=RESTART))
-        self.assertFalse(result.reached)
+        self.assertEqual((result.reached, result.entered), (False, False))
         self.assertTrue(result.first_try_failed)
         self.assertEqual(result.cure, RESTART)
         self.assertIn("USB output", result.why)
@@ -65,13 +65,12 @@ class TheRetryTest(unittest.TestCase):
                       BoardUnreachableError("[Errno 2] No such file or directory: 'mpremote'")):
             probe = FakeConsoleProbe(cured=RESTART)
             result = board_reach.reach(FakeBoardConnection(error), probe)
-            self.assertEqual(result, board_reach.ReachResult(False, "", True, None, str(error), False))
+            self.assertEqual(result, board_reach.ReachResult(False, "", True, None, str(error), True))
             self.assertEqual(probe.asked, [])
 
-    def test_code_with_no_answer_in_time_entered_the_board_and_is_not_retried(self):
-        from board_connection import BoardTimeoutError
+    def test_code_with_no_answer_in_time_may_have_entered_the_board_and_is_not_retried(self):
         probe = FakeConsoleProbe(cured=RESTART)
-        result = board_reach.reach(FakeBoardConnection(BoardTimeoutError("no answer in 20 s")), probe, code="while True: pass")
+        result = board_reach.reach(FakeBoardConnection(BoardUnreachableError("no answer in 20 s")), probe, code="while True: pass")
         self.assertEqual((result.reached, result.entered, result.why), (False, True, "no answer in 20 s"))
         self.assertEqual(probe.asked, [])
 

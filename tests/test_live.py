@@ -96,6 +96,24 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(json.loads(said)["answer"], "could-not-run")
         self.assertEqual([command for command in ran if "devs" not in command], [])
 
+    def test_an_unreadable_grant_file_is_no_grant_and_runs_nothing(self):
+        grant = Path(os.environ["SPARK_HOME"]) / "grants" / "8c-bf-ea-xx-xx-xx.json"
+        grant.chmod(0)
+        self.addCleanup(grant.chmod, 0o600)
+        code, said, _, ran = self.go("--code", "print(1)", "--json")
+        self.assertEqual((code, json.loads(said)["grant_why"]), (1, "not a grant"))
+        self.assertEqual([command for command in ran if "devs" not in command], [])
+
+    def test_a_given_port_reaches_the_grant_check_the_run_and_the_reset(self):
+        code, said, _, ran = self.go("--code", "print(1)", "--port", C6_PORT)
+        self.assertEqual(code, 0)
+        self.assertEqual([command[-1] for command in ran if C6_PORT in command], ["print(1)", "reset"])
+
+    def test_could_not_run_json_holds_every_field(self):
+        code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-two.txt")
+        self.assertEqual(sorted(json.loads(said)), ["answer", "cure", "gpio_numbers_in_code", "grant_why", "output",
+                                                    "pins_checked", "port", "reset", "why"])
+
     def test_a_broken_record_exits_2(self):
         (self.project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "no-such-board"}))
         code, _, problems, _ = self.go("--code", "print(1)")

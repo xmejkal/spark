@@ -139,8 +139,8 @@ These only read:
   `grant_why`, `why`, `output`, `cure`, `reset` (`done`, `failed` or null), `pins_checked`, `gpio_numbers_in_code`
   and `port`. Exit 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset
   failed, or it could not run. `ran` means the board ran the code: an empty output still counts, so read `output`.
-  A `reset` of `failed`, or null after code that ran, means the firmware may be stopped: tell the person to press R
-  or replug. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
+  A `reset` of `failed` means the firmware may be stopped: tell the person to press R or replug. `reset` is null only
+  after a refusal, or after a `not_reached` where mpremote could not enter the raw REPL, so the code never ran. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
   code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
   candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,

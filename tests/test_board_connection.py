@@ -82,8 +82,8 @@ class BoardConnectionTest(unittest.TestCase):
         going = subprocess.TimeoutExpired(["mpremote"], 20, output=b"ready\nLED on\n")
         self.assertEqual(connection(Mpremote(raises=going)).run_code("import main", keep_running_for=20), "ready\nLED on\n")
 
-    def test_no_answer_in_time_is_a_timeout_the_code_may_still_run(self):
-        with self.assertRaises(board_connection.BoardTimeoutError) as said:
+    def test_no_answer_in_time_is_board_unreachable(self):
+        with self.assertRaises(board_connection.BoardUnreachableError) as said:
             connection(Mpremote(raises=subprocess.TimeoutExpired(["mpremote"], 20))).run_code("pass")
         self.assertEqual(str(said.exception), "no answer in 20 s")
 
@@ -92,12 +92,11 @@ class BoardConnectionTest(unittest.TestCase):
         connection(run).reset()
         self.assertEqual(run.ran, [(["mpremote", "connect", "/dev/ttyX", "reset"], 20)])
 
-    def test_a_reset_that_fails_or_drops_the_port_is_board_unreachable_never_a_timeout(self):
+    def test_a_reset_that_fails_or_drops_the_port_is_board_unreachable(self):
         for run in (Mpremote(fails=NO_RAW_REPL), Mpremote(raises=subprocess.TimeoutExpired(["mpremote"], 20)),
                     Mpremote(raises=OSError("[Errno 6] Device not configured"))):
-            with self.assertRaises(board_connection.BoardUnreachableError) as said:
+            with self.assertRaises(board_connection.BoardUnreachableError):
                 connection(run).reset()
-            self.assertNotIsInstance(said.exception, board_connection.BoardTimeoutError)
 
     def test_no_mpremote_is_board_unreachable(self):
         with self.assertRaises(board_connection.BoardUnreachableError):

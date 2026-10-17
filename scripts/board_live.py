@@ -6,10 +6,11 @@ A library: live.py only parses arguments, calls `LiveTryService` and prints.
 
     LiveTryResult    the answer code, why, what the board printed, the cure, the reset and two pin facts.
     LiveTryService   checks the grant (P253), refuses a restricted pin (P254), runs the code with one cure (P251),
-                     and restarts the chip after any code that got in (P252's pick, a hard reset).
+                     and restarts the chip after any code that may have got in (P252's pick, a hard reset).
 
 Nothing reaches the board without a grant: the grant check runs only `mpremote devs`, and every refusal comes before
-the run. The reset runs whenever mpremote got into the board, so code that never ends is stopped too.
+the run. The reset runs unless mpremote said it could not enter the raw REPL, so code that never ends is stopped too.
+A Ctrl-C during the run stops live.py before the reset.
 """
 
 from collections import namedtuple
@@ -60,7 +61,7 @@ def gpio_numbers(board):
 class LiveTryService:
     """Service: one live try on the board on one port. `grants` is a board_grant.GrantService, `connection` a bare
     board_connection.BoardConnection on that port, `probe` its board_console.ConsoleProbe (or None for no cure),
-    `board` the project's board record. RestrictedPins.from_board's ValueError and the grant check's LookStop pass up."""
+    `board` the project's board record. RestrictedPins.from_board's BrokenRecordError and the grant check's LookStop pass up."""
 
     def __init__(self, grants, connection, probe, board):
         self.grants, self.connection, self.probe, self.board = grants, connection, probe, board
