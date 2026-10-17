@@ -27,6 +27,10 @@ the board printed during it. The exec stops the firmware that ran: press R or re
 It is the PO's bench tool for P251. Claude's live try, behind a grant and with a reset at the end, is live.py (P247).
 With --cure-first it opens the port with DTR and RTS off before the only try: the bench's cold arm. With two or more boards on USB, --port is needed.
 
+When mpremote cannot get into the board, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
+and one next step for your hands, as the last line. Its look at the console can restart the board.
+
 Exit codes: 0 the board answered, 2 it did not, or reach.py could not run, and the last line says why."""
 
 

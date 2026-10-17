@@ -38,6 +38,10 @@ The record is the project's active board (boards/active.json). live.py does not 
 refused_pin, refused_no_parse, or could-not-run, the word outcomes.py shares), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
 pins_checked (false when the record names no usb or flash pin) and gpio_numbers_in_code, with port.
 
+When mpremote cannot get into the board, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
+and one next step for your hands, as the last line. Its look at the console can restart the board. --json carries it as doctor.
+
 Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed, or
 live.py could not run, and the last line says why. With two or more boards on USB, --port is needed."""
 

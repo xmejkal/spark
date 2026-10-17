@@ -30,6 +30,10 @@ with a built-in USB port, like the ESP32-C6's. A board on a USB bridge chip gets
 While the grant lasts, live.py runs Claude's code on the board (P247). With two or more boards on USB, --port is
 needed.
 
+When esptool cannot read the board, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
+and one next step for your hands, as the last line. Its look at the console can restart the board.
+
 Exit codes: 0 the grant was given or is valid, 1 refused (no grant, it ended, the person answered no, the serial is not
 the MAC), 2 grant.py could not run (no board, two boards, the MAC not read, --minutes out of range, no terminal), and the
 last line says why. With --check --json, a run that could not look prints why "could not run" too."""

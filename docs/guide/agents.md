@@ -143,6 +143,18 @@ These only read:
   after a refusal, or after a `not_reached` where mpremote could not enter the raw REPL, so the code never ran. `pins_checked: false` means the record names no restricted pin, so nothing was refused. A pin that the
   code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
   candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool;
+- the board doctor ([P282](https://github.com/xmejkal/spark/issues/326)). When esptool cannot read the board
+  (`look.py`, `grant.py`) or mpremote never gets in (`reach.py`, `live.py`), the script adds the doctor's lines:
+  `said` (the tool's own error line, a fact you show and never decide on), one `check` line per check
+  (`port-listed`, `console`), and `next`, one step for the person's hands. `live.py --json` and `reach.py --json`
+  carry it as `doctor`: `checks`, `tool_said`, `next_step` and `if_not_helped`. The codes are `plug_in`,
+  `close_other`, `press_reset`, `run_again`, `hold_boot` and `replug`. Your part: tell the person the step in its own
+  words, wait until they say it is done, and run the same command again. If the same `next_step` comes back after the
+  person did it, give the `if_not_helped` step; when that is null, stop and say that spark knows no further step. A
+  doctor result is never a pass, and a `next_step` of null means the doctor could not look. Its console check opens
+  the port, which can restart the board, so say so before you run a command that may call it. Each tool's
+  `silent_step` in the tools list (`hold_boot` for esptool, `press_reset` for mpremote) sets the step for a silent
+  board; never change it for the person;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.
