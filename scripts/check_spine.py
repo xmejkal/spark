@@ -787,7 +787,8 @@ def keep_breadboard(requirements, destination, stages=()):
                   "line": "no %s: %s" % (renderer.NOUN, written.why)} for path, renderer in drawings]
     # a part the person moved in breadboard.json that the build could not keep (P273)
     kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
-              "why": named.why, "line": named.line} for named in written.not_kept]
+              "part": named.subject, "code": named.code, "why": named.why,
+              "line": "move not kept: %s" % named.line} for named in written.not_kept]
     return kept
 
 

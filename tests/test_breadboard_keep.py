@@ -145,6 +145,19 @@ class OtherEditsTest(unittest.TestCase):
         self.assertEqual(written.not_kept, [])
         self.assertEqual((project / "breadboard.json").read_bytes(), first)
 
+    def test_a_build_after_a_kept_move_names_nothing_when_nothing_moved_since(self):
+        project = new_project(FULL)
+        build(project)
+        edit(project, move("TactileButton", dx=3 * PITCH_PX))
+        build(project)
+        self.assertEqual(build(project).not_kept, [])
+
+    def test_a_breadboard_dragged_away_from_the_corner_makes_the_file_unreadable(self):
+        project = new_project(FULL)
+        build(project)
+        edit(project, move("bb1", dx=PITCH_PX))
+        self.assertEqual(codes(build(project)), {"breadboard.json": "unreadable"})
+
     def test_a_first_build_has_no_earlier_diagram_to_name(self):
         project = new_project(FULL)
         self.assertEqual(build(project).not_kept, [])
@@ -285,6 +298,7 @@ class TheBuildSaysItTest(unittest.TestCase):
         self.assertEqual(len(named), 1)
         self.assertIn("LedRed5mm", named[0]["line"])
         self.assertEqual(named[0]["file"], str(project / "breadboard.json"))
+        self.assertEqual((named[0]["part"], named[0]["code"]), ("LedRed5mm", "pin-off-holes"))
 
     def test_the_command_prints_each_name_on_stderr(self):
         import io

@@ -20,5 +20,8 @@
  {"file": "scripts/breadboard.py", "name": "the command does not print what it did not keep", "find": "        print(\"not kept: %s\" % named.line, file=sys.stderr)", "replace": "        pass"},
  {"file": "scripts/breadboard.py", "name": "the write result drops the names", "find": "    return WriteResult(Path(out), paths, None, planned.not_kept)", "replace": "    return WriteResult(Path(out), paths, None, [])"},
  {"file": "scripts/breadboard_drawing.py", "name": "the planner never lets a strategy reserve first", "find": "        self.placement.reserve_first(ledger)", "replace": "        pass"},
- {"file": "scripts/check_spine.py", "name": "the build entry has another word than the constant", "find": "\"did\": MOVE_NOT_KEPT,", "replace": "\"did\": \"not kept\","}
+ {"file": "scripts/check_spine.py", "name": "the build entry has another word than the constant", "find": "\"did\": MOVE_NOT_KEPT,", "replace": "\"did\": \"not kept\","},
+ {"file": "scripts/breadboard_keep.py", "name": "a part at its earlier place is named again at every build", "find": "        elif _place(now.left, now.top, now.rotate) != before and fresh_places", "replace": "        elif fresh_places"},
+ {"file": "scripts/breadboard_keep.py", "name": "a breadboard dragged from the corner is ignored", "find": "                    if float(one[\"left\"]) != 0 or float(one[\"top\"]) != 0:", "replace": "                    if False:"},
+ {"file": "scripts/check_spine.py", "name": "the build entry does not say which part", "find": "\"part\": named.subject, ", "replace": ""}
 ]
