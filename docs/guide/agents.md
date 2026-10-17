@@ -617,11 +617,11 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    nothing. Give the person that line word for word and wait. The one other yes is the person's deploy grant
    ([P242](https://github.com/xmejkal/spark/issues/249)): `grant.py --scope deploy --minutes N`, typed once in their own
    terminal, lets you run `deploy.py --token T` for N minutes (1 to 1440) on that board, and deploy.py prints
-   `standing yes: ...` and erases with no question. Its question says it allows an erase of ALL of the flash and any
+   `yes: standing yes typed by ...` and erases with no question. Its question says it allows an erase of ALL of the flash and any
    passed image of any project. It covers only a look with no warning, no unknown field and no stop, and never
    `--ignore-older-runs`; for those deploy.py asks in the terminal. deploy.py is on build.md's `allowed-tools`, so Claude Code
    does not ask before it runs: the grant is the gate. Never run `grant.py --scope deploy` yourself, and never write or
-   change a grant file (the person accepts that you could). The store's deploy record says `standing yes typed by
+   change a grant file. A grant file is not tamper-proof: its token is derived from the MAC, and the store accepts what you write. The rule is the guard, and the person accepts that risk. The store's deploy record says `standing yes typed by
    <login> at <time>, until <time>`. After the flash, only `ready seen` (exit 0) is a pass:
    the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
    a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).

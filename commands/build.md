@@ -297,8 +297,9 @@ order: the look, its token, then the person's yes.
 
 1. Run `look.py` and relay its lines. A stop means do not propose the flash.
 2. Run `deploy.py --token <the token>`, with `--port` only when two boards are on USB. If deploy.py prints
-   `standing yes: standing yes typed by ...`, the person's deploy grant is the yes and it erases at once. Relay that line.
-   If it prints `standing yes: not used: <why>` and `no terminal to ask you in`, it erased nothing. Give the person the line
+   `yes: standing yes typed by ...`, the person's deploy grant is the yes and it erases at once. Relay that line.
+   If it prints `no terminal to ask you in` (and, when a deploy grant exists but cannot cover this deploy,
+   `standing yes: not used: <why>`), it erased nothing. Give the person the line
    it printed to run in their own terminal window, word for word, and wait. deploy.py looks at the board again (the
    board restarts), names every warning in its question and erases only after they type `yes`.
 3. If the person wants you to deploy without a yes each time, offer the deploy grant line that deploy.py printed:

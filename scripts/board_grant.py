@@ -33,6 +33,8 @@ from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 #: What a grant allows. A file with no `scope` (written before P242) is a live grant.
 SCOPE_LIVE, SCOPE_DEPLOY = "live", "deploy"
 SCOPES = (SCOPE_LIVE, SCOPE_DEPLOY)
+
+
 class Grant(namedtuple("Grant", "mac board_token granted_by granted_at expires_at scope", defaults=(SCOPE_LIVE,))):
     """Value: the grant as the store keeps it. The times are ISO 8601 in UTC, with the zone."""
 
@@ -149,7 +151,7 @@ class GrantStore:
             grant = Grant(**json.loads(path.read_text()))
         except (OSError, ValueError, TypeError):
             raise GrantRefusedError(WHY_NOT_A_GRANT)
-        if grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \
+        if not isinstance(grant.mac, str) or grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \
                 or grant.board_token != board_look.board_token(mac_key(mac)):
             raise GrantRefusedError(WHY_NOT_A_GRANT)
         return grant
@@ -181,7 +183,8 @@ class StandingConsentStrategy(ConsentStrategy):
 class GrantService:
     """Service: issues a grant after one look and the person's yes, and checks the grant of the board on USB.
     `finder` is a board_look.PortFinder, `reader` a board_look.BoardReader, `now` returns the time in UTC. A service that
-    only builds the deploy consent (`consent_for_deploy`) needs neither finder nor reader."""
+    only builds the deploy consent (`consent_for_deploy`) needs neither finder nor reader, and `issue` and `check` need
+    them."""
 
     def __init__(self, finder=None, reader=None, grants=None, now=utc_now):
         self.finder, self.reader, self.grants, self.now = finder, reader, grants or GrantStore(), now
@@ -227,16 +230,16 @@ class GrantService:
         """A DeployConsentResult for deploy.py: the StandingConsentStrategy when the look `report` is a match, deploy
         does not ignore older runs and a deploy grant holds for the look's MAC; else `fallback` (the terminal) and the
         WHY_ code that says why. A grant file that cannot be trusted is no grant."""
-        if report.verdict != board_look.VERDICT_MATCH:
-            return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)
-        if ignore_older_runs:
-            return DeployConsentResult(fallback, WHY_IGNORE_OLDER_RUNS)
         try:
             grant = self.grants.find(report.reading.mac, SCOPE_DEPLOY)
         except GrantRefusedError as refused:
             return DeployConsentResult(fallback, refused.why)
         if grant is None:
             return DeployConsentResult(fallback, WHY_NO_GRANT)
+        if report.verdict != board_look.VERDICT_MATCH:
+            return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)
+        if ignore_older_runs:
+            return DeployConsentResult(fallback, WHY_IGNORE_OLDER_RUNS)
         why = grant.why_not_valid(self.now())
         if why:
             return DeployConsentResult(fallback, why)

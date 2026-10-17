@@ -108,9 +108,9 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
         return EXIT_COULD_NOT_RUN
     print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))
     if grant.scope == board_grant.SCOPE_DEPLOY:
-        file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
+        grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
         print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
-              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(str(file)))
+              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(str(grant_file)))
     return EXIT_OK
 
 

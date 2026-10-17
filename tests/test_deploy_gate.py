@@ -74,7 +74,7 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False, probe=None, clock=None, grants=None):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False, probe=None, clock=None, grant_service=None):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command."""
         self.copied = getattr(self, "copied", {})
 
@@ -96,7 +96,7 @@ class GateCase(LookCase):
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, probe=probe, clock=clock,
-                               grants=grants)
+                               grant_service=grant_service)
         return code, out.getvalue(), err.getvalue()
 
     def token(self, **kw):
@@ -617,7 +617,7 @@ class TheStandingYesTest(GateCase):
             (self.START + datetime.timedelta(minutes=minutes)).isoformat(), scope))
 
     def flash(self, *argv, **kw):
-        return self.deploy("--token", self.token(), *argv, grants=self.grants, **kw)
+        return self.deploy("--token", self.token(), *argv, grant_service=self.grants, **kw)
 
     def record(self):
         return json.loads((store.place("boards") / "8c-bf-ea-xx-xx-xx.json").read_text())["deploys"][-1]["yes"]
@@ -627,7 +627,7 @@ class TheStandingYesTest(GateCase):
         code, said, _ = self.flash()
         self.assertEqual((code, self.flashed()), (0, ["erase_flash", str(self.image)]))
         who = "standing yes typed by ada at 2026-10-17T09:00:00+00:00, until 2026-10-17T09:30:00+00:00"
-        self.assertIn("  standing yes: %s" % who, said.splitlines())
+        self.assertIn("  yes: %s" % who, said.splitlines())
         self.assertEqual(self.record(), who)
 
     def test_a_consent_given_to_main_wins_over_a_valid_grant(self):
@@ -672,12 +672,13 @@ class TheStandingYesTest(GateCase):
         self.assertAsksInTheTerminal("the store's deploy grant file for this board is not a deploy grant")
 
     def test_a_look_with_a_warning_or_an_unknown_field_asks_in_the_terminal(self):
-        self.give()
-        for board, esptool in (("firebeetle2-esp32s3", "s3-flash-id-8mb.txt"), ("xiao-esp32-c6", "c6-flash-id-garbled.txt")):
+        for board, esptool, mac in (("firebeetle2-esp32s3", "s3-flash-id-8mb.txt", "dc:da:0c:xx:xx:xx"),
+                                    ("xiao-esp32-c6", "c6-flash-id-garbled.txt", self.MAC)):
             with self.subTest(esptool):
                 self.board(board)
+                self.give(mac=mac)
                 code, said, problems = self.deploy("--token", self.token(esptool=esptool), esptool=esptool,
-                                                   grants=self.grants)
+                                                   grant_service=self.grants)
                 self.assertEqual((code, self.flashed()), (2, []))
                 self.assertIn("the look is not a match", said)
                 self.assertIn("no terminal to ask you in", problems)
@@ -685,7 +686,7 @@ class TheStandingYesTest(GateCase):
     def test_a_look_with_a_stop_refuses_whatever_the_grant(self):
         self.give()
         self.board("firebeetle2-esp32s3")
-        code, said, problems = self.deploy("--token", "aaaa-bbbb", esptool="c6-flash-id.txt", grants=self.grants)
+        code, said, problems = self.deploy("--token", "aaaa-bbbb", esptool="c6-flash-id.txt", grant_service=self.grants)
         self.assertEqual((code, self.flashed()), (1, []))
         self.assertIn("not flashed.", problems)
 
@@ -699,9 +700,16 @@ class TheStandingYesTest(GateCase):
     def test_the_standing_yes_line_comes_only_after_the_gate_passes(self):
         self.give()
         for token in ("", "0000-1111"):
-            code, said, _ = self.deploy("--token", token, grants=self.grants)
+            code, said, _ = self.deploy("--token", token, grant_service=self.grants)
             self.assertEqual((code, self.flashed()), (2, []))
-            self.assertNotIn("standing yes", said)
+            self.assertNotIn("yes: standing yes", said)
+
+    def test_a_look_with_a_warning_and_no_grant_prints_nothing_about_a_grant(self):
+        self.board("firebeetle2-esp32s3")
+        code, said, problems = self.deploy("--token", self.token(esptool="s3-flash-id-8mb.txt"),
+                                           esptool="s3-flash-id-8mb.txt", grant_service=self.grants)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertNotIn("standing yes", said)
 
     def test_a_grant_that_ends_after_the_yes_and_before_the_erase_stops_it(self):
         self.give()
@@ -718,13 +726,13 @@ class TheStandingYesTest(GateCase):
             chosen.consent.ask = asking
             return chosen
         self.grants.consent_for_deploy = ends_after_asking
-        code, _, problems = self.deploy("--token", token, grants=self.grants)
+        code, _, problems = self.deploy("--token", token, grant_service=self.grants)
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the deploy grant ended before the erase", problems)
 
     def test_the_token_still_has_to_match(self):
         self.give()
-        code, _, problems = self.deploy("--token", "0000-1111", grants=self.grants)
+        code, _, problems = self.deploy("--token", "0000-1111", grant_service=self.grants)
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("changed since the look", problems)
 
@@ -742,7 +750,7 @@ class TheStandingYesTest(GateCase):
             chosen.consent.ask = asking
             return chosen
         self.grants.consent_for_deploy = changes_the_image_at_the_yes
-        code, _, problems = self.deploy("--token", token, grants=self.grants)
+        code, _, problems = self.deploy("--token", token, grant_service=self.grants)
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("no run in sim/runs/ tested flash-with-firmware.bin as it is now", problems)
 
@@ -756,7 +764,7 @@ class TheStandingYesTest(GateCase):
             self.clock.advance(minutes=31)
             return chosen
         grants.consent_for_deploy = then_time_passes
-        code, _, problems = self.deploy("--token", token, grants=grants)
+        code, _, problems = self.deploy("--token", token, grant_service=grants)
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the deploy grant ended before the erase", problems)
 

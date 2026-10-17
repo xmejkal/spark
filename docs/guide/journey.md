@@ -1206,7 +1206,7 @@ without that yes each time, give a deploy grant ([P242](https://github.com/xmejk
 Its question says that it lets Claude erase ALL of that board's flash and write any passed image of any project,
 for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file in your store,
 `grants/8c-bf-ea-cc-97-70-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
-While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `standing yes: ...` instead of asking. It still
+While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: standing yes typed by ...` instead of asking. It still
 looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
 record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
 terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.

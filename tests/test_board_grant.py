@@ -467,6 +467,17 @@ class ConsentForDeployTest(unittest.TestCase):
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text("not json")
         self.assertTerminal("not a grant")
 
+    def test_a_mac_that_is_no_text_asks_in_the_terminal_and_never_crashes(self):
+        (self.home / "grants").mkdir()
+        for mac in (12, ["8c"], None):
+            (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text(
+                json.dumps(dict(a_grant()._asdict(), mac=mac)))
+            self.assertTerminal("not a grant")
+
+    def test_a_look_with_a_warning_and_no_deploy_grant_says_there_is_no_grant(self):
+        self.assertTerminal("no grant", report=a_report("warning"))
+        self.assertTerminal("no grant", ignore_older_runs=True)
+
     def test_a_time_that_cannot_be_trusted_asks_in_the_terminal(self):
         for changes, why in (({"expires_at": "2099-01-01T00:00:00"}, "no zone"),
                              ({"expires_at": "2027-10-17T09:30:00+00:00"}, "not a grant"),

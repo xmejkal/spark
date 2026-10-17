@@ -68,7 +68,7 @@ A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run
 ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
 The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for
-this board's MAC. While it lasts, deploy.py takes it as the yes, prints `standing yes: ...` and erases with no question,
+this board's MAC. While it lasts, deploy.py takes it as the yes, prints `yes: standing yes typed by ...` and erases with no question,
 but only when the look matched the board record (no warning, no unknown field, no stop) and --ignore-older-runs is not
 given. Then the token and the check that the image did not change still hold. For anything else, or with no grant or an
 ended one, deploy.py asks in the terminal as above and says why it did not use the grant. The grant covers any passed
@@ -189,14 +189,14 @@ def grant_hint(args, port):
             "allows an erase of ALL of the flash and any passed image of any project:\n  %s" % line)
 
 
-def choose_consent(args, report, grants):
+def choose_consent(args, report, grant_service):
     """The ConsentStrategy for this deploy, after the look: the standing yes of a valid deploy grant when the look
     matched and the deploy ignores no older run, else a yes typed in this terminal. Prints one line that says which, and
     why not when it is the terminal."""
     line = rerun_line(args, report.port)
     if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:
         line += grant_hint(args, report.port)
-    chosen = grants.consent_for_deploy(report, args.ignore_older_runs, deploy_gate.TerminalConsentStrategy(line))
+    chosen = grant_service.consent_for_deploy(report, args.ignore_older_runs, deploy_gate.TerminalConsentStrategy(line))
     if chosen.why not in (None, board_grant.WHY_NO_GRANT):  # a person with no grant is told only by the no-terminal text
         said = board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]
         print("  standing yes: not used: %s" % said, flush=True)
@@ -209,12 +209,12 @@ def read_board(project, image, report, connection, expected, moment):
     return facts, facts_line, ready_check.ReadyCheck(connection).check(expected)
 
 
-def main(argv=None, run=None, consent=None, probe=None, clock=None, grants=None):
+def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_service=None):
     """
     Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
     `consent` how the person says yes (default: in this terminal), `probe` how a board in download mode is found
     (default: board_console.ConsoleProbe), `clock` how the time is read (default: datetime.datetime.now, called once),
-    `grants` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
+    `grant_service` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
     wins: the grant is read only when none is given. Returns the exit code.
     """
     parser = argparse.ArgumentParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
@@ -245,10 +245,10 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grants=None)
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
         print("\n".join(look.lines(report, token=False)), flush=True)
-        consent = consent or choose_consent(args, report, grants or board_grant.GrantService())
+        consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService())
         deploy_gate.require_open_gate(report, args.token, consent, ProjectImage(args.project).path.relative_to(args.project))
         if isinstance(consent, board_grant.StandingConsentStrategy):
-            print("  standing yes: %s" % consent.who, flush=True)
+            print("  yes: %s" % consent.who, flush=True)
         planned = plan(args.project, report.port, args.ignore_older_runs)
         if report.token() != args.token:  # AT116: the image changed while the person answered
             raise DeployError("the image changed after your yes: run look.py again. not flashed.")
