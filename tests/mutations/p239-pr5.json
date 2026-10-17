@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/project_image.py",
+  "name": "find_passed_log ignores the verdict",
+  "find": "if sha256 == self.sha256 and verdict == \"passed\"), None)",
+  "replace": "if sha256 == self.sha256), None)"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "why_untested accepts a failed run",
+  "find": "failed = [(log, verdict) for log, verdict in named if verdict != \"passed\"]",
+  "replace": "failed = []"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "why_other_runs ignores a log with no sha256",
+  "find": "logs = [(log.name, sha256) for log, _, sha256 in self.read_run_logs() if sha256 != self.sha256]",
+  "replace": "logs = [(log.name, sha256) for log, _, sha256 in self.read_run_logs() if sha256 and sha256 != self.sha256]"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "an unreadable log is skipped",
+  "find": "raise DeployError(\"cannot read %s: %s\" % (log, cannot))",
+  "replace": "continue"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "the constructor reads the logs",
+  "find": "self.runs = project / \"sim\" / \"runs\"",
+  "replace": "self.runs = project / \"sim\" / \"runs\"\n        self.read_run_logs()"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "command_for drops -m",
+  "find": "return tool.command + [\"-m\", tool.entry[\"module\"]]",
+  "replace": "return tool.command + [tool.entry[\"module\"]]"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "Look.run loses the image on an unreadable log",
+  "find": "            why = str(cannot)  # image stays set",
+  "replace": "            image = None\n            why = str(cannot)  # image stays set"
+ }
+]

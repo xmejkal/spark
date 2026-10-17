@@ -3,7 +3,6 @@
 import hashlib
 import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -16,7 +15,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import board_connection  # noqa: E402
 import board_facts  # noqa: E402
 import ready_check  # noqa: E402
-import image_check  # noqa: E402
 from fakes import FakeBoardConnection  # noqa: E402
 
 MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}
@@ -82,17 +80,6 @@ class WhatTheBoardSaysTest(unittest.TestCase):
 
 def board_ready_check(connection):
     return ready_check.ReadyCheck(connection).check(MAIN)
-
-
-class PassedLogTest(unittest.TestCase):
-    def test_a_failed_run_on_the_same_image_is_never_the_passed_log(self):
-        runs = Path(tempfile.mkdtemp())
-        image = runs / "image.bin"
-        image.write_bytes(b"image")
-        digest = hashlib.sha256(b"image").hexdigest()
-        (runs / "a.log").write_text("# a\nverdict: failed (wokwi-cli exit 1)\nimage sha256: %s\n\n" % digest)
-        (runs / "b.log").write_text("# b\nverdict: passed\nimage sha256: %s\n\n" % digest)
-        self.assertEqual(image_check.passed_log(image, runs), runs / "b.log")
 
 
 if __name__ == "__main__":

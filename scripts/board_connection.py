@@ -48,7 +48,7 @@ class BoardCodeError(Exception):
 
 
 class BoardConnection:
-    """Adapter: mpremote on one board's port. `mpremote` is its command (image_check.runnable), `run` runs a command.
+    """Adapter: mpremote on one board's port. `mpremote` is its command (tools.command_for), `run` runs a command.
     Raises BoardUnreachableError and BoardCodeError."""
 
     def __init__(self, mpremote, port, run=subprocess.run, timeout_s=DEFAULT_TIMEOUT_S):
