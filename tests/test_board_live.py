@@ -36,7 +36,7 @@ class FakeGrants:
 
 
 GRANTED = board_grant.GrantCheckResult(True, None, None)
-EXPIRED = board_grant.GrantCheckResult(False, None, board_grant.WHY_EXPIRED)
+EXPIRED = board_grant.GrantCheckResult(False, None, "expired")
 
 
 class UntouchableBoard(FakeBoardConnection):
@@ -60,24 +60,24 @@ def live(code, *answers, grants=None, board=C6, probe=None, reset_raises=None, c
 class RefusalTest(unittest.TestCase):
     def test_no_grant_refuses_with_the_grant_s_code_and_sends_nothing(self):
         result, _, grants = live("print(1)", grants=FakeGrants(EXPIRED), connection=UntouchableBoard())
-        self.assertEqual((result.answer, result.grant_why, result.reset), (board_live.REFUSED_NO_GRANT, "expired", None))
-        self.assertEqual(result.why, board_grant.MESSAGE_FOR[board_grant.WHY_EXPIRED])
+        self.assertEqual((result.answer, result.grant_why, result.reset), ("refused_no_grant", "expired", None))
+        self.assertIn("the grant for this board ended", result.why)
         self.assertEqual(grants.checked, [(PORT, "live.py")])
         self.assertEqual(board_live.exit_code(result), 1)
 
     def test_a_restricted_pin_is_refused_and_sends_nothing(self):
         result, _, _ = live("from machine import Pin\nPin(12, Pin.OUT)", connection=UntouchableBoard())
-        self.assertEqual(result.answer, board_live.REFUSED_PIN)
+        self.assertEqual(result.answer, "refused_pin")
         self.assertIn("GPIO12", result.why)
         self.assertEqual(board_live.exit_code(result), 1)
 
     def test_code_that_does_not_parse_is_refused_and_sends_nothing(self):
         result, _, _ = live("print(", connection=UntouchableBoard())
-        self.assertEqual((result.answer, board_live.exit_code(result)), (board_live.REFUSED_NO_PARSE, 1))
+        self.assertEqual((result.answer, board_live.exit_code(result)), ("refused_no_parse", 1))
 
     def test_the_grant_is_checked_before_the_pins(self):
         result, _, _ = live("Pin(12)", grants=FakeGrants(EXPIRED), connection=UntouchableBoard())
-        self.assertEqual(result.answer, board_live.REFUSED_NO_GRANT)
+        self.assertEqual(result.answer, "refused_no_grant")
 
     def test_a_broken_record_raises_and_sends_nothing(self):
         broken = dict(C6, pin_roles={"usb": {"gpio": "12", "note": "x"}})
@@ -89,29 +89,29 @@ class RunTest(unittest.TestCase):
     def test_print_1_runs_on_the_c6_and_the_board_is_reset(self):
         result, connection, _ = live("print(1)", "1\n")
         self.assertEqual((result.answer, result.why, result.output, result.reset),
-                         (board_live.RAN, None, "1\n", board_live.RESET_DONE))
+                         ("ran", None, "1\n", "done"))
         self.assertEqual((connection.ran, connection.resets), ([("print(1)", None)], 1))
         self.assertEqual(board_live.exit_code(result), 0)
 
     def test_an_empty_answer_still_counts_as_ran(self):
         result, _, _ = live("x = 1", "")
-        self.assertEqual(result.answer, board_live.RAN)
+        self.assertEqual(result.answer, "ran")
 
     def test_code_that_raised_is_reset_and_exits_1(self):
         result, connection, _ = live("x", BoardCodeError("Traceback\nNameError: name 'x' isn't defined\n", 1))
-        self.assertEqual((result.answer, connection.resets), (board_live.RAISED, 1))
+        self.assertEqual((result.answer, connection.resets), ("raised", 1))
         self.assertIn("NameError", result.why)
         self.assertEqual(board_live.exit_code(result), 1)
 
     def test_code_that_never_ends_is_not_reached_but_still_reset(self):
         result, connection, _ = live("while True: pass", BoardTimeoutError("no answer in 20 s"))
-        self.assertEqual((result.answer, connection.resets), (board_live.NOT_REACHED, 1))
+        self.assertEqual((result.answer, connection.resets), ("not_reached", 1))
         self.assertEqual(board_live.exit_code(result), 2)
 
     def test_a_board_that_never_let_mpremote_in_is_not_reset_and_names_both_causes(self):
         connection = FakeBoardConnection(REFUSED, REFUSED, reset_raises=AssertionError("the board was reset"))
         result, _, _ = live("print(1)", connection=connection)
-        self.assertEqual((result.answer, result.reset, result.cure), (board_live.NOT_REACHED, None, RESTART))
+        self.assertEqual((result.answer, result.reset, result.cure), ("not_reached", None, RESTART))
         self.assertIn("USB output", result.why)
         self.assertIn("does not read its console", result.why)
         self.assertEqual(board_live.exit_code(result), 2)
@@ -119,11 +119,11 @@ class RunTest(unittest.TestCase):
     def test_a_busy_port_is_not_reached_with_mpremote_s_words_and_no_reset(self):
         busy = BoardUnreachableError("failed to access /dev/cu.usbmodem1101 (it may be in use by another program)")
         result, connection, _ = live("print(1)", busy)
-        self.assertEqual((result.answer, result.why, connection.resets), (board_live.NOT_REACHED, str(busy), 0))
+        self.assertEqual((result.answer, result.why, connection.resets), ("not_reached", str(busy), 0))
 
     def test_a_failed_reset_after_a_clean_run_exits_2_and_says_the_firmware_may_be_stopped(self):
         result, _, _ = live("print(1)", "1\n", reset_raises=BoardUnreachableError("[Errno 6] Device not configured"))
-        self.assertEqual((result.answer, result.reset), (board_live.RAN, board_live.RESET_FAILED))
+        self.assertEqual((result.answer, result.reset), ("ran", "failed"))
         self.assertIn("the firmware may be stopped", result.why)
         self.assertIn("Device not configured", result.why)
         self.assertEqual(board_live.exit_code(result), 2)
@@ -138,7 +138,7 @@ class PinFactsTest(unittest.TestCase):
     def test_a_record_with_no_restricted_pin_says_the_pins_were_not_checked(self):
         bare = dict(C6, pin_roles={})
         result, _, _ = live("print(12)", "12\n", board=bare)
-        self.assertEqual((result.answer, result.pins_checked), (board_live.RAN, False))
+        self.assertEqual((result.answer, result.pins_checked), ("ran", False))
 
 
 if __name__ == "__main__":
