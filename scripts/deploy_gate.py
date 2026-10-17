@@ -1,9 +1,10 @@
 """
 The gate before deploy.py erases a board (P219): the look found no stop, the token is this board's and this image's,
-and the person says yes. It is the only way to the erase (D8).
+and there is a yes. It is the only way to the erase (D8).
 
 The yes is a strategy (`ConsentStrategy`). `TerminalConsentStrategy` asks in a real terminal only: a pipe, a
-heredoc or Claude Code's `!` is none, so the person runs the line in their own terminal window. A second way to say
+heredoc or Claude Code's `!` is none, so the person runs the line in their own terminal window.
+`board_grant.StandingConsentStrategy` is the yes the person gave once, as a deploy grant (P242). Another way to say
 yes (an MCP or web yes, D19) is another ConsentStrategy.
 """
 

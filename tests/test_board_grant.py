@@ -25,9 +25,11 @@ GRANT_SCRIPT = str(ROOT / "scripts" / "grant.py")
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_grant  # noqa: E402
+import board_look  # noqa: E402
+import deploy_gate  # noqa: E402
 import grant  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent  # noqa: E402
+from fakes import FakeConsent, FakeUtcClock  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
 
@@ -277,6 +279,258 @@ class CheckTest(GrantCase):
     def test_the_text_says_until_when(self):
         code, out, _ = self.grant("--check")
         self.assertEqual((code, out.strip()), (0, "granted: board 8c:bf:ea:xx:xx:xx until 2026-10-17T09:30:00+00:00"))
+
+
+class DeployGrantTest(GrantCase):
+    """P242 (#249): `grant.py --scope deploy` keeps a second file per board, with its own question."""
+
+    def kept_deploy(self):
+        return json.loads((self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").read_text())
+
+    def test_a_deploy_grant_keeps_its_own_file_and_leaves_the_live_one(self):
+        self.grant("--minutes", "30", consent=FakeConsent(True))
+        code, out, _ = self.grant("--scope", "deploy", "--minutes", "60", consent=FakeConsent(True))
+        self.assertEqual(code, 0)
+        self.assertIn("granted (deploy): board %s" % MAC, out)
+        self.assertEqual((self.kept_deploy()["scope"], self.kept_deploy()["expires_at"]),
+                         ("deploy", "2026-10-17T10:00:00+00:00"))
+        self.assertEqual((self.kept()["scope"], self.kept()["expires_at"]), ("live", "2026-10-17T09:30:00+00:00"))
+        self.assertEqual(stat.S_IMODE((self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").stat().st_mode), 0o600)
+
+    def test_a_new_live_grant_leaves_the_deploy_one(self):
+        self.grant("--scope", "deploy", "--minutes", "60", consent=FakeConsent(True))
+        self.grant("--minutes", "5", consent=FakeConsent(True))
+        self.assertEqual(self.kept_deploy()["expires_at"], "2026-10-17T10:00:00+00:00")
+
+    def test_the_question_says_it_erases_all_the_flash_and_asks_no_yes_for_each_deploy(self):
+        consent = FakeConsent(True)
+        self.grant("--scope", "deploy", "--minutes", "60", consent=consent)
+        self.assertEqual(len(consent.asked), 1)
+        for words in ("erase ALL of the flash", "8c:bf:ea:xx:xx:xx", "any passed image of any project",
+                      "no yes from you for each deploy", "for 60 minutes"):
+            self.assertIn(words, consent.asked[0])
+
+    def test_no_saves_nothing(self):
+        code, _, _ = self.grant("--scope", "deploy", "--minutes", "60", consent=FakeConsent(False))
+        self.assertEqual(code, 1)
+        self.assertFalse((self.home / "grants").exists())
+
+    def test_a_board_whose_serial_is_not_its_mac_gets_a_deploy_grant_but_no_live_one(self):
+        self.devs = "/dev/cu.usbserial-1410 None 1a86:7523 USB Serial\n"
+        self.assertEqual(self.grant("--minutes", "30", consent=FakeConsent(True))[0], 1)
+        self.assertEqual(self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))[0], 0)
+
+    def test_minutes_out_of_range_are_refused_for_a_deploy_grant_too(self):
+        for minutes in ("0", "1441"):
+            self.assertEqual(self.grant("--scope", "deploy", "--minutes", minutes, consent=FakeConsent(True))[0], 2)
+        self.assertEqual(self.ran, [])
+
+    def test_scope_goes_with_minutes_only_and_must_be_known(self):
+        for argv in (("--check", "--scope", "deploy"), ("--minutes", "5", "--scope", "everything")):
+            with self.assertRaises(SystemExit):
+                self.grant(*argv)
+        self.assertEqual(self.grant("--check", "--scope", "live")[0], 1)
+
+    def test_grant_py_says_what_a_deploy_grant_allows_and_how_to_end_it(self):
+        _, out, _ = self.grant("--scope", "deploy", "--minutes", "60", consent=FakeConsent(True))
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json"
+        self.assertIn("Claude can now run deploy.py on this board with no yes from you", out)
+        self.assertIn("erases ALL of the board's flash each time", out)
+        self.assertIn("rm %s" % shlex.quote(str(path)), out)
+        _, out, _ = self.grant("--minutes", "60", consent=FakeConsent(True))
+        self.assertNotIn("rm ", out)
+
+    def test_an_unknown_scope_given_to_the_service_is_refused_and_saves_nothing(self):
+        service = board_grant.GrantService(mock.Mock(), mock.Mock(), now=FakeUtcClock(START))
+        with self.assertRaises(board_grant.GrantRefusedError) as refused:
+            service.issue(None, 5, FakeConsent(True), scope="bogus")
+        self.assertEqual(refused.exception.why, "bad scope")
+        self.assertEqual(refused.exception.code, 2)
+        self.assertFalse((self.home / "grants").exists())
+
+    def test_no_terminal_gives_the_deploy_line_with_its_scope(self):
+        class Pipe(io.StringIO):
+            def isatty(self):
+                return False
+
+        with mock.patch.object(sys, "stdin", Pipe()):
+            _, _, err = self.grant("--scope", "deploy", "--minutes", "30")
+        line = shlex.join([GRANT_SCRIPT, "--scope", "deploy", "--minutes", "30", "--project", str(Path(".").resolve())])
+        self.assertIn("\n  %s\n" % line, err + "\n")
+
+
+def a_grant(scope="deploy", mac=MAC, minutes=30, since=START, **changes):
+    """A Grant of `scope` for `mac` that starts at `since` and lasts `minutes`, with `changes` to its fields."""
+    fields = dict(mac=mac, board_token=board_look.board_token(mac), granted_by="ada", granted_at=since.isoformat(),
+                  expires_at=(since + datetime.timedelta(minutes=minutes)).isoformat(), scope=scope)
+    return board_grant.Grant(**dict(fields, **changes))
+
+
+def a_report(verdict="match", mac=MAC):
+    """What consent_for_deploy reads of a look: its verdict and the board's MAC."""
+    return mock.Mock(verdict=verdict, reading=board_look.BoardReading("esp32c6", 4, mac))
+
+
+class GrantScopeTest(unittest.TestCase):
+    """The store keeps a live and a deploy grant side by side, and each reads only its own file."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.grants = board_grant.GrantStore()
+
+    def test_a_grant_with_no_scope_in_its_file_reads_as_a_live_grant(self):
+        old = {key: value for key, value in a_grant("live")._asdict().items() if key != "scope"}
+        (self.home / "grants").mkdir()
+        (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").write_text(json.dumps(old))
+        self.assertEqual(self.grants.find(MAC), a_grant("live"))
+        self.assertEqual(self.grants.find(MAC).scope, "live")
+
+    def test_a_file_whose_scope_differs_from_its_name_is_refused(self):
+        for scope, wanted, name in (("deploy", "live", "8c-bf-ea-xx-xx-xx"), ("live", "deploy", "8c-bf-ea-xx-xx-xx-deploy"),
+                                    ("x", "deploy", "8c-bf-ea-xx-xx-xx-deploy")):
+            (self.home / "grants").mkdir(exist_ok=True)
+            (self.home / "grants" / (name + ".json")).write_text(json.dumps(a_grant(scope)._asdict()))
+            with self.assertRaises(board_grant.GrantRefusedError) as refused:
+                self.grants.find(MAC, wanted)
+            self.assertEqual(refused.exception.why, "not a grant", (scope, wanted))
+
+    def test_a_deploy_grant_alone_opens_no_live_grant(self):
+        self.grants.save(a_grant("deploy"))
+        self.assertIsNone(self.grants.find(MAC))
+        finder = mock.Mock(require_one_board=lambda *a: board_look.Port("/dev/x", MAC, "303a:1001", "p"))
+        service = board_grant.GrantService(finder, now=FakeUtcClock(START))
+        self.assertEqual(service.check().why, "no grant")
+
+    def test_a_live_grant_alone_opens_no_deploy_grant(self):
+        self.grants.save(a_grant("live"))
+        self.assertIsNone(self.grants.find(MAC, "deploy"))
+
+    def test_the_unsafe_times_of_a_grant_are_not_trusted(self):
+        for changes, why in (({"expires_at": "garbage"}, "not a grant"),
+                             ({"granted_at": "garbage"}, "not a grant"),
+                             ({"expires_at": None}, "not a grant"),
+                             ({"expires_at": "2099-01-01T00:00:00"}, "no zone"),
+                             ({"granted_at": "2026-10-17T08:00:00"}, "no zone"),
+                             ({"expires_at": "2027-10-17T09:30:00+00:00"}, "not a grant"),
+                             ({"granted_at": "2026-10-17T09:05:00+00:00"}, "not a grant"),
+                             ({"expires_at": "2026-10-17T09:00:00+00:00"}, "expired")):
+            self.assertEqual(a_grant(**changes).why_not_valid(START), why, changes)
+        self.assertIsNone(a_grant().why_not_valid(START))
+
+    def test_the_longest_grant_counts_from_the_yes_not_from_now(self):
+        two_hours_ago = START - datetime.timedelta(hours=2)
+        self.assertEqual(a_grant(since=two_hours_ago, minutes=25 * 60).why_not_valid(START), "not a grant")
+        self.assertIsNone(a_grant(since=two_hours_ago, minutes=24 * 60).why_not_valid(START))
+
+    def test_a_clock_with_no_zone_is_no_valid_time(self):
+        self.assertEqual(a_grant().why_not_valid(datetime.datetime(2026, 10, 17, 9, 0)),
+                         "no zone")
+
+
+class ConsentForDeployTest(unittest.TestCase):
+    """consent_for_deploy: the standing yes for a look that matched and a valid deploy grant, else the terminal."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.clock, self.terminal = FakeUtcClock(START), FakeConsent(False)
+        self.service = board_grant.GrantService(now=self.clock)
+
+    def choose(self, report=None, ignore_older_runs=False):
+        return self.service.consent_for_deploy(report or a_report(), ignore_older_runs, self.terminal)
+
+    def assertTerminal(self, why, **kw):
+        chosen = self.choose(**kw)
+        self.assertIs(chosen.consent, self.terminal)
+        self.assertEqual(chosen.why, why)
+
+    def test_a_valid_deploy_grant_and_a_matching_look_give_the_standing_yes(self):
+        board_grant.GrantStore().save(a_grant())
+        chosen = self.choose()
+        self.assertIsInstance(chosen.consent, board_grant.StandingConsentStrategy)
+        self.assertIsNone(chosen.why)
+        self.assertTrue(chosen.consent.ask("erase ALL?"))
+        self.assertEqual(chosen.consent.who,
+                         "standing yes typed by ada at 2026-10-17T09:00:00+00:00, until 2026-10-17T09:30:00+00:00")
+
+    def test_a_mac_in_capitals_finds_the_grant(self):
+        board_grant.GrantStore().save(a_grant())
+        self.assertIsNone(self.choose(a_report(mac=MAC.upper())).why)
+
+    def test_no_deploy_grant_asks_in_the_terminal(self):
+        self.assertTerminal("no grant")
+
+    def test_an_ended_deploy_grant_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant())
+        self.clock.advance(minutes=30)
+        self.assertTerminal("expired")
+
+    def test_only_a_live_grant_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant("live"))
+        self.assertTerminal("no grant")
+
+    def test_a_deploy_grant_of_another_board_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant(mac="aa:bb:cc:dd:ee:ff"))
+        self.assertTerminal("no grant")
+
+    def test_a_deploy_file_whose_scope_differs_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant())
+        (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text(
+            json.dumps(a_grant("live")._asdict()))
+        self.assertTerminal("not a grant")
+
+    def test_a_file_that_is_no_grant_asks_in_the_terminal_and_never_crashes(self):
+        (self.home / "grants").mkdir()
+        (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text("not json")
+        self.assertTerminal("not a grant")
+
+    def test_a_mac_that_is_no_text_asks_in_the_terminal_and_never_crashes(self):
+        (self.home / "grants").mkdir()
+        for mac in (12, ["8c"], None):
+            (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text(
+                json.dumps(dict(a_grant()._asdict(), mac=mac)))
+            self.assertTerminal("not a grant")
+
+    def test_a_look_with_a_warning_and_no_deploy_grant_says_there_is_no_grant(self):
+        self.assertTerminal("no grant", report=a_report("warning"))
+        self.assertTerminal("no grant", ignore_older_runs=True)
+
+    def test_a_time_that_cannot_be_trusted_asks_in_the_terminal(self):
+        for changes, why in (({"expires_at": "2099-01-01T00:00:00"}, "no zone"),
+                             ({"expires_at": "2027-10-17T09:30:00+00:00"}, "not a grant"),
+                             ({"expires_at": "garbage"}, "not a grant")):
+            board_grant.GrantStore().save(a_grant(**changes))
+            self.assertTerminal(why)
+
+    def test_a_look_that_is_no_match_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant())
+        for verdict in ("warning", "stop"):
+            self.assertTerminal("look not a match", report=a_report(verdict))
+
+    def test_ignore_older_runs_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant())
+        self.assertTerminal("ignore older runs", ignore_older_runs=True)
+
+    def test_the_standing_yes_stops_when_the_grant_ends_before_the_erase(self):
+        board_grant.GrantStore().save(a_grant())
+        consent = self.choose().consent
+        self.clock.advance(minutes=31)
+        for step in (consent.require_ready, lambda: consent.ask("erase ALL?")):
+            with self.assertRaises(deploy_gate.GateClosedError) as shut:
+                step()
+            self.assertIn("deploy grant ended before the erase", str(shut.exception))
+            self.assertEqual(shut.exception.code, 2)
+
+    def test_the_standing_yes_works_with_the_real_clock(self):
+        board_grant.GrantStore().save(a_grant(since=board_grant.utc_now().replace(microsecond=0)))
+        chosen = board_grant.GrantService().consent_for_deploy(a_report(), False, self.terminal)
+        self.assertIsNone(chosen.why)
+        self.assertTrue(chosen.consent.ask("x"))
 
 
 if __name__ == "__main__":

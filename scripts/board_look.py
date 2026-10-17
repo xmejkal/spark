@@ -176,6 +176,10 @@ def _recorded(value):
     return " or ".join(str(each) for each in (value if isinstance(value, list) else [value]))
 
 
+#: The look's verdicts: a stop refuses, a warning or an unknown field asks the person, a match asks nothing more.
+VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
+
+
 class LookReport:
     """Value. What the look found. `stops` and `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
     warning or stop."""
@@ -193,7 +197,8 @@ class LookReport:
             self.warnings.append("the flash differs: %s MB, the record says %s" % (reading.flash_mb, _recorded(record["flash_mb"])))
         self.unknown = {name: "the board did not say" if getattr(reading, read_key) is None else "the record does not hold it"
                         for name, read_key, _, _ in FIELDS if self.fields[name] == "unknown"}
-        self.verdict = "stop" if self.stops else "warning" if self.warnings or self.unknown else "match"
+        self.verdict = (VERDICT_STOP if self.stops else
+                        VERDICT_WARNING if self.warnings or self.unknown else VERDICT_MATCH)
 
     @property
     def status(self):
@@ -208,7 +213,7 @@ class LookReport:
 
     def no_token_reason(self):
         """Why there is no token, or None when there is one."""
-        if self.verdict == "stop":
+        if self.verdict == VERDICT_STOP:
             return "the look found a stop"
         if not self.reading.mac:
             return "the board's MAC could not be read"
@@ -240,7 +245,7 @@ def report_lines(report, token=True):
         out.append("%d field%s unknown (%s): deploy.py will ask you to accept it."
                    % (len(report.unknown), "" if len(report.unknown) == 1 else "s",
                       ", ".join("%s: %s" % each for each in report.unknown.items())))
-    if report.verdict == "match":
+    if report.verdict == VERDICT_MATCH:
         out.append("all fields match the board record %s." % name)
     if token:
         mine = report.token()

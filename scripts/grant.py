@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 import board_doctor
 import board_grant
 import board_look
+import store
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
@@ -29,6 +31,13 @@ with a built-in USB port, like the ESP32-C6's. A board on a USB bridge chip gets
 
 While the grant lasts, live.py runs Claude's code on the board (P247). With two or more boards on USB, --port is
 needed.
+
+grant.py --scope deploy --minutes N gives a deploy grant: for N minutes from your yes, Claude may run deploy.py
+on this board and erase ALL of its flash, with no yes typed for each deploy. Its question says so. The file is
+grants/<MAC with dashes>-deploy.json, so a live grant and a deploy grant stand side by side. A deploy grant covers
+only a deploy whose look matched the board record (no warning, no unknown field, no stop) and that does not pass
+--ignore-older-runs; deploy.py asks you in your terminal for anything else. Delete the file to end it. It needs no
+built-in USB port: deploy.py finds it by the MAC its own look reads. --check looks for a live grant only.
 
 When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
@@ -59,7 +68,11 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--minutes", type=int, help="give a grant for this many minutes from your yes (1 to 1440)")
-    mode.add_argument("--check", action="store_true", help="say whether the board on USB has a grant now")
+    mode.add_argument("--check", action="store_true", help="say whether the board on USB has a live grant now")
+    parser.add_argument("--scope", choices=board_grant.SCOPES, default=board_grant.SCOPE_LIVE,
+                        help="with --minutes: what the grant allows. live (default) lets Claude run code on the "
+                        "board. deploy lets Claude erase it and write a passed image with deploy.py, with no yes "
+                        "typed for each deploy")
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder whose tools list names mpremote and esptool (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
@@ -67,6 +80,8 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
     args = parser.parse_args(argv)
     if args.json and not args.check:
         parser.error("--json goes with --check only")
+    if args.check and args.scope != board_grant.SCOPE_LIVE:
+        parser.error("--scope goes with --minutes only: --check looks for a live grant")
     try:
         finder = board_look.PortFinder(tools.find("board-shell", args.project), run)
         if args.check:
@@ -74,10 +89,12 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
             print(to_json(result) if args.json else describe(result))
             return EXIT_OK if result.granted else EXIT_PROBLEMS
         reader = board_look.EsptoolReader(tools.find("flasher", args.project), run)
-        line = format_rerun_line(__file__, ["--minutes", args.minutes, "--project", args.project.resolve()]
+        line = format_rerun_line(__file__, (["--scope", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])
+                                 + ["--minutes", args.minutes, "--project", args.project.resolve()]
                                  + (["--port", args.port] if args.port else []))
         grant = board_grant.GrantService(finder, reader, now=now).issue(
-            args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print("  " + RESTART))
+            args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print("  " + RESTART),
+            scope=args.scope)
     except GateClosedError as closed:
         print("grant.py: %s" % closed, file=sys.stderr)
         return closed.code
@@ -89,7 +106,11 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
         else:
             print("grant.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    print("  granted: board %s (token %s) until %s" % (grant.mac, grant.board_token, grant.expires_at))
+    print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))
+    if grant.scope == board_grant.SCOPE_DEPLOY:
+        grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
+        print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
+              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(str(grant_file)))
     return EXIT_OK
 
 

@@ -430,6 +430,14 @@ class ReportLinesTest(LookCase):
         lines = board_look.report_lines(self.look(esptool="c6-flash-id-garbled.txt"), token=False)
         self.assertIn("  1 field unknown (flash: the board did not say): deploy.py will ask you to accept it.", lines)
 
+    def test_a_flash_of_zero_is_read_and_none_is_not_read(self):
+        self.run_the_scenario()
+        report = self.look()
+        report.reading = report.reading._replace(flash_mb=0)
+        self.assertIn("  flash  same      0 MB", board_look.report_lines(report, token=False))
+        report.reading = report.reading._replace(flash_mb=None)
+        self.assertIn("  flash  same      not read", board_look.report_lines(report, token=False))
+
     def test_a_warning_is_said(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")

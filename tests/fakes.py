@@ -1,5 +1,7 @@
 """P239 PR 2 (#238): the fakes of the deploy area's swappable parts, one per part of spark's core."""
 
+import datetime
+
 
 class FakeBoardConnection:
     """A fake BoardConnection: run_code and read_file give or raise each of `answers` in turn, and copy_to_board
@@ -64,6 +66,20 @@ class FakeClock:
     def sleep(self, seconds):
         self.slept.append(seconds)
         self.now += seconds
+
+
+class FakeUtcClock:
+    """A fake clock for board_grant: calling it gives `now` (a time in UTC with the zone), and `advance` moves it on."""
+
+    def __init__(self, now):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, **kw):
+        """Move the clock on by a datetime.timedelta's keyword arguments, for example minutes=30."""
+        self.now += datetime.timedelta(**kw)
 
 
 class FakeConsoleProbe:
