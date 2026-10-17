@@ -242,9 +242,9 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe` |
 
 The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
-gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. Until
-PRs 4 to 8 merge, `LookService`, `DeployService`, `ReadyResult` and `DeployResult` do not exist yet, and some classes
-keep their old names: `Report`, `Reading` and `Look`.
+gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. PR 4
+gave `ReadyResult`, `DeployPlan` and `BoardLog`. Until PRs 5 to 8 merge, `LookService`, `DeployService` and
+`DeployResult` do not exist yet, and some classes keep their old names: `Report`, `Reading` and `Look`.
 
 These rules name a class, a function or a constant:
 
