@@ -81,8 +81,12 @@ for, numbered wiring steps (one connection each) and a mermaid diagram of them, 
 `breadboard.json` is an example layout of the same steps on a half breadboard, each jumper in its step's color
 ([P267](https://github.com/xmejkal/spark/issues/300)). The person pastes it into the `diagram.json` of a new project
 on wokwi.com and compares it with their own breadboard. `breadboard.svg` is the same layout as a picture, which the
-sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). It is new each time, so a change made to it in Wokwi is
-lost at the next build. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
+sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). A part you move in it stays where you put it at the next build ([P273](https://github.com/xmejkal/spark/issues/309)),
+if it still fits. A part it cannot keep is named, one line each, and with `--json` a `kept` entry with `did`
+`move not kept`. A resistor and a jumper are not kept yet: a jumper follows its parts, and a resistor is named when it is not where
+spark would put it (it may not have been moved by you).
+A build that did not finish (a failed build, or requirements the build refuses) leaves a `breadboard.json` that holds
+parts, with a `left alone` entry, so a typo does not wipe your moves. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it
 again after a build. `page.html` shows the same circuit in three tabs: the breadboard picture, and tscircuit's
 schematic and PCB of the kept `dist/board/circuit.json` ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a
