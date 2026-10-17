@@ -39,7 +39,7 @@ class TheConsoleTest(unittest.TestCase):
         waits, said = board_console.ConsoleProbe(["/opt/python3"], PORT, printing(ROM, ran)).waits_in_download_mode()
         self.assertEqual((waits, said), (True, ROM))
         self.assertEqual(ran[0][:2] + ran[0][3:], ["/opt/python3", "-c", PORT, "2"])
-        self.assertIn("s.dtr, s.rts = sys.argv[1], 115200, 0.1, False, False", ran[0][2])
+        self.assertIn("s.dtr, s.rts, s.exclusive = sys.argv[1], 115200, 0.1, False, False, True", ran[0][2])
 
     def test_the_console_script_opens_the_port_with_dtr_and_rts_off_and_prints_what_it_read(self):
         opened = []
@@ -63,6 +63,33 @@ class TheConsoleTest(unittest.TestCase):
             exec(board_console.READ_CONSOLE, {})
         self.assertEqual(opened, [(PORT, 115200, False, False), "closed"])
         self.assertEqual(out.getvalue(), ROM + "\ufffd")
+
+    def test_the_console_script_takes_the_port_s_lock_and_exits_3_when_another_program_holds_it(self):
+        import errno
+
+        class SerialException(OSError):
+            pass
+
+        def opening(error):
+            class Serial:
+                def open(self):
+                    self.seen = self.exclusive
+                    raise SerialException(error, "Could not exclusively lock port")
+            return Serial
+
+        for error, code in ((errno.EAGAIN, 3), (errno.ENOENT, 1)):
+            serial = types.SimpleNamespace(Serial=opening(error), SerialException=SerialException)
+            with mock.patch.dict(sys.modules, {"serial": serial}), mock.patch.object(sys, "argv", ["-c", PORT, "1"]), \
+                    contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as stopped:
+                exec(board_console.READ_CONSOLE, {})
+            self.assertEqual(stopped.exception.code, code)
+
+    def test_a_port_another_program_holds_is_read_as_busy_and_never_as_download_mode(self):
+        def busy(command, **kw):
+            raise subprocess.CalledProcessError(3, command, "", "Could not exclusively lock port /dev/cu.usbmodem101")
+        probe = board_console.ConsoleProbe(["/opt/python3"], PORT, busy)
+        self.assertEqual(probe.console().kind, "busy")
+        self.assertFalse(probe.waits_in_download_mode()[0])
 
     def test_a_line_that_is_ready_is_a_boot_and_a_word_inside_a_line_is_not(self):
         self.assertTrue(download_mode.booted("entry 0x4086b910\r\nready\r\n"))

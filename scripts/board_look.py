@@ -41,8 +41,22 @@ def board_token(mac):
     return hashlib.sha256(mac.encode()).hexdigest()[:4]
 
 
+#: How esptool 5.5.0 starts the line of its failure on stderr; the lines after it are a URL or a hint (P282's research).
+ESPTOOL_ERROR = "ERROR: "
+
+
 class LookStop(Exception):
-    """The look cannot go on. The message is the whole sentence."""
+    """The look cannot go on. The message is the whole sentence. When esptool could not read the board, `port` is its
+    port and `tool_said` esptool's own line of the failure, shown to the person and never decided on (P282)."""
+
+    def __init__(self, message, port=None, tool_said=None):
+        super().__init__(message)
+        self.port, self.tool_said = port, tool_said
+
+
+def esptool_said(stderr):
+    """esptool's own line of the failure in `stderr`: the first that starts with ESPTOOL_ERROR, else None."""
+    return next((line.strip() for line in (stderr or "").splitlines() if line.startswith(ESPTOOL_ERROR)), None)
 
 
 class PortFinder:
@@ -113,7 +127,8 @@ class EsptoolReader(BoardReader):
             raise LookStop("could not read the board on %s: esptool took more than %d s. %s"
                            % (port, READ_TIMEOUT_S, image_check.BOOT_HINT))
         if done.returncode:
-            raise LookStop("could not read the board on %s. %s" % (port, image_check.BOOT_HINT))
+            raise LookStop("could not read the board on %s. %s" % (port, image_check.BOOT_HINT), port,
+                           esptool_said(done.stderr))
         return self.parse(done.stdout)
 
     @staticmethod
