@@ -22,8 +22,8 @@ from collections import namedtuple
 from pathlib import Path
 
 import boards
-import project_image
 import outcomes
+import project_image
 import tools
 
 #: What to try when esptool cannot reach the board. Used here and by deploy.py; PR 7 of P239 moves it to the Flasher.
