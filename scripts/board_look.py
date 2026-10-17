@@ -1,8 +1,8 @@
 """
 Read the board on USB without changing it, and compare it with the project's board record (P219, #201).
 
-A library: look.py only parses arguments, calls `looker(project).run(project, port)` and prints `report_lines` of the LookReport. deploy.py
-calls them too. It reads the image checks from project_image.py and never imports deploy.py.
+A library: look.py only parses arguments, calls `looker(project).run(project, port)` and prints `report_lines(report)`.
+deploy.py calls `looker` and `report_lines` too. It reads the image checks from project_image.py and never imports deploy.py.
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
     PortFinder     the boards on USB, from mpremote's list. It never opens a port.
@@ -34,7 +34,7 @@ BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press 
 NOT_A_BOARD = "0000:0000"
 Port = namedtuple("Port", "device serial usb product")
 #: What esptool said, each field None when it could not be parsed. flash_mb is a number of MB.
-BoardReading = namedtuple("Reading", "chip flash_mb mac")
+BoardReading = namedtuple("BoardReading", "chip flash_mb mac")
 MB = 1024 * 1024
 #: How long a subprocess may take, in seconds: mpremote only lists, esptool connects to a board and may wait for it.
 LIST_TIMEOUT_S, READ_TIMEOUT_S = 15, 60
@@ -219,7 +219,6 @@ class LookReport:
         if self.no_token_reason():
             return None
         return "%s-%s" % (board_token(self.reading.mac), hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
-
 
     def to_dict(self):
         """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id; the image is not in it."""

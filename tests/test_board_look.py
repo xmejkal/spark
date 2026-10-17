@@ -409,11 +409,17 @@ class ReportLinesTest(LookCase):
         self.assertIn("  2 fields unknown (chip: the record does not hold it, flash: the record does not hold it): "
                       "deploy.py will ask you to accept it.", lines)
 
-    def test_a_stop_and_a_warning_are_each_said(self):
+    def test_a_stop_is_said(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
         lines = board_look.report_lines(self.look(esptool="s3-flash-id-2mb.txt"), token=False)
         self.assertIn("  the flash is 2 MB, the image needs 4 MB: deploy.py will refuse.", lines)
+
+    def test_a_match_and_one_unknown_field_are_said(self):
+        self.run_the_scenario()
+        self.assertIn("  all fields match the board record xiao-esp32-c6.", board_look.report_lines(self.look(), token=False))
+        lines = board_look.report_lines(self.look(esptool="c6-flash-id-garbled.txt"), token=False)
+        self.assertIn("  1 field unknown (flash: the board did not say): deploy.py will ask you to accept it.", lines)
 
     def test_a_warning_is_said(self):
         self.run_the_scenario()
@@ -432,6 +438,7 @@ class RenamesTest(unittest.TestCase):
             for node in ast.walk(ast.parse(each.read_text())):
                 named = node.name if isinstance(node, ast.ClassDef) else node.attr if isinstance(node, ast.Attribute) else \
                     node.id if isinstance(node, ast.Name) else None
+                # check_physics.py has a local variable named Reading, no class
                 if named in old and not (isinstance(node, ast.Name) and each.name == "check_physics.py"):
                     self.fail("%s:%d still names %s" % (each.name, node.lineno, named))
         self.assertFalse(hasattr(board_look, "Report") or hasattr(board_look, "Look") or hasattr(board_look, "Reading"))
