@@ -81,6 +81,21 @@ def place_of(project, part_id):
     return found["left"], found["top"], found.get("rotate", 0)
 
 
+def holes_of(project, part_id):
+    """{Wokwi pin: Hole} of one part as the diagram holds it."""
+    found = part(project, part_id)
+    shape = GEOMETRY.part(found["type"])
+    turned = breadboard_drawing.rotate(shape["pins"], shape["center"], found.get("rotate", 0))
+    return {pin: GEOMETRY.hole_at(found["left"] + x, found["top"] + y) for pin, (x, y) in turned.items()}
+
+
+def put_led(project, hole_a):
+    """Move the LED so its pin A is over a hole (its pin C then lies one column to the left)."""
+    pins = GEOMETRY.part("wokwi-led")["pins"]
+    edit(project, lambda drawn: next(one for one in drawn["parts"] if one["id"] == "LedRed5mm")
+         .update(left=round(hole_a.x - pins["A"][0], 3), top=round(hole_a.y - pins["A"][1], 3)))
+
+
 def codes(written):
     return {one.subject: one.code for one in written.not_kept}
 
@@ -161,21 +176,40 @@ class OtherEditsTest(unittest.TestCase):
     def test_a_part_moved_onto_a_hole_another_part_holds_is_named_and_the_first_in_the_file_wins(self):
         project = new_project(FULL)
         build(project)
-        button = part(project, "TactileButton")
         led = part(project, "LedRed5mm")
-        # put the LED's first pin on the button's first pin hole
-        shape_button, shape_led = GEOMETRY.part(button["type"]), GEOMETRY.part("wokwi-led")
-        turned = breadboard_drawing.rotate(shape_button["pins"], shape_button["center"], button["rotate"])
-        x, y = next(iter(turned.values()))
-        pin_x, pin_y = next(iter(shape_led["pins"].values()))
-        edit(project, lambda drawn: next(one for one in drawn["parts"] if one["id"] == "LedRed5mm")
-             .update(left=button["left"] + x - pin_x, top=button["top"] + y - pin_y))
+        target = holes_of(project, "TactileButton")["1.l"]
+        # the LED's pin A (the right one) goes on the button's pin hole
+        put_led(project, target)
         before = place_of(project, "TactileButton")
         written = build(project)
         self.assertEqual(place_of(project, "TactileButton"), before)
-        self.assertEqual(set(codes(written)), {"LedRed5mm"})
-        self.assertIn(codes(written)["LedRed5mm"], ("hole-taken", "row-shared"))
+        self.assertEqual(codes(written), {"LedRed5mm": "hole-taken"})
         self.assertEqual(place_of(project, "LedRed5mm")[:2], (led["left"], led["top"]))
+
+    def test_a_part_moved_into_a_row_another_part_holds_is_named(self):
+        project = new_project(FULL)
+        build(project)
+        button = holes_of(project, "TactileButton")
+        taken = {hole.name for held in ("TactileButton", "LedRed5mm", "board") for hole in holes_of(project, held).values()}
+        beside = next(hole for hole in GEOMETRY.surface.holes if hole.group == button["1.l"].group
+                      and hole.name not in taken)
+        put_led(project, beside)
+        self.assertEqual(codes(build(project)), {"LedRed5mm": "row-shared"})
+
+    def test_a_part_whose_body_covers_a_hole_another_part_holds_is_named(self):
+        project = new_project(FULL)
+        build(project)
+        board = part(project, "board")
+        shape = GEOMETRY.part(board["type"])
+        covered = breadboard_drawing.FirstFitPartPlacement(GEOMETRY)._covered(
+            shape, board["rotate"], board["left"], board["top"], holes_of(project, "board"))
+        under = next((one, two) for one in covered for two in covered
+                     if abs(two.x - one.x - PITCH_PX) < 0.5 and one.y == two.y)
+        # the LED goes first in the file, with both pins under the board's body: the board must be refused
+        put_led(project, under[1])
+        edit(project, lambda drawn: drawn["parts"].insert(1, drawn["parts"].pop(
+            next(i for i, one in enumerate(drawn["parts"]) if one["id"] == "LedRed5mm"))))
+        self.assertEqual(codes(build(project)), {"board": "hole-taken"})
 
     def test_a_kept_part_far_right_leaves_room_for_a_new_part(self):
         project = new_project(BUTTON_ONLY)

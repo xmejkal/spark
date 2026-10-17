@@ -175,8 +175,8 @@ def name_parts_not_kept(earlier, layout, fresh, reasons, default_code=None):
     """
     [NotKeptResult], in the earlier file's order, for each earlier part that `layout` does not keep as the person left
     it. One that `layout` lacks is NOT_IN_CIRCUIT. One the placement refused is named with its reason from `reasons`
-    ({part id: (code, message)}). One placed away from its earlier place is named only if the person moved it, that is,
-    if its earlier place differs from where `fresh` (the layout planned with nothing kept) puts it: RESISTOR_NOT_KEPT
+    ({part id: (code, message)}). One placed elsewhere is named only if the person moved it, that is, if its earlier
+    place differs from where `fresh` (the layout planned with nothing kept) puts it: RESISTOR_NOT_KEPT
     for a resistor, else `default_code` (None names nothing). A part at its earlier place, and a part that is not in
     the earlier file, are never named.
     """
@@ -190,7 +190,7 @@ def name_parts_not_kept(earlier, layout, fresh, reasons, default_code=None):
             named.append(_result(part_id, NOT_IN_CIRCUIT))
         elif part_id in reasons:
             named.append(NotKeptResult(part_id, *reasons[part_id]))
-        elif _place(now.left, now.top, now.rotate) != before and fresh_places.get(part_id) != before:
+        elif fresh_places.get(part_id) != before:
             code = RESISTOR_NOT_KEPT if now.type == RESISTOR_TYPE else default_code
             if code:
                 named.append(_result(part_id, code))
