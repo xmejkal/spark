@@ -18,8 +18,9 @@ the project can change in their own layers): esptool needs download mode, mpremo
 
 from collections import namedtuple
 
-from board_console import KIND_BUSY, KIND_READ, shows_boot
-from board_look import LookStop
+import tools
+from board_console import KIND_BUSY, KIND_READ, ConsoleProbe, shows_boot
+from board_look import LookStop, PortFinder
 from download_mode import DOWNLOAD_MODE
 
 #: The next steps, one code each. The sources are in MESSAGE_FOR's comments.
@@ -144,6 +145,28 @@ class BoardDoctorService:
                 break
         step = results[-1].next_step if results else None
         return BoardDoctorResult(tuple(results), tool_said, step, IF_NOT_HELPED.get(step))
+
+
+def after_esptool(stop, project, run):
+    """The BoardDoctorResult for a board_look.LookStop from esptool's read, or None when the stop names no port (it
+    was no failed read). The tools come from the project's tools list. tools.ToolProblem and UnknownStepError pass up."""
+    if stop.port is None:
+        return None
+    shell = tools.find("board-shell", project)
+    doctor = BoardDoctorService.for_board(PortFinder(shell, run), ConsoleProbe.for_tool(shell, stop.port, run))
+    return doctor.examine(stop.port, tools.find("flasher", project), stop.tool_said)
+
+
+def stop_lines(script, stop, project, run):
+    """The lines a script prints when esptool's look stopped with `stop`. After a failed read, the board doctor's facts
+    and next step follow, and the next step is the last line."""
+    try:
+        result = after_esptool(stop, project, run)
+    except (tools.ToolProblem, UnknownStepError) as cannot:
+        return ["%s: %s (no doctor: %s)" % (script, stop, cannot)]
+    if result is None:
+        return ["%s: %s" % (script, stop)]
+    return ["%s: could not read the board on %s" % (script, stop.port)] + ["  " + line for line in describe(result)]
 
 
 def describe(result):

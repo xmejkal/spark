@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_doctor
 import board_look
 from outcomes import EXIT_COULD_NOT_RUN
 
@@ -62,7 +63,7 @@ def main(argv=None, run=subprocess.run):
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
     except board_look.LookStop as stop:
-        print("look.py: %s" % stop, file=sys.stderr)
+        print("\n".join(board_doctor.stop_lines("look.py", stop, args.project, run)), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print("\n".join(lines(report)))
     return report.exit_code()

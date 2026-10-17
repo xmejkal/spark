@@ -27,8 +27,10 @@ READY_MATCHED = '[s] Expected text matched: "ready"\n'
 SCENARIO = 'name: s\nversion: 1\nsteps:\n  - wait-serial: "LED on"\n'
 PYTHON = "/opt/python3"
 #: esptool and mpremote as tools.find returns them once /spark:setup installed them for the Python at PYTHON.
-FOUND = {"flasher": tools.Tool("esptool", "flasher", {"kind": "python", "module": "esptool"}, [PYTHON]),
-         "board-shell": tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote"}, [PYTHON])}
+FOUND = {"flasher": tools.Tool("esptool", "flasher", {"kind": "python", "module": "esptool", "silent_step": "hold_boot"},
+                                [PYTHON]),
+         "board-shell": tools.Tool("mpremote", "board-shell",
+                                   {"kind": "python", "module": "mpremote", "silent_step": "press_reset"}, [PYTHON])}
 PORT = "/dev/cu.usbmodem1101"
 
 

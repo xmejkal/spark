@@ -7,13 +7,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_doctor
 import board_grant
 import board_look
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
-RESTART = "the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
+RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
+           "written. If it then waits in download mode, press its R button once.")
 EPILOG = """grant.py --minutes N reads the board on USB once with esptool (the board restarts), and asks you in your own
 terminal to let Claude run code on that board for N minutes from your yes (1 to 1440, one day). A pipe, a heredoc or
 Claude Code's ! is no terminal, so grant.py gives no grant there. Your yes is kept in your store as a file named by the
@@ -77,7 +79,10 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
     except (tools.ToolProblem, board_look.LookStop) as cannot:
         if args.json:
             print(to_json(board_grant.GrantCheckResult(False, None, board_grant.WHY_COULD_NOT_RUN)))
-        print("grant.py: %s" % cannot, file=sys.stderr)
+        if isinstance(cannot, board_look.LookStop):
+            print("\n".join(board_doctor.stop_lines("grant.py", cannot, args.project, run)), file=sys.stderr)
+        else:
+            print("grant.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print("  granted: board %s (token %s) until %s" % (grant.mac, grant.board_token, grant.expires_at))
     return EXIT_OK
