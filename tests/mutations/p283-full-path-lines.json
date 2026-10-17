@@ -44,8 +44,8 @@
  {
   "file": "scripts/board_grant.py",
   "name": "cmd-parent",
-  "find": "GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / \"grant.py\"",
-  "replace": "GRANT_COMMAND = format_rerun_line(Path(\"grant.py\")"
+  "find": "\nGRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / \"grant.py\"",
+  "replace": "\nGRANT_COMMAND = format_rerun_line(Path(\"grant.py\")"
  },
  {
   "file": "scripts/board_grant.py",
