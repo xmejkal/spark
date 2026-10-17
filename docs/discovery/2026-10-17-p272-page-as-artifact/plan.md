@@ -4,6 +4,13 @@ Card: "Step 4: the same page as an Artifact. Done when: the same bundled file op
 "ideally if reusable for the artifact and later even some electron version". Brief D5 (Mac page, then Artifact) and D8
 (order). The page is P271's `page.html`.
 
+> **TL;DR.** `page.html` gets Artifact-ready CSS (color tokens, a dark mode, a 16 px gutter, a 2 to 4 word title) so the
+> same file serves the browser, the Artifact and a later Electron window. The docs tell Claude how to publish it, with
+> the person's yes. The builder publishes nothing; one private publish by Claude, after the PO's yes, closes the card.
+
+The page gets plain Artifact CSS in `TabbedHtmlPage` and a `page_title` function. No new file, no script, no flag. The tests
+prove the page obeys the rules; only the private publish proves the host opens it.
+
 ## Context
 
 Spark's scripts cannot publish an Artifact. Claude publishes one with its Artifact tool, from a file. So the work has
@@ -43,7 +50,37 @@ Changes made to the plan:
 
 Rejected: the doubt about the white backdrop in dark mode (it works; side bands from `object-fit` are checked by eye).
 
-(Round 2 is filled below when it finishes.)
+### Round 2 (tech lead and PO assistant, both sonnet)
+
+- TL;DR and a three-sentence summary now open the plan (the PO's reply layers).
+- The done line is split. The PR proves "the page obeys the Artifact rules", by tests. "It opens as an Artifact" is
+  proved only by one private publish, by Claude after the PO's yes. Until then the card stays open at "partly", and
+  no README row or journey picture changes status. The PR says so. A third host question asks for that publish.
+- `page_title` splits on `re.split(r"[\s\-_.]+", name)`, drops empty words, keeps the first three, cuts each to 20
+  characters, and adds "circuit"; no words gives "spark circuit". Examples, each an `assertEqual`:
+  `button-light-xiao` gives "button light xiao circuit"; `keep` gives "keep circuit"; `2026-10-17` gives
+  "2026 10 17 circuit"; `a-b-c-d` gives "a b c circuit"; `my cool robot project` gives "my cool robot circuit";
+  `---`, `__` and "" give "spark circuit"; 300 letters give the first 20 plus " circuit"; `Světlo-tlačítko` gives
+  "Světlo tlačítko circuit".
+- The call site is `tabbed_page.page_title(Path(destination).resolve().name)` in `check_spine.keep_tabbed_page`.
+  `text(tabs, title="spark")` keeps its default.
+- The tab underline color is set in the `shown` loop (`border-color:#c33`), not in STYLE. It becomes
+  `border-color:var(--accent)`, and a test asserts no `#c33`.
+- Gutter rules to add or change: `nav{padding:0 16px}` (new) and `.panel{display:none;padding:12px 16px}`. Tests use the
+  regexes `nav\{[^}]*padding:0 16px` and `\.panel\{[^}]*padding:12px 16px`.
+- The color test strips `data:` URIs and reads only the `<style>` text outside the `:root` blocks, so base64 and a
+  missing-tab reason cannot match a color name.
+- Add a test that reads `<title>` from `text(..., title=...)` and from the kept page (`test_check_spine.py`).
+- Mutation entries each use one unique anchor (`tools/mutate.py` refuses a `find` that matches twice), and the table
+  is `tests/mutations/p272-page-as-artifact.json`. The dark values are written once, so the "printed twice" entry
+  anchors on the media-query guard string. Cut to what the mutation-tester runs: guard, dark block, word cut, empty
+  fallback, gutter, `--paper` in body, `overflow-wrap`.
+- Docs: nothing quotes `PURPOSE_MESSAGE` text, so the append breaks no test. Update `--help` at `check_spine.py:643`,
+  `agents.md`, `commands/build.md`, `journey.md:470`. The README line 56 and `tools/journey.py` stay, since no
+  step status changes.
+
+Rejected: none. Two points kept as they were: the dark-mode machinery and the 7-entry table, because each serves a
+stated Artifact rule.
 
 ## Gaps found
 
@@ -135,6 +172,8 @@ block. `tests/test_journey.py` stays green: the README row for this step moves i
 1. Does the host show the `data:` images? If not, the card stops and the PO decides.
 2. Which `<title>` does the host use when our nested document brings its own, and do the tabs and tokens still work?
    If it harms, build the fragment variant named in round 1.
+
+3. Does the PO approve one private test publish of the kept `page.html` by Claude, and who deletes it afterwards?
 
 This builder publishes nothing.
 
