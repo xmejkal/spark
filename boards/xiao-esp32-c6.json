@@ -106,6 +106,25 @@
         23
       ],
       "note": "SDA, SCL — D4, D5. The hardware I2C bus; same reasoning as spi."
+    },
+    "usb": {
+      "gpio": [
+        12,
+        13
+      ],
+      "note": "USB D- (GPIO12) and D+ (GPIO13) of the chip's own USB Serial/JTAG port, which the XIAO's USB-C plug and every mpremote session use: driving one drops that port. Sources: ESP32-C6 Series Datasheet v1.5 (https://documentation.espressif.com/esp32-c6_datasheet_en.pdf, sha256 372a5b42b2900c83ef4309149c8835e9ae2d1be19244995bf2fb83af4dc5edf1), page 23, Table 2-9, and page 24, section 2.3.4 (\"by default, connected to the USB Serial/JTAG Controller\"); ESP-IDF GPIO page for the ESP32-C6 (https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/api-reference/peripherals/gpio.html, read 2026-10-17): USB-JTAG is disabled if they become normal GPIOs. Neither is on the XIAO's header."
+    },
+    "flash": {
+      "gpio": [
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "note": "wired inside the chip to the 4 MB flash that holds the firmware (the XIAO's ESP32-C6FH4 has its flash in the package): driving one can stop the chip. Sources: ESP32-C6 Series Datasheet v1.5 (https://documentation.espressif.com/esp32-c6_datasheet_en.pdf, sha256 372a5b42b2900c83ef4309149c8835e9ae2d1be19244995bf2fb83af4dc5edf1), page 20, Table 2-4 (GPIO24 to GPIO30 are SPICS0, SPIQ, SPIWP, VDD_SPI, SPIHD, SPICLK and SPID: GPIO27 powers the flash, the others carry its signals), and page 32, section 2.6 (\"not routed out\"; \"Do not use the pins connected to flash for any other purposes\"); ESP-IDF GPIO page for the ESP32-C6 (https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/api-reference/peripherals/gpio.html, read 2026-10-17): \"usually used for SPI flash and not recommended for other uses\". None is on the XIAO's header."
     }
   },
   "//deep_sleep": "How this chip is woken. esp32.wake_on_ext0 does not exist on the C6 and Pin.irq(wake=DEEPSLEEP) silently does nothing; wake_on_ext1 and wake_on_gpio both exist. Verified on MicroPython v1.29.",

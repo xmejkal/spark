@@ -130,6 +130,10 @@ These only read:
   grant works only on a board whose USB serial is its MAC (a built-in USB port, like the ESP32-C6's). The person ends a
   grant early by deleting its file in the store, named by the MAC with dashes (`grants/8c-bf-ea-cc-97-70.json`). The grant is a file in the person's store, and you can
   write that file. The PO accepts that risk, as for every store record. Never write or change a grant file;
+- `restricted_pins.py` is a library with no command yet. When P247 adds the live try, it will refuse code that
+  writes a number of the board's USB or flash pins ([P254](https://github.com/xmejkal/spark/issues/266)). It refuses
+  any such number anywhere in the code, `time.sleep(12)` too, and a number computed at run time passes. Only the XIAO
+  C6 record names these pins so far;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.

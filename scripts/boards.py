@@ -104,6 +104,9 @@ PIN_ROLES = {
     # MI and MO on two LEDs and a button because nothing said they were a bus.
     "spi": "the hardware SPI bus; spent last by signals that could use any pin",
     "i2c": "the hardware I2C bus; spent last by signals that could use any pin",
+    # Read by `restricted_pins` (P254, D14): code for a live try that writes one of these numbers is refused.
+    "usb": "the chip's own USB D- and D+: driving one drops the USB port the session talks through",
+    "flash": "wired to the flash that holds the firmware: driving one can stop the chip",
 }
 
 #: Named, so the one role a check singles out is spelled in exactly one place.
