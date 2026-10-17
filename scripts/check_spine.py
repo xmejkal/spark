@@ -943,7 +943,7 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
         sys.stdout.write(render(stages, code, left_off(requirements)))
     for entry in kept or []:
         print("  %s" % entry["line"], file=sys.stderr)
-    if workdir is not None and workdir.exists():
+    if workdir is not None:
         shutil.rmtree(workdir, ignore_errors=True)
     return code
 
