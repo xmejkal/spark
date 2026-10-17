@@ -8,7 +8,21 @@ sentence do not change. `DeployToken` is dropped (the brief). `looker`, `LookSto
 
 ## Council
 
-Not yet run.
+Round 1 (tech lead, refuter) changed:
+- Test 5 is a precise check: an `ast` walk of scripts/ and tests/ for class names and attributes (`Report`, `Look`,
+  `Reading`, `look.lines`), not a word grep over prose.
+- Test 4 reads the `ast` Import nodes of scripts/deploy.py only; red today at deploy.py:41.
+- Test 2 compares the exact dict, which also fixes the key set; the mutations rely on it.
+- `--anchors` also runs on p251-reach.json and p168-readers.json (checked by grep: only p219-reader, p239-pr5 and
+  p251-reach name board_look).
+- The docstring work names board_look.py's header lines 4 and 11-12.
+- `board` in `to_dict` is `record["id"]`, not the record (a catalog record is large).
+- Test 3 adds a `report_lines` case with both fields unknown, so the plural mutation is caught.
+- The p239-pr5 row label "Look.run ..." is renamed "LookService.run ..." (name only; its `find` is unchanged).
+- Stale on main and left (P284): p251-reach and p219-gate rows also fail `--anchors` now.
+- "deploy.py must not import a script" becomes "must not import look.py"; deploy.py still imports run_scenario.
+- Comment at board_look.py:29 and header lines 4 and 11-12 are renamed.
+- grant.py's copy of the restart sentence is left on purpose (it is not this PR's file set); a card if the PO wants one.
 
 ## Design
 
@@ -30,10 +44,10 @@ Not yet run.
 | `Report` | `LookReport` | Value | What the look found: the reading against the record, the verdict, the token. Its methods only calculate. |
 | `Look` | `LookService` | Service | The look at one project: its record, the port, the reading. Returns a `LookReport`. |
 | `Reading` | `BoardReading` | Value | What esptool said: chip, flash_mb, mac. |
-| `look.lines(report, token)` | `board_look.report_lines(report, token)` | function | The lines a person reads. deploy.py needs them and must not import a script. |
+| `look.lines(report, token)` | `board_look.report_lines(report, token)` | function | The lines a person reads. deploy.py needs them and must not import look.py. |
 | `look.RESTART`, `look.TOKEN` | `board_look.RESTART_NOTICE`, `board_look.TOKEN_LINE` | constants | The two sentences `report_lines` prints. `RESTART` already means a regex in board_console.py and a copy in grant.py. |
 
-`LookReport.to_dict()` returns `{"port", "chip", "flash_mb", "mac", "board_record", "fields", "stops", "warnings",
+`LookReport.to_dict()` returns `{"port", "chip", "flash_mb", "mac", "board", "fields", "stops", "warnings",
 "unknown", "verdict", "status", "token", "no_token_reason"}`: plain strings, numbers, lists and dicts, no `Path`. It is
 what `look.py --json` (P213 PR a) will print inside `outcomes.envelope`; nothing prints it in this PR. `token` is the
 string or None. `image` is a path of the project and stays out: the token already names it.
