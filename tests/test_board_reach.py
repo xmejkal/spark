@@ -28,13 +28,13 @@ class TheRetryTest(unittest.TestCase):
     def test_a_board_that_answers_is_reached_at_once_and_never_cured(self):
         probe = FakeConsoleProbe(cured=RESTART)
         result = board_reach.reach(FakeBoardConnection("reached\n"), probe)
-        self.assertEqual(result, board_reach.ReachResult(True, "reached\n", False, None, None))
+        self.assertEqual(result, board_reach.ReachResult(True, "reached\n", False, None, None, True))
         self.assertEqual(probe.asked, [])
 
     def test_a_refused_raw_repl_is_cured_once_and_reached(self):
         board, probe = FakeBoardConnection(REFUSED, "reached\n"), FakeConsoleProbe(cured=RESTART)
         result = board_reach.reach(board, probe)
-        self.assertEqual(result, board_reach.ReachResult(True, "reached\n", True, RESTART, None))
+        self.assertEqual(result, board_reach.ReachResult(True, "reached\n", True, RESTART, None, True))
         self.assertEqual(probe.asked, ["cure"])
         self.assertEqual(len(board.ran), 2)
 
@@ -65,8 +65,15 @@ class TheRetryTest(unittest.TestCase):
                       BoardUnreachableError("[Errno 2] No such file or directory: 'mpremote'")):
             probe = FakeConsoleProbe(cured=RESTART)
             result = board_reach.reach(FakeBoardConnection(error), probe)
-            self.assertEqual(result, board_reach.ReachResult(False, "", True, None, str(error)))
+            self.assertEqual(result, board_reach.ReachResult(False, "", True, None, str(error), False))
             self.assertEqual(probe.asked, [])
+
+    def test_code_with_no_answer_in_time_entered_the_board_and_is_not_retried(self):
+        from board_connection import BoardTimeoutError
+        probe = FakeConsoleProbe(cured=RESTART)
+        result = board_reach.reach(FakeBoardConnection(BoardTimeoutError("no answer in 20 s")), probe, code="while True: pass")
+        self.assertEqual((result.reached, result.entered, result.why), (False, True, "no answer in 20 s"))
+        self.assertEqual(probe.asked, [])
 
     def test_code_that_raised_on_the_board_is_reached_and_not_retried(self):
         raised = BoardCodeError("Traceback\nNameError: name 'x' isn't defined\n", 1)
@@ -91,7 +98,7 @@ class TheRetryTest(unittest.TestCase):
     def test_cure_first_cures_then_runs_once(self):
         board, probe = FakeBoardConnection("reached\n"), FakeConsoleProbe(cured=RESTART)
         result = board_reach.reach(board, probe, cure_first=True)
-        self.assertEqual(result, board_reach.ReachResult(True, "reached\n", None, RESTART, None))
+        self.assertEqual(result, board_reach.ReachResult(True, "reached\n", None, RESTART, None, True))
         self.assertEqual(probe.asked, ["cure"])
         self.assertEqual(len(board.ran), 1)
 

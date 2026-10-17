@@ -35,6 +35,10 @@ class BoardUnreachableError(Exception):
         self.output = output
 
 
+class BoardTimeoutError(BoardUnreachableError):
+    """Error: mpremote got into the board, and the code gave no answer in time. The code may still run there (P247)."""
+
+
 class BoardCodeError(Exception):
     """Error: the board answered, and the code raised there. The message is the board's last line, `output` all it
     printed."""
@@ -63,7 +67,7 @@ class BoardConnection:
         except subprocess.TimeoutExpired as going:
             if keep_running_for:
                 return printed_text(going.stdout)
-            raise BoardUnreachableError("no answer in %d s" % self.timeout_s, printed_text(going.stdout)) from None
+            raise BoardTimeoutError("no answer in %d s" % self.timeout_s, printed_text(going.stdout)) from None
 
     def copy_to_board(self, local, remote):
         """Copy the file at `local` to `remote` on the board's filesystem."""
@@ -72,6 +76,10 @@ class BoardConnection:
     def read_file(self, remote):
         """The text of `remote` on the board's filesystem."""
         return self._mpremote(["fs", "cat", ":" + remote], self.timeout_s)
+
+    def reset(self):
+        """Restart the chip with `mpremote reset`, which runs machine.reset(), so the firmware starts from boot (P252)."""
+        self._mpremote(["reset"], self.timeout_s)
 
     def repl_command(self):
         """The command that opens the board's REPL, where a person sees the firmware start."""
@@ -124,6 +132,10 @@ class RetryingBoardConnection:
     def read_file(self, remote):
         """BoardConnection.read_file, with no cure."""
         return self.connection.read_file(remote)
+
+    def reset(self):
+        """BoardConnection.reset, with no cure."""
+        return self.connection.reset()
 
     def repl_command(self):
         """BoardConnection.repl_command."""

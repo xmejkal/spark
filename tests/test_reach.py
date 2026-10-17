@@ -68,7 +68,7 @@ class ReachScriptTest(unittest.TestCase):
         code, said, _, _ = self.go("--json", answers=(REFUSED, "reached\n"))
         line = json.loads(said)
         self.assertEqual(code, 0)
-        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "first_try_failed", "output", "port", "reached", "why"])
+        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "entered", "first_try_failed", "output", "port", "reached", "why"])
         self.assertEqual(line["cure"], {"heard": RESTART.heard, "why": None, "restart_heard": True, "port_back": True, "boot_heard": False})
         self.assertFalse(line["cure_first"])
         self.assertTrue(line["first_try_failed"])
