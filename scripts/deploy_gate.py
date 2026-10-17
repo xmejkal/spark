@@ -30,6 +30,10 @@ class ConsentStrategy(abc.ABC):
     def ask(self, question):
         """True when the person said yes to `question`. It may raise GateClosedError when it cannot ask."""
 
+    def require_ready(self):
+        """Raises GateClosedError when it could not ask now, so a caller stops before it touches the board. The default
+        can always ask."""
+
 
 class TerminalConsentStrategy(ConsentStrategy):
     """Strategy: `yes` typed in a real terminal. With no terminal, GateClosedError gives `line`, the command to run
@@ -38,9 +42,12 @@ class TerminalConsentStrategy(ConsentStrategy):
     def __init__(self, line, stdin=None, stdout=None):
         self.line, self.stdin, self.stdout = line, stdin or sys.stdin, stdout or sys.stdout
 
-    def ask(self, question):
+    def require_ready(self):
         if not (self.stdin.isatty() and self.stdout.isatty()):
             raise GateClosedError(NO_TERMINAL % self.line)
+
+    def ask(self, question):
+        self.require_ready()
         self.stdout.write("%s type yes to go on: " % question)
         self.stdout.flush()
         return self.stdin.readline().strip() == "yes"
