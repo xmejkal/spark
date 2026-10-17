@@ -400,11 +400,11 @@ class GrantScopeTest(unittest.TestCase):
                              ({"expires_at": "2027-10-17T09:30:00+00:00"}, "not a grant"),
                              ({"granted_at": "2026-10-17T09:05:00+00:00"}, "not a grant"),
                              ({"expires_at": "2026-10-17T09:00:00+00:00"}, "expired")):
-            self.assertEqual(board_grant.why_not_valid(a_grant(**changes), START), why, changes)
-        self.assertIsNone(board_grant.why_not_valid(a_grant(), START))
+            self.assertEqual(a_grant(**changes).why_not_valid(START), why, changes)
+        self.assertIsNone(a_grant().why_not_valid(START))
 
     def test_a_clock_with_no_zone_is_no_valid_time(self):
-        self.assertEqual(board_grant.why_not_valid(a_grant(), datetime.datetime(2026, 10, 17, 9, 0)),
+        self.assertEqual(a_grant().why_not_valid(datetime.datetime(2026, 10, 17, 9, 0)),
                          "no zone")
 
 

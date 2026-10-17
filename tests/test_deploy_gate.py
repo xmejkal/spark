@@ -643,10 +643,14 @@ class TheStandingYesTest(GateCase):
         code, said, problems = self.flash(*argv)
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("no terminal to ask you in", problems)
-        self.assertIn("  standing yes: not used: " + why, said)
+        if why:
+            self.assertIn("  standing yes: not used: " + why, said)
+        else:  # no grant at all: only the no-terminal text, with the line that gives one
+            self.assertNotIn("standing yes", said)
+            self.assertIn("grant.py --scope deploy --minutes N", problems)
 
     def test_no_deploy_grant_asks_in_the_terminal(self):
-        self.assertAsksInTheTerminal("no deploy grant for this board")
+        self.assertAsksInTheTerminal(None)
 
     def test_an_ended_deploy_grant_asks_in_the_terminal(self):
         self.give()
@@ -655,11 +659,11 @@ class TheStandingYesTest(GateCase):
 
     def test_only_a_live_grant_asks_in_the_terminal(self):
         self.give("live")
-        self.assertAsksInTheTerminal("no deploy grant for this board")
+        self.assertAsksInTheTerminal(None)
 
     def test_a_deploy_grant_of_another_board_asks_in_the_terminal(self):
         self.give(mac="aa:bb:cc:dd:ee:ff")
-        self.assertAsksInTheTerminal("no deploy grant for this board")
+        self.assertAsksInTheTerminal(None)
 
     def test_a_deploy_file_whose_scope_differs_asks_in_the_terminal(self):
         self.give()
@@ -691,6 +695,32 @@ class TheStandingYesTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("--ignore-older-runs is never covered by a deploy grant", said)
         self.assertIn("no terminal to ask you in", problems)
+
+    def test_the_standing_yes_line_comes_only_after_the_gate_passes(self):
+        self.give()
+        for token in ("", "0000-1111"):
+            code, said, _ = self.deploy("--token", token, grants=self.grants)
+            self.assertEqual((code, self.flashed()), (2, []))
+            self.assertNotIn("standing yes", said)
+
+    def test_a_grant_that_ends_after_the_yes_and_before_the_erase_stops_it(self):
+        self.give()
+        token, real = self.token(), self.grants.consent_for_deploy
+
+        def ends_after_asking(*args):
+            chosen = real(*args)
+            ask = chosen.consent.ask
+
+            def asking(question):
+                answer = ask(question)
+                self.clock.advance(minutes=31)
+                return answer
+            chosen.consent.ask = asking
+            return chosen
+        self.grants.consent_for_deploy = ends_after_asking
+        code, _, problems = self.deploy("--token", token, grants=self.grants)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("the deploy grant ended before the erase", problems)
 
     def test_the_token_still_has_to_match(self):
         self.give()

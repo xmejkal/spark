@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 import board_doctor
 import board_grant
 import board_look
+import store
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
@@ -30,7 +32,7 @@ with a built-in USB port, like the ESP32-C6's. A board on a USB bridge chip gets
 While the grant lasts, live.py runs Claude's code on the board (P247). With two or more boards on USB, --port is
 needed.
 
-grant.py --scope deploy --minutes N gives a deploy grant (P242): for N minutes from your yes, Claude may run deploy.py
+grant.py --scope deploy --minutes N gives a deploy grant: for N minutes from your yes, Claude may run deploy.py
 on this board and erase ALL of its flash, with no yes typed for each deploy. Its question says so. The file is
 grants/<MAC with dashes>-deploy.json, so a live grant and a deploy grant stand side by side. A deploy grant covers
 only a deploy whose look matched the board record (no warning, no unknown field, no stop) and that does not pass
@@ -105,6 +107,10 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
             print("grant.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))
+    if grant.scope == board_grant.SCOPE_DEPLOY:
+        file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
+        print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
+              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(str(file)))
     return EXIT_OK
 
 

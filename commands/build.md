@@ -303,7 +303,7 @@ order: the look, its token, then the person's yes.
    board restarts), names every warning in its question and erases only after they type `yes`.
 3. If the person wants you to deploy without a yes each time, offer the deploy grant line that deploy.py printed:
    `grant.py --scope deploy --minutes N`. Say first that it lets you erase ALL of the board's flash and write any passed
-   image of any project for N minutes (1 to 1440). Never run it yourself: it is the person's yes in their own terminal.
+   image of any project for N minutes (1 to 1440). Never run it yourself, and never write a grant file: it is the person's yes in their own terminal.
    A deploy grant covers only a look with no warning, no unknown field and no stop, and never `--ignore-older-runs`;
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
 4. When deploy.py prints "press the board's R (reset) button once", relay that line to the person at once: only a hand

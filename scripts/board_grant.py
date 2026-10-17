@@ -33,8 +33,27 @@ from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 #: What a grant allows. A file with no `scope` (written before P242) is a live grant.
 SCOPE_LIVE, SCOPE_DEPLOY = "live", "deploy"
 SCOPES = (SCOPE_LIVE, SCOPE_DEPLOY)
-#: The grant as the store keeps it (a Value). The times are ISO 8601 in UTC, with the zone.
-Grant = namedtuple("Grant", "mac board_token granted_by granted_at expires_at scope", defaults=(SCOPE_LIVE,))
+class Grant(namedtuple("Grant", "mac board_token granted_by granted_at expires_at scope", defaults=(SCOPE_LIVE,))):
+    """Value: the grant as the store keeps it. The times are ISO 8601 in UTC, with the zone."""
+
+    __slots__ = ()
+
+    def why_not_valid(self, now):
+        """The WHY_ code that says this grant does not hold at `now` (a time in UTC with the zone), or None when it
+        holds: a time of it is not a time or has no zone, it was given in the future, it lasts more than a day, or it
+        has passed."""
+        try:
+            since = datetime.datetime.fromisoformat(self.granted_at)
+            until = datetime.datetime.fromisoformat(self.expires_at)
+            if since.tzinfo is None or until.tzinfo is None or now.tzinfo is None:
+                return WHY_NO_ZONE
+            if since > now or until - since > datetime.timedelta(minutes=MAX_MINUTES):
+                return WHY_NOT_A_GRANT
+            return WHY_EXPIRED if now >= until else None
+        except (TypeError, ValueError):
+            return WHY_NOT_A_GRANT
+
+
 #: `consent` is the ConsentStrategy deploy.py uses, `why` the WHY_ code that says why it is not the standing yes (None
 #: when it is).
 DeployConsentResult = namedtuple("DeployConsentResult", "consent why")
@@ -79,7 +98,8 @@ DEPLOY_MESSAGE_FOR = {
     WHY_EXPIRED: "the deploy grant for this board ended: the person runs %s again" % DEPLOY_GRANT_COMMAND,
     WHY_NO_ZONE: "the deploy grant's time has no zone, so it was not trusted: the person runs %s again"
                  % DEPLOY_GRANT_COMMAND,
-    WHY_NOT_A_GRANT: "the store's deploy grant file for this board is not a deploy grant for it, so it was not trusted",
+    WHY_NOT_A_GRANT: "the store's deploy grant file for this board is not a deploy grant for it, so it was not trusted"
+                     ": the person runs %s again" % DEPLOY_GRANT_COMMAND,
 }
 #: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.
 COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES)
@@ -93,21 +113,6 @@ def mac_key(mac):
 def utc_now():
     """Now, in UTC with the zone."""
     return datetime.datetime.now(datetime.timezone.utc)
-
-
-def why_not_valid(grant, now):
-    """The WHY_ code that says `grant` does not hold at `now` (a time in UTC with the zone), or None when it holds: a
-    time of it is not a time or has no zone, it was given in the future, it lasts more than a day, or it has passed."""
-    try:
-        since = datetime.datetime.fromisoformat(grant.granted_at)
-        until = datetime.datetime.fromisoformat(grant.expires_at)
-        if since.tzinfo is None or until.tzinfo is None or now.tzinfo is None:
-            return WHY_NO_ZONE
-        if since > now or until - since > datetime.timedelta(minutes=MAX_MINUTES):
-            return WHY_NOT_A_GRANT
-        return WHY_EXPIRED if now >= until else None
-    except (TypeError, ValueError):
-        return WHY_NOT_A_GRANT
 
 
 class GrantRefusedError(GateClosedError):
@@ -164,7 +169,7 @@ class StandingConsentStrategy(ConsentStrategy):
                                                              self.grant.expires_at)
 
     def require_ready(self):
-        if why_not_valid(self.grant, self.now()):
+        if self.grant.why_not_valid(self.now()):
             raise GateClosedError("the deploy grant ended before the erase. not flashed. The person runs %s again"
                                   % DEPLOY_GRANT_COMMAND)
 
@@ -215,7 +220,7 @@ class GrantService:
             return GrantCheckResult(False, None, refused.why)
         if grant is None:
             return GrantCheckResult(False, None, WHY_NO_GRANT)
-        why = why_not_valid(grant, self.now())
+        why = grant.why_not_valid(self.now())
         return GrantCheckResult(why is None, grant, why)
 
     def consent_for_deploy(self, report, ignore_older_runs, fallback):
@@ -232,7 +237,7 @@ class GrantService:
             return DeployConsentResult(fallback, refused.why)
         if grant is None:
             return DeployConsentResult(fallback, WHY_NO_GRANT)
-        why = why_not_valid(grant, self.now())
+        why = grant.why_not_valid(self.now())
         if why:
             return DeployConsentResult(fallback, why)
         return DeployConsentResult(StandingConsentStrategy(grant, self.now), None)

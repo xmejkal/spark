@@ -24,14 +24,25 @@ Round 1 (2026-10-17): a tech lead (Sonnet) and the refuter (Opus). The design is
   about deploy) and the press-R relay goes into build.md and agents.md.
 - Rejected by the refuter: a `<mac>.json` and `<mac>-deploy.json` mix-up, MAC case, and a time-of-check gap.
 
-Round 2: not run yet (tech lead and PO assistant, Sonnet).
+Round 2 (2026-10-17): a tech lead and a PO assistant (Sonnet), on the plan and the built code. Changed:
+
+- Tech lead: the `standing yes:` line now prints after the gate passes (a wrong token showed it before; test); the "not
+  used" line is silent when no grant file exists (the no-terminal text carries the grant line instead); deploy.py calls
+  `consent.require_ready()` just before the erase, so a grant that ends while the plan reads the image still stops it
+  (test); `why_not_valid` is a `Grant` method, since the table gives a Value its `why_` questions; the stale lines in
+  deploy_gate.py, deploy.py, README, journey.md, the design skill and agents.md rule 7 now name the deploy grant; build.md
+  and agents.md say never write a grant file.
+- PO assistant: grant.py prints that Claude can now erase the board with no yes, and the full `rm` line that ends the
+  grant; journey.md says what Claude does when the grant cannot be used; help text has no P-codes in the new paragraphs.
+  Open for the PO: the bench run on the XIAO, the allowed-tools change, the 1440-minute cap, "any image of any project".
+  A `--revoke` is a later card.
 
 ## Decisions taken without the PO (routine; he can overrule)
 
 1. `grant.py --scope` goes with `--minutes` only. `--check` stays about the live grant, because a deploy grant is found
    by the look's MAC, and a USB bridge board has no serial that equals its MAC.
 2. A deploy grant skips the "serial is the MAC" rule (the brief: it stays for live grants only).
-3. The expiry check is a module function `why_not_valid(grant, now)` in board_grant.py, not a private method: both
+3. The expiry check is the method `Grant.why_not_valid(now)`, not a private method of the service: both
    `GrantService.check` and `StandingConsentStrategy.ask` call it, and a strategy has no service.
 4. `board_look` gets `VERDICT_STOP`, `VERDICT_WARNING`, `VERDICT_MATCH` (no bare strings, the no-magic-strings rule).
 5. When deploy.py falls back to the terminal for a clean look, its no-terminal line adds the deploy grant line, so
@@ -70,7 +81,7 @@ Existing guards (tests/test_journey.py, the docs checks) stay green; commands/bu
  Grant (Value)      mac board_token granted_by granted_at expires_at  scope=SCOPE_LIVE   (scope NEW)
  GrantStore         save(grant)  find(mac, scope=SCOPE_LIVE)     file: <mac>.json | <mac>-deploy.json
  GrantService       issue(..., scope)  check(port)  consent_for_deploy(report, ignore_older_runs, fallback)  NEW
- why_not_valid(grant, now) -> WHY_ code | None     NEW, shared by check and StandingConsentStrategy
+ Grant.why_not_valid(now) -> WHY_ code | None        NEW, shared by check and StandingConsentStrategy
 ```
 
 ## Sequence
@@ -104,7 +115,7 @@ tests/mutations/p242-deploy-grant.json, re-anchor moved tables. 9. Hand run in a
 | `GrantStore`, `GrantService` | Store, Service | unchanged names |
 | `SCOPE_LIVE`, `SCOPE_DEPLOY` | constants | one word for one thing: scope |
 | `consent_for_deploy` | method | says what it returns, for which flow |
-| `why_not_valid` | function | the `why_` prefix answers a question about a Value |
+| `Grant.why_not_valid` | method of a Value | the table lets a Value answer a `why_` question about its facts |
 | `FakeUtcClock` | Fake | `Fake` plus the whole name, in tests/fakes.py |
 
 Words: "deploy grant" is the file; "standing yes" is the consent read from it. No other word is used for either.

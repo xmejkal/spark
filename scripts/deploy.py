@@ -15,7 +15,8 @@ firmware's start, which prints `ready` (the ready contract, commands/build.md). 
 sim/runs/board/, and the store keeps a record of the board by its MAC.
 
 Before the erase, deploy.py looks at the board as look.py does (P219). It refuses a stop, a token that is not this
-board's and this image's, and a person who does not type yes in their own terminal (deploy_gate.py). The chip comes from
+board's and this image's, and a deploy with no yes: one typed in the person's own terminal, or the standing yes of a
+deploy grant (deploy_gate.py, board_grant.py). The chip comes from
 the project's board (requirements.json's `board`), and esptool refuses a board with another chip too.
 esptool and mpremote are the tools list's `flasher` and `board-shell`, which /spark:setup installs.
 """
@@ -66,7 +67,7 @@ asks in your terminal, naming every warning: type yes to accept them and erase. 
 A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. "Go
 ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
-The one other yes is a deploy grant (P242): you ran `grant.py --scope deploy --minutes N` once in your own terminal, for
+The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for
 this board's MAC. While it lasts, deploy.py takes it as the yes, prints `standing yes: ...` and erases with no question,
 but only when the look matched the board record (no warning, no unknown field, no stop) and --ignore-older-runs is not
 given. Then the token and the check that the image did not change still hold. For anything else, or with no grant or an
@@ -196,9 +197,7 @@ def choose_consent(args, report, grants):
     if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:
         line += grant_hint(args, report.port)
     chosen = grants.consent_for_deploy(report, args.ignore_older_runs, deploy_gate.TerminalConsentStrategy(line))
-    if chosen.why is None:
-        print("  standing yes: %s" % chosen.consent.who, flush=True)
-    else:
+    if chosen.why not in (None, board_grant.WHY_NO_GRANT):  # a person with no grant is told only by the no-terminal text
         said = board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]
         print("  standing yes: not used: %s" % said, flush=True)
     return chosen.consent
@@ -248,9 +247,12 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grants=None)
         print("\n".join(look.lines(report, token=False)), flush=True)
         consent = consent or choose_consent(args, report, grants or board_grant.GrantService())
         deploy_gate.require_open_gate(report, args.token, consent, ProjectImage(args.project).path.relative_to(args.project))
+        if isinstance(consent, board_grant.StandingConsentStrategy):
+            print("  standing yes: %s" % consent.who, flush=True)
         planned = plan(args.project, report.port, args.ignore_older_runs)
         if report.token() != args.token:  # AT116: the image changed while the person answered
             raise DeployError("the image changed after your yes: run look.py again. not flashed.")
+        consent.require_ready()  # a deploy grant can end while the plan reads the image
     except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN

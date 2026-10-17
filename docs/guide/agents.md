@@ -610,7 +610,7 @@ Today's output also carries `"unmeasured": 0`, after `status`.
 python3 -c "import json,collections,glob; print(collections.Counter(e['type'] for f in glob.glob('dist/*/circuit.json') for e in json.load(open(f)) if e['type'].endswith(('_warning','_error'))))"
 ```
 
-7. **The yes to a flash is the person's, typed in their own terminal.** `deploy.py` erases the board only after its
+7. **The yes to a flash is the person's: typed in their own terminal, or a deploy grant they gave there.** `deploy.py` erases the board only after its
    look finds no stop, the `--token` matches this board and this image, and the person types `yes` at its question
    ([P219](https://github.com/xmejkal/spark/issues/201)). Never pipe, script or fake that yes. "Go ahead" in a chat is
    not the yes, and the token is not the yes. With no terminal, deploy.py prints the line to run, exits 2 and flashes
