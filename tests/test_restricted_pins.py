@@ -68,6 +68,9 @@ class RefusalTest(unittest.TestCase):
     def test_code_that_does_not_parse_is_refused(self):
         self.assertEqual(self.refused("Pin(12"), "the code does not parse as Python, so spark cannot tell which pins it names")
 
+    def test_code_too_deep_to_parse_is_refused_not_a_crash(self):
+        self.assertIn("does not parse", self.refused("x = " + "[" * 100000 + "]" * 100000))
+
     def test_a_viper_function_parses(self):
         self.assertIsNone(self.refused("import micropython\n@micropython.viper\ndef f(x: int) -> int:\n    return x"))
 
@@ -78,6 +81,15 @@ class NoRolesTest(unittest.TestCase):
         self.assertTrue(pins.has_none())
         self.assertIsNone(pins.why_refused("Pin(12)"))
         self.assertFalse(RestrictedPins.from_board(C6).has_none())
+
+    def test_a_broken_record_is_an_error_not_a_pass(self):
+        for spec in ({"gpio": "12", "note": "x"}, {"gpio": 12, "note": "x"}, {"gpio": [12], "note": ""},
+                     {"gpio": [12]}, ["12"], {"gpio": [12.0], "note": "x"}):
+            with self.assertRaises(ValueError, msg=repr(spec)):
+                RestrictedPins.from_board({"id": "b", "pin_roles": {"usb": spec}})
+
+    def test_the_flash_note_names_the_page_that_maps_the_gpios(self):
+        self.assertIn("page 20, Table 2-4", C6["pin_roles"]["flash"]["note"])
 
     def test_whole_numbers_in(self):
         self.assertEqual(whole_numbers_in("a = 3\nb = -4\nc = 'x5'\nd = False"), {3, 4})
