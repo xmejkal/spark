@@ -15,7 +15,35 @@ page that is plain, self-contained and follows the Artifact rules everywhere. No
 
 Rebased on main after P273 (#339); line numbers re-read (`check_spine.py:835` is the only one that moved).
 
-(Rounds 1 and 2 are filled below as they finish.)
+### Round 1 (tech lead on sonnet, refuter on opus)
+
+Changes made to the plan:
+
+- The nested skeleton is decided now. The host wraps the file in its own doctype/html/head/body, and the refuter saw two
+  `<title>` elements, the host's first. Decision: keep the full document, no flag. A plain browser and Electron need
+  the doctype, and the styles, radio tabs and tokens still work when nested. If the private publish shows a harm, the
+  fallback is a fragment variant (`<meta>`, `<title>`, `<style>`, then the content), named here, not built.
+- `page_title` becomes a module function beside `exported_tab`, not a static method: a Renderer decides nothing.
+  Rules: split on `-`, `_`, `.`; drop empty words; first three words; cap each word at 20 characters; no words gives
+  "spark circuit". Tests: `---`, `__`, a 300-character word, `Světlo-tlačítko`, `2026-10-17`, `keep`.
+- Gutter: name the rules: `nav{padding:0 16px}` and `.panel{padding:12px 16px}`; tested by regex, not by finding
+  "16px" anywhere.
+- Horizontal scroll: a missing tab's reason can be a long path with no break point (788 px wide at 400 px). Add
+  `p{overflow-wrap:anywhere}`. Add `max-width:100%` to `.panel img`. Both tested.
+- Colors: the picture ground is the token `--backdrop`, white in both sets. The "no hard-coded color" test looks for
+  hex, `rgb(`, `hsl(` and color names outside the token blocks. Every `var(--x)` used must be defined on bare `:root`,
+  and the dark set has the same keys as the light set.
+- The tab underline uses `var(--accent)`. The two dark blocks come from one dict, so they hold the same values.
+- The 5 MB size test is dropped: no code enforces a limit, and the test always passes.
+- Docs: the publish step says what to do on failure (report it, never retry in a loop) and that `icon` is for the
+  first publish only. Tests and docs that quote `PURPOSE_MESSAGE` are grepped.
+- Mutation table entries: the guard removed, the dark block left out of the media query, the word cut, the empty
+  fallback, the gutter 16 to 12, `--paper` unused by body, the `overflow-wrap` rule.
+- `--keep .` is the documented use, so the title comes from the project folder's name. The plan keeps that source.
+
+Rejected: the doubt about the white backdrop in dark mode (it works; side bands from `object-fit` are checked by eye).
+
+(Round 2 is filled below when it finishes.)
 
 ## Gaps found
 
@@ -33,7 +61,7 @@ I built `tests/data/breadboard/button-light-xiao` with `check_spine.py --keep` i
 | Phone width, 16px side gutter, no sideways scroll | viewport meta is set (`:94`); the panel gutter is 12px (`:82`); the tab labels wrap | gutter is 12px, not 16px |
 | At most 16 MB | 311 KB | none |
 | Unknown: the host may block `data:` images | not known | test at the private publish |
-| Unknown: the host wraps the page in its own skeleton, and our `<!doctype>` and `<html>` may nest | not known | test at the private publish |
+| The host wraps the page in its own skeleton (the contract says so) | ours nests; a second `<title>` lands in the body, the host's first | decided in round 1: keep the full document; host question for the PO below |
 
 ## Design
 
@@ -46,7 +74,7 @@ TabbedHtmlPage            (scripts/tabbed_page.py, existing)
   TOKENS_LIGHT / TOKENS_DARK   <- new: one dict of color tokens per scheme
   STYLE                         <- uses var(--paper) and so on, gutter 16px
   text(tabs, title)             <- emits the token blocks, then STYLE
-  page_title(name)  (static)    <- new: "<name> circuit", at most 4 words
+  page_title(name)  (module function beside exported_tab) <- new: "<name> circuit", 2 to 4 words
 check_spine.keep_tabbed_page  -> TabbedHtmlPage.page_title(folder name)
 ```
 
@@ -82,7 +110,6 @@ In `tests/test_tabbed_page.py`, each fails before the code:
 - no `<script`, and no `http` in `href`, `src` or `@import`;
 - `page_title("button-light-xiao")` has 2 to 4 words; the empty name and a long name hold too;
 - the panel gutter is 16px;
-- a 5 MB picture keeps the page under 16 MB (a size guard).
 
 In `tests/test_check_spine.py`: the kept page's title has 2 to 4 words. Run a mutation check on the title and the dark
 block. `tests/test_journey.py` stays green: the README row for this step moves in the same PR.
@@ -102,6 +129,14 @@ block. `tests/test_journey.py` stays green: the README row for this step moves i
    the phone width works. Record the result in the PR. If the host blocks `data:` images, the card stops and the PO
    decides.
 4. Delete the test Artifact afterwards, with the PO's yes.
+
+## Open host questions (go into the PR, for the PO's private publish)
+
+1. Does the host show the `data:` images? If not, the card stops and the PO decides.
+2. Which `<title>` does the host use when our nested document brings its own, and do the tabs and tokens still work?
+   If it harms, build the fragment variant named in round 1.
+
+This builder publishes nothing.
 
 ## Out of scope
 
