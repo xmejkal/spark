@@ -38,7 +38,7 @@
  {
   "file": "scripts/deploy_gate.py",
   "name": "the terminal's who is fixed",
-  "find": "self._who = TYPED_BY % getpass.getuser()",
-  "replace": "self._who = \"typed in a terminal\""
+  "find": "return TYPED_BY % getpass.getuser()",
+  "replace": "return \"typed in a terminal\""
  }
 ]
