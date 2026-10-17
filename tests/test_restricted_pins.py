@@ -71,6 +71,9 @@ class RefusalTest(unittest.TestCase):
     def test_code_too_deep_to_parse_is_refused_not_a_crash(self):
         self.assertIn("does not parse", self.refused("x = " + "[" * 100000 + "]" * 100000))
 
+    def test_a_null_byte_does_not_parse(self):
+        self.assertIn("does not parse", self.refused("Pin(1)\x00"))
+
     def test_a_viper_function_parses(self):
         self.assertIsNone(self.refused("import micropython\n@micropython.viper\ndef f(x: int) -> int:\n    return x"))
 
