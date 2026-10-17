@@ -73,6 +73,10 @@ class BoardConnection:
         """The text of `remote` on the board's filesystem."""
         return self._mpremote(["fs", "cat", ":" + remote], self.timeout_s)
 
+    def reset(self):
+        """Restart the chip with `mpremote reset`, which runs machine.reset(), so the firmware starts from boot (P252)."""
+        self._mpremote(["reset"], self.timeout_s)
+
     def repl_command(self):
         """The command that opens the board's REPL, where a person sees the firmware start."""
         return self.command + ["repl"]
@@ -124,6 +128,10 @@ class RetryingBoardConnection:
     def read_file(self, remote):
         """BoardConnection.read_file, with no cure."""
         return self.connection.read_file(remote)
+
+    def reset(self):
+        """BoardConnection.reset, with no cure."""
+        return self.connection.reset()
 
     def repl_command(self):
         """BoardConnection.repl_command."""

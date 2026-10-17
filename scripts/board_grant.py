@@ -2,8 +2,8 @@
 The live grant (P253, #265): one yes the person types in their own terminal for one board and a time limit (D12), after
 one look at that board (D13). A later call finds the grant with no contact with the board.
 
-A library: grant.py only parses arguments, calls `GrantService` and prints. P247 (#267) checks the grant before a live
-try, and P242 (#249) reuses the same record.
+A library: grant.py only parses arguments, calls `GrantService` and prints. board_live.py (P247, #267) checks the grant
+before a live try, and P242 (#249) reuses the same record.
 
     Grant             the grant as the store keeps it: the board's MAC and token, who said yes, when, until when.
     GrantStore        reads and writes the store's grants place, one file per board by its MAC.
@@ -93,7 +93,7 @@ class GrantStore:
             return None
         try:
             grant = Grant(**json.loads(path.read_text()))
-        except (ValueError, TypeError):
+        except (OSError, ValueError, TypeError):
             raise GrantRefusedError(WHY_NOT_A_GRANT)
         if mac_key(grant.mac) != mac_key(mac) or grant.board_token != board_look.board_token(mac_key(mac)):
             raise GrantRefusedError(WHY_NOT_A_GRANT)

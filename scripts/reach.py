@@ -23,8 +23,8 @@ opens the port once with DTR and RTS off, which restarted a XIAO ESP32-C6 whose 
 the port is there again, and runs the line once more. It says whether the board answered, whether a cure ran and what
 the board printed during it. The exec stops the firmware that ran: press R or replug to run it again.
 
-It is the PO's bench tool for P251. With --cure-first it opens the port with DTR and RTS off before the only try: the
-bench's cold arm. With two or more boards on USB, --port is needed.
+It is the PO's bench tool for P251. Claude's live try, behind a grant and with a reset at the end, is live.py (P247).
+With --cure-first it opens the port with DTR and RTS off before the only try: the bench's cold arm. With two or more boards on USB, --port is needed.
 
 Exit codes: 0 the board answered, 2 it did not, or reach.py could not run, and the last line says why."""
 

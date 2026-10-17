@@ -3,11 +3,12 @@
 
 class FakeBoardConnection:
     """A fake BoardConnection: run_code and read_file give or raise each of `answers` in turn, and copy_to_board
-    raises `copy_raises` or keeps each copy.
+    raises `copy_raises` or keeps each copy. reset raises `reset_raises` or counts the reset in `resets`.
     Raises IndexError when a test asks for more answers than it gave."""
 
-    def __init__(self, *answers, copy_raises=None):
+    def __init__(self, *answers, copy_raises=None, reset_raises=None):
         self.answers, self.copy_raises, self.copied, self.ran = list(answers), copy_raises, [], []
+        self.reset_raises, self.resets = reset_raises, 0
 
     def _next(self):
         answer = self.answers.pop(0)
@@ -26,6 +27,11 @@ class FakeBoardConnection:
         if self.copy_raises:
             raise self.copy_raises
         self.copied.append((local, remote))
+
+    def reset(self):
+        if self.reset_raises:
+            raise self.reset_raises
+        self.resets += 1
 
 
 class FakeConsent:

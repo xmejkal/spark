@@ -25,7 +25,7 @@ grant.py --check says whether the board on USB has a grant now. It runs only `mp
 never opens a port, so the running program goes on. It knows the board by its USB serial, which is the MAC on a board
 with a built-in USB port, like the ESP32-C6's. A board on a USB bridge chip gets no grant, and the sentence says why.
 
-No code runs on the board yet: P247 adds the live try behind this grant. With two or more boards on USB, --port is
+While the grant lasts, live.py runs Claude's code on the board (P247). With two or more boards on USB, --port is
 needed.
 
 Exit codes: 0 the grant was given or is valid, 1 refused (no grant, it ended, the person answered no, the serial is not

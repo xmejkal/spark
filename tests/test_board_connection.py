@@ -87,6 +87,17 @@ class BoardConnectionTest(unittest.TestCase):
             connection(Mpremote(raises=subprocess.TimeoutExpired(["mpremote"], 20))).run_code("pass")
         self.assertEqual(str(said.exception), "no answer in 20 s")
 
+    def test_a_reset_runs_mpremote_reset_on_the_port(self):
+        run = Mpremote()
+        connection(run).reset()
+        self.assertEqual(run.ran, [(["mpremote", "connect", "/dev/ttyX", "reset"], 20)])
+
+    def test_a_reset_that_fails_or_drops_the_port_is_board_unreachable(self):
+        for run in (Mpremote(fails=NO_RAW_REPL), Mpremote(raises=subprocess.TimeoutExpired(["mpremote"], 20)),
+                    Mpremote(raises=OSError("[Errno 6] Device not configured"))):
+            with self.assertRaises(board_connection.BoardUnreachableError):
+                connection(run).reset()
+
     def test_no_mpremote_is_board_unreachable(self):
         with self.assertRaises(board_connection.BoardUnreachableError):
             connection(Mpremote(raises=FileNotFoundError("mpremote"))).run_code("pass")

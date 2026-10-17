@@ -2,7 +2,7 @@
 The pins a live try must not touch (P254, #266, D14): a board record's `usb` and `flash` roles, and the reason code is
 refused when it writes one of their numbers.
 
-A library. P247 (#267) calls `RestrictedPins.from_board(record).why_refused(code)` before a live try runs anything.
+A library. board_live.py (P247, #267) calls `RestrictedPins.from_board(record).why_refused(code)` before a live try runs anything.
 
     RestrictedPins    a Value with one lookup method: each restricted GPIO with its role and note, from a board record.
     whole_numbers_in  every whole number written in the code, read with Python's own parser (ast).
@@ -25,6 +25,10 @@ DOES_NOT_PARSE = "the code does not parse as Python, so spark cannot tell which 
 WRITES_A_RESTRICTED_PIN = "it writes the number {gpio} (any number, not only a pin), and GPIO{gpio} is this board's {role} pin: {note}"
 
 
+class BrokenRecordError(ValueError):
+    """Error: the record's restricted role is not a list of whole GPIO numbers with a note."""
+
+
 def whole_numbers_in(code):
     """Every whole number written in `code`, as a set of ints, or None when Python's parser cannot read it. `-12` counts
     as 12, a bool is no number, and a number inside a string is not read."""
@@ -45,7 +49,7 @@ class RestrictedPins:
 
     @classmethod
     def from_board(cls, board):
-        """The restricted pins a board record names in its `pin_roles`, under one of REFUSED_ROLES. ValueError when a
+        """The restricted pins a board record names in its `pin_roles`, under one of REFUSED_ROLES. BrokenRecordError when a
         role is there but is not a list of whole GPIO numbers with a note, so a broken record never refuses nothing."""
         found = {}
         for role in REFUSED_ROLES:
@@ -55,7 +59,7 @@ class RestrictedPins:
             gpios = spec.get("gpio") if isinstance(spec, dict) else None
             note = spec.get("note") if isinstance(spec, dict) else None
             if not isinstance(gpios, list) or not all(type(gpio) is int for gpio in gpios) or not (isinstance(note, str) and note.strip()):
-                raise ValueError(BROKEN_ROLE.format(board=board.get("id", "this board"), role=role))
+                raise BrokenRecordError(BROKEN_ROLE.format(board=board.get("id", "this board"), role=role))
             for gpio in gpios:
                 found.setdefault(gpio, (role, note))
         return cls(found)
