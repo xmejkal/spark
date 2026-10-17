@@ -48,6 +48,16 @@ class ReadyCheckTest(unittest.TestCase):
         verdict, _, _ = ready_check.ReadyCheck(board_connection.BoardConnection(["mpremote"], "/dev/ttyX", Unreachable())).check(MAIN)
         self.assertEqual(verdict, "ready unknown")
 
+    def test_a_check_returns_a_ready_result_that_is_read_by_name(self):
+        result = ready_check.ReadyCheck(FakeBoardConnection(board_connection.BoardCodeError("Traceback\n", 1))).check(MAIN)
+        self.assertIsInstance(result, ready_check.ReadyResult)
+        self.assertEqual((result.verdict, result.sentence, result.log),
+                         ("ready unknown", "mpremote could not read the board's files: Traceback", "Traceback\n"))
+
+    def test_a_passed_log_with_no_files_is_a_ready_result_too(self):
+        result = ready_check.ReadyCheck(FakeBoardConnection()).check({})
+        self.assertEqual((result.verdict, result.log), ("ready unknown", ""))
+
     def test_each_read_names_the_board_s_port(self):
         run = Unreachable()
         ready_check.ReadyCheck(board_connection.BoardConnection(["mpremote"], "/dev/ttyX", run)).check(MAIN)

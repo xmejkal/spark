@@ -38,6 +38,9 @@ class FakeConsent:
     """A fake ConsentStrategy: answers `answer` and keeps each question. A test that must act while the question
     waits subclasses it and overrides `ask`."""
 
+    #: Who said yes, as the store's record keeps it.
+    who = "a test"
+
     def __init__(self, answer):
         self.answer, self.asked = answer, []
 

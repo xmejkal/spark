@@ -187,6 +187,13 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
             deploy.plan(self.project)
         self.assertIn("--ignore-older-runs", str(said.exception))
 
+    def test_plan_returns_a_deploy_plan_read_by_name(self):
+        self.run_the_scenario()
+        with mock.patch.object(tools, "find", side_effect=found):
+            plan = deploy.plan(self.project, PORT)
+        self.assertIsInstance(plan, deploy.DeployPlan)
+        self.assertEqual((len(plan.commands), plan.mpremote, plan.notes), (2, [PYTHON, "-m", "mpremote"], []))
+
     def test_the_log_refusal_comes_before_the_tools(self):
         self.run_two_scenarios()
 
