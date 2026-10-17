@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_doctor
 import board_grant
 import board_live
 import board_look
@@ -51,6 +52,8 @@ def describe(result):
     if result.gpio_numbers_in_code:
         out.append("gpio    the code writes %s, each a GPIO of this board"
                    % ", ".join(str(gpio) for gpio in result.gpio_numbers_in_code))
+    if result.doctor:
+        out += board_doctor.describe(result.doctor)
     return "\n".join("  " + line for line in out)
 
 
@@ -58,6 +61,7 @@ def to_json(port, result):
     """One line of JSON for a LiveTryResult, with the port."""
     fields = result._asdict()
     fields["cure"] = result.cure._asdict() if result.cure is not None else None
+    fields["doctor"] = board_doctor.as_dict(result.doctor) if result.doctor is not None else None
     return json.dumps(dict(fields, port=port))
 
 
@@ -77,11 +81,14 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.utc_now):
         shell = tools.find("board-shell", args.project)
         finder = board_look.PortFinder(shell, run)
         port = port or finder.require_one_port("live.py")
+        probe = probe or ConsoleProbe.for_tool(shell, port, run)
+        doctor = board_doctor.BoardDoctorService.for_board(finder, probe)
         service = board_live.LiveTryService(board_grant.GrantService(finder, now=now),
-                                            BoardConnection(runnable(shell), port, run),
-                                            probe or ConsoleProbe.for_tool(shell, port, run), boards.load(args.project))
+                                            BoardConnection(runnable(shell), port, run), probe,
+                                            boards.load(args.project), doctor, shell)
         result = service.run(args.code, port)
-    except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError) as cannot:
+    except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError,
+            board_doctor.UnknownStepError) as cannot:
         if args.json:
             empty = dict.fromkeys(board_live.LiveTryResult._fields)
             print(json.dumps(dict(empty, answer=COULD_NOT_RUN, why=str(cannot), port=port)))

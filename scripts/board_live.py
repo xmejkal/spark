@@ -39,9 +39,10 @@ NO_RESTRICTED_PINS_MESSAGE = "the board record names no usb or flash pin, so the
 #: sentence (None after a clean run), `output` what the board printed, `cure` the board_console.Cure when one ran,
 #: `reset` RESET_DONE, RESET_FAILED or None, `pins_checked` False when the record names no restricted pin,
 #: `gpio_numbers_in_code` the whole numbers in the code that are a GPIO of this board. That list over-claims:
-#: `print(1)` lists GPIO1.
+#: `print(1)` lists GPIO1. `doctor` is the board_doctor.BoardDoctorResult when mpremote never got in, else None (P282).
 LiveTryResult = namedtuple("LiveTryResult",
-                           "answer grant_why why output cure reset pins_checked gpio_numbers_in_code")
+                           "answer grant_why why output cure reset pins_checked gpio_numbers_in_code doctor",
+                           defaults=(None,))
 
 
 def exit_code(result):
@@ -61,10 +62,12 @@ def gpio_numbers(board):
 class LiveTryService:
     """Service: one live try on the board on one port. `grants` is a board_grant.GrantService, `connection` a bare
     board_connection.BoardConnection on that port, `probe` its board_console.ConsoleProbe (or None for no cure),
-    `board` the project's board record. RestrictedPins.from_board's BrokenRecordError and the grant check's LookStop pass up."""
+    `board` the project's board record, `doctor` a board_doctor.BoardDoctorService with `shell` the tools list's
+    mpremote, or None for no doctor. RestrictedPins.from_board's BrokenRecordError and the grant check's LookStop pass up."""
 
-    def __init__(self, grants, connection, probe, board):
+    def __init__(self, grants, connection, probe, board, doctor=None, shell=None):
         self.grants, self.connection, self.probe, self.board = grants, connection, probe, board
+        self.doctor, self.shell = doctor, shell
 
     def run(self, code, port, script="live.py"):
         """The LiveTryResult of running `code` on the board on `port`, after the grant and the pin check."""
@@ -87,4 +90,7 @@ class LiveTryService:
                 reset = RESET_DONE
             except BoardUnreachableError as failed:
                 reset, why = RESET_FAILED, ". ".join(filter(None, [why, RESET_FAILED_MESSAGE % failed]))
-        return LiveTryResult(answer, None, why, reached.output, reached.cure, reset, **facts)
+        examined = None
+        if not reached.entered and self.doctor is not None:
+            examined = self.doctor.examine(port, self.shell, reached.why)
+        return LiveTryResult(answer, None, why, reached.output, reached.cure, reset, doctor=examined, **facts)

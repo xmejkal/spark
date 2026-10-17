@@ -8,6 +8,7 @@ import sys
 import time
 from pathlib import Path
 
+import board_doctor
 import board_look
 import board_reach
 import tools
@@ -49,10 +50,12 @@ def describe(port, result):
     return ["  " + line for line in out]
 
 
-def to_json(port, result, cure_first):
-    """One line of JSON for the bench log: the result, the port, the arm, and `at`, the time it was written."""
+def to_json(port, result, cure_first, doctor=None):
+    """One line of JSON for the bench log: the result, the port, the arm, `doctor` (the board doctor's result when
+    mpremote never got in, else null) and `at`, the time it was written."""
     fields = result._asdict()
     fields["cure"] = result.cure._asdict() if result.cure is not None else None
+    fields["doctor"] = board_doctor.as_dict(doctor) if doctor is not None else None
     return json.dumps(dict(fields, port=port, cure_first=cure_first, at=time.strftime("%Y-%m-%dT%H:%M:%S%z")))
 
 
@@ -70,7 +73,8 @@ def main(argv=None, run=subprocess.run, probe=None):
     args = parser.parse_args(argv)
     try:
         shell = tools.find("board-shell", args.project)
-        port = args.port or board_look.PortFinder(shell, run).require_one_port("reach.py")
+        finder = board_look.PortFinder(shell, run)
+        port = args.port or finder.require_one_port("reach.py")
     except (tools.ToolProblem, board_look.LookStop) as cannot:
         print("reach.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
@@ -79,7 +83,17 @@ def main(argv=None, run=subprocess.run, probe=None):
         print("reach.py: %s" % board_reach.NO_PROBE_MESSAGE, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     result = board_reach.reach(BoardConnection(runnable(shell), port, run), probe, cure_first=args.cure_first)
-    print(to_json(port, result, args.cure_first) if args.json else "\n".join(describe(port, result)))
+    try:
+        doctor = (None if result.entered else
+                  board_doctor.BoardDoctorService.for_board(finder, probe).examine(port, shell, result.why))
+    except board_doctor.UnknownStepError as cannot:
+        print("reach.py: no doctor: %s" % cannot, file=sys.stderr)
+        doctor = None
+    if args.json:
+        print(to_json(port, result, args.cure_first, doctor))
+    else:
+        lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor)] if doctor else [])
+        print("\n".join(lines))
     return EXIT_OK if result.reached else EXIT_COULD_NOT_RUN
 
 
