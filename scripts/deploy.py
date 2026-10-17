@@ -155,8 +155,8 @@ def plan(project, port=None, ignore_older_runs=False):
 
 def rerun_line(args, port):
     """The line that runs this deploy again, for the person's own terminal."""
-    line = [str(Path(__file__).resolve()), "--project", str(args.project.resolve()), "--token", args.token or "", "--port", port]
-    return shlex.join(line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
+    line = ["--project", args.project.resolve(), "--token", args.token or "", "--port", port]
+    return deploy_gate.format_rerun_line(__file__, line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
 
 
 def read_board(project, report, connection, expected):

@@ -522,6 +522,22 @@ class TheDefaultConsentTest(GateCase):
         self.assertIn("\n  %s\n" % line, problems)
 
 
+class TheRerunLineTest(unittest.TestCase):
+    """P283: the line a person runs in their own terminal names the script by its whole path, from any folder."""
+
+    def test_a_relative_script_becomes_its_absolute_path(self):
+        line = deploy_gate.format_rerun_line("scripts/grant.py", ["--minutes", 30])
+        self.assertEqual(line, shlex.join([str(Path("scripts/grant.py").resolve()), "--minutes", "30"]))
+
+    def test_deploy_keeps_ignore_older_runs_in_its_line(self):
+        import argparse
+        args = argparse.Namespace(project=Path("."), token="aaaa-bbbb", ignore_older_runs=True)
+        self.assertTrue(deploy.rerun_line(args, "/dev/cu.usbmodem101").endswith(" --ignore-older-runs"))
+
+    def test_a_path_with_a_space_is_quoted(self):
+        self.assertEqual(deploy_gate.format_rerun_line("/my spark/grant.py", []), "'/my spark/grant.py'")
+
+
 class TerminalConsentTest(unittest.TestCase):
     LINE = "/spark/scripts/deploy.py --project /p --token aaaa-bbbb --port /dev/cu.usbmodem101"
 

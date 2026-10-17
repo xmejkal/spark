@@ -20,7 +20,7 @@ from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
 from restricted_pins import BrokenRecordError
 
 EPILOG = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
-touch the board. First, the board must have a grant now: the person runs grant.py --minutes N in their own terminal,
+touch the board. First, the board must have a grant now: the person runs %s in their own terminal,
 and live.py checks it with `mpremote devs` only. Second, the code must not write a number that the project's board
 record names as a usb or flash pin (pin_roles), so time.sleep(12) is refused on a XIAO ESP32-C6 too. A refusal sends
 nothing to the board.
@@ -43,7 +43,7 @@ port, and two seconds of the console with the port's lock. It prints mpremote's 
 and one next step for your hands, as the last line. Its look at the console can restart the board. --json carries it as doctor.
 
 Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed, or
-live.py could not run, and the last line says why. With two or more boards on USB, --port is needed."""
+live.py could not run, and the last line says why. With two or more boards on USB, --port is needed.""" % board_grant.GRANT_COMMAND
 
 
 def describe(result):

@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import shlex
 import stat
 import subprocess
 import sys
@@ -19,6 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
+#: The whole path a person runs grant.py by (P283).
+GRANT_SCRIPT = str(ROOT / "scripts" / "grant.py")
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_grant  # noqa: E402
@@ -123,9 +126,20 @@ class IssueTest(GrantCase):
         with mock.patch.object(sys, "stdin", Pipe()):
             code, _, err = self.grant("--minutes", "30")
         self.assertEqual(code, 2)
-        self.assertIn("grant.py --minutes 30", err)
+        # P283: the bare `grant.py` was "command not found" in the PO's terminal; the line names the script's whole path.
+        self.assertIn("\n  %s\n" % shlex.join([GRANT_SCRIPT, "--minutes", "30", "--project", str(Path(".").resolve())]),
+                      err + "\n")
         self.assertFalse((self.home / "grants").exists())
         self.assertEqual([argv[-1] for argv in self.ran], ["devs"], "the board restarted for nothing")
+
+    def test_no_terminal_keeps_the_port_the_person_named(self):
+        class Pipe(io.StringIO):
+            def isatty(self):
+                return False
+
+        with mock.patch.object(sys, "stdin", Pipe()):
+            _, _, err = self.grant("--minutes", "30", "--port", "/dev/cu.usbmodem101")
+        self.assertIn(" --port /dev/cu.usbmodem101", err)
 
     def test_minutes_out_of_range_are_refused_before_the_board_is_touched(self):
         for minutes in ("0", "1441", "99999999999"):
@@ -205,7 +219,16 @@ class CheckTest(GrantCase):
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").unlink()
         code, out, _ = self.grant("--check")
         self.assertEqual(code, 1)
-        self.assertIn("no grant for this board: the person runs grant.py --minutes N in their own terminal", out)
+        self.assertIn("no grant for this board: the person runs %s --minutes N in their own terminal" % GRANT_SCRIPT, out)
+
+    def test_an_ended_or_untrusted_grant_names_grant_py_by_its_whole_path(self):
+        # P283: the ended and no-zone sentences ask for the grant again, as the no-grant one does.
+        self.now = START + datetime.timedelta(hours=1)
+        self.assertIn("ended: the person runs %s --minutes N again" % GRANT_SCRIPT, self.grant("--check")[1])
+        self.now = START
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
+        path.write_text(json.dumps(dict(self.kept(), expires_at="2099-01-01T00:00:00")))
+        self.assertIn("not trusted: the person runs %s --minutes N again" % GRANT_SCRIPT, self.grant("--check")[1])
 
     def test_a_time_with_no_zone_is_not_trusted(self):
         path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"

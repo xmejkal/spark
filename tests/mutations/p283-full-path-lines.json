@@ -1,0 +1,74 @@
+[
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "no-resolve",
+  "find": "shlex.join([str(Path(script).resolve())]",
+  "replace": "shlex.join([str(Path(script))]"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "drop-args",
+  "find": "+ [str(argument) for argument in arguments])",
+  "replace": ")"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "join-not-quote",
+  "find": "return shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments])",
+  "replace": "return \" \".join([str(Path(script).resolve())] + [str(argument) for argument in arguments])"
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "grant-no-project",
+  "find": "[\"--minutes\", args.minutes, \"--project\", args.project.resolve()]",
+  "replace": "[\"--minutes\", args.minutes]"
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "grant-no-port",
+  "find": "+ ([\"--port\", args.port] if args.port else []))",
+  "replace": ")"
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "grant-script-name",
+  "find": "format_rerun_line(__file__, [\"--minutes\"",
+  "replace": "format_rerun_line(\"grant.py\", [\"--minutes\""
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "cmd-no-minutes",
+  "find": "[\"--minutes\", \"N\"]",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "cmd-parent",
+  "find": "Path(__file__).resolve().parent / \"grant.py\"",
+  "replace": "Path(\"grant.py\")"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "expired-no-cmd",
+  "find": "the person runs %s again\" % GRANT_COMMAND,\n    WHY_NO_ZONE",
+  "replace": "the person runs grant.py --minutes N again\",\n    WHY_NO_ZONE"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy-drop-ignore",
+  "find": "[\"--ignore-older-runs\"] if args.ignore_older_runs else []",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy-no-token",
+  "find": "\"--token\", args.token or \"\"",
+  "replace": "\"--token\", \"\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy-script",
+  "find": "format_rerun_line(__file__,",
+  "replace": "format_rerun_line(\"deploy.py\","
+ }
+]
