@@ -110,7 +110,7 @@ def flash_commands(flasher, chip, image, port=None):
     return [base + [ERASE], base + [WRITE, IMAGE_OFFSET, str(image)]]
 
 
-#: Result: what `plan` returns. `commands` are the two flash commands, `mpremote` is mpremote's command, and `notes` are
+#: Value: what `plan` returns. `commands` are the two flash commands, `mpremote` is mpremote's command, and `notes` are
 #: sentences for the person.
 DeployPlan = collections.namedtuple("DeployPlan", "commands mpremote notes")
 
@@ -125,10 +125,10 @@ class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 fact
             self.sentence, self.heard)
 
 
-def write_board_log(project, log, moment):
+def write_board_log(project, log):
     """The board's log (a BoardLog) in sim/runs/board/ beside the run logs, whose *.log glob does not reach it. Returns
     its path."""
-    path = project / "sim" / "runs" / "board" / ("%s.log" % moment.strftime("%Y-%m-%dT%H-%M-%S"))
+    path = project / "sim" / "runs" / "board" / ("%s.log" % log.moment.strftime("%Y-%m-%dT%H-%M-%S"))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(log.text())
     return path
@@ -257,7 +257,7 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None):
                 facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)
                 heard += download_mode.READ_AGAIN + "\n"
     log = write_board_log(args.project, BoardLog(moment, report.port, hashlib.sha256(image.read_bytes()).hexdigest(),
-                                                 facts_line, ready.verdict, ready.sentence, heard + ready.log), moment)
+                                                 facts_line, ready.verdict, ready.sentence, heard + ready.log))
     print("  %s\n  %s: %s\n  board log: %s" % (facts_line, ready.verdict, ready.sentence, log))
     try:
         print("  store record: %s" % board_facts.record_deploy(facts, ready.verdict, consent.who))

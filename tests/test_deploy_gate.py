@@ -460,9 +460,9 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "a test")
 
     def test_a_yes_typed_in_a_terminal_is_recorded_as_typed_in_a_terminal(self):
+        terminal = deploy_gate.TerminalConsentStrategy("x", stdin=Stream("yes\n"), stdout=Stream())
         with mock.patch.object(getpass, "getuser", return_value="ada"):
-            terminal = deploy_gate.TerminalConsentStrategy("x", stdin=Stream("yes\n"), stdout=Stream())
-        _, said, _ = self.flash(terminal)
+            _, said, _ = self.flash(terminal)
         record = Path(said.split("store record: ")[1].strip())
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "typed in a terminal by ada")
 
@@ -565,9 +565,9 @@ class TheConsentTest(unittest.TestCase):
             Silent()
 
     def test_the_terminal_says_who_typed_the_yes(self):
+        terminal = deploy_gate.TerminalConsentStrategy("x")
         with mock.patch.object(getpass, "getuser", return_value="ada"):
-            terminal = deploy_gate.TerminalConsentStrategy("x")
-        self.assertEqual(terminal.who, "typed in a terminal by ada")
+            self.assertEqual(terminal.who, "typed in a terminal by ada")
 
 
 class TheDefaultConsentTest(GateCase):

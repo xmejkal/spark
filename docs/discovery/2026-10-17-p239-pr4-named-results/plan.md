@@ -19,7 +19,7 @@ Round 1 ran: tech lead (Sonnet) and refuter (Opus). It changed:
 - The clock has two names: the parameter `clock` (a callable) and the value `moment`. `main` reads it once.
 - `RunLog` became `BoardLog`, which holds no `ReadyResult`.
 - The download-mode branch changes only the sentence and the log, so it uses `_replace`.
-- `who` is built in `TerminalConsentStrategy.__init__`, and its text is a named constant.
+- `who` is a property of `TerminalConsentStrategy` with a named constant for its text.
 - Tests: no tuple guard, literal golden strings, one test for the dropped `yes_by`.
 - Four mutation anchors on the removed `read_board` line are re-anchored. developing.md:246 changes.
 
@@ -35,21 +35,21 @@ Round 2 ran: tech lead and PO assistant (Sonnet). It changed:
 
 ```
  deploy.main --parses, prints, maps the exit code
-   |-- plan() ---------------> DeployPlan   (Result)  commands, mpremote, notes
+   |-- plan() ---------------> DeployPlan   (Value)   commands, mpremote, notes
    |-- ConsentStrategy -------- .who  (str)  "typed in a terminal by petr"
    |       `- TerminalConsentStrategy
    |-- read_board(.., moment) -> ReadyCheck.check() -> ReadyResult (Result) verdict, sentence, log
-   |-- BoardLog (Value) -------- .text() -> str ;  write_board_log(project, log, moment) -> Path
+   |-- BoardLog (Value) -------- .text() -> str ;  write_board_log(project, log) -> Path
    `-- board_facts.facts(.., moment) / record_deploy(facts, verdict, who)
 ```
 
 | Class | Role word | File | Job |
 |---|---|---|---|
 | `ReadyResult` | Result (namedtuple) | ready_check.py | `verdict`, `sentence`, `log` of one check. `check` returns it. |
-| `DeployPlan` | Result (namedtuple) | deploy.py | `commands`, `mpremote`, `notes`. `plan` returns it. |
+| `DeployPlan` | Value (namedtuple) | deploy.py | `commands`, `mpremote`, `notes`. `plan` returns it. |
 | `BoardLog` | Value | deploy.py | Facts of the board's log: `moment`, `port`, `image_sha256` (hashed in `main`), `facts_line`, `verdict`, `sentence`, `heard` (the console text, then `ready.log`). `text()` is the file's text. |
-| `write_board_log` | function | deploy.py | Saves `text()` in sim/runs/board/ under `moment`'s name, and returns the path. Replaces `keep_board_log`. |
-| `ConsentStrategy.who` | abstract property | deploy_gate.py | Who said yes, as a phrase. `TerminalConsentStrategy.__init__` builds it from `getpass.getuser()` and the constant `TYPED_BY = "typed in a terminal by %s"`. |
+| `write_board_log` | function | deploy.py | Saves `text()` in sim/runs/board/ under `log.moment`'s name, and returns the path. Replaces `keep_board_log`. |
+| `ConsentStrategy.who` | abstract property | deploy_gate.py | Who said yes, as a phrase. `TerminalConsentStrategy.who` is a property that reads `getpass.getuser()` when asked (so only when the record is written), with the constant `TYPED_BY = "typed in a terminal by %s"`. |
 
 Why `BoardLog`, not the synthesis's `RunLog`: `image_check.run_logs` means the scenario logs in sim/runs/. This file
 is in sim/runs/board/ and the output calls it "board log:". It takes verdict and sentence as arguments and holds no
@@ -59,7 +59,7 @@ Changes: `check` returns `ReadyResult` on all six lines. `read_board` and `put_f
 `facts(project, board, mac, image, files, moment)`, which has no clock. `read_board` returns `(facts, facts_line,
 ReadyResult)`. The no-reset branch (`NO_RESET`) uses `ready._replace(sentence=..., log=...)`. `main(..., clock=None)`
 reads `moment = (clock or datetime.datetime.now)()` once. `record_deploy(facts, verdict, who)` requires `who`, and
-`yes_by` and `getpass` leave board_facts.py (`getpass` moves to deploy_gate.py). The field stays `yes`. `FakeConsent` is
+`yes_by` and `getpass` leave board_facts.py (`getpass` moves to deploy_gate.py). The field stays `yes`. The board log's time is now the moment `main` read the clock, before `read_board`. It can be earlier than before by up to the reset wait (about 60 s). This is a deliberate change. `FakeConsent` is
 duck-typed and gets `who = "a test"`.
 
 ## Tests first (red before the fix)
