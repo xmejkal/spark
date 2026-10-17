@@ -123,6 +123,13 @@ class TheGateTest(GateCase):
         self.assertIn("erase ALL of this board's flash", consent.asked[0])
         self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the run that passed", said)
 
+    def test_deploy_prints_the_look_without_a_token_line(self):
+        self.run_the_scenario()
+        _, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
+        self.assertIn("  all fields match the board record", said)
+        self.assertNotIn("  token  ", said)
+        self.assertNotIn("no token:", said)
+
     def test_the_answer_no_erases_nothing(self):
         self.run_the_scenario()
         code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(False))

@@ -1,15 +1,16 @@
 """
 Read the board on USB without changing it, and compare it with the project's board record (P219, #201).
 
-A library: look.py only parses arguments, calls `looker(project).run(project, port)` and prints the Report. The gate
-module of step 4 will call it too. It reads the image checks from project_image.py and never imports deploy.py.
+A library: look.py only parses arguments, calls `looker(project).run(project, port)` and prints `report_lines(report)`.
+deploy.py calls `looker` and `report_lines` too. It reads the image checks from project_image.py and never imports deploy.py.
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
     PortFinder     the boards on USB, from mpremote's list. It never opens a port.
     EsptoolReader  one board's chip, flash size and MAC, from `esptool flash_id`.
     compare        each field of the reading against the record: same, differs or unknown.
-    Look           the project's record, the port, the reading, the Report.
-    Report         the verdict (match, warning or stop), the exit status and the token.
+    LookService    the project's record, the port, the reading, the LookReport.
+    LookReport     the verdict (match, warning or stop), the exit status and the token, as a dict too.
+    report_lines   the lines a person reads, for a LookReport.
 
 A board restarts when esptool reads it. Nothing is erased or written.
 """
@@ -33,10 +34,13 @@ BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press 
 NOT_A_BOARD = "0000:0000"
 Port = namedtuple("Port", "device serial usb product")
 #: What esptool said, each field None when it could not be parsed. flash_mb is a number of MB.
-Reading = namedtuple("Reading", "chip flash_mb mac")
+BoardReading = namedtuple("BoardReading", "chip flash_mb mac")
 MB = 1024 * 1024
 #: How long a subprocess may take, in seconds: mpremote only lists, esptool connects to a board and may wait for it.
 LIST_TIMEOUT_S, READ_TIMEOUT_S = 15, 60
+
+RESTART_NOTICE = "the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
+TOKEN_LINE = "token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that."
 
 
 def board_token(mac):
@@ -106,7 +110,7 @@ class PortFinder:
 
 
 class BoardReader:
-    """How a board is read. `read(port)` returns a Reading, or raises LookStop when the board cannot be read."""
+    """How a board is read. `read(port)` returns a BoardReading, or raises LookStop when the board cannot be read."""
 
     def read(self, port):
         raise NotImplementedError
@@ -136,7 +140,7 @@ class EsptoolReader(BoardReader):
 
     @staticmethod
     def parse(text):
-        """The Reading in esptool's output. The chip is the last `Detecting chip type...` line, as the record writes it."""
+        """The BoardReading in esptool's output. The chip is the last `Detecting chip type...` line, as the record writes it."""
         def found(pattern):
             return re.findall(pattern, text, re.MULTILINE)
 
@@ -147,7 +151,7 @@ class EsptoolReader(BoardReader):
         if flash:
             size = int(flash[0][0]) / (1024 if flash[0][1] == "KB" else 1)
             size = int(size) if size == int(size) else size
-        return Reading(chips[-1].lower().replace("-", "") if chips else None, size, macs[0] if macs else None)
+        return BoardReading(chips[-1].lower().replace("-", "") if chips else None, size, macs[0] if macs else None)
 
 
 def _flash_same(read, recorded):
@@ -176,8 +180,8 @@ def _recorded(value):
 VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 
 
-class Report:
-    """What the look found. `stops` and `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
+class LookReport:
+    """Value. What the look found. `stops` and `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
     warning or stop."""
 
     def __init__(self, port, reading, record, image, image_why):
@@ -221,15 +225,42 @@ class Report:
             return None
         return "%s-%s" % (board_token(self.reading.mac), hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
 
+    def to_dict(self):
+        """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id; the image is not in it."""
+        return {"port": self.port, "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
+                "board": self.record["id"], "fields": dict(self.fields), "stops": list(self.stops),
+                "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
+                "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason()}
 
-class Look:
+
+def report_lines(report, token=True):
+    """The lines a person reads, for a LookReport. deploy.py prints them without the token line."""
+    reading, name = report.reading, report.record["id"]
+    shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
+    out = [RESTART_NOTICE, "port   %s" % report.port, "mac    %s" % (reading.mac or "not read")]
+    out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
+    out += ["%s: deploy.py will refuse." % stop for stop in report.stops]
+    out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings]
+    if report.unknown:
+        out.append("%d field%s unknown (%s): deploy.py will ask you to accept it."
+                   % (len(report.unknown), "" if len(report.unknown) == 1 else "s",
+                      ", ".join("%s: %s" % each for each in report.unknown.items())))
+    if report.verdict == VERDICT_MATCH:
+        out.append("all fields match the board record %s." % name)
+    if token:
+        mine = report.token()
+        out.append(TOKEN_LINE % mine if mine else "no token: %s" % report.no_token_reason())
+    return ["  " + line for line in out]
+
+
+class LookService:
     """The look at one project: its record, the port, the reading."""
 
     def __init__(self, finder, reader):
         self.finder, self.reader = finder, reader
 
     def run(self, project, port=None, ignore_older_runs=False):
-        """A Report. LookStop says why not: no record, no board, two boards without a port, a read that failed."""
+        """A LookReport. LookStop says why not: no record, no board, two boards without a port, a read that failed."""
         record = self.record_of(project)
         port = port or self.only_port()
         reading = self.reader.read(port)
@@ -240,7 +271,7 @@ class Look:
             why = found.why_untested() or (None if ignore_older_runs else found.why_other_runs())
         except project_image.DeployError as cannot:
             why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
-        return Report(port, reading, record, image, why)
+        return LookReport(port, reading, record, image, why)
 
     @staticmethod
     def record_of(project):
@@ -261,8 +292,8 @@ class Look:
 
 
 def looker(project, run=subprocess.run):
-    """A Look with mpremote and esptool as the project's tools list finds them. tools.ToolProblem becomes a LookStop."""
+    """A LookService with mpremote and esptool as the project's tools list finds them. tools.ToolProblem becomes a LookStop."""
     try:
-        return Look(PortFinder(tools.find("board-shell", project), run), EsptoolReader(tools.find("flasher", project), run))
+        return LookService(PortFinder(tools.find("board-shell", project), run), EsptoolReader(tools.find("flasher", project), run))
     except tools.ToolProblem as cannot:
         raise LookStop(str(cannot))
