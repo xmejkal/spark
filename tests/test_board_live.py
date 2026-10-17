@@ -137,6 +137,37 @@ class RunTest(unittest.TestCase):
         self.assertEqual(board_live.exit_code(result), 2)
 
 
+class FakeDoctor:
+    """A fake BoardDoctorService: keeps what it examined and answers `answer`."""
+
+    def __init__(self, answer="examined"):
+        self.answer, self.examined = answer, []
+
+    def examine(self, port, tool, tool_said=None):
+        self.examined.append((port, tool, tool_said))
+        return self.answer
+
+
+class DoctorTest(unittest.TestCase):
+    """P282: the doctor looks only when mpremote never got into the board."""
+
+    def run_with(self, *answers):
+        doctor = FakeDoctor()
+        service = board_live.LiveTryService(FakeGrants(GRANTED), FakeBoardConnection(*answers),
+                                            FakeConsoleProbe(cured=RESTART), C6, doctor, "the shell")
+        return service.run("print(1)", PORT), doctor
+
+    def test_code_that_got_in_and_timed_out_gets_no_doctor(self):
+        result, doctor = self.run_with(BoardUnreachableError("no answer in 20 s"))
+        self.assertEqual((result.doctor, doctor.examined), (None, []))
+
+    def test_a_board_mpremote_never_entered_gets_the_doctor_with_mpremote_s_words(self):
+        result, doctor = self.run_with(REFUSED, REFUSED)
+        self.assertEqual(result.doctor, "examined")
+        self.assertEqual(doctor.examined[0][:2], (PORT, "the shell"))
+        self.assertIn("could not enter raw repl", doctor.examined[0][2])
+
+
 class PinFactsTest(unittest.TestCase):
     def test_the_gpio_numbers_in_the_code_are_listed_and_over_claim(self):
         result, _, _ = live("from machine import Pin\nPin(15, Pin.OUT).value(0)\nprint(1)", "1\n")

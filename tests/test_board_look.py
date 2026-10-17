@@ -171,6 +171,12 @@ class EsptoolReaderTest(unittest.TestCase):
         self.assertEqual((stop.exception.port, stop.exception.tool_said), (C6_PORT, (
             "ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data received.")))
 
+    def test_esptool_s_line_is_the_first_error_line_stripped_and_none_without_one(self):
+        stderr = "ERROR: the first\nERROR: the second\nFor troubleshooting steps visit: https://docs.espressif.com\n"
+        self.assertEqual(board_look.esptool_said(stderr), "ERROR: the first")
+        self.assertIsNone(board_look.esptool_said(None))
+        self.assertIsNone(board_look.esptool_said("Connecting......\nHint: check the port\n"))
+
     def test_a_failed_read_with_no_error_line_says_nothing_for_esptool(self):
         with self.assertRaises(board_look.LookStop) as stop:
             self.read("wrong-chip.txt", code=2)
