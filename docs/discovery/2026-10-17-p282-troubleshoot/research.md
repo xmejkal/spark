@@ -23,8 +23,8 @@ only the bench backs says so, with its count.
   or a hint (the refuter reproduced this).
 - `--before` modes: `default-reset`, `usb-reset`, `no-reset`, `no-reset-no-sync` (`esptool/__init__.py:422`).
 - The esptool troubleshooting page for the ESP32-C6, "latest" (https://docs.espressif.com/projects/esptool/en/latest/esp32c6/troubleshooting.html):
-  for "Failed to connect" it names the port, permissions and other programs on the port, a stable 3.3 V, the boot
-  pins, other devices on the GPIOs, and a lower baud rate. Its USB-Serial/JTAG part ties manual download mode to a
+  for "Failed to connect", it names six things to look at. They are the port, the permissions and other programs on
+  the port, a stable 3.3 V, the boot pins, other devices on the GPIOs, and a lower baud rate. Its USB-Serial/JTAG part ties manual download mode to a
   device that disappears.
 - Boot mode selection, "latest" (https://docs.espressif.com/projects/esptool/en/latest/esp32c6/advanced-topics/boot-mode-selection.html):
   hold BOOT (GPIO9 low), press RESET, keep BOOT held while esptool starts.
@@ -32,7 +32,7 @@ only the bench backs says so, with its count.
 ## The ESP32-C6's USB-Serial/JTAG console
 
 - The esp-idf guide, "latest" (https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/api-guides/usb-serial-jtag-console.html):
-  the device disappears when the app reconfigures GPIO12/13 or disables the controller. In deep sleep it looks
+  if the app reconfigures GPIO12/13 or disables the controller, the device disappears. In deep sleep it looks
   unplugged. In light sleep it can stay listed but unresponsive, and a replug cures it.
 - A board that stays listed with a silent output after a power-on is in no Espressif document. The bench saw it
   (AT187, P251).
@@ -42,14 +42,14 @@ only the bench backs says so, with its count.
 - The docs (https://docs.micropython.org/en/latest/reference/mpremote.html) describe `reset`, `soft-reset` and
   `resume`, and no failure modes: "could not enter raw repl" and "failed to access" are not documented.
 - mpremote opens the port with an exclusive lock (`mpremote/transport_serial.py:52`), and so does esptool. spark's
-  console read opened it without the lock, so it could not see a held port (the refuter reproduced this).
+  console read opened it without the lock, so it did not see a held port (the refuter reproduced this).
 
 ## Doctor tools
 
 - `flutter doctor` (https://docs.flutter.dev/install/troubleshoot): each check gives ok, a warning or an error, and a
   failed check gives a fix line.
-- `brew doctor` (https://docs.brew.sh/Manpage): named checks, `--list-checks`, a non-zero exit when a check finds
-  something.
+- `brew doctor` (https://docs.brew.sh/Manpage) runs named checks and lists them with `--list-checks`. If a check
+  finds something, it exits non-zero.
 
 ## What the bench backs (docs/observations)
 
