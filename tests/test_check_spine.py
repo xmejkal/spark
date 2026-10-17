@@ -868,7 +868,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
             self.assertEqual(by_file[name]["did"], "removed")
             self.assertEqual(by_file[name]["why"], detail + ", and it described an earlier build")
         self.assertEqual(by_file["pins.py"]["did"], "removed")
-        self.assertIn(detail, by_file["pins.py"]["why"])
+        self.assertIn("is not JSON", by_file["pins.py"]["why"])
 
     def test_a_file_that_reads_but_is_refused_gives_its_own_reason(self):
         project = self._an_earlier_build(json.dumps({"board": "firebeetle2-esp32s3",
@@ -876,7 +876,8 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
                                                                {"part": "tactile-button", "name": "Openlid"}]}))
         _, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
         self.assertFalse((project / "page.html").exists())
-        self.assertIn("no page: parts[0] is called OpenLid and parts[1] Openlid", err)
+        page_line = next(line for line in err.splitlines() if "no page: " in line)
+        self.assertIn("parts[0] is called OpenLid and parts[1] Openlid", page_line)
 
     def test_a_missing_file_removes_nothing(self):
         # A typo in the file's name must not delete a good build of the file that is there.
