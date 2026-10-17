@@ -24,6 +24,13 @@ Round 1 (tech lead, refuter) changed:
 - Comment at board_look.py:29 and header lines 4 and 11-12 are renamed.
 - grant.py's copy of the restart sentence is left on purpose (it is not this PR's file set); a card if the PO wants one.
 
+Round 2 (tech lead, PO-assistant) changed:
+- The Value row of developing.md also allows a method that only calculates from the facts (`token()`, `exit_code()`,
+  `to_dict()`); `LookReport` stays a Value.
+- `to_dict` copies `fields`, `stops`, `warnings` and `unknown`. Test 4 matches the module name `look`, not `board_look`.
+- `looker` is the only caller of `LookService`. The XIAO look is named under Verification as waiting on the PO.
+- Kept on purpose: the `ast` guard of test 5 (cheap) and the 13-key `to_dict` (the brief names it).
+
 ## Design
 
 ```
@@ -78,7 +85,7 @@ string or None. `image` is a path of the project and stays out: the token alread
 - `python3 tools/mutate.py --anchors` on p239-pr6 and on every table whose `find` text moves (p219-reader.json holds
   board_look rows; p239-pr5 `Look.run` row; p251-reach.json:63). p215-ready, p219-reader, p215-facts, p219-de2 were stale
   on main (P284, #331): their stale rows stay.
-- The suite and the push hook pass. A real look on the XIAO is the PO's bench step; test_look.py pins the text.
+- The suite and the push hook pass. Waits on the PO: a real look on the XIAO prints the same lines as before (the brief's done-when). test_look.py pins the text meanwhile.
 
 ## Docs
 
