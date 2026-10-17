@@ -14,7 +14,6 @@ import board_reach
 import tools
 from board_connection import BoardConnection
 from board_console import ConsoleProbe
-from image_check import runnable
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
 
 #: What reach.py says after the board answered: mpremote's exec stops the firmware that ran (reach-test.md).
@@ -86,7 +85,7 @@ def main(argv=None, run=subprocess.run, probe=None):
     if args.cure_first and probe is None:
         print("reach.py: %s" % board_reach.NO_PROBE_MESSAGE, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    result = board_reach.reach(BoardConnection(runnable(shell), port, run), probe, cure_first=args.cure_first)
+    result = board_reach.reach(BoardConnection(tools.command_for(shell), port, run), probe, cure_first=args.cure_first)
     try:
         doctor = (None if result.entered else
                   board_doctor.BoardDoctorService.for_board(finder, probe).examine(port, shell, result.why))

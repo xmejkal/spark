@@ -15,7 +15,6 @@ import boards
 import tools
 from board_connection import BoardConnection
 from board_console import ConsoleProbe
-from image_check import runnable
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
 from restricted_pins import BrokenRecordError
 
@@ -88,7 +87,7 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.utc_now):
         probe = probe or ConsoleProbe.for_tool(shell, port, run)
         doctor = board_doctor.BoardDoctorService.for_board(finder, probe)
         service = board_live.LiveTryService(board_grant.GrantService(finder, now=now),
-                                            BoardConnection(runnable(shell), port, run), probe,
+                                            BoardConnection(tools.command_for(shell), port, run), probe,
                                             boards.load(args.project), doctor, shell)
         result = service.run(args.code, port)
     except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError) as cannot:

@@ -26,8 +26,8 @@
  {
   "file": "scripts/deploy.py",
   "name": "facts without mac",
-  "find": "board_of(project), report.reading.mac, image_of(project)",
-  "replace": "board_of(project), None, image_of(project)"
+  "find": "board_of(project), report.reading.mac, image.path",
+  "replace": "board_of(project), None, image.path"
  },
  {
   "file": "scripts/store.py",

@@ -32,13 +32,13 @@
  {
   "file": "scripts/deploy.py",
   "name": "reread-not-kept",
-  "find": "facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN",
-  "replace": "_ = read_board(args.project, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN"
+  "find": "facts, facts_line, ready = read_board(args.project, image, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN",
+  "replace": "_ = read_board(args.project, image, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN"
  },
  {
   "file": "scripts/deploy.py",
   "name": "logged-without-reread",
-  "find": "facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN",
+  "find": "facts, facts_line, ready = read_board(args.project, image, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN",
   "replace": "pass\n                heard += download_mode.READ_AGAIN"
  },
  {
@@ -50,7 +50,7 @@
  {
   "file": "scripts/deploy.py",
   "name": "facts-stale",
-  "find": "facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN",
-  "replace": "_f, _l, ready = read_board(args.project, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN"
+  "find": "facts, facts_line, ready = read_board(args.project, image, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN",
+  "replace": "_f, _l, ready = read_board(args.project, image, report, connection, expected, moment)\n                heard += download_mode.READ_AGAIN"
  }
 ]

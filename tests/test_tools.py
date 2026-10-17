@@ -769,5 +769,16 @@ class AnNpmInstallNeedsThePackageJsonTest(unittest.TestCase):
         self.assertEqual(self.ran, [["npm", "install", "-g", "runner"]])
 
 
+class CommandForTest(unittest.TestCase):
+    """P239 PR 5 (#238): the command that runs a tool."""
+
+    def test_a_python_package_runs_as_python_dash_m_its_module_and_any_other_tool_as_found(self):
+        python = tools.Tool("esptool", "flasher", {"kind": "python", "module": "esptool"}, ["python3"])
+        other = tools.Tool("mpremote", "board-shell", {"kind": "binary"}, ["/bin/mpremote"])
+        self.assertEqual(tools.command_for(python), ["python3", "-m", "esptool"])
+        self.assertEqual(tools.command_for(other), ["/bin/mpremote"])
+        self.assertIsNot(tools.command_for(other), other.command)
+
+
 if __name__ == "__main__":
     unittest.main()

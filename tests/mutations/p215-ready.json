@@ -10,11 +10,5 @@
   "name": "port dropped",
   "find": "([\"connect\", port] if port else [])",
   "replace": "([])"
- },
- {
-  "file": "scripts/image_check.py",
-  "name": "passed_log ignores the verdict",
-  "find": "if sha256 == digest and verdict == \"passed\"), None)",
-  "replace": "if sha256 == digest), None)"
  }
 ]
