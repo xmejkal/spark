@@ -87,6 +87,9 @@ BUILD_TIMEOUT_S = 300
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
 PIN_MODULE = Path("firmware") / "pins.py"
 
+#: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
+REQUIREMENTS_STAGE = "requirements"
+
 
 class Stage:
     """One link, and what became of it."""
@@ -652,7 +655,7 @@ def main(argv=None):
     try:
         requirements = design.read(source) if source else dict(REFERENCE)
     except design.DesignError as broken:
-        return report([Stage("requirements", COULD_NOT_RUN, str(broken))], args)
+        return report([Stage(REQUIREMENTS_STAGE, COULD_NOT_RUN, str(broken))], args)
     # A file in no project is built from the plugin's library, and the board stage says so.
     project = design.project_for(source) if source else None
     from_library = bool(source) and design.is_library(project)
@@ -761,9 +764,8 @@ def keep_breadboard(requirements, destination, stages=()):
     """
     sheet = Path(destination) / breadboard.SHEET
     drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in breadboard.DRAWING_RENDERERS]
-    if not any(stage.name == "build" and stage.status == OK for stage in stages):
-        why = ("board only: nothing to wire" if any(stage.status == SKIPPED for stage in stages)
-               else "the build did not finish in this run")
+    why = why_not_built(stages, "board only: nothing to wire")
+    if why:
         return [_left_from_earlier(sheet, "breadboard sheet", why)] + [
             _left_from_earlier(path, renderer.NOUN, why) for path, renderer in drawings]
     try:
@@ -783,12 +785,26 @@ def keep_breadboard(requirements, destination, stages=()):
     return kept
 
 
+def why_not_built(stages, board_only_why):
+    """Why no build finished in this run, or None when one did: the refused requirements file's own reason (P280),
+    `board_only_why` for a board-only design, else that the build did not finish."""
+    if any(stage.name == "build" and stage.status == OK for stage in stages):
+        return None
+    refused = next((stage.detail for stage in stages if stage.name == REQUIREMENTS_STAGE and stage.status != OK), None)
+    if refused:
+        return refused
+    if any(stage.status == SKIPPED for stage in stages):
+        return board_only_why
+    return "the build did not finish in this run"
+
+
 def why_no_page(destination, stages, kept):
     """Why the page (P271) cannot be drawn in this run, or None: its three tabs read the one circuit.json kept in this
-    run, so a build that did not finish, a board-only one, or a dist/ that was not copied leaves no page."""
-    if not any(stage.name == "build" and stage.status == OK for stage in stages):
-        return ("board only: nothing to draw" if any(stage.status == SKIPPED for stage in stages)
-                else "the build did not finish in this run")
+    run, so a refused requirements file, a build that did not finish, a board-only one, or a dist/ that was not copied
+    leaves no page."""
+    why = why_not_built(stages, "board only: nothing to draw")
+    if why:
+        return why
     if not any(entry["file"] == str(Path(destination) / "dist") and entry["did"] == "wrote" for entry in kept):
         return "the build was not kept in this run"
     return None
@@ -900,11 +916,15 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
     any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed. What
-    --keep wrote and left alone is said on stderr and, with --json, carried under `kept` (P124).
+    --keep wrote and left alone is said on stderr and, with --json, carried under `kept` (P124). With no workdir, a
+    requirements file that is there but refused still removes what an earlier build left (P280); a missing one, which
+    may be a typo, removes nothing.
     """
     code = verdict(stages)
-    kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None
-    if kept is not None and getattr(args, "requirements", None):
+    requirements_file = getattr(args, "requirements", None)
+    keeps = args.keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
+    kept = (_kept(workdir, args.keep) if workdir is not None else []) if keeps else None
+    if kept is not None and requirements_file:
         kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages)
         kept += drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
@@ -921,11 +941,9 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
         print(json.dumps(said))
     else:
         sys.stdout.write(render(stages, code, left_off(requirements)))
-    if workdir is None:
-        return code
     for entry in kept or []:
         print("  %s" % entry["line"], file=sys.stderr)
-    if workdir.exists():
+    if workdir is not None:
         shutil.rmtree(workdir, ignore_errors=True)
     return code
 

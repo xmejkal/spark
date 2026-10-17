@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a refused file's own reason is not the why",
+  "find": "    if refused:\n        return refused\n",
+  "replace": "    if False:\n        return refused\n"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a missing requirements file removes an earlier build",
+  "find": "bool(requirements_file) and Path(requirements_file).is_file()",
+  "replace": "bool(requirements_file)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a refused file keeps and cleans nothing",
+  "find": "keeps = args.keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())",
+  "replace": "keeps = args.keep and workdir is not None"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a build that finished is still said not to",
+  "find": "    if any(stage.name == \"build\" and stage.status == OK for stage in stages):\n        return None\n",
+  "replace": "    if False:\n        return None\n"
+ }
+]
