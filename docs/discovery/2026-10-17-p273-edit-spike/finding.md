@@ -1,8 +1,8 @@
 # P273 spike: a person's breadboard edit across a rebuild
 
-> **Pass, 3 of 3.** A throwaway merge rule kept a moved part and a moved jumper across a real rebuild after a
-> requirements change. It named every edit the new circuit did not hold. The real build needs one placement strategy,
-> which the planner already takes, and one jumper step after the plan.
+> **2 of 3 strictly, 3 of 3 if a moved jumper counts for case c.** The prototype, run after a real rebuild, kept a
+> moved part and a moved jumper. When the new circuit broke a moved jumper, it named it. No requirements change on
+> this fixture broke a moved part's kept position, because the rule reserves kept parts before new ones go in.
 
 [P273, #309](https://github.com/xmejkal/spark/issues/309), D11 of [the P269 brief](../2026-10-16-p269-views-and-editors/brief.md).
 Pass line, set 2026-10-16: in 3 of 3 cases the edit survives a rebuild after a requirements change, or is named.
@@ -11,69 +11,63 @@ Pass line, set 2026-10-16: in 3 of 3 cases the edit survives a rebuild after a r
 
 [prototype.py](prototype.py) is spike code. Nothing in `scripts/` or `tests/` imports it, and it calls spark's planner
 unchanged. All runs used copies of `tests/data/breadboard/button-light-xiao` in a scratch folder, a scratch
-`SPARK_HOME` and `python3 -I`. The rebuilds were real: `check_spine.py requirements.json --keep .` built the button
-alone, and the fixture's circuit is the build with both parts. A copy of `breadboard.json` with changed coordinates
-and holes stood in for a Wokwi edit. Each run compares the merged diagram's connections with a fresh plan's.
+`SPARK_HOME` and `python3 -I`. Real `check_spine.py requirements.json --keep .` builds made the button-only and the
+LED-only projects. The fixture's circuit is the build with both. The real rebuild writes its own `breadboard.json`,
+and the edit survives only in the prototype's output. A copy of `breadboard.json` with changed coordinates and holes
+stood in for a Wokwi edit. `same_connections_as_a_fresh_plan` was true in every run, but it reads rows only. It
+ignores holes under the board's body and checks no route. No merged diagram went through a simulation or a diagram
+check.
 
 ## The cases
 
-| Case | Earlier diagram (the edit) | Rebuild | Output | Verdict |
+| Case | The edit | Rebuild | Output | Verdict |
 | --- | --- | --- | --- | --- |
-| a, moved part | button only, button moved 4 columns right (`left` 105.8 to 144.2), its jumpers left in the old rows | LED added | button kept at 144.2. LED and R1 placed after it. Both stale jumpers named ("one end is in a row that holds no pin") and routed to the button's new rows. Connections equal a fresh plan | pass, survives |
-| b, moved jumper | both parts, D10 jumper end moved from `14t.a` to `14t.b` with route `["v-20","h40"]` | LED removed | jumper kept as `6b.j-14t.b` with its route. Three LED jumpers named ("the new circuit does not join R1:1 and board:D8") | pass, survives |
-| c, broken edit | both parts, LED and R1 moved 3 columns right with their jumpers | LED removed | "LedRed5mm: not in the new circuit", same for R1 and its three jumpers. Button and D10 jumper kept | pass, named |
-| c2, extra | button's type changed to one spark has no geometry for | LED removed | "TactileButton: its Wokwi type changed", button placed fresh, its jumpers named | pass, named |
+| a, moved part | button moved 4 columns right, its jumpers left in the old rows | LED added | button kept at its new place. LED and R1 placed after it. The 2 stale jumpers named and routed to the new rows | pass, survives |
+| b, jumper in its row | D10 jumper end `14t.a` to `14t.b`, route `["v-20","h40"]` | LED removed | kept with its route | pass, survives |
+| b2, jumper to another row | GND jumper end from the LED K row `17b.g` to the button B row `12t.c` | LED removed | kept as `8b.j-12t.c` with its route, because the new circuit joins GND to button B | pass, survives |
+| b3, jumper to an empty row | D10 jumper end `14t.a` to `15t.a` | LED removed | named: "one end is in a row that holds no pin", and planned fresh | named, but the edit itself broke the point |
+| c, new circuit breaks a moved jumper | LED, R1 and their jumpers moved 2 columns right | button removed | LED and R1 kept. The LED-only build moved the LED from D8 to D10, so the moved jumper `4b.j-26b.f` is named: "the new circuit does not join R1:1 and board:D8" | pass for a jumper |
+| c-part, a moved part | LED moved 2 columns, R1 left where it was | button removed | LED kept. R1 named: "its leg 2 is no longer in row 20b, which it joins", and placed fresh | named, but the edit broke it, not the new circuit |
+| removed (old c) | LED and R1 moved | LED removed | both named "not in the new circuit". This name ignores whether a part was moved | named |
+| type | button type changed to one spark has no geometry for | LED removed | named "its Wokwi type changed", placed fresh | named |
 
 ## The merge rule
 
-1. Read the earlier `breadboard.json` into parts with holes and jumpers with holes and route.
-2. Reserve each earlier part whose id and Wokwi type are in the new circuit, before any other part goes in. Its pins
+1. Reserve each earlier part whose id and Wokwi type are in the new circuit, before any other part goes in. Its pins
    and the holes its body covers must be free. Each pin of a part other than a resistor needs a row of its own.
-3. A resistor keeps its place only when its joined leg is still in the row it joins.
-4. Place every other part by spark's first fit.
-5. Know a jumper by what its two rows hold, as `{"board:D10", "TactileButton:1.l"}`. Give a new jumper the earlier
+2. A resistor keeps its place only when its joined leg is still in the row it joins.
+3. Place every other part by spark's first fit.
+4. Know a jumper by what its two rows hold, as `{"board:D10", "TactileButton:1.l"}`. A new jumper takes the earlier
    holes and route of the jumper with the same ends, when those holes are free and in the rows the new plan gives.
-6. Name every earlier part and jumper the new diagram does not keep, and why.
+5. Name every earlier part and jumper the new diagram does not keep, and why.
 
-## Identity across builds
+## Identity and hooks
 
-- A part keeps its id: `emit_board.component_name(part)` gives `TactileButton` (scripts/breadboard.py:370), and the
-  board is `board`.
-- A resistor does not. Its id is `R` plus its order in the circuit (scripts/breadboard.py:341). A new part that asks
-  for a resistor renumbers the others. The circuit's own name (`LedRed5mmSeriesA`) is stable.
-- A jumper has no id in Wokwi. The prototype names it by the two part pins its rows hold. A jumper to a free row (a
-  board pad set up on its own) has no such pin, and this fixture has none, so that case is untested.
-
-## The hook the real build needs
-
-- `scripts/breadboard_drawing.py:148` `PartPlacement` is already a strategy, and `BreadboardPlanner` takes one
+- A part keeps its id from `emit_board.component_name(part)` (scripts/breadboard.py:370). A resistor does not: its id
+  is `R` plus its order in the circuit (scripts/breadboard.py:341). The circuit's name (`LedRed5mmSeriesA`) is stable.
+- A jumper has no id in Wokwi. The prototype names it by the part pins its rows hold. A jumper to a free row has none.
+- `PartPlacement` is already a strategy (scripts/breadboard_drawing.py:148), and `BreadboardPlanner` takes one
   (scripts/breadboard_drawing.py:225). A `KeepEditsPlacement` fits there with no change to `plan()`.
-- Jumpers need one step after `plan()` (scripts/breadboard_drawing.py:227), and `Jumper` needs a `route` field
-  (scripts/breadboard_drawing.py:31). Today `render()` writes every route as `[]` (scripts/breadboard_drawing.py:332),
-  and the SVG draws its own path.
-- `scripts/breadboard.py:377` `_plan_layout` must read the earlier `breadboard.json` before `write()`
-  (scripts/breadboard.py:438) overwrites it. Today every build writes the file from scratch.
+- Jumpers need one step after `plan()` (scripts/breadboard_drawing.py:227) and a `route` field on `Jumper`
+  (scripts/breadboard_drawing.py:31). Today `render()` writes every route as `[]` (scripts/breadboard_drawing.py:332).
+- `_plan_layout` (scripts/breadboard.py:377) must read the earlier `breadboard.json` before `write()`
+  (scripts/breadboard.py:438) overwrites it.
 
 ## Risks
 
-- A kept part far to the right pushes new parts right, because the planner starts the next part two columns after the
-  last one placed (scripts/breadboard_drawing.py:235). In case a, R1 reached column 28 of 30. Free rows for board
-  pads come after the last part too (scripts/breadboard_drawing.py:249).
-- A jumper's color is its step's color. A person's new color is lost, because step numbers change on a rebuild.
-- The first prototype forgot the holes the board's body covers, and jumpers landed in holes under the board. The
-  connection check passed anyway. A real check needs the covered holes too.
-- Moving a part in Wokwi leaves its jumpers in the old rows. Case a shows the rule names and re-routes them, but the
-  person's edited diagram was miswired until the rebuild.
+- A kept part far to the right pushes new parts right (scripts/breadboard_drawing.py:235). In case a, R1 reached
+  column 28 of 30. Free rows for board pads come after the last part too (scripts/breadboard_drawing.py:249).
+- A jumper's color is its step's color, so a person's new color is lost when step numbers change.
+- The first prototype forgot the holes under the board's body, and jumpers landed there. The connection check missed it.
+- Moving a part in Wokwi leaves its jumpers in the old rows, so the edited diagram is miswired until the rebuild.
 
-## What this spike did not test
+## Not tested
 
-- A real drag in Wokwi's web editor, and how the person brings the edited `diagram.json` back into the project.
-- Wokwi's own route format beyond two waypoints, and a jumper whose end the person moves to another row.
+- A real drag in Wokwi's web editor, and how the edited `diagram.json` comes back into the project.
 - A rail, a jumper to a free row, two parts of one record, and a rotation the geometry file has not measured.
 
 ## Recommendation for the story's plan
 
-Smallest first slice: keep moved parts only. Add `KeepEditsPlacement` (reserve, then first fit), read the earlier
-`breadboard.json` in `_plan_layout`, and print each dropped part with its reason. Test it with case a and case c on
-this fixture. The second slice keeps jumper holes and routes and adds `route` to `Jumper`. Resistor ids by circuit
-name come before any slice that adds a part with a resistor.
+First slice: keep moved parts only. Add `KeepEditsPlacement`, read the earlier `breadboard.json` in `_plan_layout`,
+and print each dropped part with its reason. Test it with cases a and c-part. Then keep jumper holes and routes.
+Resistor ids by circuit name come before any slice that adds a part with a resistor.
