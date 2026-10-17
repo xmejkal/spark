@@ -3,110 +3,89 @@
 ## Context
 
 PR 5 of the synthesis (docs/observations/2026-10-14-p239-oo-council/synthesis.md, section e). PRs 1-4 are merged. I read
-main at 7554792. `--help`, exit codes and the store record do not change. No printed sentence changes.
+main at 7554792. `--help`, exit codes, the store record and every printed sentence do not change.
 
 | Item | On main | Touches |
 |---|---|---|
-| `ProjectImage` | image_check.py holds five functions, each takes `(image, runs)`, and three of them hash the image again | image_check.py, deploy.py, board_look.py |
-| `command_for` | `runnable(tool)` sits in image_check but is about a tool | image_check.py, tools.py, deploy.py, board_look.py, reach.py, live.py |
-| `BOOT_HINT` | sits in image_check, is about esptool | board_look.py (esptool's reader), deploy.py |
-| `DeployError` | `DeployProblem` | all raisers and catchers |
+| `ProjectImage` | image_check.py: five functions on `(image, runs)`, three hash the image again | image_check.py, deploy.py, board_look.py |
+| `command_for` | `runnable(tool)` sits in image_check but is about a tool | tools.py, deploy.py, board_look.py, reach.py, live.py |
+| `BOOT_HINT` | sits in image_check, is about esptool | board_look.py, deploy.py |
+| `DeployError` | `DeployProblem` | every raiser and catcher |
 
 ## Council
 
-Round 1 ran: tech lead (Sonnet) and refuter (Opus). It changed:
-- The constructor does only `image_of`'s two checks (toml, image file). It never reads `sim/runs/`, so `put_facts` and the
-  gate cannot get a new error path from an unreadable log.
-- `sha256` is a `cached_property`. The "old hash" test is dropped: staleness is not a contract. Only "a new `ProjectImage`
-  gives the new hash" is tested. The logs are read on each call (not cached); `why_untested` and `why_other_runs` stay
-  separate from `passed_log`.
-- Role: Value fits only if a method may read. The Value row in developing.md says so (reads, never writes).
-- `main` builds a fresh `ProjectImage` after the flash and for `put_facts`. `board_facts.facts` still hashes the file
-  itself: deliberate, it is facts' own job and PR 5 does not change it.
-- Callers added: tests/test_ready_check.py:19,95 (rebuilt on a project fixture); the re-exports in deploy.py:44 go.
-  `Look.run` keeps two tests: no image (image None) and an unreadable log (image set). `deploy.py:204, 222, 235` catch
-  `DeployError`. `project_image.py` calls `run_scenario.run_record` through the module, so the patches work.
-- p219-de2.json finds change text (`DeployError`, `.why_other_runs()`), not only lines.
-- `BOOT_HINT` in board_look.py differs from the synthesis ("beside the flasher"): deliberate, until PR 7.
+Round 1 (tech lead, refuter) changed:
+- The constructor does only `image_of`'s two checks and reads no log, so no gate step gets a new error path.
+- `sha256` is a `cached_property`; only "a new `ProjectImage` gives the new hash" is tested. Logs are read on each call.
+- The Value row in developing.md allows a method that reads files and never writes.
+- `main` builds a fresh `ProjectImage` after the flash. `board_facts.facts` still hashes the file itself (not this PR).
+- Added: test_ready_check.py:19,95, the deploy.py:44 re-exports go, both `Look.run` cases tested, `DeployError` caught at
+  deploy.py:204, 222, 235, and p219-de2.json finds change text.
+Round 2 (tech lead, PO-assistant) changed:
+- Method names start with a verb: `read_run_logs`, `find_passed_log`. `command_for` stays (the synthesis's name, as `chip_of`).
+- `write_board_log`'s caller takes the hash from the fresh `ProjectImage.sha256`; `main` builds one at deploy.py:218 and
+  one after the flash (:235), and calls `.find_passed_log()` there. test_board_look.py:17 imports `project_image`.
+- The `find_passed_log` row leaves p215-ready.json (moved to p239-pr5.json); `--anchors` runs on both tables.
+- The plan is cut to about 90 lines.
 
 ## Design
 
 ```
  deploy.main / board_look.Look.run
-   |-- ProjectImage(project) ------- Value   path, sha256, runs
-   |      .why_untested() -> str|None        .why_other_runs() -> str|None
-   |      .passed_log()   -> Path|None       .run_logs() -> [(log, verdict, sha256|None)]
-   |      raises DeployError (when built, or when a log is unreadable)
-   |-- tools.command_for(tool) -> list        (was image_check.runnable)
-   `-- board_look.BOOT_HINT                   (was image_check.BOOT_HINT)
+   |-- ProjectImage(project) ---- Value  path, sha256 (cached), runs
+   |      .why_untested() -> str|None     .why_other_runs() -> str|None
+   |      .find_passed_log() -> Path|None .read_run_logs() -> [(log, verdict, sha256|None)]
+   |      raises DeployError (built without toml/image, or a log is unreadable)
+   |-- tools.command_for(tool) -> list     (was image_check.runnable)
+   `-- board_look.BOOT_HINT                (was image_check.BOOT_HINT)
  image_check.py is deleted; project_image.py holds ProjectImage and DeployError.
 ```
 
 | Name | Role word | File | Job |
 |---|---|---|---|
-| `ProjectImage` | Value | project_image.py | The flash image `sim/wokwi.toml` names and the run logs in `sim/runs/` that name it. Built from the project. Its methods read the project's files and never write. |
-| `DeployError` | Error | project_image.py | Why the image cannot go on the board yet. The message is the whole sentence. Replaces `DeployProblem`. |
+| `ProjectImage` | Value | project_image.py | The flash image `sim/wokwi.toml` names and the run logs in `sim/runs/` that name it. Its methods read the project's files and never write. |
+| `DeployError` | Error | project_image.py | Why the image cannot go on the board yet. Replaces `DeployProblem`. `ProjectImage` raises it and deploy.py and board_look.py already import that module, so deploy.py keeps `deploy.DeployError`. |
 | `command_for` | function | tools.py | The command that runs a Tool. Replaces `runnable`. |
-| `BOOT_HINT` | constant | board_look.py | What to try when esptool cannot reach the board. |
-
-Why `command_for`, not a verb: the synthesis names it, and it is an accessor like `chip_of` and `board_of`.
-
-Why `project_image.py`, not `image_check.py`: the file holds a class now, and "check" no longer says what it is. Why
-`DeployError` lives there: `ProjectImage` raises it, and both deploy.py and board_look.py already import that module.
-deploy.py keeps the name in its namespace (`deploy.DeployError`) because it catches it.
-
-Why `BOOT_HINT` in board_look.py: there is no Flasher class until PR 7. board_look.py holds `EsptoolReader`, the esptool
-code, and deploy.py already imports it. PR 7 moves the constant with the `Flasher`.
-
-Method map (old to new):
+| `BOOT_HINT` | constant | board_look.py | What to try when esptool cannot reach the board. The synthesis says "beside the flasher"; no `Flasher` exists until PR 7, so it sits with `EsptoolReader` and PR 7 moves it. |
 
 | Old | New |
 |---|---|
-| `image_of(project)` | `ProjectImage(project).path` (raises `DeployError`) |
-| `run_logs(runs)` | `.run_logs()` |
+| `image_of(project)` | `ProjectImage(project).path` |
+| `run_logs(runs)` | `.read_run_logs()` |
 | `untested(image, runs)` | `.why_untested()` |
 | `tested_another(image, runs)` | `.why_other_runs()` |
-| `passed_log(image, runs)` | `.passed_log()` |
+| `passed_log(image, runs)` | `.find_passed_log()` |
 
-`sha256` is read from the file once, when first asked, and cached (the constructor reads no log). A caller that must see a changed file builds a new
-`ProjectImage` (`plan()` does, and `main` builds one after the flash). The five functions hashed the file each call.
-
-Callers: `deploy.plan` builds one image and calls its methods. `put_facts` and `main` use `.path`. `Look.run` builds one,
-and catches `DeployError` twice: when building it (no image: `image` stays None) and when a log is unreadable (`image`
-stays set for the fit check). The `Report` keeps carrying a `Path`, so look.py, deploy_gate.py and the token do not change.
+`Look.run` builds one `ProjectImage` and catches `DeployError` twice: on building it (`image` None) and on an unreadable
+log (`image` stays set for the fit check). `Report` keeps carrying a `Path`, so look.py and the token do not change.
 
 ## Tests first (red before the fix)
 
-1. tests/test_project_image.py (new): the five old behaviours by name on the class. No toml, no image, an image with a
-   passed log, a failed log, a log of another image, a log of an older spark (no sha256), an unreadable log, a path that
-   is no file. Red today: the module does not exist.
-2. The same file: `sha256` is the file's hash, and a new `ProjectImage` after the file changed gives the new hash. A
-   constructor test: an unreadable log does not stop `ProjectImage(project)`.
-3. test_tools.py: `command_for` gives `command + ["-m", module]` for a Python tool and the command for any other.
-4. test_board_look.py: `board_look.BOOT_HINT` is shown in the two esptool refusals (the tests already read the text).
-5. The existing tests move to the new names: `deploy.DeployError`, `project_image.run_scenario.run_record`, the
-   `passed_log` patch in test_deploy_gate.py patches `ProjectImage.passed_log`, and test_ready_check.py's `PassedLogTest`
-   builds a project with a toml.
-   test_board_look.py pins both `Look.run` cases (no image; an unreadable log keeps the image).
-6. `DeployError` is an `Exception` whose name ends in `Error`, and `DeployProblem` no longer exists anywhere.
-7. Mutation file tests/mutations/p239-pr5.json: `sha256` re-read each time is not a defect, so the finds are: passed_log
-   ignores the verdict (moved from p215-ready.json), why_untested accepts a failed log, why_other_runs ignores an older
-   log with no sha256, `command_for` drops `-m`, `Look.run` loses the image on a `DeployError` from a log.
+1. tests/test_project_image.py (new): the old behaviours by name. No toml, no image, a passed log, a failed log, a log of
+   another image, a log of an older spark (no sha256), an unreadable log, a path that is no file; a new `ProjectImage`
+   after the file changed gives the new hash; an unreadable log does not stop the constructor. test_ready_check.py's
+   `PassedLogTest` moves here (a project with a toml). Red today: no module.
+2. test_tools.py: `command_for` gives `command + ["-m", module]` for a Python tool, else the command.
+3. Existing tests take the new names: `deploy.DeployError`, `project_image.run_scenario.run_record` (and the import at
+   test_board_look.py:17), and the `find_passed_log` patch in test_deploy_gate.py:276 on `ProjectImage` (`lambda *a`
+   still works, `self` is an argument). test_board_look.py pins both `Look.run` cases.
+4. `DeployProblem` appears nowhere.
+5. tests/mutations/p239-pr5.json: `find_passed_log` ignores the verdict, `why_untested` accepts a failed log,
+   `why_other_runs` ignores a log with no sha256, `command_for` drops `-m`, `Look.run` loses the image on an unreadable log.
 
 ## Verification
 
-- Tables that name image_check.py or the lines of the moved code are re-anchored: p215-ready.json (file path),
-  p219-reader.json:95-102, p219-de2.json:47-60, and any p215-facts.json find that names `image_of`.
-- `python3 tools/mutate.py --anchors` passes on every table I change. Rows already stale on main stay for P284 (#331).
-- The full suite passes, and the push hook passes.
+- Re-anchor p215-ready.json (row leaves), p219-reader.json:95-102, p219-de2.json:47-60 (text changes) and p215-facts.json:29.
+- `python3 tools/mutate.py --anchors` passes on every table I change. Rows stale on main stay for P284 (#331).
+- The suite and the push hook pass.
 
 ## Docs
 
-developing.md: the paragraph that says PRs 5 to 8 are not merged moves PR 5 to the merged list; `Error` examples add
-`DeployError`. board_connection.py:51 and board_look.py:5 docstrings name `command_for` and `project_image.py`. agents.md
-and the commands pages name none of the moved functions. Historic plans and observation files keep the old names.
+developing.md: the Value row allows a reading method; "Until PRs 5 to 8" moves PR 5 to the merged list; the Error
+examples add `DeployError`. Docstrings board_connection.py:51 and board_look.py:5 name `command_for` and
+`project_image.py`. agents.md and the commands pages name none of the moved functions. Historic plans keep old names.
 
 ## Out of scope
 
-`DeployToken` and `LookReport` (PR 6), `Flasher` (PR 7), `DeployService` (PR 8). `ToolProblem` keeps its name: the `Error`
-suffix spreads to the rest of the repository in v0.13 (#94). No change to `--json`, exit codes or sentences.
+`DeployToken` and `LookReport` (PR 6), `Flasher` (PR 7), `DeployService` (PR 8). `ToolProblem` keeps its name until
+v0.13 (#94). No change to `--json`, exit codes or sentences.
