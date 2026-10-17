@@ -7,6 +7,8 @@ at boot, and reads its output for READY_WAIT_S seconds. Ready is seen only when 
 the board, it is unknown, never seen. So is a passed run's log from before P215, which names no files.
 """
 
+import collections
+
 from board_connection import BoardUnreachableError, BoardCodeError
 from run_scenario import READY
 
@@ -33,6 +35,10 @@ for p in %%r:
 
 SEEN, NOT_SEEN, UNKNOWN = "ready seen", "ready not seen", "ready unknown"
 
+#: Result: what `ReadyCheck.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
+#: what the board printed (the board's log).
+ReadyResult = collections.namedtuple("ReadyResult", "verdict sentence log")
+
 
 class ReadyCheck:
     """The two reads on one board, through its BoardConnection (board_connection.py)."""
@@ -41,13 +47,13 @@ class ReadyCheck:
         self.connection = connection
 
     def check(self, expected):
-        """(verdict, sentence, the board's log) for the files `expected` {path: sha256}: SEEN, NOT_SEEN or UNKNOWN."""
+        """A ReadyResult for the files `expected` {path: sha256}: SEEN, NOT_SEEN or UNKNOWN."""
         if not expected:
-            return UNKNOWN, "the passed run's log names no files (an older spark): run its scenario again", ""
+            return ReadyResult(UNKNOWN, "the passed run's log names no files (an older spark): run its scenario again", "")
         try:
             hashes = self.connection.run_code(HASH_FILES % sorted(expected))
         except (BoardUnreachableError, BoardCodeError) as cannot:
-            return UNKNOWN, "mpremote could not read the board's files: %s" % cannot, cannot.output
+            return ReadyResult(UNKNOWN, "mpremote could not read the board's files: %s" % cannot, cannot.output)
         read = dict(line.split(" ", 2)[1:][::-1] for line in hashes.splitlines() if line.startswith(HASH_LINE + " "))
         differ = [path for path in sorted(expected) if read.get(path) != expected[path]]
         stopped = None
@@ -56,14 +62,14 @@ class ReadyCheck:
         except BoardCodeError as raised:  # the board answered the hashes, so the firmware stopped
             said, stopped = raised.output, str(raised)
         except BoardUnreachableError as cannot:
-            return UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output
+            return ReadyResult(UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output)
         log = hashes + said
         if differ:
-            return NOT_SEEN, "the board's %s %s not the files that passed" % (
-                ", ".join(differ), "is" if len(differ) == 1 else "are"), log
+            return ReadyResult(NOT_SEEN, "the board's %s %s not the files that passed" % (
+                ", ".join(differ), "is" if len(differ) == 1 else "are"), log)
         if stopped is not None:
-            return NOT_SEEN, "the firmware stopped with an error: %s" % stopped, log
+            return ReadyResult(NOT_SEEN, "the firmware stopped with an error: %s" % stopped, log)
         if READY not in said:
-            return NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log
-        return SEEN, "the firmware printed %r and the board's %d files match the run that passed" % (
-            READY, len(expected)), log
+            return ReadyResult(NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log)
+        return ReadyResult(SEEN, "the firmware printed %r and the board's %d files match the run that passed" % (
+            READY, len(expected)), log)

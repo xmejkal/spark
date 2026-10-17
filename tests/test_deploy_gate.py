@@ -2,6 +2,8 @@
 and the person types yes in their own terminal."""
 
 import contextlib
+import datetime
+import getpass
 import hashlib
 import io
 import json
@@ -69,7 +71,7 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False, probe=None):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False, probe=None, clock=None):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command."""
         self.copied = getattr(self, "copied", {})
 
@@ -90,7 +92,7 @@ class GateCase(LookCase):
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, probe=probe)
+            code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, probe=probe, clock=clock)
         return code, out.getvalue(), err.getvalue()
 
     def token(self, **kw):
@@ -451,7 +453,38 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.assertEqual((kept["mac"], kept["board"], len(kept["deploys"])),
                          (json.loads(self.copied["spark.json"])["mac"], "xiao-esp32-c6", before + 1))
         self.assertEqual(kept["deploys"][-1]["verdict"], "ready seen")
-        self.assertTrue(kept["deploys"][-1]["yes"].startswith("typed in a terminal by "))
+
+    def test_the_record_keeps_whose_yes_the_consent_says(self):
+        _, said, _ = self.flash(FakeConsent(True))
+        record = Path(said.split("store record: ")[1].strip())
+        self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "a test")
+
+    def test_a_yes_typed_in_a_terminal_is_recorded_as_typed_in_a_terminal(self):
+        terminal = deploy_gate.TerminalConsentStrategy("x", stdin=Stream("yes\n"), stdout=Stream())
+        with mock.patch.object(getpass, "getuser", return_value="ada"):
+            _, said, _ = self.flash(terminal)
+        record = Path(said.split("store record: ")[1].strip())
+        self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "typed in a terminal by ada")
+
+    def test_one_moment_names_the_facts_the_log_and_its_file(self):
+        moment, calls = datetime.datetime(2026, 10, 17, 9, 8, 7), []
+        self.run_the_scenario()
+        self.deploy("--token", self.token(), consent=FakeConsent(True), clock=lambda: calls.append(1) or moment)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log"))
+        self.assertEqual((len(calls), json.loads(self.copied["spark.json"])["deployed"], log.name),
+                         (1, "2026-10-17T09:08:07", "2026-10-17T09-08-07.log"))
+        self.assertTrue(log.read_text().startswith("# deploy 2026-10-17T09:08:07 on /dev/cu.usbmodem101\n"))
+
+    def test_the_facts_carry_the_moment_given_and_no_clock(self):
+        moment = datetime.datetime(2026, 1, 2, 3, 4, 5)
+        self.run_the_scenario()
+        said = board_facts.facts(self.project, "xiao-esp32-c6", "aa:bb", self.image, {}, moment)
+        self.assertEqual(said["deployed"], "2026-01-02T03:04:05")
+
+    def test_the_record_writes_the_who_it_is_given(self):
+        said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "deployed": "d"}
+        path = board_facts.record_deploy(said, "ready seen", "a test")
+        self.assertEqual(json.loads(path.read_text())["deploys"][-1]["yes"], "a test")
 
     def test_the_facts_go_to_the_look_s_port_and_name_the_look_s_mac(self):
         self.flash()
@@ -499,6 +532,42 @@ class TheFactsAfterTheFlashTest(GateCase):
             code, said, _ = self.flash()
         self.assertEqual(code, 0)
         self.assertIn("store record: not written: no room", said)
+
+
+class TheBoardLogTextTest(unittest.TestCase):
+    """The board log's text is a Value's: the same facts are the same text."""
+
+    MOMENT = datetime.datetime(2026, 10, 17, 9, 8, 7)
+
+    def log(self, **kw):
+        return deploy.BoardLog(**dict(dict(moment=self.MOMENT, port="/dev/x", image_sha256="abc",
+                                           facts_line="facts file spark.json sha256: f", verdict="ready seen",
+                                           sentence="it is up", heard="the board said\n"), **kw))
+
+    def test_a_ready_seen_log_reads_as_it_always_did(self):
+        self.assertEqual(self.log().text(), "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\n"
+                         "facts file spark.json sha256: f\nready seen: it is up\n\nthe board said\n\n")
+
+    def test_a_log_with_no_reset_keeps_the_console_text_before_the_board_s(self):
+        text = self.log(verdict="ready unknown", sentence="no reset came",
+                        heard="console with DTR and RTS off: waiting for download\nno reset\nOSError\n").text()
+        self.assertEqual(text, "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\n"
+                         "facts file spark.json sha256: f\nready unknown: no reset came\n\n"
+                         "console with DTR and RTS off: waiting for download\nno reset\nOSError\n\n")
+
+
+class TheConsentTest(unittest.TestCase):
+    def test_a_consent_that_does_not_say_who_cannot_be_built(self):
+        class Silent(deploy_gate.ConsentStrategy):
+            def ask(self, question):
+                return True
+        with self.assertRaises(TypeError):
+            Silent()
+
+    def test_the_terminal_says_who_typed_the_yes(self):
+        terminal = deploy_gate.TerminalConsentStrategy("x")
+        with mock.patch.object(getpass, "getuser", return_value="ada"):
+            self.assertEqual(terminal.who, "typed in a terminal by ada")
 
 
 class TheDefaultConsentTest(GateCase):

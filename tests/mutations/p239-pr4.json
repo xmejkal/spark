@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/board_facts.py",
+  "name": "the record ignores who",
+  "find": "\"yes\": who}",
+  "replace": "\"yes\": \"typed in a terminal\"}"
+ },
+ {
+  "file": "scripts/board_facts.py",
+  "name": "the facts read the clock",
+  "find": "\"deployed\": moment.isoformat(timespec=\"seconds\")}",
+  "replace": "\"deployed\": __import__(\"datetime\").datetime.now().isoformat(timespec=\"seconds\")}"
+ },
+ {
+  "file": "scripts/ready_check.py",
+  "name": "the sentence and the log are swapped",
+  "find": "ReadyResult(NOT_SEEN, \"the firmware stopped with an error: %s\" % stopped, log)",
+  "replace": "ReadyResult(NOT_SEEN, log, \"the firmware stopped with an error: %s\" % stopped)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "no reset keeps the old sentence",
+  "find": "ready = ready._replace(sentence=download_mode.NO_RESET)",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "the first read uses its own clock",
+  "find": "facts, facts_line, ready = read_board(args.project, report, connection, expected, moment)\n    heard = \"\"",
+  "replace": "facts, facts_line, ready = read_board(args.project, report, connection, expected, datetime.datetime.now())\n    heard = \"\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "the store gets a fixed who",
+  "find": "ready.verdict, consent.who)",
+  "replace": "ready.verdict, \"typed in a terminal by x\")"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "the terminal's who is fixed",
+  "find": "return TYPED_BY % getpass.getuser()",
+  "replace": "return \"typed in a terminal\""
+ }
+]

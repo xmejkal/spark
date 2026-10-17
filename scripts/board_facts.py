@@ -7,8 +7,6 @@ image's sha256 and each file's sha256. In the person's store: `record_deploy` ke
 its MAC, with each deploy, its verdict and whose yes it was.
 """
 
-import datetime
-import getpass
 import hashlib
 import json
 import tempfile
@@ -22,11 +20,11 @@ FACTS_FILE = "spark.json"
 PLUGIN_JSON = Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
 
 
-def facts(project, board, mac, image, files):
-    """The facts file's content: what spark put on this board, from records it holds."""
+def facts(project, board, mac, image, files, moment):
+    """The facts file's content: what spark put on this board, from records it holds, at `moment` (a datetime)."""
     return {"spark": json.loads(PLUGIN_JSON.read_text())["version"], "project": Path(project).resolve().name,
             "board": board, "mac": mac, "image_sha256": hashlib.sha256(Path(image).read_bytes()).hexdigest(),
-            "files": files, "deployed": datetime.datetime.now().isoformat(timespec="seconds")}
+            "files": files, "deployed": moment.isoformat(timespec="seconds")}
 
 
 def facts_text(said):
@@ -54,14 +52,14 @@ class FactsFile:
         return None if back.strip() == text.strip() else "it read back different from what was copied"
 
 
-def record_deploy(facts, verdict, yes_by=None):
+def record_deploy(facts, verdict, who):
     """
     The store's record of this board, by its MAC, with this deploy added: the project, the image's sha256, the date,
-    the verdict and whose yes it was (the person typed it in their own terminal). Returns the record's path.
+    the verdict and `who`, the phrase for whose yes it was (ConsentStrategy.who). Returns the record's path.
     """
     key = store.slug(facts["mac"])
     deploy = {"project": facts["project"], "image_sha256": facts["image_sha256"], "deployed": facts["deployed"],
-              "verdict": verdict, "yes": "typed in a terminal by %s" % (yes_by or getpass.getuser())}
+              "verdict": verdict, "yes": who}
     with store.locked():
         path = store.place("boards") / (key + ".json")
         try:

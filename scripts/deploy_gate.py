@@ -8,12 +8,15 @@ yes (an MCP or web yes, D19) is another ConsentStrategy.
 """
 
 import abc
+import getpass
 import shlex
 import sys
 from pathlib import Path
 
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 
+#: How the store's record says a yes was given in a terminal: %s is the person's login name.
+TYPED_BY = "typed in a terminal by %s"
 NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):\n  %s"
 
 
@@ -32,7 +35,13 @@ class GateClosedError(Exception):
 
 
 class ConsentStrategy(abc.ABC):
-    """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes."""
+    """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes, and
+    `who`, the phrase that tells the store's record whose yes it was."""
+
+    @property
+    @abc.abstractmethod
+    def who(self):
+        """Who said yes, as a phrase for the store's record, for example "typed in a terminal by ada"."""
 
     @abc.abstractmethod
     def ask(self, question):
@@ -49,6 +58,10 @@ class TerminalConsentStrategy(ConsentStrategy):
 
     def __init__(self, line, stdin=None, stdout=None):
         self.line, self.stdin, self.stdout = line, stdin or sys.stdin, stdout or sys.stdout
+
+    @property
+    def who(self):
+        return TYPED_BY % getpass.getuser()
 
     def require_ready(self):
         if not (self.stdin.isatty() and self.stdout.isatty()):

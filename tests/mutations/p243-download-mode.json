@@ -44,13 +44,13 @@
  {
   "file": "scripts/deploy.py",
   "name": "probe without expected files",
-  "find": "if verdict == ready_check.UNKNOWN and expected:",
-  "replace": "if verdict == ready_check.UNKNOWN:"
+  "find": "if ready.verdict == ready_check.UNKNOWN and expected:",
+  "replace": "if ready.verdict == ready_check.UNKNOWN:"
  },
  {
   "file": "scripts/deploy.py",
   "name": "probe whatever the verdict",
-  "find": "if verdict == ready_check.UNKNOWN and expected:",
+  "find": "if ready.verdict == ready_check.UNKNOWN and expected:",
   "replace": "if expected:"
  },
  {
@@ -62,7 +62,7 @@
  {
   "file": "scripts/deploy.py",
   "name": "no retry after the reset",
-  "find": "                if reset:\n                    facts, facts_line, verdict, sentence, said = read_board",
+  "find": "                if reset:\n                    facts, facts_line, ready = read_board",
   "replace": "                if reset:\n                    _ = read_board"
  },
  {
