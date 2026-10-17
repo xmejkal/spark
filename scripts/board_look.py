@@ -2,7 +2,7 @@
 Read the board on USB without changing it, and compare it with the project's board record (P219, #201).
 
 A library: look.py only parses arguments, calls `looker(project).run(project, port)` and prints the Report. The gate
-module of step 4 will call it too. It reads the image checks from image_check.py and never imports deploy.py.
+module of step 4 will call it too. It reads the image checks from project_image.py and never imports deploy.py.
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
     PortFinder     the boards on USB, from mpremote's list. It never opens a port.
@@ -22,10 +22,13 @@ from collections import namedtuple
 from pathlib import Path
 
 import boards
-import image_check
 import outcomes
+import project_image
 import tools
 
+#: What to try when esptool cannot reach the board. Used here and by deploy.py; PR 7 of P239 moves it to the Flasher.
+BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press and release RESET, release BOOT, "
+             "and run it again")
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"
 Port = namedtuple("Port", "device serial usb product")
@@ -63,7 +66,7 @@ class PortFinder:
     """The boards on USB. It runs mpremote's `devs`, which only lists, never opens a port or runs code on a board."""
 
     def __init__(self, shell, run=subprocess.run):
-        self.command, self.run = image_check.runnable(shell) + ["devs"], run
+        self.command, self.run = tools.command_for(shell) + ["devs"], run
 
     def boards(self):
         try:
@@ -72,7 +75,7 @@ class PortFinder:
             raise LookStop("could not list the boards on USB: %s" % cannot)
         except subprocess.TimeoutExpired:
             raise LookStop("could not list the boards on USB: mpremote took more than %d s. %s"
-                           % (LIST_TIMEOUT_S, image_check.BOOT_HINT))
+                           % (LIST_TIMEOUT_S, BOOT_HINT))
         if done.returncode:
             lines = (done.stderr or "").strip().splitlines()
             raise LookStop("could not list the boards on USB: %s" % (lines[-1] if lines else "mpremote exited with %d" % done.returncode))
@@ -118,16 +121,16 @@ class EsptoolReader(BoardReader):
     def read(self, port):
         if self.flasher.name != "esptool":
             raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher.name)
-        command = image_check.runnable(self.flasher) + ["--port", port, "flash_id"]
+        command = tools.command_for(self.flasher) + ["--port", port, "flash_id"]
         try:
             done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:
             raise LookStop("could not read the board on %s: %s" % (port, cannot), port)
         except subprocess.TimeoutExpired:
             raise LookStop("could not read the board on %s: esptool took more than %d s. %s"
-                           % (port, READ_TIMEOUT_S, image_check.BOOT_HINT), port)
+                           % (port, READ_TIMEOUT_S, BOOT_HINT), port)
         if done.returncode:
-            raise LookStop("could not read the board on %s. %s" % (port, image_check.BOOT_HINT), port,
+            raise LookStop("could not read the board on %s. %s" % (port, BOOT_HINT), port,
                            esptool_said(done.stderr))
         return self.parse(done.stdout)
 
@@ -227,10 +230,10 @@ class Look:
         reading = self.reader.read(port)
         image, why = None, None
         try:
-            image = image_check.image_of(project)
-            runs = project / "sim" / "runs"
-            why = image_check.untested(image, runs) or (None if ignore_older_runs else image_check.tested_another(image, runs))
-        except image_check.DeployProblem as cannot:
+            found = project_image.ProjectImage(project)
+            image = found.path
+            why = found.why_untested() or (None if ignore_older_runs else found.why_other_runs())
+        except project_image.DeployError as cannot:
             why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
         return Report(port, reading, record, image, why)
 

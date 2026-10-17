@@ -273,7 +273,7 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.assertIn("Traceback: OSError: 19", log.read_text())
 
     def test_a_passed_log_gone_after_the_flash_is_unknown_not_a_traceback(self):
-        with mock.patch.object(deploy, "passed_log", side_effect=lambda *a: None):
+        with mock.patch.object(deploy.ProjectImage, "find_passed_log", side_effect=lambda *a: None):
             code, said, _ = self.flash()
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the passed run's log names no files", said)

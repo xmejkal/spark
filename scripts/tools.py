@@ -267,6 +267,13 @@ def off_sentence(tool_name, project=None, personal=None):
     return "%s is turned off in %s — turn it on: /spark:setup add %s" % (tool_name, setter, tool_name)
 
 
+def command_for(tool):
+    """The command that runs a Tool: a Python package as `python -m <module>`, anything else as it was found."""
+    if tool.entry.get("kind") == "python":
+        return tool.command + ["-m", tool.entry["module"]]
+    return list(tool.command)
+
+
 def find(name, project=None, personal=None, _seen=()):
     """A role or a tool's name -> the Tool to run, or a ToolProblem saying why not and what to do."""
     lists = merged(project, personal)

@@ -183,7 +183,7 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
 
     def test_plan_refuses_by_default(self):
         self.run_two_scenarios()
-        with mock.patch.object(tools, "find", side_effect=found), self.assertRaises(deploy.DeployProblem) as said:
+        with mock.patch.object(tools, "find", side_effect=found), self.assertRaises(deploy.DeployError) as said:
             deploy.plan(self.project)
         self.assertIn("--ignore-older-runs", str(said.exception))
 
