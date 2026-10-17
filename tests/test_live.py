@@ -74,7 +74,7 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual((line["answer"], line["output"], line["reset"], line["port"]), ("ran", "1\n", "done", C6_PORT))
         self.assertEqual([command[-4:] for command in ran if "devs" not in command],
                          [["connect", C6_PORT, "exec", "print(1)"], ["mpremote", "connect", C6_PORT, "reset"]])
-        self.assertEqual(sorted(line), ["answer", "cure", "gpio_numbers_in_code", "grant_why", "output", "pins_checked",
+        self.assertEqual(sorted(line), ["answer", "cure", "doctor", "gpio_numbers_in_code", "grant_why", "output", "pins_checked",
                                         "port", "reset", "why"])
 
     def test_an_ended_grant_exits_1_with_its_code_and_runs_nothing_on_the_board(self):
@@ -111,7 +111,7 @@ class LiveScriptTest(unittest.TestCase):
 
     def test_could_not_run_json_holds_every_field(self):
         code, said, _, _ = self.go("--code", "print(1)", "--json", devs="mpremote-devs-two.txt")
-        self.assertEqual(sorted(json.loads(said)), ["answer", "cure", "gpio_numbers_in_code", "grant_why", "output",
+        self.assertEqual(sorted(json.loads(said)), ["answer", "cure", "doctor", "gpio_numbers_in_code", "grant_why", "output",
                                                     "pins_checked", "port", "reset", "why"])
 
     def test_a_broken_record_exits_2(self):
@@ -126,6 +126,33 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("does not read its console", said)
         self.assertEqual([command for command in ran if "reset" in command], [])
+        self.assertIn("  check   console: the console was silent for 2 s\n", said)
+        self.assertTrue(said.rstrip().endswith("if not  unplug the board, plug it in again, and run it again"))
+
+    def test_a_silent_board_s_json_carries_the_doctor_s_codes(self):
+        refused = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        code, said, _, _ = self.go("--code", "print(1)", "--json", answers=(refused, refused))
+        doctor = json.loads(said)["doctor"]
+        self.assertEqual((code, doctor["next_step"], doctor["if_not_helped"]), (2, "press_reset", "replug"))
+        self.assertEqual([check["name"] for check in doctor["checks"]], ["port-listed", "console"])
+
+    def test_a_port_mpremote_could_not_open_gets_the_doctor_and_no_reset(self):
+        busy = subprocess.CalledProcessError(1, [], "", "failed to access %s (it may be in use by another program)\n" % C6_PORT)
+        code, said, _, ran = self.go("--code", "print(1)", "--json", answers=(busy,))
+        line = json.loads(said)
+        self.assertEqual((code, line["reset"]), (2, None))
+        self.assertEqual(line["doctor"]["checks"][0]["name"], "port-listed")
+        self.assertEqual([command for command in ran if "reset" in command], [])
+
+    def test_an_unknown_silent_step_keeps_the_try_s_answer_and_says_no_doctor(self):
+        refused = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        shell = tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote", "silent_step": "erase"},
+                           ["/opt/python3"])
+        with mock.patch.dict(found.__globals__["FOUND"], {"board-shell": shell}):
+            code, said, _, _ = self.go("--code", "print(1)", "--json", answers=(refused, refused))
+        line = json.loads(said)
+        self.assertEqual((code, line["answer"], line["doctor"]), (2, "not_reached", None))
+        self.assertIn("No doctor:", line["why"])
 
     def test_the_text_lists_the_gpio_numbers_in_the_code(self):
         code, said, _, _ = self.go("--code", "from machine import Pin\nPin(15, Pin.OUT).value(1)", answers=("", ""))

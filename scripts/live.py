@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_doctor
 import board_grant
 import board_live
 import board_look
@@ -26,7 +27,7 @@ nothing to the board.
 
 If mpremote cannot enter the board's raw REPL, live.py cures the board once, as reach.py does, and tries again. When
 it still cannot get in, it names both causes: a dead USB output, or firmware that does not read its console. The exec
-stops the firmware that ran. So unless mpremote said it could not enter the raw REPL, live.py restarts the chip with
+stops the firmware that ran. So unless mpremote said it could not open the port or enter the raw REPL, live.py restarts the chip with
 `mpremote reset`, even after code that never ends, and the firmware starts from boot. A pin that the code set and the firmware never sets
 can keep its value through that reset (P252's bench), so live.py lists the GPIO numbers written in the code. That list
 over-claims: print(1) lists GPIO1.
@@ -36,6 +37,10 @@ The record is the project's active board (boards/active.json). live.py does not 
 --json prints one line with every field, null where it has none: answer (ran, raised, not_reached, refused_no_grant,
 refused_pin, refused_no_parse, or could-not-run, the word outcomes.py shares), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
 pins_checked (false when the record names no usb or flash pin) and gpio_numbers_in_code, with port.
+
+When mpremote cannot open the port or enter the board's REPL, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+port, and two seconds of the console with the port's lock. It prints mpremote's own error, each check's fact,
+and one next step for your hands, as the last line. Its look at the console can restart the board. --json carries it as doctor.
 
 Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board did not answer, the reset failed, or
 live.py could not run, and the last line says why. With two or more boards on USB, --port is needed."""
@@ -51,6 +56,8 @@ def describe(result):
     if result.gpio_numbers_in_code:
         out.append("gpio    the code writes %s, each a GPIO of this board"
                    % ", ".join(str(gpio) for gpio in result.gpio_numbers_in_code))
+    if result.doctor:
+        out += board_doctor.describe(result.doctor)
     return "\n".join("  " + line for line in out)
 
 
@@ -58,6 +65,7 @@ def to_json(port, result):
     """One line of JSON for a LiveTryResult, with the port."""
     fields = result._asdict()
     fields["cure"] = result.cure._asdict() if result.cure is not None else None
+    fields["doctor"] = board_doctor.as_dict(result.doctor) if result.doctor is not None else None
     return json.dumps(dict(fields, port=port))
 
 
@@ -77,9 +85,11 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.utc_now):
         shell = tools.find("board-shell", args.project)
         finder = board_look.PortFinder(shell, run)
         port = port or finder.require_one_port("live.py")
+        probe = probe or ConsoleProbe.for_tool(shell, port, run)
+        doctor = board_doctor.BoardDoctorService.for_board(finder, probe)
         service = board_live.LiveTryService(board_grant.GrantService(finder, now=now),
-                                            BoardConnection(runnable(shell), port, run),
-                                            probe or ConsoleProbe.for_tool(shell, port, run), boards.load(args.project))
+                                            BoardConnection(runnable(shell), port, run), probe,
+                                            boards.load(args.project), doctor, shell)
         result = service.run(args.code, port)
     except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError) as cannot:
         if args.json:

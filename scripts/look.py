@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_doctor
 import board_look
 from outcomes import EXIT_COULD_NOT_RUN
 
@@ -24,6 +25,10 @@ and the line says why.
 
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a
 token even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it.
+
+When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
+port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
+and one next step for your hands, as the last line. Its look at the console can restart the board.
 
 Exit codes: 0 every field matches and there is a token, 1 a field differs or the look found a stop, 2 it could not run
 or could not check something (a field unknown, no token), and the sentence says why."""
@@ -62,7 +67,7 @@ def main(argv=None, run=subprocess.run):
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
     except board_look.LookStop as stop:
-        print("look.py: %s" % stop, file=sys.stderr)
+        print("\n".join(board_doctor.stop_lines("look.py", stop, args.project, run)), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print("\n".join(lines(report)))
     return report.exit_code()

@@ -18,6 +18,9 @@ BOARD_TRACEBACK = "Traceback"
 #: What mpremote says when the board did not answer its raw REPL, as part of its last line
 #: `mpremote.transport.TransportError: could not enter raw repl` (docs/observations/2026-10-15-p235-reach-test.md).
 RAW_REPL_REFUSED = "could not enter raw repl"
+#: What mpremote 1.29 says when it could not open the port at all: another program holds it, or it is gone
+#: (`failed to access <port> (it may be in use by another program)`, transport_serial.py:104). Nothing ran then.
+PORT_NOT_OPENED = "failed to access"
 #: How long one mpremote call may take before the board counts as not answering, in seconds.
 DEFAULT_TIMEOUT_S = 20
 

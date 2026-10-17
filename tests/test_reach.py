@@ -63,12 +63,13 @@ class ReachScriptTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("does not read its console", said)
         self.assertNotIn("the firmware is stopped", said)
+        self.assertTrue(said.rstrip().endswith("if not  unplug the board, plug it in again, and run it again"))
 
     def test_json_is_one_line_with_the_cure_as_an_object_and_the_time(self):
         code, said, _, _ = self.go("--json", answers=(REFUSED, "reached\n"))
         line = json.loads(said)
         self.assertEqual(code, 0)
-        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "entered", "first_try_failed", "output", "port", "reached", "why"])
+        self.assertEqual(sorted(line), ["at", "cure", "cure_first", "doctor", "entered", "first_try_failed", "output", "port", "reached", "why"])
         self.assertEqual(line["cure"], {"heard": RESTART.heard, "why": None, "restart_heard": True, "port_back": True, "boot_heard": False})
         self.assertFalse(line["cure_first"])
         self.assertTrue(line["first_try_failed"])

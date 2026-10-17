@@ -1198,6 +1198,10 @@ While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal
 live.py --code 'print(1)'
 ```
 
+If the board does not answer `grant.py`'s read or `live.py`, the script says why: esptool's or mpremote's own error, whether
+the port is listed, what the console said, and one step for your hands, such as pressing R
+([P282](https://github.com/xmejkal/spark/issues/326)).
+
 It checks the grant without touching the board, and it refuses code that writes a number of the board's USB or flash
 pins. Then it runs the code with mpremote, which stops your firmware. At the end it restarts the chip with
 `mpremote reset`, so the firmware starts again from boot. It prints the answer (`ran`, `raised`, `not_reached` or a

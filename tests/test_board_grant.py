@@ -8,6 +8,7 @@ import io
 import json
 import os
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -63,6 +64,31 @@ class GrantCase(unittest.TestCase):
     def check(self, *argv):
         code, out, _ = self.grant("--check", "--json", *argv)
         return code, json.loads(out)
+
+
+class DoctorTest(GrantCase):
+    """P282: a read that esptool could not make ends with the board doctor's facts and one next step."""
+
+    def run_tool(self, argv, **kw):
+        self.ran.append(argv)
+        if "devs" in argv:
+            return done(self.devs)
+        if "flash_id" in argv:
+            return subprocess.CompletedProcess(argv, 2, "Connecting......\n", "ERROR: A fatal error occurred: Failed "
+                                               "to connect to Espressif device: No serial data received.\nFor "
+                                               "troubleshooting steps visit: https://docs.espressif.com\n")
+        return done("")  # the doctor's console read: silent
+
+    def test_a_silent_board_names_esptool_s_words_the_port_and_hold_boot_last(self):
+        code, _, err = self.grant("--minutes", "30", consent=FakeConsent(True))
+        self.assertEqual(code, 2)
+        lines = err.strip().splitlines()
+        self.assertEqual(lines[0], "grant.py: could not read the board on /dev/cu.usbmodem101")
+        self.assertIn("  said    ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data "
+                      "received.", lines)
+        self.assertIn("  check   console: the console was silent for 2 s", lines)
+        self.assertTrue(lines[-1].startswith("  next    hold the board's BOOT (B) button"))
+        self.assertFalse((self.home / "grants").exists())
 
 
 class IssueTest(GrantCase):

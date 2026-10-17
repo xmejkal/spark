@@ -32,13 +32,23 @@ RESTART = re.compile(r"\brst:0x[0-9a-f]+")
 BOOT_END = re.compile(r"^entry 0x[0-9a-f]+\s*$", re.MULTILINE)
 #: What the probe says of a port it could not read (P244): a could-not-run, never a silent console.
 UNREAD = "could not read the port: %s"
+#: The console script's exit code when another program holds the port's lock, as mpremote and esptool do while they run
+#: (mpremote 1.29 transport_serial.py:52 opens with exclusive=True). pyserial 3.5 keeps the lock's errno (serialposix.py:387).
+EXIT_PORT_BUSY = 3
+#: The kinds of a console read: it read the port, another program held it, or it could not read it for another reason.
+KIND_READ, KIND_BUSY, KIND_UNREAD = "read", "busy", "unread"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening
-#: it does not choose the boot mode. argv: the port, the seconds.
-READ_CONSOLE = """import sys, time, serial
+#: it does not choose the boot mode, and with the port's lock, so that a port another program holds is told apart
+#: (P282). argv: the port, the seconds.
+READ_CONSOLE = """import errno, sys, time, serial
 s = serial.Serial()
-s.port, s.baudrate, s.timeout, s.dtr, s.rts = sys.argv[1], 115200, 0.1, False, False
-s.open()
-out, end = b"", time.monotonic() + float(sys.argv[2])
+s.port, s.baudrate, s.timeout, s.dtr, s.rts, s.exclusive = sys.argv[1], 115200, 0.1, False, False, True
+try:
+    s.open()
+except serial.SerialException as cannot:
+    sys.stderr.write(str(cannot) + "\\n")
+    sys.exit(%d if cannot.errno in (errno.EAGAIN, errno.EWOULDBLOCK) else 1)
+""" % EXIT_PORT_BUSY + """out, end = b"", time.monotonic() + float(sys.argv[2])
 try:
     while time.monotonic() < end:
         out += s.read(512)
@@ -48,6 +58,9 @@ finally:
 """
 
 
+#: Result: the kind of a console read (KIND_READ, KIND_BUSY or KIND_UNREAD), what the port printed (also when the read
+#: failed part way), and why it failed, or None.
+ConsoleReadResult = namedtuple("ConsoleReadResult", "kind printed why")
 #: Value: what the cure's open heard (all of it, also when the read failed part way), why the read failed or None,
 #: whether the board printed a restart, whether the port was there again after the wait, and whether it heard the end
 #: of a boot (a restart, or only its tail).
@@ -85,28 +98,25 @@ class ConsoleProbe:
         return cls(tool.command, port, run)
 
     def console(self):
-        """(What the port printed in READ_S seconds, None), or (None, why) when it could not be read."""
-        printed, why = self._read()
-        return (None, why) if why else (printed, None)
-
-    def _read(self):
-        """(What the port printed, also when the read failed part way, why it failed or None)."""
+        """The ConsoleReadResult of reading the port for READ_S seconds, with its lock."""
         try:
             done = self.run(self.python + ["-c", READ_CONSOLE, self.port, str(READ_S)], capture_output=True, text=True,
                             timeout=READ_S + 10, check=True)
         except subprocess.CalledProcessError as failed:
-            return printed_text(failed.stdout or ""), ((failed.stderr or "").strip().splitlines() or [str(failed)])[-1]
+            why = ((failed.stderr or "").strip().splitlines() or [str(failed)])[-1]
+            kind = KIND_BUSY if failed.returncode == EXIT_PORT_BUSY else KIND_UNREAD
+            return ConsoleReadResult(kind, printed_text(failed.stdout or ""), why)
         except subprocess.TimeoutExpired as failed:
-            return printed_text(failed.stdout or ""), str(failed)
+            return ConsoleReadResult(KIND_UNREAD, printed_text(failed.stdout or ""), str(failed))
         except (OSError, subprocess.SubprocessError) as failed:
-            return "", str(failed)
-        return printed_text(done.stdout), None
+            return ConsoleReadResult(KIND_UNREAD, "", str(failed))
+        return ConsoleReadResult(KIND_READ, printed_text(done.stdout), None)
 
     def cure(self):
         """The Cure of a board whose USB output died at power-on (P251): the open with DTR and RTS off, which restarted
         the XIAO C6 in AT187, and what it printed. Then a wait of at most PORT_BACK_S until the port is there again, and
         PORT_SETTLE_S more. It never waits for the port to go: the restart comes during the read."""
-        heard, why = self._read()
+        _, heard, why = self.console()
         end = self.clock.monotonic() + PORT_BACK_S
         while not self.port_exists(self.port) and self.clock.monotonic() < end:
             self.clock.sleep(POLL_S)
@@ -118,10 +128,10 @@ class ConsoleProbe:
     def waits_in_download_mode(self):
         """(True when the console says DOWNLOAD_MODE, what it printed). A port it could not read is never download
         mode, and what it says is UNREAD with the reason, never an empty console (P244)."""
-        said, why = self.console()
-        if said is None:
-            return False, UNREAD % why
-        return DOWNLOAD_MODE in said, said
+        read = self.console()
+        if read.kind != KIND_READ:
+            return False, UNREAD % read.why
+        return DOWNLOAD_MODE in read.printed, read.printed
 
     def wait_for_reset(self, timeout_s=RESET_WAIT_S):
         """True when the port went away and came back within `timeout_s`, as it does when the board restarts."""

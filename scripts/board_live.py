@@ -9,12 +9,14 @@ A library: live.py only parses arguments, calls `LiveTryService` and prints.
                      and restarts the chip after any code that may have got in (P252's pick, a hard reset).
 
 Nothing reaches the board without a grant: the grant check runs only `mpremote devs`, and every refusal comes before
-the run. The reset runs unless mpremote said it could not enter the raw REPL, so code that never ends is stopped too.
+the run. The reset runs unless mpremote said it could not open the port or enter the raw REPL, so code that never
+ends is stopped too.
 A Ctrl-C during the run stops live.py before the reset.
 """
 
 from collections import namedtuple
 
+import board_doctor
 import board_reach
 from board_connection import BoardUnreachableError
 from board_grant import MESSAGE_FOR
@@ -39,9 +41,10 @@ NO_RESTRICTED_PINS_MESSAGE = "the board record names no usb or flash pin, so the
 #: sentence (None after a clean run), `output` what the board printed, `cure` the board_console.Cure when one ran,
 #: `reset` RESET_DONE, RESET_FAILED or None, `pins_checked` False when the record names no restricted pin,
 #: `gpio_numbers_in_code` the whole numbers in the code that are a GPIO of this board. That list over-claims:
-#: `print(1)` lists GPIO1.
+#: `print(1)` lists GPIO1. `doctor` is the board_doctor.BoardDoctorResult when mpremote never got in, else None (P282).
 LiveTryResult = namedtuple("LiveTryResult",
-                           "answer grant_why why output cure reset pins_checked gpio_numbers_in_code")
+                           "answer grant_why why output cure reset pins_checked gpio_numbers_in_code doctor",
+                           defaults=(None,))
 
 
 def exit_code(result):
@@ -61,10 +64,12 @@ def gpio_numbers(board):
 class LiveTryService:
     """Service: one live try on the board on one port. `grants` is a board_grant.GrantService, `connection` a bare
     board_connection.BoardConnection on that port, `probe` its board_console.ConsoleProbe (or None for no cure),
-    `board` the project's board record. RestrictedPins.from_board's BrokenRecordError and the grant check's LookStop pass up."""
+    `board` the project's board record, `doctor` a board_doctor.BoardDoctorService with `shell` the tools list's
+    mpremote, or None for no doctor. RestrictedPins.from_board's BrokenRecordError and the grant check's LookStop pass up."""
 
-    def __init__(self, grants, connection, probe, board):
+    def __init__(self, grants, connection, probe, board, doctor=None, shell=None):
         self.grants, self.connection, self.probe, self.board = grants, connection, probe, board
+        self.doctor, self.shell = doctor, shell
 
     def run(self, code, port, script="live.py"):
         """The LiveTryResult of running `code` on the board on `port`, after the grant and the pin check."""
@@ -87,4 +92,10 @@ class LiveTryService:
                 reset = RESET_DONE
             except BoardUnreachableError as failed:
                 reset, why = RESET_FAILED, ". ".join(filter(None, [why, RESET_FAILED_MESSAGE % failed]))
-        return LiveTryResult(answer, None, why, reached.output, reached.cure, reset, **facts)
+        examined = None
+        if not reached.entered and self.doctor is not None:
+            try:
+                examined = self.doctor.examine(port, self.shell, reached.why)
+            except board_doctor.UnknownStepError as cannot:
+                why = "%s. No doctor: %s" % (why, cannot)
+        return LiveTryResult(answer, None, why, reached.output, reached.cure, reset, doctor=examined, **facts)

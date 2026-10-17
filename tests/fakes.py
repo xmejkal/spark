@@ -72,6 +72,12 @@ class FakeConsoleProbe:
         self.printed, self.reset, self.on_reset, self.asked = printed, reset, on_reset, []
         self.on_console, self.cured, self.on_cure = on_console, cured, on_cure
 
+    def console(self):
+        """The board doctor's read: `printed`, read with the port's lock."""
+        self.asked.append("console")
+        from board_console import ConsoleReadResult  # scripts/ is on the path once a test imports spark
+        return ConsoleReadResult("read", self.printed, None)
+
     def waits_in_download_mode(self):
         self.asked.append("console")
         if self.on_console:

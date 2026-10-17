@@ -162,6 +162,26 @@ class EsptoolReaderTest(unittest.TestCase):
         self.assertIn("could not read the board on %s" % C6_PORT, str(stop.exception))
         self.assertIn("BOOT", str(stop.exception))
 
+    def test_a_failed_read_keeps_the_port_and_esptool_s_own_line_not_its_url(self):
+        stderr = ("ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data received.\n"
+                  "For troubleshooting steps visit: https://docs.espressif.com/projects/esptool/en/latest/troubleshooting.html\n")
+        failed = lambda argv, **kw: subprocess.CompletedProcess([], 2, "Connecting......\n", stderr)
+        with self.assertRaises(board_look.LookStop) as stop:
+            board_look.EsptoolReader(FOUND["flasher"], failed).read(C6_PORT)
+        self.assertEqual((stop.exception.port, stop.exception.tool_said), (C6_PORT, (
+            "ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data received.")))
+
+    def test_esptool_s_line_is_the_first_error_line_stripped_and_none_without_one(self):
+        stderr = "ERROR: the first\nERROR: the second\nFor troubleshooting steps visit: https://docs.espressif.com\n"
+        self.assertEqual(board_look.esptool_said(stderr), "ERROR: the first")
+        self.assertIsNone(board_look.esptool_said(None))
+        self.assertIsNone(board_look.esptool_said("Connecting......\nHint: check the port\n"))
+
+    def test_a_failed_read_with_no_error_line_says_nothing_for_esptool(self):
+        with self.assertRaises(board_look.LookStop) as stop:
+            self.read("wrong-chip.txt", code=2)
+        self.assertIsNone(stop.exception.tool_said)
+
     def test_two_different_detecting_lines_and_the_last_wins(self):
         for first in ("Autodetection failed, trying again...", "ESP32"):
             text = "Detecting chip type... %s\nDetecting chip type... ESP32-S3\nBASE MAC: aa:bb:cc:dd:ee:ff\n" % first
