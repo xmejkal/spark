@@ -168,7 +168,7 @@ These write:
 - `init_project.py`: four project files, three files that AI tools read, plus the store's projects list.
 - `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for
   what you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each),
-  a mermaid diagram whose edges are those steps, and the points as a check list. Beside it, new each time, it writes
+  a mermaid diagram whose edges are those steps, and the points as a check list. Beside it it writes, at each build,
   `breadboard.json` (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi
   diagram. Only a board in `data/wokwi-geometry.json` is drawn, today the XIAO ESP32-C6, and rails are not drawn yet.
   Otherwise the sheet and stderr say `breadboard.json not written:` and the missing fact, and an old file is removed.

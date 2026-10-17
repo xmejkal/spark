@@ -14,6 +14,7 @@ different resistor now; jumpers are planned fresh from the placed parts.
 
 import collections
 import json
+import math
 from pathlib import Path
 
 import breadboard_drawing
@@ -96,7 +97,8 @@ class EarlierDiagram:
                 if one["type"] == surface_type:
                     on_surface = True
                     continue
-                float(one["left"]), float(one["top"])
+                if not math.isfinite(float(one["left"])) or not math.isfinite(float(one["top"])):
+                    raise ValueError("a position that is not a number")
                 parts[one["id"]] = one
         except (ValueError, KeyError, TypeError) as broken:
             return cls({}, "is not a Wokwi diagram of spark's kind (%s: %s)" % (type(broken).__name__, broken))

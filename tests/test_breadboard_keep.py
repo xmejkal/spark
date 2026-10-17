@@ -254,6 +254,12 @@ class OtherEditsTest(unittest.TestCase):
         edit(project, lambda drawn: drawn["parts"][0].update(type="wokwi-breadboard"))
         self.assertEqual(codes(build(project)), {"breadboard.json": "unreadable"})
 
+    def test_a_position_that_is_not_a_number_makes_the_file_unreadable(self):
+        project = new_project(FULL)
+        build(project)
+        edit(project, lambda drawn: drawn["parts"][2].update(left="nan"))
+        self.assertEqual(codes(build(project)), {"breadboard.json": "unreadable"})
+
     def test_every_code_has_a_message(self):
         self.assertEqual(set(breadboard_keep.MESSAGES), set(breadboard_keep.CODES))
         self.assertEqual(len(breadboard_keep.CODES), len(set(breadboard_keep.CODES)))

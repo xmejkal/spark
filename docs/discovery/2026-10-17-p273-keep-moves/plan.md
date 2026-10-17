@@ -51,8 +51,9 @@ entries. Variants of the fixture come from real `--keep` builds (`button-only-xi
    `hole_at()` give them.
 3. Every other part goes to first fit; one that does not fit after a kept part is retried from column 0.
 4. If the kept plan raises `NotDrawn`, the fresh layout is used and a moved part gets `no room`.
-5. Name each earlier part not in the layout (`not in the circuit`), and each refused part, and each resistor, whose
-   earlier place differs from its place now. A kept part and a part already where spark puts it are not named.
+5. Name each earlier part not in the layout (`not in the circuit`), each part the placement refused (also an
+   unmoved one that lost a hole to a moved one), and each resistor or `no room` part whose earlier place differs
+   from where the fresh plan puts it. A kept part, and a part the person did not move, are not named.
 
 ## Classes (new module `scripts/breadboard_keep.py`)
 
@@ -62,7 +63,7 @@ PartPlacement (breadboard_drawing)   Strategy; NEW no-op reserve_first(ledger), 
         `-- KeepMovesFirstFitPartPlacement   NEW Strategy: reserve earlier parts, else first fit (one per plan)
 EarlierDiagram                       NEW Value: earlier parts by id (type, left, top, turn), or why unread
 NotKeptResult(subject, code, why)    NEW Result: one per part named
-name_parts_not_kept(earlier, layout, reasons) -> [NotKeptResult]
+name_parts_not_kept(earlier, layout, fresh, reasons, default_code) -> [NotKeptResult]
 ```
 
 ```

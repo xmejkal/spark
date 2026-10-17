@@ -9,7 +9,7 @@ Example, in a project after `/spark:build` (`check_spine.py requirements.json --
 
     python3 "$CLAUDE_PLUGIN_ROOT/scripts/breadboard.py" requirements.json
 
-What it writes, each time from scratch (a part you moved in breadboard.json is the one thing it reads back):
+What it writes, each time from scratch (it reads back only the parts you moved in breadboard.json):
   - the parts: the board, each part with how many, each resistor a part asks for (R1, R2, …, through-hole) and what
     it is for, and whether you have each: yours (your drawer holds it for this project), in your drawer (you own it,
     not held here), to get; blank when the project is not on your list (/spark:init puts it there);
@@ -20,9 +20,10 @@ What it writes, each time from scratch (a part you moved in breadboard.json is t
     line, as the check list after wiring (breadboard_steps.py holds the step rule);
   - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
     to paste into a new project on wokwi.com; and breadboard.svg (P268), the same layout as a picture the sheet
-    shows, each part as spark's own pictogram (data/pictograms/). A part you moved in breadboard.json stays where you
-    put it at the next build (P273), if it still fits; a part it cannot keep is named on stderr, with why. A resistor and
-    a jumper are not kept yet: the jumpers follow the parts, and a resistor you moved is named. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
+    shows, each part as spark's own pictogram (data/pictograms/). A part you moved in breadboard.json stays where
+    you put it at the next build (P273), if it still fits; a part it cannot keep is named on stderr, with why. A
+    resistor and a jumper are not kept yet: the jumpers follow the parts, and a resistor is named when its place
+    differs from the one spark would give it. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
     today), and rails are not drawn yet; otherwise the sheet says what is missing, and an old drawing is removed;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
