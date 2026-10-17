@@ -148,6 +148,10 @@ class HoleLedger:
 class PartPlacement:
     """Strategy: where one part goes, and how it is turned."""
 
+    def reserve_first(self, ledger):
+        """Called once, with the plan's ledger, before the first part is placed. A strategy that keeps parts where an
+        earlier plan put them claims their holes here. The default claims nothing."""
+
     def place(self, part_id, drawn, ledger, after=0, pinned=None):
         raise NotImplementedError
 
@@ -227,6 +231,7 @@ class BreadboardPlanner:
     def plan(self, steps):
         """Each part placed in step order, then each resistor with a leg in the row it joins, then each jumper."""
         ledger = HoleLedger(self.geometry.surface)
+        self.placement.reserve_first(ledger)
         seated = list(steps.anchored())
         placed, after = {}, 1
         for step in seated:

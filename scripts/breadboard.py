@@ -9,7 +9,7 @@ Example, in a project after `/spark:build` (`check_spine.py requirements.json --
 
     python3 "$CLAUDE_PLUGIN_ROOT/scripts/breadboard.py" requirements.json
 
-What it writes, each time from scratch:
+What it writes, each time from scratch (a part you moved in breadboard.json is the one thing it reads back):
   - the parts: the board, each part with how many, each resistor a part asks for (R1, R2, …, through-hole) and what
     it is for, and whether you have each: yours (your drawer holds it for this project), in your drawer (you own it,
     not held here), to get; blank when the project is not on your list (/spark:init puts it there);
@@ -20,7 +20,9 @@ What it writes, each time from scratch:
     line, as the check list after wiring (breadboard_steps.py holds the step rule);
   - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
     to paste into a new project on wokwi.com; and breadboard.svg (P268), the same layout as a picture the sheet
-    shows, each part as spark's own pictogram (data/pictograms/). Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
+    shows, each part as spark's own pictogram (data/pictograms/). A part you moved in breadboard.json stays where you
+    put it at the next build (P273), if it still fits; a part it cannot keep is named on stderr, with why. A resistor and
+    a jumper are not kept yet: the jumpers follow the parts, and a resistor you moved is named. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
     today), and rails are not drawn yet; otherwise the sheet says what is missing, and an old drawing is removed;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
@@ -41,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assign_pins  # noqa: E402
 import breadboard_drawing  # noqa: E402
+import breadboard_keep  # noqa: E402
 import breadboard_steps  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
@@ -80,6 +83,9 @@ STEP_COLORS = breadboard_steps.StepColors()
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),
                      breadboard_drawing.SvgBreadboardDiagram(breadboard_drawing.WokwiGeometry.load(), STEP_COLORS))
+#: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).
+EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
+                        if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}
 
@@ -381,20 +387,41 @@ def _plan_layout(read):
 
 def drawing(requirements_path, circuit_path=None, read=None):
     """The Wokwi diagram's text, or NotDrawn with what stopped it."""
-    wokwi = next(renderer for renderer in DRAWING_RENDERERS
-                 if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
-    return wokwi.text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
+    return EDITABLE_DRAWING.text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
 
 
-#: One plan of the layout for a sheet and its drawings: the layout, or why it could not be planned.
-PlannedLayout = collections.namedtuple("PlannedLayout", "layout why")
+#: One plan of the layout for a sheet and its drawings: the layout, or why it could not be planned, and the earlier
+#: parts it could not keep as the person left them ([NotKeptResult]).
+PlannedLayout = collections.namedtuple("PlannedLayout", "layout why not_kept")
 
 
-def _plan_once(read):
+def _plan_once(read, earlier_path=None):
+    """The layout planned fresh; then, when `earlier_path` is a diagram the person may have edited, planned again
+    keeping the parts they moved. The fresh plan's error stands. When the kept plan has no room, the fresh layout is
+    used and the moved parts are named."""
     try:
-        return PlannedLayout(_plan_layout(read), None)
+        fresh = _plan_layout(read)
     except breadboard_drawing.NotDrawn as stopped:
-        return PlannedLayout(None, str(stopped))
+        return PlannedLayout(None, str(stopped), [])
+    if earlier_path is None:
+        return PlannedLayout(fresh, None, [])
+    geometry = breadboard_drawing.WokwiGeometry.load()
+    earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
+    if earlier is None:
+        return PlannedLayout(fresh, None, [])
+    if earlier.why_unread:
+        return PlannedLayout(fresh, None, [breadboard_keep.NotKeptResult(
+            Path(earlier_path).name, breadboard_keep.UNREADABLE,
+            breadboard_keep.MESSAGES[breadboard_keep.UNREADABLE] % earlier.why_unread)])
+    catalog = _describe_parts(read, geometry)
+    placement = breadboard_keep.KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)
+    try:
+        layout = breadboard_drawing.BreadboardPlanner(geometry, catalog, placement).plan(read.steps)
+        default = None
+    except breadboard_drawing.NotDrawn:
+        layout, default = fresh, breadboard_keep.NO_ROOM
+    named = breadboard_keep.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
+    return PlannedLayout(layout, None, named)
 
 
 def sheet(requirements_path, circuit_path=None, read=None, planned=None):
@@ -430,9 +457,9 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None):
     return "\n".join(lines) + "\n"
 
 
-#: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, and why none was (the
-#: plan fails for every drawing at once), else None.
-WriteResult = collections.namedtuple("WriteResult", "sheet drawings why")
+#: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, why none was (the
+#: plan fails for every drawing at once), else None, and the [NotKeptResult] of the earlier parts not kept.
+WriteResult = collections.namedtuple("WriteResult", "sheet drawings why not_kept")
 
 
 def write(requirements_path, out, circuit_path=None):
@@ -440,8 +467,9 @@ def write(requirements_path, out, circuit_path=None):
     calls beside the kept board. The layout is planned once. A drawing left from an earlier build is removed, since it
     describes another one."""
     read = _read_build(requirements_path, circuit_path)
-    planned = _plan_once(read)
     paths = [(Path(out).parent / renderer.FILE_NAME, renderer) for renderer in DRAWING_RENDERERS]
+    # the earlier breadboard.json is read here, before the new one overwrites the person's edits
+    planned = _plan_once(read, Path(out).parent / EDITABLE_DRAWING.FILE_NAME)
     try:
         # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
         texts = [renderer.text(planned.layout) for renderer in DRAWING_RENDERERS] if planned.layout else []
@@ -453,7 +481,7 @@ def write(requirements_path, out, circuit_path=None):
     if not planned.layout:
         for path, _ in paths:
             path.unlink(missing_ok=True)
-        return WriteResult(Path(out), [], planned.why)
+        return WriteResult(Path(out), [], planned.why, [])
     try:
         for (path, _), text in zip(paths, texts):
             path.write_text(text)
@@ -461,7 +489,7 @@ def write(requirements_path, out, circuit_path=None):
         for path, _ in paths:
             path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
         raise
-    return WriteResult(Path(out), paths, None)
+    return WriteResult(Path(out), paths, None, planned.not_kept)
 
 
 def main(argv=None):
@@ -481,6 +509,8 @@ def main(argv=None):
     print("wrote %s" % written.sheet, file=sys.stderr)
     for path, renderer in written.drawings:
         print("wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE), file=sys.stderr)
+    for named in written.not_kept:
+        print("not kept: %s" % named.line, file=sys.stderr)
     if written.why:
         for renderer in DRAWING_RENDERERS:
             print("%s not written: %s" % (renderer.FILE_NAME, written.why), file=sys.stderr)

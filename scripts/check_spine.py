@@ -89,6 +89,8 @@ PIN_MODULE = Path("firmware") / "pins.py"
 
 #: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
 REQUIREMENTS_STAGE = "requirements"
+#: The `did` of a kept entry for a part the person moved in breadboard.json that the build could not keep (P273).
+MOVE_NOT_KEPT = "move not kept"
 
 
 class Stage:
@@ -635,7 +637,8 @@ def main(argv=None):
                              "dist/, where every check already looks. Existing .tsx files are "
                              "left alone and named; with --json, each file is listed under kept. With a requirements "
                              "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
-                             "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today), "
+                             "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
+                             "you moved in it stays where you put it, or the build names it as `move not kept`), "
                              "breadboard.svg, that drawing as a picture, page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser, and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
@@ -782,6 +785,9 @@ def keep_breadboard(requirements, destination, stages=()):
     if written.why:
         kept += [{"file": str(path), "did": "not written", "why": written.why,
                   "line": "no %s: %s" % (renderer.NOUN, written.why)} for path, renderer in drawings]
+    # a part the person moved in breadboard.json that the build could not keep (P273)
+    kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
+              "why": named.why, "line": named.line} for named in written.not_kept]
     return kept
 
 

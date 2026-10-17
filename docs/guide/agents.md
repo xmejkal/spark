@@ -172,6 +172,12 @@ These write:
   `breadboard.json` (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi
   diagram. Only a board in `data/wokwi-geometry.json` is drawn, today the XIAO ESP32-C6, and rails are not drawn yet.
   Otherwise the sheet and stderr say `breadboard.json not written:` and the missing fact, and an old file is removed.
+  A part moved in the earlier `breadboard.json` stays there (P273, `breadboard_keep.py`): `breadboard.write()` reads the
+  earlier file before it writes, and a part that is not a resistor keeps its place if its pins are over free holes, one
+  row each. `WriteResult.not_kept` lists `NotKeptResult(subject, code, why)` for each part it could not keep (codes in
+  `breadboard_keep.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under `kept` with
+  `did` `move not kept`. A resistor is placed by spark and named when it differs; jumpers are planned fresh. A failed
+  or refused build still removes the file. Never read a missing `not kept` line as proof that a jumper's move was kept.
   Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
   `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
   from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).
