@@ -68,6 +68,7 @@ WHY_NO_GRANT, WHY_EXPIRED, WHY_NO_ZONE, WHY_NOT_A_GRANT = "no grant", "expired",
 WHY_SERIAL_NOT_MAC, WHY_NO_MAC, WHY_BAD_MINUTES, WHY_ANSWERED_NO = "serial not mac", "no mac", "bad minutes", "answered no"
 #: Why a deploy asks for a typed yes though a deploy grant may exist: the look is no match, or --ignore-older-runs.
 WHY_LOOK_NOT_MATCH, WHY_IGNORE_OLDER_RUNS = "look not a match", "ignore older runs"
+WHY_BAD_SCOPE = "bad scope"
 #: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
 WHY_COULD_NOT_RUN = "could not run"
 #: The command a person types for a grant, by grant.py's whole path, so it runs from any folder (P283).
@@ -89,6 +90,7 @@ MESSAGE_FOR = {
                         "The grant works only on a board with a built-in USB port, like the ESP32-C6's",
     WHY_NO_MAC: "the board's MAC could not be read",
     WHY_BAD_MINUTES: "--minutes must be a whole number from 1 to %d" % MAX_MINUTES,
+    WHY_BAD_SCOPE: "--scope must be %s" % " or ".join(SCOPES),
     WHY_ANSWERED_NO: "no grant: the person answered no",
     WHY_LOOK_NOT_MATCH: "the look is not a match (a warning, an unknown field or a stop), so a deploy grant does not "
                         "cover this deploy: the person types yes",
@@ -104,7 +106,7 @@ DEPLOY_MESSAGE_FOR = {
                      ": the person runs %s again" % DEPLOY_GRANT_COMMAND,
 }
 #: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.
-COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES)
+COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES, WHY_BAD_SCOPE)
 
 
 def mac_key(mac):
@@ -193,8 +195,10 @@ class GrantService:
         """The Grant of `scope` kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and
         a yes from `consent`. `before_look` runs just before the board restarts. Raises GrantRefusedError, board_look.LookStop, or
         GateClosedError when consent cannot ask. It saves nothing then."""
-        if not 1 <= minutes <= MAX_MINUTES or scope not in SCOPES:
+        if not 1 <= minutes <= MAX_MINUTES:
             raise GrantRefusedError(WHY_BAD_MINUTES)
+        if scope not in SCOPES:
+            raise GrantRefusedError(WHY_BAD_SCOPE)
         board = self.finder.require_one_board(script, port)
         consent.require_ready()
         before_look()

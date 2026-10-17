@@ -1,83 +1,290 @@
 [
- {"file": "scripts/board_grant.py", "name": "deploy-grant-line-relative",
+ {
+  "file": "scripts/board_grant.py",
+  "name": "deploy-grant-line-relative",
   "find": "DEPLOY_GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / \"grant.py\"",
-  "replace": "DEPLOY_GRANT_COMMAND = format_rerun_line(Path(\"grant.py\")"},
- {"file": "scripts/board_grant.py", "name": "find-ignores-scope",
+  "replace": "DEPLOY_GRANT_COMMAND = format_rerun_line(Path(\"grant.py\")"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "find-ignores-scope",
   "find": "grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \\\n",
-  "replace": "mac_key(grant.mac) != mac_key(mac) \\\n"},
- {"file": "scripts/board_grant.py", "name": "deploy-file-is-live-file",
-  "find": "(\"-deploy\" if scope == SCOPE_DEPLOY else \"\")", "replace": "\"\""},
- {"file": "scripts/board_grant.py", "name": "old-file-reads-as-deploy",
-  "find": "defaults=(SCOPE_LIVE,))", "replace": "defaults=(SCOPE_DEPLOY,))"},
- {"file": "scripts/board_grant.py", "name": "serial-rule-dropped-for-live",
-  "find": "if scope == SCOPE_LIVE and mac_key(board.serial) != mac:", "replace": "if False:"},
- {"file": "scripts/board_grant.py", "name": "serial-rule-kept-for-deploy",
-  "find": "if scope == SCOPE_LIVE and mac_key(board.serial) != mac:", "replace": "if mac_key(board.serial) != mac:"},
- {"file": "scripts/board_grant.py", "name": "unknown-scope-accepted",
-  "find": "if not 1 <= minutes <= MAX_MINUTES or scope not in SCOPES:", "replace": "if not 1 <= minutes <= MAX_MINUTES:"},
- {"file": "scripts/board_grant.py", "name": "live-question-for-deploy",
-  "find": "(DEPLOY_QUESTION if scope == SCOPE_DEPLOY else LIVE_QUESTION)", "replace": "LIVE_QUESTION"},
- {"file": "scripts/board_grant.py", "name": "deploy-grant-saved-as-live",
+  "replace": "mac_key(grant.mac) != mac_key(mac) \\\n"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "deploy-file-is-live-file",
+  "find": "(\"-deploy\" if scope == SCOPE_DEPLOY else \"\")",
+  "replace": "\"\""
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "old-file-reads-as-deploy",
+  "find": "defaults=(SCOPE_LIVE,))",
+  "replace": "defaults=(SCOPE_DEPLOY,))"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "serial-rule-dropped-for-live",
+  "find": "if scope == SCOPE_LIVE and mac_key(board.serial) != mac:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "serial-rule-kept-for-deploy",
+  "find": "if scope == SCOPE_LIVE and mac_key(board.serial) != mac:",
+  "replace": "if mac_key(board.serial) != mac:"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "unknown-scope-accepted",
+  "find": "        if scope not in SCOPES:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "live-question-for-deploy",
+  "find": "(DEPLOY_QUESTION if scope == SCOPE_DEPLOY else LIVE_QUESTION)",
+  "replace": "LIVE_QUESTION"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "deploy-grant-saved-as-live",
   "find": "(now + datetime.timedelta(minutes=minutes)).isoformat(timespec=\"seconds\"), scope)",
-  "replace": "(now + datetime.timedelta(minutes=minutes)).isoformat(timespec=\"seconds\"))"},
- {"file": "scripts/board_grant.py", "name": "future-grant-trusted",
+  "replace": "(now + datetime.timedelta(minutes=minutes)).isoformat(timespec=\"seconds\"))"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "future-grant-trusted",
   "find": "if since > now or until - since > datetime.timedelta(minutes=MAX_MINUTES):",
-  "replace": "if until - since > datetime.timedelta(minutes=MAX_MINUTES):"},
- {"file": "scripts/board_grant.py", "name": "long-grant-trusted",
-  "find": "if since > now or until - since > datetime.timedelta(minutes=MAX_MINUTES):", "replace": "if since > now:"},
- {"file": "scripts/board_grant.py", "name": "long-grant-counted-from-now",
-  "find": "until - since > datetime.timedelta(minutes=MAX_MINUTES)", "replace": "until - now > datetime.timedelta(minutes=MAX_MINUTES)"},
- {"file": "scripts/board_grant.py", "name": "grant-ends-a-moment-late",
-  "find": "return WHY_EXPIRED if now >= until else None", "replace": "return WHY_EXPIRED if now > until else None"},
- {"file": "scripts/board_grant.py", "name": "grant-never-ends",
-  "find": "return WHY_EXPIRED if now >= until else None", "replace": "return None"},
- {"file": "scripts/board_grant.py", "name": "clock-zone-unchecked",
-  "find": "if since.tzinfo is None or until.tzinfo is None or now.tzinfo is None:", "replace": "if since.tzinfo is None or until.tzinfo is None:"},
- {"file": "scripts/board_grant.py", "name": "grant-zone-unchecked",
-  "find": "if since.tzinfo is None or until.tzinfo is None or now.tzinfo is None:", "replace": "if now.tzinfo is None:"},
- {"file": "scripts/board_grant.py", "name": "bad-time-crashes",
+  "replace": "if until - since > datetime.timedelta(minutes=MAX_MINUTES):"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "long-grant-trusted",
+  "find": "if since > now or until - since > datetime.timedelta(minutes=MAX_MINUTES):",
+  "replace": "if since > now:"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "long-grant-counted-from-now",
+  "find": "until - since > datetime.timedelta(minutes=MAX_MINUTES)",
+  "replace": "until - now > datetime.timedelta(minutes=MAX_MINUTES)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "grant-ends-a-moment-late",
+  "find": "return WHY_EXPIRED if now >= until else None",
+  "replace": "return WHY_EXPIRED if now > until else None"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "grant-never-ends",
+  "find": "return WHY_EXPIRED if now >= until else None",
+  "replace": "return None"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "clock-zone-unchecked",
+  "find": "if since.tzinfo is None or until.tzinfo is None or now.tzinfo is None:",
+  "replace": "if since.tzinfo is None or until.tzinfo is None:"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "grant-zone-unchecked",
+  "find": "if since.tzinfo is None or until.tzinfo is None or now.tzinfo is None:",
+  "replace": "if now.tzinfo is None:"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "bad-time-crashes",
   "find": "        except (TypeError, ValueError):\n            return WHY_NOT_A_GRANT\n\n\n",
-  "replace": "        except KeyError:\n            return WHY_NOT_A_GRANT\n\n\n"},
- {"file": "scripts/board_grant.py", "name": "standing-yes-never-ends-at-ask",
-  "find": "    def ask(self, question):\n        self.require_ready()\n        return True", "replace": "    def ask(self, question):\n        return True"},
- {"file": "scripts/board_grant.py", "name": "standing-yes-never-ready-check",
-  "find": "        if self.grant.why_not_valid(self.now()):\n            raise GateClosedError(", "replace": "        if False:\n            raise GateClosedError("},
- {"file": "scripts/board_grant.py", "name": "standing-who-drops-the-login",
-  "find": "\"standing yes typed by %s at %s, until %s\" % (self.grant.granted_by,", "replace": "\"standing yes typed by %s at %s, until %s\" % (\"nobody\","},
- {"file": "scripts/board_grant.py", "name": "warning-look-covered",
-  "find": "if report.verdict != board_look.VERDICT_MATCH:", "replace": "if report.verdict == board_look.VERDICT_STOP:"},
- {"file": "scripts/board_grant.py", "name": "ignore-older-runs-covered",
+  "replace": "        except KeyError:\n            return WHY_NOT_A_GRANT\n\n\n"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "standing-yes-never-ends-at-ask",
+  "find": "    def ask(self, question):\n        self.require_ready()\n        return True",
+  "replace": "    def ask(self, question):\n        return True"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "standing-yes-never-ready-check",
+  "find": "        if self.grant.why_not_valid(self.now()):\n            raise GateClosedError(",
+  "replace": "        if False:\n            raise GateClosedError("
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "standing-who-drops-the-login",
+  "find": "\"standing yes typed by %s at %s, until %s\" % (self.grant.granted_by,",
+  "replace": "\"standing yes typed by %s at %s, until %s\" % (\"nobody\","
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "warning-look-covered",
+  "find": "if report.verdict != board_look.VERDICT_MATCH:",
+  "replace": "if report.verdict == board_look.VERDICT_STOP:"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "ignore-older-runs-covered",
   "find": "        if ignore_older_runs:\n            return DeployConsentResult(fallback, WHY_IGNORE_OLDER_RUNS)",
-  "replace": "        if False:\n            return DeployConsentResult(fallback, WHY_IGNORE_OLDER_RUNS)"},
- {"file": "scripts/board_grant.py", "name": "deploy-reads-the-live-file",
-  "find": "self.grants.find(report.reading.mac, SCOPE_DEPLOY)", "replace": "self.grants.find(report.reading.mac)"},
- {"file": "scripts/board_grant.py", "name": "untrusted-file-crashes",
+  "replace": "        if False:\n            return DeployConsentResult(fallback, WHY_IGNORE_OLDER_RUNS)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "deploy-reads-the-live-file",
+  "find": "self.grants.find(report.reading.mac, SCOPE_DEPLOY)",
+  "replace": "self.grants.find(report.reading.mac)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "untrusted-file-crashes",
   "find": "        except GrantRefusedError as refused:\n            return DeployConsentResult(fallback, refused.why)",
-  "replace": "        except KeyError as refused:\n            return DeployConsentResult(fallback, refused.why)"},
- {"file": "scripts/board_grant.py", "name": "ended-grant-covers",
+  "replace": "        except KeyError as refused:\n            return DeployConsentResult(fallback, refused.why)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "ended-grant-covers",
   "find": "        why = grant.why_not_valid(self.now())\n        if why:\n            return DeployConsentResult(fallback, why)",
-  "replace": "        why = None\n        if why:\n            return DeployConsentResult(fallback, why)"},
- {"file": "scripts/board_grant.py", "name": "check-skips-the-time-rules",
+  "replace": "        why = None\n        if why:\n            return DeployConsentResult(fallback, why)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "check-skips-the-time-rules",
   "find": "        return GrantCheckResult(why is None, grant, why)",
-  "replace": "        return GrantCheckResult(True, grant, None)"},
- {"file": "scripts/deploy.py", "name": "grant-beats-the-given-consent",
+  "replace": "        return GrantCheckResult(True, grant, None)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "grant-beats-the-given-consent",
   "find": "consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService())",
-  "replace": "consent = choose_consent(args, report, grant_service or board_grant.GrantService())"},
- {"file": "scripts/deploy.py", "name": "hint-for-ignore-older-runs",
+  "replace": "consent = choose_consent(args, report, grant_service or board_grant.GrantService())"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "hint-for-ignore-older-runs",
   "find": "if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:\n        line +=",
-  "replace": "if report.verdict == board_look.VERDICT_MATCH:\n        line +="},
- {"file": "scripts/deploy.py", "name": "ignore-older-runs-not-passed",
-  "find": "chosen = grant_service.consent_for_deploy(report, args.ignore_older_runs, ", "replace": "chosen = grant_service.consent_for_deploy(report, False, "},
- {"file": "scripts/deploy.py", "name": "why-not-printed",
-  "find": "        print(\"  standing yes: not used: %s\" % said, flush=True)\n", "replace": ""},
- {"file": "scripts/deploy.py", "name": "standing-yes-not-printed",
-  "find": "            print(\"  yes: %s\" % consent.who, flush=True)\n", "replace": "            pass\n"},
- {"file": "scripts/grant.py", "name": "scope-not-passed",
-  "find": "            scope=args.scope)", "replace": "            )"},
- {"file": "scripts/grant.py", "name": "check-takes-a-scope",
-  "find": "    if args.check and args.scope != board_grant.SCOPE_LIVE:", "replace": "    if False:"},
- {"file": "scripts/grant.py", "name": "deploy-line-drops-its-scope",
-  "find": "([\"--scope\", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])", "replace": "([\"--scope\", args.scope] if False else [])"},
- {"file": "scripts/board_look.py", "name": "stop-verdict-not-refused-token",
-  "find": "        if self.verdict == VERDICT_STOP:\n            return \"the look found a stop\"", "replace": "        if False:\n            return \"the look found a stop\""}
+  "replace": "if report.verdict == board_look.VERDICT_MATCH:\n        line +="
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "ignore-older-runs-not-passed",
+  "find": "chosen = grant_service.consent_for_deploy(report, args.ignore_older_runs, ",
+  "replace": "chosen = grant_service.consent_for_deploy(report, False, "
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "why-not-printed",
+  "find": "        print(\"  standing yes: not used: %s\" % said, flush=True)\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "standing-yes-not-printed",
+  "find": "            print(\"  yes: %s\" % consent.who, flush=True)\n",
+  "replace": "            pass\n"
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "scope-not-passed",
+  "find": "            scope=args.scope)",
+  "replace": "            )"
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "check-takes-a-scope",
+  "find": "    if args.check and args.scope != board_grant.SCOPE_LIVE:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "deploy-line-drops-its-scope",
+  "find": "([\"--scope\", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])",
+  "replace": "([\"--scope\", args.scope] if False else [])"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "stop-verdict-not-refused-token",
+  "find": "        if self.verdict == VERDICT_STOP:\n            return \"the look found a stop\"",
+  "replace": "        if False:\n            return \"the look found a stop\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "no-ready-check-before-erase",
+  "find": "        consent.require_ready()  # a deploy grant can end while the plan reads the image",
+  "replace": "        pass"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "no-grant-also-printed",
+  "find": "if chosen.why not in (None, board_grant.WHY_NO_GRANT):",
+  "replace": "if chosen.why is not None:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy-message-ignored",
+  "find": "board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]",
+  "replace": "board_grant.MESSAGE_FOR[chosen.why]"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "hint-drops-port",
+  "find": "\"--project\", args.project.resolve(), \"--port\", port])",
+  "replace": "\"--project\", args.project.resolve()])"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "hint-wrong-scope",
+  "find": "\"--scope\", board_grant.SCOPE_DEPLOY, \"--minutes\", \"N\", \"--project\"",
+  "replace": "\"--scope\", board_grant.SCOPE_LIVE, \"--minutes\", \"N\", \"--project\""
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "standing-ask-says-no",
+  "find": "        self.require_ready()\n        return True",
+  "replace": "        self.require_ready()\n        return False"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "standing-who-wrong-time",
+  "find": "return \"standing yes typed by %s at %s, until %s\" % (self.grant.granted_by, self.grant.granted_at,",
+  "replace": "return \"standing yes typed by %s at %s, until %s\" % (self.grant.granted_by, self.grant.expires_at,"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "standing-uses-no-clock",
+  "find": "if self.grant.why_not_valid(self.now()):\n            raise GateClosedError(",
+  "replace": "if self.grant.why_not_valid(utc_now()):\n            raise GateClosedError("
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "service-now-not-passed",
+  "find": "StandingConsentStrategy(grant, self.now)",
+  "replace": "StandingConsentStrategy(grant)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "look-not-match-first-dropped",
+  "find": "        if report.verdict != board_look.VERDICT_MATCH:\n            return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)",
+  "replace": "        if False:\n            return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "no-grant-returns-standing",
+  "find": "        if grant is None:\n            return DeployConsentResult(fallback, WHY_NO_GRANT)",
+  "replace": "        if False:\n            return DeployConsentResult(fallback, WHY_NO_GRANT)"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "unknown-ignored-in-verdict",
+  "find": "VERDICT_WARNING if self.warnings or self.unknown else VERDICT_MATCH",
+  "replace": "VERDICT_WARNING if self.warnings else VERDICT_MATCH"
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "deploy-message-dropped",
+  "find": "    if grant.scope == board_grant.SCOPE_DEPLOY:\n        grant_file =",
+  "replace": "    if False:\n        grant_file ="
+ }
 ]

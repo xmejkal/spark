@@ -331,6 +331,23 @@ class DeployGrantTest(GrantCase):
                 self.grant(*argv)
         self.assertEqual(self.grant("--check", "--scope", "live")[0], 1)
 
+    def test_grant_py_says_what_a_deploy_grant_allows_and_how_to_end_it(self):
+        _, out, _ = self.grant("--scope", "deploy", "--minutes", "60", consent=FakeConsent(True))
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json"
+        self.assertIn("Claude can now run deploy.py on this board with no yes from you", out)
+        self.assertIn("erases ALL of the board's flash each time", out)
+        self.assertIn("rm %s" % shlex.quote(str(path)), out)
+        _, out, _ = self.grant("--minutes", "60", consent=FakeConsent(True))
+        self.assertNotIn("rm ", out)
+
+    def test_an_unknown_scope_given_to_the_service_is_refused_and_saves_nothing(self):
+        service = board_grant.GrantService(mock.Mock(), mock.Mock(), now=FakeUtcClock(START))
+        with self.assertRaises(board_grant.GrantRefusedError) as refused:
+            service.issue(None, 5, FakeConsent(True), scope="bogus")
+        self.assertEqual(refused.exception.why, "bad scope")
+        self.assertEqual(refused.exception.code, 2)
+        self.assertFalse((self.home / "grants").exists())
+
     def test_no_terminal_gives_the_deploy_line_with_its_scope(self):
         class Pipe(io.StringIO):
             def isatty(self):
@@ -402,6 +419,11 @@ class GrantScopeTest(unittest.TestCase):
                              ({"expires_at": "2026-10-17T09:00:00+00:00"}, "expired")):
             self.assertEqual(a_grant(**changes).why_not_valid(START), why, changes)
         self.assertIsNone(a_grant().why_not_valid(START))
+
+    def test_the_longest_grant_counts_from_the_yes_not_from_now(self):
+        two_hours_ago = START - datetime.timedelta(hours=2)
+        self.assertEqual(a_grant(since=two_hours_ago, minutes=25 * 60).why_not_valid(START), "not a grant")
+        self.assertIsNone(a_grant(since=two_hours_ago, minutes=24 * 60).why_not_valid(START))
 
     def test_a_clock_with_no_zone_is_no_valid_time(self):
         self.assertEqual(a_grant().why_not_valid(datetime.datetime(2026, 10, 17, 9, 0)),

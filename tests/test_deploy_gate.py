@@ -652,10 +652,12 @@ class TheStandingYesTest(GateCase):
     def test_no_deploy_grant_asks_in_the_terminal(self):
         self.assertAsksInTheTerminal(None)
 
-    def test_an_ended_deploy_grant_asks_in_the_terminal(self):
+    def test_an_ended_deploy_grant_asks_in_the_terminal_and_names_the_grant_line_by_its_whole_path(self):
         self.give()
         self.clock.advance(minutes=30)
-        self.assertAsksInTheTerminal("the deploy grant for this board ended")
+        grant_py = str(Path(board_grant.__file__).with_name("grant.py").resolve())
+        self.assertAsksInTheTerminal("the deploy grant for this board ended: the person runs %s --scope deploy "
+                                     "--minutes N again" % grant_py)
 
     def test_only_a_live_grant_asks_in_the_terminal(self):
         self.give("live")
