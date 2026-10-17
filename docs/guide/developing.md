@@ -235,7 +235,8 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote, the tool that talks to MicroPython on a board |
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
 | Error | an exception | ends in `Error` (the deploy area only, for now) | `GateClosedError` |
-| Value | facts with no actions | a plain noun | `Port`, `BoardReading` |
+| Value | facts with no actions. A `why_` method can answer a question about the facts and change nothing | a plain noun; the docstring says Value | `Port`, `BoardReading`, `RestrictedPins` |
+| Store | reads and writes one place in the person's store, as JSON files | the noun of what it keeps, then `Store` | `GrantStore` keeps one grant file per board in `grants/` |
 | Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
 | Renderer | turns one value into lines of a sheet or the text of a file, and decides nothing again | what it draws, then its form | `NumberedList` and `MermaidDiagram` render the steps (`WIRING_VIEWS`); `WokwiBreadboardDiagram` and `SvgBreadboardDiagram` render the layout (`DRAWING_RENDERERS`), with `FILE_NAME`, `NOUN`, `PURPOSE_MESSAGE` and `SHEET_MESSAGE` |
 | Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe` |
