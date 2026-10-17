@@ -610,7 +610,7 @@ class TheStandingYesTest(GateCase):
         self.grants = board_grant.GrantService(now=self.clock)
         self.run_the_scenario()
 
-    def give(self, scope=board_grant.SCOPE_DEPLOY, minutes=30, mac=None):
+    def give(self, scope="deploy", minutes=30, mac=None):
         mac = mac or self.MAC
         board_grant.GrantStore().save(board_grant.Grant(
             mac, board_grant.board_look.board_token(mac), "ada", self.START.isoformat(),
@@ -654,7 +654,7 @@ class TheStandingYesTest(GateCase):
         self.assertAsksInTheTerminal("the deploy grant for this board ended")
 
     def test_only_a_live_grant_asks_in_the_terminal(self):
-        self.give(board_grant.SCOPE_LIVE)
+        self.give("live")
         self.assertAsksInTheTerminal("no deploy grant for this board")
 
     def test_a_deploy_grant_of_another_board_asks_in_the_terminal(self):
@@ -664,7 +664,7 @@ class TheStandingYesTest(GateCase):
     def test_a_deploy_file_whose_scope_differs_asks_in_the_terminal(self):
         self.give()
         (store.place("grants") / "8c-bf-ea-xx-xx-xx-deploy.json").write_text(
-            json.dumps(board_grant.GrantStore().find(self.MAC, board_grant.SCOPE_DEPLOY)._replace(scope="live")._asdict()))
+            json.dumps(board_grant.GrantStore().find(self.MAC, "deploy")._replace(scope="live")._asdict()))
         self.assertAsksInTheTerminal("the store's deploy grant file for this board is not a deploy grant")
 
     def test_a_look_with_a_warning_or_an_unknown_field_asks_in_the_terminal(self):

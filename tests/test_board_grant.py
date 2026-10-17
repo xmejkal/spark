@@ -342,14 +342,14 @@ class DeployGrantTest(GrantCase):
         self.assertIn("\n  %s\n" % line, err + "\n")
 
 
-def a_grant(scope=board_grant.SCOPE_DEPLOY, mac=MAC, minutes=30, since=START, **changes):
+def a_grant(scope="deploy", mac=MAC, minutes=30, since=START, **changes):
     """A Grant of `scope` for `mac` that starts at `since` and lasts `minutes`, with `changes` to its fields."""
     fields = dict(mac=mac, board_token=board_look.board_token(mac), granted_by="ada", granted_at=since.isoformat(),
                   expires_at=(since + datetime.timedelta(minutes=minutes)).isoformat(), scope=scope)
     return board_grant.Grant(**dict(fields, **changes))
 
 
-def a_report(verdict=board_look.VERDICT_MATCH, mac=MAC):
+def a_report(verdict="match", mac=MAC):
     """What consent_for_deploy reads of a look: its verdict and the board's MAC."""
     return mock.Mock(verdict=verdict, reading=board_look.Reading("esp32c6", 4, mac))
 
@@ -365,10 +365,10 @@ class GrantScopeTest(unittest.TestCase):
         self.grants = board_grant.GrantStore()
 
     def test_a_grant_with_no_scope_in_its_file_reads_as_a_live_grant(self):
-        old = {key: value for key, value in a_grant(board_grant.SCOPE_LIVE)._asdict().items() if key != "scope"}
+        old = {key: value for key, value in a_grant("live")._asdict().items() if key != "scope"}
         (self.home / "grants").mkdir()
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").write_text(json.dumps(old))
-        self.assertEqual(self.grants.find(MAC), a_grant(board_grant.SCOPE_LIVE))
+        self.assertEqual(self.grants.find(MAC), a_grant("live"))
         self.assertEqual(self.grants.find(MAC).scope, "live")
 
     def test_a_file_whose_scope_differs_from_its_name_is_refused(self):
@@ -378,34 +378,34 @@ class GrantScopeTest(unittest.TestCase):
             (self.home / "grants" / (name + ".json")).write_text(json.dumps(a_grant(scope)._asdict()))
             with self.assertRaises(board_grant.GrantRefusedError) as refused:
                 self.grants.find(MAC, wanted)
-            self.assertEqual(refused.exception.why, board_grant.WHY_NOT_A_GRANT, (scope, wanted))
+            self.assertEqual(refused.exception.why, "not a grant", (scope, wanted))
 
     def test_a_deploy_grant_alone_opens_no_live_grant(self):
-        self.grants.save(a_grant(board_grant.SCOPE_DEPLOY))
+        self.grants.save(a_grant("deploy"))
         self.assertIsNone(self.grants.find(MAC))
         finder = mock.Mock(require_one_board=lambda *a: board_look.Port("/dev/x", MAC, "303a:1001", "p"))
         service = board_grant.GrantService(finder, now=FakeUtcClock(START))
-        self.assertEqual(service.check().why, board_grant.WHY_NO_GRANT)
+        self.assertEqual(service.check().why, "no grant")
 
     def test_a_live_grant_alone_opens_no_deploy_grant(self):
-        self.grants.save(a_grant(board_grant.SCOPE_LIVE))
-        self.assertIsNone(self.grants.find(MAC, board_grant.SCOPE_DEPLOY))
+        self.grants.save(a_grant("live"))
+        self.assertIsNone(self.grants.find(MAC, "deploy"))
 
     def test_the_unsafe_times_of_a_grant_are_not_trusted(self):
-        for changes, why in (({"expires_at": "garbage"}, board_grant.WHY_NOT_A_GRANT),
-                             ({"granted_at": "garbage"}, board_grant.WHY_NOT_A_GRANT),
-                             ({"expires_at": None}, board_grant.WHY_NOT_A_GRANT),
-                             ({"expires_at": "2099-01-01T00:00:00"}, board_grant.WHY_NO_ZONE),
-                             ({"granted_at": "2026-10-17T08:00:00"}, board_grant.WHY_NO_ZONE),
-                             ({"expires_at": "2027-10-17T09:30:00+00:00"}, board_grant.WHY_NOT_A_GRANT),
-                             ({"granted_at": "2026-10-17T09:05:00+00:00"}, board_grant.WHY_NOT_A_GRANT),
-                             ({"expires_at": "2026-10-17T09:00:00+00:00"}, board_grant.WHY_EXPIRED)):
+        for changes, why in (({"expires_at": "garbage"}, "not a grant"),
+                             ({"granted_at": "garbage"}, "not a grant"),
+                             ({"expires_at": None}, "not a grant"),
+                             ({"expires_at": "2099-01-01T00:00:00"}, "no zone"),
+                             ({"granted_at": "2026-10-17T08:00:00"}, "no zone"),
+                             ({"expires_at": "2027-10-17T09:30:00+00:00"}, "not a grant"),
+                             ({"granted_at": "2026-10-17T09:05:00+00:00"}, "not a grant"),
+                             ({"expires_at": "2026-10-17T09:00:00+00:00"}, "expired")):
             self.assertEqual(board_grant.why_not_valid(a_grant(**changes), START), why, changes)
         self.assertIsNone(board_grant.why_not_valid(a_grant(), START))
 
     def test_a_clock_with_no_zone_is_no_valid_time(self):
         self.assertEqual(board_grant.why_not_valid(a_grant(), datetime.datetime(2026, 10, 17, 9, 0)),
-                         board_grant.WHY_NO_ZONE)
+                         "no zone")
 
 
 class ConsentForDeployTest(unittest.TestCase):
@@ -441,47 +441,47 @@ class ConsentForDeployTest(unittest.TestCase):
         self.assertIsNone(self.choose(a_report(mac=MAC.upper())).why)
 
     def test_no_deploy_grant_asks_in_the_terminal(self):
-        self.assertTerminal(board_grant.WHY_NO_GRANT)
+        self.assertTerminal("no grant")
 
     def test_an_ended_deploy_grant_asks_in_the_terminal(self):
         board_grant.GrantStore().save(a_grant())
         self.clock.advance(minutes=30)
-        self.assertTerminal(board_grant.WHY_EXPIRED)
+        self.assertTerminal("expired")
 
     def test_only_a_live_grant_asks_in_the_terminal(self):
-        board_grant.GrantStore().save(a_grant(board_grant.SCOPE_LIVE))
-        self.assertTerminal(board_grant.WHY_NO_GRANT)
+        board_grant.GrantStore().save(a_grant("live"))
+        self.assertTerminal("no grant")
 
     def test_a_deploy_grant_of_another_board_asks_in_the_terminal(self):
         board_grant.GrantStore().save(a_grant(mac="aa:bb:cc:dd:ee:ff"))
-        self.assertTerminal(board_grant.WHY_NO_GRANT)
+        self.assertTerminal("no grant")
 
     def test_a_deploy_file_whose_scope_differs_asks_in_the_terminal(self):
         board_grant.GrantStore().save(a_grant())
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text(
-            json.dumps(a_grant(board_grant.SCOPE_LIVE)._asdict()))
-        self.assertTerminal(board_grant.WHY_NOT_A_GRANT)
+            json.dumps(a_grant("live")._asdict()))
+        self.assertTerminal("not a grant")
 
     def test_a_file_that_is_no_grant_asks_in_the_terminal_and_never_crashes(self):
         (self.home / "grants").mkdir()
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").write_text("not json")
-        self.assertTerminal(board_grant.WHY_NOT_A_GRANT)
+        self.assertTerminal("not a grant")
 
     def test_a_time_that_cannot_be_trusted_asks_in_the_terminal(self):
-        for changes, why in (({"expires_at": "2099-01-01T00:00:00"}, board_grant.WHY_NO_ZONE),
-                             ({"expires_at": "2027-10-17T09:30:00+00:00"}, board_grant.WHY_NOT_A_GRANT),
-                             ({"expires_at": "garbage"}, board_grant.WHY_NOT_A_GRANT)):
+        for changes, why in (({"expires_at": "2099-01-01T00:00:00"}, "no zone"),
+                             ({"expires_at": "2027-10-17T09:30:00+00:00"}, "not a grant"),
+                             ({"expires_at": "garbage"}, "not a grant")):
             board_grant.GrantStore().save(a_grant(**changes))
             self.assertTerminal(why)
 
     def test_a_look_that_is_no_match_asks_in_the_terminal(self):
         board_grant.GrantStore().save(a_grant())
-        for verdict in (board_look.VERDICT_WARNING, board_look.VERDICT_STOP):
-            self.assertTerminal(board_grant.WHY_LOOK_NOT_MATCH, report=a_report(verdict))
+        for verdict in ("warning", "stop"):
+            self.assertTerminal("look not a match", report=a_report(verdict))
 
     def test_ignore_older_runs_asks_in_the_terminal(self):
         board_grant.GrantStore().save(a_grant())
-        self.assertTerminal(board_grant.WHY_IGNORE_OLDER_RUNS, ignore_older_runs=True)
+        self.assertTerminal("ignore older runs", ignore_older_runs=True)
 
     def test_the_standing_yes_stops_when_the_grant_ends_before_the_erase(self):
         board_grant.GrantStore().save(a_grant())
