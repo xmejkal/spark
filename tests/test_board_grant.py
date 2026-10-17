@@ -221,6 +221,15 @@ class CheckTest(GrantCase):
         self.assertEqual(code, 1)
         self.assertIn("no grant for this board: the person runs %s --minutes N in their own terminal" % GRANT_SCRIPT, out)
 
+    def test_an_ended_or_untrusted_grant_names_grant_py_by_its_whole_path(self):
+        # P283: the ended and no-zone sentences ask for the grant again, as the no-grant one does.
+        self.now = START + datetime.timedelta(hours=1)
+        self.assertIn("ended: the person runs %s --minutes N again" % GRANT_SCRIPT, self.grant("--check")[1])
+        self.now = START
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
+        path.write_text(json.dumps(dict(self.kept(), expires_at="2099-01-01T00:00:00")))
+        self.assertIn("not trusted: the person runs %s --minutes N again" % GRANT_SCRIPT, self.grant("--check")[1])
+
     def test_a_time_with_no_zone_is_not_trusted(self):
         path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
         path.write_text(json.dumps(dict(self.kept(), expires_at="2099-01-01T00:00:00")))
