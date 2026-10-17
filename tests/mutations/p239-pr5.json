@@ -40,5 +40,11 @@
   "name": "Look.run loses the image on an unreadable log",
   "find": "            why = str(cannot)  # image stays set",
   "replace": "            image = None\n            why = str(cannot)  # image stays set"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "the plural is always singular",
+  "find": "\"names\" if len(older) == 1 else \"name\"",
+  "replace": "\"names\""
  }
 ]

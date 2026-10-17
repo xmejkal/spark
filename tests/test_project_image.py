@@ -120,6 +120,12 @@ class TheRunLogsTest(unittest.TestCase):
         self.assertEqual(self.image.why_other_runs(),
                          "older.log names no image (an older spark): run that scenario again to test this one")
 
+    def test_why_other_runs_for_two_older_logs_speaks_in_the_plural(self):
+        write_log(self.project, "a.log", "passed", None)
+        write_log(self.project, "b.log", "passed", None)
+        self.assertEqual(self.image.why_other_runs(),
+                         "a.log, b.log name no image (an older spark): run those scenarios again to test this one")
+
     def test_a_failed_run_on_the_same_image_is_never_the_passed_log(self):
         write_log(self.project, "a.log", "failed (wokwi-cli exit 1)")
         write_log(self.project, "b.log", "passed")
