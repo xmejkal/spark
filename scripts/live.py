@@ -30,7 +30,7 @@ the chip with `mpremote reset`, and the firmware starts from boot. A pin that th
 can keep its value through that reset (P252's bench), so live.py lists the GPIO numbers written in the code. That list
 over-claims: print(1) lists GPIO1.
 
-The record is the project's board (requirements.json's board). live.py does not match it against the board on USB.
+The record is the project's active board (boards/active.json). live.py does not match it against the board on USB.
 
 --json prints one line: answer (ran, raised, not_reached, refused_no_grant, refused_pin, refused_no_parse, or
 could-not-run), grant_why (grant.py's code when the grant refused), why, output, cure, reset (done, failed or null),
@@ -67,7 +67,7 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.utc_now):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--code", required=True, help="the code to run on the board, e.g. 'print(1)'")
     parser.add_argument("--project", type=Path, default=Path("."),
-                        help="the project folder whose requirements.json names the board and whose tools list names mpremote (default: here)")
+                        help="the project folder whose boards/active.json names the board and whose tools list names mpremote (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
     parser.add_argument("--json", action="store_true", help="print one line of JSON")
     args = parser.parse_args(argv)
