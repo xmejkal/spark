@@ -177,6 +177,8 @@ These write:
   `page.html` (P271) shows the breadboard picture and tscircuit's schematic and PCB in three tabs, each from
   `tsci export` on the kept `dist/board/circuit.json`. A tab that could not be drawn says why. With no build in this
   run, a board-only build, or a `dist/` that was not kept, an old `page.html` is removed and the kept entry says why.
+  If the requirements file is there but refused, an old sheet, drawing, page and spark-written `pins.py` are removed,
+  and each kept entry gives the refusal as its `why` (P280). A missing requirements file removes nothing.
   `check_spine.py` also writes `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
