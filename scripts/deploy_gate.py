@@ -17,7 +17,6 @@ from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):\n  %s"
 
 
-
 def format_rerun_line(script, arguments):
     """The line a person runs in their own terminal: `script` by its whole path, so it runs from any folder (P283),
     then `arguments`, each quoted where the shell needs it."""
