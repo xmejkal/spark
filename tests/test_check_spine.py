@@ -18,6 +18,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -37,6 +38,7 @@ import design  # noqa: E402
 import emit_board  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
+import tabbed_page  # noqa: E402
 from fakes import FakeTscircuitExport  # noqa: E402
 
 
@@ -1080,6 +1082,12 @@ class TheTabbedPageTest(unittest.TestCase):
         circuit = str(self.project / "dist" / "board" / "circuit.json")
         self.assertEqual(self.exporter.asked, [(circuit, "schematic-svg"), (circuit, "pcb-svg")])
         self.assertEqual(3, self.page.read_text().count("data:image/svg+xml;base64,"))
+
+    def test_the_title_has_two_to_four_words_from_the_folder_name(self):
+        self.keep()
+        title = re.search(r"<title>(.*?)</title>", self.page.read_text()).group(1)
+        self.assertEqual(title, tabbed_page.page_title(self.project.resolve().name))
+        self.assertIn(len(title.split()), (2, 3, 4))
 
     def test_a_failed_build_removes_an_earlier_page(self):
         self.page.write_text("old")

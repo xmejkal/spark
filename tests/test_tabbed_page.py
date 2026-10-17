@@ -117,5 +117,103 @@ class TscircuitExportTest(unittest.TestCase):
                 self.assertIn("<svg", result.svg)
 
 
+def style_of(page):
+    return re.search(r"<style>(.*?)</style>", page, re.S).group(1)
+
+
+def root_blocks(style):
+    """The token blocks: bare :root, the dark media query, and :root[data-theme="dark"]."""
+    light = re.search(r"(?:^|\})\s*:root\{([^}]*)\}", style).group(1)
+    media = re.search(r'@media \(prefers-color-scheme: dark\)\{:root:not\(\[data-theme="light"\]\)\{([^}]*)\}\}', style)
+    forced = re.search(r':root\[data-theme="dark"\]\{([^}]*)\}', style)
+    return light, media and media.group(1), forced and forced.group(1)
+
+
+def tokens(block):
+    return dict(re.findall(r"(--[a-z]+):([^;]+)", block))
+
+
+class ArtifactPageTest(unittest.TestCase):
+    """P272 (#308): the page follows the Artifact page rules, so one file serves a browser and an Artifact."""
+
+    def setUp(self):
+        self.page = TabbedHtmlPage().text(three_tabs(), title="button light xiao circuit")
+        self.style = style_of(self.page)
+
+    def test_every_token_is_first_defined_on_bare_root(self):
+        light, _, _ = root_blocks(self.style)
+        self.assertEqual({"--paper", "--ink", "--backdrop", "--accent"}, set(tokens(light)))
+        used = set(re.findall(r"var\((--[a-z]+)\)", self.style))
+        self.assertEqual(used, set(tokens(light)))
+
+    def test_the_dark_values_are_written_twice_and_are_the_same(self):
+        light, media, forced = root_blocks(self.style)
+        self.assertIsNotNone(media, "the media query with the light guard is missing")
+        self.assertIsNotNone(forced, ':root[data-theme="dark"] is missing')
+        self.assertEqual(tokens(media), tokens(forced))
+        self.assertEqual(set(tokens(light)), set(tokens(media)))
+        for name in ("--paper", "--ink", "--accent"):
+            self.assertNotEqual(tokens(light)[name], tokens(media)[name], name)
+        self.assertTrue(light.endswith("color-scheme:light"))
+        self.assertIn("color-scheme:dark", media)
+        self.assertIn("color-scheme:dark", forced)
+
+    def test_the_body_has_an_explicit_background_from_a_token(self):
+        self.assertRegex(self.style, r"body\{[^}]*background:var\(--paper\)")
+        self.assertRegex(self.style, r"body\{[^}]*color:var\(--ink\)")
+
+    def test_no_color_is_written_outside_the_token_blocks(self):
+        outside = re.sub(r"\{[^{}]*--paper:[^{}]*\}", "{}", self.style)
+        self.assertEqual(3, len(re.findall(r"--paper:", self.style)))
+        self.assertNotRegex(outside, r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
+        self.assertNotRegex(outside, r"(?:color|background|border-color):\s*(?!var\(|transparent|inherit)[a-z]+")
+        self.assertNotIn("border-color:#c33", self.page)
+
+    def test_every_selected_tab_uses_the_accent_token(self):
+        for number in (1, 2, 3):
+            self.assertIn("#tab%d:checked~nav label[for=tab%d]{border-color:var(--accent)}" % (number, number),
+                          self.style)
+
+    def test_the_page_says_its_language(self):
+        self.assertIn('<html lang="en">', self.page)
+
+    def test_the_side_gutter_is_16px(self):
+        self.assertRegex(self.style, r"nav\{[^}]*padding:0 16px")
+        self.assertRegex(self.style, r"\.panel\{[^}]*padding:12px 16px")
+
+    def test_nothing_can_push_the_page_sideways(self):
+        self.assertRegex(self.style, r"\.panel img\{[^}]*max-width:100%")
+        self.assertRegex(self.style, r"p\{[^}]*overflow-wrap:anywhere")
+
+    def test_nothing_makes_a_panel_wider_than_the_screen(self):
+        for rule in ("min-width", "nowrap", "overflow-x"):
+            self.assertNotIn(rule, self.style)
+
+    def test_the_title_is_written_from_the_title_argument(self):
+        self.assertIn("<title>button light xiao circuit</title>", self.page)
+
+    def test_the_page_stays_a_whole_document_for_a_browser(self):
+        self.assertTrue(self.page.startswith("<!doctype html>"))
+        self.assertIn('<meta name="viewport" content="width=device-width, initial-scale=1">', self.page)
+
+
+class PageTitleTest(unittest.TestCase):
+    def test_the_title_has_two_to_four_words(self):
+        for name, title in [("button-light-xiao", "button light xiao circuit"),
+                            ("keep", "keep circuit"),
+                            ("2026-10-17", "2026 10 17 circuit"),
+                            ("a-b-c-d", "a b c circuit"),
+                            ("my cool robot project", "my cool robot circuit"),
+                            ("board.v2", "board v2 circuit"),
+                            ("---", "spark circuit"),
+                            ("__", "spark circuit"),
+                            ("", "spark circuit"),
+                            ("x" * 300, "x" * 20 + " circuit"),
+                            ("Světlo-tlačítko", "Světlo tlačítko circuit")]:
+            with self.subTest(name=name[:12]):
+                self.assertEqual(title, tabbed_page.page_title(name))
+                self.assertIn(len(title.split()), (2, 3, 4))
+
+
 if __name__ == "__main__":
     unittest.main()
