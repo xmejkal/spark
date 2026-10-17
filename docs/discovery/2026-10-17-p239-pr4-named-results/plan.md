@@ -3,31 +3,33 @@
 ## Context
 
 PR 4 of the synthesis (docs/observations/2026-10-14-p239-oo-council/synthesis.md). PRs 1-3 are merged. I read main at
-2ca0410. All four items still apply. Only the code around them moved.
+2ca0410. All five items still apply. `--help`, exit codes and the store record's field names do not change.
 
-| Item | Status on main | Touches |
+| Item | On main | Touches |
 |---|---|---|
-| `ReadyResult` | Applies. `ReadyCheck.check` returns a bare 3-tuple, and `read_board` glues it to `(facts, facts_line)`. | ready_check.py, deploy.py, tests/test_ready_check.py |
-| `DeployPlan` | Applies. `plan()` returns `(commands, mpremote, notes)` and `main` unpacks it twice (one drops `notes` with `_`). | deploy.py, tests/test_deploy.py |
-| `BoardLog` | Applies. `keep_board_log` takes 7 arguments and calls `datetime.now()` itself. | deploy.py, tests/test_deploy_gate.py |
-| `ConsentStrategy.who` | Applies. `record_deploy` writes "typed in a terminal by <getpass user>" whatever the yes was (board_facts.py:64). `yes_by` is never passed. | deploy_gate.py, board_facts.py, tests/fakes.py |
-| Clock injected | Applies. `facts()` and `keep_board_log` read the clock. | board_facts.py, deploy.py |
-
-P251 renamed the probe to `board_console.ConsoleProbe`. PR 4 does not touch it. I do not use `format_rerun_line`
-(PR #333). The behaviour, the `--help` text, the exit codes and the store record's field names do not change.
+| `ReadyResult` | `ReadyCheck.check` returns a bare 3-tuple, glued to `(facts, facts_line)` in `read_board` | ready_check.py, deploy.py |
+| `DeployPlan` | `plan()` returns a 3-tuple, unpacked twice (once with `_`) | deploy.py |
+| `BoardLog` | `keep_board_log` takes 7 arguments and reads the clock | deploy.py |
+| `ConsentStrategy.who` | `record_deploy` writes "typed in a terminal by <user>" whatever the yes was; `yes_by` is never passed | deploy_gate.py, board_facts.py, tests/fakes.py |
+| Clock injected | `facts()` and `keep_board_log` read the clock | board_facts.py, deploy.py |
 
 ## Council
 
 Round 1 ran: tech lead (Sonnet) and refuter (Opus). It changed:
 - The clock has two names: the parameter `clock` (a callable) and the value `moment`. `main` reads it once.
-- `RunLog` became `BoardLog`. It holds no `ReadyResult`.
-- The download-mode branch rewrites only the sentence and the log, so it uses `_replace`.
+- `RunLog` became `BoardLog`, which holds no `ReadyResult`.
+- The download-mode branch changes only the sentence and the log, so it uses `_replace`.
 - `who` is built in `TerminalConsentStrategy.__init__`, and its text is a named constant.
-- Tests: no tuple guard, literal golden strings, and one test per dropped `yes_by`.
-- Four mutation anchors on the removed `read_board` line are re-anchored in this PR.
-- developing.md:246 changes. The `getpass` use in board_grant.py is out of scope.
+- Tests: no tuple guard, literal golden strings, one test for the dropped `yes_by`.
+- Four mutation anchors on the removed `read_board` line are re-anchored. developing.md:246 changes.
 
-Round 2: (pending).
+Round 2 ran: tech lead and PO assistant (Sonnet). It changed:
+- `BoardLog` is a Value (facts, no actions) with `text()`. A function `write_board_log(project, log, moment)` saves it.
+  Golden test 7 checks `text()` alone, with no file system.
+- `image_sha256` is computed in `main` (the old code hashed the image in the log call). `heard + ready.log` make the
+  `heard` field, so the text stays byte for byte today's.
+- One `moment` per `main` is a deliberate change: `read_board`'s retries now write the same `deployed` time.
+- The plan is trimmed to about 90 lines.
 
 ## Design
 
@@ -37,7 +39,7 @@ Round 2: (pending).
    |-- ConsentStrategy -------- .who  (str)  "typed in a terminal by petr"
    |       `- TerminalConsentStrategy
    |-- read_board(.., moment) -> ReadyCheck.check() -> ReadyResult (Result) verdict, sentence, log
-   |-- BoardLog (Value) -------- .write(project) -> Path   (sim/runs/board/<moment>.log)
+   |-- BoardLog (Value) -------- .text() -> str ;  write_board_log(project, log, moment) -> Path
    `-- board_facts.facts(.., moment) / record_deploy(facts, verdict, who)
 ```
 
@@ -45,25 +47,20 @@ Round 2: (pending).
 |---|---|---|---|
 | `ReadyResult` | Result (namedtuple) | ready_check.py | `verdict`, `sentence`, `log` of one check. `check` returns it. |
 | `DeployPlan` | Result (namedtuple) | deploy.py | `commands`, `mpremote`, `notes`. `plan` returns it. |
-| `BoardLog` | Value | deploy.py | The board's log text: `moment`, `port`, `image_sha256`, `facts_line`, `verdict`, `sentence`, `heard`. Its one method, `write(project)`, saves it. Replaces `keep_board_log`. |
+| `BoardLog` | Value | deploy.py | Facts of the board's log: `moment`, `port`, `image_sha256` (hashed in `main`), `facts_line`, `verdict`, `sentence`, `heard` (the console text, then `ready.log`). `text()` is the file's text. |
+| `write_board_log` | function | deploy.py | Saves `text()` in sim/runs/board/ under `moment`'s name, and returns the path. Replaces `keep_board_log`. |
 | `ConsentStrategy.who` | abstract property | deploy_gate.py | Who said yes, as a phrase. `TerminalConsentStrategy.__init__` builds it from `getpass.getuser()` and the constant `TYPED_BY = "typed in a terminal by %s"`. |
 
 Why `BoardLog`, not the synthesis's `RunLog`: `image_check.run_logs` means the scenario logs in sim/runs/. This file
 is in sim/runs/board/ and the output calls it "board log:". It takes verdict and sentence as arguments and holds no
 `ReadyResult`, so it does not depend on ready_check.
 
-Changes by function:
-- `ReadyCheck.check` returns `ReadyResult(verdict, sentence, log)`. All six return lines change.
-- `read_board(project, report, connection, expected, moment)` and `put_facts(..., moment)` pass `moment` on to
-  `board_facts.facts(project, board, mac, image, files, moment)`. `facts` has no clock inside.
-- `read_board` returns `(facts, facts_line, ReadyResult)`. `main` keeps one `ready` variable.
-- The download-mode branch (deploy.py:237, `NO_RESET`) changes only the sentence and the log: `ready =
-  ready._replace(sentence=..., log=...)`.
-- `main(..., clock=None)`: `moment = (clock or datetime.datetime.now)()`, once, passed to `read_board` and `BoardLog`.
-  The facts file and the log share one time. Never `now` for both.
-- `record_deploy(facts, verdict, who)`: `who` is required. `yes_by` and the `getpass` import leave board_facts.py
-  (`getpass` moves to deploy_gate.py). The record's field stays `yes`, and its value is `who`.
-- `FakeConsent` is duck-typed, not a subclass. It gets `who = "a test"`.
+Changes: `check` returns `ReadyResult` on all six lines. `read_board` and `put_facts` take `moment` and pass it to
+`facts(project, board, mac, image, files, moment)`, which has no clock. `read_board` returns `(facts, facts_line,
+ReadyResult)`. The no-reset branch (`NO_RESET`) uses `ready._replace(sentence=..., log=...)`. `main(..., clock=None)`
+reads `moment = (clock or datetime.datetime.now)()` once. `record_deploy(facts, verdict, who)` requires `who`, and
+`yes_by` and `getpass` leave board_facts.py (`getpass` moves to deploy_gate.py). The field stays `yes`. `FakeConsent` is
+duck-typed and gets `who = "a test"`.
 
 ## Tests first (red before the fix)
 
@@ -78,11 +75,11 @@ Changes by function:
    terminal consent records the literal prefix and the user.
 5. test_deploy_gate.py: `main(..., clock=lambda: fixed)` gives the facts file's `deployed`, the log's file name and
    its header line the fixed time. Red today.
-6. New tests/test_board_facts.py: `facts(..., moment)` uses `moment`. `record_deploy(facts, "ready seen", "a test")`
-   writes that `yes`. A malformed record still raises `StoreProblem`. It reuses the SPARK_HOME helper of the
-   existing tests.
-7. Golden: the board log's text for two deploys, written as literal strings: one ready seen, and one download-mode
-   deploy where no reset came (`NO_RESET`, sentence and log replaced). The text is byte for byte today's.
+6. Facts tests (in test_deploy_gate.py's `TheFactsAfterTheFlashTest`, or a new test_board_facts.py if none fits):
+   `facts(..., moment)` uses `moment`. `record_deploy(facts, "ready seen", "a test")` writes that `yes`. A malformed
+   record still raises `StoreProblem`. They reuse the SPARK_HOME helper of the existing tests.
+7. Golden: `BoardLog(...).text()` as a literal string, for a ready-seen log and for a no-reset log (`NO_RESET`).
+   Pure text, no file system. The text is byte for byte today's. A deploy test also reads the no-reset file.
 8. Mutation file tests/mutations/p239-pr4.json: `who` ignored in `record_deploy`, the clock read inside `facts`,
    `ReadyResult`'s `sentence` and `log` swapped, and `_replace` dropped in the no-reset branch.
 
@@ -95,15 +92,11 @@ Changes by function:
 
 ## Docs
 
-- developing.md:246 says `ReadyResult` "does not exist yet": update that line. The rules and the table do not change.
-- agents.md and journey.md: the record's field `yes` and the printed lines are unchanged, so nothing changes.
-  how-it-works.md:220 and commands/build.md:319 ("whose yes it was") stay true.
-- Docstrings: each new class starts with its role word. The module docstrings of ready_check.py, board_facts.py and
-  deploy.py name the new types.
-- No README or tools/journey.py change, because no step's status changes.
+developing.md:246 says `ReadyResult` "does not exist yet": update that line (the rules and table stay). agents.md,
+journey.md, how-it-works.md:220 and commands/build.md:319 stay true, since the `yes` field and the printed lines do not
+change. New classes get a role word first in their docstrings. No README or journey.py change.
 
 ## Out of scope
 
-PR 5 `ProjectImage` and `DeployError`. PR 6 `DeployToken` and `LookReport`. PR 7 `Flasher`. PR 8 `DeployService` and
-`DeployResult`. board_grant.py:129 writes `getpass.getuser()` into the grant, not `consent.who`: a later PR or card.
-No change to `--json`, exit codes, `Problem` renames outside the deploy area, or `format_rerun_line`.
+PRs 5 to 8 (`ProjectImage`, `DeployToken`, `Flasher`, `DeployService`). board_grant.py:129 writes
+`getpass.getuser()` into the grant, not `consent.who`: a later card. No change to `--json` or exit codes.
