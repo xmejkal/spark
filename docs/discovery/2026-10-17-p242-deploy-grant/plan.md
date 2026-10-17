@@ -37,6 +37,12 @@ Round 2 (2026-10-17): a tech lead and a PO assistant (Sonnet), on the plan and t
   Open for the PO: the bench run on the XIAO, the allowed-tools change, the 1440-minute cap, "any image of any project".
   A `--revoke` is a later card.
 
+Final review (2026-10-17): a reviewer (Sonnet), the refuter (Opus) and the mutation tester. Changed: a `mac` in a grant
+file that is no text falls back and does not crash; `consent_for_deploy` reads the grant file first, so the "not used"
+line never shows when no grant exists; the printed line is `yes: standing yes typed by ...`; the `grants` parameter is
+`grant_service`; an unknown scope is `WHY_BAD_SCOPE`; four tests for the mutants that escaped (the relative deploy line,
+an unknown scope, the day cap counted from now, grant.py's message). Rows AT380 to AT383 in docs/observations/INDEX.md.
+
 ## Decisions taken without the PO (routine; he can overrule)
 
 1. `grant.py --scope` goes with `--minutes` only. `--check` stays about the live grant, because a deploy grant is found
