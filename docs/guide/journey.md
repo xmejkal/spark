@@ -469,7 +469,10 @@ holes in its step's color, with its step number at the corner. Pictures from onl
 
 Since 2026-10-16 the build also writes `page.html`, the same circuit in three tabs: the breadboard, the schematic
 and the PCB ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a browser on your Mac and click a tab.
-The schematic and the PCB are tscircuit's own pictures, from `tsci export` on the kept circuit. The PCB tab of the
+The schematic and the PCB are tscircuit's own pictures, from `tsci export` on the kept circuit. Since 2026-10-17 the page
+also follows the Artifact page rules ([P272](https://github.com/xmejkal/spark/issues/308)): colors are tokens with a
+dark mode that follows your system, the side gutter is 16 px, and the title is the folder's name and "circuit". Claude can
+publish the same file as a private Artifact when you say yes. The PCB tab of the
 same project:
 
 ![The PCB tab of page.html for the button-and-LED project](../discovery/2026-10-16-p271-page/tab-pcb.jpg)

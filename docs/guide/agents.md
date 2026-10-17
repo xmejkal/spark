@@ -187,6 +187,12 @@ These write:
   `page.html` (P271) shows the breadboard picture and tscircuit's schematic and PCB in three tabs, each from
   `tsci export` on the kept `dist/board/circuit.json`. A tab that could not be drawn says why. With no build in this
   run, a board-only build, or a `dist/` that was not kept, an old `page.html` is removed and the kept entry says why.
+  The page follows the Artifact page rules (P272): color tokens with a dark mode, a 16 px side gutter, and a title of
+  two to four words, `<project folder> circuit`, so the same file opens in a browser and as an Artifact. Publish it as an Artifact (P272, #308) only if the person says yes; spark never does. Ask first: "Publish this page as an
+  Artifact?" On a yes, call the Artifact tool with `file_path` set to the full path of `page.html` and `icon` set to
+  `circuit`; the page is private until the person shares it, so give them the link. To update it after a rebuild, call
+  the tool again with the same `file_path` and no `icon`. If the tool is not there, or it refuses the page (too big, or
+  the host blocks the pictures), say so and stop; do not retry in a loop.
   If the requirements file is there but refused, an old sheet, drawing, page and spark-written `pins.py` are removed,
   and each kept entry gives the refusal as its `why` (P280). A missing requirements file removes nothing.
   `check_spine.py` also writes `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a

@@ -1,0 +1,16 @@
+[
+ {"file": "scripts/tabbed_page.py", "name": "the dark media query loses its light-choice guard", "find": "{:root:not([data-theme=\"light\"]){%s}}'", "replace": "{:root{%s}}'"},
+ {"file": "scripts/tabbed_page.py", "name": "the dark media query is left out", "find": "+ '@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){%s}}' % dark", "replace": ""},
+ {"file": "scripts/tabbed_page.py", "name": "the data-theme dark block is left out", "find": "+ ':root[data-theme=\"dark\"]{%s}' % dark", "replace": ""},
+ {"file": "scripts/tabbed_page.py", "name": "the dark blocks do not set the dark color scheme", "find": "dark = block(cls.TOKENS_DARK, \"dark\")", "replace": "dark = block(cls.TOKENS_DARK, \"light\")"},
+ {"file": "scripts/tabbed_page.py", "name": "the body background is a literal color", "find": "background:var(--paper);color:var(--ink)}", "replace": "background:#f6f3ee;color:var(--ink)}"},
+ {"file": "scripts/tabbed_page.py", "name": "the selected tab is a literal color", "find": "{border-color:var(--accent)}", "replace": "{border-color:#c33}"},
+ {"file": "scripts/tabbed_page.py", "name": "the panel gutter is 12px", "find": ".panel{display:none;padding:12px 16px}", "replace": ".panel{display:none;padding:12px 12px}"},
+ {"file": "scripts/tabbed_page.py", "name": "the tab bar has no gutter", "find": "\"nav{padding:0 16px}\"", "replace": "\"nav{padding:0}\""},
+ {"file": "scripts/tabbed_page.py", "name": "a long reason may push the page sideways", "find": "\"p{overflow-wrap:anywhere}\"", "replace": "\"p{}\""},
+ {"file": "scripts/tabbed_page.py", "name": "a picture has no max-width", "find": "width:100%;max-width:100%;", "replace": "width:100%;"},
+ {"file": "scripts/tabbed_page.py", "name": "the title keeps four words of the name", "find": "TITLE_NAME_WORDS = 3", "replace": "TITLE_NAME_WORDS = 4"},
+ {"file": "scripts/tabbed_page.py", "name": "a long word is not cut", "find": "[:TITLE_WORD_LETTERS] for word", "replace": " for word"},
+ {"file": "scripts/tabbed_page.py", "name": "a name of no words gives one word", "find": "or [\"spark\"]) + \" circuit\"", "replace": "or [\"\"]) + \" circuit\""},
+ {"file": "scripts/check_spine.py", "name": "the kept page takes the folder name as its title", "find": "title=tabbed_page.page_title(Path(destination).resolve().name))", "replace": "title=Path(destination).resolve().name)"}
+]

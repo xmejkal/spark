@@ -640,7 +640,7 @@ def main(argv=None):
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
                              "you moved in it stays where you put it, or the build names it as `move not kept`), "
                              "breadboard.svg, that drawing as a picture, page.html, the breadboard, schematic and PCB "
-                             "in three tabs to open in a browser, and "
+                             "in three tabs to open in a browser or to publish as an Artifact, and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")
@@ -832,7 +832,7 @@ def keep_tabbed_page(destination, stages, kept, exporter):
             tabbed_page.exported_tab("Schematic", exporter.export_svg(circuit, "schematic-svg")),
             tabbed_page.exported_tab("PCB", exporter.export_svg(circuit, "pcb-svg"))]
     try:
-        page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=Path(destination).resolve().name),
+        page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=tabbed_page.page_title(Path(destination).resolve().name)),
                         encoding="utf-8")
     except OSError as refused:
         return {"file": str(page), "did": "not written", "why": str(refused), "line": "no page: %s" % refused}
