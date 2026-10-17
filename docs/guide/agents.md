@@ -122,6 +122,10 @@ These only read:
   **A field `unknown` is not a pass**, and neither is a look with no token: the exit is 2 and the line says what went unchecked.
   Exit 1 is a stop (deploy.py will refuse, no token) or a field that differs but that the person can accept (with a token):
   the stop line or the token line tells them apart. The token is not the person's yes;
+- `restricted_pins.py` is a library with no command yet. When P247 adds the live try, it will refuse code that
+  writes a number of the board's USB or flash pins ([P254](https://github.com/xmejkal/spark/issues/266)). It refuses
+  any such number anywhere in the code, `time.sleep(12)` too, and a number computed at run time passes. Only the XIAO
+  C6 record names these pins so far;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.
