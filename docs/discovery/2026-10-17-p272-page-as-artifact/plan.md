@@ -13,7 +13,9 @@ page that is plain, self-contained and follows the Artifact rules everywhere. No
 
 ## Council
 
-(Filled after round 1 and round 2.)
+Rebased on main after P273 (#339); line numbers re-read (`check_spine.py:835` is the only one that moved).
+
+(Rounds 1 and 2 are filled below as they finish.)
 
 ## Gaps found
 
@@ -22,8 +24,8 @@ I built `tests/data/breadboard/button-light-xiao` with `check_spine.py --keep` i
 | Artifact rule | Today | Gap |
 |---|---|---|
 | One HTML file | `page.html`, pictures as data URIs | none |
-| `<title>` of 2 to 4 words | the folder name, here `keep` (`check_spine.py:828`, `tabbed_page.py:85,95`) | yes: one word, or a hyphen slug |
-| Color tokens on `:root` | hard-coded `#f6f3ee`, `#222`, `#fff`, `#c33` (`tabbed_page.py:79-83,100`) | yes |
+| `<title>` of 2 to 4 words | the folder name, here `keep` (`check_spine.py:835`, `tabbed_page.py:95`) | yes: one word, or a hyphen slug |
+| Color tokens on `:root` | hard-coded `#f6f3ee`, `#222`, `#fff`, `#c33` (`tabbed_page.py:79-83,92`) | yes |
 | Dark mode, two blocks (`prefers-color-scheme` guarded by `:root:not([data-theme="light"])`, and `:root[data-theme="dark"]`) | none | yes |
 | Explicit body background | set, `tabbed_page.py:79` | none (moves to a token) |
 | Scripts only from the five hosts | no `<script>`, no `http` (grep count 0) | none |
