@@ -1,0 +1,6 @@
+{
+  "board": "xiao-esp32-c6-fresh",
+  "parts": [
+    "led-red-5mm"
+  ]
+}
