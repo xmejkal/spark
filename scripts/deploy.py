@@ -38,7 +38,6 @@ import boards
 import deploy_gate
 import board_console
 import download_mode
-import look
 import store
 import tools
 from project_image import DeployError, ProjectImage
@@ -211,7 +210,7 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None):
         return EXIT_OK
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
-        print("\n".join(look.lines(report, token=False)), flush=True)
+        print("\n".join(board_look.report_lines(report, token=False)), flush=True)
         consent = consent or deploy_gate.TerminalConsentStrategy(rerun_line(args, report.port))
         deploy_gate.require_open_gate(report, args.token, consent, ProjectImage(args.project).path.relative_to(args.project))
         planned = plan(args.project, report.port, args.ignore_older_runs)

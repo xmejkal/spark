@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/board_look.py",
+  "name": "to_dict drops the status",
+  "find": "                \"status\": self.status, \"token\": self.token(),",
+  "replace": "                \"token\": self.token(),"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "to_dict leaves out why there is no token",
+  "find": "\"no_token_reason\": self.no_token_reason()}",
+  "replace": "\"no_token_reason\": None}"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "to_dict hands out the report's own list of stops",
+  "find": "\"stops\": list(self.stops),",
+  "replace": "\"stops\": self.stops,"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "report_lines prints the token line when asked not to",
+  "find": "    if token:\n        mine = report.token()",
+  "replace": "    if True:\n        mine = report.token()"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "report_lines loses the stop lines",
+  "find": "    out += [\"%s: deploy.py will refuse.\" % stop for stop in report.stops]\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "report_lines loses the warning lines",
+  "find": "    out += [\"%s. deploy.py will ask you to accept it.\" % warning for warning in report.warnings]\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "report_lines says one field unknown for two",
+  "find": "\"\" if len(report.unknown) == 1 else \"s\"",
+  "replace": "\"\""
+ }
+]

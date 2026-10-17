@@ -46,7 +46,7 @@ class LookCase(ProjectCase):
 
     def look(self, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", port=None, flasher=None, esptool_code=0,
              text=None, **kwargs):
-        """The Report of Look.run with fake tools. `text` is what esptool prints, in place of the file. LookStop propagates."""
+        """The LookReport of LookService.run with fake tools. `text` is what esptool prints, in place of the file. LookStop propagates."""
         def run(argv, **kw):
             self.ran.append(argv)
             if "devs" in argv:
@@ -140,20 +140,20 @@ class EsptoolReaderTest(unittest.TestCase):
         return board_look.EsptoolReader(FOUND["flasher"], lambda argv, **kw: done(data(name), code)).read(C6_PORT)
 
     def test_the_c6_reading_with_its_six_byte_base_mac(self):
-        self.assertEqual(self.read("c6-flash-id.txt"), board_look.Reading("esp32c6", 4, "8c:bf:ea:xx:xx:xx"))
+        self.assertEqual(self.read("c6-flash-id.txt"), board_look.BoardReading("esp32c6", 4, "8c:bf:ea:xx:xx:xx"))
 
     def test_a_classic_esp32_has_two_detecting_lines_and_the_last_one_counts(self):
         reading = self.read("esp32-classic-flash-id.txt")
         self.assertEqual((reading.chip, reading.mac), ("esp32", "24:6f:28:xx:xx:xx"))
 
     def test_the_s3(self):
-        self.assertEqual(self.read("s3-flash-id-16mb.txt"), board_look.Reading("esp32s3", 16, "dc:da:0c:xx:xx:xx"))
+        self.assertEqual(self.read("s3-flash-id-16mb.txt"), board_look.BoardReading("esp32s3", 16, "dc:da:0c:xx:xx:xx"))
 
     def test_a_flash_size_in_kb(self):
         self.assertEqual(self.read("c6-flash-id-kb.txt").flash_mb, 4)
 
     def test_a_field_it_cannot_parse_is_none(self):
-        self.assertEqual(self.read("c6-flash-id-garbled.txt"), board_look.Reading("esp32c6", None, "8c:bf:ea:xx:xx:xx"))
+        self.assertEqual(self.read("c6-flash-id-garbled.txt"), board_look.BoardReading("esp32c6", None, "8c:bf:ea:xx:xx:xx"))
         self.assertIsNone(self.read("c6-flash-id-no-mac.txt").mac)
 
     def test_any_non_zero_exit_raises(self):
@@ -205,13 +205,13 @@ class CompareTest(unittest.TestCase):
 
     def test_each_field_is_same_differs_or_unknown(self):
         compare = board_look.compare
-        self.assertEqual(compare(board_look.Reading("esp32s3", 4, "m"), self.RECORD), {"chip": "same", "flash": "same"})
-        self.assertEqual(compare(board_look.Reading("esp32c6", 8, "m"), self.RECORD), {"chip": "differs", "flash": "differs"})
-        self.assertEqual(compare(board_look.Reading(None, None, None), self.RECORD), {"chip": "unknown", "flash": "unknown"})
+        self.assertEqual(compare(board_look.BoardReading("esp32s3", 4, "m"), self.RECORD), {"chip": "same", "flash": "same"})
+        self.assertEqual(compare(board_look.BoardReading("esp32c6", 8, "m"), self.RECORD), {"chip": "differs", "flash": "differs"})
+        self.assertEqual(compare(board_look.BoardReading(None, None, None), self.RECORD), {"chip": "unknown", "flash": "unknown"})
 
     def test_a_record_without_flash_is_unknown_and_a_single_number_works(self):
-        self.assertEqual(board_look.compare(board_look.Reading("esp32c6", 4, "m"), {"chip": "esp32c6"})["flash"], "unknown")
-        self.assertEqual(board_look.compare(board_look.Reading("esp32c6", 4, "m"), {"chip": "esp32c6", "flash_mb": 4})["flash"], "same")
+        self.assertEqual(board_look.compare(board_look.BoardReading("esp32c6", 4, "m"), {"chip": "esp32c6"})["flash"], "unknown")
+        self.assertEqual(board_look.compare(board_look.BoardReading("esp32c6", 4, "m"), {"chip": "esp32c6", "flash_mb": 4})["flash"], "same")
 
 
 class LookTest(LookCase):
@@ -264,7 +264,7 @@ class LookTest(LookCase):
         self.assertIsNone(report.token())
 
     def fit(self, record, megabytes, extra):
-        """The Report for a 4 MB image plus `extra` bytes on a board that says `megabytes` MB."""
+        """The LookReport for a 4 MB image plus `extra` bytes on a board that says `megabytes` MB."""
         self.run_the_scenario()
         self.board(record)
         self.image.write_bytes(self.image.read_bytes() + b"x" * extra)
@@ -359,6 +359,92 @@ class LookTest(LookCase):
         with self.assertRaises(board_look.LookStop) as stop:
             self.look(flasher=other)
         self.assertIn("the look reads only esptool", str(stop.exception))
+
+
+class LookReportToDictTest(LookCase):
+    """P239 PR 6: the facts of a look as plain values, for the --json of P213. Nothing prints them yet."""
+
+    def test_a_match_with_a_token(self):
+        self.run_the_scenario()
+        report = self.look()
+        as_dict = report.to_dict()
+        self.assertEqual(as_dict, {
+            "port": C6_PORT, "chip": "esp32c6", "flash_mb": 4, "mac": "8c:bf:ea:xx:xx:xx", "board": "xiao-esp32-c6",
+            "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
+            "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None})
+        self.assertIsNotNone(as_dict["token"])
+        json.dumps(as_dict)
+
+    def test_a_stop_has_no_token_and_says_why(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        as_dict = self.look().to_dict()
+        self.assertEqual((as_dict["verdict"], as_dict["status"], as_dict["token"], as_dict["no_token_reason"]),
+                         ("stop", outcomes.PROBLEMS, None, "the look found a stop"))
+        self.assertEqual(as_dict["stops"], ["this board is an esp32c6, the project is for an esp32s3"])
+        json.dumps(as_dict)
+
+    def test_an_unknown_field_with_no_scenario_run(self):
+        report = self.look(esptool="c6-flash-id-garbled.txt")
+        as_dict = report.to_dict()
+        self.assertEqual((as_dict["flash_mb"], as_dict["fields"]["flash"], as_dict["unknown"], as_dict["status"]),
+                         (None, "unknown", {"flash": "the board did not say"}, outcomes.COULD_NOT_RUN))
+        self.assertIn("run a scenario first", as_dict["no_token_reason"])
+        json.dumps(as_dict)
+
+
+class ReportLinesTest(LookCase):
+    """P239 PR 6: the lines a person reads live in board_look, so deploy.py need not import look.py."""
+
+    def test_the_token_line_is_there_unless_asked_not_to(self):
+        self.run_the_scenario()
+        report = self.look()
+        with_token, without = board_look.report_lines(report), board_look.report_lines(report, token=False)
+        self.assertEqual(with_token[:-1], without)
+        self.assertTrue(with_token[-1].startswith("  token  %s  for deploy.py --token" % report.token()))
+
+    def test_two_unknown_fields_are_said_in_the_plural(self):
+        with mock.patch.object(board_look.boards, "load", return_value={"id": "x"}):
+            lines = board_look.report_lines(self.look(), token=False)
+        self.assertIn("  2 fields unknown (chip: the record does not hold it, flash: the record does not hold it): "
+                      "deploy.py will ask you to accept it.", lines)
+
+    def test_a_stop_and_a_warning_are_each_said(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        lines = board_look.report_lines(self.look(esptool="s3-flash-id-2mb.txt"), token=False)
+        self.assertIn("  the flash is 2 MB, the image needs 4 MB: deploy.py will refuse.", lines)
+
+    def test_a_warning_is_said(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        lines = board_look.report_lines(self.look(esptool="s3-flash-id-8mb.txt"), token=False)
+        self.assertIn("  the flash differs: 8 MB, the record says 16 or 4. deploy.py will ask you to accept it.", lines)
+
+
+class RenamesTest(unittest.TestCase):
+    """P239 PR 6: the old class names are gone, and deploy.py no longer imports look.py."""
+
+    def test_old_names_are_gone(self):
+        import ast
+        old = {"Report", "Look", "Reading"}
+        for each in sorted((ROOT / "scripts").glob("*.py")) + sorted((ROOT / "tests").glob("*.py")):
+            for node in ast.walk(ast.parse(each.read_text())):
+                named = node.name if isinstance(node, ast.ClassDef) else node.attr if isinstance(node, ast.Attribute) else \
+                    node.id if isinstance(node, ast.Name) else None
+                if named in old and not (isinstance(node, ast.Name) and each.name == "check_physics.py"):
+                    self.fail("%s:%d still names %s" % (each.name, node.lineno, named))
+        self.assertFalse(hasattr(board_look, "Report") or hasattr(board_look, "Look") or hasattr(board_look, "Reading"))
+
+    def test_deploy_does_not_import_look(self):
+        import ast
+        imported = set()
+        for node in ast.walk(ast.parse((ROOT / "scripts" / "deploy.py").read_text())):
+            if isinstance(node, ast.Import):
+                imported |= {alias.name for alias in node.names}
+            elif isinstance(node, ast.ImportFrom):
+                imported.add(node.module)
+        self.assertNotIn("look", imported)
 
 
 class TheRecordsTest(unittest.TestCase):
