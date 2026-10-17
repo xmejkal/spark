@@ -826,6 +826,87 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         for stage_run in ("] footprint", "] build", "] simulation"):
             self.assertNotIn(stage_run, out, "nothing was emitted, nothing built")
 
+    # P280 (#318): a refused file kept nothing and cleaned nothing, so an earlier build's sheet and page stayed beside a
+    # requirements file that no longer builds, describing another board.
+    EARLIER_BUILD = ("breadboard.md", "breadboard.json", "breadboard.svg", "page.html")
+
+    @staticmethod
+    def _main_with_stderr(argv):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = check_spine.main(argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def _an_earlier_build(self, requirements_text="{not json"):
+        project = Path(tempfile.mkdtemp())
+        for name in self.EARLIER_BUILD:
+            (project / name).write_text("from an earlier build")
+        (project / "firmware").mkdir()
+        (project / "firmware" / "pins.py").write_text(check_spine.assign_pins.PIN_MODULE_HEADER + "\n")
+        if requirements_text is not None:
+            (project / "requirements.json").write_text(requirements_text)
+        return project
+
+    def test_a_refused_file_removes_the_earlier_build_s_sheet_drawings_page_and_pin_map(self):
+        project = self._an_earlier_build()
+        code, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        for name in self.EARLIER_BUILD + ("firmware/pins.py",):
+            self.assertFalse((project / name).exists(), name)
+        self.assertIn("no breadboard sheet: ", err)
+        self.assertIn("not JSON", err)
+        self.assertIn("; removed %s" % (project / "breadboard.md"), err)
+
+    def test_with_json_each_removed_file_is_a_kept_entry_with_the_reason(self):
+        project = self._an_earlier_build()
+        _, out, _ = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project), "--json"])
+        said = json.loads(out)
+        detail = said["stages"][0]["detail"]
+        by_file = {Path(entry["file"]).name: entry for entry in said["kept"]}
+        self.assertEqual(sorted(by_file), sorted(self.EARLIER_BUILD + ("pins.py",)))
+        for name in self.EARLIER_BUILD:
+            self.assertEqual(by_file[name]["did"], "removed")
+            self.assertEqual(by_file[name]["why"], detail + ", and it described an earlier build")
+        self.assertEqual(by_file["pins.py"]["did"], "removed")
+        self.assertIn(detail, by_file["pins.py"]["why"])
+
+    def test_a_file_that_reads_but_is_refused_gives_its_own_reason(self):
+        project = self._an_earlier_build(json.dumps({"board": "firebeetle2-esp32s3",
+                                                     "parts": [{"part": "tactile-button", "name": "OpenLid"},
+                                                               {"part": "tactile-button", "name": "Openlid"}]}))
+        _, _, err = self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
+        self.assertFalse((project / "page.html").exists())
+        self.assertIn("no page: parts[0] is called OpenLid and parts[1] Openlid", err)
+
+    def test_a_missing_file_removes_nothing(self):
+        # A typo in the file's name must not delete a good build of the file that is there.
+        project = self._an_earlier_build(requirements_text=None)
+        code, _, _ = self._main_with_stderr([str(project / "requirements.jsn"), "--keep", str(project)])
+        self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+        for name in self.EARLIER_BUILD + ("firmware/pins.py",):
+            self.assertTrue((project / name).exists(), name)
+
+    def test_a_refused_file_touches_nothing_else(self):
+        project = self._an_earlier_build()
+        (project / "firmware" / "pins.py").write_text("PIN = 4  # mine\n")
+        for name in ("board.tsx", "notes.txt", "dist/board/circuit.json"):
+            (project / name).parent.mkdir(parents=True, exist_ok=True)
+            (project / name).write_text("kept")
+        self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project)])
+        for name in ("firmware/pins.py", "board.tsx", "notes.txt", "dist/board/circuit.json"):
+            self.assertTrue((project / name).exists(), name)
+
+    def test_a_keep_folder_that_is_not_there_is_not_made(self):
+        project = self._an_earlier_build()
+        self._main_with_stderr([str(project / "requirements.json"), "--keep", str(project / "elsewhere")])
+        self.assertFalse((project / "elsewhere").exists())
+
+    def test_without_keep_nothing_is_removed(self):
+        project = self._an_earlier_build()
+        self._main_with_stderr([str(project / "requirements.json")])
+        for name in self.EARLIER_BUILD:
+            self.assertTrue((project / name).exists(), name)
+
     def test_the_project_is_the_files_not_the_current_directory(self):
         # A project with a part of its own, run from elsewhere. The schematic stage has to find
         # the part; the build stage is could-not-run because no toolchain is offered, which is
