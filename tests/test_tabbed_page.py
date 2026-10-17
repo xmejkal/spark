@@ -117,10 +117,6 @@ class TscircuitExportTest(unittest.TestCase):
                 self.assertIn("<svg", result.svg)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 def style_of(page):
     return re.search(r"<style>(.*?)</style>", page, re.S).group(1)
 
@@ -156,7 +152,9 @@ class ArtifactPageTest(unittest.TestCase):
         self.assertIsNotNone(forced, ':root[data-theme="dark"] is missing')
         self.assertEqual(tokens(media), tokens(forced))
         self.assertEqual(set(tokens(light)), set(tokens(media)))
-        self.assertNotEqual(tokens(light), tokens(media))
+        for name in ("--paper", "--ink", "--accent"):
+            self.assertNotEqual(tokens(light)[name], tokens(media)[name], name)
+        self.assertTrue(light.endswith("color-scheme:light"))
         self.assertIn("color-scheme:dark", media)
         self.assertIn("color-scheme:dark", forced)
 
@@ -171,8 +169,13 @@ class ArtifactPageTest(unittest.TestCase):
         self.assertNotRegex(outside, r"(?:color|background|border-color):\s*(?!var\(|transparent|inherit)[a-z]+")
         self.assertNotIn("border-color:#c33", self.page)
 
-    def test_the_selected_tab_uses_the_accent_token(self):
-        self.assertIn("border-color:var(--accent)", self.style)
+    def test_every_selected_tab_uses_the_accent_token(self):
+        for number in (1, 2, 3):
+            self.assertIn("#tab%d:checked~nav label[for=tab%d]{border-color:var(--accent)}" % (number, number),
+                          self.style)
+
+    def test_the_page_says_its_language(self):
+        self.assertIn('<html lang="en">', self.page)
 
     def test_the_side_gutter_is_16px(self):
         self.assertRegex(self.style, r"nav\{[^}]*padding:0 16px")
@@ -181,6 +184,10 @@ class ArtifactPageTest(unittest.TestCase):
     def test_nothing_can_push_the_page_sideways(self):
         self.assertRegex(self.style, r"\.panel img\{[^}]*max-width:100%")
         self.assertRegex(self.style, r"p\{[^}]*overflow-wrap:anywhere")
+
+    def test_nothing_makes_a_panel_wider_than_the_screen(self):
+        for rule in ("min-width", "nowrap", "overflow-x"):
+            self.assertNotIn(rule, self.style)
 
     def test_the_title_is_written_from_the_title_argument(self):
         self.assertIn("<title>button light xiao circuit</title>", self.page)
@@ -206,3 +213,7 @@ class PageTitleTest(unittest.TestCase):
             with self.subTest(name=name[:12]):
                 self.assertEqual(title, tabbed_page.page_title(name))
                 self.assertIn(len(title.split()), (2, 3, 4))
+
+
+if __name__ == "__main__":
+    unittest.main()

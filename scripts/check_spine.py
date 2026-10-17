@@ -832,8 +832,8 @@ def keep_tabbed_page(destination, stages, kept, exporter):
             tabbed_page.exported_tab("Schematic", exporter.export_svg(circuit, "schematic-svg")),
             tabbed_page.exported_tab("PCB", exporter.export_svg(circuit, "pcb-svg"))]
     try:
-        page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=tabbed_page.page_title(Path(destination).resolve().name)),
-                        encoding="utf-8")
+        title = tabbed_page.page_title(Path(destination).resolve().name)
+        page.write_text(tabbed_page.TabbedHtmlPage().text(tabs, title=title), encoding="utf-8")
     except OSError as refused:
         return {"file": str(page), "did": "not written", "why": str(refused), "line": "no page: %s" % refused}
     why = tabbed_page.TabbedHtmlPage.PURPOSE_MESSAGE
