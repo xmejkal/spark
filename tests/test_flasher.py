@@ -46,7 +46,9 @@ class TheEsptoolFlasherTest(unittest.TestCase):
                          ("erase_flash", "write_flash", "0x0"))
 
     def test_the_boot_hint_is_the_one_the_look_prints_too(self):
-        self.assertIn("hold the board's BOOT button", flasher.EsptoolFlasher.BOOT_HINT)
+        steps = ["hold the board's BOOT button", "press and release RESET", "release BOOT", "run it again"]
+        hint = flasher.EsptoolFlasher.BOOT_HINT
+        self.assertEqual([hint.index(step) for step in steps], sorted(hint.index(step) for step in steps))
         failed = types.SimpleNamespace(returncode=1, stdout="", stderr="")
         with self.assertRaises(board_look.LookStop) as stop:
             board_look.EsptoolReader(ESPTOOL, lambda argv, **kw: failed).read(PORT)

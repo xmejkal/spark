@@ -94,5 +94,77 @@
   "name": "the plan builds the commands without the port",
   "find": "project_flasher.build_commands(image.path, port)",
   "replace": "project_flasher.build_commands(image.path)"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "both commands share one list object",
+  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
+  "replace": "base.append(self.ERASE)\n        return [base, base]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the image is passed as given, not str()",
+  "find": "self.IMAGE_OFFSET, str(image)]]",
+  "replace": "self.IMAGE_OFFSET, image]]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "only the erase command is returned",
+  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
+  "replace": "return [base + [self.ERASE]]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the chip is not stored",
+  "find": "self.tool, self.chip = tool, chip",
+  "replace": "self.tool, self.chip = tool, None"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the hint says RESET only",
+  "find": "press and release RESET, release BOOT, \"",
+  "replace": "press RESET, \""
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the hint lacks the run-again sentence",
+  "find": "\"and run it again\")",
+  "replace": "\"\")"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "prefix drops the tool command",
+  "find": "return tools.command_for(tool) + ([\"--chip\"",
+  "replace": "return ([\"--chip\""
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "prefix reverses the tool command",
+  "find": "return tools.command_for(tool) + ([\"--chip\"",
+  "replace": "return list(reversed(tools.command_for(tool))) + ([\"--chip\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "DeployPlan field order swapped",
+  "find": "\"flasher commands mpremote notes\"",
+  "replace": "\"commands flasher mpremote notes\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "plan swaps mpremote and notes",
+  "find": "DeployPlan(project_flasher, commands, tools.command_for(mpremote), notes)",
+  "replace": "DeployPlan(project_flasher, commands, notes, tools.command_for(mpremote))"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "hint separator loses the colon",
+  "find": "\": \" + hint if hint else \"\"",
+  "replace": "\" \" + hint if hint else \"\""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "look hint is the base class hint",
+  "find": "BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT",
+  "replace": "BOOT_HINT = flasher.Flasher.BOOT_HINT"
  }
 ]
