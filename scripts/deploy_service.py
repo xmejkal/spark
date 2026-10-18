@@ -139,7 +139,10 @@ class DeployService:
             show_line("  " + flasher.RETRY_LINE % {"wait": flasher.RETRY_WAIT_S, "command": shlex.join(command),
                                                    "code": failed.returncode})
             self.sleep(flasher.RETRY_WAIT_S)
-            consent.require_ready()
+            try:
+                consent.require_ready()
+            except deploy_gate.GateClosedError as shut:  # the first try ran: the board may be erased
+                raise FlashError("`%s` failed (%s), and its retry did not run: %s" % (shlex.join(command), failed, shut))
             self.run(command, check=True, **echo)
 
     def verify(self, report, planned, show_line):

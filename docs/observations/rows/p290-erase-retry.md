@@ -13,3 +13,6 @@ The plan councils of P290 (#347). Plan: [`plan.md`](../../discovery/2026-10-18-p
 | 7 | Generic service code must not name esptool in the retry line | round 2 | acted | `Flasher.RETRY_LINE` |
 | 8 | "retry", "again" and "once more" named one thing | round 2 | acted | "retry" everywhere |
 | 9 | The service test `test_a_failed_flash_is_a_deploy_error_with_the_sentence_and_the_hint` would wait 5 s for real | the full suite | acted | its case patches `DeployService.sleep` |
+| 10 | A yes that ends during the wait gave `stage: gate` and "not flashed", but the first erase ran and can stop halfway with exit 2 | refuter, PR review | acted | `_run_flash` raises a `FlashError`: `stage: flash`, `board_state: may_be_erased`; a gate test and a `--json` test |
+| 11 | Two tests bound `problems` and never used it | reviewer, PR review | acted | removed |
+| 12 | The mutation run: 12 planted, 12 caught | mutation tester, PR review | closed | `tools/mutate.py --copy`, the whole suite, 411 s |

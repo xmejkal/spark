@@ -109,6 +109,17 @@ class GateCase(LookCase):
     def token(self, **kw):
         return self.look(**kw).token()
 
+    def ends_during_the_wait(self):
+        """A yes that ends while the service waits for its retry, as a deploy grant can."""
+        case = self
+
+        class EndsDuringTheWait(FakeConsent):
+            def require_ready(self):
+                if case.slept:
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.")
+
+        return EndsDuringTheWait(True)
+
     def flashed(self):
         return [command[-1] for command in self.ran if "erase_flash" in command or "write_flash" in command]
 
@@ -246,12 +257,12 @@ class TheGateTest(GateCase):
 
     def test_an_erase_that_fails_with_another_code_is_not_retried(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=1)
+        code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=1)
         self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], []))
 
     def test_a_failed_write_is_not_retried(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), write_fails=True)
+        code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), write_fails=True)
         self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash", str(self.image)], []))
 
     def test_an_erase_that_cannot_start_is_not_retried(self):
@@ -259,18 +270,11 @@ class TheGateTest(GateCase):
         code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=OSError("no such file"))
         self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], []))
 
-    def test_a_consent_that_ends_during_the_wait_stops_the_retry(self):
-        case = self
-
-        class EndsDuringTheWait(FakeConsent):
-            def require_ready(self):
-                if case.slept:
-                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.")
-
+    def test_a_consent_that_ends_during_the_wait_stops_the_retry_and_says_the_board_may_be_erased(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=EndsDuringTheWait(True), fails=1)
+        code, _, problems = self.deploy("--token", self.token(), consent=self.ends_during_the_wait(), fails=1)
         self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], [5]))
-        self.assertIn("the deploy grant ended", problems)
+        self.assertIn("and its retry did not run: the deploy grant ended", problems)
 
     def test_a_flash_too_small_for_the_image_stops_before_the_question(self):
         self.run_the_scenario()

@@ -199,6 +199,12 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((code, said["data"]["stage"]), (0, "verify"))
         self.assertIn("  retry in 5 s: ", err)
 
+    def test_a_yes_that_ends_during_the_retry_wait_says_the_board_may_be_erased(self):
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", self.token(), consent=self.ends_during_the_wait(), fails=1)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((said["data"]["stage"], said["data"]["board_state"]), ("flash", "may_be_erased"))
+
     def test_a_plan_that_cannot_be_made_has_no_look(self):
         code, said, _ = self.go()
         said = self.one(code, said, "deploy", "deploy")
