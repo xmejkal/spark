@@ -83,8 +83,9 @@ for, numbered wiring steps (one connection each) and a mermaid diagram of them, 
 on wokwi.com and compares it with their own breadboard. `breadboard.svg` is the same layout as a picture, which the
 sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). A part you move in it stays where you put it at the next build ([P273](https://github.com/xmejkal/spark/issues/309)),
 if it still fits. A part it cannot keep is named, one line each, and with `--json` a `kept` entry with `did`
-`move not kept`. A resistor and a jumper are not kept yet: a jumper follows its parts, and a resistor is named when it is not where
-spark would put it (it may not have been moved by you).
+`move not kept`. A resistor you move stays if its joined leg is still in the row it joins. A jumper you move stays, with its bends,
+if it still joins the two rows the new layout joins (its color is the step's). Otherwise it is named, for example
+`jumper 6b.j-15t.a: no jumper of the new layout is left to join rows 6b and 15t, so spark drew its own`.
 A build that did not finish (a failed build, or requirements the build refuses) leaves a `breadboard.json` that holds
 parts, with a `left alone` entry, so a typo does not wipe your moves. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it

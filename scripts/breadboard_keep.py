@@ -4,12 +4,16 @@ may edit in Wokwi. This library reads the earlier file before the build writes t
 person put it when it still fits, and names each part it could not keep and why. `breadboard.py` calls it; nothing
 here writes a file.
 
-    EarlierDiagram.read(path, surface_type)                         the file as parts by id
+    EarlierDiagram.read(path, surface_type)                         the file as parts and jumpers by id
     KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)      a Strategy for BreadboardPlanner
-    name_parts_not_kept(earlier, layout, reasons, default_code)     [NotKeptResult]
+    KeepMovesJumperPlacement(geometry, earlier)                     a Strategy for BreadboardPlanner
+    name_parts_not_kept(earlier, layout, fresh, reasons, default_code)                [NotKeptResult]
+    name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, default_code)    [NotKeptResult]
 
-Only parts other than a resistor are kept. A resistor's id is its order in the circuit, so an earlier "R1" can be a
-different resistor now; jumpers are planned fresh from the placed parts.
+A part keeps its place when it still fits. A resistor is checked when it is placed, because the row it joins is known
+only then; its id is its order in the circuit, so an earlier "R1" can be a different resistor now, and its place is
+kept only if it is legal for this one. A jumper keeps its holes, route and direction when its two rows are the two
+rows of a jumper the plan draws, so a kept jumper never changes what is connected.
 """
 
 import collections
@@ -27,10 +31,12 @@ PIN_OFF_HOLES = "pin-off-holes"
 HOLE_TAKEN = "hole-taken"
 ROW_SHARED = "row-shared"
 NO_ROOM = "no-room"
-RESISTOR_NOT_KEPT = "resistor-not-kept"
+PIN_OFF_ROW = "pin-off-row"
+ROWS_NOT_JOINED = "rows-not-joined"
+JUMPER_NOT_ON_BOARD = "jumper-not-on-board"
 UNREADABLE = "unreadable"
-CODES = (NOT_IN_CIRCUIT, TYPE_CHANGED, TURN_UNKNOWN, PIN_OFF_HOLES, HOLE_TAKEN, ROW_SHARED, NO_ROOM,
-         RESISTOR_NOT_KEPT, UNREADABLE)
+CODES = (NOT_IN_CIRCUIT, TYPE_CHANGED, TURN_UNKNOWN, PIN_OFF_HOLES, HOLE_TAKEN, ROW_SHARED, NO_ROOM, PIN_OFF_ROW,
+         ROWS_NOT_JOINED, JUMPER_NOT_ON_BOARD, UNREADABLE)
 MESSAGES = {
     NOT_IN_CIRCUIT: "it is not in the new circuit",
     TYPE_CHANGED: "its Wokwi type changed from %s to %s",
@@ -39,7 +45,9 @@ MESSAGES = {
     HOLE_TAKEN: "hole %s is taken by %s",
     ROW_SHARED: "two of its pins share a row, or a row holds another part",
     NO_ROOM: "the half breadboard has no room with it kept, so spark placed it",
-    RESISTOR_NOT_KEPT: "a resistor's place is not kept yet, so spark placed it",
+    PIN_OFF_ROW: "its pin %s is no longer in the row it joins, so spark placed it",
+    ROWS_NOT_JOINED: "no jumper of the new layout is left to join rows %s and %s, so spark drew its own",
+    JUMPER_NOT_ON_BOARD: "it does not join two holes of the breadboard, so spark drew its own",
     UNREADABLE: "the earlier diagram %s, so no part was kept",
 }
 
@@ -66,16 +74,28 @@ def _result(subject, code, *facts):
     return NotKeptResult(subject, code, MESSAGES[code] % facts if facts else MESSAGES[code])
 
 
+class EarlierJumper(collections.namedtuple("EarlierJumper", "one other route")):
+    """Value: one connection of the earlier file, as the person left it. Its ends are hole names (4b.j) when they lie
+    on the breadboard, else the file's own text (board:D8); `route` is the tuple of strings Wokwi writes for its bends."""
+
+    __slots__ = ()
+
+    @property
+    def subject(self):
+        return "jumper %s-%s" % (self.one, self.other)
+
+
 class EarlierDiagram:
     """
-    Value: the parts of the breadboard.json that the build wrote before, as the person left it: {id: the part's
-    Wokwi entry}, without the breadboard itself. `why_unread` says why the file cannot be used, else None; `parts` is
-    then empty.
+    Value: the parts and jumpers of the breadboard.json that the build wrote before, as the person left it: `parts` is
+    {id: the part's Wokwi entry}, without the breadboard itself, and `jumpers` is [EarlierJumper] in file order.
+    `why_unread` says why the file cannot be used, else None; both are then empty.
     """
 
-    def __init__(self, parts, why_unread=None):
+    def __init__(self, parts, why_unread=None, jumpers=()):
         self.parts = parts
         self.why_unread = why_unread
+        self.jumpers = list(jumpers)
 
     @classmethod
     def read(cls, path, surface_type):
@@ -91,14 +111,15 @@ class EarlierDiagram:
 
     @classmethod
     def parse(cls, text, surface_type):
-        parts, on_surface = {}, False
+        parts, on_surface, surface_id = {}, False, None
         try:
-            for one in json.loads(text)["parts"]:
+            data = json.loads(text)
+            for one in data["parts"]:
                 if one["type"] == surface_type:
                     if float(one["left"]) != 0 or float(one["top"]) != 0:
                         return cls({}, "has its breadboard moved from 0, 0, so its parts are not where the build "
                                        "draws them")
-                    on_surface = True
+                    on_surface, surface_id = True, surface_id or one["id"]
                     continue
                 if not math.isfinite(float(one["left"])) or not math.isfinite(float(one["top"])):
                     raise ValueError("a position that is not a number")
@@ -107,7 +128,30 @@ class EarlierDiagram:
             return cls({}, "is not a Wokwi diagram of spark's kind (%s: %s)" % (type(broken).__name__, broken))
         if not on_surface:
             return cls({}, "has no %s to put parts on" % surface_type)
-        return cls(parts)
+        try:
+            jumpers = [_jumper_of(item, surface_id) for item in data.get("connections", [])]
+        except (ValueError, TypeError) as broken:
+            return cls({}, "is not a Wokwi diagram of spark's kind (%s: %s)" % (type(broken).__name__, broken))
+        return cls(parts, None, jumpers)
+
+
+def _jumper_of(item, surface_id):
+    """The EarlierJumper of one connection [end, end, color, route]; the color and route may be missing. Raises
+    ValueError for anything else."""
+    if not (isinstance(item, list) and len(item) >= 2 and all(isinstance(end, str) for end in item[:2])):
+        raise ValueError("a connection that is not a list of two ends")
+    route = item[3] if len(item) > 3 else []
+    if not (isinstance(route, list) and all(isinstance(bend, str) for bend in route)):
+        raise ValueError("a route that is not a list of strings")
+    prefix = surface_id + ":"
+    ends = [end[len(prefix):] if end.startswith(prefix) else end for end in item[:2]]
+    return EarlierJumper(ends[0], ends[1], tuple(route))
+
+
+def pin_holes(geometry, shape, turn, left, top):
+    """{Wokwi pin: the Hole under it, or None} for a part of this shape turned and placed so."""
+    turned = breadboard_drawing.rotate(shape["pins"], shape["center"], turn)
+    return {pin: geometry.hole_at(left + x, top + y) for pin, (x, y) in turned.items()}
 
 
 class KeepMovesFirstFitPartPlacement(breadboard_drawing.FirstFitPartPlacement):
@@ -132,40 +176,49 @@ class KeepMovesFirstFitPartPlacement(breadboard_drawing.FirstFitPartPlacement):
             drawn = self.catalog.get(part_id)
             if drawn is None or drawn.type == RESISTOR_TYPE:
                 continue
-            refused = self._reserve(part_id, part, drawn, ledger)
+            placed, refused = self._keep(part_id, part, drawn, ledger)
             if refused:
                 self.reasons[part_id] = refused
+            else:
+                self.reserved[part_id] = placed
 
-    def _reserve(self, part_id, part, drawn, ledger):
-        """Claim the part's holes and remember it, or return (code, message) saying why not."""
+    def _keep(self, part_id, part, drawn, ledger, pinned=None):
+        """(the part placed where it was, None) with its holes claimed, or (None, (code, message)) saying why not.
+        `pinned` (Wokwi pin, group) is a resistor's pin that must lie in the row it joins, which already holds other
+        pins; every other pin needs a row of its own that holds nothing."""
         if part["type"] != drawn.type:
-            return TYPE_CHANGED, MESSAGES[TYPE_CHANGED] % (part["type"], drawn.type)
+            return None, (TYPE_CHANGED, MESSAGES[TYPE_CHANGED] % (part["type"], drawn.type))
         turn = part.get("rotate", 0)
         if turn not in QUARTER_TURNS_DEGREES:
-            return TURN_UNKNOWN, MESSAGES[TURN_UNKNOWN] % turn
+            return None, (TURN_UNKNOWN, MESSAGES[TURN_UNKNOWN] % turn)
         turn, left, top = int(turn), float(part["left"]), float(part["top"])
         shape = self.geometry.part(drawn.type)
-        turned = breadboard_drawing.rotate(shape["pins"], shape["center"], turn)
-        holes = {pin: self.geometry.hole_at(left + x, top + y) for pin, (x, y) in turned.items()}
+        holes = pin_holes(self.geometry, shape, turn, left, top)
         off = next((pin for pin, hole in holes.items() if hole is None), None)
         if off is not None:
-            return PIN_OFF_HOLES, MESSAGES[PIN_OFF_HOLES] % off
+            return None, (PIN_OFF_HOLES, MESSAGES[PIN_OFF_HOLES] % off)
+        if pinned and holes[pinned[0]].group != pinned[1]:
+            return None, (PIN_OFF_ROW, MESSAGES[PIN_OFF_ROW] % pinned[0])
         covered = self._covered(shape, turn, left, top, holes) if shape.get("covers_holes") else []
         for hole in list(holes.values()) + covered:
             if not ledger.is_free(hole):
-                return HOLE_TAKEN, MESSAGES[HOLE_TAKEN] % (hole.name, ledger.taken[hole.name])
+                return None, (HOLE_TAKEN, MESSAGES[HOLE_TAKEN] % (hole.name, ledger.taken[hole.name]))
         groups = [hole.group for hole in holes.values()]
-        if len(set(groups)) < len(groups) or not all(ledger.group_is_free(group) for group in groups):
-            return ROW_SHARED, MESSAGES[ROW_SHARED]
+        alone = [hole.group for pin, hole in holes.items() if not pinned or pin != pinned[0]]
+        if len(set(groups)) < len(groups) or not all(ledger.group_is_free(group) for group in alone):
+            return None, (ROW_SHARED, MESSAGES[ROW_SHARED])
         for pin, hole in holes.items():
             ledger.claim(hole, "%s %s" % (part_id, pin))
         for hole in covered:
             ledger.claim(hole, "%s, which covers it" % part_id)
-        self.reserved[part_id] = breadboard_drawing.PlacedPart(part_id, drawn.type, drawn.attrs, left, top, turn, holes)
-        return None
+        return breadboard_drawing.PlacedPart(part_id, drawn.type, drawn.attrs, left, top, turn, holes), None
 
     def place(self, part_id, drawn, ledger, after=0, pinned=None):
         kept = self.reserved.pop(part_id, None)
+        if kept is None and drawn.type == RESISTOR_TYPE and part_id in self.earlier.parts:
+            kept, refused = self._keep(part_id, self.earlier.parts[part_id], drawn, ledger, pinned)
+            if refused:
+                self.reasons[part_id] = refused
         if kept:
             return kept
         try:
@@ -181,8 +234,8 @@ def name_parts_not_kept(earlier, layout, fresh, reasons, default_code=None):
     [NotKeptResult], in the earlier file's order, for each earlier part that `layout` does not keep as the person left
     it. One that `layout` lacks is NOT_IN_CIRCUIT. One the placement refused is named with its reason from `reasons`
     ({part id: (code, message)}). One placed away from its earlier place is named only if the person moved it, that is, if its earlier
-    place differs from where `fresh` (the layout planned with nothing kept) puts it: RESISTOR_NOT_KEPT
-    for a resistor, else `default_code` (None names nothing). A part at its earlier place, and a part that is not in
+    place differs from where `fresh` (the layout planned with nothing kept) puts it: `default_code` (None names
+    nothing). A part at its earlier place, and a part that is not in
     the earlier file, are never named.
     """
     placed = {one.id: one for one in layout.parts}
@@ -196,11 +249,116 @@ def name_parts_not_kept(earlier, layout, fresh, reasons, default_code=None):
         elif part_id in reasons:
             named.append(NotKeptResult(part_id, *reasons[part_id]))
         elif _place(now.left, now.top, now.rotate) != before and fresh_places.get(part_id) != before:
-            code = RESISTOR_NOT_KEPT if now.type == RESISTOR_TYPE else default_code
-            if code:
-                named.append(_result(part_id, code))
+            if default_code:
+                named.append(_result(part_id, default_code))
     return named
 
 
 def _place(left, top, turn):
     return round(float(left), PLACE_DIGITS), round(float(top), PLACE_DIGITS), turn
+
+
+class KeepMovesJumperPlacement(breadboard_drawing.JumperPlacement):
+    """
+    Strategy: an earlier jumper keeps its holes, route and direction when its two rows are the two rows of a planned
+    jumper that no earlier jumper has taken yet and both its holes are free. The first in the file wins a pair of rows
+    and a hole. Every other jumper takes its first free hole in its own rows, so no jumper changes a row, and nothing
+    kept leaves the layout as it was. `reasons` is {EarlierJumper.subject: (code, message)} for each earlier jumper
+    that is not in the layout; two earlier jumpers with the same ends share one entry. Built for one plan.
+    """
+
+    def __init__(self, geometry, earlier):
+        self.geometry = geometry
+        self.earlier = earlier
+        self.reasons = {}
+
+    def place_jumpers(self, layout, ledger):
+        holes = {hole.name: hole for hole in ledger.surface.holes}
+        kept = {}
+        for wire in self.earlier.jumpers:
+            ends = (holes.get(wire.one), holes.get(wire.other))
+            if None in ends:
+                self.reasons[wire.subject] = (JUMPER_NOT_ON_BOARD, MESSAGES[JUMPER_NOT_ON_BOARD])
+                continue
+            rows = {end.group for end in ends}
+            index = next((i for i, planned in enumerate(layout.jumpers)
+                          if i not in kept and {planned.one.group, planned.other.group} == rows), None)
+            taken = next((end for end in ends if not ledger.is_free(end)), None)
+            if index is None:
+                self.reasons[wire.subject] = (ROWS_NOT_JOINED, MESSAGES[ROWS_NOT_JOINED] % tuple(
+                    end.group for end in ends))
+            elif taken:
+                self.reasons[wire.subject] = (HOLE_TAKEN, MESSAGES[HOLE_TAKEN] % (taken.name, ledger.taken[taken.name]))
+            else:
+                for end in ends:
+                    ledger.claim(end, wire.subject)
+                kept[index] = (wire, ends)
+        if not kept:
+            return layout
+        jumpers = []
+        for index, planned in enumerate(layout.jumpers):
+            if index in kept:
+                wire, ends = kept[index]
+                jumpers.append(planned._replace(one=ends[0], other=ends[1], route=wire.route))
+            else:
+                by = "jumper %d" % planned.step
+                jumpers.append(planned._replace(one=ledger.claim_free_hole(planned.one.group, by),
+                                                other=ledger.claim_free_hole(planned.other.group, by)))
+        return layout._replace(jumpers=jumpers)
+
+
+def name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, default_code=None):
+    """
+    [NotKeptResult], in the earlier file's order, for each earlier jumper that is in neither `layout` nor `fresh` (the
+    layout planned with nothing kept, which holds the jumpers the build drew before), with its reason from `reasons`
+    ({subject: (code, message)}) else `default_code` (None names nothing). One refused for rows no planned jumper
+    joins, or by the default, is named only when the person's edit explains it: each of its end rows is held in the
+    earlier file only by parts that are still where they were, or holds nothing, lies at or left of the file's last part
+    and is held by no part of `layout` or `fresh` (else a part left it, and that part's own line explains the jumper).
+    """
+    held, last_column = _rows_held(earlier, geometry)
+    stayed = {one.id: _place(one.left, one.top, one.rotate) for one in layout.parts}
+    holes = {hole.name: hole for hole in geometry.surface.holes}
+    vacated = {hole.group for planned in (layout, fresh) for one in planned.parts for hole in one.holes.values()}
+    pairs = {frozenset((jumper.one.name, jumper.other.name)) for planned in (layout, fresh)
+             for jumper in planned.jumpers}
+    named = []
+    for wire in earlier.jumpers:
+        if frozenset((wire.one, wire.other)) in pairs:
+            continue
+        if wire.one not in holes or wire.other not in holes:
+            named.append(NotKeptResult(wire.subject, JUMPER_NOT_ON_BOARD, MESSAGES[JUMPER_NOT_ON_BOARD]))
+            continue
+        code, why = reasons.get(wire.subject) or (default_code, default_code and MESSAGES[default_code])
+        if code is None:
+            continue
+        if code in (ROWS_NOT_JOINED, default_code) and not all(
+                _is_explained_by_edit(holes[end], held, stayed, last_column, vacated) for end in (wire.one, wire.other)):
+            continue
+        named.append(NotKeptResult(wire.subject, code, why))
+    return named
+
+
+def _rows_held(earlier, geometry):
+    """({row: {part id: its earlier place}}, the last column a part's pin lies in) for the earlier file's parts."""
+    held, last_column = collections.defaultdict(dict), 0
+    for part_id, part in earlier.parts.items():
+        turn = part.get("rotate", 0)
+        try:
+            shape = geometry.part(part["type"])
+        except breadboard_drawing.NotDrawn:
+            continue
+        if turn not in QUARTER_TURNS_DEGREES:
+            continue
+        for hole in pin_holes(geometry, shape, int(turn), float(part["left"]), float(part["top"])).values():
+            if hole:
+                held[hole.group][part_id] = _place(part["left"], part["top"], turn)
+                last_column = max(last_column, hole.column)
+    return held, last_column
+
+
+def _is_explained_by_edit(hole, held, stayed, last_column, vacated):
+    owners = held.get(hole.group)
+    if owners:
+        return all(stayed.get(part_id) == place for part_id, place in owners.items())
+    return hole.column <= last_column and hole.group not in vacated

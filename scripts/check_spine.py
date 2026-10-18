@@ -638,7 +638,8 @@ def main(argv=None):
                              "left alone and named; with --json, each file is listed under kept. With a requirements "
                              "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
-                             "you moved in it stays where you put it, or the build names it as `move not kept`), "
+                             "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "
+                             "`move not kept`), "
                              "breadboard.svg, that drawing as a picture, page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser or to publish as an Artifact, and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")

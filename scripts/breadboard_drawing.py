@@ -27,8 +27,9 @@ Hole = collections.namedtuple("Hole", "name x y group column")
 DrawnPart = collections.namedtuple("DrawnPart", "type attrs pins")
 #: One component on the breadboard: its id, type, attrs, top-left corner in px, its turn, and {Wokwi pin: Hole}.
 PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate holes")
-#: One jumper between two holes, drawn in the color of the step it belongs to.
-Jumper = collections.namedtuple("Jumper", "one other step")
+#: One jumper between two holes, drawn in the color of the step it belongs to, with the bends of its route as Wokwi
+#: writes them (strings such as "v-20"), empty when it runs straight.
+Jumper = collections.namedtuple("Jumper", "one other step route", defaults=((),))
 #: Value: the whole drawing as holes, which any renderer reads.
 BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers")
 
@@ -112,9 +113,9 @@ class HoleLedger:
     """The taken holes of one surface. A claim of a taken hole is refused and names it. (Its messages say row, the word
     a person reads on the sheet.)"""
 
-    def __init__(self, surface):
+    def __init__(self, surface, taken=None):
         self.surface = surface
-        self.taken = {}
+        self.taken = dict(taken or {})
 
     def claim(self, hole, by):
         if hole.name in self.taken:
@@ -154,6 +155,15 @@ class PartPlacement:
 
     def place(self, part_id, drawn, ledger, after=0, pinned=None):
         raise NotImplementedError
+
+
+class JumperPlacement:
+    """Strategy: which holes the jumpers take, once the parts are placed and each jumper has its two rows."""
+
+    def place_jumpers(self, layout, ledger):
+        """The layout with its jumpers' holes chosen. `ledger` holds the holes the parts take and no jumper's. The
+        default keeps the holes the planner took."""
+        return layout
 
 
 class FirstFitPartPlacement(PartPlacement):
@@ -223,10 +233,11 @@ class BreadboardPlanner:
     #: Columns from one part's last pin to the next part's first: one empty column between them, for the jumpers.
     SPACING_COLUMNS = 2
 
-    def __init__(self, geometry, catalog, placement=None):
+    def __init__(self, geometry, catalog, placement=None, jumper_placement=None):
         self.geometry = geometry
         self.catalog = catalog
         self.placement = placement or FirstFitPartPlacement(geometry)
+        self.jumper_placement = jumper_placement or JumperPlacement()
 
     def plan(self, steps):
         """Each part placed in step order, then each resistor with a leg in the row it joins, then each jumper."""
@@ -244,6 +255,7 @@ class BreadboardPlanner:
             if step.act == breadboard_steps.SUPPLY:
                 raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject)
         self._place_resistors(seated, placed, ledger, after)
+        parts_only = HoleLedger(self.geometry.surface, ledger.taken)
         groups, jumpers = {}, []
         for number, step in enumerate(seated, 1):
             end = step.subject
@@ -258,7 +270,8 @@ class BreadboardPlanner:
                 anchor = step.anchor.seat().end
                 jumpers.append(Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
                                       ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number))
-        return BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers)
+        return self.jumper_placement.place_jumpers(
+            BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers), parts_only)
 
     def _place_resistors(self, seated, placed, ledger, after):
         """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row."""
@@ -335,7 +348,7 @@ class WokwiBreadboardDiagram:
             drawn["attrs"] = dict(part.attrs or {})
             parts.append(drawn)
         connections = [["%s:%s" % (self.breadboard_id, jumper.one.name), "%s:%s" % (self.breadboard_id,
-                        jumper.other.name), self.colors.color(jumper.step), []] for jumper in layout.jumpers]
+                        jumper.other.name), self.colors.color(jumper.step), list(jumper.route)] for jumper in layout.jumpers]
         return {"version": 1, "author": "spark", "editor": "wokwi", "parts": parts, "connections": connections,
                 "dependencies": {}}
 
