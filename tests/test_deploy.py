@@ -193,6 +193,8 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
             plan = deploy.plan(self.project, PORT)
         self.assertIsInstance(plan, deploy.DeployPlan)
         self.assertEqual((len(plan.commands), plan.mpremote, plan.notes), (2, [PYTHON, "-m", "mpremote"], []))
+        self.assertEqual(plan.commands, plan.flasher.build_commands(self.image, PORT))
+        self.assertIn("hold the board's BOOT button", plan.flasher.BOOT_HINT)
 
     def test_the_log_refusal_comes_before_the_tools(self):
         self.run_two_scenarios()

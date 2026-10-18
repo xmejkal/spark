@@ -1,0 +1,170 @@
+[
+ {
+  "file": "scripts/flasher.py",
+  "name": "the write runs before the erase",
+  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
+  "replace": "return [base + [self.WRITE, self.IMAGE_OFFSET, str(image)], base + [self.ERASE]]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the port is never put in the command",
+  "find": "+ ([\"--port\", port] if port else [])",
+  "replace": "+ []"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the chip is never put in the command",
+  "find": "([\"--chip\", chip] if chip else [])",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the port comes before the chip",
+  "find": "return tools.command_for(tool) + ([\"--chip\", chip] if chip else []) + ([\"--port\", port] if port else [])",
+  "replace": "return tools.command_for(tool) + ([\"--port\", port] if port else []) + ([\"--chip\", chip] if chip else [])"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the image goes to another offset",
+  "find": "IMAGE_OFFSET = \"0x0\"",
+  "replace": "IMAGE_OFFSET = \"0x1000\""
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the erase uses the dashed name",
+  "find": "ERASE, WRITE = \"erase_flash\", \"write_flash\"",
+  "replace": "ERASE, WRITE = \"erase-flash\", \"write_flash\""
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the write drops the image path",
+  "find": "self.IMAGE_OFFSET, str(image)]]",
+  "replace": "self.IMAGE_OFFSET]]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the base builds no commands and says nothing",
+  "find": "raise NotImplementedError",
+  "replace": "return []"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the base has a hint that is no one's",
+  "find": "BOOT_HINT = \"\"",
+  "replace": "BOOT_HINT = \"press a button\""
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the hint loses the BOOT button",
+  "find": "hold the board's BOOT button, press and release RESET, release BOOT, \"",
+  "replace": "press the board's button, \""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "the look prints no hint",
+  "find": "BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT",
+  "replace": "BOOT_HINT = \"\""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "the reader leaves the port out of its line",
+  "find": "flasher.build_esptool_prefix(self.flasher_tool, port) + [\"flash_id\"]",
+  "replace": "flasher.build_esptool_prefix(self.flasher_tool) + [\"flash_id\"]"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "a failed flash line ends in a colon when the flasher has no hint",
+  "find": "\": \" + hint if hint else \"\"",
+  "replace": "\": \" + hint"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "a failed flash line prints no hint",
+  "find": "hint = planned.flasher.BOOT_HINT",
+  "replace": "hint = \"\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "the plan flashes for another chip",
+  "find": "flasher.EsptoolFlasher(flasher_tool, chip)",
+  "replace": "flasher.EsptoolFlasher(flasher_tool, \"esp32\")"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "the plan builds the commands without the port",
+  "find": "project_flasher.build_commands(image.path, port)",
+  "replace": "project_flasher.build_commands(image.path)"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "both commands share one list object",
+  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
+  "replace": "base.append(self.ERASE)\n        return [base, base]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the image is passed as given, not str()",
+  "find": "self.IMAGE_OFFSET, str(image)]]",
+  "replace": "self.IMAGE_OFFSET, image]]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "only the erase command is returned",
+  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
+  "replace": "return [base + [self.ERASE]]"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the chip is not stored",
+  "find": "self.tool, self.chip = tool, chip",
+  "replace": "self.tool, self.chip = tool, None"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the hint says RESET only",
+  "find": "press and release RESET, release BOOT, \"",
+  "replace": "press RESET, \""
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "the hint lacks the run-again sentence",
+  "find": "\"and run it again\")",
+  "replace": "\"\")"
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "prefix drops the tool command",
+  "find": "return tools.command_for(tool) + ([\"--chip\"",
+  "replace": "return ([\"--chip\""
+ },
+ {
+  "file": "scripts/flasher.py",
+  "name": "prefix reverses the tool command",
+  "find": "return tools.command_for(tool) + ([\"--chip\"",
+  "replace": "return list(reversed(tools.command_for(tool))) + ([\"--chip\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "DeployPlan field order swapped",
+  "find": "\"flasher commands mpremote notes\"",
+  "replace": "\"commands flasher mpremote notes\""
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "plan swaps mpremote and notes",
+  "find": "DeployPlan(project_flasher, commands, tools.command_for(mpremote), notes)",
+  "replace": "DeployPlan(project_flasher, commands, notes, tools.command_for(mpremote))"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "hint separator loses the colon",
+  "find": "\": \" + hint if hint else \"\"",
+  "replace": "\" \" + hint if hint else \"\""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "look hint is the base class hint",
+  "find": "BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT",
+  "replace": "BOOT_HINT = flasher.Flasher.BOOT_HINT"
+ }
+]
