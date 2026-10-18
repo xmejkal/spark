@@ -11,7 +11,7 @@ then everything rebuilds." Sources: the README table, `docs/guide/journey.md`, `
 > For an RC car it stops at the first step. The four blockers:
 > 1. **No board does it all.** The FireBeetle builds and simulates but has no drawn breadboard and has not met the bench.
 >    The XIAO met the bench, but its shipped record cannot build; the bench used a hand-made copy.
-> 2. **A goal outside the eight library parts needs research that never ran.** "Beeps" has no part; an RC car has no
+> 2. **A goal outside the eight library parts needs research that never ran.** "Beeps" has no buzzer (the library holds only audio modules); an RC car has no
 >    motor, battery or radio.
 > 3. **Nobody has walked the loop once.** The button-and-LED breadboard is not wired (P100).
 > 4. **Deploy needs a passed Wokwi run, so it needs a Wokwi token and CI minutes.** The repository states no free limit.
@@ -45,7 +45,7 @@ skipped.
   `parts.py --requirements` writes nothing while a pick owes a footprint, pin order or simulation stance (journey.md).
 - Circuits: the demo `rc-car` has two circuits (car and remote), and `check_all.py --project` stops on it
   ([#205](https://github.com/xmejkal/spark/issues/205) P223). The driver's pull-ups conflict with the board's
-  pull-downs, and `check_all` does not report it ([#43](https://github.com/xmejkal/spark/issues/43) P109).
+  pull-downs, and `check_all` does not report it ([#43](https://github.com/xmejkal/spark/issues/43) P109, closed into Later).
 - Drawing: a motor needs a supply rail, and rails are not drawn, so `breadboard.json` is not written (agents.md,
   `breadboard.py`). No card names rails.
 
@@ -53,15 +53,15 @@ skipped.
 
 1. **No board does the whole loop.** FireBeetle: build and simulation work; no drawn breadboard; no bench run; no USB or
    flash pin facts, so `live.py` refuses no pin there (#323). XIAO: the bench and the drawing work, but the shipped
-   record stops the build, and the bench project used its own `xiao-esp32-c6-fresh`. Cards: #314 (header facts), #323,
-   [#336](https://github.com/xmejkal/spark/issues/336) P286 (unknown boards). No card asks for one shipped board that
-   runs the whole loop.
+   record stops the build (a refuter run on 2026-10-18 stopped at the schematic stage: the record has no `power.io_volts`, so header facts alone do not fix it), and the bench project used its own `xiao-esp32-c6-fresh`. Cards: #314 (header facts), #323,
+   [#336](https://github.com/xmejkal/spark/issues/336) P286 (unknown boards). [#68](https://github.com/xmejkal/spark/issues/68) P134 asks that the example builds on each library board; no
+   card asks for one shipped board that runs the whole loop, bench included.
 2. **A goal outside the library needs research that never ran.** The README marks Research "partly". The PO set
    rounds B and C aside on 2026-10-11 and no card was filed (#6 comment). #178 covers the by-hand steps for one owned part.
 3. **The loop has not been walked once.** The pieces ran on 2026-10-12, 10-14, 10-15, 10-16 and 10-17, never in one
    session from a goal to a lit LED on a wired breadboard. That is what #6 is for.
 4. **Deploy waits on Wokwi.** `deploy.py` flashes only an image with a passed log, so a person with no Wokwi account
-   cannot reach the board. `commands/build.md` says the free minutes are not stated. #356 asks if spark can run its own
+   cannot reach the board. `commands/build.md` (line 207) says only that it is not stated whether the VS Code extension spends CI minutes; nothing in the repository gives a free limit. #356 asks if spark can run its own
    simulator. For the PO, who has a token, this is a cost and not a stop.
 
 ## Gaps that only make it less nice
@@ -81,7 +81,7 @@ skipped.
 Each is one PR. The order follows what unblocks the next.
 
 1. **A shipped XIAO record that builds.** Done when `check_spine.py --keep` on `tactile-button` + `led-red-5mm` with
-   `"board": "xiao-esp32-c6"` reaches the simulation stage and writes `breadboard.json` (#314).
+   `"board": "xiao-esp32-c6"` reaches the simulation stage and writes `breadboard.json` (#314 plus the board's `power.io_volts`; widen #314 or file a card).
 2. **The bench walk, round A, on the XIAO.** Done when the PO wires the sheet, presses the button, the LED lights, and
    the diary files each stall as a card (#6).
 3. **One command to remove or swap a pick.** Done when after `--pick` of another part, `--requirements` drops the old
@@ -94,3 +94,11 @@ Each is one PR. The order follows what unblocks the next.
    (new card; #356 decides whether it stays).
 8. **RC car, first slice.** Done when the car's circuit (driver, two motors, battery rail) builds and is drawn (needs
    #205, a card for rail drawing, and research for the motor).
+
+## Checked by
+
+The `refuter` agent (Opus) reproduced the claims on 2026-10-18, with no USB. It confirmed the swapped pick that keeps the
+old part, the XIAO stop, the geometry file, the buzzer match, the cited cards, the dates and the style rules. It changed
+four things: the XIAO build stops at the schematic stage for lack of `power.io_volts` (story 1 and blocker 1 now say so);
+the Wokwi line now quotes `build.md` line 207 as it is; #43 is marked closed into Later; #68 is named beside blocker 1.
+Not checked: the hardware rows (no USB) and the deploy refusal itself, which rests on `deploy.py`'s docstring.
