@@ -162,14 +162,23 @@ class TheBacklogCheckTest(unittest.TestCase):
             with self.subTest(stage=stage):
                 self.assertEqual(check_backlog.problems([item(1, stage, labels=("epic",)), item(2, stage),
                                                          item(3, stage)]), [])
+                # The other side: its stories still count, and a third is named.
+                self.assertEqual(check_backlog.problems([item(1, stage, labels=("epic",)), item(2, stage),
+                                                         item(3, stage), item(4, stage)]),
+                                 ["%s holds 3 (#2, #3, #4) — its limit is 2: finish one before starting another" % stage])
 
     def test_an_epic_in_discovery_is_not_a_fifth_card_in_flight(self):
         # Four stories fill the flight; the epic beside them is no fifth. Before R9 this board failed (P136 and P94).
         self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
                                                  item(3, "Design"), item(4, "Build"), item(5, "Review")]), [])
+        # The other side: a fifth story beside the epic is still named.
+        self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
+                                                 item(3, "Design"), item(4, "Build"), item(5, "Review"),
+                                                 item(6, "Review")]),
+                         ["5 in flight (#2, #3, #4, #5, #6) — " + IN_FLIGHT_SAYS])
 
     def test_an_epic_in_ready_is_not_counted_there(self):
-        # The PO's words taken literally: an epic counts in Discovery and Design; Ready is a queue, not work.
+        # An epic counts in no stage (R9's experiment A), and Ready is a queue, not work.
         self.assertEqual(check_backlog.problems([item(n) for n in (1, 2, 3, 4, 5)] + [item(6, labels=("epic",))]), [])
 
     def test_an_epic_in_build_or_review_rides_on_its_stories(self):
