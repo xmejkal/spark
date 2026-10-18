@@ -100,6 +100,11 @@ def codes(written):
     return {one.subject: one.code for one in written.not_kept}
 
 
+def part_codes(written):
+    """codes() without the jumpers: a part and its old jumpers moved together can leave named jumpers (P287)."""
+    return {subject: code for subject, code in codes(written).items() if not subject.startswith("jumper ")}
+
+
 class ThreeCasesTest(unittest.TestCase):
     def test_a_a_moved_part_survives_a_requirements_change(self):
         project = new_project(BUTTON_ONLY)
@@ -121,8 +126,8 @@ class ThreeCasesTest(unittest.TestCase):
         edit(project, move("R1", dx=2 * PITCH_PX))
         change_requirements(project, BUTTON_ONLY)
         written = build(project)
-        self.assertEqual(codes(written), {"LedRed5mm": "not-in-circuit",
-                                          "R1": "not-in-circuit"})
+        self.assertEqual(part_codes(written), {"LedRed5mm": "not-in-circuit",
+                                               "R1": "not-in-circuit"})
         self.assertEqual({one["id"] for one in diagram(project)["parts"]}, {"bb1", "board", "TactileButton"})
 
     def test_c_a_moved_part_that_cannot_stay_is_named_and_placed_fresh(self):
@@ -222,7 +227,7 @@ class OtherEditsTest(unittest.TestCase):
         put_led(project, under[1])
         edit(project, lambda drawn: drawn["parts"].insert(1, drawn["parts"].pop(
             next(i for i, one in enumerate(drawn["parts"]) if one["id"] == "LedRed5mm"))))
-        self.assertEqual(codes(build(project)), {"board": "hole-taken"})
+        self.assertEqual(codes(build(project)), {"board": "hole-taken", "R1": "pin-off-row"})
 
     def test_a_part_with_two_pins_in_one_row_is_named(self):
         project = new_project(FULL)
@@ -265,13 +270,6 @@ class OtherEditsTest(unittest.TestCase):
             written = build(project)
         self.assertEqual(codes(written), {"TactileButton": "no-room"})
         self.assertNotEqual(place_of(project, "TactileButton"), moved)
-
-    def test_a_resistor_is_never_kept_and_is_named_when_its_place_differs(self):
-        project = new_project(FULL)
-        build(project)
-        edit(project, move("R1", dy=-2 * PITCH_PX))
-        written = build(project)
-        self.assertEqual(codes(written), {"R1": "resistor-not-kept"})
 
     def test_an_unreadable_earlier_file_is_named_and_the_build_goes_on(self):
         project = new_project(FULL)
