@@ -17,4 +17,4 @@ The plan councils of P290 (#347). Plan: [`plan.md`](../../discovery/2026-10-18-p
 | 11 | Two tests bound `problems` and never used it | reviewer, PR review | acted | removed |
 | 12 | The mutation run: 12 planted, 12 caught | mutation tester, PR review | closed | `tools/mutate.py --copy`, the whole suite, 411 s |
 | 13 | The bench, 2026-10-18 14:32 to 14:35 Prague, XIAO ESP32-C6, blink-c6, a 30-minute deploy grant: 3 deploys of 3 exit 0 with `ready seen`; no erase needed the retry, so the bench did not reproduce the failed connect | the PO's bench | closed | board logs `sim/runs/board/2026-10-18T14-33-07.log`, `14-34-18.log`, `14-35-14.log` in blink-c6 |
-| 14 | The `yes: standing yes typed by ...` line prints its times in UTC (`+00:00`), not in the person's zone | the PO's bench | raised | proposed card for the PO's zone rule |
+| 14 | The `yes: standing yes typed by ...` line prints its times in UTC (`+00:00`), not in the person's zone | the PO's bench | acted | card P315 #393 in Idea |
