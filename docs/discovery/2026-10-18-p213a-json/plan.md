@@ -6,7 +6,7 @@
 
 ## Council
 
-Round 1 tech lead changed: problems from the status lists; no redirect, `out=`; no Result class; `then` for look/yes; `reset_seen`. Refuter changed: esptool writes to fd 1, so `DeployService(echo_to=sys.stderr)` passes `stdout=` to the flash run under `--json`; `effects` use the vocabulary `writes`/`deletes`; a deploy step is keyed on the token, not the status; the no-terminal step is for the person's own terminal and carries `run_in_terminal` and a `grant` step; ready unknown gives a `watch` step (the REPL), never a second erase; a flash that fails is `stage:"flash"` (the board may be erased). Round 1 (tech lead sonnet, refuter opus) and round 2 (tech lead, PO assistant with an AI-UX eye, both
+Rounds: 1 (tech lead sonnet, refuter opus), 2 (tech lead, PO assistant, both sonnet), then a review (sonnet) and the refuter on the diff; their findings are in `rows.md`. Round 1 tech lead changed: problems from the status lists; no redirect, `out=`; no Result class; `then` for look/yes; `reset_seen`. Refuter changed: esptool writes to fd 1, so `DeployService(echo_to=sys.stderr)` passes `stdout=` to the flash run under `--json`; `effects` use the vocabulary `writes`/`deletes`; a deploy step is keyed on the token, not the status; the no-terminal step is for the person's own terminal and carries `run_in_terminal` and a `grant` step; ready unknown gives a `watch` step (the REPL), never a second erase; a flash that fails is `stage:"flash"` (the board may be erased). Round 1 (tech lead sonnet, refuter opus) and round 2 (tech lead, PO assistant with an AI-UX eye, both
 sonnet) are recorded here with what each changed.
 
 ## Design
