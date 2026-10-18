@@ -2,8 +2,8 @@
 P102a: the spark project's open items name what needs them, sit on a slice, and respect the WIP limits.
 
 P146 (the PO, 2026-10-06 evening, after the first day at the cap of 3): every working stage takes 2 — Discovery 2,
-Design 2, Build 2 and Review 2 — Ready stays at 5, and at most 4 cards are in flight; an epic counts in Discovery and
-Design, where it is the work itself, and from Build on its stories carry the limit; a task under its story never counts,
+Design 2, Build 2 and Review 2 — Ready stays at 5, and at most 4 cards are in flight; an epic counts in no stage (R9's
+experiment A, 2026-10-18; it counted in Discovery and Design before), and its stories carry the limit; a task under its story never counts,
 and a task with no parent story is a card of its own. Each limit is pinned from both sides: a board at the limit
 passes, and one card over it is named. The numbers are written out here, never read from the module (W2,
 test_self_confirmation).
@@ -27,7 +27,7 @@ lends nothing; and a Ready that holds one over its limit is named, expedite or n
 
 P146 (docs/2026-10-06-process-design.md, §1: "The bin's desk cards count in the same three. A bench session is your
 hands, so it sits outside them"): the bin's board is read for three things. Its cards in a working stage fly in the same
-total as spark's — a task under its story rides on it, an epic counts only in Discovery and Design, a Done card is out,
+total as spark's — a task under its story rides on it, an epic counts nowhere, a Done card is out,
 and a card labelled `bench` sits outside — the expedite lane is one lane across both boards, and a card that waits on
 someone is asked since when there too, as on spark's. They fill none of spark's stages and are asked for no Needed by or
 slice, and a sentence names them `bin #12`, apart from spark's #12. A bin board that could not be read is said, with its
@@ -155,21 +155,18 @@ class TheBacklogCheckTest(unittest.TestCase):
                                                  item(4, "Build"), item(5, "Review")]),
                          ["5 in flight (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
 
-    def test_an_epic_in_discovery_or_design_is_the_work_and_counts(self):
-        # An epic and two stories: the epic's place is what puts the stage over its limit of 2.
-        self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
-                                                 item(3, "Discovery")]),
-                         ["Discovery holds 3 (#1, #2, #3) — its limit is 2: finish one before starting another"])
-        self.assertEqual(check_backlog.problems([item(4, "Design", labels=("epic",)), item(5, "Design"),
-                                                 item(6, "Design")]),
-                         ["Design holds 3 (#4, #5, #6) — its limit is 2: finish one before starting another"])
+    def test_an_epic_in_discovery_or_design_rides_on_its_stories(self):
+        # R9's experiment A (the PO, 2026-10-18, broad form): an epic takes no slot in any stage. An epic and two
+        # stories: counted, the epic would be a third card and break the limit of 2.
+        for stage in ("Discovery", "Design"):
+            with self.subTest(stage=stage):
+                self.assertEqual(check_backlog.problems([item(1, stage, labels=("epic",)), item(2, stage),
+                                                         item(3, stage)]), [])
 
-    def test_an_epic_in_discovery_counts_toward_the_flight_cap(self):
-        # The case the counting rule was made for: P136 and P94, epics in Discovery, were the uncounted third and
-        # fourth. The epic here is the fifth card; left uncounted, the board would read as four in flight and pass.
+    def test_an_epic_in_discovery_is_not_a_fifth_card_in_flight(self):
+        # Four stories fill the flight; the epic beside them is no fifth. Before R9 this board failed (P136 and P94).
         self.assertEqual(check_backlog.problems([item(1, "Discovery", labels=("epic",)), item(2, "Discovery"),
-                                                 item(3, "Design"), item(4, "Build"), item(5, "Review")]),
-                         ["5 in flight (#1, #2, #3, #4, #5) — " + IN_FLIGHT_SAYS])
+                                                 item(3, "Design"), item(4, "Build"), item(5, "Review")]), [])
 
     def test_an_epic_in_ready_is_not_counted_there(self):
         # The PO's words taken literally: an epic counts in Discovery and Design; Ready is a queue, not work.
@@ -186,7 +183,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertEqual([check_backlog.counts(e) for e in (item(1, "Discovery", labels=("epic",)),
                                                             item(2, "Build", labels=("epic",)),
                                                             item(3, "Build", labels=("task",), parent=1), item(4, "Build"))],
-                         [True, False, False, True])
+                         [False, False, False, True])
 
     def test_one_expedite_may_take_a_stage_one_over_its_limit(self):
         rushed = item(9, "Build", labels=("story", "expedite"))
@@ -300,14 +297,14 @@ class TheBacklogCheckTest(unittest.TestCase):
         finished = item(19, "Done", labels=("story", "expedite"))
         self.assertEqual(check_backlog.problems([item(1, "Build", labels=("story", "expedite"))], bin_items=[finished]), [])
 
-    def test_the_bin_s_fifth_card_flies_in_every_working_stage_and_so_does_an_epic_in_discovery(self):
+    def test_the_bin_s_fifth_card_flies_in_every_working_stage_but_an_epic_does_not(self):
         spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
-        fifths = [item(19, "Discovery"), item(19, "Design"), item(19, "Build"), item(19, "Review"),
-                  item(19, "Discovery", labels=("epic",))]
-        for fifth in fifths:
-            with self.subTest(status=fifth["status"], labels=fifth["labels"]):
-                self.assertEqual(check_backlog.problems(spark, bin_items=[fifth]),
+        for stage in ("Discovery", "Design", "Build", "Review"):
+            with self.subTest(status=stage):
+                self.assertEqual(check_backlog.problems(spark, bin_items=[item(19, stage)]),
                                  ["5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before starting another"])
+        # R9's experiment A: the bin's epic counts nowhere, as spark's does not.
+        self.assertEqual(check_backlog.problems(spark, bin_items=[item(19, "Discovery", labels=("epic",))]), [])
 
     def test_a_bench_card_of_the_bin_sits_outside_the_flight_total(self):
         # The spec §1: "A bench session is your hands, so it sits outside them" — the labelled card alone, not the bin's others.

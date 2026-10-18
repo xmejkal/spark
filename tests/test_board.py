@@ -80,8 +80,9 @@ class TheCoreTest(unittest.TestCase):
     def test_in_flight_names_stage_item_and_age_and_leaves_an_epic_in_build_out(self):
         self.assertEqual(board.in_flight(SPARK, TODAY), ["Build P102c (#26) 2 d"])
 
-    def test_in_flight_shows_an_epic_in_discovery_or_design_but_not_in_build_and_never_a_task_under_its_story(self):
-        # P146: the status counts as the check does (check_backlog.counts), so it cannot hide what the gate counts. The
+    def test_in_flight_shows_no_epic_in_any_stage_and_never_a_task_under_its_story(self):
+        # P146: the status counts as the check does (check_backlog.counts), so it cannot hide what the gate counts; R9's
+        # experiment A (2026-10-18): no epic counts, in Discovery and Design either. The
         # story sits under its epic (parent 24) and still counts: a parent changes how a task counts, and nothing else.
         crowded = board.to_items(project(node(70, "P136 — Full circuit checks", "Discovery", labels=("epic",)),
                                          node(71, "P100 — The flows", "Design", labels=("epic",)),
@@ -89,7 +90,7 @@ class TheCoreTest(unittest.TestCase):
                                          node(29, "P102e — A discovery skill", "Build", parent=24),
                                          node(31, "P102e step one", "Build", labels=("task",), parent=29)))
         self.assertEqual(board.in_flight(crowded, TODAY),
-                         ["Discovery P136 (#70) 2 d", "Design P100 (#71) 2 d", "Build P102e (#29) 2 d"])
+                         ["Build P102e (#29) 2 d"])
 
     def test_items_carry_a_task_s_parent_story(self):
         items = board.to_items(project(node(9, "T9 — x", "Build", labels=("task",), parent=1), node(10, "T10 — y", "Build", labels=("task",))))
@@ -198,8 +199,8 @@ class TheCoreTest(unittest.TestCase):
         return out.getvalue().splitlines(), git
 
     def epic_with_an_appetite(self, changed):
-        """An epic in Discovery whose card carries an Appetite of 3 — a number field the board holds as process data."""
-        epic = node(5, "E — x", "Discovery", changed=changed, labels=("epic",))
+        """A card in Discovery that carries an Appetite of 3 — a number field the board holds as process data."""
+        epic = node(5, "E — x", "Discovery", changed=changed)
         epic["fieldValues"]["nodes"].append({"number": 3, "field": {"name": "Appetite"}})
         return board.to_items(project(epic))
 
