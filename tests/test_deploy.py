@@ -69,8 +69,9 @@ class ProjectCase(unittest.TestCase):
 
     def plan(self, port=None, ignore_older_runs=False):
         """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
+        kwargs = {"ignore_older_runs": True} if ignore_older_runs else {}  # the default is the refusal
         return deploy_service.DeployService(
-            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), ignore_older_runs).plan(port)
+            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), **kwargs).plan(port)
 
     def deploy(self, *argv, find=found, run=None):
         """(exit code, stdout, stderr, the commands run) of deploy.py in this project."""
