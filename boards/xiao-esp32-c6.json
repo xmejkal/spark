@@ -20,7 +20,7 @@
   "physical": {
     "footprint_module": "XIAO-ESP32-C6-SMD",
     "footprint_export": "XiaoEsp32C6",
-    "//footprint_module": "Seeed's SMD footprint name, kept from the earlier record. No file in this repository draws it: emit_footprint.py generates XiaoEsp32C6 from the header below. boards.py --for-fab trusts this name, so that gate does not prove a footprint was drawn and checked (P278 row).",
+    "//footprint_module": "Seeed's SMD footprint name, kept from the earlier record. No file in this repository draws it: emit_footprint.py generates XiaoEsp32C6 from the header below. boards.py --for-fab trusts this name, so that gate does not prove a footprint was drawn and checked (docs/discovery/2026-10-18-p278-xiao-record/rows.md).",
     "width_mm": 17.8,
     "height_mm": 21.0,
     "//thickness_mm": "Not stated in any source read. Not recorded rather than guessed.",

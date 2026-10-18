@@ -74,11 +74,17 @@ class TheCopiedFactsEqualTheCheckedRecordTest(unittest.TestCase):
             self.assertTrue(document["url"].startswith("https://"), name)
             self.assertRegex(document["sha256"], r"^[0-9a-f]{64}$", name)
 
-    def test_every_cite_in_power_names_a_kept_document(self):
-        for fact, entry in SHIPPED["power"].items():
-            cite = entry.get("cites")
-            if cite:
-                self.assertIn(cite["document"], SHIPPED["documents"], fact)
+    def test_every_cite_in_the_record_names_a_kept_document(self):
+        def cites(node, where=""):
+            if isinstance(node, dict):
+                if isinstance(node.get("cites"), dict):
+                    yield where, node["cites"]["document"]
+                for key, value in node.items():
+                    yield from cites(value, where + "." + key)
+        found = list(cites(SHIPPED))
+        self.assertGreaterEqual(len(found), 5)
+        for where, document in found:
+            self.assertIn(document, SHIPPED["documents"], where)
 
     def test_physical_equals_the_fresh_record_except_the_footprint_module_name(self):
         left = {k: v for k, v in SHIPPED["physical"].items() if "footprint_module" not in k}
@@ -87,8 +93,7 @@ class TheCopiedFactsEqualTheCheckedRecordTest(unittest.TestCase):
         self.assertEqual(SHIPPED["physical"]["footprint_module"], "XIAO-ESP32-C6-SMD")
 
     def test_the_header_pins_equal_in_both_records(self):
-        header = {name: gpio for name, gpio in SHIPPED["pins"].items()}
-        for name, gpio in header.items():
+        for name, gpio in SHIPPED["pins"].items():
             self.assertEqual(FRESH["pins"][name], gpio, name)
 
     def test_fresh_adds_only_tx_and_rx_which_pad_aliases_reach(self):
@@ -117,7 +122,7 @@ class TheLibraryXiaoIsAValidBoardTest(unittest.TestCase):
         path = ROOT / "boards" / "xiao-esp32-c6.json"
         self.assertEqual(boards.validate(SHIPPED, path), [])
 
-    def test_the_fab_gate_answers_as_before_for_the_library_xiao(self):
+    def test_the_fab_gate_finds_no_problem_in_the_library_xiao(self):
         path = ROOT / "boards" / "xiao-esp32-c6.json"
         self.assertEqual(boards.validate(SHIPPED, path, for_fab=True), [])
 

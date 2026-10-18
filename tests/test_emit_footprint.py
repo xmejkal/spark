@@ -201,8 +201,9 @@ class WhatItWillNotInventTest(unittest.TestCase):
         # The XIAO's file once recorded no header geometry at all (P121); a board that lacks it must come out as could-not-run.
         from board_library import library_without
         file = library_without("physical.header") / "xiao-esp32-c6.json"
-        physical = json.loads(file.read_text()).get("physical") or {}
-        self.assertTrue(emit_footprint._missing(physical, physical.get("header")))
+        board = json.loads(file.read_text())
+        self.assertTrue(emit_footprint.footprint_gaps(board))
+        self.assertEqual(emit_footprint.footprint_gaps(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())), [])
 
 
 class TheCommandLineTest(unittest.TestCase):
