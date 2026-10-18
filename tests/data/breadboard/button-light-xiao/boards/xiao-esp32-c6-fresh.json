@@ -216,14 +216,14 @@
     }
   },
   "//other_chip_pins": "Not on the header, so not in pins: GPIO12/13 are USB D-/D+ to the USB-C (datasheet page 25, schematic). GPIO3 powers the RF switch (low = on) and GPIO14 selects the antenna (low = the ceramic one, high = the U.FL), per the wiki and variant.cpp, which drives both low at start. GPIO24-30 are the in-package flash (ESP32-C6FH4, 4 MB, datasheet Table 1-1 page 13; schematic U4 is ESP32-C6FH4).",
-  "//deep_sleep": "soc_caps.h v5.5.1: SOC_PM_SUPPORT_EXT1_WAKEUP and SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN are defined, SOC_PM_SUPPORT_EXT0_WAKEUP is not. So there is no ext0, and the silicon can give each ext1 pin its own level.",
+  "//deep_sleep": "How this chip is woken. esp32.wake_on_ext0 does not exist on the C6 and Pin.irq(wake=DEEPSLEEP) silently does nothing; wake_on_ext1 and wake_on_gpio both exist. Verified on MicroPython v1.29.",
   "deep_sleep": {
     "wake_api": "esp32.wake_on_ext1",
-    "single_pin_api": null,
-    "single_polarity_for_all_pins": false,
-    "//single_polarity_for_all_pins": "False for the silicon (MODE_PER_PIN). UNVERIFIED: whether MicroPython's esp32.wake_on_ext1(pins, level) lets each pin have its own level. Its signature takes one level, so in MicroPython the answer may be true.",
-    "simulated_by_wokwi": null,
-    "//simulated_by_wokwi": "Not tested for this file."
+    "single_polarity_for_all_pins": true,
+    "//single_polarity_for_all_pins": "True of MicroPython's API, not of the silicon: esp32.wake_on_ext1 takes one level for the whole mask (ports/esp32/modesp32.c, v1.29.0), while the C6 itself defines SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN (ESP-IDF soc_caps.h; documents keeps v5.5.1, where SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN is defined too; the v5.5.2 read is not kept). A firmware on another runtime could give each pin its own level.",
+    "simulated_by_wokwi": false,
+    "//simulated_by_wokwi": "Wokwi wakes this chip from a timer but not from a GPIO - established by experiment, see firmware/micropython/sim/README.md. Deep sleep is a bench test.",
+    "//polarity_is_a_wiring_decision": "Which level wakes the chip follows from how the buttons are wired, not from this board, so it lives in config.WAKE_ON_HIGH. See boards/README.md."
   },
   "vendor": {
     "arduino_variant": "XIAO_ESP32C6"
@@ -369,5 +369,7 @@
         "at": "sheet 03 Power"
       }
     }
-  }
+  },
+  "flash_mb": 4,
+  "//flash_mb": "The flash in MB, as the board has it. Seeed: \"512KB SRAM & 4MB Flash\" (https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/, read 2026-10-13). A bench read agrees: esptool 5.5.0 flash-id printed \"Detected flash size: 4MB\" (docs/discovery/2026-10-13-p218-deploy-and-board/bench/p228/03-esptool.txt). The look (board_look.py) compares a board with it."
 }

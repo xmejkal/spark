@@ -25,6 +25,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+from board_library import board_missing  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -226,6 +227,7 @@ class WithoutABuiltDesignTest(unittest.TestCase):
                          init_project.EXIT_COULD_NOT_RUN)
         self.assertFalse((root / "boards" / "active.json").exists())
 
+    @board_missing("physical.header")
     def test_a_board_that_stops_at_the_footprint_is_written_saying_so(self):
         # F12's follow-up: `--board xiao-esp32-c6` wrote active.json without a word — /spark:idea's L runs this; never refused
         said = {}
@@ -239,6 +241,7 @@ class WithoutABuiltDesignTest(unittest.TestCase):
                       "board file\n", said["xiao-esp32-c6"])
         self.assertNotIn("stops at", said["firebeetle2-esp32s3"])
 
+    @board_missing("physical.header")
     def test_the_boards_offered_are_those_that_build_then_each_that_stops_said_as_such(self):
         # F12 (C-7): both "Available:" lines offered the XIAO unmarked — /spark:idea's L runs this first; never hidden
         offered = ("Available: firebeetle2-esp32s3; xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry "

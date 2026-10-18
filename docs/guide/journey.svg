@@ -76,7 +76,9 @@
 <text x="1214" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">page of tabs ran,</text>
 <text x="1214" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16. A moved part,</text>
 <text x="1214" y="936" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">jumper or resistor is kept,</text>
-<text x="1214" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-18.</text>
+<text x="1214" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-18. The library's</text>
+<text x="1214" y="1004" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">XIAO record builds button +</text>
+<text x="1214" y="1038" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">LED, 2026-10-18.</text>
 <line x1="227" y1="1182" x2="1373" y2="1182" stroke="#b0b0b0" stroke-width="4"/>
 <circle cx="227" cy="1182" r="36" fill="#2dc75c"/>
 <text x="227" y="1193" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>

@@ -12,19 +12,72 @@
   "//wokwi_pin_naming": "Wokwi's XIAO part names its pins by silkscreen - D0..D10, 3V3, 5V, GND - and rejects GPIO numbers.",
   "wokwi_pin_naming": "silkscreen",
   "wokwi_power_pins": {
-    "V33": "3V3",
+    "3V3": "3V3",
     "GND": "GND",
-    "V5": "5V"
+    "5V": "5V"
   },
-  "//physical": "What the board *is*, physically. The PCB design needs the footprint and the outline; the simulator needs a size to place parts around. Both change when the board does, which is why they live here and not in the files that use them.",
+  "//physical": "Seeed's own footprint XIAO-ESP32-C6-DIP.kicad_mod (Seeed-Studio/OPL_Kicad_Library commit b0035c51) gives the through-holes: two rows of 7 at 2.54 mm pitch, rows 15.24 mm apart (y = -7.62 and +7.62), each row centred (x = -7.62 to +7.62), drill 0.889 mm, pad 1.524 mm. The wiki gives the board as 21 x 17.8 mm. A centred 15.24 mm row on a 21 mm side puts the first hole 2.88 mm from each end, which Seeed's SMD footprint confirms (castellated pads at y = -2.88 and -18.12).",
   "physical": {
     "footprint_module": "XIAO-ESP32-C6-SMD",
-    "footprint_export": "XiaoRealFootprint",
-    "width_mm": 21.0,
-    "height_mm": 17.8,
+    "footprint_export": "XiaoEsp32C6",
+    "//footprint_module": "Seeed's SMD footprint name, kept from the earlier record. No file in this repository draws it: emit_footprint.py generates XiaoEsp32C6 from the header below. boards.py --for-fab trusts this name, so that gate does not prove a footprint was drawn and checked (docs/discovery/2026-10-18-p278-xiao-record/rows.md).",
+    "width_mm": 17.8,
+    "height_mm": 21.0,
+    "//thickness_mm": "Not stated in any source read. Not recorded rather than guessed.",
+    "header": {
+      "rows": 2,
+      "pins": [
+        7,
+        7
+      ],
+      "pitch_mm": 2.54,
+      "row_spacing_mm": 15.24,
+      "drill_mm": 0.889,
+      "pad_mm": 1.524,
+      "//first_pad_from_edge_mm": "(21.0 - 6 x 2.54) / 2 = 2.88 mm. Both rows are centred, so they are flush at both ends.",
+      "first_pad_from_edge_mm": 2.88,
+      "flush_edge": "+y"
+    },
+    "//max_component_height": "Not stated in any source read.",
+    "//wokwi_size_px": "Wokwi's board.json gives 18.1 x 23.4 mm (the USB-C overhangs). At Wokwi's 96 dpi that is 68 x 88 px. The px figure is arithmetic on Wokwi's drawing, not a Seeed fact, and only placement reads it.",
     "wokwi_size_px": {
-      "width": 70,
-      "height": 90
+      "width": 68,
+      "height": 88
+    },
+    "//header_order": "From the schematic, sheet 03 Power, symbol U2 'XIAO ESP32-C6': pins 1-7 are D0, D1, D2, D3, D4, D5, D6/TX; pins 8-14 are D7/RX, D8, D9, D10, 3V3_OUT, GND, VBUS. In the DIP footprint pin 7 sits opposite pin 8 and pin 1 opposite pin 14. Wokwi's board.json agrees (D0 beside 5V, D6 beside D7). Each row is listed from the end away from the USB-C, as spark's other board does. Which end the USB-C is at comes from Wokwi's drawing (D0 and 5V nearest the top, where the connector overhangs) and the wiki's pinout picture, not from the footprint, which has no connector in it: UNVERIFIED against the board in hand.",
+    "header_order": {
+      "row_left": [
+        "D6",
+        "D5",
+        "D4",
+        "D3",
+        "D2",
+        "D1",
+        "D0"
+      ],
+      "row_right": [
+        "D7",
+        "D8",
+        "D9",
+        "D10",
+        "3V3",
+        "GND",
+        "5V"
+      ]
+    },
+    "//pad_aliases": "The silkscreen prints D0-D10 only. The bus and analogue names are the variant header's.",
+    "pad_aliases": {
+      "A0": "D0",
+      "A1": "D1",
+      "A2": "D2",
+      "SS": "D3",
+      "SDA": "D4",
+      "SCL": "D5",
+      "TX": "D6",
+      "RX": "D7",
+      "SCK": "D8",
+      "MISO": "D9",
+      "MOSI": "D10"
     }
   },
   "//pins": "The silkscreen label on the board, and the GPIO it actually is. This is the single most error-prone fact about this board: D3 is GPIO21, not GPIO3.",
@@ -61,11 +114,15 @@
     6,
     7
   ],
-  "//adc_gpio": "The only pins with an analogue input, for current sensing.",
+  "//adc_gpio": "GPIO0-6: datasheet v1.5 Table 2-8 (page 23) ADC1_CH0-6, and soc_caps.h SOC_ADC_PERIPH_NUM 1. The chip has no ADC2, so no ADC pin is lost to the radio. On the header: D0, D1, D2 (A0-A2).",
   "adc_gpio": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5,
+    6
   ],
   "//pin_roles": "What a pin IS, beyond its number. Typed so a program can read it: the arrays are for checks, the notes are for people. A pin with a role is not unusable - it is usable with a caveat, and the caveat is the note.",
   "pin_roles": {
@@ -131,15 +188,178 @@
   "deep_sleep": {
     "wake_api": "esp32.wake_on_ext1",
     "single_polarity_for_all_pins": true,
-    "//single_polarity_for_all_pins": "True of MicroPython's API, not of the silicon: esp32.wake_on_ext1 takes one level for the whole mask (ports/esp32/modesp32.c, v1.29.0), while the C6 itself defines SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN (ESP-IDF v5.5.2 soc_caps.h). A firmware on another runtime could give each pin its own level.",
+    "//single_polarity_for_all_pins": "True of MicroPython's API, not of the silicon: esp32.wake_on_ext1 takes one level for the whole mask (ports/esp32/modesp32.c, v1.29.0), while the C6 itself defines SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN (ESP-IDF soc_caps.h; documents keeps v5.5.1, where SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN is defined too; the v5.5.2 read is not kept). A firmware on another runtime could give each pin its own level.",
     "simulated_by_wokwi": false,
     "//simulated_by_wokwi": "Wokwi wakes this chip from a timer but not from a GPIO - established by experiment, see firmware/micropython/sim/README.md. Deep sleep is a bench test.",
     "//polarity_is_a_wiring_decision": "Which level wakes the chip follows from how the buttons are wired, not from this board, so it lives in config.WAKE_ON_HIGH. See boards/README.md."
   },
-  "//wokwi_power_pins": "Pads that are not GPIOs, so no naming rule covers them. Keyed by the name the footprint gives the pad, because that is what the emitter looks up.",
+  "//wokwi_power_pins": "Pads that are not GPIOs, so no naming rule covers them. Keyed by the name the generated footprint gives the pad (3V3, GND, 5V), because that is what the emitter looks up; each must name a power pad.",
   "//vendor": "Where the pin map can be RE-DERIVED from, so it is verified rather than trusted. tools/../check_vendor_pins.py fetches this header and compares.",
   "vendor": {
     "arduino_variant": "XIAO_ESP32C6"
   },
-  "//pins_functions": "SDA SCL SS MOSI MISO SCK A0 A1 A2 are the vendor's function names for GPIOs this header already carries under D-labels (D4=SDA, D5=SCL, D3=SS, D10=MOSI, D9=MISO, D8=SCK, D0-D2=A0-A2), from XIAO_ESP32C6.pins_arduino.h. Recorded 2026-09-29 so a bus signal can land by name and the bus roles below have something to point at. The silkscreen prints the D-numbers; whether it also prints the function names is not recorded here, and this file has no header_order yet for a pad_aliases entry to point at."
+  "//pins_functions": "SDA SCL SS MOSI MISO SCK A0 A1 A2 are the vendor's function names for GPIOs this header already carries under D-labels (D4=SDA, D5=SCL, D3=SS, D10=MOSI, D9=MISO, D8=SCK, D0-D2=A0-A2), from XIAO_ESP32C6.pins_arduino.h. Recorded 2026-09-29 so a bus signal can land by name and the bus roles below have something to point at. The silkscreen prints the D-numbers; whether it also prints the function names is not recorded here, and physical.pad_aliases now points each at its D-label.",
+  "power": {
+    "regulator_3v3_a": {
+      "value": null,
+      "verified": false,
+      "source": "The schematic names the 3.3 V buck (U1 SGM6029CYG/TR, sheet 03) but no current rating. Seeed's wiki gives none. The SGM6029 datasheet was not read.",
+      "why_it_matters": "What everything on 3V3 is summed against, the chip's own radio included."
+    },
+    "module_peak_a": {
+      "value": 0.354,
+      "verified": true,
+      "source": "ESP32-C6 Series Datasheet v1.5, Table 5-7 (page 66): 802.11b, 1 Mbps, DSSS @ 21.0 dBm TX, 354 mA peak. This is the bare chip's figure. The XIAO is a chip on a board, not a module.",
+      "cites": {
+        "document": "esp32-c6-datasheet-v1-5",
+        "at": "Table 5-7, page 66"
+      }
+    },
+    "deep_sleep_ua": {
+      "value": 15,
+      "verified": false,
+      "source": "Seeed wiki, Features: 'a deep sleep mode with consumption as low as 15 μA' (supply 3.8 V on BAT, per the specifications table). The specifications table puts three boards side by side and the column order was not certain in the text read, so this stays unverified.",
+      "cites": {
+        "document": "xiao-c6-wiki"
+      }
+    },
+    "internal_pull_up_ohms": {
+      "value": 45000,
+      "verified": true,
+      "source": "ESP32-C6 Series Datasheet v1.5, DC characteristics (page 65): RPU, internal weak pull-up resistor, 45 kOhm typical.",
+      "cites": {
+        "document": "esp32-c6-datasheet-v1-5",
+        "at": "page 65"
+      }
+    },
+    "io_volts": {
+      "value": 3.3,
+      "verified": true,
+      "source": "ESP32-C6 Series Datasheet v1.5, Table 5-2 (page 64): VDDPST1/VDDPST2 3.0 min, 3.3 typ, 3.6 max V. The board's buck makes +3V3 (schematic sheet 03).",
+      "cites": {
+        "document": "esp32-c6-datasheet-v1-5",
+        "at": "Table 5-2, page 64"
+      }
+    },
+    "charge_current_a": {
+      "value": 0.12,
+      "verified": true,
+      "source": "Schematic sheet 03: U3 SGM40567-4.2XG/TR, note 'ICharge=24000/200K=120mA'.",
+      "cites": {
+        "document": "xiao-c6-schematic-v1-0",
+        "at": "sheet 03 Power"
+      }
+    }
+  },
+  "power_pads": {
+    "GND": {
+      "rail": "ground",
+      "direction": "out"
+    },
+    "3V3": {
+      "rail": "logic",
+      "direction": "out",
+      "can_supply": "regulator_3v3_a",
+      "own_draw": "module_peak_a",
+      "volts": "io_volts",
+      "//": "Schematic sheet 03 Power: U1 SGM6029CYG/TR, a 5 V to 3.3 V buck, drives +3V3, which is U2 pin 12 '3V3_OUT'. The wiki calls the pin 'Power Output'."
+    },
+    "5V": {
+      "rail": "5v",
+      "direction": "in",
+      "feeds": "3V3",
+      "//": "Schematic: U2 pin 14 is VBUS, the USB-C VBUS. The wiki: '5V VBUS Power Input/Output', and 'When using battery power, no voltage will be present on the 5V pin.' VBUS reaches the buck through a Schottky diode (block diagram sheet 02). So it is an input that also carries the USB 5 V out when USB is plugged in."
+    }
+  },
+  "documents": {
+    "xiao-c6-wiki": {
+      "url": "https://wiki.seeedstudio.com/xiao_esp32c6_getting_started/",
+      "sha256": "87ab9b8800f2bab3e56f41bcbc6d5ef7391a5570b80115a080d362252e9ef366",
+      "file": "seeed-wiki-xiao_esp32c6_getting_started.html",
+      "retrieved": "2026-10-13",
+      "title": "Getting Started with Seeed Studio XIAO ESP32C6",
+      "version": "Last updated on Aug 5, 2024"
+    },
+    "xiao-c6-schematic-v1-0": {
+      "url": "https://files.seeedstudio.com/wiki/SeeedStudio-XIAO-ESP32C6/XIAO_ESP32_C6_v1.0_SCH_260114.pdf",
+      "sha256": "510f3f917bcded1201ca5c63374409183457c1ef83a836988517d6802180dad7",
+      "file": "XIAO_ESP32_C6_v1.0_SCH_260114.pdf",
+      "retrieved": "2026-10-13",
+      "title": "XIAO ESP32-C6",
+      "version": "Rev V1.0, 2026-01-14"
+    },
+    "xiao-c6-pinout-sheet": {
+      "url": "https://files.seeedstudio.com/wiki/SeeedStudio-XIAO-ESP32C6/res/XIAO_ESP32C6_Pinout.xlsx",
+      "sha256": "e2dae530c359e66ba704039f86cfea4bc316596fde367d992723509777746494",
+      "file": "XIAO_ESP32C6_Pinout.xlsx",
+      "retrieved": "2026-10-13",
+      "title": null,
+      "version": null
+    },
+    "xiao-c6-dip-footprint": {
+      "url": "https://raw.githubusercontent.com/Seeed-Studio/OPL_Kicad_Library/b0035c51eb0348bb3e165fdb2f2765fa3d1d17bd/Seeed%20Studio%20XIAO%20Series%20Library/XIAO-ESP32-C6-DIP.kicad_mod",
+      "sha256": "5361d04543e25a0693e5a34ab660b5dc6cc416352ee4e95381e331fedcc7771d",
+      "file": "XIAO-ESP32-C6-DIP.kicad_mod",
+      "retrieved": "2026-10-13",
+      "title": "XIAO-ESP32-C6-DIP",
+      "version": "commit b0035c51"
+    },
+    "esp32-c6-datasheet-v1-5": {
+      "url": "https://documentation.espressif.com/esp32-c6_datasheet_en.pdf",
+      "sha256": "372a5b42b2900c83ef4309149c8835e9ae2d1be19244995bf2fb83af4dc5edf1",
+      "file": "esp32-c6_datasheet_en.pdf",
+      "retrieved": "2026-10-13",
+      "title": "ESP32-C6 Series Datasheet",
+      "version": "1.5"
+    },
+    "arduino-variant-3-3-12": {
+      "url": "https://raw.githubusercontent.com/espressif/arduino-esp32/3.3.12/variants/XIAO_ESP32C6/pins_arduino.h",
+      "sha256": "9cdb00a2ef0a3e95826e99cb8b581780cd1ef9db14750a59059be7043dab0360",
+      "file": "XIAO_ESP32C6.pins_arduino.h",
+      "retrieved": "2026-10-13",
+      "title": null,
+      "version": "tag 3.3.12"
+    },
+    "arduino-variant-cpp-3-3-12": {
+      "url": "https://raw.githubusercontent.com/espressif/arduino-esp32/3.3.12/variants/XIAO_ESP32C6/variant.cpp",
+      "sha256": "cb6b1b849ee4f54db5acdbe7fb7ee08afed906ad68a15a1d850cb5a8fa2e515c",
+      "file": "XIAO_ESP32C6.variant.cpp",
+      "retrieved": "2026-10-13",
+      "title": null,
+      "version": "tag 3.3.12"
+    },
+    "esp-idf-soc-caps-v5-5-1": {
+      "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32c6/include/soc/soc_caps.h",
+      "sha256": "43e1668e045daf9b419fff29c4c647d8f48b065b744a48a2ffebfaf8bb358169",
+      "file": "esp-idf-v5.5.1-esp32c6-soc_caps.h",
+      "retrieved": "2026-10-13",
+      "title": null,
+      "version": "tag v5.5.1"
+    },
+    "micropython-download": {
+      "url": "https://micropython.org/download/SEEED_XIAO_ESP32C6/",
+      "sha256": "295caeb15a75638994ce4fe659c04d07adb3b8667bc517689a3ff724db40996f",
+      "file": "micropython-download-SEEED_XIAO_ESP32C6.html",
+      "retrieved": "2026-10-13",
+      "title": null,
+      "version": "lists v1.29.0 (2026-08-24)"
+    },
+    "micropython-pins-csv": {
+      "url": "https://github.com/micropython/micropython/blob/v1.29.0/ports/esp32/boards/SEEED_XIAO_ESP32C6/pins.csv",
+      "sha256": "fa4b3b57cc81d9ffcf0a24752e4b7d85fb474e21fd8e58a8a39e9c1d9651d057",
+      "file": "SEEED_XIAO_ESP32C6.pins.csv",
+      "retrieved": "2026-10-13",
+      "title": null,
+      "version": "tag v1.29.0"
+    },
+    "wokwi-board": {
+      "url": "https://github.com/wokwi/wokwi-boards/blob/4294fca6dce4c5e3d7393ceda312225ed861c997/boards/xiao-esp32-c6/board.json",
+      "sha256": "e5200e012416f096bcc188f9cb4fe8f292cd9d973dc0249513624bf5768856a8",
+      "file": "wokwi-xiao-esp32-c6.board.json",
+      "retrieved": "2026-10-13",
+      "title": "Seeed Studio XIAO ESP32-C6",
+      "version": "commit 4294fca6"
+    }
+  },
+  "//power": "Copied from the checked record xiao-esp32-c6-fresh (P229, 2026-10-13) in P278, with its cites and its unverified marks. Every cite names an entry of documents."
 }

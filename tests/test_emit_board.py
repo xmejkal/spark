@@ -932,7 +932,9 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         # F9: series_ohms' refusal was a traceback and exit 1, which check_spine read as a defect in the design
         root = self._project()
         (root / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}))
-        code, tsx, err = self._main(["requirements.json"], root)
+        from board_library import board_missing
+        with board_missing("power.io_volts"):
+            code, tsx, err = self._main(["requirements.json"], root)
         self.assertEqual((code, tsx), (emit_board.EXIT_COULD_NOT_RUN, ""))
         self.assertIn("cannot emit a board: led-red-5mm asks for 5 mA through a series resistor, but the board states no "
                       "power.io_volts — nothing to compute it from", err)

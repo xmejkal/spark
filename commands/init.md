@@ -30,7 +30,7 @@ the ones in the plugin's `docs/guide/how-it-works.md`, "Your own dev board" — 
 ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id>
 ```
 
-With such a board it prints the same words after `wrote active.json` (`board xiao-esp32-c6 stops at the footprint stage
+With such a board it prints the same words after `wrote active.json` (`board <id> stops at the footprint stage
 (P121) — …`) and writes the file all the same.
 
 **After a build, run it again with `--force`:** it names the rails from the built board and keeps every answer
