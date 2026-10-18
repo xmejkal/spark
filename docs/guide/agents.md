@@ -182,6 +182,14 @@ These write:
   `kept` with `did` `move not kept`, `subject`, `code` and `why`. Spark never names a jumper it drew itself (the record `wiring-record.json` lists them as `drawn_jumpers`) when a new circuit leaves it out. It always names a jumper the person moved when the build cannot keep it. With no record, it names no jumper for rows that no planned jumper joins. A build
   that did not finish (failed or refused) leaves a `breadboard.json` that holds parts, with a `left alone` entry, since it
   may hold moves; one that holds none, or is not readable, is removed. Never read a missing `not kept` line as proof that a move was kept: read the file.
+  The build checks the drawing against the points (P279, `breadboard_match.py`). `DrawnNets` joins the rows of each
+  jumper and the pins that are one inside a part (`joined_pins` in `data/wokwi-geometry.json`, the pushbutton's two sides
+  of a contact). `PlannedLayout.differs` and `WriteResult.differs` list `DrawingDiffersResult(subject, code, why)`. The
+  codes are `not-joined` (an end is not in its point's net) and `joined-to-other` (two points share a net, a short).
+  `breadboard.py` prints each as `drawing differs: …` on stderr, the sheet says the first under the drawing's line, and
+  `check_spine --keep` adds `{file: breadboard.json, did: "drawing differs", code, subject, why}`. The files are still
+  written and the exit code does not change: wire from the steps, not from the drawing. Only the pins that the points
+  name are checked, so a missing `drawing differs` entry is not proof that no other pin shares a row.
   A rebuild lists what to change on the bench (P300, `breadboard_changes.py`). `breadboard.write()` reads
   `wiring-record.json`, which holds each step of the last sheet, before it writes anything. It compares the record with the
   new steps, writes the sheet, and then writes the new record. The sheet gets a section `### Changes since the last build`

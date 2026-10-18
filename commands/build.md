@@ -86,7 +86,10 @@ if it still fits. A part it cannot keep is named, one line each, and with `--jso
 `move not kept`. A resistor you move stays if its joined leg is still in the row it joins. A jumper you move stays, with its bends,
 if it still joins the two rows the new layout joins (its color is the step's). Otherwise it is named, for example
 `jumper 6b.j-15t.a: no jumper of the new layout is left to join rows 6b and 15t, so spark drew its own`.
-Spark never names a jumper it drew itself. After a rebuild, the sheet and the screen list what to change on the bench
+Spark never names a jumper it drew itself. The build also makes sure that the drawing joins the points of
+`circuit.json` ([P279](https://github.com/xmejkal/spark/issues/317)). An end it joins differently is named, as
+`drawing differs: R1 end 1 is not joined to board D8 in the drawing`, and the sheet says to wire from its steps.
+After a rebuild, the sheet and the screen list what to change on the bench
 ([P300](https://github.com/xmejkal/spark/issues/366)): one line for each part to put in or take out, each jumper to run,
 move or take out (by its two ends and its color), and each resistor to swap. With `--json`, each line is a `kept` entry with
 `did` `changed`. Read these lines to the person before they touch the breadboard.

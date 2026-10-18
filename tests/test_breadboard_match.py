@@ -86,7 +86,7 @@ class TheCheckTest(unittest.TestCase):
         named = {end.pin for point in self.points for end in point.ends if end.component == breadboard_steps.THE_BOARD}
         board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
         one, other = [pin for pin in board.holes if pin not in named and pin in self.catalog[board.id].pins][:2]
-        ends = [breadboard_steps.End(breadboard_steps.BOARD, board.id, "board " + pin, "board " + pin, pin)
+        ends = [breadboard_steps.End("board", board.id, "board " + pin, "board " + pin, pin)
                 for pin in (one, other)]
         point = [breadboard_steps.StepPoint(ends, None, None)]
         rows = [board.holes[pin].group for pin in (one, other)]
@@ -125,7 +125,7 @@ class TheBuildSaysItTest(unittest.TestCase):
         with in_store():
             kept = check_spine.keep_breadboard(self.project / "requirements.json", self.project,
                                                [check_spine.Stage("build", check_spine.OK)])
-        differs = [entry for entry in kept if entry["did"] == check_spine.DRAWING_DIFFERS]
+        differs = [entry for entry in kept if entry["did"] == "drawing differs"]
         self.assertEqual([(entry["code"], entry["subject"]) for entry in differs], [(NOT_JOINED, "R1 end 1")])
         self.assertEqual(differs[0]["line"], "drawing differs: R1 end 1 is not joined to board D8 in the drawing")
 
