@@ -154,6 +154,42 @@ class MovedJumperTest(unittest.TestCase):
         self.assertEqual(codes(build(project)), {"breadboard.json": "unreadable"})
 
 
+class EscapedMutantsTest(unittest.TestCase):
+    """Tests the mutation table's first run found missing (P287)."""
+
+    def test_a_jumper_not_kept_takes_a_free_hole_beside_a_kept_one(self):
+        project = built_full()
+        edit(project, lambda drawn: drawn["connections"].pop(2))
+        index, _ = wire_between(project, "12t", "17b")
+        change_wire(project, index, other="bb1:17b.g")
+        self.assertEqual(build(project).not_kept, [])
+        self.assertEqual(wire_between(project, "12t", "17b")[1][:2], ["bb1:12t.a", "bb1:17b.g"])
+        self.assertEqual(wire_between(project, "8b", "17b")[1][:2], ["bb1:8b.j", "bb1:17b.h"])
+
+    def test_a_jumper_moved_to_an_empty_row_beyond_the_last_part_is_drawn_again_without_a_name(self):
+        project = built_full()
+        change_wire(project, 1, other="bb1:28t.a")
+        self.assertEqual(build(project).not_kept, [])
+        self.assertEqual(wire_between(project, "6b", "14t")[1][:2], ["bb1:6b.j", "bb1:14t.a"])
+
+    def test_a_jumper_into_a_row_held_by_a_part_that_could_not_stay_is_explained_by_that_part(self):
+        project = built_full()
+        # R1 turned the other way with its pin 2 still in the LED's row: its pin 1 lies in the button's row
+        edit(project, lambda drawn: next(one for one in drawn["parts"] if one["id"] == "R1")
+             .update(rotate=0, left=round(part(project, "R1")["left"] - 58.8, 3)))
+        index, _ = wire_between(project, "12t", "17b")
+        change_wire(project, index, other="bb1:18b.h")
+        self.assertEqual(codes(build(project)), {"R1": "row-shared"})
+
+    def test_when_the_kept_plan_has_no_room_a_moved_jumper_is_named_no_room(self):
+        project = built_full()
+        change_wire(project, 1, other="bb1:14t.b")
+        with base.mock.patch.object(base.breadboard_keep.KeepMovesFirstFitPartPlacement, "place",
+                                    side_effect=base.breadboard_drawing.NotDrawn("no room")):
+            written = build(project)
+        self.assertEqual(codes(written), {"jumper 6b.j-14t.b": "no-room"})
+
+
 class QuietTest(unittest.TestCase):
     def test_a_requirements_change_names_no_jumper_nobody_moved(self):
         project = built_full()

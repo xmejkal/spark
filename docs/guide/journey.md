@@ -449,7 +449,9 @@ breadboard. Since 2026-10-17 a part you move in the file stays where you put it 
 ([P273](https://github.com/xmejkal/spark/issues/309)), even after you change the requirements, if it still fits. A
 part that cannot stay is named on the screen, with why: for example `LedRed5mm: its pin A is not over a hole`, or
 `LedRed5mm: it is not in the new circuit`. Its jumpers follow it, so the diagram stays wired. A resistor you move
-is named, not kept, and a jumper you move is re-drawn. A build that fails leaves the file, with your moves, and says so.
+stays if its joined leg is still in the row it joins, and a jumper you move stays, with its bends, if the new circuit
+still joins the two rows it joins (since 2026-10-18, [P287](https://github.com/xmejkal/spark/issues/340)); otherwise
+the screen names it, for example `jumper 6b.j-15t.a: …`. A build that fails leaves the file, with your moves, and says so.
 
 Only the Seeed Studio XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the
 board. The board is the limit because spark knows where Wokwi draws its pins and the

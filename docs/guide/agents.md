@@ -173,12 +173,15 @@ These write:
   diagram. Only a board in `data/wokwi-geometry.json` is drawn, today the XIAO ESP32-C6, and rails are not drawn yet.
   Otherwise the sheet and stderr say `breadboard.json not written:` and the missing fact, and an old file is removed.
   A part moved in the earlier `breadboard.json` stays there (P273, `breadboard_keep.py`): `breadboard.write()` reads the
-  earlier file before it writes, and a part that is not a resistor keeps its place if its pins are over free holes, one
-  row each. `WriteResult.not_kept` lists `NotKeptResult(subject, code, why)` for each part it could not keep (codes in
-  `breadboard_keep.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under `kept` with
-  `did` `move not kept`, `part`, `code` and `why`. A resistor is placed by spark and named when it differs; jumpers are planned fresh. A build
+  earlier file before it writes, and a part keeps its place if its pins are over free holes, one
+  row each. A resistor is checked when it is placed (P287): its joined pin must still lie in the row it joins and its other pin
+  in a free row. A jumper keeps its holes, route and direction (not its color) when its two rows are the two rows of a jumper
+  the new layout draws (`KeepMovesJumperPlacement`), so a kept jumper never changes what is connected.
+  `WriteResult.not_kept` lists `NotKeptResult(subject, code, why)` for each part or jumper (`jumper 4b.j-24b.f`) it could not
+  keep (codes in `breadboard_keep.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under
+  `kept` with `did` `move not kept`, `part`, `code` and `why`. A jumper of a part that moved or went is not named: the part's own line explains it. A build
   that did not finish (failed or refused) leaves a `breadboard.json` that holds parts, with a `left alone` entry, since it
-  may hold moves; one that holds none, or is not readable, is removed. Never read a missing `not kept` line as proof that a jumper's move was kept.
+  may hold moves; one that holds none, or is not readable, is removed. Never read a missing `not kept` line as proof that a move was kept: read the file.
   Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
   `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
   from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).
