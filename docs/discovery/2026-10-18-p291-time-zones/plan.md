@@ -2,7 +2,18 @@
 
 ## Council
 
-Round 1 and round 2 go here, with what they changed.
+Round 1 ran (Sonnet). It changed:
+- A grant stored in UTC before this change printed `+00:00` on the `yes:` line and in the record's "yes" text. One
+  helper, `say_in_local_zone(iso)`, now says a stored time in the machine's zone wherever it is printed or copied
+  into the record. The stored grant JSON is unchanged.
+- A naive test clock stayed naive. The service calls `.astimezone()` on the moment, so naive means local.
+- `expires_at` across a DST change kept the old offset: `(now + delta).astimezone()`.
+- Names: a function starts with a verb, so `read_local_time()` (it replaces `utc_now`), and `FakeUtcClock` becomes
+  `FakeLocalClock`. Every default `now=utc_now` and the docstrings that say UTC or `datetime.datetime.now` change.
+- Accepted, not fixed: two deploys in the same second inside a DST fall-back hour share a log file name. It needs a
+  deploy in a repeated hour twice in one second.
+
+Round 2 has not run yet.
 
 ## Context
 
@@ -16,18 +27,23 @@ program stores carries its zone. Spark uses the machine's zone, with no setting.
 One clock for both, in `scripts/board_grant.py`:
 
 ```python
-def local_now():
+def read_local_time():
     """Now, in the machine's zone, with the zone."""
     return datetime.datetime.now().astimezone()
+
+
+def say_in_local_zone(iso):
+    """A stored time, said in the machine's zone; a time with no zone is read as local."""
+    return datetime.datetime.fromisoformat(iso).astimezone().isoformat(timespec="seconds")
 ```
 
 ```mermaid
 sequenceDiagram
   participant G as grant.py / live.py
-  participant BG as board_grant.local_now
+  participant BG as board_grant.read_local_time
   participant D as DeployService
   participant F as board_facts
-  G->>BG: now() for granted_at, expires_at
+  G->>BG: read_local_time() for granted_at, expires_at
   D->>BG: clock() once per deploy
   D->>F: facts(..., moment) "deployed" with +02:00
   F-->>D: the store record and the board log share the moment
@@ -38,8 +54,12 @@ sequenceDiagram
 1. Tests first: a grant written now has the machine's offset in `granted_at` and `expires_at`; a deploy with no
    clock given writes `"deployed"` with an offset; the board log file name stays `YYYY-MM-DDTHH-MM-SS.log` (no
    offset in a file name); a grant stored in UTC before this change still reads and still expires on time.
-2. `board_grant.utc_now` becomes `local_now` (callers: `board_grant`, `grant.py`, `live.py`, one test).
-3. `DeployService`'s default clock is `board_grant.local_now` (`deploy_service.py:158`).
+2. `board_grant.utc_now` becomes `read_local_time` (callers: `board_grant`, `grant.py`, `live.py`, the tests and
+   `tests/fakes.py`). `issue` writes `expires_at` as `(now + delta).astimezone()`.
+3. `DeployService`'s default clock is `board_grant.read_local_time`, and the moment is `.astimezone()`d
+   (`deploy_service.py:158`).
+3b. `say_in_local_zone` where a grant's times are printed or copied: `StandingConsentStrategy.who`, `describe`,
+   `grant.py`'s two "until" lines. A test with a grant stored in UTC.
 4. Docs: `deploy.py --help` and `grant.py --help` if they say UTC; `docs/guide/agents.md` where the record's fields
    are listed; rows `docs/observations/rows/p291-time-zones.md`.
 
