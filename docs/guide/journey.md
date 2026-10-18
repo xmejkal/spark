@@ -496,6 +496,12 @@ holes in its step's color, with its step number at the corner. Pictures from onl
 
 ![The button-and-LED project as the sheet shows it](img/button-light-xiao-breadboard.svg)
 
+**The drawing is checked.** Since 2026-10-18 ([P279](https://github.com/xmejkal/spark/issues/317)) the build makes
+sure that the drawing joins the same pins as the points in `circuit.json`. It follows each jumper and the button's two
+sides of one contact. When they match, it says nothing. When an end differs, the screen prints one line for it, for
+example `drawing differs: R1 end 1 is not joined to board D8 in the drawing`, and the sheet tells you to wire from
+its steps. A jumper from GND to the 5V pad is named too, because no point names 5V. The drawing is still written.
+
 Since 2026-10-16 the build also writes `page.html`, the same circuit in three tabs: the breadboard, the schematic
 and the PCB ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a browser on your Mac and click a tab.
 The schematic and the PCB are tscircuit's own pictures, from `tsci export` on the kept circuit. Since 2026-10-17 the page

@@ -53,6 +53,7 @@ import assign_pins  # noqa: E402
 import breadboard_changes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
+import breadboard_match  # noqa: E402
 import breadboard_steps  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
@@ -403,30 +404,37 @@ def drawing(requirements_path, circuit_path=None, read=None):
 
 
 #: One plan of the layout for a sheet and its drawings: the layout, or why it could not be planned, and the earlier
-#: parts it could not keep as the person left them ([NotKeptResult]).
-PlannedLayout = collections.namedtuple("PlannedLayout", "layout why not_kept fresh", defaults=(None,))
+#: parts it could not keep as the person left them ([NotKeptResult]), the fresh layout, and each end the layout joins
+#: differently from the points ([DrawingDiffersResult], P279).
+PlannedLayout = collections.namedtuple("PlannedLayout", "layout why not_kept fresh differs", defaults=(None, ()))
 
 
 def _plan_once(read, earlier_path=None, record=None):
     """The layout planned fresh; then, when `earlier_path` is a diagram the person may have edited, planned again
     keeping the parts they moved. The fresh plan's error stands. When the kept plan has no room, the fresh layout is
     used and the moved parts are named. `record` is the earlier wiring record (None when there is none or it cannot be
-    read): it says which jumpers of the earlier file spark drew itself."""
+    read): it says which jumpers of the earlier file spark drew itself. The layout it returns is checked against the
+    points (P279)."""
     try:
         fresh = _plan_layout(read)
     except breadboard_drawing.NotDrawn as stopped:
         return PlannedLayout(None, str(stopped), [])
-    if earlier_path is None:
-        return PlannedLayout(fresh, None, [], fresh)
     geometry = breadboard_drawing.WokwiGeometry.load()
+    catalog = _describe_parts(read, geometry)
+
+    def checked(layout, not_kept):
+        differs = breadboard_match.DrawnNets(layout, geometry).differences(read.steps.points, catalog)
+        return PlannedLayout(layout, None, not_kept, fresh, differs)
+
+    if earlier_path is None:
+        return checked(fresh, [])
     earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
     if earlier is None:
-        return PlannedLayout(fresh, None, [], fresh)
+        return checked(fresh, [])
     if earlier.why_unread:
-        return PlannedLayout(fresh, None, [breadboard_keep.NotKeptResult(
+        return checked(fresh, [breadboard_keep.NotKeptResult(
             Path(earlier_path).name, breadboard_keep.UNREADABLE,
-            breadboard_keep.MESSAGES[breadboard_keep.UNREADABLE] % earlier.why_unread)], fresh)
-    catalog = _describe_parts(read, geometry)
+            breadboard_keep.MESSAGES[breadboard_keep.UNREADABLE] % earlier.why_unread)])
     placement = breadboard_keep.KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)
     jumpers = breadboard_keep.KeepMovesJumperPlacement(geometry, earlier)
     try:
@@ -437,7 +445,7 @@ def _plan_once(read, earlier_path=None, record=None):
     drawn = record.drawn_jumpers if record and not record.why_unread else None
     named = breadboard_keep.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
     named += breadboard_keep.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, drawn, default)
-    return PlannedLayout(layout, None, named, fresh)
+    return checked(layout, named)
 
 
 def holds_parts(path):
@@ -471,6 +479,10 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
         first, *others = DRAWING_RENDERERS
         lines += ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
         lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
+        if planned.differs:
+            more = len(planned.differs) - 1
+            lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
+                      % (planned.differs[0].why, ", and %d more" % more if more else "")]
     else:
         lines += ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
                                                 planned.why)]
@@ -485,8 +497,9 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
 
 #: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, why none was (the
 #: plan fails for every drawing at once), else None, the [NotKeptResult] of the earlier parts not kept, and the
-#: [WiringChange] since the last build (none on a first build).
-WriteResult = collections.namedtuple("WriteResult", "sheet drawings why not_kept changes")
+#: [WiringChange] since the last build (none on a first build), and each end the drawing joins differently from the
+#: points ([DrawingDiffersResult], P279).
+WriteResult = collections.namedtuple("WriteResult", "sheet drawings why not_kept changes differs", defaults=((),))
 
 
 def _spark_jumpers(planned, earlier_path, record):
@@ -554,7 +567,7 @@ def write(requirements_path, out, circuit_path=None):
         for path, _ in paths:
             path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
         raise
-    return WriteResult(Path(out), paths, None, planned.not_kept, changes)
+    return WriteResult(Path(out), paths, None, planned.not_kept, changes, planned.differs)
 
 
 def main(argv=None):
@@ -578,6 +591,8 @@ def main(argv=None):
         print("change: %s" % CHANGE_LIST.line(change), file=sys.stderr)
     for named in written.not_kept:
         print("not kept: %s" % named.line, file=sys.stderr)
+    for differs in written.differs:
+        print("drawing differs: %s" % differs.why, file=sys.stderr)
     if written.why:
         for renderer in DRAWING_RENDERERS:
             print("%s not written: %s" % (renderer.FILE_NAME, written.why), file=sys.stderr)

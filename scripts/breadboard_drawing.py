@@ -300,25 +300,39 @@ class BreadboardPlanner:
             waiting = [one for one in waiting if one[0] not in placed]
 
     def _drawn(self, component):
-        drawn = self.catalog.get(component)
-        if drawn is None:
-            raise NotDrawn("nothing says how to draw %s in Wokwi" % component)
-        return drawn
+        return drawn_part(component, self.catalog)
 
     def _group_of(self, end, placed, groups):
-        """The group an end sits in: its pin's group, or the free group its board pad's jumper took."""
-        if end.name in groups:
-            return groups[end.name]
-        if end.component not in placed:
-            raise NotDrawn("%s is joined before it is placed" % end.name)
-        return placed[end.component].holes[self._pin(end)].group
+        return end_group(end, placed, self.catalog, groups)
 
     def _pin(self, end):
-        """The Wokwi pin of one end, or NotDrawn naming it."""
-        pin = self._drawn(end.component).pins.get(end.pin)
-        if pin is None:
-            raise NotDrawn("which Wokwi pin is %s is not known" % end.name)
-        return pin
+        return end_pin(end, self.catalog)
+
+
+def drawn_part(component, catalog):
+    """What the catalog draws for one component, or NotDrawn naming it."""
+    drawn = catalog.get(component)
+    if drawn is None:
+        raise NotDrawn("nothing says how to draw %s in Wokwi" % component)
+    return drawn
+
+
+def end_pin(end, catalog):
+    """The Wokwi pin of one end, or NotDrawn naming it."""
+    pin = drawn_part(end.component, catalog).pins.get(end.pin)
+    if pin is None:
+        raise NotDrawn("which Wokwi pin is %s is not known" % end.name)
+    return pin
+
+
+def end_group(end, placed, catalog, groups=None):
+    """The group an end sits in: its pin's group, or the free group its board pad's jumper took (`groups`, which the
+    planner fills as it draws). The planner and the drawing check (`breadboard_match`) both ask it."""
+    if groups and end.name in groups:
+        return groups[end.name]
+    if end.component not in placed:
+        raise NotDrawn("%s is joined before it is placed" % end.name)
+    return placed[end.component].holes[end_pin(end, catalog)].group
 
 
 class WokwiBreadboardDiagram:
