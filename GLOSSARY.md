@@ -513,7 +513,8 @@ tests what the author thought of.
 ### Intake, observation, audit
 
 An outside reading — an agent that has not seen this conversation — writes a report into
-`docs/observations/`, and every claim lands in that folder's `INDEX.md` as `raised`. **A claim is
+`docs/observations/`, and every claim lands as a `raised` row in the PR's own rows file, `docs/observations/rows/<card>-<topic>.md`
+(`INDEX.md` holds the rows up to 2026-10-18). **A claim is
 a hypothesis until reproduced** (W9), and it earns its way onto the backlog by being reproduced,
 with its need named. This is not ceremony: the v1 close audit made 33 claims and **11 were false**.
 

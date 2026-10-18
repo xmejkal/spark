@@ -58,8 +58,8 @@ report what something costs and what it would prove.
 | [`VISION.md`](VISION.md) | what spark is, who it is for, v0.10 and what it is not (confirmed by the PO on 2026-10-03, P69) |
 | [`STORY_MAP.md`](STORY_MAP.md) | the journey a person takes, and the slices in order — each a milestone a command or a bench log proves; a card's *Slice* field names one (confirmed by the PO on 2026-10-03, P69) |
 
-The work lives on the two boards and nowhere else, each card an issue in its repository. `docs/observations/INDEX.md`
-is **raw observation intake**, not a queue of work: anything in it that should be built is an issue on a board or it is
+The work lives on the two boards and nowhere else, each card an issue in its repository. `docs/observations/` (`INDEX.md`
+up to 2026-10-18, then one rows file per PR in `rows/`) is **raw observation intake**, not a queue of work: anything in it that should be built is an issue on a board or it is
 not happening. That consolidation is deliberate: three parallel lists is how 37 observations and 20 findings reached
 zero resolved between them.
 
