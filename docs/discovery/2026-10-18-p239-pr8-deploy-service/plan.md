@@ -2,123 +2,123 @@
 
 > TL;DR: the flow in `deploy.py`'s `main` (plan, look, gate, flash, facts, ready, recovery, log, record) moves into
 > `scripts/deploy_service.py` as `DeployService`, which has no `print` and no `sys.exit`. A new `FirmwarePlatform`
-> (`scripts/firmware_platform.py`) holds the parts that depend on MicroPython: flasher, connection, ready check, console
-> probe. `main` parses, prints and maps the exit code. Every printed line, exit code and store record stays the same.
-> Card [#238](https://github.com/xmejkal/spark/issues/238), brief item 4 of [P218's finish](../2026-10-17-p218-finish/brief.md).
+> (`scripts/firmware_platform.py`) holds the parts that depend on MicroPython. `main` parses, prints and maps the exit
+> code. Every printed line, exit code and store record stays the same.
+
+Summary: after this PR a second caller (`--json` in P213, `/spark:deploy`, an MCP tool) can run a deploy without a
+terminal and print its own way. `FirmwarePlatform` is the one place where an Arduino or PlatformIO build would plug in
+later; it earns its place now because the brief asked for it as one constructor argument and it costs one small class.
+Card [#238](https://github.com/xmejkal/spark/issues/238), brief item 4 of [P218's finish](../2026-10-17-p218-finish/brief.md).
 
 ## Council
 
-Round 1 (2026-10-18): tech lead (Sonnet) and the refuter (Opus). The refuter reproduced point 1. What it changed:
+Round 1 (tech lead, Sonnet; refuter, Opus; 2026-10-18). The refuter reproduced point 1. Changes:
 
-- Exception scope stays as on main. A fault after the flash is a traceback today (`find_passed_log`, `tools.find`), so
-  `deploy()` ends when the flash ends and main calls `verify()` outside its `try`. One `try` in main covers `look`,
-  `choose_consent` and `deploy`, with the same handlers in the same order. The brief's `deploy(...) -> DeployResult`
-  becomes: `deploy` returns nothing, `verify` returns the `DeployResult`. A golden case pins the traceback.
-- `run = run or subprocess.run` stays in main. `console_probe` is called inside `verify`, only when ready is unknown.
-- `FirmwarePlatform` calls `tools.find` through the module (tests patch it) and caches `shell_command()`, so
-  `tools.find` is called as often as before. `look()` delegates to `board_look.looker` (a `LookService`).
-- The tests that patch moved names are listed: `deploy.plan` becomes `DeployService.plan` (test_deploy_gate:226),
-  `deploy.file_hashes` becomes `deploy_service.file_hashes` (:435), `deploy.BoardLog`, `deploy.DeployPlan` and
-  `deploy.DeployError` change module. The mutation tables with 49 entries on deploy.py get `file` and `find` re-anchored.
-- The store record is written in `verify`, before main prints its lines; on main the board log line prints first.
-  Only an exception other than OSError or StoreProblem shows the difference; it is named in the PR.
-- Declined: splitting the PR (the moves are mechanical and the golden diff covers them); committing the golden harness
-  (the existing tests already assert these lines; the harness stays scratch and the PR body gives its result).
-- `FirmwarePlatform` gets a row in developing.md's table ("Platform": a bundle of the parts that depend on the
-  firmware's language; factory methods named for what they return). `ignore_older_runs` is constructor state.
+- Exception scope stays as on main: a fault after the flash is a traceback today (`find_passed_log`, `tools.find`).
+  `deploy()` ends when the flash ends; main calls `verify()` outside its `try`. One `try` covers `look`,
+  `choose_consent` and `deploy`, same handlers, same order. Brief change: `verify`, not `deploy`, returns the result.
+- `run = run or subprocess.run` stays in main; the console probe is built inside `verify`, only when ready is unknown.
+- `FirmwarePlatform` calls `tools.find` through the module (tests patch it). `look()` uses `board_look.looker`.
+- Tests that patch or call moved names are re-pointed (listed under Tests). Mutation tables with 49 entries on
+  deploy.py are re-anchored.
+- Declined, decided by the tech lead and refuter for the PO (delegated): no split of the PR, no committed golden harness.
+
+Round 2 (tech lead and PO assistant, Sonnet). Changes:
+
+- No cache of `tools.find`: each `make_*` calls it as main did, so the number of calls is unchanged. `deploy()` returns
+  the `DeployPlan` it ran, and `verify` takes it, so the connection uses the plan's command as before.
+- Factory methods are verbs: `make_flasher`, `make_shell_command`, `make_connection`, `make_ready_check`,
+  `make_console_probe`. The result field is `log_path` (the class `BoardLog` is a Value). `verify` takes `who`, a
+  sentence, not the whole consent. The callback is `show_line`, not `say`.
+- The dry-run builds its mpremote line with `platform.make_connection(...)`, so main names no MicroPython class.
+- `plan()` order stays: `make_flasher` (chip, then tool), then `make_shell_command`, so errors keep their precedence.
+- Layers: this summary added; "Waits on you" added; words glossed. The store record is written before main prints the
+  board log line; only an error other than OSError or StoreProblem shows the difference, and it is named in the PR.
+- Observation rows start at AT450; P287's PR takes AT420 onward, so they do not clash.
 
 ## What moves
 
 | Now in `deploy.py` | Becomes |
 |---|---|
-| `plan()`, `newer_files`, `DeployPlan`, `OLDER_RUNS_WAY_OUT` | `DeployService.plan(port)`, same plan value, same notes |
-| the look call in `main` | `DeployService.look(port)` returns the `LookReport` |
-| gate, token re-check, `require_ready`, flash loop | `DeployService.deploy(report, token, consent, say)` |
-| `put_facts`, `read_board`, the recovery block, `write_board_log`, `BoardLog`, `record_deploy` | `DeployService.verify(report, consent, say)` (private steps) |
-| `board_of`, `chip_of`, `tools.find`, `EsptoolFlasher(...)`, `BoardConnection(...)`, `ReadyCheck(...)`, `ConsoleProbe.for_tool` | `FirmwarePlatform` methods, built by `FirmwarePlatform.micropython(project)` |
+| `plan()`, `newer_files`, `DeployPlan`, `OLDER_RUNS_WAY_OUT` | `DeployService.plan(port)`, same plan and notes |
+| the look call in `main` | `DeployService.look(port)`, returns the `LookReport` (what the look found) |
+| gate, token re-check, `require_ready`, flash loop | `DeployService.deploy(report, token, consent, show_line)` |
+| `put_facts`, `read_board`, recovery block, `write_board_log`, `BoardLog`, `record_deploy` | `DeployService.verify(report, who, plan, show_line)` |
+| `board_of`, `chip_of`, `tools.find`, `EsptoolFlasher(...)`, `BoardConnection(...)`, `ReadyCheck(...)`, `ConsoleProbe` | `FirmwarePlatform`, built by `FirmwarePlatform.micropython(project)` |
 
 Stays in `deploy.py`: arguments, `EPILOG`, `WATCH`, `rerun_line`, `grant_hint`, `choose_consent` (they read `args` and
-print), the dry-run, and the exit-code map. `--help`, exit codes, lines and the store record do not change.
+print), the dry-run and the exit-code map. `--help`, exit codes, lines and the store record do not change.
 
-## How output works without print
+## Output without print
 
-`DeployService` gets `say`, a function that takes one line (main passes `print(line, flush=True)`). It calls it for the
-lines that must appear while a step still runs: `yes: ...`, `running: ...` before each command, and the R-press request.
-Everything else is returned: `DeployResult` holds what main prints after the flash. A refusal is an exception that main
-prints to stderr: `LookStop`, `DeployError`, `tools.ToolProblem` (exit 2) and `GateClosedError` (its own code). A flash
-that fails raises `DeployError` with the sentence main printed before, `BOOT_HINT` tail included.
-
-The brief names `deploy(token, consent, on_press_reset)`. Two changes: the `report` is an argument, because the person's
-yes is chosen after the look and from its verdict; and one `say` replaces `on_press_reset`, because `yes:` and `running:`
-need the same hook and the order of lines is the contract.
+`show_line` takes one line (main passes `print(line, flush=True)`). The service calls it for lines that appear while a
+step runs: `yes: ...`, `running: ...` before each command, the R-press request. The rest is returned in `DeployResult`.
+A refusal is an exception main prints to stderr: `LookStop`, `DeployError`, `tools.ToolProblem` (exit 2),
+`GateClosedError` (its own code). A failed flash raises `DeployError` with the sentence main printed before.
+The brief names `deploy(token, consent, on_press_reset)`; the report is an argument because the yes is chosen after the
+look; one `show_line` replaces `on_press_reset` because the order of lines is the contract.
 
 ## Classes
 
 ```
 FirmwarePlatform  (plain noun; not a Value, its parts act)       scripts/firmware_platform.py
-  micropython(project)  classmethod                              MicroPython today; Arduino later is another builder
-  flasher() -> Flasher               chip_of(project) + tools.find("flasher") -> EsptoolFlasher
-  shell_command() -> argv            tools.find("board-shell") -> tools.command_for
-  connection(command, port, run) -> BoardConnection
-  ready_check(connection) -> ReadyCheck
-  console_probe(port, run) -> probe or None
-  board_of(), chip_of()              requirements.json's board, its chip (moved unchanged)
+  micropython(project)  classmethod                              Arduino later is another builder
+  make_flasher() -> Flasher            chip_of(project) + tools.find("flasher") -> EsptoolFlasher
+  make_shell_command() -> argv         tools.find("board-shell") -> tools.command_for
+  make_connection(command, port, run) -> BoardConnection         (command: the plan's shell command)
+  make_ready_check(connection) -> ReadyCheck
+  make_console_probe(port, run) -> probe or None
+  board_of(), chip_of()                requirements.json's board and its chip, moved unchanged
 
 DeployService  (Service)                                         scripts/deploy_service.py
   __init__(project, platform, ignore_older_runs=False, run=subprocess.run, clock=None, probe=None)
-  plan(port=None) -> DeployPlan      image checks, then the tools; raises DeployError / ToolProblem
-  look(port=None) -> LookReport      board_look.looker(project, run).run(...)
-  deploy(report, token, consent, say)                             gate, plan again, token, flash; raises, returns None
-  verify(report, consent, say) -> DeployResult                    facts, ready, recovery, board log, store record
-DeployResult  (Result, namedtuple)   facts_line, ready, board_log, store_record, store_problem, repl_command
-DeployPlan, BoardLog                 move with the service, unchanged
+  plan(port=None) -> DeployPlan        image checks, then the tools; DeployError / ToolProblem
+  look(port=None) -> LookReport
+  deploy(report, token, consent, show_line) -> DeployPlan         gate, plan again, token, flash; returns the plan it ran
+  verify(report, who, plan, show_line) -> DeployResult            facts, ready, recovery, board log, store record
+DeployResult (Result)  facts_line, ready, log_path, store_record, store_problem, repl_command
 ```
 
 ```
-main            service            platform / look / gate / board
- |-parse------>|
- |-plan(port)->|-image checks------>| flasher(), shell_command()
- |<-DeployPlan-|  (--dry-run: main prints and returns 0)
- |-look(port)->|-looker.run-------->| board
- |<-LookReport-|
+main            service                  platform / board
+ |-plan(port)->|-image checks---------->| make_flasher, make_shell_command
+ |  (--dry-run: main prints, returns 0)
+ |-look(port)->|-looker.run------------>| board
  | print lines; choose consent (grant or terminal)
- |-deploy(report, token, consent, say)->|-require_open_gate, say("yes:")
- |             |-plan(report.port), token check, require_ready
- |             |-run(command) x2, say("running:") before each
- |<-None  (or DeployError / GateClosedError; main's one try ends here)
- |-verify(report, consent, say)->|-facts, ready, probe, say(R press), log, record
- |<-DeployResult
- | print facts line, verdict, board log, store record; exit 0, 1 or 2
+ |-deploy(report, token, consent, show_line)->|-gate, show_line("yes:"), plan again, token, require_ready
+ |             |-run(command) x2, show_line("running:") before each
+ |<-DeployPlan (a flash error is a DeployError; main's one try ends here)
+ |-verify(report, who, plan, show_line)->|-facts, ready, probe, show_line(R press), log, record
+ |<-DeployResult; main prints facts line, verdict, log, record; exit 0, 1 or 2
 ```
 
 ## Names, checked against developing.md's table
 
-- `DeployService` ends in `Service`; `DeployResult` ends in `Result` (the table already lists both).
-- `FirmwarePlatform` is a plain noun and its docstring says what varies (the brief dropped "Value").
-- Methods start with a verb or answer as a noun of what they hand over: `plan`, `look`, `deploy`, `verify`; on the
-  platform `flasher()`, `connection()` build and return one thing, like `tools.find`. The Strategy table row allows a
-  plain noun for `Flasher`; the factory methods are named for what they return.
-- `say` is a callback that takes a line. `store_problem` is a sentence; a field `store_record` is a path or None.
-- One word for one thing: "report" is the `LookReport`, "result" is a `*Result`, "plan" is the `DeployPlan`.
+- `DeployService` ends in `Service`; `DeployResult` ends in `Result`. Both are already in the table.
+- `FirmwarePlatform` is a plain noun; its docstring says what varies. A row "Platform" is added to the table.
+- Functions start with a verb (`plan`, `look`, `deploy`, `verify`, `make_*`). One word for one thing: "report" is a
+  `LookReport`, "result" a `*Result`, "plan" a `DeployPlan`, "log" a `BoardLog` and `log_path` its file.
 
 ## Tests, first
 
-1. A golden capture (scratch, not committed) of every `deploy.main` call across `test_deploy`, `test_deploy_gate` and
-   `test_journey_basic`: argv, exit code, stdout, stderr with temp paths and times replaced, plus `--help` and the
-   dry-run. Taken before, compared byte for byte after.
-2. `tests/test_deploy_service.py`: the service with fakes (no print: a `say` list holds the lines; `DeployError` for a
-   failed flash); an ast test that `deploy_service.py` and `firmware_platform.py` hold no `print` call and no
-   `sys.exit`; `FirmwarePlatform.micropython` returns EsptoolFlasher, BoardConnection, ReadyCheck.
-3. `test_deploy.py` and `test_deploy_gate.py` keep their asserts; only their imports of moved names change.
+1. Golden capture (scratch): every `deploy.main` call across `test_deploy`, `test_deploy_gate` and `test_journey_basic`
+   (argv, exit code, stdout, stderr; temp paths and times replaced), plus `--help` and a dry run. Taken before, compared
+   after; the PR body holds the result, and the reviewer re-runs the script.
+2. `tests/test_deploy_service.py`, with Fakes (stand-ins from `tests/fakes.py`): lines in a `show_line` list, the failed
+   flash, a fault after the flash stays a traceback; an ast test (reads the code's syntax tree) that the two new
+   modules hold no `print` call and no `sys.exit` and that `firmware_platform` imports no `deploy_service`.
+3. Re-pointed: `deploy.plan` becomes `DeployService.plan` (test_deploy_gate:226, test_deploy:187,193),
+   `deploy.file_hashes` becomes `deploy_service.file_hashes` (:435), `deploy.BoardLog`, `DeployPlan`, `DeployError`.
 
 ## Docs and bookkeeping
 
-developing.md (the paragraph on what each PR gave, and "Until PR 8 merges"), agents.md (the module list near line 424
-if it names deploy's helpers; no JSON or exit code moves), `docs/guide` command pages unchanged. README and
-`tools/journey.py`: no change, an internal refactor. Mutation table `tests/mutations/p239-pr8.json`; tables anchored on
-moved lines are re-anchored. Observation rows from AT450 (P287's PR takes AT420 onward).
+developing.md (the paragraph on what each PR gave, "Until PR 8 merges", the Platform row), agents.md near line 424 only
+if it names moved helpers. README and `tools/journey.py`: no change, an internal refactor. Mutation table
+`tests/mutations/p239-pr8.json` (a mutation table is a list of planted defects the suite must catch); tables anchored on moved
+lines are re-anchored (their `find` text is the exact line the plant edits). Observation rows from AT450.
 
-## Not done
+## Not done, and what waits on you
 
-The real flash: it waits for the PO's bench (P213b's walk or P290's). The one recovery path (the brief's decision:
-move, do not merge `RetryingBoardConnection`) stays a new card. `--json` is step 5.
+The one recovery path (`RetryingBoardConnection`) stays a new card; `--json` is step 5. The real flash cannot run
+here. **Waits on you:** the bench check of one real flash (P213b's walk or [P290](https://github.com/xmejkal/spark/issues/290)'s)
+and the PR's review and merge.
