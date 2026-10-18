@@ -76,9 +76,11 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=False, probe=None, clock=None, grant_service=None):
-        """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command."""
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None):
+        """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command. The first flash command
+        exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait."""
         self.copied = getattr(self, "copied", {})
+        self.slept, flash = [], []
 
         def run(command, **kw):
             self.ran.append(command)
@@ -90,12 +92,15 @@ class GateCase(LookCase):
                 return done(text or data(esptool))
             if "exec" in command:
                 return self.on_board(command)
-            if fails:
-                raise subprocess.CalledProcessError(2, command)
+            flash.append(command)
+            first = command == flash[0]
+            if (first and flash.count(command) <= fails) or (not first and write_fails):
+                raise subprocess.CalledProcessError(fail_code, command) if isinstance(fail_code, int) else fail_code
             return done("")
 
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
+                mock.patch.object(deploy_service.DeployService, "sleep", side_effect=self.slept.append), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, probe=probe, clock=clock,
                                grant_service=grant_service)
@@ -212,8 +217,9 @@ class TheGateTest(GateCase):
 
     def test_a_failed_erase_writes_nothing_and_says_what_to_try(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=True)
-        self.assertEqual((code, self.flashed()), (2, ["erase_flash"]))
+        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=2)
+        self.assertEqual((code, self.flashed()), (2, ["erase_flash", "erase_flash"]))
+        self.assertEqual((problems.count("retry in 5 s:"), self.slept), (1, [5]))
         self.assertIn("hold the board's BOOT button", problems)
         line = problems.strip().splitlines()[-1]
         self.assertTrue(line.startswith("deploy.py: `"), line)
@@ -226,9 +232,45 @@ class TheGateTest(GateCase):
         real = deploy_service.DeployService.plan
         with mock.patch.object(deploy_service.DeployService, "plan", autospec=True, side_effect=lambda *a, **k: real(*a, **k)._replace(
                 flasher=silent, commands=silent.build_commands(None))):
-            code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=True)
-        self.assertEqual(code, 2)
+            code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
+        self.assertEqual((code, self.slept), (2, []))
+        self.assertNotIn("retry", problems)
         self.assertTrue(problems.strip().splitlines()[-1].endswith(")"), problems)
+
+    def test_an_erase_that_fails_once_is_retried_after_5_s_and_the_deploy_goes_on(self):
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
+        self.assertEqual((code, self.flashed(), self.slept), (0, ["erase_flash", "erase_flash", str(self.image)], [5]))
+        self.assertIn("  retry in 5 s: ", problems)
+        self.assertIn("erase_flash stopped with exit 2 (esptool's exit for any stop, a failed connect among them)", problems)
+
+    def test_an_erase_that_fails_with_another_code_is_not_retried(self):
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=1)
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], []))
+
+    def test_a_failed_write_is_not_retried(self):
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), write_fails=True)
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash", str(self.image)], []))
+
+    def test_an_erase_that_cannot_start_is_not_retried(self):
+        self.run_the_scenario()
+        code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=OSError("no such file"))
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], []))
+
+    def test_a_consent_that_ends_during_the_wait_stops_the_retry(self):
+        case = self
+
+        class EndsDuringTheWait(FakeConsent):
+            def require_ready(self):
+                if case.slept:
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.")
+
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", self.token(), consent=EndsDuringTheWait(True), fails=1)
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], [5]))
+        self.assertIn("the deploy grant ended", problems)
 
     def test_a_flash_too_small_for_the_image_stops_before_the_question(self):
         self.run_the_scenario()
