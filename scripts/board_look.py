@@ -23,13 +23,12 @@ from collections import namedtuple
 from pathlib import Path
 
 import boards
+import flasher
 import outcomes
 import project_image
 import tools
 
-#: What to try when esptool cannot reach the board. Used here and by deploy.py; PR 7 of P239 moves it to the Flasher.
-BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press and release RESET, release BOOT, "
-             "and run it again")
+BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT  # one sentence for the look and for deploy.py
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"
 Port = namedtuple("Port", "device serial usb product")
@@ -125,7 +124,7 @@ class EsptoolReader(BoardReader):
     def read(self, port):
         if self.flasher.name != "esptool":
             raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher.name)
-        command = tools.command_for(self.flasher) + ["--port", port, "flash_id"]
+        command = flasher.build_esptool_prefix(self.flasher, port) + ["flash_id"]
         try:
             done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:

@@ -40,17 +40,13 @@ import boards
 import deploy_gate
 import board_console
 import download_mode
+import flasher
 import store
 import tools
 from project_image import DeployError, ProjectImage
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from run_scenario import file_hashes
 
-#: Where the image goes: it is the whole flash from its first byte, as the simulator loaded it.
-IMAGE_OFFSET = "0x0"
-#: esptool's commands with underscores: esptool 3 and 4 know only these, and 5.x still accepts them with a deprecation
-#: line (esptool 5.5.0's cli_util.py, read 2026-10-12). The tools list finds any installed esptool, not only its pin.
-ERASE, WRITE = "erase_flash", "write_flash"
 #: The last line: how the person sees the firmware start.
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
@@ -111,15 +107,9 @@ def chip_of(project):
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot))
 
 
-def flash_commands(flasher, chip, image, port=None):
-    """esptool's two commands: erase the board's flash, then write the image at IMAGE_OFFSET."""
-    base = tools.command_for(flasher) + ["--chip", chip] + (["--port", port] if port else [])
-    return [base + [ERASE], base + [WRITE, IMAGE_OFFSET, str(image)]]
-
-
-#: Value: what `plan` returns. `commands` are the two flash commands, `mpremote` is mpremote's command, and `notes` are
-#: sentences for the person.
-DeployPlan = collections.namedtuple("DeployPlan", "commands mpremote notes")
+#: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
+#: mpremote's command, and `notes` are sentences for the person.
+DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote notes")
 
 
 class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard")):
@@ -165,12 +155,13 @@ def plan(project, port=None, ignore_older_runs=False):
     if other and not ignore_older_runs:
         raise DeployError(other + OLDER_RUNS_WAY_OUT)
     chip = chip_of(project)
-    flasher, mpremote = tools.find("flasher", project), tools.find("board-shell", project)
+    flasher_tool, mpremote = tools.find("flasher", project), tools.find("board-shell", project)
     changed = newer_files(project, image.path)
     notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
              "scenario again to test it." % ", ".join(changed)] if changed else []
     notes += [other] if other else []
-    return DeployPlan(flash_commands(flasher, chip, image.path, port), tools.command_for(mpremote), notes)
+    project_flasher = flasher.EsptoolFlasher(flasher_tool, chip)
+    return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), tools.command_for(mpremote), notes)
 
 
 def rerun_line(args, port):
@@ -263,7 +254,9 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
         try:
             run(command, check=True)
         except (OSError, subprocess.CalledProcessError) as failed:
-            print("deploy.py: `%s` failed (%s): %s" % (shlex.join(command), failed, board_look.BOOT_HINT), file=sys.stderr)
+            hint = planned.flasher.BOOT_HINT
+            print("deploy.py: `%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
+                  file=sys.stderr)
             return EXIT_COULD_NOT_RUN
     image = ProjectImage(args.project)  # fresh: the flash and the person's wait are behind us
     passed = image.find_passed_log()
