@@ -106,8 +106,7 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         else:
             print("grant.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token,
-                                                                    board_grant.say_in_local_zone(grant.expires_at)))
+    print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))
     if grant.scope == board_grant.SCOPE_DEPLOY:
         grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
         print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "

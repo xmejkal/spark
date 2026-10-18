@@ -32,10 +32,10 @@ import flasher  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, pin_time_zone  # noqa: E402
+from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 #: A fixed zone for a deploy moment, so a test reads the same on every machine (P291).
 PRAGUE_SUMMER = datetime.timezone(datetime.timedelta(hours=2))
-from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 
 class Stream(io.StringIO):

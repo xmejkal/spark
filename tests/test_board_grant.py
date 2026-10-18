@@ -281,6 +281,11 @@ class CheckTest(GrantCase):
         code, out, _ = self.grant("--check")
         self.assertEqual((code, out.strip()), (0, "granted: board 8c:bf:ea:xx:xx:xx until 2026-10-17T11:30:00+02:00"))
 
+    def test_a_grant_kept_in_utc_says_until_when_in_the_machines_zone(self):
+        path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
+        path.write_text(json.dumps(dict(self.kept(), expires_at="2026-10-17T09:30:00+00:00")))
+        self.assertEqual(self.grant("--check")[1].strip(), "granted: board 8c:bf:ea:xx:xx:xx until 2026-10-17T11:30:00+02:00")
+
 
 class DeployGrantTest(GrantCase):
     """P242 (#249): `grant.py --scope deploy` keeps a second file per board, with its own question."""
@@ -539,10 +544,6 @@ class ConsentForDeployTest(unittest.TestCase):
         self.assertTrue(chosen.consent.ask("x"))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class LocalTimeTest(unittest.TestCase):
     """P291, P315: spark writes and says a time in the machine's zone, with the zone."""
 
@@ -550,9 +551,12 @@ class LocalTimeTest(unittest.TestCase):
         pin_time_zone(self)
 
     def test_now_has_the_machines_zone(self):
-        now = board_grant.read_local_time()
-        self.assertEqual((now.tzname(), now.utcoffset()), (datetime.datetime.now().astimezone().tzname(),
-                                                           datetime.datetime.now().astimezone().utcoffset()))
+        self.assertIn(board_grant.read_local_time().utcoffset(),
+                      (datetime.timedelta(hours=1), datetime.timedelta(hours=2)))  # Prague: winter or summer
+
+    def test_a_kept_time_has_no_fraction_of_a_second(self):
+        moment = datetime.datetime(2026, 10, 18, 10, 0, 0, 123456, tzinfo=UTC)
+        self.assertEqual(board_grant.stamp(moment), "2026-10-18T12:00:00+02:00")
 
     def test_a_stored_utc_time_is_said_in_the_machines_zone(self):
         self.assertEqual(board_grant.say_in_local_zone("2026-10-18T04:30:19+00:00"), "2026-10-18T06:30:19+02:00")
@@ -567,3 +571,7 @@ class LocalTimeTest(unittest.TestCase):
         grant = board_grant.GrantService(finder, reader, grants, now=clock).issue(
             None, 60, FakeConsent(True), scope="deploy")
         self.assertEqual((grant.granted_at, grant.expires_at), ("2026-10-25T02:30:00+02:00", "2026-10-25T02:30:00+01:00"))
+
+
+if __name__ == "__main__":
+    unittest.main()

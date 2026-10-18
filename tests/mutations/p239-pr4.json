@@ -27,7 +27,7 @@
   "file": "scripts/deploy_service.py",
   "name": "the first read uses its own clock",
   "find": "facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)\n        heard = \"\"",
-  "replace": "facts, facts_line, ready = self._read_board(image, report, connection, expected, datetime.datetime.now())\n        heard = \"\""
+  "replace": "facts, facts_line, ready = self._read_board(image, report, connection, expected, __import__(\"datetime\").datetime.now().astimezone())\n        heard = \"\""
  },
  {
   "file": "scripts/deploy_service.py",
