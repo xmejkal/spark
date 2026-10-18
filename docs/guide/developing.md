@@ -148,8 +148,8 @@ A refusal: the gate's rules run on the board as `gh` printed it at the migration
     #15 R2.6 — A fourth cold test: waits on the PO since nobody knows — set Waiting since
 ```
 
-The other refusals read the same way, one line each, as the suite expects them: `Build holds 3 (#1, #2, #3) — its
-limit is 2: finish one before starting another`, `5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before
+The other refusals read the same way, one line each, as the suite expects them: `Build holds 4 (#1, #2, #3, #4) — its
+limit is 3: finish one before starting another`, `5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before
 starting another`, `2 cards labelled expedite (#1, #2) — one at a time, on the PO's word`, and for a card with no slice
 `#8 P8 — x: on no slice of the story map`. With no `gh` login:
 

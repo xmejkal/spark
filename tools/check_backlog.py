@@ -42,7 +42,7 @@ BIN_BOARD = "bin"
 BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not counted or checked"
 #: The stages that carry a limit (§3); Idea and Done carry none. Every working stage takes 2, the PO's call of
 #: 2026-10-06 evening (P146); Ready is a queue, not work, and stays at 5.
-LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 2, "Review": 2}
+LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 3, "Review": 2}
 IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
 #: From the commitment on (Ready, Build, Review) a card carries its Needed by and slice; in Idea, Discovery and Design
 #: it decides whether to build, and the PO's order into Ready is what commits. P146, docs/2026-10-06-process-design.md:
