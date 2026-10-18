@@ -200,8 +200,9 @@ With spark's own scripts:
    `boards/active.json`) is refused before anything is fetched (step 1).
 5. **Name the id as `board`** in the requirements file. The chain takes the project's definition before the library's.
 
-No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on the XIAO, which has
-none ([P121](https://github.com/xmejkal/spark/issues/55)); `boards.py --list`, `init_project.py --board`, and
+No contract check catches missing header geometry: `boards.py --validate --for-fab` answers ok on a board with a
+`footprint_module` name and no header ([P121](https://github.com/xmejkal/spark/issues/55)); the name is trusted, and no
+file in this repository draws the XIAO's; `boards.py --list`, `init_project.py --board`, and
 `parts.py --audit`, `--match`, `--pick` and `--requirements` say such a board stops at the footprint stage. Nothing
 compares copied geometry with the new board either.
 

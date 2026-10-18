@@ -184,8 +184,8 @@ How to read the matches:
 - A candidate with an `about` line shows it under its row. With `--json`, each candidate has a `score` from 0 to 1 and a
   `why`. `--matcher word-overlap` ranks by shared words, tags and descriptions, and `same-words` stays the default.
 - `stops at the footprint stage (P121)` marks a board whose board file has no header geometry: the chain stops at its
-  footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). Of spark's two boards, only the FireBeetle
-  builds today.
+  footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). Both library boards build today (the XIAO since
+  [P278](https://github.com/xmejkal/spark/issues/314)); the lines above are a dated record from when it did not.
 
 Here a distance sensor is offered for soil moisture. It senses distance, not moisture, so soil moisture is a real gap.
 Research is for that; [owed facts and gaps](#owed-facts-and-gaps) says what a gap leaves off the board until then.
@@ -1115,7 +1115,7 @@ line is the token.
 
 `deploy.py --token` looks at the board again, then asks the person in their own terminal (or reads their deploy grant) before it erases
 ([P219](https://github.com/xmejkal/spark/issues/201)). On 2026-10-14 the same XIAO ran the button-and-LED project,
-whose scenario passed in Wokwi. Its board record `xiao-esp32-c6-fresh` holds no flash size, so the look gave the flash
+whose scenario passed in Wokwi. Its board record `xiao-esp32-c6-fresh` then held no flash size (it does now), so the look gave the flash
 as `unknown` and a token. From Claude Code's shell, which has no terminal, deploy.py printed the look and the line to
 run, and exited 2. The MAC and the token's board half are masked here.
 

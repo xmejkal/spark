@@ -1223,7 +1223,12 @@ class AnEmitBoardCrashIsNotADesignFaultTest(unittest.TestCase):
         workdir = Path(tempfile.mkdtemp())
         requirements = {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        stages = check_spine.run(requirements, workdir, from_library=True)
+        # the generator runs in a child process that cannot see a patched library, so the board with the gap is the project's own
+        import shutil
+        from board_library import library_without
+        (workdir / "boards").mkdir()
+        shutil.copy(library_without("power.io_volts") / "xiao-esp32-c6.json", workdir / "boards")
+        stages = check_spine.run(requirements, workdir, project=workdir)
         self.assertEqual((stages[-1].name, stages[-1].status), ("schematic", check_spine.COULD_NOT_RUN))
         self.assertTrue(stages[-1].detail.startswith("cannot emit a board: led-red-5mm asks for 5 mA"), stages[-1].detail)
 

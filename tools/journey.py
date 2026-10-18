@@ -32,7 +32,7 @@ STEPS = [
      "The library search runs. Research by agents was not run.", "partly"),
     ("Build", "/spark:build", "Run it on the requirements file.",
      "A board that builds, a Wokwi diagram, a sheet, a page of tabs.",
-     "Ran end to end on 2026-10-11. The drawing is on the XIAO C6 only. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18.", "works"),
+     "Ran end to end on 2026-10-11. The drawing is on the XIAO C6 only. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18.", "works"),
     ("Checks", "check_all.py", "Run the checks on the project.", "What holds, and what a check could not look at.",
      "A fresh button-and-LED project passes.", "works"),
     ("Firmware", "import_firmware.py", "Write the firmware with Claude.", "A pin map that the firmware imports.",

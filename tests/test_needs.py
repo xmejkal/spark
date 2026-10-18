@@ -15,6 +15,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+from board_library import board_missing  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -241,12 +242,16 @@ class TheMatcherTest(unittest.TestCase):
         run(["--needs-set", str(self.project), a_file([
             {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "alarm", "does": "sound", "what": "alarm"},
             {"id": "board", "does": "compute", "what": "microcontroller"}, {"id": "input", "does": "input", "what": "button"}])])
-        said, self.code = run(["--match", str(self.project)])
+        self.needs, self.code = self.matched_needs()
+
+    def matched_needs(self):
+        """Every need with its candidates, however many pages the library's growth takes, and the first page's exit code."""
+        said, code = run(["--match", str(self.project)])
         matched = list(said["data"]["needs"])
-        while said["truncated"] and said["truncated"]["next"]:  # every need, however many pages the library's growth takes
+        while said["truncated"] and said["truncated"]["next"]:
             said, _ = run(["--match", str(self.project), "--from", str(len(matched))])
             matched += said["data"]["needs"]
-        self.needs = {need["need"]: need for need in matched}
+        return {need["need"]: need for need in matched}, code
 
     def test_owned_first_with_counts_and_what_it_owes(self):
         first = self.needs["soil"]["candidates"][0]
@@ -346,12 +351,14 @@ class TheMatcherTest(unittest.TestCase):
         self.assertEqual((board["owes"], board["broken"]), ([], False))
 
     def test_a_board_whose_file_has_no_header_geometry_says_it_stops_at_the_footprint(self):
-        # C-7 (the council on PR #98): the XIAO was offered like the S3, and the chain stops at its footprint stage (P121)
-        boards_offered = {c["id"]: c for c in self.needs["board"]["candidates"] if c["kind"] == "board"}
-        self.assertEqual((boards_offered["xiao-esp32-c6"]["stops_at"], boards_offered["firebeetle2-esp32s3"]["stops_at"]), ("footprint", None))
+        # C-7 (the council on PR #98): a board without header geometry was offered like the S3, and the chain stops at its footprint stage (P121)
         out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            parts.main(["--match", str(self.project)])
+        with board_missing("physical.header"):  # setUp matched with the real library, where the XIAO builds
+            needs, _ = self.matched_needs()
+            with contextlib.redirect_stdout(out):
+                parts.main(["--match", str(self.project)])
+        boards_offered = {c["id"]: c for c in needs["board"]["candidates"] if c["kind"] == "board"}
+        self.assertEqual((boards_offered["xiao-esp32-c6"]["stops_at"], boards_offered["firebeetle2-esp32s3"]["stops_at"]), ("footprint", None))
         lines = out.getvalue().splitlines()
         self.assertIn("stops at the footprint stage (P121)", next(line for line in lines if "xiao-esp32-c6 (library)" in line))
         self.assertNotIn("stops at", next(line for line in lines if "firebeetle2-esp32s3 (library)" in line))
@@ -718,6 +725,7 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual(said["data"]["released"], [])
         self.assertNotIn("release", self.text(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"]))
 
+    @board_missing("physical.header")
     def test_a_board_that_stops_at_the_footprint_is_picked_saying_so_and_one_that_builds_is_not(self):
         # F12 (C-7): the XIAO was picked without a word, and the person learnt it when the build stopped; warned, never refused
         said = self.text(["--pick", str(self.project), "board=xiao-esp32-c6"])
@@ -1432,6 +1440,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertIn("REVIEW-INJECTED", board)
         self.assertNotIn("REVIEW-INJECTED", re.sub(r"/\*.*?\*/", "", board, flags=re.DOTALL), "outside every comment")
 
+    @board_missing("physical.header")
     def test_a_board_that_stops_at_the_footprint_is_written_saying_so(self):
         # F12 (C-7): --requirements wrote the XIAO without a word, and the build then stopped; warned, never refused
         _, project = self.project([("board", [{"board": "xiao-esp32-c6"}]), ("light", [{"part": "led-red-5mm"}])])
@@ -1701,6 +1710,7 @@ class TheRequirementsFileTest(unittest.TestCase):
                          % (sentence, said["problems"][0]["fix"]))
         self.assertFalse((project / "requirements.json").exists())
 
+    @board_missing("physical.header")
     def test_a_board_that_stops_at_the_footprint_is_never_suggested(self):
         # C-7: the refusal suggested the XIAO, whose board file has no header geometry, beside the S3
         home, project = self.project([])

@@ -471,7 +471,8 @@ count.
      `i2c_bus_capacitance_pf` is null ([P107](https://github.com/xmejkal/spark/issues/41)).
 
    `compare_design.py`, `assign_pins.py` and `check_spine.py` answer 2 instead. So exit 1 with an empty stdout is a
-   crash, not problems; check_all reports each as could-not-run. `emit_board.py` with the library LED on the XIAO is a
+   crash, not problems; check_all reports each as could-not-run. `emit_board.py` with the library LED on a board whose file states no `power.io_volts` (the library's XIAO did not until
+   P278) is a
    refusal, not a crash: exit 2, nothing on stdout, and on stderr `cannot emit a board: led-red-5mm asks for 5 mA
    through a series resistor, but the board states no power.io_volts — nothing to compute it from`. `check_spine.py`
    shows it as `[????] schematic` with that sentence, then `the chain was NOT exercised — this is not a pass`, exit 2

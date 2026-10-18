@@ -33,7 +33,7 @@ traces, 0 errors. Verify: `pcb_trace > 0` and `pcb_autorouting_error == 0`.
    - Connectors: `jst_ph_2`, `jst_ph_3`, `jst_ph_4` (real JST-PH, with silk outline).
    - Passives: `0402/0603/0805`, `soic8`, `sot23`, etc. — already real via footprinter.
    Discover the set: `node -e "console.log(require('@tscircuit/footprinter').getFootprintNames().join(','))"`.
-2. **A specific vendor/KiCad footprint** — fetch the `.kicad_mod` from GitHub (raw works even when
+2. **A specific vendor/KiCad footprint** (the library's XIAO needs none: spark generates `XiaoEsp32C6` from the header geometry in its board file) — fetch the `.kicad_mod` from GitHub (raw works even when
    git-clone is blocked; clone OUTSIDE a bridge-connected folder since lockfiles can't be unlinked
    there) then convert it to tscircuit:
    ```

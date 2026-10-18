@@ -197,17 +197,19 @@ class WhatItWillNotInventTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             emit_footprint.pads(board)
 
-    def test_the_real_second_board_is_refused_rather_than_guessed(self):
-        # The XIAO's file records no header geometry at all. This is not a hypothetical: it is
-        # the other board the plugin ships, and it must come out as could-not-run.
-        xiao = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
-        physical = xiao.get("physical") or {}
+    def test_a_library_board_with_no_header_geometry_is_refused_rather_than_guessed(self):
+        # The XIAO's file once recorded no header geometry at all (P121); a board that lacks it must come out as could-not-run.
+        from board_library import library_without
+        file = library_without("physical.header") / "xiao-esp32-c6.json"
+        physical = json.loads(file.read_text()).get("physical") or {}
         self.assertTrue(emit_footprint._missing(physical, physical.get("header")))
 
 
 class TheCommandLineTest(unittest.TestCase):
     def test_a_board_that_cannot_be_generated_exits_could_not_run(self):
-        self.assertEqual(emit_footprint.main(["--board", "xiao-esp32-c6", "--json"]),
+        from board_library import library_without
+        library = library_without("physical.header")
+        self.assertEqual(emit_footprint.main(["--board", "xiao-esp32-c6", "--json", "--project", str(library.parent)]),
                          emit_footprint.EXIT_COULD_NOT_RUN)
 
     def test_a_missing_board_exits_could_not_run(self):

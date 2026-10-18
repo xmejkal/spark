@@ -31,6 +31,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+from board_library import board_missing  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -2518,6 +2519,7 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         broken = {row["id"]: row["problems"] for row in said["data"]["broken"]}
         self.assertTrue(broken.get('x"y', [""])[0].startswith("id is 'x\"y', but an id is a plain key"), said["data"]["broken"])
 
+    @board_missing("physical.header")
     def test_audit_says_a_board_whose_file_has_no_header_geometry_stops_at_the_footprint(self):
         # C-7 (the council on PR #98): the XIAO was counted current, and the chain stops at its footprint stage all the same
         out = io.StringIO()
