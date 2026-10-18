@@ -1,7 +1,7 @@
 # P288: do we need the mutations? An analysis with numbers
 
 > **TL;DR.** Yes, keep mutation testing, but run it once per story. In the 33 runs whose counts the rows give, the
-> mutation-tester or a story agent planted 384 defects and 67 escaped (17%); 26 of the 33 runs found at least one
+> mutation-tester or a story agent planted 424 defects and 71 escaped (17%); 27 of the 33 runs found at least one
 > missing test, and all escapes but 2 got a test or a fix. The cost is two full suites per call (about 4.5 min
 > today) plus one more suite per escape, and a story often pays it two or three times. One pass per story, a cap of
 > 12 plants on new logic, and four number fields on board #2 keep the value and drop the repeats.
@@ -19,7 +19,7 @@ run? who should do it and when?"* Numbers were read on origin/main `61d5f63`, 20
 | `mutation-tester` agent | Reads the branch diff, plants at most 12 defects, runs the table once with `--copy`, reports "N planted, M caught". | `.claude/agents/mutation-tester.md` |
 | Rule: when | Only a change that holds logic; the council launches the tester before the PR. | `GLOSSARY.md` line 106, `developing.md` line 46 |
 | Rule: kept | A table stays in `tests/mutations/` only when a defect escaped (P208, 2026-10-12). | `WORKING_AGREEMENTS.md` W3 |
-| Rule: epic sweep | When an epic is done, every row for its files runs in one sweep. | `scrum/README.md` line 308 |
+| Rule: epic sweep | When an epic is done, every row for its files runs in one sweep. | `scrum/README.md` line 311 |
 | Push gate | Checks anchors only; it never runs the tables. | `developing.md` line 110 |
 
 ## 2. The tables
@@ -33,21 +33,21 @@ run? who should do it and when?"* Numbers were read on origin/main `61d5f63`, 20
 
 ## 3. Value: what the rows say
 
-`docs/observations/INDEX.md` has 1049 rows; 98 mention mutation, escaped or planted. 33 runs state counts (DP4 on
+`docs/observations/INDEX.md` has 1040 rows; 93 mention mutation, escaped or planted. 33 runs state counts (DP4 on
 2026-10-12 to AT402 on 2026-10-18), run by the tester or a story agent.
 
 | Measure | Number |
 | --- | --- |
-| Defects planted | 384 |
-| Caught / escaped | 317 / 67 (17% escaped) |
-| Runs with at least one escape | 26 of 33 (79%) |
-| Runs with none | 7 (AT112, AT243, AT261, AT267, AT280, AT289, AT306) |
-| Escapes recorded as a test or a fix | all but 2 |
+| Defects planted | 424 |
+| Caught / escaped | 353 / 71 (16.7% escaped) |
+| Runs with at least one escape | 27 of 33 (82%) |
+| Runs with none | 6 (AT112, AT243, AT261, AT267, AT280, AT306) |
+| Escapes the rows call "acted" | all but 2 (AT130 lists 6 escapes, 3 tests) |
 | The 2 others | AT320, an equivalent mutant (`ignore_errors=True`); the cache in PR #338 (AT332), left untested |
 | The last 11 runs (AT295 to AT402, 2026-10-17 to 18) | 24 escapes; 10 of the 11 runs had one |
 
-The rows count escapes, not shipped bugs. None says a user hit one. Each escape is a defect that the suite would
-have passed. Reviews find another class (AT298, AT304: crashes, wrong docs), so the two do not replace each other.
+The rows count escapes, not shipped bugs. None says a user hit one. Each escape is a defect that the suite
+passed. Reviews find another class (AT298, AT304: crashes, wrong docs), so the two do not replace each other.
 
 Three examples:
 
@@ -65,12 +65,10 @@ Measured here on 2026-10-18 on a loaded machine, so read it as a scale:
 | Measure | Number |
 | --- | --- |
 | Full suite | 2616 tests, 133 s (22.8 s for 1144 tests in `developing.md` line 110) |
-| `tests.test_check_spine` alone | 137 tests, 5 s |
 | Slowest modules | test_mutate 24 s, test_docs 17 s, test_journey_basic 17 to 23 s (real builds), test_needs 14 to 16 s |
 | Near set of `check_spine.py` | 9 modules, 52 s (it includes `test_journey_basic` and `test_needs`) |
 | Near set of `tools.py` / `deploy.py` / `store.py` | 52 s / 36 s / 35 s |
-| Near set of `check_backlog.py` / `cost.py` / `drawer.py` | 0.3 s / 0.5 s / 1.9 s |
-| Fixed cost of one `mutate.py` call | 2 full suites, about 266 s |
+| Fixed cost of one `mutate.py` call | 2 full suites (266 s) plus one near run per file (`near_sets`), up to 52 s |
 | One escape | a near run plus a full suite, 133 s or more |
 
 So the slow run is not one slow test. It is the fixed 4.5 min, plus up to 52 s per caught row whose near set holds
@@ -102,13 +100,13 @@ Empty means the source is silent. No source splits near from full catches, so th
 | 10-17 | P282 | | | tester | 12 | 2 | | 2 | | |
 | 10-17 | P280 | 330 | | tester | 12 | 1 | | 0 | 1 | |
 | 10-17 | P283 | 333 | | tester | 12 | 2 | | 2 | | |
-| 10-17 | P239-4 | 335 | p239-pr4 | story agent | 7 | 0 | 6 | | | |
-| 10-17 | P239-5 | 338 | p239-pr5 | story agent | 8 | 0 | 4 | | | |
+| 10-17 | P239-4 | 335 | p239-pr4 | story agent | 7 | 0 | | | | |
+| 10-17 | P239-5 | 338 | p239-pr5 | story agent | 8 | 0 | | | | |
 | 10-17 | P239-5 | 338 | | tester | 12 | 2 | | 1 | | |
 | 10-17 | P273-1 | 339 | p273-keep-moves | tester | 32 | 2 | | 2 | | 368 (2 rows) |
 | 10-17 | P272 | 341 | p272-page-as-artifact | tester | 12 | 6 | | 6 | | |
 | 10-17 | P242 | 342 | p242-deploy-grant | story agent | 48 | 4 | | 4 | | |
-| 10-18 | P239-6 | 343 | p239-pr6 | story agent | 7 | 1 | 0 | 1 | | |
+| 10-18 | P239-6 | 343 | p239-pr6 | story agent | 7 | 1 | 3 | 1 | | |
 
 ## 6. Options
 
@@ -120,7 +118,7 @@ Empty means the source is silent. No source splits near from full catches, so th
 | D. Faster near sets: leave real-build modules out of a set | up to 52 s per caught row | a faster set can catch by import side effect |
 | E. Run only before the PR, not per review round | the repeats after each round | a defect from a review fix is not planted |
 | F. Drop the agent, keep the tool | one Sonnet agent per story | the author plants; AT379 shows the author's first tests accepted either code |
-| G. Drop mutation testing at a stage | the whole cost | 26 of 33 runs found a gap |
+| G. Drop mutation testing at a stage | the whole cost | 27 of 33 runs found a gap |
 | H. Delete or re-anchor the 62 refused rows; run `--anchors` in the gate | silent decay of 3.4% of rows | none |
 | I. Number fields on board #2, one value per card, summed over its runs: "Mutants planted", "Mutants escaped", "Real gaps found", "Mutation minutes" | the PO reads totals on the card; no file | one value per card, no history per run, not in git |
 | J. `mutate.py` appends its counted columns itself; the agent fills only real_gaps and equivalent | hand-copied numbers | needs a file or an API write from the tool |
@@ -135,7 +133,7 @@ runs there is no streak of 3, so it does not fire. Check at each epic.
 ## 7. Recommendation
 
 Do B with C, E, H and I: one tester pass per story after the fixes, a cap of 12 plants, `--anchors` in the gate and
-the board fields, because 79% of runs find a missing test while every extra pass pays the same 4.5 min again.
+the board fields, because 82% of runs find a missing test while every extra pass pays the same 4.5 min again.
 
 ## 8. Open questions for the PO
 
@@ -147,4 +145,4 @@ the board fields, because 79% of runs find a missing test while every extra pass
 
 ## Checked by
 
-(after the refuter)
+The refuter (Opus) reproduced the tables, cost and PR figures. It rejected: the run list (AT289 re-ran a table and AT386 was left out, so 384/67/26 became 424/71/27); 98 INDEX rows (now 93, of 1040 rows); refused cells for P239-4, P239-5 (re-anchored, not refused) and P239-6 (3); the fixed cost without the near run; scrum/README line 308 (311). Open: AT402 says tester, table says story agent.
