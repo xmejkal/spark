@@ -118,7 +118,7 @@ These only read:
   on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7));
 - `tools.py --status`, `boards.py --list`, `check_vendor_pins.py --offline`;
 - `look.py`. It writes nothing and changes no flash, but **the board on USB restarts**, because esptool resets it to read it: a running
-  program stops and starts again, so say so before you run it. It prints text only until `--json` ([P213](https://github.com/xmejkal/spark/issues/175)): read its exit code and its lines.
+  program stops and starts again, so say so before you run it. Run it with `--json` ([P213](https://github.com/xmejkal/spark/issues/175)): one envelope on stdout, described under "look.py and deploy.py's envelope". The exit code is the same as the text run's.
   **A field `unknown` is not a pass**, and neither is a look with no token: the exit is 2 and the line says what went unchecked.
   Exit 1 is a stop (deploy.py will refuse, no token) or a field that differs but that the person can accept (with a token):
   the stop line or the token line tells them apart. The token is not the person's yes;
@@ -336,6 +336,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `emit_footprint.py` | `check`, `message`, `status` |
 | `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked`. Each of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`. A project with no `firmware/` folder is `could-not-run`. One with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`. Its firmware cannot be imported without running `main.py` |
 | `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`. With `--keep` or `--sim-dir`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`, `removed`, `not written` or `not kept`) and `why` |
+| `look.py`, `deploy.py` | the envelope, as `parts.py`'s: see below |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
 Checking a shipped board's pin map, as an agent does, without the network:
@@ -423,9 +424,35 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 ```
 
 **Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
-`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py` and `parts.py`. These do not take
-it: `boards.py`, `breadboard.py`, `check_bom.py`, `deploy.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `look.py`, `run_scenario.py` and `tools.py`. `tools.py
+`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py` and `parts.py`. These do not take
+it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
+
+### look.py and deploy.py's envelope
+
+`look.py --json` and `deploy.py --json` ([P213](https://github.com/xmejkal/spark/issues/192)) print one `outcomes.envelope` (`envelope`,
+`tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated`, and `notes` for deploy) on stdout. The status is
+the exit code's: `ok` 0, `problems` 1, `could-not-run` 2. With `--json`, deploy.py prints every line a person reads, and
+the flash tool's own output, on **stderr**, so stdout holds the envelope alone. An argument error prints usage and no envelope.
+A raise after the flash (a traceback) prints no envelope either; read the exit code and stderr.
+
+- `look.py` `data`: `port`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
+  `status`, `token`, `no_token_reason`. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
+  `unchecked` are the unknown fields and a missing token. A look that could not run has `data: null` (or `data.doctor` after a failed read). When there is a
+  token, `next` holds a `deploy` step, whatever the status. A warning or an unknown field is not a pass: relay it.
+- `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
+  `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
+  `facts_line`, `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
+  `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`. Keys not reached are null.
+- `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
+  and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
+  `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could
+  cover it. Never run either one yourself.
+- `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
+  board's R button, `data.person_action` says so, but only after the wait for the press ran out. So tell the person before you run
+  `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
+  board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`.
+- A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.
 
 ## The outcomes and their exit codes
 

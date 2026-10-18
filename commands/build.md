@@ -282,13 +282,13 @@ that runs on Node, with nothing else to install; a project's own `cli.ts` runs w
 Before you propose a flash, and when the person asks whether the right board is plugged in, run the look:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/look.py
+${CLAUDE_PLUGIN_ROOT}/scripts/look.py --json
 ```
 
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
 `same`, `differs` or `unknown`, with the board's MAC and a token. With two boards on USB, it lists them and needs
-`--port <the board's serial port>`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Relay its lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
+`--port <the board's serial port>`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents.md`, "look.py and deploy.py's envelope") and relay it in words. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
 `allowed-tools`, and so is `deploy.py` (P242): Claude Code does not ask before it runs deploy.py. The gate is inside
 deploy.py. With no deploy grant, it asks for a yes in a real terminal, Claude's shell has none, and deploy.py exits 2
@@ -306,7 +306,7 @@ the board's flash. The second writes the image at `0x0`, where the simulator loa
 order: the look, its token, then the person's yes.
 
 1. Run `look.py` and relay its lines. A stop means do not propose the flash.
-2. Run `deploy.py --token <the token>`, with `--port` only when two boards are on USB. If deploy.py prints
+2. Run `deploy.py --json --token <the token>`, with `--port` only when two boards are on USB. If deploy.py prints
    `yes: standing yes typed by ...`, the person's deploy grant is the yes and it erases at once. Relay that line.
    If it prints `no terminal to ask you in` (and, when a deploy grant exists but cannot cover this deploy,
    `standing yes: not used: <why>`), it erased nothing. Give the person the line
@@ -318,7 +318,8 @@ order: the look, its token, then the person's yes.
    A deploy grant covers only a look with no warning, no unknown field and no stop, and never `--ignore-older-runs`;
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
 4. When deploy.py prints "press the board's R (reset) button once", relay that line to the person at once: only a hand
-   on the board can do it.
+   on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
+   run it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
 
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. On macOS the board

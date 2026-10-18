@@ -231,6 +231,64 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
+## R9 — 2026-10-18, on four days of Kanban without a retro
+
+Prepared by Claude with a Lean and Agile council and six team voices drawn from the agents' logs. Held with Petr on
+2026-10-18, one theme at a time; his decisions are in the table of actions. The full page, with every number and its command:
+[`docs/discovery/2026-10-18-r9-retro/retro.md`](../docs/discovery/2026-10-18-r9-retro/retro.md).
+
+134 PRs merged into main since R8, 51 of them from 2026-10-15 to 10-18, and no retro ran for 17 days. The retro trigger is an epic's last
+story, and the epic in flight (P235) is still in Build, so it never fired. Petr, 2026-10-18: *"Are you even doing
+retrospectives and playing around with the wip and such?"*
+
+### R8's three actions, checked as written
+
+| | |
+| --- | --- |
+| **R8.1** (the bin's gate means something again) | **held**, done the same day (bin `852f1c6`). |
+| **R8.2** (every committed derived file is checked or made) and **R8.3** (a fact-correcting commit quotes its sweep) | **not checked.** Both belong to the four-repository sprints before the boards (2026-10-05); nobody carried them onto a card. Dropped with this line as their record (decided at the hold, under the standing rule that row and card decisions are delegated). |
+
+### Experiments from the inbox, to judge with the PO
+
+| experiment (since) | evidence in this window | proposal |
+| --- | --- | --- |
+| the refuter on opus (P261, 10-15) | 34 runs, 9% of agent tokens; still confirms and rejects claims in INDEX.md rows | keep on every PR that holds logic; its brief length is not in the logs |
+| the extra gaps round in every plan council (P251, 10-15) | names still reached round 2 unchecked once (AT451) | keep; the author runs the name check before round 1 |
+| the weekly look's retro line (P261, 10-15) | no retro line found in this window | replaced by the cadence below, if Petr agrees |
+| the chime hook (10-15) | no number in the logs | Petr's word only |
+
+### What the four days found about themselves
+
+**The limit holds at the push and breaks at the pull.** Two WIP slips at the pull (P272, P295), plus slice 0 started
+before P239 finished; the hook refused two pushes over a limit. Three of five working-stage cards are epics.
+
+**Two branches on the same files cost a fifth of the tokens.** P239 PR 6 ran beside P242: 460 tool calls and 103 M of
+the log window's 506 M input tokens, cache reads included. 11 of 16 merges of main name INDEX.md rows (P296 is Ready).
+
+**The checks earn their keep, and their size grows by habit.** Mutation found 23 real gaps in 25 escapes over 10
+cards; four opus lenses on one council cost 15 M tokens where a sonnet review takes 4 to 16 tool calls.
+
+**Agents and the lead collide on shared tools.** Plan mode stopped four agents, an edit script blew a module to 28 MB,
+a stray `git checkout` detached main for a moment, and GraphQL ran out four times in one morning. Each was undone;
+none was prevented.
+
+### Actions, as Petr decided them (all to 2026-11-01 unless named)
+
+Petr took all five themes, not the proposed two.
+
+| # | change | decision | check at R10 |
+| --- | --- | --- | --- |
+| **R9.1** | Before a builder or spike agent starts, Claude writes "in flight: N of 4" as the launch's first line. | yes |  slips in the inbox: 0 (today 2 in 4 days) |
+| **R9.2** | P296 goes to the top of Ready. | yes | merges that name INDEX.md rows over the next 20 PRs (today 11 in 51) |
+| **R9.3** | Mutation once per story on the whole branch; opus lenses only on a design or an epic. | yes, both parts; the refuter stays on every PR that holds logic | tester minutes per story (P239: four runs) and real gaps per story (today 2.3) |
+| **R9.4** | Every agent that runs a git command gets a worktree; no plan mode while an agent writes; board edits in one batch per turn. | yes, but plan mode stays: Claude still plans in plan mode before code | incidents: 0 (today 3); rate-limit hits per day (today 17 in 21 hours) |
+| **R9.5** | The next three stories get typed `task` sub-issues as work reveals them. | yes, from the story after P278 | 3 of 3 stories with two or more typed tasks; Petr's word |
+| **WIP A, B, C** | an epic card does not count in flight; Review stays at 2 with its wait measured; two cards on the same files never run in parallel | A broad (no epic card counts, only story, spike, chore and bug cards), B yes, C yes | each with its measure and time box in the retro page |
+| **Cadence** | a retro every 10 merged stories or 7 days, prepared from the board, the PRs and the agent logs by the team with the council, held with Petr; a running, typed inbox; each experiment carries its due retro | yes, as written; R10 is due by 2026-10-25 | R10 is held within 7 days, and opens with this table's verdicts |
+| **Logs as the team's voice** | Petr, 2026-10-18: *"We'll see if the process improvements also happen if it's only with the logs."* A script reads the agent logs; no agent note for now. | decided before the hold | at R10: a log number led to a proposal that changed a number; a list of what the logs missed |
+
+---
+
 ## R8 — 2026-10-01, on Sprint 8 and the premises that did not survive reproduction
 
 Eight items, planned as five, closed the same day they were planned. The sprint's own measurement

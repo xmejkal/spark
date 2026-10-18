@@ -42,15 +42,13 @@ BIN_BOARD = "bin"
 BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not counted or checked"
 #: The stages that carry a limit (§3); Idea and Done carry none. Every working stage takes 2, the PO's call of
 #: 2026-10-06 evening (P146); Ready is a queue, not work, and stays at 5.
-LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 2, "Review": 2}
+LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 3, "Review": 2}
 IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
 #: From the commitment on (Ready, Build, Review) a card carries its Needed by and slice; in Idea, Discovery and Design
 #: it decides whether to build, and the PO's order into Ready is what commits. P146, docs/2026-10-06-process-design.md:
 #: the skeptic pass's item 6 ("the gate checks a slice from Ready on, not from Discovery on") and §1 ("Your order into
 #: Ready commits"). A card with no Status is not asked either, like Idea (stage_of).
 JUDGED = ("Ready", "Build", "Review")
-#: Where an epic is the work itself; from Build on, its stories carry the limit.
-UPSTREAM = ("Discovery", "Design")
 #: Every stage the gate knows (P167), in the board's order: Idea, the limited ones, Done. A card whose Status is any other
 #: word stands in a stage somebody renamed or added on the board, and the gate judges nothing until that is a decision.
 #: `--help` lists these, so the two cannot drift.
@@ -161,13 +159,13 @@ def counts(entry):
     """
     Whether an open card counts against the limits: a task rides on its story, so it does not count — unless it has no
     parent story at all or only a closed one (open_parent), when it is a card of its own (P146), and one whose parent
-    could not be asked (PARENT_UNREAD) rides; an epic counts only in Discovery and Design, where it is the work itself —
-    from Build on, its stories carry the limit. board.py reads the same rule.
+    could not be asked (PARENT_UNREAD) rides; an epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form, to 2026-11-02).
+    board.py reads the same rule.
     """
     labels = entry.get("labels") or []
     if "task" in labels:
         return entry.get("parent") is None
-    return "epic" not in labels or entry.get("status") in UPSTREAM
+    return "epic" not in labels
 
 
 def problems(items, bin_items=()):
@@ -177,7 +175,7 @@ def problems(items, bin_items=()):
     open stage and a riding task included (the status lists every open wait, so the gate asks for every open date), two
     open cards labelled expedite (whatever their stage or board), and a broken WIP limit. A working stage, or the
     flight, may hold one over its limit while exactly one of the cards it holds is the expedite; Ready, a queue the
-    expedite never enters, may not. An epic counts only in Discovery and Design; a task (a plan's step, a sub-issue of
+    expedite never enters, may not. An epic counts nowhere; a task (a plan's step, a sub-issue of
     its story) rides on its open story and is judged only on its wait — unless it has no open parent story, when it is a card
     like any other (counts()). A Done card is not judged at all. Where a card stands is stage_of()'s word: a card in a
     stage the gate does not know, or a board with no Status on any card, is UnknownStage, and nothing is judged (P167).
@@ -392,8 +390,8 @@ is could-not-run naming it, and nothing is judged; a card with no Status is in I
 bin's board read in part, or with no Status on any card, is set aside and said, and spark's cards
 are counted alone.
 
-How cards count: an epic counts in Discovery and Design only, where it is the work itself; from
-Build on its stories carry the limit. A task under an open story rides on it and counts nowhere;
+How cards count: an epic counts in no stage, and its stories carry the
+limit (R9's experiment A, to 2026-11-02). A task under an open story rides on it and counts nowhere;
 a task with no parent story, or only a closed one, is a card of its own. The bin's cards in a
 working stage fly in the same total as spark's (a bin card labelled `bench` sits outside it) and
 fill none of spark's stages.

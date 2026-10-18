@@ -27,6 +27,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_envelope
 import board_grant
 import board_look
 import deploy_gate
@@ -34,7 +35,7 @@ import download_mode
 import ready_check
 import store
 import tools
-from deploy_service import DeployService
+from deploy_service import DeployService, FlashError
 from firmware_platform import FirmwarePlatform
 from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
@@ -70,6 +71,11 @@ port to go and come back under the same name, and reads the board again. If it r
 board finished its restart late, and deploy.py reads it again at once. What the port printed, `nothing`, or why it could
 not be read goes in the board log.
 
+--json prints one envelope on stdout (docs/guide/agents.md): the token, the look, the stage the run reached, the yes, the
+board log and the store record in `data`, and in `next` the step that waits for the person (`needs_yes`). Every line above
+then goes to stderr, and so does the flash tool's own output. Exit codes do not change; the envelope's status is the exit
+code's. An argument error prints usage on stderr and no envelope.
+
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
     ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
@@ -77,36 +83,40 @@ came, 2 it could not run, you answered no, there was no terminal, or ready is un
 
 def rerun_line(args, port):
     """The line that runs this deploy again, for the person's own terminal."""
-    line = ["--project", args.project.resolve(), "--token", args.token or "", "--port", port]
-    return deploy_gate.format_rerun_line(__file__, line + (["--ignore-older-runs"] if args.ignore_older_runs else []))
+    return deploy_gate.format_rerun_line(__file__, board_envelope.deploy_argv(args.project.resolve(), args.token, port,
+                                                                            args.ignore_older_runs))
+
+
+def grant_argv(args, port, minutes="N"):
+    """The arguments of grant.py that give a deploy grant for this board."""
+    return ["--scope", board_grant.SCOPE_DEPLOY, "--minutes", minutes, "--project", str(args.project.resolve()), "--port", port]
 
 
 def grant_hint(args, port):
     """The text added to the no-terminal line when a deploy grant could make the yes unnecessary: the line the person
     runs once in their own terminal to give it."""
-    line = deploy_gate.format_rerun_line(Path(__file__).resolve().with_name("grant.py"), [
-        "--scope", board_grant.SCOPE_DEPLOY, "--minutes", "N", "--project", args.project.resolve(), "--port", port])
+    line = deploy_gate.format_rerun_line(Path(__file__).resolve().with_name("grant.py"), grant_argv(args, port))
     return ("\nOr, to let Claude deploy this board for N minutes (1 to 1440) with no yes each time, run this once. It "
             "allows an erase of ALL of the flash and any passed image of any project:\n  %s" % line)
 
 
-def choose_consent(args, report, grant_service):
+def choose_consent(args, report, grant_service, out=None):
     """The ConsentStrategy for this deploy, after the look: the standing yes of a valid deploy grant when the look
     matched and the deploy ignores no older run, else a yes typed in this terminal. Prints one line that says which, and
     why not when it is the terminal."""
     line = rerun_line(args, report.port)
     if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:
         line += grant_hint(args, report.port)
-    chosen = grant_service.consent_for_deploy(report, args.ignore_older_runs, deploy_gate.TerminalConsentStrategy(line))
+    chosen = grant_service.consent_for_deploy(report, args.ignore_older_runs, deploy_gate.TerminalConsentStrategy(line, stdout=out))
     if chosen.why not in (None, board_grant.WHY_NO_GRANT):  # a person with no grant is told only by the no-terminal text
         said = board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]
-        print("  standing yes: not used: %s" % said, flush=True)
+        print("  standing yes: not used: %s" % said, flush=True, file=out)
     return chosen.consent
 
 
-def show_line(line):
+def show_line(line, out=None):
     """How the service's lines reach the person: printed at once, because a step is still running."""
-    print(line, flush=True)
+    print(line, flush=True, file=out)
 
 
 def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_service=None):
@@ -128,42 +138,79 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
                         help="flash even when a log in sim/runs/ tested another image, and name it in a note "
                         "(default: refuse)")
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
+    parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
+                        "stderr (docs/guide/agents.md)")
     args = parser.parse_args(argv)
-    run = run or subprocess.run
+    reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
+            "ignore_older_runs": args.ignore_older_runs, "dry_run": args.dry_run}
+    code = _deploy(args, run or subprocess.run, consent, probe, clock, grant_service, sys.stderr if args.json else None, reached)
+    if args.json:
+        print(board_envelope.dumps(board_envelope.deploy_envelope(reached, code)))
+    return code
+
+
+def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
+    """The deploy main parses for. Every line a person reads goes to `out` (None: stdout). What `--json` reports it puts in
+    `reached`. Returns the exit code."""
+    def say(line):
+        print(line, file=out)
+
     service = DeployService(args.project, FirmwarePlatform.micropython(args.project), args.ignore_older_runs, run,
-                            clock, probe)
+                            clock, probe, echo_to=None if out is None else 2)
     try:
         planned = service.plan(args.port)
     except (DeployError, tools.ToolProblem) as cannot:
+        reached["refusal"] = str(cannot)
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
+    reached["plan"] = planned
     for note in planned.notes:
-        print("  note: %s" % note)
+        say("  note: %s" % note)
     if args.dry_run:
-        print("\n".join("  would run: %s" % shlex.join(command) for command in planned.commands))
-        print("  board: not looked at: run look.py")
-        print("  " + WATCH % shlex.join(service.platform.make_connection(planned.mpremote, args.port).repl_command()))
+        say("\n".join("  would run: %s" % shlex.join(command) for command in planned.commands))
+        say("  board: not looked at: run look.py")
+        say("  " + WATCH % shlex.join(service.platform.make_connection(planned.mpremote, args.port).repl_command()))
         return EXIT_OK
     try:
-        report = service.look(args.port)
-        print("\n".join(board_look.report_lines(report, token=False)), flush=True)
-        consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService())
-        planned = service.deploy(report, args.token, consent, show_line)
+        reached["stage"] = board_envelope.STAGE_LOOK
+        report = reached["report"] = service.look(args.port)
+        print("\n".join(board_look.report_lines(report, token=False)), flush=True, file=out)
+        reached["port"] = report.port
+        consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), out)
+        yes_kind = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
+        reached["stage"] = board_envelope.STAGE_GATE
+        planned = service.deploy(report, args.token, consent, lambda line: show_line(line, out))
+        reached.update(consent=consent, yes_kind=yes_kind)  # the gate is passed: only now is there a yes to report
     except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
+        if isinstance(cannot, FlashError):
+            reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind)
+        reached["refusal"] = str(cannot)
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
+        reached.update(refusal=str(shut), next_op=shut.next_op)
+        if shut.next_op == deploy_gate.NEXT_DEPLOY:
+            reached["run_in_terminal"] = rerun_line(args, report.port)
+            if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:
+                reached["grant_argv"] = grant_argv(args, report.port, "60")
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code
-    result = service.verify(report, planned, show_line)
+    reached["stage"] = board_envelope.STAGE_VERIFY
+    result = reached["result"] = service.verify(report, planned, lambda line: show_line(line, out))
     ready = result.ready
-    print("  %s\n  %s: %s\n  board log: %s" % (result.facts_line, ready.verdict, ready.sentence, result.log_path))
+    reached["person_action"] = download_mode.PRESS_RESET
+    if ready.verdict != ready_check.SEEN:
+        reached["refusal"] = ready.sentence
+    say("  %s\n  %s: %s\n  board log: %s" % (result.facts_line, ready.verdict, ready.sentence, result.log_path))
     try:
-        print("  store record: %s" % service.record(result, consent))
+        reached["store_record"] = str(service.record(result, consent))
+        say("  store record: %s" % reached["store_record"])
     except (OSError, store.StoreProblem) as cannot:
-        print("  store record: not written: %s" % cannot)
+        reached["store_record_error"] = str(cannot)
+        reached["notes"] = ["the store record was not written: %s" % cannot]
+        say("  store record: not written: %s" % cannot)
     if ready.verdict == ready_check.UNKNOWN:
-        print("  " + WATCH % shlex.join(result.repl_command))
+        say("  " + WATCH % shlex.join(result.repl_command))
         return EXIT_COULD_NOT_RUN
     return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
 
