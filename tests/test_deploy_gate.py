@@ -27,6 +27,7 @@ import deploy  # noqa: E402
 import board_grant  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
+import flasher  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeUtcClock  # noqa: E402
@@ -213,6 +214,20 @@ class TheGateTest(GateCase):
         code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=True)
         self.assertEqual((code, self.flashed()), (2, ["erase_flash"]))
         self.assertIn("hold the board's BOOT button", problems)
+        line = problems.strip().splitlines()[-1]
+        self.assertTrue(line.startswith("deploy.py: `"), line)
+        self.assertTrue(line.endswith("): " + flasher.EsptoolFlasher.BOOT_HINT), line)
+
+    def test_a_flasher_with_no_hint_ends_the_failure_line_at_the_error(self):
+        self.run_the_scenario()
+        silent = flasher.Flasher()
+        silent.build_commands = lambda image, port=None: [["probe", "write"]]
+        real = deploy.plan
+        with mock.patch.object(deploy, "plan", side_effect=lambda *a, **k: real(*a, **k)._replace(
+                flasher=silent, commands=silent.build_commands(None))):
+            code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=True)
+        self.assertEqual(code, 2)
+        self.assertTrue(problems.strip().splitlines()[-1].endswith(")"), problems)
 
     def test_a_flash_too_small_for_the_image_stops_before_the_question(self):
         self.run_the_scenario()
