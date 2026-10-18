@@ -15,10 +15,16 @@ def build_esptool_prefix(tool, port=None, chip=None):
 
 
 class Flasher:
-    """Strategy: how an image goes onto a board. A subclass supplies `build_commands` and may set `BOOT_HINT`."""
+    """Strategy: how an image goes onto a board. A subclass supplies `build_commands` and may set `BOOT_HINT` and the
+    retry of its first command: `RETRY_EXIT_CODE`, `RETRY_WAIT_S` and `RETRY_LINE`."""
 
     #: What to try when the flasher cannot connect to the board. A sentence; empty when a flasher has none.
     BOOT_HINT = ""
+    #: The exit code on which the first command runs once more, after RETRY_WAIT_S seconds. None: never retry.
+    RETRY_EXIT_CODE = None
+    RETRY_WAIT_S = 0
+    #: The line that names the retry, formatted with `wait`, `command` and `code`.
+    RETRY_LINE = ""
 
     def build_commands(self, image, port=None):
         """The commands that put `image` on the board, in order, each an argv list. `port` is None when the tool finds the board."""
@@ -37,6 +43,12 @@ class EsptoolFlasher(Flasher):
     #: What to try when esptool cannot reach the board. Read by the look, and by deploy.py through its plan's flasher.
     BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press and release RESET, release BOOT, "
                  "and run it again")
+    #: esptool 5.5.0 exits with 2 for every FatalError (esptool/__init__.py:1374), and a failed connect is one
+    #: (esptool/loader.py:916). A second erase does what the first would have done. The wait is one bench observation:
+    #: the PO's erase right after the look failed to connect, and the same command 5 s later connected (2026-10-18, P290).
+    RETRY_EXIT_CODE = 2
+    RETRY_WAIT_S = 5
+    RETRY_LINE = "retry in %(wait)d s: %(command)s stopped with exit %(code)d (esptool's exit for any stop, a failed connect among them)"
 
     def __init__(self, tool, chip):
         self.tool, self.chip = tool, chip

@@ -217,9 +217,9 @@ class TheGateTest(GateCase):
 
     def test_a_failed_erase_writes_nothing_and_says_what_to_try(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=2)
+        code, said, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=2)
         self.assertEqual((code, self.flashed()), (2, ["erase_flash", "erase_flash"]))
-        self.assertEqual((problems.count("retry in 5 s:"), self.slept), (1, [5]))
+        self.assertEqual((said.count("retry in 5 s:"), self.slept), (1, [5]))
         self.assertIn("hold the board's BOOT button", problems)
         line = problems.strip().splitlines()[-1]
         self.assertTrue(line.startswith("deploy.py: `"), line)
@@ -239,10 +239,10 @@ class TheGateTest(GateCase):
 
     def test_an_erase_that_fails_once_is_retried_after_5_s_and_the_deploy_goes_on(self):
         self.run_the_scenario()
-        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
         self.assertEqual((code, self.flashed(), self.slept), (0, ["erase_flash", "erase_flash", str(self.image)], [5]))
-        self.assertIn("  retry in 5 s: ", problems)
-        self.assertIn("erase_flash stopped with exit 2 (esptool's exit for any stop, a failed connect among them)", problems)
+        self.assertIn("  retry in 5 s: ", said)
+        self.assertIn("erase_flash stopped with exit 2 (esptool's exit for any stop, a failed connect among them)", said)
 
     def test_an_erase_that_fails_with_another_code_is_not_retried(self):
         self.run_the_scenario()

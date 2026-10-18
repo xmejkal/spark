@@ -11,6 +11,7 @@ import datetime
 import hashlib
 import shlex
 import subprocess
+import time
 
 import board_facts
 import board_grant
@@ -70,6 +71,9 @@ class DeployService:
     `ignore_older_runs` holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
     `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
 
+    #: How the service waits before its flasher's retry. A test replaces it.
+    sleep = staticmethod(time.sleep)
+
     def __init__(self, project, platform, ignore_older_runs=False, run=subprocess.run, clock=None, probe=None, echo_to=None):
         self.project, self.platform, self.ignore_older_runs = project, platform, ignore_older_runs
         self.run, self.clock, self.probe = run, clock, probe
@@ -114,14 +118,29 @@ class DeployService:
         if report.token() != token:  # AT116: the image changed while the person answered
             raise DeployError("the image changed after your yes: run look.py again. not flashed.")
         consent.require_ready()  # a deploy grant can end while the plan reads the image
-        for command in planned.commands:
+        for index, command in enumerate(planned.commands):
             show_line("  running: %s" % shlex.join(command))
             try:
-                self.run(command, check=True, **({} if self.echo_to is None else {"stdout": self.echo_to}))
+                self._run_flash(command, planned.flasher, consent, show_line, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:
                 hint = planned.flasher.BOOT_HINT
                 raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""))
         return planned
+
+    def _run_flash(self, command, flasher, consent, show_line, retry):
+        """Run one flash command. With `retry`, a stop with the flasher's RETRY_EXIT_CODE runs it once more, after the
+        flasher's wait, while the yes still holds (P290: the erase right after the look's reset)."""
+        echo = {} if self.echo_to is None else {"stdout": self.echo_to}
+        try:
+            self.run(command, check=True, **echo)
+        except subprocess.CalledProcessError as failed:
+            if not retry or failed.returncode != flasher.RETRY_EXIT_CODE:
+                raise
+            show_line("  " + flasher.RETRY_LINE % {"wait": flasher.RETRY_WAIT_S, "command": shlex.join(command),
+                                                   "code": failed.returncode})
+            self.sleep(flasher.RETRY_WAIT_S)
+            consent.require_ready()
+            self.run(command, check=True, **echo)
 
     def verify(self, report, planned, show_line):
         """
