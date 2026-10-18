@@ -311,6 +311,19 @@ reads those. Nor can it tell whether a step's status is still current. So when a
 changes what it does, the change updates the journey guide and the README's *What works today*: item 8 of the
 [Definition of Done](../../scrum/README.md#definition-of-done).
 
+## Findings rows
+
+The findings of a PR's councils, reviews and refuters go in one rows file for that PR:
+`docs/observations/rows/<card>-<topic>.md`, for example `p296-rows-per-pr.md`. The file uses the header
+`| # | claim | source | status | evidence / where it went |` and numbers its rows 1, 2, 3. Each status cell starts
+with one of the words in `docs/observations/INDEX.md`'s status table. A row is cited as `<file>#<n>`.
+`docs/observations/INDEX.md` takes no new rows (P296, #358), and `tests/test_observation_rows.py` guards both rules.
+To list the unresolved rows (`raised` or `verified`), run this line from the repository root:
+
+```
+/usr/bin/grep -nE '\| \**(raised|verified)' docs/observations/rows/*.md docs/observations/INDEX.md
+```
+
 ## Where the work is planned
 
 Every item is an issue on [spark's board](https://github.com/users/xmejkal/projects/2). The flow, the stages and their

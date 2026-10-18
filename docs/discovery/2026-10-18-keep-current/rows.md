@@ -1,6 +1,6 @@
 # Keep-current sweep, 2026-10-18: finding rows
 
-These rows go into `docs/observations/INDEX.md` when the PO has read them. The sweep read the README's "What works
+These rows stay here as history. Since P296 (#358) no row goes into `docs/observations/INDEX.md`. The sweep read the README's "What works
 today" table, `tools/journey.py` and the journey guide against what merged since v0.9.0.
 
 | Row | Finding | Status |

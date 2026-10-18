@@ -2,7 +2,7 @@
 
 Read this after a context clear. It is the short list: what was decided, and why, so none of it
 gets re-litigated. Everything still open is a card on a board — spark's
-(https://github.com/users/xmejkal/projects/2) or the bin's (/projects/1); `docs/observations/INDEX.md` is raw intake.
+(https://github.com/users/xmejkal/projects/2) or the bin's (/projects/1); `docs/observations/` is raw intake: `INDEX.md` up to 2026-10-18, then one rows file per PR in `rows/`.
 
 Last condensed: 2026-09-25; the product rules and the cautions revised 2026-10-09 (P146).
 
@@ -46,7 +46,7 @@ Its corollaries, each learned from a real defect:
 | **`assign_pins` output is authoritative in `emit_board`** | The generator looped over parts and their `needs`, so any signal for a part with no record (button, LED, connector, shunt) vanished — 6 of 12 gone, exit 0, under a banner claiming completeness. Now assignments drive, and unclaimed ones are printed loudly. | `emit_board.py` |
 | **The vendor's drill is not our drill** | The board file's `drill_mm: 0.9` is DFRobot's finished hole for their own pad. A hole that accepts their 0.64 mm square pin needs ≥1.0. Generating from the vendor number produces a board that will not mate. | `check_footprints` rejects it — spark caught spark |
 | **Observers write to `docs/observations/`** | Every serious defect found here came from someone who was not doing the work. Findings must outlive the context that found them. | memory: `background-observers` |
-| **A claim leaves `INDEX.md` only by being acted on or rejected with a reason** | `rejected` is terminal and stays in the corpus, or a confidently-wrong observer raises it again every run. | `INDEX.md` |
+| **A claim leaves the rows (`INDEX.md`, `rows/`) only by being acted on or rejected with a reason** | `rejected` is terminal and stays in the corpus, or a confidently-wrong observer raises it again every run. | `INDEX.md` |
 
 ## Product rules
 

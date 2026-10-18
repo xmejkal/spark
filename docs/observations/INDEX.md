@@ -1,5 +1,14 @@
 # What the observations found, and what happened to it
 
+This table takes no new rows since 2026-10-18 (P296, #358). Each PR writes its findings in a rows file of its own,
+`docs/observations/rows/<card>-<topic>.md`, with this table's header and status words. Its rows are numbered 1, 2, 3
+inside the file, so no global counter exists and parallel PRs do not conflict. The rows below stay as history, and
+their status can still change. This line lists the unresolved rows in both places:
+
+```
+/usr/bin/grep -nE '\| \**(raised|verified)' docs/observations/rows/*.md docs/observations/INDEX.md
+```
+
 > **This is INTAKE, not a backlog.** Claims arrive here and leave by being reproduced or
 > rejected. A claim becomes *work* only by being promoted to an issue on a board
 > ([`scrum/README.md`](../../scrum/README.md); the backlog file was retired for the boards on 2026-10-05).
