@@ -11,58 +11,72 @@ resistor survives or is named.
 
 ## Council
 
-(filled after each round)
+Round 1 (tech lead, refuter) changed: one word, `jumper`, for the thing (no `wire`); a resistor goes through the same
+`_reserve` as other parts, with a `pinned` argument, so it has their codes (`LEG_OFF_ROW` becomes `PIN_OFF_ROW`, used
+for the pinned pin only); the ledger handed to `place_jumpers` is a copy of the holes taken before any jumper; a
+board-pad jumper is matched by rows like any other (the "not matched" choice could not be built, and its row is fixed
+by then); an earlier jumper is matched once, as an unordered pair of rows, against the planned jumpers (the kept
+pass's, not the nothing-kept `fresh`); the naming rule is quieter (the refuter's run named 3 of 4 untouched jumpers
+after a requirements change); pass 2 never picks a new row; the "row full" and jumper `no-room` tests are dropped
+(pass 2 cannot run out of holes); the p273 table, the old resistor test and three docstrings are listed. Rejected: an
+empty `JumperPlacement` base is kept (it mirrors `PartPlacement`); a malformed `connections` entry makes the file
+unreadable, as a malformed part does.
 
 ## The safety rule that makes this small
 
-A kept jumper only takes the holes of a jumper the fresh plan already has: it must join the same two rows. So a kept
-jumper never changes a connection. The same holds for a kept resistor: its joined leg must lie in the row it joins and
-its other leg in a free row; jumpers follow whatever rows result.
+A kept jumper only takes the holes of a planned jumper's two rows (the jumpers of the kept pass, which carry rows and
+a step; their holes are claimed again). So a kept jumper never changes a connection. A kept resistor has its joined pin
+in the row it joins and its other pin in a free row; jumpers follow whatever rows result. The SVG ignores a route.
 
 ## What changes for a person
 
-1. A jumper moved to other holes of the rows it joins (spike b, b2, c) keeps its holes and its route (the bends in
-   the file). The colour is still the step's.
-2. A resistor moved so its joined leg is still in the row it joins keeps its place. It is checked when placed, not
-   reserved at the start, because the row it joins is known only then.
-3. Each earlier jumper that is in neither the new layout nor the fresh plan is named, one line:
-   `jumper 4b.j-24b.f: the new plan joins no jumper between rows 4b and 24b` (spike b3, and c when the new circuit
-   breaks it). A jumper that is the fresh plan's own is never named, so a rebuild with no change names nothing.
-4. A resistor that cannot stay is named: `its leg 2 is no longer in the row it joins` (spike c-part).
+1. A jumper moved to other holes of the rows it joins (spike b, b2, c) keeps its holes, its route and its direction.
+   The colour is still the step's.
+2. A resistor keeps its place when its joined pin is still in the row it joins, and its other pin is free (spike
+   resistor). It is checked when placed, because the row it joins is known only then. Resistors are placed in circuit
+   order, so for two resistors the earlier one in the circuit wins a hole.
+3. An earlier jumper in neither the new layout nor the fresh plan is named (`jumper 4b.j-24b.f: the new plan joins no
+   jumper between rows 4b and 24b`), but only when each of its end rows is empty in the earlier file or held there by
+   parts that are still where they were. A jumper of a part that moved, or that the circuit lost, is explained by that
+   part's own line. So spike b3 (an empty row) and c (the circuit stopped joining it) are named, and a requirements
+   change does not list the jumpers of a removed part.
+4. A resistor that cannot stay is named: `its pin 2 is no longer in the row it joins` (spike c-part).
 
 ## Cases (tests on copies of `button-light-xiao`)
 
 | Case | Edit, then change | Result |
 | --- | --- | --- |
-| b, same row | jumper end moved to another hole of its row; LED removed | holes and route kept |
+| b, same row | jumper end moved to another hole of its row, with a route; LED removed | holes and route kept |
 | b2, other row | GND jumper end moved to the button B row; LED removed | kept (the new circuit joins those rows) |
-| b3, empty row | jumper end moved to a row no part holds | named `rows-not-joined`; fresh jumper |
-| c, circuit breaks it | LED, R1 and jumpers moved; button removed | LED and R1 kept; the jumper the circuit no longer joins is named |
-| c-part | LED moved, R1 left | R1 named `leg-off-row`, placed fresh (as in the spike) |
+| b3, empty row | jumper end moved to a row no part holds | named `rows-not-joined`; planned jumper drawn |
+| c, circuit breaks it | LED, R1 and a jumper moved; button removed | LED, R1 kept; the jumper the circuit no longer joins named |
+| c-part | LED moved, R1 left | R1 named `pin-off-row`, placed by first fit |
 | resistor | R1 moved along its row, its jumper moved with it | both kept |
 
-Also: a hole taken by a part or covered by the board, two earlier jumpers on one pair of rows (first in the file
-wins), a wire that is not between two holes, a route that is not a list, a row with no hole left, a jumper written
-the other way round, an unchanged rebuild (same bytes), the kept plan falling back to the fresh one (jumpers named
-`no-room`).
+Also: a jumper onto a hole a part holds or the board covers (`hole-taken`), two earlier jumpers on one pair of rows
+(first in the file wins), a jumper written the other way round (direction kept), a connection to a part pin (named
+`jumper-off-holes`), a malformed connection (file unreadable), an unchanged rebuild (same bytes, nothing named), a
+requirements change with no edit (nothing named for a lost part's jumpers), and every merged diagram joins the same
+rows as the planned one. The old test that wants `resistor-not-kept` is replaced.
 
 ## Classes (`breadboard_drawing.py`, `breadboard_keep.py`)
 
 ```
-PartPlacement -- FirstFitPartPlacement -- KeepMovesFirstFitPartPlacement   slice 1; place() now also keeps a resistor
-JumperPlacement                  NEW Strategy: place_jumpers(layout, ledger) -> layout; no-op; end of plan()
-  `-- KeepMovesJumperPlacement   NEW: an earlier wire takes the holes of the fresh jumper with the same two rows
-Jumper(one, other, step, route=())   gains route; the renderer writes it
-HoleLedger(surface, taken=None)      gains a start state: the holes of the parts, before any jumper
-EarlierWire(one, other, route)       NEW Value: one connection of the earlier file (EarlierDiagram.wires, .surface_id)
-name_jumpers_not_kept(earlier, layout, fresh, reasons, default_code) -> [NotKeptResult]    NEW function
+PartPlacement -- FirstFitPartPlacement -- KeepMovesFirstFitPartPlacement   slice 1; _reserve(.., pinned) also serves place()
+JumperPlacement                  NEW Strategy: place_jumpers(layout, ledger) -> layout; no-op; last line of plan()
+  `-- KeepMovesJumperPlacement   NEW: an earlier jumper takes the holes of the planned jumper with the same two rows
+Jumper(one, other, step, route=())   gains route (a tuple of strings); the Wokwi renderer writes it
+HoleLedger(surface, taken=None)      gains a start state
+EarlierJumper(one, other, route)     NEW Value: one connection of the earlier file (EarlierDiagram.jumpers, .surface_id)
+name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, default_code) -> [NotKeptResult]   NEW function
 ```
 
 ```
-plan(): parts, resistors -> bare = holes taken so far -> fresh jumpers (as today)
-        -> jumper_placement.place_jumpers(layout, HoleLedger(surface, bare))
-KeepMoves...: each earlier wire, in file order: its two rows = a fresh jumper's two rows, both holes free -> claim
-              (pass 1); then every other jumper takes its first free holes (pass 2); no wire kept = layout as it was
+plan(): parts, resistors -> parts_only = copy of the holes taken -> planned jumpers (as today)
+        -> jumper_placement.place_jumpers(layout, HoleLedger(surface, parts_only))
+KeepMoves...: pass 1, each earlier jumper in file order: both ends on holes, its two rows = an unmatched planned
+              jumper's two rows, both holes free -> claim them; pass 2: the others take their first free hole in
+              their rows (no new row); nothing kept = the layout as it was
 ```
 
 ## Names, checked against developing.md's table
@@ -71,26 +85,26 @@ KeepMoves...: each earlier wire, in file order: its two rows = a fresh jumper's 
 | --- | --- | --- |
 | `JumperPlacement` | Strategy | base, as `PartPlacement` |
 | `KeepMovesJumperPlacement` | Strategy | what varies, then the base's whole name |
-| `EarlierWire` | Value | facts of one connection, no actions |
+| `EarlierJumper` | Value | facts of one connection, no actions |
 | `name_jumpers_not_kept` | function | verb first, beside `name_parts_not_kept` |
-| `ROWS_NOT_JOINED`, `WIRE_OFF_HOLES`, `LEG_OFF_ROW` | codes | a code decides, `MESSAGES` is read (P260) |
-| `RESISTOR_NOT_KEPT` | removed | a resistor now has the codes of other parts |
+| `ROWS_NOT_JOINED`, `JUMPER_OFF_HOLES`, `PIN_OFF_ROW` | codes | a code decides, `MESSAGES` is read (P260) |
+| `RESISTOR_NOT_KEPT` | removed | a resistor has the codes of other parts |
 
 ## Choices made without the PO
 
-- A kept jumper keeps its holes, its route and its direction (a route is relative to its first end), and the step's
-  colour. A colour the person changed is lost.
-- A resistor keeps its place when that is legal for whatever `R1` is now (ids are by order, not stable). Jumpers
-  follow the rows, so no connection can change.
-- A jumper to a free row (a board pad, `claim_free_group`) is not matched by rows, so it is named when moved.
+- A kept jumper keeps its holes, route and direction (a route is relative to its first end) and the step's colour.
+- A resistor keeps its place when that is legal for whatever `R1` is now (ids are by order).
+- A malformed `connections` list makes the earlier file unreadable, as a malformed part does.
 
 ## Follow-ups to propose, not built
 
-1. Keep a jumper's colour. 2. Stable resistor ids from the circuit name. 3. Quiet naming of a jumper nobody moved when
-the circuit drops it. 4. Read a diagram exported from Wokwi's web editor. 5. A far-right kept part crowding the board.
+1. Keep a jumper's colour. 2. Stable resistor ids from the circuit name. 3. Name the jumpers of a part that moved, as
+one line. 4. Read a diagram exported from Wokwi's web editor. 5. Draw a route in the SVG. 6. A far-right kept part
+crowding the board.
 
 ## Docs and gates
 
-`--help` of `breadboard.py` and `check_spine.py`, `docs/guide/agents.md`, `commands/build.md`, `docs/guide/journey.md`.
-Mutation table `tests/mutations/p287-keep-jumpers.json`; re-anchor with `python3 tools/mutate.py --anchors`. Rows
-from AT420.
+`--help` of `breadboard.py` (line 25) and `check_spine.py`, the docstrings of `breadboard_keep.py` and
+`name_parts_not_kept`, `docs/guide/agents.md`, `commands/build.md`, `docs/guide/journey.md`. The old resistor test and
+`tests/mutations/p273-keep-moves.json` row 14 change. Mutation table `tests/mutations/p287-keep-jumpers.json`;
+re-anchor with `python3 tools/mutate.py --anchors`. Observation rows from AT420.
