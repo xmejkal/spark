@@ -2,7 +2,6 @@
 """Read the board on USB without changing it, compare it with the project's board record, and print a token (P219)."""
 
 import argparse
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -65,7 +64,7 @@ def main(argv=None, run=subprocess.run):
 
 
 def _print_json(envelope):
-    print(json.dumps(envelope, ensure_ascii=False, separators=(",", ":")))
+    print(board_envelope.dumps(envelope))
 
 
 if __name__ == "__main__":

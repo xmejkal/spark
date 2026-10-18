@@ -22,7 +22,6 @@ esptool and mpremote are the tools list's `flasher` and `board-shell`, which /sp
 """
 
 import argparse
-import json
 import shlex
 import subprocess
 import sys
@@ -142,17 +141,17 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
                         "stderr (docs/guide/agents.md)")
     args = parser.parse_args(argv)
-    seen = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": "plan",
+    reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
             "ignore_older_runs": args.ignore_older_runs, "dry_run": args.dry_run}
-    code = _deploy(args, run or subprocess.run, consent, probe, clock, grant_service, sys.stderr if args.json else None, seen)
+    code = _deploy(args, run or subprocess.run, consent, probe, clock, grant_service, sys.stderr if args.json else None, reached)
     if args.json:
-        print(json.dumps(board_envelope.deploy_envelope(seen, code), ensure_ascii=False, separators=(",", ":")))
+        print(board_envelope.dumps(board_envelope.deploy_envelope(reached, code)))
     return code
 
 
-def _deploy(args, run, consent, probe, clock, grant_service, out, seen):
+def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
     """The deploy main parses for. Every line a person reads goes to `out` (None: stdout). What `--json` reports it puts in
-    `seen`. Returns the exit code."""
+    `reached`. Returns the exit code."""
     def say(line):
         print(line, file=out)
 
@@ -161,10 +160,10 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, seen):
     try:
         planned = service.plan(args.port)
     except (DeployError, tools.ToolProblem) as cannot:
-        seen["refusal"] = str(cannot)
+        reached["refusal"] = str(cannot)
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    seen["plan"] = planned
+    reached["plan"] = planned
     for note in planned.notes:
         say("  note: %s" % note)
     if args.dry_run:
@@ -173,39 +172,42 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, seen):
         say("  " + WATCH % shlex.join(service.platform.make_connection(planned.mpremote, args.port).repl_command()))
         return EXIT_OK
     try:
-        seen["stage"] = "look"
-        report = seen["report"] = service.look(args.port)
+        reached["stage"] = board_envelope.STAGE_LOOK
+        report = reached["report"] = service.look(args.port)
         print("\n".join(board_look.report_lines(report, token=False)), flush=True, file=out)
-        seen["port"] = report.port
+        reached["port"] = report.port
         consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), out)
-        seen["consent"] = consent
-        seen["yes_kind"] = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
-        seen["stage"] = "gate"
+        reached["consent"] = consent
+        reached["yes_kind"] = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
+        reached["stage"] = board_envelope.STAGE_GATE
         planned = service.deploy(report, args.token, consent, lambda line: show_line(line, out))
     except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
         if isinstance(cannot, FlashError):
-            seen["stage"] = "flash"
-        seen["refusal"] = str(cannot)
+            reached["stage"] = board_envelope.STAGE_FLASH
+        reached["refusal"] = str(cannot)
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
-        seen.update(refusal=str(shut), next_op=shut.next_op)
-        if shut.next_op == deploy_gate.NEXT_YES:
-            seen["run_in_terminal"] = rerun_line(args, report.port)
+        reached.update(refusal=str(shut), next_op=shut.next_op)
+        if shut.next_op == deploy_gate.NEXT_DEPLOY:
+            reached["run_in_terminal"] = rerun_line(args, report.port)
             if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:
-                seen["grant_argv"] = grant_argv(args, report.port, "60")
+                reached["grant_argv"] = grant_argv(args, report.port, "60")
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code
-    seen["stage"] = "verify"
-    result = seen["result"] = service.verify(report, planned, lambda line: show_line(line, out))
+    reached["stage"] = board_envelope.STAGE_VERIFY
+    result = reached["result"] = service.verify(report, planned, lambda line: show_line(line, out))
     ready = result.ready
-    seen["refusal"], seen["person_action"] = ready.sentence, download_mode.PRESS_RESET
+    reached["person_action"] = download_mode.PRESS_RESET
+    if ready.verdict != ready_check.SEEN:
+        reached["refusal"] = ready.sentence
     say("  %s\n  %s: %s\n  board log: %s" % (result.facts_line, ready.verdict, ready.sentence, result.log_path))
     try:
-        seen["store_record"] = str(service.record(result, consent))
-        say("  store record: %s" % seen["store_record"])
+        reached["store_record"] = str(service.record(result, consent))
+        say("  store record: %s" % reached["store_record"])
     except (OSError, store.StoreProblem) as cannot:
-        seen["store_record_error"] = str(cannot)
+        reached["store_record_error"] = str(cannot)
+        reached["notes"] = ["the store record was not written: %s" % cannot]
         say("  store record: not written: %s" % cannot)
     if ready.verdict == ready_check.UNKNOWN:
         say("  " + WATCH % shlex.join(result.repl_command))

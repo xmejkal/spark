@@ -13,14 +13,14 @@ sonnet) are recorded here with what each changed.
 
 - New library module `scripts/board_envelope.py`. `look_envelope(report)` and `deploy_envelope(run_result, code)` return the
   `outcomes.envelope` dict. `main()` in both scripts only parses, prints and maps the exit code.
-- `main` keeps a dict `seen` (plan, look, token given, `consent.who`, `DeployResult`, store record path or why not,
+- `main` keeps a dict `reached` (plan, look, token given, `consent.who`, `DeployResult`, store record path or why not,
   one `refusal` sentence) and passes it to `deploy_envelope` at each exit. No new class (round 1: a mutable "Result" breaks
   the table).
 - No `redirect_stdout`. `main` picks `out = sys.stderr if args.json else sys.stdout` and every print takes `file=out`,
   `TerminalConsentStrategy` gets `stdout=out`. The envelope alone goes to stdout. Argparse errors and a raise inside
   `verify` stay as today (usage / traceback, no envelope): a row, not this PR.
 - Status by construction: code 0 gives no problems, 1 gives `problems`, 2 gives `unchecked`, so `EXIT_FOR[status] == code`.
-- `GateClosedError` gets `next_op` (None, `NEXT_YES` for "no terminal", `NEXT_LOOK` for no token or "changed since the look"),
+- `GateClosedError` gets `next_op` (None, `NEXT_DEPLOY` for "no terminal", `NEXT_LOOK` for no token or "changed since the look"),
   and `DeployResult` gets `reset_seen` (None, True or False). Both replace a comparison of English text (no magic strings).
 - `look_envelope` builds `problems` from the same lists `LookReport.status` uses (differing fields + stops) and `unchecked`
   from unknown fields + no token, and reuses `LookReport.to_dict()` as `data`. A flash that differs but fits is `problems`.
@@ -60,7 +60,7 @@ the top-level keys. Mutations in `tests/mutations/p213a-json.json`.
 
 ## Names (developing.md table)
 
-`board_envelope` (module: what it builds), `seen` (a dict, no class), `NEXT_YES`, `look_envelope`, `deploy_envelope` (named for what they
+`board_envelope` (module: what it builds), `reached` (a dict, no class), `NEXT_DEPLOY`, `look_envelope`, `deploy_envelope` (named for what they
 return), `needs_yes` (already `outcomes.step`'s word), `reset_seen`. One word each: the person's consent is `yes` in data and
 `needs_yes` in steps; the token is `token`; `refusal` is the one sentence that stopped the run.
 

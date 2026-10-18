@@ -28,12 +28,12 @@ def format_rerun_line(script, arguments):
 
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
-NEXT_YES, NEXT_LOOK = "deploy", "look"
+NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"
 
 
 class GateClosedError(Exception):
     """Error: why the gate stays shut, and `code`, the exit code: 1 for a stop the look found, 2 for everything else.
-    `next_op` is NEXT_YES (the person runs the deploy in their own terminal), NEXT_LOOK (the look is stale or missing)
+    `next_op` is NEXT_DEPLOY (the person runs the deploy in their own terminal), NEXT_LOOK (the look is stale or missing)
     or None (nothing to do but read the sentence)."""
 
     def __init__(self, why, code=EXIT_COULD_NOT_RUN, next_op=None):
@@ -73,7 +73,7 @@ class TerminalConsentStrategy(ConsentStrategy):
 
     def require_ready(self):
         if not (self.stdin.isatty() and self.stdout.isatty()):
-            raise GateClosedError(NO_TERMINAL % self.line, next_op=NEXT_YES)
+            raise GateClosedError(NO_TERMINAL % self.line, next_op=NEXT_DEPLOY)
 
     def ask(self, question):
         self.require_ready()
