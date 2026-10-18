@@ -5,7 +5,21 @@ Plan, 2026-10-18. Backlog item 1 of [the loop backlog](../2026-10-18-loop-backlo
 
 ## Council
 
-Not run yet. Round 1: tech lead and refuter. Round 2: tech lead and PO assistant.
+Round 1 ran (tech lead sonnet, refuter opus). The refuter could not break the build and rejected three worries (the
+`wokwi_power_pins` key change, `adc_gpio` `[0..6]`, the width/height swap). Changes it forced:
+
+- Fifteen stale tests, not 13: two need a board with no `power.io_volts`, the rest one with no `physical.header`. One test
+  helper, `board_missing(field)`, patches `boards.LIBRARY` to a copy of the library with that field deleted.
+- `footprint_module` null fails `boards.py --validate --for-fab`. The old SMD name pointed at no file, so the old pass was
+  false. Decision: the XIAO fails the fab gate until a footprint is drawn and checked; a test pins it; `how-it-works.md:203` says so.
+- The risk "fixtures already agree" was false: the fresh record puts the button on D10 and the LED on D8, the shipped one
+  on D7 and D10. A shipped build is never compared with the `button-light-xiao` fixtures.
+- The pin map gains `BUTTON_PULL = "up"`, because `power.internal_pull_up_ohms` now exists. A test pins it.
+- Stale record text is fixed: `//adc_gpio`, `//wokwi_power_pins`, `//pins_functions`, the `deep_sleep` cite (v5.5.2 is not kept; documents hold v5.5.1, and the comment says so).
+- Docs added: `commands/build.md:181`, `how-it-works.md:203`, `skills/spark-design/references/tscircuit-recipes.md:40-44`, `journey.md` transcripts.
+- `pins`: fresh also has `TX`, `RX`; they are not copied, `pad_aliases` reaches them. A test says so.
+
+Round 2: tech lead and PO assistant.
 
 ## Problem
 
@@ -41,8 +55,8 @@ its own `pin_roles` (USB and flash pins are cited there, and `live.py` reads the
    `breadboard.json`, plus one fact test per copied field (equals the fresh record's; every `cites.document` names an
    entry in `documents`; the three agreeing fields are equal in both records).
 2. Change `boards/xiao-esp32-c6.json` (data only) and the fresh fixture's `flash_mb` and `deep_sleep`.
-3. Thirteen tests use the shipped XIAO as the board "that stops at the footprint stage". It no longer does. Each gets a
-   scratch board with no `physical.header` (one helper) so the stop message stays tested.
+3. Fifteen tests use the shipped XIAO as a board that stops (no header, or no `io_volts`). It no longer does. Each
+   uses `board_missing(field)` so the stop message stays tested.
 4. Docs that say the XIAO stops: README lines 32-36, `docs/guide/journey.md`, `agents.md` (the `io_volts` example),
    `commands/idea.md`, `commands/init.md`, the Build row and `tools/journey.py` if the note changes
    (`tests/test_journey.py` guards).
@@ -52,5 +66,5 @@ its own `pin_roles` (USB and flash pins are cited there, and `live.py` reads the
 
 - The 13 stale tests are the real cost. If a scratch board per test is not simple, one fixture board in `tests/data`.
 - `adc_gpio` `[0..6]`: `assign_pins` reads it against the header pin map, so GPIO 3-6 never match. A test pins it.
-- Placement reads `wokwi_size_px`: 70x90 becomes 68x88. The breadboard fixtures were built from the fresh record, so they
-  already agree.
+- Placement reads `wokwi_size_px`: 70x90 becomes 68x88. Only `emit_footprint` and `place()` read it.
+- `breadboard.json` and `pins.py` of a shipped-board build differ from the fixtures' (other pins, `BUTTON_PULL`).
