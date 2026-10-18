@@ -8,7 +8,24 @@
 
 ## Council
 
-(Filled in after each round.)
+Round 1 (2026-10-18): tech lead (Sonnet) and the refuter (Opus). The refuter reproduced point 1. What it changed:
+
+- Exception scope stays as on main. A fault after the flash is a traceback today (`find_passed_log`, `tools.find`), so
+  `deploy()` ends when the flash ends and main calls `verify()` outside its `try`. One `try` in main covers `look`,
+  `choose_consent` and `deploy`, with the same handlers in the same order. The brief's `deploy(...) -> DeployResult`
+  becomes: `deploy` returns nothing, `verify` returns the `DeployResult`. A golden case pins the traceback.
+- `run = run or subprocess.run` stays in main. `console_probe` is called inside `verify`, only when ready is unknown.
+- `FirmwarePlatform` calls `tools.find` through the module (tests patch it) and caches `shell_command()`, so
+  `tools.find` is called as often as before. `look()` delegates to `board_look.looker` (a `LookService`).
+- The tests that patch moved names are listed: `deploy.plan` becomes `DeployService.plan` (test_deploy_gate:226),
+  `deploy.file_hashes` becomes `deploy_service.file_hashes` (:435), `deploy.BoardLog`, `deploy.DeployPlan` and
+  `deploy.DeployError` change module. The mutation tables with 49 entries on deploy.py get `file` and `find` re-anchored.
+- The store record is written in `verify`, before main prints its lines; on main the board log line prints first.
+  Only an exception other than OSError or StoreProblem shows the difference; it is named in the PR.
+- Declined: splitting the PR (the moves are mechanical and the golden diff covers them); committing the golden harness
+  (the existing tests already assert these lines; the harness stays scratch and the PR body gives its result).
+- `FirmwarePlatform` gets a row in developing.md's table ("Platform": a bundle of the parts that depend on the
+  firmware's language; factory methods named for what they return). `ignore_older_runs` is constructor state.
 
 ## What moves
 
@@ -51,7 +68,7 @@ DeployService  (Service)                                         scripts/deploy_
   __init__(project, platform, ignore_older_runs=False, run=subprocess.run, clock=None, probe=None)
   plan(port=None) -> DeployPlan      image checks, then the tools; raises DeployError / ToolProblem
   look(port=None) -> LookReport      board_look.looker(project, run).run(...)
-  deploy(report, token, consent, say) -> DeployResult             gate, plan again, token, flash, then verify
+  deploy(report, token, consent, say)                             gate, plan again, token, flash; raises, returns None
   verify(report, consent, say) -> DeployResult                    facts, ready, recovery, board log, store record
 DeployResult  (Result, namedtuple)   facts_line, ready, board_log, store_record, store_problem, repl_command
 DeployPlan, BoardLog                 move with the service, unchanged
@@ -68,8 +85,9 @@ main            service            platform / look / gate / board
  |-deploy(report, token, consent, say)->|-require_open_gate, say("yes:")
  |             |-plan(report.port), token check, require_ready
  |             |-run(command) x2, say("running:") before each
- |             |-verify: facts, ready, probe, say(R press), log, record
- |<-DeployResult  (or DeployError / GateClosedError)
+ |<-None  (or DeployError / GateClosedError; main's one try ends here)
+ |-verify(report, consent, say)->|-facts, ready, probe, say(R press), log, record
+ |<-DeployResult
  | print facts line, verdict, board log, store record; exit 0, 1 or 2
 ```
 
