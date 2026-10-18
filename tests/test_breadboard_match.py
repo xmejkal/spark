@@ -27,7 +27,7 @@ import breadboard_keep  # noqa: E402
 import breadboard_steps  # noqa: E402
 import check_spine  # noqa: E402
 from breadboard_drawing import Jumper, WokwiGeometry  # noqa: E402
-from breadboard_match import JOINED_TO_OTHER, NOT_JOINED, DrawnNets  # noqa: E402
+from breadboard_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 GEOMETRY = WokwiGeometry.load()
@@ -82,6 +82,15 @@ class TheCheckTest(unittest.TestCase):
         # 1.r (row 14b) is one contact with 1.l (row 14t, TactileButton A); a wire from it to the LED's row shorts them
         found = self.differences(with_jumpers(self.layout, ("14b.j", "18b.i")))
         self.assertEqual([one.code for one in found], [JOINED_TO_OTHER])
+
+    def test_a_point_joined_to_a_pin_no_point_names_is_a_short(self):
+        # row 17b holds GND (LED K); the board's 5V pad is in no point
+        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        five = board.holes["5V"]
+        beside = next(hole.name for hole in HOLES.values() if hole.group == five.group and hole.name != five.name)
+        found = self.differences(with_jumpers(self.layout, ("17b.i", beside)))
+        self.assertEqual([(one.code, one.why) for one in found],
+                         [(JOINED_TO_UNUSED, "board GND is joined to board 5V in the drawing, which no point names")])
 
     def test_board_pads_joined_through_a_free_row_match_and_a_moved_setup_jumper_does_not(self):
         named = {end.pin for point in self.points for end in point.ends if end.component == breadboard_steps.THE_BOARD}

@@ -500,7 +500,7 @@ holes in its step's color, with its step number at the corner. Pictures from onl
 sure that the drawing joins the same pins as the points in `circuit.json`. It follows each jumper and the button's two
 sides of one contact. When they match, it says nothing. When an end differs, the screen prints one line for it, for
 example `drawing differs: R1 end 1 is not joined to board D8 in the drawing`, and the sheet tells you to wire from
-its steps. The drawing is still written. Only the pins that the points name are checked.
+its steps. A jumper from GND to the 5V pad is named too, because no point names 5V. The drawing is still written.
 
 Since 2026-10-16 the build also writes `page.html`, the same circuit in three tabs: the breadboard, the schematic
 and the PCB ([P271](https://github.com/xmejkal/spark/issues/307)). Open it in a browser on your Mac and click a tab.

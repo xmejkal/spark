@@ -185,11 +185,12 @@ These write:
   The build checks the drawing against the points (P279, `breadboard_match.py`). `DrawnNets` joins the rows of each
   jumper and the pins that are one inside a part (`joined_pins` in `data/wokwi-geometry.json`, the pushbutton's two sides
   of a contact). `PlannedLayout.differs` and `WriteResult.differs` list `DrawingDiffersResult(subject, code, why)`. The
-  codes are `not-joined` (an end is not in its point's net) and `joined-to-other` (two points share a net, a short).
+  codes are `not-joined` (an end is not in its point's net), `joined-to-other` (two points share a net, a short) and
+  `joined-to-unused` (a point is joined to a pin no point names, such as board 5V, also a short).
   `breadboard.py` prints each as `drawing differs: …` on stderr, the sheet says the first and a count of the rest under the drawing's line, and
   `check_spine --keep` adds `{file: breadboard.json, did: "drawing differs", code, subject, why}`. The files are still
-  written and the exit code does not change: wire from the steps, not from the drawing. Only the pins that the points
-  name are checked, so a missing `drawing differs` entry is not proof that no other pin shares a row.
+  written and the exit code does not change: wire from the steps, not from the drawing. A pin of the contact a point
+  names (the pushbutton's other side) counts as that point's. Only the drawn layout is checked, not a breadboard on the bench.
   A rebuild lists what to change on the bench (P300, `breadboard_changes.py`). `breadboard.write()` reads
   `wiring-record.json`, which holds each step of the last sheet, before it writes anything. It compares the record with the
   new steps, writes the sheet, and then writes the new record. The sheet gets a section `### Changes since the last build`
