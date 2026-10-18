@@ -22,7 +22,8 @@ not in the repository.
 - Open to merge: median 24 min, 85th percentile 190 min; 20 of 51 under 15 min. Longest: #296 494 min (overnight),
   #343 449 min (P239 PR 6), #261 416 min, #321 380 min, #334 and #335 264 min each.
 - Merge commits of main into a branch since 10-15 (`git log origin/main --since=2026-10-15`, grep "Merge ... main"):
-  15. Ten of their messages name observation rows (INDEX.md) as what the merge kept or renumbered.
+  16 (the refuter's count; the first read missed `bf5611c` "Merge main"). 11 of their messages name observation rows
+  (INDEX.md), 9 of them rows only (`c8fe3d7` also adds tests, `44a095b` also keeps doc lines).
   Examples: `ac4e965` "rows AT420-AT442 kept beside AT450-AT454", `d47b2c9` "rows renumbered AT383-AT386".
 
 ## Agent logs (this session's subagent JSONL, 135 agents, 2026-10-17 11:10 to 2026-10-18 08:49 UTC)
@@ -37,11 +38,12 @@ read in a file, not only a git conflict.
 | mutation-tester | 11 | 110 | 193 | 3.8 | 0 | 2 | 0 | 1 |
 | Plan | 6 | 34 | 9 | 1.3 | 0 | 1 | 0 | 0 |
 | code-reviewer | 3 | 42 | 2 | 1.8 | 0 | 0 | 0 | 0 |
+| claude-code-guide | 1 | 8 | 1 | 0.4 | 0 | 0 | 1 | 0 |
 | total | 135 | 3338 | 1438 | 506 | 14 | 29 | 17 | 18 |
 
 - Largest single run: P239 PR 6 LookReport, 460 tool calls, 41 min, 103 M input tokens (the inbox: most of it went on
   the merge after P242 touched the same files). Next: P242 188 calls 58 M; P273 150 calls 42 M; P287 110 calls 38 M.
-- Push refusals by run: P239 PR 7 6, P287 3, P288 2, P242 1, P213a 1, P272 plan 1.
+- Failed pushes by run (hook refusals and stale-branch rejects together): P239 PR 7 6, P287 3, P288 2, P242 1, P213a 1, P272 plan 1.
 - Rate-limit hits by run: P213a 4, hygiene sweep 4, P239 PR 8 3, P294 2, others 1 each.
 - 287 tool results flagged as errors (164 general-purpose, 102 refuter, 20 mutation-tester).
 

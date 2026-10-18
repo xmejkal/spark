@@ -3,9 +3,9 @@ Facts come from facts.md, the retro inbox, RETROSPECTIVES.md and scrum/README.md
 
 ## 1. Why retros stopped after R8
 
-- Cause: the only trigger is an epic's last story (README cadence table). The epic that would fire it, P235 #224,
-  is still in Build at slice Live 0. So the trigger has not fired in 17 days, while about 100 PRs merged
-  (51 of them since 10-15).
+- Cause: the only trigger is an epic's last story (README cadence table). The epic that fires it, P235 #224,
+  is still in Build at slice Live 0. So the trigger has not fired in 17 days, while 134 PRs merged
+  (the refuter's count; 51 of them since 10-15).
 - The backup trigger is the weekly look with one retro line. It has no command (README: "has no command", posted by
   hand). A step done by hand, with no owner and no output check, is skipped under load. I found no weekly-look
   retro line in the files I read (opinion: it was not done, so the net had a hole).

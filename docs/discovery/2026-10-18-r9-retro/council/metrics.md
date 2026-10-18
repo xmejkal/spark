@@ -39,7 +39,7 @@ issues (createdAt, closedAt, updatedAt), read 2026-10-18.
 - 10 cards with counts: 213 planted, 25 escaped (11.7%), 23 real gaps. P272 gave 6 real gaps of 12; P247 gave 0 of 12 (F).
 - Cost: 11 mutation-tester runs, 193 min, 110 calls, 3.8 M tokens (L). That is 13% of agent minutes and under 1% of tokens.
 - Yield: 193 / 23 = 8.4 min per real gap. Tokens are cheap, so the cost is wall time.
-- Unknown: how many of the 23 a lens or the refuter would have caught anyway. Without that, the data supports keeping it for logic changes only. It does not support dropping it.
+- Unknown: how many of the 23 a lens or the refuter catches anyway. Without that, the data supports keeping it for logic changes only. It does not support dropping it.
 
 ## 5. What to read at the next retro
 
