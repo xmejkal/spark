@@ -20,10 +20,10 @@ What it writes, each time from scratch (it reads back only the parts you moved i
     line, as the check list after wiring (breadboard_steps.py holds the step rule);
   - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
     to paste into a new project on wokwi.com; and breadboard.svg (P268), the same layout as a picture the sheet
-    shows, each part as spark's own pictogram (data/pictograms/). A part you moved in breadboard.json stays where
-    you put it at the next build (P273), if it still fits; a part it cannot keep is named on stderr, with why. A
-    resistor and a jumper are not kept yet: the jumpers follow the parts, and a resistor is named when its place
-    differs from the one spark would give it. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
+    shows, each part as spark's own pictogram (data/pictograms/). A part, a resistor or a jumper you moved in
+    breadboard.json stays where you put it at the next build (P273, P287), if it still fits: a resistor with its
+    joined pin in the row it joins, a jumper between the two rows the new layout joins (it keeps its holes and bends,
+    not its color). What it cannot keep is named on stderr, with why. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
     today), and rails are not drawn yet; otherwise the sheet says what is missing, and an old drawing is removed;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
@@ -416,12 +416,14 @@ def _plan_once(read, earlier_path=None):
             breadboard_keep.MESSAGES[breadboard_keep.UNREADABLE] % earlier.why_unread)])
     catalog = _describe_parts(read, geometry)
     placement = breadboard_keep.KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)
+    jumpers = breadboard_keep.KeepMovesJumperPlacement(geometry, earlier)
     try:
-        layout = breadboard_drawing.BreadboardPlanner(geometry, catalog, placement).plan(read.steps)
+        layout = breadboard_drawing.BreadboardPlanner(geometry, catalog, placement, jumpers).plan(read.steps)
         default = None
     except breadboard_drawing.NotDrawn:
         layout, default = fresh, breadboard_keep.NO_ROOM
     named = breadboard_keep.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
+    named += breadboard_keep.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, default)
     return PlannedLayout(layout, None, named)
 
 
