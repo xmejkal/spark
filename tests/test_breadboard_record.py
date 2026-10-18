@@ -5,7 +5,9 @@ beside the sheet, compares it with the new steps, and says each difference in th
     python3 -m unittest tests.test_breadboard_record
 """
 
+import argparse
 import contextlib
+import shutil
 import io
 import json
 import os
@@ -22,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import breadboard  # noqa: E402
 import breadboard_changes  # noqa: E402
+import check_spine  # noqa: E402
 from test_breadboard_keep import BUTTON_ONLY, FULL, LED_ONLY, build, change_requirements, new_project  # noqa: E402
 
 SECTION = "### Changes since the last build"
@@ -134,6 +137,55 @@ class WriteOrderTest(unittest.TestCase):
         with mock.patch.object(breadboard, "_plan_layout", side_effect=breadboard.breadboard_drawing.NotDrawn("no room")):
             build(project)
         self.assertTrue(all(step["color"] is None for step in record(project)["steps"]))
+
+
+class CheckSpineTest(unittest.TestCase):
+    """`check_spine --keep` carries each change as a kept entry, and --json carries the entry's fields."""
+
+    def keep(self, project, variant, stages=None, as_json=True):
+        work = Path(tempfile.mkdtemp())
+        (work / "dist" / "board").mkdir(parents=True)
+        shutil.copy(variant / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        args = argparse.Namespace(json=as_json, keep=project, requirements=str(project / "requirements.json"))
+        stages = stages or [check_spine.Stage("build", check_spine.OK, "fine")]
+        with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}), contextlib.redirect_stdout(
+                io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.report(stages, args, work)
+        return (json.loads(out.getvalue())["kept"] if as_json else None), err.getvalue()
+
+    def rebuilt(self):
+        project = new_project(BUTTON_ONLY)
+        build(project)
+        change_requirements(project, FULL)
+        return project
+
+    def test_each_change_is_a_kept_entry_with_its_fields(self):
+        project = self.rebuilt()
+        kept, said = self.keep(project, FULL)
+        changed = [entry for entry in kept if entry["did"] == "changed"]
+        self.assertEqual([entry["change"] for entry in changed], ["added"] * 5 + ["rerouted"])
+        self.assertEqual(changed[0], {"file": str(project / "breadboard.md"), "did": "changed", "change": "added",
+                                      "subject": "LedRed5mm", "color": None,
+                                      "why": "Put LedRed5mm in the breadboard."})
+        self.assertEqual(changed[2]["color"], "cyan")
+        self.assertIn("  changed: Put LedRed5mm in the breadboard.", said)
+
+    def test_json_keeps_every_field_of_a_kept_entry_but_the_line(self):
+        project = new_project(FULL)
+        build(project)
+        from test_breadboard_keep import edit, move
+        edit(project, move("LedRed5mm", dy=-500))
+        kept, _ = self.keep(project, FULL)
+        named = next(entry for entry in kept if entry["did"] == "move not kept")
+        self.assertEqual((named["part"], named["code"]), ("LedRed5mm", "pin-off-holes"))
+        self.assertNotIn("line", named)
+
+    def test_a_build_that_did_not_finish_keeps_the_record(self):
+        project = self.rebuilt()
+        earlier = (project / breadboard_changes.WiringRecord.FILE_NAME).read_text()
+        self.keep(project, FULL, [check_spine.Stage("build", check_spine.PROBLEMS, "1 error")])
+        self.assertFalse((project / "breadboard.md").exists())
+        self.assertEqual((project / breadboard_changes.WiringRecord.FILE_NAME).read_text(), earlier)
 
 
 if __name__ == "__main__":

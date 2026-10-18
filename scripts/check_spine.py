@@ -91,6 +91,8 @@ PIN_MODULE = Path("firmware") / "pins.py"
 REQUIREMENTS_STAGE = "requirements"
 #: The `did` of a kept entry for a part the person moved in breadboard.json that the build could not keep (P273).
 MOVE_NOT_KEPT = "move not kept"
+#: The `did` of a kept entry for one thing a rebuild asks a person to change on the bench (P300).
+CHANGED = "changed"
 
 
 class Stage:
@@ -786,6 +788,10 @@ def keep_breadboard(requirements, destination, stages=()):
     if written.why:
         kept += [{"file": str(path), "did": "not written", "why": written.why,
                   "line": "no %s: %s" % (renderer.NOUN, written.why)} for path, renderer in drawings]
+    # what the person changes on the bench since the last sheet (P300)
+    kept += [{"file": str(written.sheet), "did": CHANGED, "change": change.code, "subject": change.name,
+              "color": change.color, "why": breadboard.CHANGE_LIST.line(change),
+              "line": "%s: %s" % (CHANGED, breadboard.CHANGE_LIST.line(change))} for change in written.changes]
     # a part the person moved in breadboard.json that the build could not keep (P273)
     kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
               "part": named.subject, "code": named.code, "why": named.why,
@@ -955,7 +961,7 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
         said.update({"unserved": requirements["unserved"]} if left_off(requirements) else {})
         if kept is not None:
-            said["kept"] = [{key: entry[key] for key in ("file", "did", "why")} for entry in kept]
+            said["kept"] = [{key: value for key, value in entry.items() if key != "line"} for entry in kept]
         print(json.dumps(said))
     else:
         sys.stdout.write(render(stages, code, left_off(requirements)))
