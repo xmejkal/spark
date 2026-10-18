@@ -104,7 +104,7 @@ class LookJsonTest(JsonCase, LookScriptCase):
             code, said, err = self.go("--json", text="x", esptool="c6-flash-id.txt", fail=True)
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["data"]["doctor"]["next_step"]), (2, "hold_boot"))
-        self.assertEqual(said["unchecked"][0]["fix"], board_doctor.MESSAGE_FOR["hold_boot"])
+        self.assertEqual(said["unchecked"][0]["fix"], "hold the board's BOOT (B) button, press and release R, release BOOT, and run it again. After it, press R once so the firmware starts")
 
     def test_status_is_the_exit_code_for_every_fixture(self):
         self.run_the_scenario()
