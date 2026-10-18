@@ -119,7 +119,7 @@ class EarlierDiagram:
                     if float(one["left"]) != 0 or float(one["top"]) != 0:
                         return cls({}, "has its breadboard moved from 0, 0, so its parts are not where the build "
                                        "draws them")
-                    on_surface, surface_id = True, one["id"]
+                    on_surface, surface_id = True, surface_id or one["id"]
                     continue
                 if not math.isfinite(float(one["left"])) or not math.isfinite(float(one["top"])):
                     raise ValueError("a position that is not a number")

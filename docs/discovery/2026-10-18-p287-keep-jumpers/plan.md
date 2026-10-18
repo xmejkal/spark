@@ -94,6 +94,8 @@ KeepMoves...: pass 1, each earlier jumper in file order: both ends on holes, its
   the first in the file wins. A connection to a part pin is named, not kept.
 - A malformed connection (not a list of strings) makes the earlier file unreadable, as a malformed part does; a missing
   `connections` key, or a connection with no route, is fine.
+- After a requirements change, a jumper whose rows the new circuit no longer joins is named even if nobody moved it
+  (the build cannot tell; the refuter's run found it, and a test says so).
 - A board-pad jumper whose free row moved because a part was added or removed is drawn fresh (known limit, follow-up 7).
 - A new part placed by first fit can take a kept resistor's holes before it is checked; the resistor is then named.
 

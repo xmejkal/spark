@@ -21,6 +21,7 @@
  {"file": "scripts/breadboard_keep.py", "name": "a connection with no route is refused", "find": "    route = item[3] if len(item) > 3 else []", "replace": "    route = item[3]"},
  {"file": "scripts/breadboard_keep.py", "name": "a connection that is not a list is read", "find": "    if not (isinstance(item, list) and len(item) >= 2 and all(isinstance(end, str) for end in item[:2])):", "replace": "    if False:"},
  {"file": "scripts/breadboard_keep.py", "name": "the breadboard's id stays on the ends", "find": "ends = [end[len(prefix):] if end.startswith(prefix) else end for end in item[:2]]", "replace": "ends = list(item[:2])"},
+ {"file": "scripts/breadboard_keep.py", "name": "a second breadboard changes the id of the first", "find": "surface_id or one[\"id\"]", "replace": "one[\"id\"]"},
  {"file": "scripts/breadboard_keep.py", "name": "the jumper's subject swaps its ends", "find": "return \"jumper %s-%s\" % (self.one, self.other)", "replace": "return \"jumper %s-%s\" % (self.other, self.one)"},
  {"file": "scripts/breadboard_keep.py", "name": "a connection to a part pin is looked up as a hole when the plan has no room", "find": "        if wire.one not in holes or wire.other not in holes:", "replace": "        if False:"},
  {"file": "scripts/breadboard_keep.py", "name": "a jumper the fallback layout lacks is not named", "find": "(default_code, default_code and MESSAGES[default_code])", "replace": "(None, None)"},

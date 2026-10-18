@@ -199,6 +199,18 @@ class EscapedMutantsTest(unittest.TestCase):
 
 
 class QuietTest(unittest.TestCase):
+    def test_a_second_breadboard_in_the_file_does_not_change_the_id_of_the_first(self):
+        project = built_full()
+        edit(project, lambda drawn: drawn["parts"].append(dict(drawn["parts"][0], id="bb2")))
+        self.assertEqual(build(project).not_kept, [])
+
+    def test_a_circuit_change_names_a_jumper_whose_rows_it_no_longer_joins_even_if_nobody_moved_it(self):
+        """A known limit: after a requirements change spark cannot tell this jumper from one the person moved."""
+        project = new_project(BUTTON_ONLY)
+        build(project)
+        change_requirements(project, FULL)
+        self.assertEqual(codes(build(project)), {"jumper 8b.j-12t.a": "rows-not-joined"})
+
     def test_a_requirements_change_names_no_jumper_nobody_moved(self):
         project = built_full()
         change_requirements(project, BUTTON_ONLY)

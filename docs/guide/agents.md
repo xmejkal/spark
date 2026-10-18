@@ -179,7 +179,7 @@ These write:
   the new layout draws (`KeepMovesJumperPlacement`), so a kept jumper never changes what is connected.
   `WriteResult.not_kept` lists `NotKeptResult(subject, code, why)` for each part or jumper (`jumper 4b.j-24b.f`) it could not
   keep (codes in `breadboard_keep.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under
-  `kept` with `did` `move not kept`, `part`, `code` and `why`. A jumper of a part that moved or went is not named: the part's own line explains it. A build
+  `kept` with `did` `move not kept`, `part`, `code` and `why`. A jumper of a part that moved or went is not named: the part's own line explains it. After a requirements change, a jumper whose rows the new circuit no longer joins is named even if nobody moved it, because spark cannot tell the two apart. A build
   that did not finish (failed or refused) leaves a `breadboard.json` that holds parts, with a `left alone` entry, since it
   may hold moves; one that holds none, or is not readable, is removed. Never read a missing `not kept` line as proof that a move was kept: read the file.
   Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
