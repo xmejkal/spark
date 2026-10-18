@@ -11,9 +11,9 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX = ROOT / "docs" / "observations" / "INDEX.md"
 ROWS = ROOT / "docs" / "observations" / "rows"
-INDEX_ROWS = 1067  # frozen on 2026-10-18 at AT459; an old row's status may change, but no row is added
+INDEX_LINES = 1076  # every table line, frozen on 2026-10-18 at AT459; a status may change, but no row is added
 HEADER = "| # | claim | source | status | evidence / where it went |"
-FILE_NAME = re.compile(r"[a-z0-9-]+\.md")
+FILE_NAME = re.compile(r"(p\d+|\d{4}-\d\d-\d\d)-[a-z0-9-]+\.md")  # card or date, then topic
 
 
 def section(text, heading):
@@ -25,7 +25,14 @@ def section(text, heading):
 
 
 def table_rows(lines):
-    return [line for line in lines if line.startswith("| ") and not line.startswith(("| ---", "| # ", "| status "))]
+    return [line for line in lines
+            if line.startswith("|") and not re.match(r"\|\s*(---|# |status )", line)]
+
+
+def cells(row):
+    """A row's cells; a `|` inside backticks, as in code, stays inside its cell."""
+    row = re.sub(r"`[^`]*`", lambda code: code.group().replace("|", "/"), row.strip().strip("|"))
+    return [cell.strip() for cell in row.split("|")]
 
 
 def statuses(index_text):
@@ -36,14 +43,17 @@ def statuses(index_text):
 
 def rows_file_problems(name, text, words):
     """What breaks the one form of a rows file, or nothing."""
-    problems = [] if FILE_NAME.fullmatch(name) else [f"{name}: name is not [a-z0-9-]+.md"]
+    problems = [] if FILE_NAME.fullmatch(name) else [f"{name}: name is not <card or date>-<topic>.md"]
     if HEADER not in text.splitlines():
         problems.append(f"{name}: no header {HEADER}")
-    for number, row in enumerate(table_rows(text.splitlines()), 1):
-        cells = [cell.strip() for cell in row.strip("|").split("|")]
-        if cells[0] != str(number):
-            problems.append(f"{name}: row {number} is numbered {cells[0]!r}")
-        if len(cells) != 5 or not cells[3].split(" ")[0].strip(",:;") in words:
+    rows = table_rows(text.splitlines())
+    if not rows:
+        problems.append(f"{name}: no row")
+    for number, row in enumerate(rows, 1):
+        row_cells = cells(row)
+        if row_cells[0] != str(number):
+            problems.append(f"{name}: row {number} is numbered {row_cells[0]!r}")
+        if len(row_cells) != 5 or row_cells[3].split(" ")[0].strip(",:;*`") not in words:
             problems.append(f"{name}: row {number} has no status word from {words}")
     return problems
 
@@ -57,7 +67,7 @@ class ObservationRowsTest(unittest.TestCase):
         self.assertEqual(self.words, ["raised", "verified", "acted", "rejected", "closed"])
 
     def test_the_index_takes_no_new_rows(self):
-        self.assertEqual(len(table_rows(section(self.index, "## The table"))), INDEX_ROWS,
+        self.assertEqual(sum(line.startswith("|") for line in self.index.splitlines()), INDEX_LINES,
                          "new rows go to docs/observations/rows/<card>-<topic>.md, not INDEX.md")
 
     def test_each_rows_file_has_the_one_form(self):
@@ -67,11 +77,15 @@ class ObservationRowsTest(unittest.TestCase):
             self.assertEqual(rows_file_problems(rows_file.name, rows_file.read_text(), self.words), [])
 
     def test_the_form_check_refuses_a_gap_a_bad_word_and_a_bad_name(self):
-        text = f"{HEADER}\n| --- | --- | --- | --- | --- |\n| 1 | a | b | raised | c |\n| 3 | a | b | maybe | c |\n"
-        self.assertEqual(rows_file_problems("P1_x.md", text, self.words), [
-            "P1_x.md: name is not [a-z0-9-]+.md",
-            "P1_x.md: row 2 is numbered '3'",
-            f"P1_x.md: row 2 has no status word from {self.words}"])
+        text = f"{HEADER}\n| --- | --- | --- | --- | --- |\n| 1 | `a|b` | b | **raised** | c |\n|3| a | b | maybe | c |\n"
+        self.assertEqual(rows_file_problems("rows.md", text, self.words), [
+            "rows.md: name is not <card or date>-<topic>.md",
+            "rows.md: row 2 is numbered '3'",
+            f"rows.md: row 2 has no status word from {self.words}"])
+
+    def test_a_rows_file_needs_a_row(self):
+        self.assertEqual(rows_file_problems("p1-x.md", f"{HEADER}\n| --- | --- | --- | --- | --- |\n", self.words),
+                         ["p1-x.md: no row"])
 
 
 if __name__ == "__main__":

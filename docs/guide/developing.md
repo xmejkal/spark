@@ -314,15 +314,18 @@ changes what it does, the change updates the journey guide and the README's *Wha
 ## Findings rows
 
 The findings of a PR's councils, reviews and refuters go in one rows file for that PR:
-`docs/observations/rows/<card>-<topic>.md`, for example `p296-rows-per-pr.md`. The file uses the header
+`docs/observations/rows/<card>-<topic>.md`, for example `p296-rows-per-pr.md`. A sweep with no card starts with its
+date, for example `2026-10-18-keep-current.md`. A second PR on the same card takes a topic of its own. The file uses the header
 `| # | claim | source | status | evidence / where it went |` and numbers its rows 1, 2, 3. Each status cell starts
-with one of the words in `docs/observations/INDEX.md`'s status table. A row is cited as `<file>#<n>`.
+with one of the words in `docs/observations/INDEX.md`'s status table, written plain. A row is cited as `<file>#<n>`.
 `docs/observations/INDEX.md` takes no new rows (P296, #358), and `tests/test_observation_rows.py` guards both rules.
 To list the unresolved rows (`raised` or `verified`), run this line from the repository root:
 
 ```
 /usr/bin/grep -nE '\| \**(raised|verified)' docs/observations/rows/*.md docs/observations/INDEX.md
 ```
+
+The line also lists one old row, A7, whose status is `acted` but whose last cell starts with `verified:`.
 
 ## Where the work is planned
 

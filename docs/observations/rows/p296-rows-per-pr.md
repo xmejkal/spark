@@ -14,3 +14,11 @@ The plan councils of P296 (#358). Plan: [`plan.md`](../../discovery/2026-10-18-p
 | 8 | The grep line missed the bold status cells (`**raised**`) that most INDEX.md rows use | tech lead, round 2 | acted | the line matches `\**`; 274 unresolved rows in INDEX.md on 2026-10-18 |
 | 9 | "Row count" had no definition, and INDEX.md holds a second table | tech lead, round 2 | acted | the count reads only `## The table`, without header and separator lines |
 | 10 | A branch name can hold `/`, and agent branch names say nothing about the card | senior, round 2 | acted | a rows file is named by card and topic |
+| 11 | The freeze counted only rows under `## The table` that start with `"| "`, so `|AT460|` or a new heading passed | refuter, PR | acted | the test counts every line that starts with `|` in INDEX.md: 1076 |
+| 12 | A row written `|2|`, a header-only file and the name `rows.md` passed the rows-file check | refuter, PR | acted | rows match `^|`, a file needs a row, the name is `<card or date>-<topic>.md` |
+| 13 | A `|` inside backticks split a cell and failed the row | refuter and reviewer, PR | acted | a `|` inside backticks stays in its cell; the test pins it |
+| 14 | The grep line lists A7, which is `acted` but whose last cell starts with `verified:` | refuter, PR | acted | `developing.md` says so |
+| 15 | Two PRs on the same card and topic would take the same file name | refuter, PR | acted | `developing.md`: a second PR takes a topic of its own |
+| 16 | "Unresolved" is not defined where INDEX.md uses it | reviewer, PR | acted | INDEX.md says `raised` or `verified` |
+| 17 | GLOSSARY.md has no entry for "rows file" | reviewer, PR | rejected | `developing.md` defines it; one place is enough |
+| 18 | Old plans and retros still say rows go to INDEX.md | reviewer, PR | closed | history, left as written |
