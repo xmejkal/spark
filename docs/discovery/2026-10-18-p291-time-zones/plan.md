@@ -13,7 +13,14 @@ Round 1 ran (Sonnet). It changed:
 - Accepted, not fixed: two deploys in the same second inside a DST fall-back hour share a log file name. It needs a
   deploy in a repeated hour twice in one second.
 
-Round 2 has not run yet.
+Round 2 ran (the refuter, Opus, reproduced under TZ=Europe/Prague and TZ=UTC). It changed:
+- No `.astimezone()` on the deploy moment: the default clock is already aware, and the call only served naive test
+  clocks, which made the tests depend on the machine's zone. The tests give an aware moment with a fixed offset.
+- `say_in_local_zone` reads only times with a zone: a grant with no zone is refused before it is printed.
+- Three anchors in `tests/mutations/p242-deploy-grant.json` (the `utc_now()` replacement, the `who` line, the
+  `expires_at` line) change with the code.
+- Step 4 shrinks: no guide lists `"deployed"` or says UTC. Rejected as a doubt: an old UTC grant still validates and
+  expires on time (aware times compare by instant).
 
 ## Context
 
@@ -33,7 +40,7 @@ def read_local_time():
 
 
 def say_in_local_zone(iso):
-    """A stored time, said in the machine's zone; a time with no zone is read as local."""
+    """A stored time with its zone, said in the machine's zone."""
     return datetime.datetime.fromisoformat(iso).astimezone().isoformat(timespec="seconds")
 ```
 
@@ -56,12 +63,12 @@ sequenceDiagram
    offset in a file name); a grant stored in UTC before this change still reads and still expires on time.
 2. `board_grant.utc_now` becomes `read_local_time` (callers: `board_grant`, `grant.py`, `live.py`, the tests and
    `tests/fakes.py`). `issue` writes `expires_at` as `(now + delta).astimezone()`.
-3. `DeployService`'s default clock is `board_grant.read_local_time`, and the moment is `.astimezone()`d
-   (`deploy_service.py:158`).
+3. `DeployService`'s default clock is `board_grant.read_local_time` (`deploy_service.py:158`). The deploy tests
+   give an aware moment with a fixed offset.
 3b. `say_in_local_zone` where a grant's times are printed or copied: `StandingConsentStrategy.who`, `describe`,
    `grant.py`'s two "until" lines. A test with a grant stored in UTC.
-4. Docs: `deploy.py --help` and `grant.py --help` if they say UTC; `docs/guide/agents.md` where the record's fields
-   are listed; rows `docs/observations/rows/p291-time-zones.md`.
+4. The docstrings that say UTC or `datetime.datetime.now` (`board_grant.py`, `deploy_service.py:70`,
+   `deploy.py:127`, `tests/fakes.py`), the three mutation anchors, and rows `docs/observations/rows/p291-time-zones.md`.
 
 Out of scope: rewriting old records; times in other scripts (`cost.py` reads the Claude log's own UTC stamps).
 
