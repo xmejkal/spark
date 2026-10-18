@@ -15,14 +15,24 @@ round 1 changed:
   `board_look` uses `EsptoolFlasher.BOOT_HINT`; its PR 7 comment goes. developing.md:247 is edited.
 - The helper is `build_esptool_prefix(tool, port=None, chip=None)` (it returns a prefix, not a command), `--chip` before
   `--port`. `test_board_look.py:194` pins the reader's line, `test_flasher.py` pins the order.
-- deploy.py must not name `EsptoolFlasher` (the refuter): `flasher.choose_flasher(tool, chip)` picks the subclass from
-  `tool.name`, and an unknown tool is a `DeployError` at plan time (the reader refuses it already).
 - The ast rule is a denylist of exact string constants (`erase_flash`, `write_flash`, `flash_id`, `--chip`, `0x0`),
   docstrings and EPILOG/WATCH skipped, modelled on `test_board_look.py:451-471`. The `cmp` is the real guard.
 - Finding 1: both reviewers say not PR 7. The tech lead put it in PR 8, the refuter says PR 8 must print the same lines,
   so a retry or pause does not fit there: it gets its own bug card (verdict below).
 
-Round 2: tech lead and PO assistant (Sonnet), not yet run.
+Round 2 (2026-10-18): tech lead and PO assistant (Sonnet). What it changed:
+
+- No `choose_flasher` (PO assistant, over the refuter's round 1 point). It was a name lookup with an error path, a first
+  step to other platforms, and it would change behaviour: a non-esptool `flasher` tool would fail at plan time, where it
+  fails today in the look. deploy.py calls `flasher.EsptoolFlasher(tool, chip)`; PR 8's `FirmwarePlatform` is the one
+  place that will choose. deploy.py then names a class, and holds no esptool string. The reader keeps its own check.
+- The empty-hint tail is tested with a second Flasher subclass; the esptool failure line is pinned in full.
+- The ast rule skips docstrings and the exact names `EPILOG` and `WATCH`. `commands/build.md` repeats the hint: checked.
+- Build order: baseline already taken; `test_flasher.py` first; then `flasher.py` and `board_look`; then deploy;
+  developing.md last.
+
+**Needs the PO:** nothing blocks PR 7. Two bench findings become two separate cards (verdicts below): say yes or no.
+This PR is a refactor that PR 8 and `--json` need, with no change a user sees.
 
 ## What moves
 
@@ -49,7 +59,6 @@ EsptoolFlasher                                 esptool: erase all, then write on
   __init__(tool, chip)                         tool: the tools.find("flasher") Tool; chip: as esptool names it
 
 flasher.build_esptool_prefix(tool, port, chip)    the start of an esptool line, --chip before --port
-flasher.choose_flasher(tool, chip) -> Flasher     by tool.name; an unknown tool is a ValueError, deploy makes it a DeployError
 
 deploy.plan() -> DeployPlan(commands, mpremote, notes, flasher)   flasher is new: main reads flasher.BOOT_HINT
 board_look.EsptoolReader                       keeps its own parse; only its command start comes from flasher.py
@@ -59,7 +68,7 @@ board_look.EsptoolReader                       keeps its own parse; only its com
 
 - `Flasher` stays a plain noun and its docstring says Strategy (the table's own example).
 - `EsptoolFlasher` is what varies, then the base's whole name.
-- A function starts with a verb: `build_commands`, `build_esptool_prefix`, `choose_flasher` (not `commands`).
+- A function starts with a verb: `build_commands`, `build_esptool_prefix` (not `commands`).
 - `BOOT_HINT` ends in `_HINT` (a sentence). `IMAGE_OFFSET` is an address, not a number with a unit: it keeps its name.
 - The module is `flasher.py`, as `deploy_gate.py` and `board_look.py` are named for their job.
 
@@ -90,4 +99,9 @@ board_look.EsptoolReader                       keeps its own parse; only its com
 - `board_look` imports `flasher`, and `deploy` imports both: no cycle, because `flasher` imports only `tools`.
 - A local named `flasher` in `deploy.plan` (the tool) clashes with the module name. The tool is renamed `flasher_tool`
   there. `EsptoolReader.__init__` keeps its `flasher` parameter: it only shadows inside `__init__`.
+- Docs this PR updates: developing.md (the Flasher row in the pattern table, line 247 on what each PR gave, the module
+  list if there is one). README "What works today" and `tools/journey.py`: no change, an internal seam. `agents.md`: no
+  change, no JSON or exit code moves. `--help`: unchanged; it names esptool in prose, which stays.
+- Words: a Strategy is a base class a caller can swap; a Decorator wraps an object and adds one behaviour; the ast rule
+  reads deploy.py's syntax tree for forbidden string constants; a mutation anchor is the exact line a mutation table edits.
 - Mutation table `tests/mutations/p239-pr7.json`; tables that anchor on the moved lines are re-anchored.
