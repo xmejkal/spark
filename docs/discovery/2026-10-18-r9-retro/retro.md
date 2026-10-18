@@ -8,7 +8,7 @@
 Prepared by Claude (opus) with a council: a Lean expert, an Agile coach, a flow-metrics analyst (sonnet), six team
 voices from the agents' own work (sonnet), and the refuter (opus). The numbers and their commands are in
 [council/facts.md](council/facts.md); each voice is under [council/](council/). The window is 2026-10-15 to
-2026-10-18; the agent logs cover 135 agents from 10-17 11:10 to 10-18 08:49 UTC.
+2026-10-18; the agent logs cover 135 agents from 10-17 11:10 to 10-18 08:49 UTC. The Miro frame: [R9 retro (draft)](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687598086787).
 
 ## The 22 inbox items in six themes
 
