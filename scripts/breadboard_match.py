@@ -30,16 +30,12 @@ class DrawingDiffersResult(collections.namedtuple("DrawingDiffersResult", "subje
 
     __slots__ = ()
 
-    @property
-    def line(self):
-        return self.why
-
 
 class DrawnNets:
     """Value: which groups of the breadboard one layout joins, by its jumpers and inside its parts."""
 
     def __init__(self, layout, geometry):
-        self.placed = {part.id: part for part in layout.parts}
+        self._placed = {part.id: part for part in layout.parts}
         self._parent = {}
         for jumper in layout.jumpers:
             self._join(jumper.one.group, jumper.other.group)
@@ -62,10 +58,11 @@ class DrawnNets:
 
     def differences(self, points, catalog):
         """[DrawingDiffersResult], in the order of the points: each end not joined to its point's first end, then each
-        end joined to an earlier point, one per pair of points."""
+        end joined to an earlier point, one per pair of points. The layout was planned from the same points and catalog,
+        so every end has a hole; `end_group` raises NotDrawn if one does not."""
         found, owner, said = [], {}, set()
         for number, point in enumerate(points):
-            ends = [(end, self.net_of(breadboard_drawing.end_group(end, self.placed, catalog))) for end in point.ends]
+            ends = [(end, self.net_of(breadboard_drawing.end_group(end, self._placed, catalog))) for end in point.ends]
             if not ends:
                 continue
             first, first_net = ends[0]

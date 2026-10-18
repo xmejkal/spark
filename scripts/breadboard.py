@@ -592,7 +592,7 @@ def main(argv=None):
     for named in written.not_kept:
         print("not kept: %s" % named.line, file=sys.stderr)
     for differs in written.differs:
-        print("drawing differs: %s" % differs.line, file=sys.stderr)
+        print("drawing differs: %s" % differs.why, file=sys.stderr)
     if written.why:
         for renderer in DRAWING_RENDERERS:
             print("%s not written: %s" % (renderer.FILE_NAME, written.why), file=sys.stderr)

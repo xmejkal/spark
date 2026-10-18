@@ -15,3 +15,8 @@ The plan councils of P279 (#317). Plan: [`plan.md`](../../discovery/2026-10-18-p
 | 9 | The catalog and geometry exist only on the kept path of `_plan_once` | round 2 | acted | built once, before the first return with a layout |
 | 10 | A sheet line per difference grows without bound | round 2 | acted | the first difference and a count |
 | 11 | A pin in no point that shares a row with a point is not checked by the product | round 2 | raised | the row test covers the fixture; a later card if a real build needs it |
+| 12 | The journey paragraph is there twice | lens review, PR | acted | the copy is removed |
+| 13 | `agents.md` leaves out the sheet's count | lens review, PR | acted | "the first and a count of the rest" |
+| 14 | No test of the kept-layout branch, of "and N more", or of two ends that differ | lens review, PR | acted | two new tests in `test_breadboard_match.py` |
+| 15 | `end_group` can raise `NotDrawn` inside the check, and nothing catches it | lens review, PR | rejected | the layout is planned from the same points and catalog; the docstring says so |
+| 16 | `DrawingDiffersResult.line` only repeats `why` | lens review, PR | acted | `line` removed; callers read `why` |

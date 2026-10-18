@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
+import breadboard_keep  # noqa: E402
 import breadboard_steps  # noqa: E402
 import check_spine  # noqa: E402
 from breadboard_drawing import Jumper, WokwiGeometry  # noqa: E402
@@ -74,7 +75,7 @@ class TheCheckTest(unittest.TestCase):
         # rows 24b (board D8 · R1 end 1) and 18b (LED A · R1 end 2) are two points
         found = self.differences(with_jumpers(self.layout, ("24b.j", "18b.j")))
         self.assertEqual([one.code for one in found], [JOINED_TO_OTHER])
-        # the later point's first end is named, beside the earlier point's first end
+        # the later point's end that lands in the earlier net is named, beside the earlier point's end
         self.assertEqual(found[0].why, "LedRed5mm A is joined to board D8 in the drawing, and they are two points")
 
     def test_a_wire_on_the_button_s_other_side_joins_its_contact(self):
@@ -105,10 +106,10 @@ class TheBuildSaysItTest(unittest.TestCase):
         shutil.copytree(XIAO, self.project)
         with in_store():
             layout = breadboard._plan_layout(breadboard._read_build(XIAO / "requirements.json"))
-        planted = moved(layout, 5, "29b.f")
-        patch = mock.patch.object(breadboard, "_plan_layout", return_value=planted)
-        patch.start()
-        self.addCleanup(patch.stop)
+        self.planted = moved(layout, 5, "29b.f")
+        self.plan = mock.patch.object(breadboard, "_plan_layout", return_value=self.planted)
+        self.plan.start()
+        self.addCleanup(mock.patch.stopall)
 
     def test_the_sheet_and_stderr_name_it_and_the_drawing_is_still_written(self):
         stderr = io.StringIO()
@@ -120,6 +121,27 @@ class TheBuildSaysItTest(unittest.TestCase):
         self.assertIn("The drawing does not join the points the same way: R1 end 1 is not joined to board D8 in the "
                       "drawing. Wire from the steps above.", sheet)
         self.assertTrue((self.project / "breadboard.json").is_file())
+
+    def test_two_differences_give_the_first_and_a_count_on_the_sheet(self):
+        both = moved(self.planted, 6, "30b.f")
+        with in_store(), mock.patch.object(breadboard, "_plan_layout", return_value=both):
+            written = breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+        self.assertEqual([one.subject for one in written.differs], ["R1 end 1", "TactileButton A"])
+        self.assertIn("in the drawing, and 1 more. Wire from the steps above.",
+                      (self.project / "breadboard.md").read_text())
+
+    def test_a_kept_layout_is_checked_not_the_fresh_one(self):
+        self.plan.stop()  # the first build plans for real, so the second one keeps its layout
+        with in_store():
+            breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+        keep = breadboard_keep.KeepMovesJumperPlacement.place_jumpers
+
+        def keep_then_move(placement, layout, ledger):
+            return moved(keep(placement, layout, ledger), 5, "29b.f")
+
+        with in_store(), mock.patch.object(breadboard_keep.KeepMovesJumperPlacement, "place_jumpers", keep_then_move):
+            written = breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+        self.assertEqual([(one.code, one.subject) for one in written.differs], [(NOT_JOINED, "R1 end 1")])
 
     def test_the_kept_entry_carries_its_code(self):
         with in_store():

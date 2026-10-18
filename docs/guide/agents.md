@@ -186,7 +186,7 @@ These write:
   jumper and the pins that are one inside a part (`joined_pins` in `data/wokwi-geometry.json`, the pushbutton's two sides
   of a contact). `PlannedLayout.differs` and `WriteResult.differs` list `DrawingDiffersResult(subject, code, why)`. The
   codes are `not-joined` (an end is not in its point's net) and `joined-to-other` (two points share a net, a short).
-  `breadboard.py` prints each as `drawing differs: …` on stderr, the sheet says the first under the drawing's line, and
+  `breadboard.py` prints each as `drawing differs: …` on stderr, the sheet says the first and a count of the rest under the drawing's line, and
   `check_spine --keep` adds `{file: breadboard.json, did: "drawing differs", code, subject, why}`. The files are still
   written and the exit code does not change: wire from the steps, not from the drawing. Only the pins that the points
   name are checked, so a missing `drawing differs` entry is not proof that no other pin shares a row.

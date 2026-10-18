@@ -802,7 +802,7 @@ def keep_breadboard(requirements, destination, stages=()):
     # an end the drawing joins differently from the points (P279): the sheet's steps stand, the drawing is wrong
     kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,
               "subject": differs.subject, "code": differs.code, "why": differs.why,
-              "line": "%s: %s" % (DRAWING_DIFFERS, differs.line)} for differs in written.differs]
+              "line": "%s: %s" % (DRAWING_DIFFERS, differs.why)} for differs in written.differs]
     return kept
 
 
