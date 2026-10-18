@@ -265,7 +265,8 @@ def _wiring(board, circuit, design_parts, resistors):
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
             return breadboard_steps.End(breadboard_steps.RESISTOR, tag, "%s end %s" % (tag, number),
-                                        "%s (%s %s), end %s" % (tag, value, purpose, number), number)
+                                        "%s (%s %s), end %s" % (tag, value, purpose, number), number,
+                                        purpose, value)
         leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
         short = "%s %s" % (component["name"], port.get("name"))
         return breadboard_steps.End(breadboard_steps.PART, component["name"], short,
