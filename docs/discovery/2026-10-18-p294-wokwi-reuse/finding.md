@@ -23,16 +23,15 @@ real Artifact, this account's Artifact capabilities (marked unknown below).
 | Editing | the person pastes `breadboard.json` into wokwi.com by hand | a rebuild keeps the person's moves | `scripts/breadboard_drawing.py:334-337`, `scripts/breadboard_keep.py:3` |
 | Simulation | `wokwi-cli`, a token, CI minutes | the scenario wrapper and the log | `scripts/run_scenario.py:60`, `docs/guide/agents.md:589` |
 
-Answer: spark reuses the format, the names and the simulator. It reimplements the drawing, with its own pictograms
-(`scripts/part_pictures.py:36`).
+Answer: spark reuses the format, names and simulator, and draws its own pictograms (`scripts/part_pictures.py:36`).
 
 ## 2. Open and closed Wokwi pieces
 
 | Piece | License / status | Reuse by spark (public, MIT, no vendor file committed) | Source |
 |---|---|---|---|
 | `@wokwi/elements` 1.9.2 | MIT, last push 2026-10-12 | Yes. Load from a CDN at run time, commit nothing. | [repo](https://github.com/wokwi/wokwi-elements), [npm](https://www.npmjs.com/package/@wokwi/elements) |
-| `wokwi-cli` | repo is MIT; the service it calls is closed and metered | Already used. Free plan: 50 CI minutes a month, 5 minutes a session. | [repo](https://github.com/wokwi/wokwi-cli), [docs](https://docs.wokwi.com/wokwi-ci/getting-started) |
-| wokwi.com editor, ESP32 simulator (C6, XIAO C6 listed) | closed, no source repo in the org; docs give no license | None. `wokwi-cli` is the only door. | [org repos](https://github.com/wokwi), [ESP32 guide](https://docs.wokwi.com/guides/esp32) |
+| `wokwi-cli` | repo is MIT; the service it calls is closed and metered | Already used. Free plan: 50 CI minutes per 30 days, 5 minutes a session. | [repo](https://github.com/wokwi/wokwi-cli), [docs](https://docs.wokwi.com/wokwi-ci/getting-started) |
+| wokwi.com editor, ESP32 simulator (C6, XIAO C6 listed) | closed, no source repo in the org; docs give no license | None. `wokwi-cli` or the MIT Python client reach the same metered server. | [org repos](https://github.com/wokwi), [ESP32 guide](https://docs.wokwi.com/guides/esp32) |
 | Wokwi for VS Code, diagram editor | closed extension; free license by account; editing needs Hobby+ or Pro | No. It runs in VS Code, not on a page. | [docs](https://docs.wokwi.com/vscode/diagram-editor) |
 | `diagram.json` format | documented, no license text found | Yes. Spark already writes it. | [docs](https://docs.wokwi.com/diagram-format) |
 
@@ -40,7 +39,7 @@ What `@wokwi/elements` 1.9.2 holds (checked in its `+esm` bundle, 422 KB, 50 `wo
 resistor, pushbuttons, buzzer, potentiometer, servo, displays, sensors, NeoPixel, Arduino boards and the ESP32 DevKit
 V1. It holds **no breadboard, no diode, no XIAO ESP32-C6 board and no generic module**. Those stay spark's own pictures.
 
-CDN: `https://cdn.jsdelivr.net/npm/@wokwi/elements@1.9.2/+esm` answers 200 and bundles its imports (jsdelivr is an
+CDN: `https://cdn.jsdelivr.net/npm/@wokwi/elements@1.9.2/+esm` answers 200 and imports lit 3.3.2 from the same CDN (jsdelivr is an
 allowed Artifact origin). Unknown: whether an Artifact page runs this module (needs a test page).
 
 ## 3. Embedding Wokwi's interactive editor
@@ -51,7 +50,7 @@ allowed Artifact origin). Unknown: whether an Artifact page runs this module (ne
 - Third-party tools make an iframe from a saved project link ([Microlink](https://microlink.io/tools/embed-url/wokwi)),
   so it is online only. The iframe's account rules and cost are not in the sources read: unknown.
 - Edits do not come back: no source read gives a message API that returns `diagram.json`. Unknown whether one exists.
-- Artifact rules name three script CDNs and say nothing of iframes. Unknown whether the frame allows `wokwi.com`.
+- Artifact rules name three script CDNs and say nothing of iframes. `wokwi.com` sends no X-Frame-Options or CSP header (checked); unknown whether the Artifact frame allows it.
 - Result: do not build on the embed (unsupported, online, one-way).
 
 ## 4. One layout for Claude and a person
@@ -76,7 +75,6 @@ The kept `breadboard.json` (a Wokwi `diagram.json`) is the one data file. Both s
 | Wiring (jumpers) | build | medium | click two holes, write a connection; routes and colors already exist in `breadboard_drawing.py` |
 | Part catalogue | reuse spark's records | small | `simulation.wokwi.part` maps a record to a Wokwi type (`scripts/parts.py:416`); the page lists records, not Wokwi's catalogue |
 | Simulation | reuse `wokwi-cli` | small | closed ESP32 simulator, no other door; costs CI minutes, so ask first |
-| Geometry for new types | build, one per type | small each | measured in Wokwi, not published; 4 types exist today |
 
 **Libraries for the "build" pieces** (the PO wants it to look good and be interactive). All load from jsdelivr, which an
 Artifact allows; whether an Artifact runs them is unknown. Versions are from npm, 2026-10-18.
@@ -99,13 +97,13 @@ license each.
 ## 6. Schematic and PCB: can they be edited the same way?
 
 Spark builds both from `board.tsx` with tscircuit (`tsci build`, `scripts/check_spine.py:428-432`) and draws them as
-static SVG from `tsci export` (`scripts/tabbed_page.py:34`, one tab each).
+static SVG from `tsci export` (`scripts/tabbed_page.py:29-30`, one tab each).
 
 - tscircuit is open: `tscircuit` 0.0.2940, `@tscircuit/pcb-viewer` 1.11.429, `@tscircuit/schematic-viewer` 2.0.105,
-  `@tscircuit/runframe` 0.0.3012, all MIT ([pcb-viewer](https://github.com/tscircuit/pcb-viewer),
+  `@tscircuit/runframe` 0.0.3012, MIT by repo, two npm packages carry no license field ([pcb-viewer](https://github.com/tscircuit/pcb-viewer),
   [runframe](https://github.com/tscircuit/runframe)).
-- Its viewers raise edit events when a person drags a part; RunFrame applies them to a `manual-edits.json` that the
-  board imports (runframe README, "File-Server Interaction with Edit Events"), the same idea as `breadboard.json`.
+- Its viewers raise edit events when a person drags a part; RunFrame applies them to a `manual-edits.json`
+  (runframe README, "File-Server Interaction with Edit Events"), the same idea as `breadboard.json`.
 - Spark has no `manual-edits` code today (no match in `scripts/`). A kept edit needs the file beside `board.tsx`, the
   generated `board.tsx` importing it, a keep rule for a part that left the circuit, and a `not kept` line. The
   never-overwrite rule for `board.tsx` (`docs/guide/agents.md`, rule 5) fits: edits sit in their own file.
@@ -156,4 +154,7 @@ flowchart LR
 
 ## Checked by
 
-(filled after the refuter run)
+The `refuter` agent (Opus) confirmed the licenses, versions, the 50 element names, the embed wording, the Wokwi docs
+and the other citations. Fixed: the bundle imports lit from the same CDN, two tscircuit npm packages lack a license
+field, the `tabbed_page.py` line, an unsupported "board imports manual-edits.json", "only door" (a Python client
+exists), the free minutes window, and one unknown settled (wokwi.com sends no frame-blocking header).
