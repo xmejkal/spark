@@ -104,7 +104,7 @@ class SecondLedTest(unittest.TestCase):
 
     def test_codes_decide_not_words(self):
         found = changes.changes_between(record_of(ONE_LED), TWO_LEDS, colors_of(TWO_LEDS))
-        self.assertEqual([one.code for one in found], [changes.ADDED] * 5 + [changes.REROUTED] * 2)
+        self.assertEqual([one.code for one in found], ["added"] * 5 + ["rerouted"] * 2)
 
 
 class ResistorTest(unittest.TestCase):
@@ -130,8 +130,8 @@ class JumperTest(unittest.TestCase):
         after = seated(["board", "Btn"], [StepPoint([board("D8"), board("D9"), pin("Btn", "A")], None, False)])
         found = changes.changes_between(record_of(before), after, colors_of(after))
         self.assertEqual([(one.code, one.name) for one in found if one.name == "board D8"],
-                         [(changes.REROUTED, "board D8")])
-        self.assertNotIn(changes.REMOVED, [one.code for one in found])
+                         [("rerouted", "board D8")])
+        self.assertNotIn("removed", [one.code for one in found])
 
 
 class BenchColorTest(unittest.TestCase):

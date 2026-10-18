@@ -64,7 +64,7 @@ class RebuildTest(unittest.TestCase):
         lines = breadboard_changes.ChangeList().render(written.changes)
         self.assertEqual(lines[0], "Put LedRed5mm in the breadboard.")
         self.assertIn("Put R1 end 1 in a free row.", lines)
-        self.assertEqual([one.code for one in written.changes], [breadboard_changes.ADDED] * 5 + [breadboard_changes.REROUTED])
+        self.assertEqual([one.code for one in written.changes], ["added"] * 5 + ["rerouted"])
         self.assertEqual(lines[-1], "Move the green jumper from board GND: it now goes to the row of LedRed5mm K "
                                     "(it went to the row of TactileButton B).")
         self.assertEqual(section(project), ["- " + line for line in lines])
@@ -84,7 +84,7 @@ class RebuildTest(unittest.TestCase):
         change_requirements(project, BUTTON_ONLY)
         written = build(project)
         jumper = next(breadboard_changes.ChangeList().line(one) for one in written.changes
-                      if one.code == breadboard_changes.REMOVED and one.kind == breadboard_changes.JUMPER)
+                      if one.code == "removed" and one.kind == "jumper")
         self.assertRegex(jumper, r"^Take out the (red|orange|gold|green|cyan|blue|purple|magenta) jumper from ")
 
     def test_the_command_prints_each_change_on_stderr(self):
