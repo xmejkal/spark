@@ -1,0 +1,86 @@
+[
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "drop joined_pins union",
+  "find": "self._join(groups[0], group)",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "drop jumper union",
+  "find": "self._join(jumper.one.group, jumper.other.group)",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "net_of follows one step only",
+  "find": "while self._parent.get(group, group) != group:",
+  "replace": "if self._parent.get(group, group) != group:"
+ },
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "join never merges",
+  "find": "if one != other:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "not-joined inverted",
+  "find": "for end, net in ends[1:] if net != first_net]",
+  "replace": "for end, net in ends[1:] if net == first_net]"
+ },
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "no pair dedup",
+  "find": "if other != number and (other, number) not in said:",
+  "replace": "if other != number:"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "no and-N-more",
+  "find": "\", and %d more\" % more if more else \"\"",
+  "replace": "\"\""
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "sheet line never",
+  "find": "if planned.differs:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "stderr line never",
+  "find": "for differs in written.differs:",
+  "replace": "for differs in []:"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "kept plan unchecked",
+  "find": "return checked(layout, named)",
+  "replace": "return PlannedLayout(layout, None, named, fresh)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "no drawing-differs entry",
+  "find": "for differs in written.differs]",
+  "replace": "for differs in []]"
+ },
+ {
+  "file": "scripts/breadboard_drawing.py",
+  "name": "end_group ignores groups",
+  "find": "if groups and end.name in groups:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "a pin no point names is never checked",
+  "find": "                if net in owner:\n                    end = owner[net][1]",
+  "replace": "                if False:\n                    end = owner[net][1]"
+ },
+ {
+  "file": "scripts/breadboard_match.py",
+  "name": "the other side of a named contact is unused",
+  "find": "self._contact.get((part.id, pin), {pin})",
+  "replace": "{pin}"
+ }
+]

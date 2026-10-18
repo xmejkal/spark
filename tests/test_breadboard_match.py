@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
+import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import breadboard_steps  # noqa: E402
 import check_spine  # noqa: E402
@@ -91,6 +92,13 @@ class TheCheckTest(unittest.TestCase):
         found = self.differences(with_jumpers(self.layout, ("17b.i", beside)))
         self.assertEqual([(one.code, one.why) for one in found],
                          [(JOINED_TO_UNUSED, "board GND is joined to board 5V in the drawing, which no point names")])
+
+    def test_an_end_s_group_is_the_free_row_its_setup_jumper_took(self):
+        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        end = breadboard_steps.End("board", board.id, "board D8", "board D8", "D8")
+        placed = {board.id: board}
+        self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog, {"board D8": "28t"}), "28t")
+        self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog), board.holes["D8"].group)
 
     def test_board_pads_joined_through_a_free_row_match_and_a_moved_setup_jumper_does_not(self):
         named = {end.pin for point in self.points for end in point.ends if end.component == breadboard_steps.THE_BOARD}

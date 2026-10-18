@@ -23,3 +23,4 @@ The plan councils of P279 (#317). Plan: [`plan.md`](../../discovery/2026-10-18-p
 | 17 | The check is silent on a short into a pin no point names: D8 to 3V3, D8 to D0, GND to 5V | refuter, PR | acted | code `joined-to-unused`; a pin of a named contact counts as its point's; test GND to 5V |
 | 18 | README and `commands/build.md` claim more than the code checks, and the docstring says "nothing more" | refuter, PR | acted | row 17 closes the gap; the docstring says "no other pin" |
 | 19 | A false difference on a fixture build, or a changed planner output | refuter, PR | rejected | 5 fixtures and 7 rebuild orders gave no difference; `breadboard.json` sha256 equal on main and the branch |
+| 20 | Mutation run 1: 12 planted, 9 caught; escapes "and N more", the kept plan unchecked, `end_group`'s free row | mutation-tester, PR | acted | the first two were closed by the review's new tests; a direct `end_group` test; run 2: 14 planted, 14 caught, 423 s |
