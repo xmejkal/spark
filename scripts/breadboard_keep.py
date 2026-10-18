@@ -8,12 +8,13 @@ here writes a file.
     KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)      a Strategy for BreadboardPlanner
     KeepMovesJumperPlacement(geometry, earlier)                     a Strategy for BreadboardPlanner
     name_parts_not_kept(earlier, layout, fresh, reasons, default_code)                [NotKeptResult]
-    name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, default_code)    [NotKeptResult]
+    name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, drawn, default_code)  [NotKeptResult]
 
 A part keeps its place when it still fits. A resistor is checked when it is placed, because the row it joins is known
 only then; its id is its order in the circuit, so an earlier "R1" can be a different resistor now, and its place is
 kept only if it is legal for this one. A jumper keeps its holes, route and direction when its two rows are the two
-rows of a jumper the plan draws, so a kept jumper never changes what is connected.
+rows of a jumper the plan draws, so a kept jumper never changes what is connected. A jumper spark drew itself, which
+the wiring record says (P300), is never named when a new circuit leaves it out; a jumper the person moved always is.
 """
 
 import collections
@@ -307,58 +308,31 @@ class KeepMovesJumperPlacement(breadboard_drawing.JumperPlacement):
         return layout._replace(jumpers=jumpers)
 
 
-def name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, default_code=None):
+def name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, drawn, default_code=None):
     """
     [NotKeptResult], in the earlier file's order, for each earlier jumper that is in neither `layout` nor `fresh` (the
     layout planned with nothing kept, which holds the jumpers the build drew before), with its reason from `reasons`
-    ({subject: (code, message)}) else `default_code` (None names nothing). One refused for rows no planned jumper
-    joins, or by the default, is named only when the person's edit explains it: each of its end rows is held in the
-    earlier file only by parts that are still where they were, or holds nothing, lies at or left of the file's last part
-    and is held by no part of `layout` or `fresh` (else a part left it, and that part's own line explains the jumper).
+    ({subject: (code, message)}) else `default_code` (None names nothing). `drawn` is the set of hole pairs (frozensets)
+    that spark drew itself at the last build, from the wiring record, or None when there is no record. A jumper in
+    `drawn` is spark's: a new circuit leaves it out and it is never named. Any other jumper is the person's and is
+    named whenever it is not kept. With no record, nothing is known to be spark's, so a jumper refused for rows no
+    planned jumper joins, or by the default, is not named.
     """
-    held, last_column = _rows_held(earlier, geometry)
-    stayed = {one.id: _place(one.left, one.top, one.rotate) for one in layout.parts}
     holes = {hole.name: hole for hole in geometry.surface.holes}
-    vacated = {hole.group for planned in (layout, fresh) for one in planned.parts for hole in one.holes.values()}
     pairs = {frozenset((jumper.one.name, jumper.other.name)) for planned in (layout, fresh)
              for jumper in planned.jumpers}
     named = []
     for wire in earlier.jumpers:
-        if frozenset((wire.one, wire.other)) in pairs:
+        pair = frozenset((wire.one, wire.other))
+        if pair in pairs:
             continue
         if wire.one not in holes or wire.other not in holes:
             named.append(NotKeptResult(wire.subject, JUMPER_NOT_ON_BOARD, MESSAGES[JUMPER_NOT_ON_BOARD]))
             continue
-        code, why = reasons.get(wire.subject) or (default_code, default_code and MESSAGES[default_code])
-        if code is None:
+        if drawn is not None and pair in drawn:
             continue
-        if code in (ROWS_NOT_JOINED, default_code) and not all(
-                _is_explained_by_edit(holes[end], held, stayed, last_column, vacated) for end in (wire.one, wire.other)):
+        code, why = reasons.get(wire.subject) or (default_code, default_code and MESSAGES[default_code])
+        if code is None or drawn is None and code in (ROWS_NOT_JOINED, default_code):
             continue
         named.append(NotKeptResult(wire.subject, code, why))
     return named
-
-
-def _rows_held(earlier, geometry):
-    """({row: {part id: its earlier place}}, the last column a part's pin lies in) for the earlier file's parts."""
-    held, last_column = collections.defaultdict(dict), 0
-    for part_id, part in earlier.parts.items():
-        turn = part.get("rotate", 0)
-        try:
-            shape = geometry.part(part["type"])
-        except breadboard_drawing.NotDrawn:
-            continue
-        if turn not in QUARTER_TURNS_DEGREES:
-            continue
-        for hole in pin_holes(geometry, shape, int(turn), float(part["left"]), float(part["top"])).values():
-            if hole:
-                held[hole.group][part_id] = _place(part["left"], part["top"], turn)
-                last_column = max(last_column, hole.column)
-    return held, last_column
-
-
-def _is_explained_by_edit(hole, held, stayed, last_column, vacated):
-    owners = held.get(hole.group)
-    if owners:
-        return all(stayed.get(part_id) == place for part_id, place in owners.items())
-    return hole.column <= last_column and hole.group not in vacated

@@ -453,6 +453,33 @@ stays if its joined leg is still in the row it joins, and a jumper you move stay
 still joins the two rows it joins (since 2026-10-18, [P287](https://github.com/xmejkal/spark/issues/340)); otherwise
 the screen names it, for example `jumper 6b.j-15t.a: …`. A build that fails leaves the file, with your moves, and says so.
 
+**A rebuild says what to change.** Since 2026-10-18 ([P300](https://github.com/xmejkal/spark/issues/366)) a rebuild
+tells you what to change on your breadboard, so you do not read the whole sheet again. Say you built the button and the
+LED, wired them, and then add a second LED. The sheet gets this section before its steps, and the screen prints the same
+lines:
+
+<!-- output: run 2026-10-18, spark 0.9.0 -->
+```text
+### Changes since the last build
+
+- Put LedGreen5mm in the breadboard.
+- Put R2 end 1 (in series with LedGreen5mm A) in a free row.
+- Run a jumper from board D9 to the row of R2 end 1 (in series with LedGreen5mm A).
+- Run a gold jumper from the row of LedRed5mm K to the row of LedGreen5mm K.
+- Put R2 end 2 (in series with LedGreen5mm A) in the row of LedGreen5mm A.
+- Move the purple jumper from board GND: it now goes to the row of LedGreen5mm K (it went to the row of LedRed5mm K).
+- Move the magenta jumper from the row of TactileButton B: it now goes to the row of LedGreen5mm K (it went to the row of LedRed5mm K).
+```
+
+A line names a jumper by its two ends. A jumper you move or take out has the color on your earlier sheet, so you can find
+the wire you wired. A new jumper has the color it has on the new sheet, unless a jumper in the same list had that color
+on your bench. Then it has no color, so no two wires in the list share one. A resistor is named by its job too, because
+its tag can renumber. A line never names a hole, because you pick your own free rows. A resistor with a new value reads
+`Swap R1, 330Ω, for a 1kΩ resistor in the same rows.` A resistor that goes is one line:
+`Take out R1, 330Ω in series with LedRed5mm A.` When nothing changed, the section says
+`- Nothing to change on the bench.` The first build has no section. Spark keeps what the last sheet said in
+`wiring-record.json`, beside the sheet. Do not edit it.
+
 Only the Seeed Studio XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the
 board. The board is the limit because spark knows where Wokwi draws its pins and the
 breadboard's holes only for the parts it measured (`data/wokwi-geometry.json`). For the FireBeetle above, the sheet

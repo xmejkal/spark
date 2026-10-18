@@ -86,6 +86,10 @@ if it still fits. A part it cannot keep is named, one line each, and with `--jso
 `move not kept`. A resistor you move stays if its joined leg is still in the row it joins. A jumper you move stays, with its bends,
 if it still joins the two rows the new layout joins (its color is the step's). Otherwise it is named, for example
 `jumper 6b.j-15t.a: no jumper of the new layout is left to join rows 6b and 15t, so spark drew its own`.
+Spark never names a jumper it drew itself. After a rebuild, the sheet and the screen list what to change on the bench
+([P300](https://github.com/xmejkal/spark/issues/366)): one line for each part to put in or take out, each jumper to run,
+move or take out (by its two ends and its color), and each resistor to swap. With `--json`, each line is a `kept` entry with
+`did` `changed`. Read these lines to the person before they touch the breadboard.
 A build that did not finish (a failed build, or requirements the build refuses) leaves a `breadboard.json` that holds
 parts, with a `left alone` entry, so a typo does not wipe your moves. Only the XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the board. Otherwise
 the line `no drawn breadboard: …` names what is missing. A line `no breadboard sheet: …` says why there is none; `${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py requirements.json` writes it

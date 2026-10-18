@@ -91,6 +91,8 @@ PIN_MODULE = Path("firmware") / "pins.py"
 REQUIREMENTS_STAGE = "requirements"
 #: The `did` of a kept entry for a part the person moved in breadboard.json that the build could not keep (P273).
 MOVE_NOT_KEPT = "move not kept"
+#: The `did` of a kept entry for one thing a rebuild asks a person to change on the bench (P300).
+CHANGED = "changed"
 
 
 class Stage:
@@ -640,7 +642,8 @@ def main(argv=None):
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
                              "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "
                              "`move not kept`), "
-                             "breadboard.svg, that drawing as a picture, page.html, the breadboard, schematic and PCB "
+                             "breadboard.svg, that drawing as a picture, "
+                             "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser or to publish as an Artifact, and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
@@ -786,9 +789,13 @@ def keep_breadboard(requirements, destination, stages=()):
     if written.why:
         kept += [{"file": str(path), "did": "not written", "why": written.why,
                   "line": "no %s: %s" % (renderer.NOUN, written.why)} for path, renderer in drawings]
+    # what the person changes on the bench since the last sheet (P300)
+    kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
+              "color": change.color, "why": breadboard.CHANGE_LIST.line(change),
+              "line": "%s: %s" % (CHANGED, breadboard.CHANGE_LIST.line(change))} for change in written.changes]
     # a part the person moved in breadboard.json that the build could not keep (P273)
     kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
-              "part": named.subject, "code": named.code, "why": named.why,
+              "subject": named.subject, "code": named.code, "why": named.why,
               "line": "move not kept: %s" % named.line} for named in written.not_kept]
     return kept
 
@@ -955,7 +962,7 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
                 "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
         said.update({"unserved": requirements["unserved"]} if left_off(requirements) else {})
         if kept is not None:
-            said["kept"] = [{key: entry[key] for key in ("file", "did", "why")} for entry in kept]
+            said["kept"] = [{key: value for key, value in entry.items() if key != "line"} for entry in kept]
         print(json.dumps(said))
     else:
         sys.stdout.write(render(stages, code, left_off(requirements)))

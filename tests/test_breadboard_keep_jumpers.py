@@ -167,20 +167,20 @@ class EscapedMutantsTest(unittest.TestCase):
         self.assertEqual(wire_between(project, "12t", "17b")[1][:2], ["bb1:12t.a", "bb1:17b.g"])
         self.assertEqual(wire_between(project, "8b", "17b")[1][:2], ["bb1:8b.j", "bb1:17b.h"])
 
-    def test_a_jumper_moved_to_an_empty_row_beyond_the_last_part_is_drawn_again_without_a_name(self):
+    def test_a_jumper_moved_to_an_empty_row_beyond_the_last_part_is_the_persons_and_is_named(self):
         project = built_full()
         change_wire(project, 1, other="bb1:28t.a")
-        self.assertEqual(build(project).not_kept, [])
+        self.assertEqual(codes(build(project)), {"jumper 6b.j-28t.a": "rows-not-joined"})
         self.assertEqual(wire_between(project, "6b", "14t")[1][:2], ["bb1:6b.j", "bb1:14t.a"])
 
-    def test_a_jumper_into_a_row_held_by_a_part_that_could_not_stay_is_explained_by_that_part(self):
+    def test_a_jumper_into_a_row_held_by_a_part_that_could_not_stay_is_named_beside_that_part(self):
         project = built_full()
         # R1 turned the other way with its pin 2 still in the LED's row: its pin 1 lies in the button's row
         edit(project, lambda drawn: next(one for one in drawn["parts"] if one["id"] == "R1")
              .update(rotate=0, left=round(part(project, "R1")["left"] - 58.8, 3)))
         index, _ = wire_between(project, "12t", "17b")
         change_wire(project, index, other="bb1:18b.h")
-        self.assertEqual(codes(build(project)), {"R1": "row-shared"})
+        self.assertEqual(codes(build(project)), {"R1": "row-shared", "jumper 12t.a-18b.h": "rows-not-joined"})
 
     def test_when_the_kept_plan_has_no_room_a_connection_to_a_part_pin_is_still_named(self):
         project = built_full()
@@ -199,25 +199,18 @@ class EscapedMutantsTest(unittest.TestCase):
         self.assertEqual(codes(written), {"jumper 6b.j-14t.b": "no-room"})
 
 
-class LastPartColumnTest(unittest.TestCase):
-    """An empty row is the person's only at or left of the earlier file's last part, column 24 here (R1's pin 1)."""
+class AMovedJumperInAnEmptyRowTest(unittest.TestCase):
+    """A jumper the person moved is named whatever the row holds, and wherever it lies (P300)."""
 
-    def test_an_empty_row_in_the_last_column_of_a_part_is_the_persons(self):
+    def test_an_empty_row_in_the_last_column_of_a_part_is_named(self):
         project = built_full()
         change_wire(project, 1, other="bb1:24t.a")
         self.assertEqual(codes(build(project)), {"jumper 6b.j-24t.a": "rows-not-joined"})
 
-    def test_an_empty_row_one_column_beyond_the_last_part_is_not(self):
+    def test_an_empty_row_one_column_beyond_the_last_part_is_named_too(self):
         project = built_full()
         change_wire(project, 1, other="bb1:25t.a")
-        self.assertEqual(build(project).not_kept, [])
-
-    def test_the_last_column_is_the_greatest_whatever_the_order_of_the_parts(self):
-        project = built_full()
-        edit(project, lambda drawn: drawn["parts"].insert(1, drawn["parts"].pop(
-            next(i for i, one in enumerate(drawn["parts"]) if one["id"] == "R1"))))
-        change_wire(project, 1, other="bb1:24t.a")
-        self.assertEqual(codes(build(project)), {"jumper 6b.j-24t.a": "rows-not-joined"})
+        self.assertEqual(codes(build(project)), {"jumper 6b.j-25t.a": "rows-not-joined"})
 
 
 class ParseTest(unittest.TestCase):
@@ -239,12 +232,51 @@ class QuietTest(unittest.TestCase):
         edit(project, lambda drawn: drawn["parts"].append(dict(drawn["parts"][0], id="bb2")))
         self.assertEqual(build(project).not_kept, [])
 
-    def test_a_circuit_change_names_a_jumper_whose_rows_it_no_longer_joins_even_if_nobody_moved_it(self):
-        """A known limit: after a requirements change spark cannot tell this jumper from one the person moved."""
+    def test_a_circuit_change_names_no_jumper_that_spark_drew(self):
+        """The false lines of P292: spark's own jumper, which the new circuit joins differently, is no one's move."""
+        variants = {"button": BUTTON_ONLY, "full": FULL, "led": LED_ONLY}
+        for before, after in (("button", "full"), ("full", "led"), ("led", "full")):
+            with self.subTest(before=before, after=after):
+                project = new_project(variants[before])
+                build(project)
+                change_requirements(project, variants[after])
+                self.assertEqual([one for one in build(project).not_kept if one.subject.startswith("jumper ")], [])
+
+    def test_a_jumper_moved_into_an_empty_row_that_a_new_part_takes_is_named(self):
+        """P292, #351: the new LED and R1 take row 18b, which was empty, and the jumper was dropped without a line."""
         project = new_project(BUTTON_ONLY)
         build(project)
+        change_wire(project, 1, other="bb1:18b.g")
         change_requirements(project, FULL)
-        self.assertEqual(codes(build(project)), {"jumper 8b.j-12t.a": "rows-not-joined"})
+        self.assertEqual(codes(build(project)), {"jumper 8b.j-18b.g": "rows-not-joined"})
+
+    def test_a_kept_jumper_of_the_persons_is_still_the_persons_when_a_third_build_loses_it(self):
+        project = built_full()
+        change_wire(project, 1, other="bb1:14t.b", route=ROUTE)
+        self.assertEqual(build(project).not_kept, [])
+        self.assertEqual(build(project).not_kept, [])
+        change_requirements(project, LED_ONLY)
+        self.assertEqual(codes(build(project)).get("jumper 6b.j-14t.b"), "rows-not-joined")
+
+    def test_a_project_built_before_the_record_names_no_jumper_nobody_moved_on_build_3(self):
+        """The refuter: with no record, build 2 must count a jumper equal to the fresh plan's as spark's."""
+        project = built_full()
+        (project / "wiring-record.json").unlink()
+        self.assertEqual(build(project).not_kept, [])
+        change_requirements(project, LED_ONLY)
+        self.assertEqual([one for one in build(project).not_kept if one.subject.startswith("jumper ")], [])
+
+    def test_with_no_record_a_jumper_that_no_plan_joins_is_not_named(self):
+        project = built_full()
+        change_wire(project, 1, other="bb1:28t.a")
+        (project / "wiring-record.json").unlink()
+        self.assertEqual(build(project).not_kept, [])
+
+    def test_a_record_that_cannot_be_read_names_no_such_jumper_either(self):
+        project = built_full()
+        change_wire(project, 1, other="bb1:28t.a")
+        (project / "wiring-record.json").write_text("{not json")
+        self.assertEqual(build(project).not_kept, [])
 
     def test_a_requirements_change_names_no_jumper_nobody_moved(self):
         project = built_full()

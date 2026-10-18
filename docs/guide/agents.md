@@ -179,9 +179,24 @@ These write:
   the new layout draws (`KeepMovesJumperPlacement`), so a kept jumper never changes what is connected.
   `WriteResult.not_kept` lists `NotKeptResult(subject, code, why)` for each part or jumper (`jumper 4b.j-24b.f`) it could not
   keep (codes in `breadboard_keep.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under
-  `kept` with `did` `move not kept`, `part`, `code` and `why`. A jumper of a part that moved or went is not named: the part's own line explains it. After a requirements change, a jumper whose rows the new circuit no longer joins is named even if nobody moved it, because spark cannot tell the two apart. A build
+  `kept` with `did` `move not kept`, `subject`, `code` and `why`. Spark never names a jumper it drew itself (the record `wiring-record.json` lists them as `drawn_jumpers`) when a new circuit leaves it out. It always names a jumper the person moved when the build cannot keep it. With no record, it names no jumper for rows that no planned jumper joins. A build
   that did not finish (failed or refused) leaves a `breadboard.json` that holds parts, with a `left alone` entry, since it
   may hold moves; one that holds none, or is not readable, is removed. Never read a missing `not kept` line as proof that a move was kept: read the file.
+  A rebuild lists what to change on the bench (P300, `breadboard_changes.py`). `breadboard.write()` reads
+  `wiring-record.json`, which holds each step of the last sheet, before it writes anything. It compares the record with the
+  new steps, writes the sheet, and then writes the new record. The sheet gets a section `### Changes since the last build`
+  before `### Steps`: one bullet for each change, `- Nothing to change on the bench.` when there is none, and one line with the
+  reason when the record cannot be read. A first build has no section. `WriteResult.changes` lists `WiringChange(code, kind,
+  name, color, before, after, marks)`. The codes are `added`, `removed`, `rerouted` (a connection joins another row, rail or free
+  row) and `swapped` (a resistor with a new value). A resistor that goes is one `removed` line, not one for each end. `breadboard.py` prints each as `change: …` on stderr.
+  `check_spine --keep` adds one kept entry for each: `{file, did: "changed", code, subject, color, why}`, and `why` is the
+  line. A `move not kept` entry has `subject` and `code` too. With `--json` every kept entry keeps all its fields except
+  `line`. The lines name jumpers by their ends, never by holes. A jumper to move or take out shows the color the earlier
+  sheet showed. A jumper to run shows its new color, unless a jumper to move or take out had that color on the bench:
+  then it shows none. `color` is `null` when no drawing showed one, or when it would clash. Spark writes
+  `wiring-record.json` whole or not at all. A project built before the record has none: the first rebuild counts a jumper
+  that equals the fresh plan's as spark's. A failed build never removes
+  `wiring-record.json`. Never read an empty list as proof that nothing changed on the bench: read the sheet.
   Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
   `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
   from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).

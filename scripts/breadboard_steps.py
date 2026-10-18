@@ -25,8 +25,9 @@ ANCHOR_ORDER = (PART, RESISTOR, BOARD)
 
 #: One end of a connection: its kind, the component it belongs to (one diagram box each), its short name (in the
 #: diagram, and where another end joins it), the full words a step says when it moves this end, and its pin on the
-#: component (the board's printed label, the part's pin, the resistor's end number), which a drawing looks up.
-End = collections.namedtuple("End", "kind component name words pin")
+#: component (the board's printed label, the part's pin, the resistor's end number), which a drawing looks up. A
+#: resistor end also says its job (what the part asks it to do) and its value, which stay the same when its tag renumbers.
+End = collections.namedtuple("End", "kind component name words pin job value", defaults=("", ""))
 #: One connection point: its ends (the board's first), the supply from off the board on it, and whether it goes on a rail.
 StepPoint = collections.namedtuple("StepPoint", "ends supply rail")
 #: One step: its words, and the two diagram names it joins (None for a step that only places something).
