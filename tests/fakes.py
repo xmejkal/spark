@@ -1,6 +1,8 @@
 """P239 PR 2 (#238): the fakes of the deploy area's swappable parts, one per part of spark's core."""
 
 import datetime
+import os
+import time
 
 
 class FakeBoardConnection:
@@ -68,8 +70,23 @@ class FakeClock:
         self.now += seconds
 
 
-class FakeUtcClock:
-    """A fake clock for board_grant: calling it gives `now` (a time in UTC with the zone), and `advance` moves it on."""
+def pin_time_zone(case, zone="Europe/Prague"):
+    """Run `case` in one time zone, so a time said in the machine's zone reads the same on every machine (P291)."""
+    before = os.environ.get("TZ")
+    os.environ["TZ"] = zone
+    time.tzset()
+
+    def restore():
+        if before is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = before
+        time.tzset()
+    case.addCleanup(restore)
+
+
+class FakeLocalClock:
+    """A fake clock for board_grant: calling it gives `now` (a time with its zone), and `advance` moves it on."""
 
     def __init__(self, now):
         self.now = now

@@ -1,0 +1,68 @@
+[
+ {
+  "file": "scripts/board_grant.py",
+  "name": "naive now",
+  "find": "datetime.datetime.now().astimezone()",
+  "replace": "datetime.datetime.now()"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "now in UTC again",
+  "find": "datetime.datetime.now().astimezone()",
+  "replace": "datetime.datetime.now(datetime.timezone.utc)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "stamp without astimezone",
+  "find": "return moment.astimezone().isoformat(timespec=\"seconds\")",
+  "replace": "return moment.isoformat(timespec=\"seconds\")"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "stamp keeps microseconds",
+  "find": "return moment.astimezone().isoformat(timespec=\"seconds\")",
+  "replace": "return moment.astimezone().isoformat()"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "say_in_local_zone returns raw string",
+  "find": "return stamp(datetime.datetime.fromisoformat(iso))",
+  "replace": "return iso"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "who prints raw granted_at",
+  "find": "say_in_local_zone(\n            self.grant.granted_at)",
+  "replace": "str(\n            self.grant.granted_at)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "who prints raw expires_at",
+  "find": "say_in_local_zone(self.grant.expires_at))\n",
+  "replace": "self.grant.expires_at)\n"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "issue expiry ignores minutes",
+  "find": "stamp(now + datetime.timedelta(minutes=minutes))",
+  "replace": "stamp(now)"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "issue stores granted_at as expiry",
+  "find": "getpass.getuser(), stamp(now), stamp(",
+  "replace": "getpass.getuser(), stamp(now + datetime.timedelta(minutes=minutes)), stamp("
+ },
+ {
+  "file": "scripts/grant.py",
+  "name": "describe prints raw until",
+  "find": "board_grant.say_in_local_zone(result.grant.expires_at))",
+  "replace": "result.grant.expires_at)"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "deploy clock naive datetime.now",
+  "find": "(self.clock or board_grant.read_local_time)()",
+  "replace": "(self.clock or __import__('datetime').datetime.now)()"
+ }
+]

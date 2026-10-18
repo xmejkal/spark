@@ -51,7 +51,7 @@ last line says why. With --check --json, a run that could not look prints why "c
 def describe(result):
     """The line a person reads, for a GrantCheckResult."""
     if result.granted:
-        return "  granted: board %s until %s" % (result.grant.mac, result.grant.expires_at)
+        return "  granted: board %s until %s" % (result.grant.mac, board_grant.say_in_local_zone(result.grant.expires_at))
     return "  not granted: %s" % board_grant.MESSAGE_FOR[result.why]
 
 
@@ -61,7 +61,7 @@ def to_json(result):
     return json.dumps({"granted": result.granted, "why": result.why, "grant": grant})
 
 
-def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
+def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local_time):
     """Issue or check a grant. `run` is how a command runs, `consent` how the person says yes (default: a real
     terminal), `now` the clock. Returns the exit code."""
     parser = argparse.ArgumentParser(prog="grant.py", description=__doc__.strip(), epilog=EPILOG,

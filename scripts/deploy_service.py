@@ -7,7 +7,6 @@ rest comes back in a `DeployResult`; a refusal is an exception (`LookStop`, `Dep
 """
 
 import collections
-import datetime
 import hashlib
 import shlex
 import subprocess
@@ -67,7 +66,7 @@ def newer_files(project, image):
 
 class DeployService:
     """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `run` runs a command, `clock` reads the
-    time (default: datetime.datetime.now, called once), `probe` finds a board in download mode (default: the platform's).
+    time (default: board_grant.read_local_time, called once), `probe` finds a board in download mode (default: the platform's).
     `ignore_older_runs` holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
     `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
 
@@ -155,7 +154,7 @@ class DeployService:
         passed = image.find_passed_log()
         expected = file_hashes(passed) if passed else {}
         connection = self.platform.make_connection(planned.mpremote, report.port, self.run)
-        moment = (self.clock or datetime.datetime.now)()  # once: the facts file and the board log share it
+        moment = (self.clock or board_grant.read_local_time)()  # once: the facts file and the board log share it
         facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
         heard, reset_seen = "", None
         if ready.verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode

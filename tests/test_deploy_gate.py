@@ -31,8 +31,11 @@ import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeConsoleProbe, FakeUtcClock  # noqa: E402
+from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, pin_time_zone  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
+
+#: A fixed zone for a deploy moment, so a test reads the same on every machine (P291).
+PRAGUE_SUMMER = datetime.timezone(datetime.timedelta(hours=2))
 
 
 class Stream(io.StringIO):
@@ -540,13 +543,19 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "typed in a terminal by ada")
 
     def test_one_moment_names_the_facts_the_log_and_its_file(self):
-        moment, calls = datetime.datetime(2026, 10, 17, 9, 8, 7), []
+        moment, calls = datetime.datetime(2026, 10, 17, 9, 8, 7, tzinfo=PRAGUE_SUMMER), []
         self.run_the_scenario()
         self.deploy("--token", self.token(), consent=FakeConsent(True), clock=lambda: calls.append(1) or moment)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log"))
         self.assertEqual((len(calls), json.loads(self.copied["spark.json"])["deployed"], log.name),
-                         (1, "2026-10-17T09:08:07", "2026-10-17T09-08-07.log"))
-        self.assertTrue(log.read_text().startswith("# deploy 2026-10-17T09:08:07 on /dev/cu.usbmodem101\n"))
+                         (1, "2026-10-17T09:08:07+02:00", "2026-10-17T09-08-07.log"))
+        self.assertTrue(log.read_text().startswith("# deploy 2026-10-17T09:08:07+02:00 on /dev/cu.usbmodem101\n"))
+
+    def test_with_no_clock_given_the_deploy_time_has_its_zone(self):
+        self.run_the_scenario()
+        self.deploy("--token", self.token(), consent=FakeConsent(True))
+        deployed = datetime.datetime.fromisoformat(json.loads(self.copied["spark.json"])["deployed"])
+        self.assertIsNotNone(deployed.tzinfo)
 
     def test_the_facts_carry_the_moment_given_and_no_clock(self):
         moment = datetime.datetime(2026, 1, 2, 3, 4, 5)
@@ -675,7 +684,8 @@ class TheStandingYesTest(GateCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.clock = FakeUtcClock(self.START)
+        pin_time_zone(self)
+        self.clock = FakeLocalClock(self.START)
         self.grants = board_grant.GrantService(now=self.clock)
         self.run_the_scenario()
 
@@ -695,7 +705,7 @@ class TheStandingYesTest(GateCase):
         self.give()
         code, said, _ = self.flash()
         self.assertEqual((code, self.flashed()), (0, ["erase_flash", str(self.image)]))
-        who = "standing yes typed by ada at 2026-10-17T09:00:00+00:00, until 2026-10-17T09:30:00+00:00"
+        who = "standing yes typed by ada at 2026-10-17T11:00:00+02:00, until 2026-10-17T11:30:00+02:00"
         self.assertIn("  yes: %s" % who, said.splitlines())
         self.assertEqual(self.record(), who)
 

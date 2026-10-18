@@ -50,8 +50,8 @@
  {
   "file": "scripts/board_grant.py",
   "name": "deploy-grant-saved-as-live",
-  "find": "(now + datetime.timedelta(minutes=minutes)).isoformat(timespec=\"seconds\"), scope)",
-  "replace": "(now + datetime.timedelta(minutes=minutes)).isoformat(timespec=\"seconds\"))"
+  "find": "stamp(now + datetime.timedelta(minutes=minutes)), scope)",
+  "replace": "stamp(now + datetime.timedelta(minutes=minutes)))"
  },
  {
   "file": "scripts/board_grant.py",
@@ -248,14 +248,14 @@
  {
   "file": "scripts/board_grant.py",
   "name": "standing-who-wrong-time",
-  "find": "return \"standing yes typed by %s at %s, until %s\" % (self.grant.granted_by, self.grant.granted_at,",
-  "replace": "return \"standing yes typed by %s at %s, until %s\" % (self.grant.granted_by, self.grant.expires_at,"
+  "find": "say_in_local_zone(\n            self.grant.granted_at), say_in_local_zone(self.grant.expires_at))",
+  "replace": "say_in_local_zone(\n            self.grant.expires_at), say_in_local_zone(self.grant.expires_at))"
  },
  {
   "file": "scripts/board_grant.py",
   "name": "standing-uses-no-clock",
   "find": "if self.grant.why_not_valid(self.now()):\n            raise GateClosedError(",
-  "replace": "if self.grant.why_not_valid(utc_now()):\n            raise GateClosedError("
+  "replace": "if self.grant.why_not_valid(read_local_time()):\n            raise GateClosedError("
  },
  {
   "file": "scripts/board_grant.py",
