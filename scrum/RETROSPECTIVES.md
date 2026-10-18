@@ -231,10 +231,10 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
-## R9 — 2026-10-18, on four days of Kanban without a retro (draft, to hold with the PO)
+## R9 — 2026-10-18, on four days of Kanban without a retro
 
-**Draft.** Prepared by Claude with a Lean and Agile council and six team voices drawn from the agents' logs; nothing
-below is decided until it is held with Petr. The full page, with every number and its command:
+Prepared by Claude with a Lean and Agile council and six team voices drawn from the agents' logs. Held with Petr on
+2026-10-18, one theme at a time; his decisions are in the table of actions. The full page, with every number and its command:
 [`docs/discovery/2026-10-18-r9-retro/retro.md`](../docs/discovery/2026-10-18-r9-retro/retro.md).
 
 134 PRs merged into main since R8, 51 of them from 2026-10-15 to 10-18, and no retro ran for 17 days. The retro trigger is an epic's last
@@ -246,7 +246,7 @@ retrospectives and playing around with the wip and such?"*
 | | |
 | --- | --- |
 | **R8.1** (the bin's gate means something again) | **held**, done the same day (bin `852f1c6`). |
-| **R8.2** (every committed derived file is checked or made) and **R8.3** (a fact-correcting commit quotes its sweep) | **not checked.** Both belong to the four-repository sprints before the boards (2026-10-05); nobody carried them onto a card. Petr decides: a card, or dropped with this line as its record. |
+| **R8.2** (every committed derived file is checked or made) and **R8.3** (a fact-correcting commit quotes its sweep) | **not checked.** Both belong to the four-repository sprints before the boards (2026-10-05); nobody carried them onto a card. Dropped with this line as their record (decided at the hold, under the standing rule that row and card decisions are delegated). |
 
 ### Experiments from the inbox, to judge with the PO
 
@@ -272,18 +272,20 @@ cards; four opus lenses on one council cost 15 M tokens where a sonnet review ta
 a stray `git checkout` detached main for a moment, and GraphQL ran out four times in one morning. Each was undone;
 none was prevented.
 
-### Proposed actions (the PO picks at most two, plus the WIP experiments and the cadence)
+### Actions, as Petr decided them (all to 2026-11-01 unless named)
 
-| # | change | check at R10 |
-| --- | --- | --- |
-| **R9.1** | Before a builder or spike agent starts, Claude writes "in flight: N of 4" as the launch's first line. | slips in the inbox: 0 (today 2 in 4 days) |
-| **R9.2** | P296 goes to the top of Ready. | merges that name INDEX.md rows over the next 20 PRs (today 11 in 51) |
-| **R9.3** | Mutation once per story on the whole branch; opus lenses only on a design or an epic. | tester minutes per story (P239: four runs) and real gaps per story (today 2.3) |
-| **R9.4** | Every agent that runs a git command gets a worktree; no plan mode while an agent writes; board edits in one batch per turn. | incidents: 0 (today 3); rate-limit hits per day (today 17 in 21 hours) |
-| **R9.5** | The next three stories get typed `task` sub-issues as work reveals them. | 3 of 3 stories with two or more typed tasks; Petr's word |
-| **WIP A, B, C** | an epic card does not count in flight; Review stays at 2 with its wait measured; two cards on the same files never run in parallel | each with its measure and time box in the retro page |
-| **Cadence** | a retro every 10 merged stories or 7 days, prepared from the board, the PRs and the agent logs by the team with the council, held with Petr; a running, typed inbox; each experiment carries its due retro | R10 is held within 7 days, and opens with this table's verdicts |
-| **Logs as the team's voice** | Petr, 2026-10-18: *"We'll see if the process improvements also happen if it's only with the logs."* A script reads the agent logs; no agent note for now. | at R10: a log number led to a proposal that changed a number; a list of what the logs missed |
+Petr took all five themes, not the proposed two.
+
+| # | change | decision | check at R10 |
+| --- | --- | --- | --- |
+| **R9.1** | Before a builder or spike agent starts, Claude writes "in flight: N of 4" as the launch's first line. | yes |  slips in the inbox: 0 (today 2 in 4 days) |
+| **R9.2** | P296 goes to the top of Ready. | yes | merges that name INDEX.md rows over the next 20 PRs (today 11 in 51) |
+| **R9.3** | Mutation once per story on the whole branch; opus lenses only on a design or an epic. | yes, both parts; the refuter stays on every PR that holds logic | tester minutes per story (P239: four runs) and real gaps per story (today 2.3) |
+| **R9.4** | Every agent that runs a git command gets a worktree; no plan mode while an agent writes; board edits in one batch per turn. | yes, but plan mode stays: Claude still plans in plan mode before code | incidents: 0 (today 3); rate-limit hits per day (today 17 in 21 hours) |
+| **R9.5** | The next three stories get typed `task` sub-issues as work reveals them. | yes, from the story after P278 | 3 of 3 stories with two or more typed tasks; Petr's word |
+| **WIP A, B, C** | an epic card does not count in flight; Review stays at 2 with its wait measured; two cards on the same files never run in parallel | A broad (no epic card counts, only story, spike, chore and bug cards), B yes, C yes | each with its measure and time box in the retro page |
+| **Cadence** | a retro every 10 merged stories or 7 days, prepared from the board, the PRs and the agent logs by the team with the council, held with Petr; a running, typed inbox; each experiment carries its due retro | yes, as written; R10 is due by 2026-10-25 | R10 is held within 7 days, and opens with this table's verdicts |
+| **Logs as the team's voice** | Petr, 2026-10-18: *"We'll see if the process improvements also happen if it's only with the logs."* A script reads the agent logs; no agent note for now. | decided before the hold | at R10: a log number led to a proposal that changed a number; a list of what the logs missed |
 
 ---
 

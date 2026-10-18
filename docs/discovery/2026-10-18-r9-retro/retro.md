@@ -1,4 +1,4 @@
-# R9 retro (draft, 2026-10-18, to hold with Petr)
+# R9 retro (2026-10-18, held with Petr)
 
 > **TL;DR.** 51 PRs merged in four days, and no retro ran for 17 days. The push hook refused two pushes over a limit,
 > and the limit still broke twice at the pull; three of five working-stage cards are epics. One run on the same
@@ -123,7 +123,19 @@ voices were drawn from that evidence.
   file and a stale-branch reject too. R10's script counts git's own `CONFLICT (content)` lines and the hook's own
   refusal line. The log window is 21 hours; R10's covers the whole period.
 
-## What waits on Petr
+## Held with Petr, 2026-10-18
 
-Hold this retro with Claude: pick at most two theme proposals, the form of WIP experiment A, B and C yes or no, and the
-cadence. Then the R9 entry in `scrum/RETROSPECTIVES.md` loses its draft mark.
+Petr took every theme, not the proposed two. Each experiment runs to 2026-11-01 unless named, and R10 judges it.
+
+| item | decision |
+| --- | --- |
+| theme 1, in flight N of 4 | yes, as written |
+| theme 2, P296 to the top of Ready | yes |
+| theme 3, mutation per story and opus lenses only on a design or an epic | yes, both parts; the refuter stays |
+| theme 4, worktrees, no plan mode while agents write, batched board edits | yes, but plan mode stays |
+| theme 5, the cadence | yes, as written; R10 is due by 2026-10-25 |
+| theme 6, typed task sub-issues for three stories | yes, from the story after P278 |
+| WIP A | the broad form: no epic card counts in flight |
+| WIP B | yes, for the next 20 merged PRs |
+| WIP C | yes |
+| R8.2 and R8.3 | dropped, with the R9 entry as their record |
