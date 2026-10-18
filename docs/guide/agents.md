@@ -438,7 +438,7 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
 
 - `look.py` `data`: `port`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
   `status`, `token`, `no_token_reason`. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
-  `unchecked` are the unknown fields and a missing token. A look that could not run has `data: null`. When there is a
+  `unchecked` are the unknown fields and a missing token. A look that could not run has `data: null` (or `data.doctor` after a failed read). When there is a
   token, `next` holds a `deploy` step, whatever the status. A warning or an unknown field is not a pass: relay it.
 - `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
@@ -448,9 +448,10 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
   `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could
   cover it. Never run either one yourself.
-- `ready unknown` gives a `watch` step, never a second `deploy`: read the board again. When the person must press the
-  board's R button, `data.person_action` says so; tell them before you run `deploy.py`, since the run waits for the press
-  and its text goes to stderr.
+- `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
+  board's R button, `data.person_action` says so, but only after the wait for the press ran out. So tell the person before you run
+  `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
+  board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`.
 - A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.
 
 ## The outcomes and their exit codes

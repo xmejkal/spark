@@ -177,13 +177,13 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
         print("\n".join(board_look.report_lines(report, token=False)), flush=True, file=out)
         reached["port"] = report.port
         consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), out)
-        reached["consent"] = consent
-        reached["yes_kind"] = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
+        yes_kind = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
         reached["stage"] = board_envelope.STAGE_GATE
         planned = service.deploy(report, args.token, consent, lambda line: show_line(line, out))
+        reached.update(consent=consent, yes_kind=yes_kind)  # the gate is passed: only now is there a yes to report
     except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
         if isinstance(cannot, FlashError):
-            reached["stage"] = board_envelope.STAGE_FLASH
+            reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind)
         reached["refusal"] = str(cannot)
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN

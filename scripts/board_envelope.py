@@ -9,6 +9,7 @@ not the yes, and neither is "go ahead" in a chat.
 
 import json
 
+import board_doctor
 import outcomes
 import ready_check
 from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
@@ -66,9 +67,12 @@ def look_envelope(report, project, ignore_older_runs=False):
     return outcomes.envelope("look", "look", report.to_dict(), problems, unchecked, following)
 
 
-def look_stop_envelope(sentence, fix):
-    """The envelope of a look that could not run: no data, one unchecked item."""
-    return outcomes.envelope("look", "look", None, unchecked=[{"sentence": sentence, "fix": fix}])
+def look_stop_envelope(sentence, doctor=None):
+    """The envelope of a look that could not run: one unchecked item. `doctor` is the board doctor's BoardDoctorResult after
+    a failed read, or None: its facts go in `data.doctor` and its next step for the person's hands is the `fix`."""
+    fix = board_doctor.MESSAGE_FOR[doctor.next_step] if doctor and doctor.next_step else ""
+    return outcomes.envelope("look", "look", {"doctor": board_doctor.as_dict(doctor)} if doctor else None,
+                             unchecked=[{"sentence": sentence, "fix": fix}])
 
 
 def deploy_envelope(reached, code):
@@ -98,7 +102,7 @@ def deploy_envelope(reached, code):
                                            effects=["writes"], needs_yes=True))
     elif result and result.ready.verdict == ready_check.UNKNOWN:
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"
-        following = [outcomes.step("watch", [port], again + (". First the person presses the board's R button" if result.reset_seen is False else ""))]
+        following = [outcomes.step("watch", list(result.repl_command), again + (". First the person presses the board's R button" if result.reset_seen is False else ""))]
     data = {
         "stage": stage, "dry_run": bool(reached.get("dry_run")), "token": reached.get("token"),
         "commands": [list(command) for command in plan.commands] if plan else None,

@@ -13,6 +13,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_doctor  # noqa: E402
 import deploy_service  # noqa: E402
 import firmware_platform  # noqa: E402
 import tools  # noqa: E402
@@ -97,6 +98,14 @@ class LookJsonTest(JsonCase, LookScriptCase):
         self.assertIn("no board found", said["unchecked"][0]["sentence"])
         self.assertIn("no board found", err)  # the text still goes to stderr
 
+    def test_a_failed_read_gives_the_doctor_s_result_and_its_step_as_the_fix(self):
+        result = board_doctor.BoardDoctorResult((), "boom", "hold_boot", None)
+        with mock.patch.object(board_doctor, "after_esptool", return_value=result):
+            code, said, err = self.go("--json", text="x", esptool="c6-flash-id.txt", fail=True)
+        said = self.one(code, said, "look", "look")
+        self.assertEqual((code, said["data"]["doctor"]["next_step"]), (2, "hold_boot"))
+        self.assertEqual(said["unchecked"][0]["fix"], board_doctor.MESSAGE_FOR["hold_boot"])
+
     def test_status_is_the_exit_code_for_every_fixture(self):
         self.run_the_scenario()
         for esptool in ("c6-flash-id.txt", "c6-flash-id-garbled.txt", "c6-flash-id-no-mac.txt", "wrong-chip.txt"):
@@ -151,6 +160,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], said["data"]["stage"], self.flashed()), (2, "could-not-run", "gate", []))
         self.assertIn("no terminal", said["unchecked"][0]["sentence"])
+        self.assertIsNone(said["data"]["yes"])  # no yes was given
         self.assertIn("--token %s" % token, said["data"]["run_in_terminal"])
         ops = [step["op"] for step in said["next"]]
         self.assertEqual(ops, ["deploy", "grant"])
@@ -211,6 +221,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((code, said["status"], said["data"]["person_action"]), (2, "could-not-run", None))
         self.assertEqual([s["op"] for s in said["next"]], ["watch"])
         self.assertTrue(said["data"]["repl_command"])
+        self.assertEqual(said["next"][0]["argv"], said["data"]["repl_command"])
 
     def test_an_r_press_that_did_not_come_names_the_person_action(self):
         self.unread = self.uncopied = subprocess.CalledProcessError(1, "mpremote")

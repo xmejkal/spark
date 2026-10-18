@@ -51,10 +51,10 @@ def main(argv=None, run=subprocess.run):
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
     except board_look.LookStop as stop:
-        lines = board_doctor.stop_lines("look.py", stop, args.project, run)
+        lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
         print("\n".join(lines), file=sys.stderr)
         if args.json:
-            _print_json(board_envelope.look_stop_envelope(str(stop), lines[-1].strip()))
+            _print_json(board_envelope.look_stop_envelope(str(stop), doctor))
         return EXIT_COULD_NOT_RUN
     if args.json:
         _print_json(board_envelope.look_envelope(report, args.project.resolve(), args.ignore_older_runs))
