@@ -315,7 +315,7 @@ class TheBuildSaysItTest(unittest.TestCase):
         self.assertEqual(len(named), 1)
         self.assertIn("LedRed5mm", named[0]["line"])
         self.assertEqual(named[0]["file"], str(project / "breadboard.json"))
-        self.assertEqual((named[0]["part"], named[0]["code"]), ("LedRed5mm", "pin-off-holes"))
+        self.assertEqual((named[0]["subject"], named[0]["code"]), ("LedRed5mm", "pin-off-holes"))
 
     def test_the_command_prints_each_name_on_stderr(self):
         import io

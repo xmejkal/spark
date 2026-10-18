@@ -258,6 +258,14 @@ class QuietTest(unittest.TestCase):
         change_requirements(project, LED_ONLY)
         self.assertEqual(codes(build(project)).get("jumper 6b.j-14t.b"), "rows-not-joined")
 
+    def test_a_project_built_before_the_record_names_no_jumper_nobody_moved_on_build_3(self):
+        """The refuter: with no record, build 2 must count a jumper equal to the fresh plan's as spark's."""
+        project = built_full()
+        (project / "wiring-record.json").unlink()
+        self.assertEqual(build(project).not_kept, [])
+        change_requirements(project, LED_ONLY)
+        self.assertEqual([one for one in build(project).not_kept if one.subject.startswith("jumper ")], [])
+
     def test_with_no_record_a_jumper_that_no_plan_joins_is_not_named(self):
         project = built_full()
         change_wire(project, 1, other="bb1:28t.a")

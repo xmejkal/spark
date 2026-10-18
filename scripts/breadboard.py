@@ -404,7 +404,7 @@ def drawing(requirements_path, circuit_path=None, read=None):
 
 #: One plan of the layout for a sheet and its drawings: the layout, or why it could not be planned, and the earlier
 #: parts it could not keep as the person left them ([NotKeptResult]).
-PlannedLayout = collections.namedtuple("PlannedLayout", "layout why not_kept")
+PlannedLayout = collections.namedtuple("PlannedLayout", "layout why not_kept fresh", defaults=(None,))
 
 
 def _plan_once(read, earlier_path=None, record=None):
@@ -417,15 +417,15 @@ def _plan_once(read, earlier_path=None, record=None):
     except breadboard_drawing.NotDrawn as stopped:
         return PlannedLayout(None, str(stopped), [])
     if earlier_path is None:
-        return PlannedLayout(fresh, None, [])
+        return PlannedLayout(fresh, None, [], fresh)
     geometry = breadboard_drawing.WokwiGeometry.load()
     earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
     if earlier is None:
-        return PlannedLayout(fresh, None, [])
+        return PlannedLayout(fresh, None, [], fresh)
     if earlier.why_unread:
         return PlannedLayout(fresh, None, [breadboard_keep.NotKeptResult(
             Path(earlier_path).name, breadboard_keep.UNREADABLE,
-            breadboard_keep.MESSAGES[breadboard_keep.UNREADABLE] % earlier.why_unread)])
+            breadboard_keep.MESSAGES[breadboard_keep.UNREADABLE] % earlier.why_unread)], fresh)
     catalog = _describe_parts(read, geometry)
     placement = breadboard_keep.KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)
     jumpers = breadboard_keep.KeepMovesJumperPlacement(geometry, earlier)
@@ -437,7 +437,7 @@ def _plan_once(read, earlier_path=None, record=None):
     drawn = record.drawn_jumpers if record and not record.why_unread else None
     named = breadboard_keep.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
     named += breadboard_keep.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, drawn, default)
-    return PlannedLayout(layout, None, named)
+    return PlannedLayout(layout, None, named, fresh)
 
 
 def holds_parts(path):
@@ -489,16 +489,22 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
 WriteResult = collections.namedtuple("WriteResult", "sheet drawings why not_kept changes")
 
 
-def _spark_jumpers(layout, earlier_path, record):
-    """The pairs of holes of the jumpers in `layout` that spark drew itself: a jumper that is not in the earlier
-    breadboard.json, or that is there and was spark's in the earlier record. A kept jumper of the person's is not."""
+def _spark_jumpers(planned, earlier_path, record):
+    """The pairs of holes of the jumpers in the layout that spark drew itself: a jumper that is not in the earlier
+    breadboard.json, or that is there and was spark's in the earlier record. A kept jumper of the person's is not.
+    With no record (a project built before it), a jumper that equals one of the fresh plan counts as spark's."""
+    layout = planned.layout
     if not layout:
         return []
     geometry = breadboard_drawing.WokwiGeometry.load()
     earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
     person = {frozenset((wire.one, wire.other)) for wire in earlier.jumpers} if earlier else set()
     pairs = [frozenset((jumper.one.name, jumper.other.name)) for jumper in layout.jumpers]
-    return [pair for pair in pairs if pair not in person or record and pair in record.drawn_jumpers]
+    if record and not record.why_unread:
+        sparks = record.drawn_jumpers
+    else:
+        sparks = {frozenset((jumper.one.name, jumper.other.name)) for jumper in planned.fresh.jumpers}
+    return [pair for pair in pairs if pair not in person or pair in sparks]
 
 
 def _change_lines(record, changes):
@@ -508,7 +514,7 @@ def _change_lines(record, changes):
     if record.why_unread:
         return ["- Changes cannot be compared with the last build: %s %s. The steps below are the whole wiring."
                 % (breadboard_changes.WiringRecord.FILE_NAME, record.why_unread)]
-    return ["- " + line for line in CHANGE_LIST.render(changes)] or ["Nothing to change on the bench."]
+    return ["- " + line for line in CHANGE_LIST.render(changes)] or ["- Nothing to change on the bench."]
 
 
 def write(requirements_path, out, circuit_path=None):
@@ -527,7 +533,7 @@ def write(requirements_path, out, circuit_path=None):
     changes = (breadboard_changes.changes_between(record, seated, colors)
                if record and not record.why_unread else [])
     new_record = breadboard_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
-        planned.layout, earlier_path, record))
+        planned, earlier_path, record))
     try:
         # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
         texts = [renderer.text(planned.layout) for renderer in DRAWING_RENDERERS] if planned.layout else []
@@ -536,7 +542,7 @@ def write(requirements_path, out, circuit_path=None):
             path.unlink(missing_ok=True)
         raise
     Path(out).write_text(sheet(requirements_path, read=read, planned=planned, change_lines=_change_lines(record, changes)))
-    record_path.write_text(json.dumps(new_record.to_dict(), indent=1) + "\n")
+    new_record.write(record_path)
     if not planned.layout:
         for path, _ in paths:
             path.unlink(missing_ok=True)

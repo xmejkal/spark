@@ -463,18 +463,21 @@ lines:
 ### Changes since the last build
 
 - Put LedGreen5mm in the breadboard.
-- Put R2 end 1 in a free row.
-- Run a magenta jumper from board D9 to the row of R2 end 1.
+- Put R2 end 1 (in series with LedGreen5mm A) in a free row.
+- Run a jumper from board D9 to the row of R2 end 1 (in series with LedGreen5mm A).
 - Run a gold jumper from the row of LedRed5mm K to the row of LedGreen5mm K.
-- Put R2 end 2 in the row of LedGreen5mm A.
+- Put R2 end 2 (in series with LedGreen5mm A) in the row of LedGreen5mm A.
 - Move the purple jumper from board GND: it now goes to the row of LedGreen5mm K (it went to the row of LedRed5mm K).
 - Move the magenta jumper from the row of TactileButton B: it now goes to the row of LedGreen5mm K (it went to the row of LedRed5mm K).
 ```
 
-A line names a jumper by its two ends and by the color on your earlier sheet, so you can find the wire you wired. It
-never names a hole, because you pick your own free rows. A resistor with a new value reads
-`Swap R1, 330Ω, for a 1kΩ resistor in the same rows.` When nothing changed, the section says
-`Nothing to change on the bench.` The first build has no section. Spark keeps what the last sheet said in
+A line names a jumper by its two ends. A jumper you move or take out has the color on your earlier sheet, so you can find
+the wire you wired. A new jumper has the color it has on the new sheet, unless a jumper in the same list had that color
+on your bench. Then it has no color, so no two wires in the list share one. A resistor is named by its job too, because
+its tag can renumber. A line never names a hole, because you pick your own free rows. A resistor with a new value reads
+`Swap R1, 330Ω, for a 1kΩ resistor in the same rows.` A resistor that goes is one line:
+`Take out R1, 330Ω in series with LedRed5mm A.` When nothing changed, the section says
+`- Nothing to change on the bench.` The first build has no section. Spark keeps what the last sheet said in
 `wiring-record.json`, beside the sheet. Do not edit it.
 
 Only the Seeed Studio XIAO ESP32-C6 is drawn yet, and only when no point needs a rail or a supply from off the

@@ -790,12 +790,12 @@ def keep_breadboard(requirements, destination, stages=()):
         kept += [{"file": str(path), "did": "not written", "why": written.why,
                   "line": "no %s: %s" % (renderer.NOUN, written.why)} for path, renderer in drawings]
     # what the person changes on the bench since the last sheet (P300)
-    kept += [{"file": str(written.sheet), "did": CHANGED, "change": change.code, "subject": change.name,
+    kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
               "color": change.color, "why": breadboard.CHANGE_LIST.line(change),
               "line": "%s: %s" % (CHANGED, breadboard.CHANGE_LIST.line(change))} for change in written.changes]
     # a part the person moved in breadboard.json that the build could not keep (P273)
     kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
-              "part": named.subject, "code": named.code, "why": named.why,
+              "subject": named.subject, "code": named.code, "why": named.why,
               "line": "move not kept: %s" % named.line} for named in written.not_kept]
     return kept
 

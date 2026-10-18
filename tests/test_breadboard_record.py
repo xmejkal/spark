@@ -57,7 +57,7 @@ class RebuildTest(unittest.TestCase):
         build(project)
         written = build(project)
         self.assertEqual(written.changes, [])
-        self.assertEqual(section(project), ["Nothing to change on the bench."])
+        self.assertEqual(section(project), ["- Nothing to change on the bench."])
 
     def test_adding_the_led_lists_what_to_put_in_the_sheet_and_the_result(self):
         project = new_project(BUTTON_ONLY)
@@ -66,7 +66,7 @@ class RebuildTest(unittest.TestCase):
         written = build(project)
         lines = breadboard_changes.ChangeList().render(written.changes)
         self.assertEqual(lines[0], "Put LedRed5mm in the breadboard.")
-        self.assertIn("Put R1 end 1 in a free row.", lines)
+        self.assertIn("Put R1 end 1 (in series with LedRed5mm A) in a free row.", lines)
         self.assertEqual([one.code for one in written.changes], ["added"] * 5 + ["rerouted"])
         self.assertEqual(lines[-1], "Move the green jumper from board GND: it now goes to the row of LedRed5mm K "
                                     "(it went to the row of TactileButton B).")
@@ -180,8 +180,8 @@ class CheckSpineTest(unittest.TestCase):
         project = self.rebuilt()
         kept, said = self.keep(project, FULL)
         changed = [entry for entry in kept if entry["did"] == "changed"]
-        self.assertEqual([entry["change"] for entry in changed], ["added"] * 5 + ["rerouted"])
-        self.assertEqual(changed[0], {"file": str(project / "breadboard.md"), "did": "changed", "change": "added",
+        self.assertEqual([entry["code"] for entry in changed], ["added"] * 5 + ["rerouted"])
+        self.assertEqual(changed[0], {"file": str(project / "breadboard.md"), "did": "changed", "code": "added",
                                       "subject": "LedRed5mm", "color": None,
                                       "why": "Put LedRed5mm in the breadboard."})
         self.assertEqual(changed[2]["color"], "cyan")
@@ -194,7 +194,7 @@ class CheckSpineTest(unittest.TestCase):
         edit(project, move("LedRed5mm", dy=-500))
         kept, _ = self.keep(project, FULL)
         named = next(entry for entry in kept if entry["did"] == "move not kept")
-        self.assertEqual((named["part"], named["code"]), ("LedRed5mm", "pin-off-holes"))
+        self.assertEqual((named["subject"], named["code"]), ("LedRed5mm", "pin-off-holes"))
         self.assertNotIn("line", named)
 
     def test_a_build_that_did_not_finish_keeps_the_record(self):

@@ -30,3 +30,15 @@ The plan councils of P300 (#366). Plan: [`plan.md`](../../discovery/2026-10-18-p
 | 24 | `wiring-record.json` repeats nine fields for every step, so it is long for a small project | the build | raised | fine for now; shrink it only if a person reads it, and the guide says not to edit it |
 | 25 | `tests/test_self_confirmation.py` fails a test that reads a module constant such as `ADDED` | the push hook | acted | the new tests name the codes as literals |
 | 26 | The mutation tester was not run on `breadboard_changes.py` and the keep change | the build | raised | the council runs it before the PR (plan, Verification) |
+| 27 | A resistor leg and a supply that moved read as "Move the jumper …" | lenses, review round | acted | each kind has its own words; tests for a leg and a supply |
+| 28 | A new jumper and a moved jumper can both be called magenta in one list | lenses, review round | acted | a new jumper whose color clashes with a removed or moved jumper names no color; docs say so |
+| 29 | Build 3 of a project built before the record gave 3 false `move not kept` lines | refuter | acted | with no record, a jumper that equals the fresh plan's counts as spark's; a build 2 and build 3 test |
+| 30 | A line said "(it went to a free rail. Mark it GND)" | refuter | acted | the record keeps the rail words and the mark apart; only the first arrival says to mark |
+| 31 | A renumbered resistor read "to the row of R1 end 1 (it went to the row of R1 end 1)" | lenses | acted | a resistor end is named with its job in a change line |
+| 32 | A removed resistor gave one line for each end | lenses | acted | one line: "Take out R1, 330Ω in series with …" |
+| 33 | "a orange jumper", "a 820Ω resistor" | lenses | acted | an article function with tests |
+| 34 | The record file could be half written | refuter | acted | `WiringRecord.write` writes a temporary file and replaces |
+| 35 | The new-value code `changed` and the kept entry key `change` and `part` mixed words | lenses | acted | code `swapped`; both kinds of kept entry use `code` and `subject`; `--json` never carried `part`, so no reader breaks |
+| 36 | "Nothing to change on the bench." had no bullet | lenses | acted | it has the same "- " bullet |
+| 37 | The mutation tester found three escapes in `changes_between` (rail mark order, take-out before swap, the mark on the first line only) | mutation tester | acted | three tests; the table is `tests/mutations/p300-change-list.json` |
+| 38 | Removing a part prints `move not kept` for parts nobody moved | PR review | rejected | outside this branch: main does the same; the coordinator files a card |

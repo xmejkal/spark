@@ -96,8 +96,9 @@ words and color) and the jumpers spark drew in `breadboard.json` itself.
    the component for a place step; the supply name for a supply; else the end's key (a resistor end: its words
    without the tag; other ends: their words). Its anchor key: the seat's end key, or the rail mark. A resistor end's key leaves out its value, so a new value on the same job
    is `changed` ("Swap R1, 330Ω, for a 1kΩ resistor in the same rows."). Same subject, other anchor: `rerouted`. Only in the record: `removed`; only now: `added`. A renamed resistor tag with the same
-   job is no change. Order: removes, changes, adds, reroutes, each in step order; a line that marks a rail comes before the
-   lines that use it. `ChangeList` writes one hand action per line ("Put", "Take out", "Move the … jumper"), and a
+   job is no change. Order (changed after review to what the code does): removes, then swaps (the code is `swapped`), then adds and
+   reroutes together, adds first, each in step order; a line that marks a rail comes before all the other lines of
+   that last group. A removed resistor is one line. `ChangeList` writes one hand action per line ("Put", "Take out", "Move the … jumper"), and a
    color only for a jumper on a sheet that showed colors: the record's color for a removed or rerouted jumper, the new
    step's color for an added one.
 2. `WiringRecord` (Value, same module) reads and writes `wiring-record.json`: per step its keys, words, jumper flag

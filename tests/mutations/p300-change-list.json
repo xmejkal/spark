@@ -1,0 +1,77 @@
+[
+{
+"file": "scripts/breadboard_changes.py",
+"name": "no-value-dedupe",
+"find": "one.key[:2] not in jobs:",
+"replace": "True:"},
+{
+"file": "scripts/breadboard_changes.py",
+"name": "anchor-eq",
+"find": "if old.anchor != one.anchor:",
+"replace": "if old.anchor == one.anchor:"},
+{
+"file": "scripts/breadboard_changes.py",
+"name": "rail-mark-last",
+"find": "key=lambda change: not change.marks)",
+"replace": "key=lambda change: bool(change.marks))"},
+{
+"file": "scripts/breadboard_changes.py",
+"name": "order-swap-first",
+"find": "return removed + swapped + further",
+"replace": "return swapped + removed + further"},
+{
+"file": "scripts/breadboard_changes.py",
+"name": "color-not-kept",
+"find": "steps.append(one._replace(color=old.color) if old and old.color else one)",
+"replace": "steps.append(one)"},
+{
+"file": "scripts/breadboard_changes.py",
+"name": "marks-inverted",
+"find": "and anchor not in reached",
+"replace": "and anchor in reached"},
+{
+"file": "scripts/breadboard.py",
+"name": "no-nothing-line",
+"find": " or [\"- Nothing to change on the bench.\"]",
+"replace": " or []"},
+{
+"file": "scripts/breadboard.py",
+"name": "changes-never",
+"find": "if record and not record.why_unread else [])",
+"replace": "if False else [])"},
+{
+"file": "scripts/breadboard.py",
+"name": "drawn-ignores-record",
+"find": "if pair not in person or pair in sparks]",
+"replace": "if pair not in person]"},
+{
+"file": "scripts/breadboard_keep.py",
+"name": "drawn-never-skipped",
+"find": "if drawn is not None and pair in drawn:",
+"replace": "if False:"},
+{
+"file": "scripts/breadboard_keep.py",
+"name": "no-record-names",
+"find": "if code is None or drawn is None and code in",
+"replace": "if code is None or code in"},
+{
+"file": "scripts/check_spine.py",
+"name": "json-keeps-line",
+"find": "if key != \"line\"}",
+"replace": "if True}"},
+{
+"file": "scripts/breadboard_changes.py",
+"name": "clash-keeps-color",
+"find": "change._replace(color=None) if change.color in bench else change",
+"replace": "change"},
+{
+"file": "scripts/breadboard_changes.py",
+"name": "no-an",
+"find": "return \"an\" if digits.group().startswith(\"8\") or digits.group() in (\"11\", \"18\") else \"a\"",
+"replace": "return \"a\""},
+{
+"file": "scripts/breadboard.py",
+"name": "old-project-fresh-plan-ignored",
+"find": "for jumper in planned.fresh.jumpers}",
+"replace": "for jumper in []}"}
+]
