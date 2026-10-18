@@ -43,6 +43,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assign_pins  # noqa: E402
+import breadboard_changes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import breadboard_steps  # noqa: E402
@@ -84,6 +85,8 @@ STEP_COLORS = breadboard_steps.StepColors()
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),
                      breadboard_drawing.SvgBreadboardDiagram(breadboard_drawing.WokwiGeometry.load(), STEP_COLORS))
+#: What the sheet says of the bench: one line per change since the last build, in these words.
+CHANGE_LIST = breadboard_changes.ChangeList()
 #: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).
 EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
                         if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
@@ -435,9 +438,10 @@ def holds_parts(path):
     return bool(earlier and earlier.parts)
 
 
-def sheet(requirements_path, circuit_path=None, read=None, planned=None):
+def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_lines=None):
     """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit).
-    `planned` is the layout `write()` already planned, so the sheet says what the drawings show."""
+    `planned` is the layout `write()` already planned, so the sheet says what the drawings show. `change_lines` is the
+    section "Changes since the last build" (P300), None on a first build."""
     requirements_path = Path(requirements_path)
     read = read or _read_build(requirements_path, circuit_path)
     planned = planned or _plan_once(read)
@@ -448,6 +452,8 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None):
              "## Parts", ""]
     lines += _parts_table(built.board, built.parts, resistors, supplies, have)
     lines += ["", "## Wiring"]
+    if change_lines is not None:
+        lines += ["", "### Changes since the last build", ""] + change_lines
     for heading, intro, renderer in WIRING_VIEWS:
         lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
     if planned.layout:
@@ -469,8 +475,31 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None):
 
 
 #: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, why none was (the
-#: plan fails for every drawing at once), else None, and the [NotKeptResult] of the earlier parts not kept.
-WriteResult = collections.namedtuple("WriteResult", "sheet drawings why not_kept")
+#: plan fails for every drawing at once), else None, the [NotKeptResult] of the earlier parts not kept, and the
+#: [WiringChange] since the last build (none on a first build).
+WriteResult = collections.namedtuple("WriteResult", "sheet drawings why not_kept changes")
+
+
+def _spark_jumpers(layout, earlier_path, record):
+    """The pairs of holes of the jumpers in `layout` that spark drew itself: a jumper that is not in the earlier
+    breadboard.json, or that is there and was spark's in the earlier record. A kept jumper of the person's is not."""
+    if not layout:
+        return []
+    geometry = breadboard_drawing.WokwiGeometry.load()
+    earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
+    person = {frozenset((wire.one, wire.other)) for wire in earlier.jumpers} if earlier else set()
+    pairs = [frozenset((jumper.one.name, jumper.other.name)) for jumper in layout.jumpers]
+    return [pair for pair in pairs if pair not in person or record and pair in record.drawn_jumpers]
+
+
+def _change_lines(record, changes):
+    """The section "Changes since the last build": None on a first build."""
+    if record is None:
+        return None
+    if record.why_unread:
+        return ["- Changes cannot be compared with the last build: %s %s. The steps below are the whole wiring."
+                % (breadboard_changes.WiringRecord.FILE_NAME, record.why_unread)]
+    return ["- " + line for line in CHANGE_LIST.render(changes)] or ["Nothing to change on the bench."]
 
 
 def write(requirements_path, out, circuit_path=None):
@@ -479,8 +508,17 @@ def write(requirements_path, out, circuit_path=None):
     describes another one."""
     read = _read_build(requirements_path, circuit_path)
     paths = [(Path(out).parent / renderer.FILE_NAME, renderer) for renderer in DRAWING_RENDERERS]
-    # the earlier breadboard.json is read here, before the new one overwrites the person's edits
-    planned = _plan_once(read, Path(out).parent / EDITABLE_DRAWING.FILE_NAME)
+    record_path = Path(out).parent / breadboard_changes.WiringRecord.FILE_NAME
+    # the earlier breadboard.json and record are read here, before the new ones overwrite them
+    earlier_path = Path(out).parent / EDITABLE_DRAWING.FILE_NAME
+    record = breadboard_changes.WiringRecord.read(record_path)
+    planned = _plan_once(read, earlier_path)
+    seated = read.steps.anchored()
+    colors = {jumper.step: STEP_COLORS.color(jumper.step) for jumper in planned.layout.jumpers} if planned.layout else {}
+    changes = (breadboard_changes.changes_between(record, seated, colors)
+               if record and not record.why_unread else [])
+    new_record = breadboard_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
+        planned.layout, earlier_path, record))
     try:
         # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
         texts = [renderer.text(planned.layout) for renderer in DRAWING_RENDERERS] if planned.layout else []
@@ -488,11 +526,12 @@ def write(requirements_path, out, circuit_path=None):
         for path, _ in paths:
             path.unlink(missing_ok=True)
         raise
-    Path(out).write_text(sheet(requirements_path, read=read, planned=planned))
+    Path(out).write_text(sheet(requirements_path, read=read, planned=planned, change_lines=_change_lines(record, changes)))
+    record_path.write_text(json.dumps(new_record.to_dict(), indent=1) + "\n")
     if not planned.layout:
         for path, _ in paths:
             path.unlink(missing_ok=True)
-        return WriteResult(Path(out), [], planned.why, [])
+        return WriteResult(Path(out), [], planned.why, [], changes)
     try:
         for (path, _), text in zip(paths, texts):
             path.write_text(text)
@@ -500,7 +539,7 @@ def write(requirements_path, out, circuit_path=None):
         for path, _ in paths:
             path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
         raise
-    return WriteResult(Path(out), paths, None, planned.not_kept)
+    return WriteResult(Path(out), paths, None, planned.not_kept, changes)
 
 
 def main(argv=None):
@@ -520,6 +559,8 @@ def main(argv=None):
     print("wrote %s" % written.sheet, file=sys.stderr)
     for path, renderer in written.drawings:
         print("wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE), file=sys.stderr)
+    for change in written.changes:
+        print("change: %s" % CHANGE_LIST.line(change), file=sys.stderr)
     for named in written.not_kept:
         print("not kept: %s" % named.line, file=sys.stderr)
     if written.why:
