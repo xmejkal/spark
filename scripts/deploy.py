@@ -124,7 +124,7 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     """
     Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
     `consent` how the person says yes (default: in this terminal), `probe` how a board in download mode is found
-    (default: board_console.ConsoleProbe), `clock` how the time is read (default: datetime.datetime.now, called once),
+    (default: board_console.ConsoleProbe), `clock` how the time is read (default: board_grant.read_local_time, called once),
     `grant_service` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
     wins: the grant is read only when none is given. Returns the exit code.
     """

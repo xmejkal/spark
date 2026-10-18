@@ -68,7 +68,7 @@ def to_json(port, result):
     return json.dumps(dict(fields, port=port))
 
 
-def main(argv=None, run=subprocess.run, probe=None, now=board_grant.utc_now):
+def main(argv=None, run=subprocess.run, probe=None, now=board_grant.read_local_time):
     """Run one live try. `run` is how a command runs, `probe` the console probe (default: ConsoleProbe for mpremote's
     Python), `now` the clock. Returns the exit code."""
     parser = argparse.ArgumentParser(prog="live.py", description=__doc__.strip(), epilog=EPILOG,

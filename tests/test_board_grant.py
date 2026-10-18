@@ -29,7 +29,7 @@ import board_look  # noqa: E402
 import deploy_gate  # noqa: E402
 import grant  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeUtcClock  # noqa: E402
+from fakes import FakeConsent, FakeLocalClock, pin_time_zone  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
 
@@ -48,6 +48,7 @@ class GrantCase(unittest.TestCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
         patcher.start()
         self.addCleanup(patcher.stop)
+        pin_time_zone(self)
         self.now, self.ran = START, []
         self.devs, self.esptool = data("mpremote-devs-one.txt"), data("c6-flash-id.txt")
 
@@ -105,7 +106,7 @@ class IssueTest(GrantCase):
                                          "from your yes?" % self.kept()["board_token"]])
         kept = self.kept()
         self.assertEqual((kept["mac"], kept["granted_at"], kept["expires_at"]),
-                         (MAC, "2026-10-17T09:00:00+00:00", "2026-10-17T09:30:00+00:00"))
+                         (MAC, "2026-10-17T11:00:00+02:00", "2026-10-17T11:30:00+02:00"))
         self.assertEqual(len(kept["board_token"]), 4)
         self.assertIn("the board restarts while it is read", out)
         self.assertEqual(stat.S_IMODE((self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").stat().st_mode), 0o600)
@@ -161,7 +162,7 @@ class IssueTest(GrantCase):
                 return super().ask(question)
 
         self.grant("--minutes", "30", consent=Slow(True))
-        self.assertEqual(self.kept()["expires_at"], "2026-10-17T09:40:00+00:00")
+        self.assertEqual(self.kept()["expires_at"], "2026-10-17T11:40:00+02:00")
 
     def test_json_goes_with_check_only(self):
         with self.assertRaises(SystemExit):
@@ -274,11 +275,11 @@ class CheckTest(GrantCase):
         self.assertEqual(self.check()[0], 1)
         self.grant("--minutes", "5", consent=FakeConsent(True))
         self.assertEqual(self.check()[0], 0)
-        self.assertEqual(self.kept()["expires_at"], "2026-10-17T09:45:00+00:00")
+        self.assertEqual(self.kept()["expires_at"], "2026-10-17T11:45:00+02:00")
 
     def test_the_text_says_until_when(self):
         code, out, _ = self.grant("--check")
-        self.assertEqual((code, out.strip()), (0, "granted: board 8c:bf:ea:xx:xx:xx until 2026-10-17T09:30:00+00:00"))
+        self.assertEqual((code, out.strip()), (0, "granted: board 8c:bf:ea:xx:xx:xx until 2026-10-17T11:30:00+02:00"))
 
 
 class DeployGrantTest(GrantCase):
@@ -293,14 +294,14 @@ class DeployGrantTest(GrantCase):
         self.assertEqual(code, 0)
         self.assertIn("granted (deploy): board %s" % MAC, out)
         self.assertEqual((self.kept_deploy()["scope"], self.kept_deploy()["expires_at"]),
-                         ("deploy", "2026-10-17T10:00:00+00:00"))
-        self.assertEqual((self.kept()["scope"], self.kept()["expires_at"]), ("live", "2026-10-17T09:30:00+00:00"))
+                         ("deploy", "2026-10-17T12:00:00+02:00"))
+        self.assertEqual((self.kept()["scope"], self.kept()["expires_at"]), ("live", "2026-10-17T11:30:00+02:00"))
         self.assertEqual(stat.S_IMODE((self.home / "grants" / "8c-bf-ea-xx-xx-xx-deploy.json").stat().st_mode), 0o600)
 
     def test_a_new_live_grant_leaves_the_deploy_one(self):
         self.grant("--scope", "deploy", "--minutes", "60", consent=FakeConsent(True))
         self.grant("--minutes", "5", consent=FakeConsent(True))
-        self.assertEqual(self.kept_deploy()["expires_at"], "2026-10-17T10:00:00+00:00")
+        self.assertEqual(self.kept_deploy()["expires_at"], "2026-10-17T12:00:00+02:00")
 
     def test_the_question_says_it_erases_all_the_flash_and_asks_no_yes_for_each_deploy(self):
         consent = FakeConsent(True)
@@ -341,7 +342,7 @@ class DeployGrantTest(GrantCase):
         self.assertNotIn("rm ", out)
 
     def test_an_unknown_scope_given_to_the_service_is_refused_and_saves_nothing(self):
-        service = board_grant.GrantService(mock.Mock(), mock.Mock(), now=FakeUtcClock(START))
+        service = board_grant.GrantService(mock.Mock(), mock.Mock(), now=FakeLocalClock(START))
         with self.assertRaises(board_grant.GrantRefusedError) as refused:
             service.issue(None, 5, FakeConsent(True), scope="bogus")
         self.assertEqual(refused.exception.why, "bad scope")
@@ -401,7 +402,7 @@ class GrantScopeTest(unittest.TestCase):
         self.grants.save(a_grant("deploy"))
         self.assertIsNone(self.grants.find(MAC))
         finder = mock.Mock(require_one_board=lambda *a: board_look.Port("/dev/x", MAC, "303a:1001", "p"))
-        service = board_grant.GrantService(finder, now=FakeUtcClock(START))
+        service = board_grant.GrantService(finder, now=FakeLocalClock(START))
         self.assertEqual(service.check().why, "no grant")
 
     def test_a_live_grant_alone_opens_no_deploy_grant(self):
@@ -438,7 +439,8 @@ class ConsentForDeployTest(unittest.TestCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.clock, self.terminal = FakeUtcClock(START), FakeConsent(False)
+        pin_time_zone(self)
+        self.clock, self.terminal = FakeLocalClock(START), FakeConsent(False)
         self.service = board_grant.GrantService(now=self.clock)
 
     def choose(self, report=None, ignore_older_runs=False):
@@ -456,7 +458,11 @@ class ConsentForDeployTest(unittest.TestCase):
         self.assertIsNone(chosen.why)
         self.assertTrue(chosen.consent.ask("erase ALL?"))
         self.assertEqual(chosen.consent.who,
-                         "standing yes typed by ada at 2026-10-17T09:00:00+00:00, until 2026-10-17T09:30:00+00:00")
+                         "standing yes typed by ada at 2026-10-17T11:00:00+02:00, until 2026-10-17T11:30:00+02:00")
+
+    def test_a_grant_kept_in_utc_says_its_times_in_the_machines_zone(self):
+        board_grant.GrantStore().save(a_grant())  # a_grant keeps START as UTC, as a grant written before P291 did
+        self.assertIn("at 2026-10-17T11:00:00+02:00, until 2026-10-17T11:30:00+02:00", self.choose().consent.who)
 
     def test_a_mac_in_capitals_finds_the_grant(self):
         board_grant.GrantStore().save(a_grant())
@@ -527,7 +533,7 @@ class ConsentForDeployTest(unittest.TestCase):
             self.assertEqual(shut.exception.code, 2)
 
     def test_the_standing_yes_works_with_the_real_clock(self):
-        board_grant.GrantStore().save(a_grant(since=board_grant.utc_now().replace(microsecond=0)))
+        board_grant.GrantStore().save(a_grant(since=board_grant.read_local_time().replace(microsecond=0)))
         chosen = board_grant.GrantService().consent_for_deploy(a_report(), False, self.terminal)
         self.assertIsNone(chosen.why)
         self.assertTrue(chosen.consent.ask("x"))
@@ -535,3 +541,29 @@ class ConsentForDeployTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LocalTimeTest(unittest.TestCase):
+    """P291, P315: spark writes and says a time in the machine's zone, with the zone."""
+
+    def setUp(self):
+        pin_time_zone(self)
+
+    def test_now_has_the_machines_zone(self):
+        now = board_grant.read_local_time()
+        self.assertEqual((now.tzname(), now.utcoffset()), (datetime.datetime.now().astimezone().tzname(),
+                                                           datetime.datetime.now().astimezone().utcoffset()))
+
+    def test_a_stored_utc_time_is_said_in_the_machines_zone(self):
+        self.assertEqual(board_grant.say_in_local_zone("2026-10-18T04:30:19+00:00"), "2026-10-18T06:30:19+02:00")
+
+    def test_a_grant_over_the_change_to_winter_time_ends_in_winter_time(self):
+        clock = FakeLocalClock(datetime.datetime(2026, 10, 25, 0, 30, tzinfo=UTC))
+        finder = mock.Mock()
+        finder.require_one_board.return_value = mock.Mock(device="/dev/cu.usbmodem101", serial=MAC)
+        reader = mock.Mock()
+        reader.read.return_value = mock.Mock(mac=MAC)
+        grants = mock.Mock()
+        grant = board_grant.GrantService(finder, reader, grants, now=clock).issue(
+            None, 60, FakeConsent(True), scope=board_grant.SCOPE_DEPLOY)
+        self.assertEqual((grant.granted_at, grant.expires_at), ("2026-10-25T02:30:00+02:00", "2026-10-25T02:30:00+01:00"))

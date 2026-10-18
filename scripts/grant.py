@@ -51,7 +51,7 @@ last line says why. With --check --json, a run that could not look prints why "c
 def describe(result):
     """The line a person reads, for a GrantCheckResult."""
     if result.granted:
-        return "  granted: board %s until %s" % (result.grant.mac, result.grant.expires_at)
+        return "  granted: board %s until %s" % (result.grant.mac, board_grant.say_in_local_zone(result.grant.expires_at))
     return "  not granted: %s" % board_grant.MESSAGE_FOR[result.why]
 
 
@@ -61,7 +61,7 @@ def to_json(result):
     return json.dumps({"granted": result.granted, "why": result.why, "grant": grant})
 
 
-def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
+def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local_time):
     """Issue or check a grant. `run` is how a command runs, `consent` how the person says yes (default: a real
     terminal), `now` the clock. Returns the exit code."""
     parser = argparse.ArgumentParser(prog="grant.py", description=__doc__.strip(), epilog=EPILOG,
@@ -106,7 +106,8 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.utc_now):
         else:
             print("grant.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))
+    print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token,
+                                                                    board_grant.say_in_local_zone(grant.expires_at)))
     if grant.scope == board_grant.SCOPE_DEPLOY:
         grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
         print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "

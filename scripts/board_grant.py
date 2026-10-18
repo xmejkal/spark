@@ -36,12 +36,13 @@ SCOPES = (SCOPE_LIVE, SCOPE_DEPLOY)
 
 
 class Grant(namedtuple("Grant", "mac board_token granted_by granted_at expires_at scope", defaults=(SCOPE_LIVE,))):
-    """Value: the grant as the store keeps it. The times are ISO 8601 in UTC, with the zone."""
+    """Value: the grant as the store keeps it. The times are ISO 8601 with the zone: the machine's zone since P291, UTC
+    before."""
 
     __slots__ = ()
 
     def why_not_valid(self, now):
-        """The WHY_ code that says this grant does not hold at `now` (a time in UTC with the zone), or None when it
+        """The WHY_ code that says this grant does not hold at `now` (a time with its zone), or None when it
         holds: a time of it is not a time or has no zone, it was given in the future, it lasts more than a day, or it
         has passed."""
         try:
@@ -114,9 +115,19 @@ def mac_key(mac):
     return (mac or "").strip().lower()
 
 
-def utc_now():
-    """Now, in UTC with the zone."""
-    return datetime.datetime.now(datetime.timezone.utc)
+def read_local_time():
+    """Now, in the machine's zone, with the zone (P291): the zone a person reads, and a stored time carries it."""
+    return datetime.datetime.now().astimezone()
+
+
+def stamp(moment):
+    """A time as the store keeps it: ISO 8601 to the second, in the machine's zone, with the zone."""
+    return moment.astimezone().isoformat(timespec="seconds")
+
+
+def say_in_local_zone(iso):
+    """A stored time with its zone, said in the machine's zone (P315): a grant kept in UTC before P291 too."""
+    return stamp(datetime.datetime.fromisoformat(iso))
 
 
 class GrantRefusedError(GateClosedError):
@@ -161,16 +172,16 @@ class GrantStore:
 
 class StandingConsentStrategy(ConsentStrategy):
     """Strategy: the yes the person gave once in their own terminal, kept as a valid deploy `grant`. It answers yes to
-    the deploy's question without asking, while the grant holds at `now()` (a time in UTC); once it ended, it raises
+    the deploy's question without asking, while the grant holds at `now()` (a time with its zone); once it ended, it raises
     GateClosedError, so the erase never runs on a stale yes."""
 
-    def __init__(self, grant, now=utc_now):
+    def __init__(self, grant, now=read_local_time):
         self.grant, self.now = grant, now
 
     @property
     def who(self):
-        return "standing yes typed by %s at %s, until %s" % (self.grant.granted_by, self.grant.granted_at,
-                                                             self.grant.expires_at)
+        return "standing yes typed by %s at %s, until %s" % (self.grant.granted_by, say_in_local_zone(
+            self.grant.granted_at), say_in_local_zone(self.grant.expires_at))
 
     def require_ready(self):
         if self.grant.why_not_valid(self.now()):
@@ -184,11 +195,11 @@ class StandingConsentStrategy(ConsentStrategy):
 
 class GrantService:
     """Service: issues a grant after one look and the person's yes, and checks the grant of the board on USB.
-    `finder` is a board_look.PortFinder, `reader` a board_look.BoardReader, `now` returns the time in UTC. A service that
+    `finder` is a board_look.PortFinder, `reader` a board_look.BoardReader, `now` returns the time with its zone. A service that
     only builds the deploy consent (`consent_for_deploy`) needs neither finder nor reader, and `issue` and `check` need
     them."""
 
-    def __init__(self, finder=None, reader=None, grants=None, now=utc_now):
+    def __init__(self, finder=None, reader=None, grants=None, now=read_local_time):
         self.finder, self.reader, self.grants, self.now = finder, reader, grants or GrantStore(), now
 
     def issue(self, port, minutes, consent, before_look=lambda: None, script="grant.py", scope=SCOPE_LIVE):
@@ -212,8 +223,7 @@ class GrantService:
         if not consent.ask(question):
             raise GrantRefusedError(WHY_ANSWERED_NO)
         now = self.now()
-        grant = Grant(mac, token, getpass.getuser(), now.isoformat(timespec="seconds"),
-                      (now + datetime.timedelta(minutes=minutes)).isoformat(timespec="seconds"), scope)
+        grant = Grant(mac, token, getpass.getuser(), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope)
         self.grants.save(grant)
         return grant
 
