@@ -36,6 +36,14 @@ Round 2 (tech lead and PO assistant, Sonnet). Changes:
   board log line; only an error other than OSError or StoreProblem shows the difference, and it is named in the PR.
 - Observation rows start at AT450; P287's PR takes AT420 onward, so they do not clash.
 
+Review (reviewer Sonnet, refuter Opus; after the build). Changes to the design above:
+
+- The chip is read before the tool is looked for (`_esptool_flasher`), as the old `plan` did.
+- The store record leaves `verify`: `DeployService.record(result, consent)` writes it, main calls it after printing the
+  board log line and reads `consent.who` inside the same `try`, so the order of lines and the "not written" case match
+  main. `verify(report, planned, show_line)` no longer takes `who`; `DeployResult` carries `facts` and has no store fields.
+  This replaces the round 2 note on the record's order.
+
 ## What moves
 
 | Now in `deploy.py` | Becomes |

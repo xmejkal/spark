@@ -97,10 +97,9 @@ class TheVerifyTest(ServiceCase):
         planned = service.deploy(report, report.token(), FakeConsent(True), self.lines.append)
         with mock.patch.object(project_image.ProjectImage, "find_passed_log", side_effect=project_image.DeployError("x")):
             with self.assertRaises(project_image.DeployError):
-                service.verify(report, "a test", planned, self.lines.append)
+                service.verify(report, planned, self.lines.append)
 
-
-    def test_main_lets_that_fault_through_as_it_always_did(self):
+    def test_main_lets_a_fault_after_the_flash_through_as_a_traceback(self):
         token = self.token()
         real = project_image.ProjectImage.find_passed_log
 
@@ -113,10 +112,28 @@ class TheVerifyTest(ServiceCase):
                 self.deploy("--token", token, consent=FakeConsent(True))
 
 
+    def test_a_who_that_cannot_be_read_is_a_store_record_not_written_after_the_board_log_line(self):
+        class Nobody(FakeConsent):
+            @property
+            def who(self):
+                raise OSError("no user")
+        code, said, _ = self.deploy("--token", self.token(), consent=Nobody(True))
+        lines = said.splitlines()
+        self.assertEqual(code, 0)
+        self.assertTrue(lines[-1].startswith("  store record: not written: no user"), lines[-1])
+        self.assertTrue(lines[-2].startswith("  board log: "), lines[-2])
+
+
 class ThePlanTest(ServiceCase):
     def test_plan_checks_the_image_before_the_tools(self):
         (self.project / "sim" / "runs" / "s.log").unlink()
         with mock.patch.object(tools, "find", side_effect=AssertionError("tools asked first")):
+            with self.assertRaises(project_image.DeployError):
+                self.service().plan()
+
+    def test_a_chip_problem_shows_before_a_missing_tool(self):
+        (self.project / "requirements.json").unlink()
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("flasher is not installed")):
             with self.assertRaises(project_image.DeployError):
                 self.service().plan()
 

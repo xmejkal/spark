@@ -32,6 +32,7 @@ import board_look
 import deploy_gate
 import download_mode
 import ready_check
+import store
 import tools
 from deploy_service import DeployService
 from firmware_platform import FirmwarePlatform
@@ -154,13 +155,13 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     except deploy_gate.GateClosedError as shut:
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code
-    result = service.verify(report, consent.who, planned, show_line)
+    result = service.verify(report, planned, show_line)
     ready = result.ready
     print("  %s\n  %s: %s\n  board log: %s" % (result.facts_line, ready.verdict, ready.sentence, result.log_path))
-    if result.store_problem is None:
-        print("  store record: %s" % result.store_record)
-    else:
-        print("  store record: not written: %s" % result.store_problem)
+    try:
+        print("  store record: %s" % service.record(result, consent))
+    except (OSError, store.StoreProblem) as cannot:
+        print("  store record: not written: %s" % cannot)
     if ready.verdict == ready_check.UNKNOWN:
         print("  " + WATCH % shlex.join(result.repl_command))
         return EXIT_COULD_NOT_RUN

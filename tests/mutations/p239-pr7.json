@@ -86,8 +86,8 @@
  {
   "file": "scripts/firmware_platform.py",
   "name": "the plan flashes for another chip",
-  "find": "flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip_of(project))",
-  "replace": "flasher.EsptoolFlasher(tools.find(\"flasher\", project), \"esp32\")"
+  "find": "return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip)",
+  "replace": "return flasher.EsptoolFlasher(tools.find(\"flasher\", project), \"esp32\")"
  },
  {
   "file": "scripts/deploy_service.py",

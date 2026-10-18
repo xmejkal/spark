@@ -18,7 +18,6 @@ import board_look
 import deploy_gate
 import download_mode
 import ready_check
-import store
 from project_image import DeployError, ProjectImage
 from run_scenario import file_hashes
 
@@ -29,9 +28,9 @@ OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the p
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
 #: the board shell's command, and `notes` are sentences for the person.
 DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote notes")
-#: Result: what `verify` returns. `ready` is a ReadyResult. `store_record` is the store file's path, or None, and then
-#: `store_problem` says why. `repl_command` is the argv that opens the board's REPL.
-DeployResult = collections.namedtuple("DeployResult", "facts_line ready log_path store_record store_problem repl_command")
+#: Result: what `verify` returns. `facts` are the board's facts, `ready` is a ReadyResult, `log_path` the board log's file.
+#: `repl_command` is the argv that opens the board's REPL.
+DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command")
 
 
 class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard")):
@@ -63,7 +62,8 @@ def newer_files(project, image):
 class DeployService:
     """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `run` runs a command, `clock` reads the
     time (default: datetime.datetime.now, called once), `probe` finds a board in download mode (default: the platform's).
-    `ignore_older_runs` holds for every step."""
+    `ignore_older_runs` holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
+    `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
 
     def __init__(self, project, platform, ignore_older_runs=False, run=subprocess.run, clock=None, probe=None):
         self.project, self.platform, self.ignore_older_runs = project, platform, ignore_older_runs
@@ -91,7 +91,7 @@ class DeployService:
         return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), shell_command, notes)
 
     def look(self, port=None):
-        """The LookReport of the board on USB. LookStop says why not."""
+        """The LookReport of the board on USB. Raises LookStop to say why not."""
         return board_look.looker(self.project, self.run).run(self.project, port, self.ignore_older_runs)
 
     def deploy(self, report, token, consent, show_line):
@@ -117,11 +117,11 @@ class DeployService:
                 raise DeployError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""))
         return planned
 
-    def verify(self, report, who, planned, show_line):
+    def verify(self, report, planned, show_line):
         """
         Read the board after the flash: copy the facts file, check each file's sha256 and wait for `ready`, with the
-        recovery for a board in download mode (P243 to P245). Writes the board log and the store record. `who` is whose
-        yes it was, `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
+        recovery for a board in download mode (P243 to P245). Writes the board log. Raises DeployError when the passed run's log cannot be read, and
+        tools.ToolProblem when a tool is missing: after the flash they are not turned into a sentence. `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
         """
         image = ProjectImage(self.project)  # fresh: the flash and the person's wait are behind us
         passed = image.find_passed_log()
@@ -148,12 +148,13 @@ class DeployService:
                     heard += download_mode.READ_AGAIN + "\n"
         log_path = write_board_log(self.project, BoardLog(moment, report.port, image.sha256,
                                                           facts_line, ready.verdict, ready.sentence, heard + ready.log))
-        record, problem = None, None
-        try:
-            record = board_facts.record_deploy(facts, ready.verdict, who)
-        except (OSError, store.StoreProblem) as cannot:
-            problem = str(cannot)
-        return DeployResult(facts_line, ready, log_path, record, problem, connection.repl_command())
+        return DeployResult(facts, facts_line, ready, log_path, connection.repl_command())
+
+    @staticmethod
+    def record(result, consent):
+        """Keep this deploy in the store's record of the board and return its path. OSError and store.StoreProblem say
+        why it was not written. Whose yes it was is read here, as the old main read it."""
+        return board_facts.record_deploy(result.facts, result.ready.verdict, consent.who)
 
     def _read_board(self, image, report, connection, expected, moment):
         """(the facts, the facts line, a ReadyResult) after a flash: the facts, then ready."""

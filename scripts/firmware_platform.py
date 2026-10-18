@@ -1,7 +1,8 @@
 """
 The parts of a deploy that depend on the firmware's language (P239 PR 8): the flasher, the connection to the board, the
 ready check and the console probe. `FirmwarePlatform.micropython` builds the one platform spark has today. A platform for
-another language (Arduino, PlatformIO) would be another builder beside it, with its own parts.
+another language (Arduino, PlatformIO) would be another builder beside it, with its own parts. deploy.py builds it
+and hands it to `deploy_service.DeployService`.
 """
 
 import json
@@ -30,9 +31,16 @@ def chip_of(project):
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot))
 
 
+def _esptool_flasher(project):
+    """The EsptoolFlasher for the project's chip. The chip is read first, so a chip problem shows before a missing tool."""
+    chip = chip_of(project)
+    return flasher.EsptoolFlasher(tools.find("flasher", project), chip)
+
+
 class FirmwarePlatform:
     """The factories for a project's flasher, board connection, ready check and console probe. Not a Value: its parts act.
-    Each `make_` method calls `tools.find` when it is called, so a missing tool shows when the step needs it, not before."""
+    `make_flasher`, `make_shell_command` and `make_console_probe` call `tools.find` when they are called, so a missing
+    tool shows when the step needs it, not before."""
 
     def __init__(self, project, make_flasher, make_shell_command, make_connection, make_ready_check, make_console_probe):
         self.project = project
@@ -44,7 +52,7 @@ class FirmwarePlatform:
     def micropython(cls, project):
         """The platform for MicroPython on an ESP32: esptool writes the image, mpremote talks to the board."""
         return cls(project,
-                   lambda: flasher.EsptoolFlasher(tools.find("flasher", project), chip_of(project)),
+                   lambda: _esptool_flasher(project),
                    lambda: tools.command_for(tools.find("board-shell", project)),
                    board_connection.BoardConnection,
                    ready_check.ReadyCheck,
