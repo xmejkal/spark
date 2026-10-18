@@ -180,9 +180,9 @@
   "replace": ""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "standing-yes-not-printed",
-  "find": "            print(\"  yes: %s\" % consent.who, flush=True)\n",
+  "find": "            show_line(\"  yes: %s\" % consent.who)\n",
   "replace": "            pass\n"
  },
  {
@@ -210,7 +210,7 @@
   "replace": "        if False:\n            return \"the look found a stop\""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "no-ready-check-before-erase",
   "find": "        consent.require_ready()  # a deploy grant can end while the plan reads the image",
   "replace": "        pass"

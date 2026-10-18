@@ -22,36 +22,24 @@ esptool and mpremote are the tools list's `flasher` and `board-shell`, which /sp
 """
 
 import argparse
-import collections
-import datetime
-import hashlib
-import json
 import shlex
 import subprocess
 import sys
 from pathlib import Path
 
-import board_facts
-import board_connection
 import board_grant
 import board_look
-import ready_check
-import boards
 import deploy_gate
-import board_console
 import download_mode
-import flasher
-import store
+import ready_check
 import tools
-from project_image import DeployError, ProjectImage
+from deploy_service import DeployService
+from firmware_platform import FirmwarePlatform
+from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
-from run_scenario import file_hashes
 
 #: The last line: how the person sees the firmware start.
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
-#: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
-OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the person says yes. To flash anyway, pass "
-                      "--ignore-older-runs, and deploy.py names the log in a note")
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
 (--ignore-older-runs flashes anyway). It erases the board's flash first.
@@ -86,85 +74,6 @@ came, 2 it could not run, you answered no, there was no terminal, or ready is un
     ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
-def newer_files(project, image):
-    """The files under firmware/ changed after the image was made, as project paths. The board gets the image, not them."""
-    made = image.stat().st_mtime
-    return sorted(str(path.relative_to(project)) for path in (project / "firmware").rglob("*")
-                  if path.is_file() and "__pycache__" not in path.parts and path.stat().st_mtime > made)
-
-
-def board_of(project):
-    """The project's board type, requirements.json's `board` (D35)."""
-    return json.loads((project / "requirements.json").read_text()).get("board")
-
-
-def chip_of(project):
-    """The board's chip as esptool names it, from requirements.json's board (P192: no chip table)."""
-    requirements = project / "requirements.json"
-    try:
-        return boards.get(project, "chip", board_of(project))
-    except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:
-        raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot))
-
-
-#: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
-#: mpremote's command, and `notes` are sentences for the person.
-DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote notes")
-
-
-class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard")):
-    """Value: the facts of the board's log after a flash. `heard` is the console text, then what the board printed."""
-
-    def text(self):
-        """The log file's text."""
-        return "# deploy %s on %s\nimage sha256: %s\n%s\n%s: %s\n\n%s\n" % (
-            self.moment.isoformat(timespec="seconds"), self.port, self.image_sha256, self.facts_line, self.verdict,
-            self.sentence, self.heard)
-
-
-def write_board_log(project, log):
-    """The board's log (a BoardLog) in sim/runs/board/ beside the run logs, whose *.log glob does not reach it. Returns
-    its path."""
-    path = project / "sim" / "runs" / "board" / ("%s.log" % log.moment.strftime("%Y-%m-%dT%H-%M-%S"))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(log.text())
-    return path
-
-
-def put_facts(project, image, report, connection, expected, moment):
-    """`image` is a ProjectImage. (the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
-    said = board_facts.facts(project, board_of(project), report.reading.mac, image.path, expected, moment)
-    why = board_facts.FactsFile(connection).write(said)
-    if why:
-        return said, "facts file: not written: %s" % why
-    return said, "facts file %s sha256: %s" % (board_facts.FACTS_FILE,
-                                              hashlib.sha256(board_facts.facts_text(said).encode()).hexdigest())
-
-
-def plan(project, port=None, ignore_older_runs=False):
-    """
-    A DeployPlan (the flash commands, mpremote's command, notes) for this project. Nothing runs here. A DeployError or a
-    tools.ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
-    A run log that tested another image refuses the flash, unless `ignore_older_runs` makes it a note.
-    """
-    image = ProjectImage(project)
-    why = image.why_untested()
-    if why:
-        raise DeployError(why)
-    other = image.why_other_runs()
-    if other and not ignore_older_runs:
-        raise DeployError(other + OLDER_RUNS_WAY_OUT)
-    chip = chip_of(project)
-    flasher_tool, mpremote = tools.find("flasher", project), tools.find("board-shell", project)
-    changed = newer_files(project, image.path)
-    notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
-             "scenario again to test it." % ", ".join(changed)] if changed else []
-    notes += [other] if other else []
-    project_flasher = flasher.EsptoolFlasher(flasher_tool, chip)
-    commands = project_flasher.build_commands(image.path, port)
-    return DeployPlan(project_flasher, commands, tools.command_for(mpremote), notes)
-
-
 def rerun_line(args, port):
     """The line that runs this deploy again, for the person's own terminal."""
     line = ["--project", args.project.resolve(), "--token", args.token or "", "--port", port]
@@ -194,10 +103,9 @@ def choose_consent(args, report, grant_service):
     return chosen.consent
 
 
-def read_board(project, image, report, connection, expected, moment):
-    """(the facts, the facts line, a ReadyResult) after a flash: the facts, then ready."""
-    facts, facts_line = put_facts(project, image, report, connection, expected, moment)
-    return facts, facts_line, ready_check.ReadyCheck(connection).check(expected)
+def show_line(line):
+    """How the service's lines reach the person: printed at once, because a step is still running."""
+    print(line, flush=True)
 
 
 def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_service=None):
@@ -221,8 +129,10 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
     args = parser.parse_args(argv)
     run = run or subprocess.run
+    service = DeployService(args.project, FirmwarePlatform.micropython(args.project), args.ignore_older_runs, run,
+                            clock, probe)
     try:
-        planned = plan(args.project, args.port, args.ignore_older_runs)
+        planned = service.plan(args.port)
     except (DeployError, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
@@ -231,67 +141,28 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     if args.dry_run:
         print("\n".join("  would run: %s" % shlex.join(command) for command in planned.commands))
         print("  board: not looked at: run look.py")
-        print("  " + WATCH % shlex.join(board_connection.BoardConnection(planned.mpremote, args.port).repl_command()))
+        print("  " + WATCH % shlex.join(service.platform.make_connection(planned.mpremote, args.port).repl_command()))
         return EXIT_OK
     try:
-        report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
+        report = service.look(args.port)
         print("\n".join(board_look.report_lines(report, token=False)), flush=True)
         consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService())
-        deploy_gate.require_open_gate(report, args.token, consent, ProjectImage(args.project).path.relative_to(args.project))
-        if isinstance(consent, board_grant.StandingConsentStrategy):
-            print("  yes: %s" % consent.who, flush=True)
-        planned = plan(args.project, report.port, args.ignore_older_runs)
-        if report.token() != args.token:  # AT116: the image changed while the person answered
-            raise DeployError("the image changed after your yes: run look.py again. not flashed.")
-        consent.require_ready()  # a deploy grant can end while the plan reads the image
+        planned = service.deploy(report, args.token, consent, show_line)
     except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code
-    for command in planned.commands:
-        print("  running: %s" % shlex.join(command), flush=True)
-        try:
-            run(command, check=True)
-        except (OSError, subprocess.CalledProcessError) as failed:
-            hint = planned.flasher.BOOT_HINT
-            print("deploy.py: `%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
-                  file=sys.stderr)
-            return EXIT_COULD_NOT_RUN
-    image = ProjectImage(args.project)  # fresh: the flash and the person's wait are behind us
-    passed = image.find_passed_log()
-    expected = file_hashes(passed) if passed else {}
-    connection = board_connection.BoardConnection(planned.mpremote, report.port, run)
-    moment = (clock or datetime.datetime.now)()  # once: the facts file and the board log share it
-    facts, facts_line, ready = read_board(args.project, image, report, connection, expected, moment)
-    heard = ""
-    if ready.verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
-        probe = probe or board_console.ConsoleProbe.for_tool(tools.find("board-shell", args.project),
-                                                                    report.port, run)
-        if probe:  # P244: what the console said goes in the log, download mode or not
-            waits, console = probe.waits_in_download_mode()
-            heard = "console with DTR and RTS off: %s\n" % (console.strip() or "nothing")
-            if waits:
-                print("  %s" % download_mode.PRESS_RESET, flush=True)
-                reset = probe.wait_for_reset()
-                if reset:
-                    facts, facts_line, ready = read_board(args.project, image, report, connection, expected, moment)
-                else:
-                    ready = ready._replace(sentence=download_mode.NO_RESET)
-                heard += "reset seen\n" if reset else "no reset\n"
-            elif download_mode.booted(console):  # P245: mpremote asked while the board still restarted
-                facts, facts_line, ready = read_board(args.project, image, report, connection, expected, moment)
-                heard += download_mode.READ_AGAIN + "\n"
-    log = write_board_log(args.project, BoardLog(moment, report.port, image.sha256,
-                                                 facts_line, ready.verdict, ready.sentence, heard + ready.log))
-    print("  %s\n  %s: %s\n  board log: %s" % (facts_line, ready.verdict, ready.sentence, log))
-    try:
-        print("  store record: %s" % board_facts.record_deploy(facts, ready.verdict, consent.who))
-    except (OSError, store.StoreProblem) as cannot:
-        print("  store record: not written: %s" % cannot)
+    result = service.verify(report, consent.who, planned, show_line)
+    ready = result.ready
+    print("  %s\n  %s: %s\n  board log: %s" % (result.facts_line, ready.verdict, ready.sentence, result.log_path))
+    if result.store_problem is None:
+        print("  store record: %s" % result.store_record)
+    else:
+        print("  store record: not written: %s" % result.store_problem)
     if ready.verdict == ready_check.UNKNOWN:
-        print("  " + WATCH % shlex.join(connection.repl_command()))
+        print("  " + WATCH % shlex.join(result.repl_command))
         return EXIT_COULD_NOT_RUN
     return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
 
