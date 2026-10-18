@@ -444,6 +444,8 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
   `facts_line`, `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
   `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`. Keys not reached are null.
+  If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
+  ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
   `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could

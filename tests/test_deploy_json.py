@@ -189,7 +189,19 @@ class DeployJsonTest(JsonCase, GateCase):
 
     def test_a_failed_flash_says_the_board_may_be_erased(self):
         self.run_the_scenario()
-        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=True)
+        code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=2)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((said["data"]["stage"], said["data"]["board_state"]), ("flash", "may_be_erased"))
+
+    def test_an_erase_retried_once_gives_the_usual_envelope_and_the_retry_line_on_stderr(self):
+        code, said, err = self.ready(fails=1)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["data"]["stage"]), (0, "verify"))
+        self.assertIn("  retry in 5 s: ", err)
+
+    def test_a_yes_that_ends_during_the_retry_wait_says_the_board_may_be_erased(self):
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", self.token(), consent=self.ends_during_the_wait(), fails=1)
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((said["data"]["stage"], said["data"]["board_state"]), ("flash", "may_be_erased"))
 

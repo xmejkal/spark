@@ -40,9 +40,11 @@ class ServiceCase(GateCase):
         super().setUp()
         self.run_the_scenario()
         self.lines, self.commands = [], []
-        patch = mock.patch.object(tools, "find", side_effect=find)
-        patch.start()
-        self.addCleanup(patch.stop)
+        self.slept = []
+        for patch in (mock.patch.object(tools, "find", side_effect=find),
+                      mock.patch.object(deploy_service.DeployService, "sleep", side_effect=self.slept.append)):
+            patch.start()
+            self.addCleanup(patch.stop)
 
     def fake_run(self, command, **kwargs):
         self.commands.append(command)
@@ -72,7 +74,8 @@ class TheFlashTest(ServiceCase):
             self.service().deploy(report, report.token(), FakeConsent(True), self.lines.append)
         self.assertTrue(str(failed.exception).startswith("`"))
         self.assertTrue(str(failed.exception).endswith(": " + flasher.EsptoolFlasher.BOOT_HINT))
-        self.assertEqual(len(self.lines), 1)  # the erase was shown; the write never started
+        self.assertEqual(len(self.lines), 2)  # the erase and its one retry were shown; the write never started
+        self.assertEqual((self.lines[1].startswith("  retry in 5 s: "), self.slept, len(self.commands)), (True, [5], 2))
 
     def test_a_token_that_is_not_the_looks_is_refused_before_any_command(self):
         report = self.look()

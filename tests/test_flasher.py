@@ -45,6 +45,10 @@ class TheEsptoolFlasherTest(unittest.TestCase):
         self.assertEqual((flasher.EsptoolFlasher.ERASE, flasher.EsptoolFlasher.WRITE, flasher.EsptoolFlasher.IMAGE_OFFSET),
                          ("erase_flash", "write_flash", "0x0"))
 
+    def test_it_retries_its_erase_on_exit_2_after_5_s_and_the_base_flasher_never_retries(self):
+        self.assertEqual((flasher.EsptoolFlasher.RETRY_EXIT_CODE, flasher.EsptoolFlasher.RETRY_WAIT_S), (2, 5))
+        self.assertEqual((flasher.Flasher.RETRY_EXIT_CODE, flasher.Flasher.RETRY_WAIT_S), (None, 0))
+
     def test_the_boot_hint_is_the_one_the_look_prints_too(self):
         steps = ["hold the board's BOOT button", "press and release RESET", "release BOOT", "run it again"]
         hint = flasher.EsptoolFlasher.BOOT_HINT

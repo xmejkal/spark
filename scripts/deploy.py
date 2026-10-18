@@ -44,7 +44,8 @@ from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
-(--ignore-older-runs flashes anyway). It erases the board's flash first.
+(--ignore-older-runs flashes anyway). It erases the board's flash first. If the erase stops with esptool's exit 2,
+it makes one retry after 5 s and prints `retry in 5 s: ...` (P290).
 
 The gate: run look.py first and pass its token. deploy.py looks at the board again (the board restarts) and refuses a
 stop (another chip, a flash too small for the image) or a token that is not this board's and this image's. Then it
