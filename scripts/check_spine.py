@@ -93,6 +93,8 @@ REQUIREMENTS_STAGE = "requirements"
 MOVE_NOT_KEPT = "move not kept"
 #: The `did` of a kept entry for one thing a rebuild asks a person to change on the bench (P300).
 CHANGED = "changed"
+#: The `did` of a kept entry for one end the drawn breadboard joins differently from circuit.json's points (P279).
+DRAWING_DIFFERS = "drawing differs"
 
 
 class Stage:
@@ -641,7 +643,7 @@ def main(argv=None):
                              "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
                              "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "
-                             "`move not kept`), "
+                             "`move not kept`; an end the drawing joins differently from the points is a `drawing differs` entry), "
                              "breadboard.svg, that drawing as a picture, "
                              "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser or to publish as an Artifact, and "
@@ -797,6 +799,10 @@ def keep_breadboard(requirements, destination, stages=()):
     kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
               "subject": named.subject, "code": named.code, "why": named.why,
               "line": "move not kept: %s" % named.line} for named in written.not_kept]
+    # an end the drawing joins differently from the points (P279): the sheet's steps stand, the drawing is wrong
+    kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,
+              "subject": differs.subject, "code": differs.code, "why": differs.why,
+              "line": "%s: %s" % (DRAWING_DIFFERS, differs.line)} for differs in written.differs]
     return kept
 
 
