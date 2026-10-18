@@ -80,9 +80,9 @@ cannot see that" is dropping the test.
 
 ## W6 — Finish before starting
 
-The board's limits are the rule: two cards in each working stage — Discovery, Design, Build, Review — five in Ready,
+The board's limits are the rule: two cards in each working stage — Discovery, Design, Review — three in Build (the PO, 2026-10-18, R9) — five in Ready,
 and at most four in flight across the working stages (the PO's call of 2026-10-06 evening, after the first day at the
-cap of three). An epic counts in Discovery and Design only, where it is the work itself; a plan's task rides on its
+cap of three). An epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form, to 2026-11-02); a plan's task rides on its
 open story, and a task with no open parent story counts as a card; every other card counts. The expedite lane opens
 on the PO's word only, for one card at a time across both boards, labelled `expedite`: it may take its working stage,
 and the flight, one over its limit — Ready never. The bin's cards in a working stage fly in the same four, except one labelled
