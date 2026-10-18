@@ -2,7 +2,7 @@
 <title>The spark journey: eight steps from an idea to a working gadget, and how far each works today</title>
 <rect width="1600" height="2180" rx="24" fill="#ffffff"/>
 <text x="48" y="96" font-size="44" font-weight="bold" fill="#1a1a1a" text-anchor="start">From an idea to a working gadget</text>
-<text x="48" y="140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The spark journey, and how far each step worked in the runs up to 2026-10-17.</text>
+<text x="48" y="140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The spark journey, and how far each step worked in the runs up to 2026-10-18.</text>
 <circle cx="58" cy="180" r="10" fill="#2dc75c"/>
 <text x="78" y="188" font-size="22" font-weight="normal" fill="#595959" text-anchor="start">works: it ran end to end for the docs</text>
 <circle cx="547" cy="180" r="10" fill="#ffdc4a"/>
@@ -74,7 +74,9 @@
 <text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11. The drawing is</text>
 <text x="1214" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">on the XIAO C6 only. The</text>
 <text x="1214" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">page of tabs ran,</text>
-<text x="1214" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16.</text>
+<text x="1214" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16. A moved part,</text>
+<text x="1214" y="936" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">jumper or resistor is kept,</text>
+<text x="1214" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-18.</text>
 <line x1="227" y1="1182" x2="1373" y2="1182" stroke="#b0b0b0" stroke-width="4"/>
 <circle cx="227" cy="1182" r="36" fill="#2dc75c"/>
 <text x="227" y="1193" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>
