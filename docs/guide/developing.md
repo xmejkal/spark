@@ -239,6 +239,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Store | reads and writes one place in the person's store, as JSON files | the noun of what it keeps, then `Store` | `GrantStore` keeps one grant file per board in `grants/` |
 | Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
 | Renderer | turns one value into lines of a sheet or the text of a file, and decides nothing again | what it draws, then its form | `NumberedList` and `MermaidDiagram` render the steps (`WIRING_VIEWS`); `WokwiBreadboardDiagram` and `SvgBreadboardDiagram` render the layout (`DRAWING_RENDERERS`), with `FILE_NAME`, `NOUN`, `PURPOSE_MESSAGE` and `SHEET_MESSAGE` |
+| Platform | a bundle of factories for the parts that depend on the firmware's language: each `make_` method builds one | a plain noun; the docstring says what varies | `FirmwarePlatform` builds the flasher, the board connection, the ready check and the console probe for MicroPython |
 | Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe` |
 
 The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
@@ -247,7 +248,8 @@ gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `Depl
 `board_look.BOOT_HINT` (PR 7 moved it to the flasher). PR 6 gave `LookReport` (with `to_dict()`), `LookService`,
 `BoardReading` and `board_look.report_lines`. PR 7 gave `flasher.Flasher`, `flasher.EsptoolFlasher` (which holds `ERASE`, `WRITE`,
 `IMAGE_OFFSET` and `BOOT_HINT`) and `flasher.build_esptool_prefix`; `board_look.BOOT_HINT` is now that class's hint.
-Until PR 8 merges, `DeployService` and `DeployResult` do not exist yet.
+PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
+`firmware_platform.FirmwarePlatform`. `deploy.py` only parses, prints and maps the exit code.
 
 These rules name a class, a function or a constant:
 

@@ -1,0 +1,74 @@
+[
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "deploy-returns-none",
+  "find": "        return planned\n",
+  "replace": "        return None\n"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "flash-error-drops-hint",
+  "find": "\": \" + hint if hint else \"\"",
+  "replace": "\"\""
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "verify-no-expected",
+  "find": "expected = file_hashes(passed) if passed else {}",
+  "replace": "expected = {}"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "record-who-lost",
+  "find": "result.ready.verdict, consent.who)",
+  "replace": "result.ready.verdict, None)"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "deploy-no-show-running",
+  "find": "show_line(\"  running: %s\" % shlex.join(command))",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "deploy-token-recheck-off",
+  "find": "if report.token() != token:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "deploy-require-ready-off",
+  "find": "consent.require_ready()  #",
+  "replace": "pass  #"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "plan-older-runs-always-refuse",
+  "find": "if other and not self.ignore_older_runs:",
+  "replace": "if other:"
+ },
+ {
+  "file": "scripts/firmware_platform.py",
+  "name": "chip-after-tool",
+  "find": "    chip = chip_of(project)\n    return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip)",
+  "replace": "    return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip_of(project))"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "main-dry-run-off",
+  "find": "if args.dry_run:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "main-exit-ok-always",
+  "find": "return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS",
+  "replace": "return EXIT_OK"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "main-unknown-exit-problems",
+  "find": "        return EXIT_COULD_NOT_RUN\n    return EXIT_OK if",
+  "replace": "        return EXIT_PROBLEMS\n    return EXIT_OK if"
+ }
+]

@@ -18,22 +18,22 @@
   "replace": "ReadyResult(NOT_SEEN, log, \"the firmware stopped with an error: %s\" % stopped)"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "no reset keeps the old sentence",
   "find": "ready = ready._replace(sentence=download_mode.NO_RESET)",
   "replace": "pass"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "the first read uses its own clock",
-  "find": "facts, facts_line, ready = read_board(args.project, image, report, connection, expected, moment)\n    heard = \"\"",
-  "replace": "facts, facts_line, ready = read_board(args.project, image, report, connection, expected, datetime.datetime.now())\n    heard = \"\""
+  "find": "facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)\n        heard = \"\"",
+  "replace": "facts, facts_line, ready = self._read_board(image, report, connection, expected, datetime.datetime.now())\n        heard = \"\""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "the store gets a fixed who",
-  "find": "ready.verdict, consent.who)",
-  "replace": "ready.verdict, \"typed in a terminal by x\")"
+  "find": "result.ready.verdict, consent.who)",
+  "replace": "result.ready.verdict, \"typed in a terminal by x\")"
  },
  {
   "file": "scripts/deploy_gate.py",
