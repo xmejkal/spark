@@ -1,6 +1,7 @@
 """P239 PR 7: flasher.py holds how an image goes onto a board, and deploy.py holds none of esptool's words."""
 
 import ast
+import subprocess
 import sys
 import types
 import unittest
@@ -51,6 +52,13 @@ class TheEsptoolFlasherTest(unittest.TestCase):
             board_look.EsptoolReader(ESPTOOL, lambda argv, **kw: failed).read(PORT)
         self.assertIn(flasher.EsptoolFlasher.BOOT_HINT, str(stop.exception))
 
+    def test_the_port_finder_prints_the_same_hint_when_mpremote_times_out(self):
+        def timed_out(argv, **kw):
+            raise subprocess.TimeoutExpired(argv, 15)
+        with self.assertRaises(board_look.LookStop) as stop:
+            board_look.PortFinder(ESPTOOL, timed_out).boards()
+        self.assertIn(flasher.EsptoolFlasher.BOOT_HINT, str(stop.exception))
+
     def test_the_prefix_puts_chip_before_port_and_both_are_optional(self):
         self.assertEqual(flasher.build_esptool_prefix(ESPTOOL, PORT, "esp32s3"), BASE + ["--chip", "esp32s3", "--port", PORT])
         self.assertEqual(flasher.build_esptool_prefix(ESPTOOL, PORT), BASE + ["--port", PORT])
@@ -84,10 +92,13 @@ class DeployHoldsNoEsptoolWordTest(unittest.TestCase):
                  and id(node) not in prose]
         self.assertEqual(found, [])
 
-    def test_deploy_names_no_boot_hint_of_its_own(self):
-        names = {node.id for node in ast.walk(ast.parse((ROOT / "scripts" / "deploy.py").read_text()))
-                 if isinstance(node, ast.Name)}
+    def test_deploy_reads_the_hint_from_its_plan_and_names_no_flash_constant(self):
+        tree = ast.parse((ROOT / "scripts" / "deploy.py").read_text())
+        names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
         self.assertFalse(names & {"ERASE", "WRITE", "IMAGE_OFFSET", "BOOT_HINT"})
+        owners = {node.value.id for node in ast.walk(tree) if isinstance(node, ast.Attribute) and node.attr == "BOOT_HINT"
+                  and isinstance(node.value, ast.Name)}
+        self.assertEqual(owners, set())  # planned.flasher.BOOT_HINT, not board_look.BOOT_HINT
 
 
 if __name__ == "__main__":

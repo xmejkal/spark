@@ -68,8 +68,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "the reader leaves the port out of its line",
-  "find": "flasher.build_esptool_prefix(self.flasher, port) + [\"flash_id\"]",
-  "replace": "flasher.build_esptool_prefix(self.flasher) + [\"flash_id\"]"
+  "find": "flasher.build_esptool_prefix(self.flasher_tool, port) + [\"flash_id\"]",
+  "replace": "flasher.build_esptool_prefix(self.flasher_tool) + [\"flash_id\"]"
  },
  {
   "file": "scripts/deploy.py",

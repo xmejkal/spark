@@ -161,7 +161,8 @@ def plan(project, port=None, ignore_older_runs=False):
              "scenario again to test it." % ", ".join(changed)] if changed else []
     notes += [other] if other else []
     project_flasher = flasher.EsptoolFlasher(flasher_tool, chip)
-    return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), tools.command_for(mpremote), notes)
+    commands = project_flasher.build_commands(image.path, port)
+    return DeployPlan(project_flasher, commands, tools.command_for(mpremote), notes)
 
 
 def rerun_line(args, port):

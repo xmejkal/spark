@@ -60,7 +60,7 @@ EsptoolFlasher                                 esptool: erase all, then write on
 
 flasher.build_esptool_prefix(tool, port, chip)    the start of an esptool line, --chip before --port
 
-deploy.plan() -> DeployPlan(commands, mpremote, notes, flasher)   flasher is new: main reads flasher.BOOT_HINT
+deploy.plan() -> DeployPlan(flasher, commands, mpremote, notes)   flasher is new: main reads flasher.BOOT_HINT
 board_look.EsptoolReader                       keeps its own parse; only its command start comes from flasher.py
 ```
 
@@ -98,7 +98,7 @@ board_look.EsptoolReader                       keeps its own parse; only its com
 
 - `board_look` imports `flasher`, and `deploy` imports both: no cycle, because `flasher` imports only `tools`.
 - A local named `flasher` in `deploy.plan` (the tool) clashes with the module name. The tool is renamed `flasher_tool`
-  there. `EsptoolReader.__init__` keeps its `flasher` parameter: it only shadows inside `__init__`.
+  there. `EsptoolReader.__init__` takes `flasher_tool` too (review): `flasher` names a Flasher only.
 - Docs this PR updates: developing.md (the Flasher row in the pattern table, line 247 on what each PR gave, the module
   list if there is one). README "What works today" and `tools/journey.py`: no change, an internal seam. `agents.md`: no
   change, no JSON or exit code moves. `--help`: unchanged; it names esptool in prose, which stays.

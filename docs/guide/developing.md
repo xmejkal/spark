@@ -244,8 +244,8 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
 gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. PR 4
 gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `DeployError`, `tools.command_for` and
-`board_look.BOOT_HINT` (PR 7 moved it to the flasher). PR 6 gave `LookReport` (with `to_dict()`), `LookService`, `BoardReading` and
-`board_look.report_lines`. PR 7 gave `flasher.Flasher`, `flasher.EsptoolFlasher` (which holds `ERASE`, `WRITE`,
+`board_look.BOOT_HINT` (PR 7 moved it to the flasher). PR 6 gave `LookReport` (with `to_dict()`), `LookService`,
+`BoardReading` and `board_look.report_lines`. PR 7 gave `flasher.Flasher`, `flasher.EsptoolFlasher` (which holds `ERASE`, `WRITE`,
 `IMAGE_OFFSET` and `BOOT_HINT`) and `flasher.build_esptool_prefix`; `board_look.BOOT_HINT` is now that class's hint.
 Until PR 8 merges, `DeployService` and `DeployResult` do not exist yet.
 

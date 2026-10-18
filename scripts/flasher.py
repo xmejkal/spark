@@ -34,7 +34,7 @@ class EsptoolFlasher(Flasher):
     #: esptool's commands with underscores: esptool 3 and 4 know only these, and 5.x still accepts them with a deprecation
     #: line (esptool 5.5.0's cli_util.py, read 2026-10-12). The tools list finds any installed esptool, not only its pin.
     ERASE, WRITE = "erase_flash", "write_flash"
-    #: What to try when esptool cannot reach the board. Used by the look and by deploy.py.
+    #: What to try when esptool cannot reach the board. Read by the look, and by deploy.py through its plan's flasher.
     BOOT_HINT = ("if esptool could not connect, hold the board's BOOT button, press and release RESET, release BOOT, "
                  "and run it again")
 

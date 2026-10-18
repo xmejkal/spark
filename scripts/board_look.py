@@ -28,7 +28,7 @@ import outcomes
 import project_image
 import tools
 
-BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT  # one sentence for the look and for deploy.py
+BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT  # the look's name for the flasher's hint
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"
 Port = namedtuple("Port", "device serial usb product")
@@ -118,13 +118,13 @@ class BoardReader:
 class EsptoolReader(BoardReader):
     """esptool 5.5.0's `flash_id` output, parsed with anchored lines. A field that does not parse is None."""
 
-    def __init__(self, flasher, run=subprocess.run):
-        self.flasher, self.run = flasher, run
+    def __init__(self, flasher_tool, run=subprocess.run):
+        self.flasher_tool, self.run = flasher_tool, run
 
     def read(self, port):
-        if self.flasher.name != "esptool":
-            raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher.name)
-        command = flasher.build_esptool_prefix(self.flasher, port) + ["flash_id"]
+        if self.flasher_tool.name != "esptool":
+            raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher_tool.name)
+        command = flasher.build_esptool_prefix(self.flasher_tool, port) + ["flash_id"]
         try:
             done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:
