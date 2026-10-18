@@ -181,6 +181,14 @@ class EscapedMutantsTest(unittest.TestCase):
         change_wire(project, index, other="bb1:18b.h")
         self.assertEqual(codes(build(project)), {"R1": "row-shared"})
 
+    def test_when_the_kept_plan_has_no_room_a_connection_to_a_part_pin_is_still_named(self):
+        project = built_full()
+        edit(project, lambda drawn: drawn["connections"].append(["board:D8", "LedRed5mm:A", "green", []]))
+        with base.mock.patch.object(base.breadboard_keep.KeepMovesFirstFitPartPlacement, "place",
+                                    side_effect=base.breadboard_drawing.NotDrawn("no room")):
+            written = build(project)
+        self.assertEqual(codes(written), {"jumper board:D8-LedRed5mm:A": "jumper-not-on-board"})
+
     def test_when_the_kept_plan_has_no_room_a_moved_jumper_is_named_no_room(self):
         project = built_full()
         change_wire(project, 1, other="bb1:14t.b")

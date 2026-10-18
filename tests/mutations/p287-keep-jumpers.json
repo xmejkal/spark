@@ -22,6 +22,7 @@
  {"file": "scripts/breadboard_keep.py", "name": "a connection that is not a list is read", "find": "    if not (isinstance(item, list) and len(item) >= 2 and all(isinstance(end, str) for end in item[:2])):", "replace": "    if False:"},
  {"file": "scripts/breadboard_keep.py", "name": "the breadboard's id stays on the ends", "find": "ends = [end[len(prefix):] if end.startswith(prefix) else end for end in item[:2]]", "replace": "ends = list(item[:2])"},
  {"file": "scripts/breadboard_keep.py", "name": "the jumper's subject swaps its ends", "find": "return \"jumper %s-%s\" % (self.one, self.other)", "replace": "return \"jumper %s-%s\" % (self.other, self.one)"},
+ {"file": "scripts/breadboard_keep.py", "name": "a connection to a part pin is looked up as a hole when the plan has no room", "find": "        if wire.one not in holes or wire.other not in holes:", "replace": "        if False:"},
  {"file": "scripts/breadboard_keep.py", "name": "a jumper the fallback layout lacks is not named", "find": "(default_code, default_code and MESSAGES[default_code])", "replace": "(None, None)"},
  {"file": "scripts/breadboard.py", "name": "the build keeps no jumper", "find": "BreadboardPlanner(geometry, catalog, placement, jumpers).plan(read.steps)", "replace": "BreadboardPlanner(geometry, catalog, placement).plan(read.steps)"},
  {"file": "scripts/breadboard.py", "name": "the build names no jumper", "find": "    named += breadboard_keep.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, default)", "replace": "    pass"},

@@ -264,7 +264,7 @@ class KeepMovesJumperPlacement(breadboard_drawing.JumperPlacement):
     jumper that no earlier jumper has taken yet and both its holes are free. The first in the file wins a pair of rows
     and a hole. Every other jumper takes its first free hole in its own rows, so no jumper changes a row, and nothing
     kept leaves the layout as it was. `reasons` is {EarlierJumper.subject: (code, message)} for each earlier jumper
-    that is not in the layout. Built for one plan.
+    that is not in the layout; two earlier jumpers with the same ends share one entry. Built for one plan.
     """
 
     def __init__(self, geometry, earlier):
@@ -325,6 +325,9 @@ def name_jumpers_not_kept(earlier, layout, fresh, reasons, geometry, default_cod
     named = []
     for wire in earlier.jumpers:
         if frozenset((wire.one, wire.other)) in pairs:
+            continue
+        if wire.one not in holes or wire.other not in holes:
+            named.append(NotKeptResult(wire.subject, JUMPER_NOT_ON_BOARD, MESSAGES[JUMPER_NOT_ON_BOARD]))
             continue
         code, why = reasons.get(wire.subject) or (default_code, default_code and MESSAGES[default_code])
         if code is None:
