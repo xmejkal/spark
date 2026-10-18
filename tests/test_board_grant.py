@@ -565,5 +565,5 @@ class LocalTimeTest(unittest.TestCase):
         reader.read.return_value = mock.Mock(mac=MAC)
         grants = mock.Mock()
         grant = board_grant.GrantService(finder, reader, grants, now=clock).issue(
-            None, 60, FakeConsent(True), scope=board_grant.SCOPE_DEPLOY)
+            None, 60, FakeConsent(True), scope="deploy")
         self.assertEqual((grant.granted_at, grant.expires_at), ("2026-10-25T02:30:00+02:00", "2026-10-25T02:30:00+01:00"))
