@@ -368,7 +368,7 @@ def a_grant(scope="deploy", mac=MAC, minutes=30, since=START, **changes):
 
 def a_report(verdict="match", mac=MAC):
     """What consent_for_deploy reads of a look: its verdict and the board's MAC."""
-    return mock.Mock(verdict=verdict, reading=board_look.Reading("esp32c6", 4, mac))
+    return mock.Mock(verdict=verdict, reading=board_look.BoardReading("esp32c6", 4, mac))
 
 
 class GrantScopeTest(unittest.TestCase):

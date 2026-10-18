@@ -235,7 +235,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote, the tool that talks to MicroPython on a board |
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
 | Error | an exception | ends in `Error` (the deploy area only, for now) | `GateClosedError`, `DeployError` |
-| Value | facts with no actions. A `why_` or `find_` method can answer a question about the facts, reading the project's files if it must, and change nothing | a plain noun; the docstring says Value | `Port`, `BoardReading`, `RestrictedPins`, `ProjectImage` |
+| Value | facts with no actions. A method can calculate from the facts (`token()`, `to_dict()`; `token()` reads the image file), and a `why_` or `find_` method can answer a question about them, reading the project's files if it must. None changes anything | a plain noun; the docstring says Value | `Port`, `BoardReading`, `LookReport`, `RestrictedPins`, `ProjectImage` |
 | Store | reads and writes one place in the person's store, as JSON files | the noun of what it keeps, then `Store` | `GrantStore` keeps one grant file per board in `grants/` |
 | Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
 | Renderer | turns one value into lines of a sheet or the text of a file, and decides nothing again | what it draws, then its form | `NumberedList` and `MermaidDiagram` render the steps (`WIRING_VIEWS`); `WokwiBreadboardDiagram` and `SvgBreadboardDiagram` render the layout (`DRAWING_RENDERERS`), with `FILE_NAME`, `NOUN`, `PURPOSE_MESSAGE` and `SHEET_MESSAGE` |
@@ -244,8 +244,8 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
 gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. PR 4
 gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `DeployError`, `tools.command_for` and
-`board_look.BOOT_HINT`. Until PRs 6 to 8 merge, `LookService`, `DeployService` and
-`DeployResult` do not exist yet, and some classes keep their old names: `Report`, `Reading` and `Look`.
+`board_look.BOOT_HINT`. PR 6 gave `LookReport` (with `to_dict()`), `LookService`, `BoardReading` and
+`board_look.report_lines`. Until PRs 7 and 8 merge, `DeployService` and `DeployResult` do not exist yet.
 
 These rules name a class, a function or a constant:
 
