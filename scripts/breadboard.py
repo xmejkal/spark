@@ -9,7 +9,8 @@ Example, in a project after `/spark:build` (`check_spine.py requirements.json --
 
     python3 "$CLAUDE_PLUGIN_ROOT/scripts/breadboard.py" requirements.json
 
-What it writes, each time from scratch (it reads back only the parts you moved in breadboard.json):
+What it writes, each time from scratch (it reads back only the parts you moved in breadboard.json, and
+wiring-record.json, which it keeps beside the sheet):
   - the parts: the board, each part with how many, each resistor a part asks for (R1, R2, …, through-hole) and what
     it is for, and whether you have each: yours (your drawer holds it for this project), in your drawer (you own it,
     not held here), to get; blank when the project is not on your list (/spark:init puts it there);
@@ -25,6 +26,12 @@ What it writes, each time from scratch (it reads back only the parts you moved i
     joined pin in the row it joins, a jumper between the two rows the new layout joins (it keeps its holes and bends,
     not its color). What it cannot keep is named on stderr, with why. Only a board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6
     today), and rails are not drawn yet; otherwise the sheet says what is missing, and an old drawing is removed;
+  - after a rebuild (P300), "Changes since the last build" before the steps: one line for each thing to change on
+    the bench, so you do not read the whole sheet again. A line says what to put in, take out, move or swap, and names
+    a jumper by its two ends and the color the earlier sheet showed. It never names holes: you pick your own free rows.
+    The same lines go to stderr as `change: …`. `wiring-record.json` holds what the last sheet said, and which jumpers
+    spark drew itself. Spark never names a jumper it drew itself when a new circuit leaves it out. A jumper you moved
+    is named when the build cannot keep it. A first build has no such section;
   - before you power it: each part's CONFLICT lines, the pins its record says must not float, and its warnings.
 
 It reads the built circuit (dist/board/circuit.json), the same file every check reads, so the sheet is the board that

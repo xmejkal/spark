@@ -642,7 +642,8 @@ def main(argv=None):
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
                              "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "
                              "`move not kept`), "
-                             "breadboard.svg, that drawing as a picture, page.html, the breadboard, schematic and PCB "
+                             "breadboard.svg, that drawing as a picture, "
+                             "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser or to publish as an Artifact, and "
                              "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
