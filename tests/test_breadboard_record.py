@@ -110,6 +110,23 @@ class RebuildTest(unittest.TestCase):
         self.assertEqual(len(record(project)["steps"]), 9)
 
 
+class DrawnJumpersTest(unittest.TestCase):
+    def test_a_first_build_records_every_jumper_spark_drew(self):
+        project = new_project(FULL)
+        build(project)
+        self.assertEqual(record(project)["drawn_jumpers"],
+                         [["12t.a", "17b.h"], ["14t.a", "6b.j"], ["17b.g", "8b.j"], ["24b.f", "4b.j"]])
+
+    def test_a_jumper_the_person_moved_and_the_build_kept_is_not_recorded_as_spark_s(self):
+        from test_breadboard_keep import edit
+        project = new_project(FULL)
+        build(project)
+        edit(project, lambda drawn: drawn["connections"][1].__setitem__(1, "bb1:14t.b"))
+        build(project)
+        self.assertNotIn(["14t.b", "6b.j"], record(project)["drawn_jumpers"])
+        self.assertEqual(len(record(project)["drawn_jumpers"]), 3)
+
+
 class WriteOrderTest(unittest.TestCase):
     def test_the_record_is_written_right_after_the_sheet_so_a_failed_drawing_leaves_them_agreeing(self):
         project = new_project(BUTTON_ONLY)

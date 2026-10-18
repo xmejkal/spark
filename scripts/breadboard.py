@@ -400,10 +400,11 @@ def drawing(requirements_path, circuit_path=None, read=None):
 PlannedLayout = collections.namedtuple("PlannedLayout", "layout why not_kept")
 
 
-def _plan_once(read, earlier_path=None):
+def _plan_once(read, earlier_path=None, record=None):
     """The layout planned fresh; then, when `earlier_path` is a diagram the person may have edited, planned again
     keeping the parts they moved. The fresh plan's error stands. When the kept plan has no room, the fresh layout is
-    used and the moved parts are named."""
+    used and the moved parts are named. `record` is the earlier wiring record (None when there is none or it cannot be
+    read): it says which jumpers of the earlier file spark drew itself."""
     try:
         fresh = _plan_layout(read)
     except breadboard_drawing.NotDrawn as stopped:
@@ -426,8 +427,9 @@ def _plan_once(read, earlier_path=None):
         default = None
     except breadboard_drawing.NotDrawn:
         layout, default = fresh, breadboard_keep.NO_ROOM
+    drawn = record.drawn_jumpers if record and not record.why_unread else None
     named = breadboard_keep.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
-    named += breadboard_keep.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, default)
+    named += breadboard_keep.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, drawn, default)
     return PlannedLayout(layout, None, named)
 
 
@@ -512,7 +514,7 @@ def write(requirements_path, out, circuit_path=None):
     # the earlier breadboard.json and record are read here, before the new ones overwrite them
     earlier_path = Path(out).parent / EDITABLE_DRAWING.FILE_NAME
     record = breadboard_changes.WiringRecord.read(record_path)
-    planned = _plan_once(read, earlier_path)
+    planned = _plan_once(read, earlier_path, record)
     seated = read.steps.anchored()
     colors = {jumper.step: STEP_COLORS.color(jumper.step) for jumper in planned.layout.jumpers} if planned.layout else {}
     changes = (breadboard_changes.changes_between(record, seated, colors)
