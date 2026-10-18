@@ -42,37 +42,37 @@
   "replace": "                return True"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "probe without expected files",
   "find": "if ready.verdict == ready_check.UNKNOWN and expected:",
   "replace": "if ready.verdict == ready_check.UNKNOWN:"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "probe whatever the verdict",
   "find": "if ready.verdict == ready_check.UNKNOWN and expected:",
   "replace": "if expected:"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "ask for R whatever the console",
   "find": "        if waits:",
   "replace": "        if True:"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "no retry after the reset",
-  "find": "                if reset:\n                    facts, facts_line, ready = read_board",
-  "replace": "                if reset:\n                    _ = read_board"
+  "find": "                    if reset:\n                        facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)",
+  "replace": "                    if reset:\n                        _ = self._read_board(image, report, connection, expected, moment)"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "console line left out of the board log",
   "find": "heard = \"console with DTR and RTS off: %s\\n\" % (console.strip() or \"nothing\")",
   "replace": "heard = \"\""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "the log does not say whether the reset came",
   "find": "heard += \"reset seen\\n\" if reset else \"no reset\\n\"",
   "replace": "heard += \"reset seen\\n\""

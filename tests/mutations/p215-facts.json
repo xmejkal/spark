@@ -24,10 +24,10 @@
   "replace": "\"verdict\": \"ready seen\","
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "facts without mac",
-  "find": "board_of(project), report.reading.mac, image.path",
-  "replace": "board_of(project), None, image.path"
+  "find": "self.platform.board_of(), report.reading.mac, image.path",
+  "replace": "self.platform.board_of(), None, image.path"
  },
  {
   "file": "scripts/store.py",

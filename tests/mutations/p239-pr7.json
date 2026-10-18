@@ -72,25 +72,25 @@
   "replace": "flasher.build_esptool_prefix(self.flasher_tool) + [\"flash_id\"]"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "a failed flash line ends in a colon when the flasher has no hint",
   "find": "\": \" + hint if hint else \"\"",
   "replace": "\": \" + hint"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "a failed flash line prints no hint",
   "find": "hint = planned.flasher.BOOT_HINT",
   "replace": "hint = \"\""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/firmware_platform.py",
   "name": "the plan flashes for another chip",
-  "find": "flasher.EsptoolFlasher(flasher_tool, chip)",
-  "replace": "flasher.EsptoolFlasher(flasher_tool, \"esp32\")"
+  "find": "return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip)",
+  "replace": "return flasher.EsptoolFlasher(tools.find(\"flasher\", project), \"esp32\")"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "the plan builds the commands without the port",
   "find": "project_flasher.build_commands(image.path, port)",
   "replace": "project_flasher.build_commands(image.path)"
@@ -144,19 +144,19 @@
   "replace": "return list(reversed(tools.command_for(tool))) + ([\"--chip\""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "DeployPlan field order swapped",
   "find": "\"flasher commands mpremote notes\"",
   "replace": "\"commands flasher mpremote notes\""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "plan swaps mpremote and notes",
-  "find": "DeployPlan(project_flasher, commands, tools.command_for(mpremote), notes)",
-  "replace": "DeployPlan(project_flasher, commands, notes, tools.command_for(mpremote))"
+  "find": "DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), shell_command, notes)",
+  "replace": "DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), notes, shell_command)"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "hint separator loses the colon",
   "find": "\": \" + hint if hint else \"\"",
   "replace": "\" \" + hint if hint else \"\""

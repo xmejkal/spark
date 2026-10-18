@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_facts  # noqa: E402
 import deploy  # noqa: E402
+import deploy_service  # noqa: E402
 import board_grant  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
@@ -222,8 +223,8 @@ class TheGateTest(GateCase):
         self.run_the_scenario()
         silent = flasher.Flasher()
         silent.build_commands = lambda image, port=None: [["probe", "write"]]
-        real = deploy.plan
-        with mock.patch.object(deploy, "plan", side_effect=lambda *a, **k: real(*a, **k)._replace(
+        real = deploy_service.DeployService.plan
+        with mock.patch.object(deploy_service.DeployService, "plan", autospec=True, side_effect=lambda *a, **k: real(*a, **k)._replace(
                 flasher=silent, commands=silent.build_commands(None))):
             code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=True)
         self.assertEqual(code, 2)
@@ -299,7 +300,7 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.assertIn("Traceback: OSError: 19", log.read_text())
 
     def test_a_passed_log_gone_after_the_flash_is_unknown_not_a_traceback(self):
-        with mock.patch.object(deploy.ProjectImage, "find_passed_log", side_effect=lambda *a: None):
+        with mock.patch.object(deploy_service.ProjectImage, "find_passed_log", side_effect=lambda *a: None):
             code, said, _ = self.flash()
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the passed run's log names no files", said)
@@ -432,7 +433,7 @@ class TheBoardInDownloadModeTest(GateCase):
 
     def test_a_passed_log_that_names_no_files_is_never_probed(self):
         probe = FakeConsoleProbe("waiting for download\n")
-        with mock.patch.object(deploy, "file_hashes", side_effect=lambda log: {}):
+        with mock.patch.object(deploy_service, "file_hashes", side_effect=lambda log: {}):
             code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (2, []))
         self.assertIn("ready unknown: the passed run's log names no files", said)
@@ -566,7 +567,7 @@ class TheBoardLogTextTest(unittest.TestCase):
     MOMENT = datetime.datetime(2026, 10, 17, 9, 8, 7)
 
     def log(self, **kw):
-        return deploy.BoardLog(**dict(dict(moment=self.MOMENT, port="/dev/x", image_sha256="abc",
+        return deploy_service.BoardLog(**dict(dict(moment=self.MOMENT, port="/dev/x", image_sha256="abc",
                                            facts_line="facts file spark.json sha256: f", verdict="ready seen",
                                            sentence="it is up", heard="the board said\n"), **kw))
 

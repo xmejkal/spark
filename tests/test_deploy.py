@@ -18,6 +18,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import deploy  # noqa: E402
+import deploy_service  # noqa: E402
+import firmware_platform  # noqa: E402
+from project_image import DeployError  # noqa: E402
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
 import tools  # noqa: E402
@@ -63,6 +66,12 @@ class ProjectCase(unittest.TestCase):
                 "FAKE_WOKWI_ERR": "" if exit_code == 0 else "Error: stuck\n"}
         with mock.patch.dict(os.environ, told):
             run_scenario.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython).run(FAKE_CLI)
+
+    def plan(self, port=None, ignore_older_runs=False):
+        """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
+        kwargs = {"ignore_older_runs": True} if ignore_older_runs else {}  # the default is the refusal
+        return deploy_service.DeployService(
+            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), **kwargs).plan(port)
 
     def deploy(self, *argv, find=found, run=None):
         """(exit code, stdout, stderr, the commands run) of deploy.py in this project."""
@@ -183,15 +192,15 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
 
     def test_plan_refuses_by_default(self):
         self.run_two_scenarios()
-        with mock.patch.object(tools, "find", side_effect=found), self.assertRaises(deploy.DeployError) as said:
-            deploy.plan(self.project)
+        with mock.patch.object(tools, "find", side_effect=found), self.assertRaises(DeployError) as said:
+            self.plan()
         self.assertIn("--ignore-older-runs", str(said.exception))
 
     def test_plan_returns_a_deploy_plan_read_by_name(self):
         self.run_the_scenario()
         with mock.patch.object(tools, "find", side_effect=found):
-            plan = deploy.plan(self.project, PORT)
-        self.assertIsInstance(plan, deploy.DeployPlan)
+            plan = self.plan(PORT)
+        self.assertIsInstance(plan, deploy_service.DeployPlan)
         self.assertEqual((len(plan.commands), plan.mpremote, plan.notes), (2, [PYTHON, "-m", "mpremote"], []))
         self.assertEqual(plan.commands, plan.flasher.build_commands(self.image, PORT))
         self.assertIn("hold the board's BOOT button", plan.flasher.BOOT_HINT)

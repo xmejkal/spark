@@ -49,10 +49,10 @@
   "replace": "    if not (consent.ask(question) or True):\n"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "erase on args.port",
-  "find": "plan(args.project, report.port, args.ignore_older_runs)\n    for",
-  "replace": "plan(args.project, args.port, args.ignore_older_runs)\n    for"
+  "find": "planned = self.plan(report.port)",
+  "replace": "planned = self.plan(None)"
  },
  {
   "file": "scripts/deploy.py",
@@ -61,10 +61,10 @@
   "replace": "    if args.dry_run and False:\n        print(\"\\n\".join"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/deploy_service.py",
   "name": "look ignores ignore flag",
-  "find": ".run(args.project, args.port, args.ignore_older_runs)",
-  "replace": ".run(args.project, args.port)"
+  "find": ".run(self.project, port, self.ignore_older_runs)",
+  "replace": ".run(self.project, port)"
  },
  {
   "file": "scripts/look.py",
