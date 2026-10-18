@@ -161,16 +161,21 @@ def after_esptool(stop, project, run):
     return doctor.examine(stop.port, tools.find("flasher", project), stop.tool_said)
 
 
-def stop_lines(script, stop, project, run):
-    """The lines a script prints when esptool's look stopped with `stop`. After a failed read, the board doctor's facts
-    and next step follow, and the next step is the last line."""
+def stop_answer(script, stop, project, run):
+    """(the lines a script prints, the BoardDoctorResult or None) when esptool's look stopped with `stop`. After a failed
+    read, the board doctor's facts and next step follow, and the next step is the last line."""
     try:
         result = after_esptool(stop, project, run)
     except (tools.ToolProblem, UnknownStepError) as cannot:
-        return ["%s: %s (no doctor: %s)" % (script, stop, cannot)]
+        return ["%s: %s (no doctor: %s)" % (script, stop, cannot)], None
     if result is None:
-        return ["%s: %s" % (script, stop)]
-    return ["%s: could not read the board on %s" % (script, stop.port)] + ["  " + line for line in describe(result)]
+        return ["%s: %s" % (script, stop)], None
+    return ["%s: could not read the board on %s" % (script, stop.port)] + ["  " + line for line in describe(result)], result
+
+
+def stop_lines(script, stop, project, run):
+    """The lines of `stop_answer`."""
+    return stop_answer(script, stop, project, run)[0]
 
 
 def describe(result):

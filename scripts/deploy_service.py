@@ -30,7 +30,12 @@ OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the p
 DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote notes")
 #: Result: what `verify` returns. `facts` are the board's facts, `ready` is a ReadyResult, `log_path` the board log's file.
 #: `repl_command` is the argv that opens the board's REPL.
-DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command")
+#: `reset_seen` is None when the person was never asked to press R, else whether the port came back.
+DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command reset_seen", defaults=(None,))
+
+
+class FlashError(DeployError):
+    """Error: a flash command failed, so the board may be erased and not written."""
 
 
 class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard")):
@@ -65,9 +70,10 @@ class DeployService:
     `ignore_older_runs` holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
     `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
 
-    def __init__(self, project, platform, ignore_older_runs=False, run=subprocess.run, clock=None, probe=None):
+    def __init__(self, project, platform, ignore_older_runs=False, run=subprocess.run, clock=None, probe=None, echo_to=None):
         self.project, self.platform, self.ignore_older_runs = project, platform, ignore_older_runs
         self.run, self.clock, self.probe = run, clock, probe
+        self.echo_to = echo_to  # a file descriptor for the flash tool's own output (2 under --json), or None: as it is
 
     def plan(self, port=None):
         """
@@ -111,10 +117,10 @@ class DeployService:
         for command in planned.commands:
             show_line("  running: %s" % shlex.join(command))
             try:
-                self.run(command, check=True)
+                self.run(command, check=True, **({} if self.echo_to is None else {"stdout": self.echo_to}))
             except (OSError, subprocess.CalledProcessError) as failed:
                 hint = planned.flasher.BOOT_HINT
-                raise DeployError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""))
+                raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""))
         return planned
 
     def verify(self, report, planned, show_line):
@@ -129,7 +135,7 @@ class DeployService:
         connection = self.platform.make_connection(planned.mpremote, report.port, self.run)
         moment = (self.clock or datetime.datetime.now)()  # once: the facts file and the board log share it
         facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
-        heard = ""
+        heard, reset_seen = "", None
         if ready.verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
             probe = self.probe or self.platform.make_console_probe(report.port, self.run)
             if probe:  # P244: what the console said goes in the log, download mode or not
@@ -137,7 +143,7 @@ class DeployService:
                 heard = "console with DTR and RTS off: %s\n" % (console.strip() or "nothing")
                 if waits:
                     show_line("  %s" % download_mode.PRESS_RESET)
-                    reset = probe.wait_for_reset()
+                    reset = reset_seen = probe.wait_for_reset()
                     if reset:
                         facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
                     else:
@@ -148,7 +154,7 @@ class DeployService:
                     heard += download_mode.READ_AGAIN + "\n"
         log_path = write_board_log(self.project, BoardLog(moment, report.port, image.sha256,
                                                           facts_line, ready.verdict, ready.sentence, heard + ready.log))
-        return DeployResult(facts, facts_line, ready, log_path, connection.repl_command())
+        return DeployResult(facts, facts_line, ready, log_path, connection.repl_command(), reset_seen)
 
     @staticmethod
     def record(result, consent):

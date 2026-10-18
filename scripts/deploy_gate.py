@@ -27,12 +27,19 @@ def format_rerun_line(script, arguments):
     return shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments])
 
 
-class GateClosedError(Exception):
-    """Error: why the gate stays shut, and `code`, the exit code: 1 for a stop the look found, 2 for everything else."""
+#: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
+NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"
 
-    def __init__(self, why, code=EXIT_COULD_NOT_RUN):
+
+class GateClosedError(Exception):
+    """Error: why the gate stays shut, and `code`, the exit code: 1 for a stop the look found, 2 for everything else.
+    `next_op` is NEXT_DEPLOY (the person runs the deploy in their own terminal), NEXT_LOOK (the look is stale or missing)
+    or None (nothing to do but read the sentence)."""
+
+    def __init__(self, why, code=EXIT_COULD_NOT_RUN, next_op=None):
         super().__init__(why)
         self.code = code
+        self.next_op = next_op
 
 
 class ConsentStrategy(abc.ABC):
@@ -66,7 +73,7 @@ class TerminalConsentStrategy(ConsentStrategy):
 
     def require_ready(self):
         if not (self.stdin.isatty() and self.stdout.isatty()):
-            raise GateClosedError(NO_TERMINAL % self.line)
+            raise GateClosedError(NO_TERMINAL % self.line, next_op=NEXT_DEPLOY)
 
     def ask(self, question):
         self.require_ready()
@@ -81,14 +88,14 @@ def require_open_gate(report, token, consent, image):
     if report.stops:
         raise GateClosedError("%s. not flashed." % "; ".join(report.stops), EXIT_PROBLEMS)
     if not token:
-        raise GateClosedError("run look.py first, then deploy.py --token <token>.")
+        raise GateClosedError("run look.py first, then deploy.py --token <token>.", next_op=NEXT_LOOK)
     mine = report.token()
     if not mine:
         raise GateClosedError("no token: %s. not flashed." % report.no_token_reason())
     theirs = (token.split("-", 1) + [""])[:2]
     changed = [what for what, given, read in zip(("the board", "the image"), theirs, mine.split("-")) if given != read]
     if changed:
-        raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed))
+        raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed), next_op=NEXT_LOOK)
     accepted = report.warnings + ["%s unknown (%s)" % each for each in report.unknown.items()]
     question = "erase ALL of this board's flash and write %s?" % image
     if accepted:

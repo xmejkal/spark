@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import board_doctor
+import board_envelope
 import board_look
 from outcomes import EXIT_COULD_NOT_RUN
 
@@ -28,6 +29,10 @@ When esptool's read of the board fails, the board doctor (P282) runs two checks:
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
 and one next step for your hands, as the last line. Its look at the console can restart the board.
 
+--json prints one envelope on stdout (docs/guide/agents.md): the look in `data`, the stops and warnings as `problems`, the
+unknown fields and a missing token as `unchecked`, and, when there is a token, the deploy step with `needs_yes`. The
+board doctor's lines still go to stderr. Exit codes do not change; the envelope's status is the exit code's.
+
 Exit codes: 0 every field matches and there is a token, 1 a field differs or the look found a stop, 2 it could not run
 or could not check something (a field unknown, no token), and the sentence says why."""
 
@@ -41,14 +46,25 @@ def main(argv=None, run=subprocess.run):
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
     parser.add_argument("--ignore-older-runs", action="store_true",
                         help="give a token even when a log in sim/runs/ tested another image (default: no token)")
+    parser.add_argument("--json", action="store_true", help="print one envelope on stdout (docs/guide/agents.md)")
     args = parser.parse_args(argv)
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
     except board_look.LookStop as stop:
-        print("\n".join(board_doctor.stop_lines("look.py", stop, args.project, run)), file=sys.stderr)
+        lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
+        print("\n".join(lines), file=sys.stderr)
+        if args.json:
+            _print_json(board_envelope.look_stop_envelope(str(stop), doctor))
         return EXIT_COULD_NOT_RUN
-    print("\n".join(board_look.report_lines(report)))
+    if args.json:
+        _print_json(board_envelope.look_envelope(report, args.project.resolve(), args.ignore_older_runs))
+    else:
+        print("\n".join(board_look.report_lines(report)))
     return report.exit_code()
+
+
+def _print_json(envelope):
+    print(board_envelope.dumps(envelope))
 
 
 if __name__ == "__main__":

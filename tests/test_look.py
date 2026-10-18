@@ -24,11 +24,11 @@ NO_BOARD = "no board found. Plug it straight into the computer with a data cable
 
 
 class LookScriptCase(LookCase):
-    def go(self, *argv, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", text=None):
+    def go(self, *argv, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", text=None, fail=False):
         """(exit code, stdout lines, stderr) of look.py with fake tools. The fakes answer from the fixtures."""
         def run(command, **kw):
             self.ran.append(command)
-            return done(data(devs)) if "devs" in command else done(text or data(esptool))
+            return done(data(devs)) if "devs" in command else done(text or data(esptool), 1 if fail else 0)
 
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
