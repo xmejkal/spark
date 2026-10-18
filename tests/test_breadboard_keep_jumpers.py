@@ -5,6 +5,7 @@ resistor. A moved jumper keeps its holes and route when it joins two rows the ne
     python3 -m unittest tests.test_breadboard_keep_jumpers
 """
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -198,7 +199,41 @@ class EscapedMutantsTest(unittest.TestCase):
         self.assertEqual(codes(written), {"jumper 6b.j-14t.b": "no-room"})
 
 
+class LastPartColumnTest(unittest.TestCase):
+    """An empty row is the person's only at or left of the earlier file's last part, column 24 here (R1's pin 1)."""
+
+    def test_an_empty_row_in_the_last_column_of_a_part_is_the_persons(self):
+        project = built_full()
+        change_wire(project, 1, other="bb1:24t.a")
+        self.assertEqual(codes(build(project)), {"jumper 6b.j-24t.a": "rows-not-joined"})
+
+    def test_an_empty_row_one_column_beyond_the_last_part_is_not(self):
+        project = built_full()
+        change_wire(project, 1, other="bb1:25t.a")
+        self.assertEqual(build(project).not_kept, [])
+
+    def test_the_last_column_is_the_greatest_whatever_the_order_of_the_parts(self):
+        project = built_full()
+        edit(project, lambda drawn: drawn["parts"].insert(1, drawn["parts"].pop(
+            next(i for i, one in enumerate(drawn["parts"]) if one["id"] == "R1"))))
+        change_wire(project, 1, other="bb1:24t.a")
+        self.assertEqual(codes(build(project)), {"jumper 6b.j-24t.a": "rows-not-joined"})
+
+
+class ParseTest(unittest.TestCase):
+    def test_a_connection_of_two_ends_is_read_with_no_route(self):
+        text = json.dumps({"parts": [{"type": base.GEOMETRY.surface.type, "id": "a", "left": 0, "top": 0}],
+                           "connections": [["a:1a.a", "a:2a.a"]]})
+        earlier = base.breadboard_keep.EarlierDiagram.parse(text, base.GEOMETRY.surface.type)
+        self.assertEqual(earlier.jumpers, [base.breadboard_keep.EarlierJumper("1a.a", "2a.a", ())])
+
+
 class QuietTest(unittest.TestCase):
+    def test_a_file_with_no_breadboard_part_is_unreadable(self):
+        project = built_full()
+        edit(project, lambda drawn: (drawn["parts"].pop(0), drawn.pop("connections")))
+        self.assertEqual(codes(build(project)), {"breadboard.json": "unreadable"})
+
     def test_a_second_breadboard_in_the_file_does_not_change_the_id_of_the_first(self):
         project = built_full()
         edit(project, lambda drawn: drawn["parts"].append(dict(drawn["parts"][0], id="bb2")))
