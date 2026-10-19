@@ -3,6 +3,7 @@
 > Today a new board takes 11 steps by hand, and an owned board works in one project only. Ten changes fix that. Six
 > come first, because the next demo needs them: an animation on the T-Display's screen, which the PO leads from his
 > own idea. Each change is a small class or function where the code already lives, so none waits for v0.13 (#94).
+> A guide command then leads a person through adding a board, one step and one check at a time.
 
 ## Where this comes from
 
@@ -46,6 +47,23 @@ Size: S is under about 50 lines, M is a few hundred. "Demo" marks what the anima
 Not changed: the look's exit code when no build exists yet (row 22) stays 2, and the look prints its verdict on the
 fields more plainly. Rows 10, 12, 15, 23, 24 and 26 are observations, kept as written. Reading the firmware already on
 a board (row 25) becomes a card.
+
+## A guide that leads
+
+The PO, during the council: *"And it would just generally be really nice if there was a guide. Like the agent, or
+claude but that he really leads the user through the process, asks him, recommends checks on progress, etc."*
+
+On this walk, Claude led the PO by hand: one step at a time, one thing for him to do, and a check after each step
+(the plug-in, the button presses read on the console). Spark has no such guide. Its commands each do one stage and
+expect the person or the agent to know the order. The guide for a new board is a command, for example
+`/spark:board`, that walks the journey above. It says where you are ("step 4 of 8"), asks one question or names one
+action at a time, runs the check that shows the step worked, and says what is still unconfirmed. Its logic stays in
+the scripts (one core, many interfaces): a script reports the journey's state for a board, and the command only
+speaks it. The PO said "generally", so the same shape can later lead the other journeys (an idea to a deploy). That
+wider guide is one epic with his words, not part of this plan.
+
+The guide comes with change 10, because it leads to a record in the store. The demo walk does not wait for it:
+Claude leads that walk by hand again, and its steps become the guide's script.
 
 ## The next demo: an animation on the T-Display
 
