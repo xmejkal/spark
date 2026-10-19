@@ -849,7 +849,7 @@ class OneCircuitConventionTest(unittest.TestCase):
         # A6). G10's fix made both refuse two matches; a third path added to one would not have
         # reached the other.
         import init_project
-        self.assertEqual(check_all.CONVENTIONS["circuit"], (check_all.FOLDER, list(design.CIRCUIT_PATHS)))
+        self.assertEqual(check_all.CONVENTIONS["circuit"], ("folder", list(design.CIRCUIT_PATHS)))
         self.assertIs(init_project.CIRCUIT_PATHS, design.CIRCUIT_PATHS)
 
 if __name__ == "__main__":
