@@ -453,7 +453,7 @@ def main(argv=None):
                              "one board are not the rules for both:\n    %s\n  %s. Everything "
                              "that comes from the part records was seeded."
                              % (len(matches), "\n    ".join(str(m.relative_to(project)) for m in matches),
-                                one_board_message([str(m) for m in matches])))
+                                one_board_message([str(m) for m in matches], "--force")))
                 circuit = None
                 break
             if matches:

@@ -383,8 +383,9 @@ class TwoBuiltDesignsTest(unittest.TestCase):
         said = out.getvalue()
         self.assertIn("dist/car/circuit.json", said)
         self.assertIn("dist/remote/circuit.json", said)
-        self.assertIn("spark handles one board per project today: use one with --circuit %s"
-                      % (root.resolve() / "dist" / "car" / "circuit.json"), said)  # P223
+        self.assertIn("spark handles one board per project today: use one with --circuit %s --force, or give each "
+                      "board its own folder with its own parts/" % (root.resolve() / "dist" / "car" / "circuit.json"),
+                      said)  # P223: --force, because the rules were already written
 
     def test_naming_one_settles_it(self):
         root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")

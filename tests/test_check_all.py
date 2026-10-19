@@ -17,6 +17,7 @@ import argparse
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -265,9 +266,20 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         car = str((root / "dist" / "car" / "circuit.json").resolve())
         for reason in reasons:
             self.assertIn("spark handles one board per project today: use one with --circuit %s, or give each board "
-                          "its own folder and run init_project.py in it" % car, reason)
+                          "its own folder with its own parts/ and run init_project.py in it" % car, reason)
         self.assertTrue(any("spark handles one board per project today: use one with --circuit %s, or give each "
-                            "board its own folder and run init_project.py in it" % car in note for note in notes), notes)
+                            "board its own folder with its own parts/ and run init_project.py in it" % car in note
+                            for note in notes), notes)
+
+    def test_a_relative_project_still_names_an_absolute_circuit(self):
+        root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
+        cwd = os.getcwd()
+        os.chdir(root.parent)
+        try:
+            _, _, ambiguous = check_all.discover(root.name)
+        finally:
+            os.chdir(cwd)
+        self.assertTrue(all(Path(path).is_absolute() for path in ambiguous["circuit"]), ambiguous)
 
     def test_the_circuit_the_reason_names_settles_it(self):
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")

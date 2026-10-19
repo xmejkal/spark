@@ -53,11 +53,12 @@ RULES_PATH = Path(".spark") / "rules.json"
 CIRCUIT_PATHS = ("dist/board/circuit.json", "dist/*/circuit.json")
 
 
-def one_board_message(circuits):
+def one_board_message(circuits, flags=""):
     """The sentence that two built designs in one project get from every tool (P223, P318): spark handles one board
-    per project today. `circuits` are absolute paths, the first one the example. Many boards come with v0.13 (#94)."""
-    return ("spark handles one board per project today: use one with --circuit %s, or give each board its own folder "
-            "and run init_project.py in it" % circuits[0])
+    per project today. `circuits` are absolute paths, the first one the example; `flags` are what the tool also needs
+    with it (init: --force, over the rules it already wrote). Many boards come with v0.13 (#94)."""
+    return ("spark handles one board per project today: use one with --circuit %s%s, or give each board its own folder "
+            "with its own parts/ and run init_project.py in it" % (circuits[0], " " + flags if flags else ""))
 
 
 class DesignError(Exception):
