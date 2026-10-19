@@ -1,0 +1,80 @@
+[
+ {
+  "file": "scripts/check_all.py",
+  "name": "a non-directory is accepted",
+  "find": "        if not folder.is_dir():",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "the folder as given is never kept",
+  "find": "folder if project == folder.resolve() else project)",
+  "replace": "project)"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "the folder is compared by the wrong test",
+  "find": "folder if project == folder.resolve() else project)",
+  "replace": "folder if project != folder.resolve() else project)"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "root always the folder",
+  "find": "return self.project if where == PROJECT else self.folder",
+  "replace": "return self.folder"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "root always the project",
+  "find": "return self.project if where == PROJECT else self.folder",
+  "replace": "return self.project"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "elsewhere always false",
+  "find": "return self.project != self.folder",
+  "replace": "return False"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "rules read from the folder",
+  "find": "\"rules\": (PROJECT,",
+  "replace": "\"rules\": (FOLDER,"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "library note dropped",
+  "find": "    if design.is_library(project):",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "project note dropped",
+  "find": "    elif checked.elsewhere():",
+  "replace": "    elif False:"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "requirements read with the folder as project",
+  "find": "design.parts_of(design.read(requirements), design.project_for(requirements))",
+  "replace": "design.parts_of(design.read(requirements), Path(project))"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "rail loads read with the folder as project",
+  "find": "made = design.load(requirements)  #",
+  "replace": "made = design.load(requirements, Path(project))  #"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "main omits the project key",
+  "find": "            answer_json[\"project\"] = None if design.is_library(checked.project) else str(checked.project.resolve())",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/check_all.py",
+  "name": "a missing folder is not could-not-run",
+  "find": "        return EXIT_FOR[COULD_NOT_RUN]\n    inputs, resolved, ambiguous = inputs_for(args, checked)",
+  "replace": "        pass\n    inputs, resolved, ambiguous = inputs_for(args, checked)"
+ }
+]

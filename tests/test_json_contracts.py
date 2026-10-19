@@ -132,7 +132,7 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
     def test_check_all(self):
         self._check("check_all", lambda: check_all.main(
             ["--project", str(self.project), "--circuit", self.circuit, "--json"]),
-            ["resolved", "results", "status", "tool", "unmeasured"])
+            ["project", "resolved", "results", "status", "tool", "unmeasured"])
 
     def test_import_firmware(self):
         # P59: this project holds no firmware/ folder, so the shape is the could-not-run one, with its `modules` empty.

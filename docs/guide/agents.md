@@ -250,6 +250,14 @@ To check a project, run one command that answers once:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project . --json
 ```
 
+`--project` names the folder that holds the requirements file and the kept build. The rules, the parts and the boards
+come from the project that the build reads, which is the nearest folder up that holds `.spark/` or
+`boards/active.json` ([P319](https://github.com/xmejkal/spark/issues/403)). The answer's `project` key names that
+project as a whole path. It is `null` when no folder up is a project: then the parts and boards come from the plugin's
+library, and there are no rules. The first resolved line names a project that is not the folder, or says that there
+is none. A `--project` that is not a directory is `could-not-run` with a `reason`, and the answer has no `project` key.
+The sample below is older than P319, so it has no `project` key.
+
 This is its answer for the project in the journey guide. It came after a build and
 `init_project.py --project . --board firebeetle2-esp32s3 --force`, which names the rails from the built board:
 
@@ -351,7 +359,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 
 | script | top-level keys |
 | --- | --- |
-| `check_all.py` | `resolved`, `results`, `status`, `tool`, `unmeasured` |
+| `check_all.py` | `project` (with `--project`), `resolved`, `results`, `status`, `tool`, `unmeasured` |
 | `check_physics.py` | `design`, `findings`, `status`, `tool` |
 | `check_footprints.py` | `findings`, `status`, `tool` |
 | `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems` |

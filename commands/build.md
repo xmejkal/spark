@@ -73,7 +73,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py requirements.json --keep .
 where every check already looks. **Without it the chain builds in a temp directory and deletes it**,
 which is right for a check and wrong for the command someone is told to run first — the project
 would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
-a board that built perfectly (backlog P51). An existing `.tsx` is left alone and named, edited or
+a board that built perfectly (backlog P51). If the folder has no `.spark/`, the build and `check_all --project` both
+read the rules and the parts of the nearest project up from it (P319). An existing `.tsx` is left alone and named, edited or
 not; delete it to have it regenerated. With `--json`, each file is listed under `kept`, with what was done to it and
 why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask
 for, numbered wiring steps (one connection each) and a mermaid diagram of them, by the board's printed labels and the parts' legs, and what each record says to check before power

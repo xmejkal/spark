@@ -72,7 +72,9 @@ not.
 ### The one command for checks
 
 - `check_all.py`: every deterministic check, in one call, with one answer. It prints what `--project` found for each
-  input it resolves by convention. It runs the five checks below. It does not run the generator's CONFLICT test or
+  input it resolves by convention. The build and the requirements come from the folder that `--project` names. The
+  rules, the parts and the boards come from the project that the build reads, the nearest one up from that folder. It
+  runs the five checks below. It does not run the generator's CONFLICT test or
   read the notes in `board.tsx` ([P109](https://github.com/xmejkal/spark/issues/43)).
 
 ### The checks
