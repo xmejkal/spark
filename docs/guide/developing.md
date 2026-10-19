@@ -340,6 +340,16 @@ To list the unresolved rows (`raised` or `verified`), run this line from the rep
 
 The line also lists one old row, A7, whose status is `acted` but whose last cell starts with `verified:`.
 
+## Checking a plan
+
+A plan or a design holds some wrong claims, however often it is reviewed (P324, an experiment). Mark each claim as
+measured (with the command that measures it), an estimate, or a proposal. Before the plan's PR, run
+`python3 tools/factcheck.py <plan>` from the repository root and quote its output in the PR. It exits 1 when a
+`file:line` reference names no file, a line past the end, or a file name two files share. It also lists the code names
+that appear nowhere else in the repository, each of which must be one the plan proposes, and the sentences that state
+a count, each of which needs its command or the word estimate. Whoever builds from the plan checks each file, line,
+name and number in the code before using it, and writes a mismatch as a row ([the habit](../../scrum/WORKING_AGREEMENTS.md#habits--no-command-judges-these)).
+
 ## Where the work is planned
 
 Every item is an issue on [spark's board](https://github.com/users/xmejkal/projects/2). The flow, the stages and their
