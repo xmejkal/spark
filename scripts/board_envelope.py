@@ -104,7 +104,7 @@ def deploy_envelope(reached, code):
                                            effects=["writes"], needs_yes=True))
     elif result and result.ready.verdict == ready_check.UNKNOWN:
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"
-        following = [outcomes.step("watch", list(result.repl_command), again + (". First the person presses the board's R button" if result.reset_seen is False else ""))]
+        following = [outcomes.step("watch", list(result.repl_command), again + (". First the person presses the board's %s" % boards.ButtonPlaces.of_project(project).reset if result.reset_seen is False else ""))]
     data = {
         "stage": stage, "dry_run": bool(reached.get("dry_run")), "token": reached.get("token"),
         "commands": [list(command) for command in plan.commands] if plan else None,

@@ -261,6 +261,11 @@ def load(project: Path, board_id: str = None) -> dict:
     return board
 
 
+def _words(value):
+    """True for a string with words in it: an empty place would print half a hint."""
+    return isinstance(value, str) and bool(value.strip())
+
+
 class ButtonPlaces:
     """Value: the words that name the BOOT and RESET buttons in a hint, from a record's `physical.buttons`. A record with no
     buttons, or a part of them missing or of the wrong type, gives EMPTY: the plain words, never half a hint."""
@@ -271,7 +276,7 @@ class ButtonPlaces:
     @staticmethod
     def _button(buttons, key):
         one = buttons.get(key)
-        if isinstance(one, dict) and isinstance(one.get("silkscreen"), str) and isinstance(one.get("place"), str):
+        if isinstance(one, dict) and _words(one.get("silkscreen")) and _words(one.get("place")):
             return "%s, %s" % (one["silkscreen"], one["place"])
         return None
 
@@ -280,7 +285,7 @@ class ButtonPlaces:
         """The places in a board record, or EMPTY."""
         physical = record.get("physical") if isinstance(record, dict) else None
         buttons = physical.get("buttons") if isinstance(physical, dict) else None
-        if not isinstance(buttons, dict) or not isinstance(buttons.get("seen_from"), str):
+        if not isinstance(buttons, dict) or not _words(buttons.get("seen_from")):
             return cls.EMPTY
         boot, reset = cls._button(buttons, "boot"), cls._button(buttons, "reset")
         return cls(buttons["seen_from"], boot, reset) if boot and reset else cls.EMPTY

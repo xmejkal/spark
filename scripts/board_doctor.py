@@ -37,7 +37,7 @@ MESSAGE_FOR = {
     # mpremote and esptool lock the port while they run (mpremote 1.29 transport_serial.py:52).
     NEXT_CLOSE_OTHER: "another program holds the port, for example mpremote or esptool: close it and run it again",
     # A board that waited in download mode booted after one press of R (the P236 bench, AT157).
-    NEXT_PRESS_RESET: "press %(reset)s once and run it again%(orientation)s",
+    NEXT_PRESS_RESET: "press the board's %(reset)s once and run it again%(orientation)s",
     # The doctor's own open restarted the board (the P251 cure, AT187), so the first failure tells little now.
     NEXT_RUN_AGAIN: "the doctor's look at the console restarted the board: run it again",
     # esptool got in after the PO pressed BOOT and R (p238 finding.md:52, n = 1).

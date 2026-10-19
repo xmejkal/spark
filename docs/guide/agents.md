@@ -484,7 +484,7 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could
   cover it. Never run either one yourself.
 - `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
-  board's R button, `data.person_action` says so, but only after the wait for the press ran out. So tell the person before you run
+  board's RESET, `data.person_action` says so, with its place when the board record has it, but only after the wait for the press ran out. So tell the person before you run
   `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
   board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`.
 - A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.

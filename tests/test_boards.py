@@ -151,7 +151,10 @@ class ButtonPlacesTest(unittest.TestCase):
                        {k: v for k, v in BUTTONS.items() if k != "reset"},
                        dict(BUTTONS, boot={"silkscreen": "B"}),
                        dict(BUTTONS, boot={"silkscreen": "B", "place": 3}),
-                       dict(BUTTONS, reset="R")):
+                       dict(BUTTONS, reset="R"),
+                       dict(BUTTONS, seen_from=" "),
+                       dict(BUTTONS, boot={"silkscreen": "", "place": "top right"}),
+                       dict(BUTTONS, reset={"silkscreen": "R", "place": ""})):
             places = boards.ButtonPlaces.from_record(with_buttons(broken))
             self.assertEqual((places.boot, places.reset, places.orientation), ("BOOT button", "RESET", ""), broken)
 

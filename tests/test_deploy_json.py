@@ -246,7 +246,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual(code, 2)
         self.assertIn("press the board's RESET (R, top left, beside the USB-C) once", said["data"]["person_action"])
         self.assertEqual(said["next"][0]["op"], "watch")
-        self.assertIn("R", said["next"][0]["why"])
+        self.assertIn("First the person presses the board's RESET (R, top left, beside the USB-C)", said["next"][0]["why"])
 
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):
         import store
