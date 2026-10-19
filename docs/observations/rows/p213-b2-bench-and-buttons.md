@@ -1,6 +1,8 @@
-# P213 b2: the bench walk, and the button places in the boot hint
+# P213 b2 bench and buttons: findings rows
 
-| # | Row | Source | State | Note |
+The bench walk and the plan council of P213 part b2 (#192). Plan: [`plan.md`](../../discovery/2026-10-19-p213b2-button-places/plan.md).
+
+| # | claim | source | status | evidence / where it went |
 |---|-----|--------|-------|------|
 | 1 | A new image needs a new look, because the token holds the image's sha256 prefix (ae7b-f34b, then ae7b-94b2): one extra board restart per redeploy | bench walk, 2026-10-19 | verified | by design |
 | 2 | The erase retry and the download-mode hint did not fire, so AT313 stays untested | bench walk, 2026-10-19 | raised | a later walk |

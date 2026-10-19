@@ -75,7 +75,7 @@ board record, makes every such hint read them, records the walk, and closes #192
     hint, `docs/guide/developing.md:248-250` (`boot_hint`, `ButtonPlaces`), the README Bench row (one sentence on
     the 10-19 walk and the button places). The Bench status stays "partly", so `tools/journey.py` does not change.
 
-11. Rows: `docs/observations/rows/p213b2-bench-and-buttons.md`: the two walk rows from #192 (a new image needs a
+11. Rows: `docs/observations/rows/p213-b2-bench-and-buttons.md`: the two walk rows from #192 (a new image needs a
     new look; AT313 not exercised), the council's rows, then the review's.
 
 ## Names
