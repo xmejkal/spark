@@ -40,3 +40,63 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 34 | P5: The PO's real question was missing | round 2 PO assistant | acted | section 8: slice 1a before or after walk 1 |
 | 35 | P6: Undefined words | round 2 PO assistant | acted | section 4 defines Value, baseline, golden, registry, seam, AST test, stdlib, mutation row |
 | 36 | P7: Reading time | round 2 PO assistant | acted | sections 1 to 7 marked reference |
+| 37 | The platform key belongs on the project, not the board record (one XIAO runs MicroPython or Arduino) | round 3 extensions | acted | 2.5: key in requirements' `firmware`, default `micropython`, enters with the second platform |
+| 38 | `FirmwarePlatform` covers only the deploy, the pin map and image are MicroPython too | round 3 extensions | acted | 2.5 row and class diagram add `pin_map_text` and `make_image`, built with the second platform |
+| 39 | No MCU is not "nothing": `REQUIRED_KEYS` needs `chip` (`boards.py:62`), a missing board loads the active ESP32 (`boards.py:253`) | round 3 extensions | acted | D16: `no_board` instead of a silent default, seam test in AC 6, a no-MCU platform deferred |
+| 40 | Check codes are listed in two places | round 3 extensions | acted | each `Check` declares `codes`, `check_all`'s are the union (2.4) |
+| 41 | `SimulationEngine` with one `run` cannot swap Wokwi | round 3 extensions | acted | `prepare(design)` and `run(scenario)`, engine facts under `simulation.<engine>` later (2.5) |
+| 42 | `run_door` mixes parse, run and print, so an MCP door would copy it | round 3 extensions | acted | `run_operation` split in slice 2 (2.6). `Argument.kind` waits for the MCP door. |
+| 43 | An online store layer needs one sync Operation with the `network` effect | round 3 extensions | raised | for P178, no second case yet |
+| 44 | The wiring page needs a `project` area above `build` | round 3 extensions | rejected | no slice needs it yet, deferred to P297 (section 7) |
+| 45 | fab, copper and emit_footprint have no area, exports have no registry | round 3 extensions | acted | placed in `design` (2.1). `EXPORTERS` deferred until a second export. |
+| 46 | The MCP Adapter seam is added before its need | round 3 simplicity | rejected | the PO named tool adapters with an MCP setting in #94. The row stays, the seam test uses a fake Adapter, no MCP client. |
+| 47 | The Renderer seam test is not needed | round 3 simplicity | acted | dropped from AC 6, two Renderers already exist |
+| 48 | The `firmware` key and the no-MCU row come too early | round 3 simplicity | acted | merged with 37 and 39 |
+| 49 | Measure columns that stay 0 until v0.13 | round 3 simplicity | acted | 5.4: a column enters with its first slice |
+| 50 | Two headline measures | round 3 simplicity | acted | one headline, "Known breaches left", Miro table from v0.13 |
+| 51 | S8's `MagicMock` sentence bans nothing (0 files) | round 3 simplicity | acted | dropped |
+| 52 | exit status and exit code (agents.md 9 lines) | round 3 simplicity | acted | "exit status" kept, agents.md edited in the design PR (section 7) |
+| 53 | outcome, status and verdict | round 3 simplicity | acted | "outcome, printed as `status`". `verdict` rename raised for later. |
+| 54 | library means record folders and a module kind | round 3 simplicity | acted | measure.py and developing.md:225 say "module" |
+| 55 | step means `outcomes.step`, `BuildStep` and breadboard steps | round 3 simplicity | acted | `BuildStage` |
+| 56 | `ArchitectureCheck` is not a `Check` | round 3 simplicity | acted | `ArchitectureRules` |
+| 57 | gate means consent and merge criteria | round 3 simplicity | acted | 5.3 says "Done when" |
+| 58 | Error scope clashes with developing.md:237 and :278 | round 3 simplicity | acted | the design PR edits both lines (section 7) |
+| 59 | Value is a role word and a vocabulary row | round 3 simplicity | acted | defined once in the role list in section 4 |
+| 60 | The summary says output is unchanged | round 3 simplicity | acted | TL;DR: output only gains keys, a crash exits 2 |
+| 61 | S1 and S6 on `tests/` puts 482 test classes in the baseline | round 3 simplicity | acted | scope `scripts/` |
+| 62 | D9 and S7 disagree on area subclasses | round 3 simplicity | acted | S7: directly or through its area's Error |
+| 63 | S3 needs judgment | round 3 simplicity | acted | S3 is an AST rule on `subprocess`, `time.time`, `urllib`, `os.environ` |
+| 64 | S13 needs judgment | round 3 simplicity | acted | S13: two subclasses or a Fake, checked by AST |
+| 65 | S10's contract test names no file | round 3 simplicity | acted | one entry per `name` in `tests/test_json_contracts.py` |
+| 66 | 10 areas can be 8 | round 3 simplicity | acted | D15: firmware holds simulation, build holds setup |
+| 67 | A newcomer's first change touches four files | round 3 simplicity | acted | a five-line "add a flag" example in developing.md, slice 1b |
+| 68 | Tool code sits in two areas | round 3 simplicity | acted | `records/tools` holds finder and install |
+| 69 | Test shape per role is not written down | round 3 testing | acted | developing.md in slice 1b |
+| 70 | Fakes can drift from their real class | round 3 testing | acted | S14 contract mixins, Fakes pass them |
+| 71 | Contract tests have no shape | round 3 testing | acted | S14 mixins land with each area, the platform mixin loops over board records |
+| 72 | A bulk golden update turns a bug into truth | round 3 testing | acted | slice 1a: one file per Operation and outcome, `--accept <op>` only |
+| 73 | Hand-retargeted mutation rows can guard nothing | round 3 testing | acted | `mutate.py --retarget` in slice 2, "rows N, caught N" |
+| 74 | Suite speed | round 3 testing | acted | parse once, suite seconds in measure, shard at 150 s |
+| 75 | What only the bench proves is unstated | round 3 testing | acted | developing.md list in slice 1b |
+| 76 | The architecture test must fail clearly | round 3 testing | acted | rule, file, line and reason, at most 20, `--lower` only lowers (section 3) |
+| 77 | Stale patch targets pass and test nothing | round 3 testing | acted | S8: every patch target resolves to its defining module |
+| 78 | Discovery needs two reads | round 3 Claude operator | acted | a generated `docs/guide/operations.md` in the plan order (5.1) |
+| 79 | No "where am I" Operation | round 3 Claude operator | acted | `loop_status` second in the plan order, in `build` |
+| 80 | Command pages still repeat logic | round 3 Claude operator | acted | `fix` steps with `op` and `argv`, build envelope in the plan order |
+| 81 | Pages still parse text | round 3 Claude operator | acted | S10: every Operation a page calls has `--json` |
+| 82 | Tokens: `check_all --all`, rules into code meanings | round 3 Claude operator | raised | behaviour changes, later card |
+| 83 | No guard on walk-1 outputs before slice 2 | round 3 Claude operator | acted | slice 1a goldens of `check_spine`, `check_all`, `deploy --dry-run` |
+| 84 | Missing codes, `image_stale` most | round 3 Claude operator | acted | starter codes in 2.4 |
+| 85 | Person steps are not marked | round 3 Claude operator | acted | `needs_person` in `outcomes.step` |
+| 86 | Nothing checks firmware imports the pin map | round 3 Claude operator | raised | a `firmware_pins` Check is a feature card |
+| 87 | Gates are not tied to effects | round 3 safety | acted | S15 and `run_door`'s consent refusal, planted in slice 2 |
+| 88 | A yes must never be an input | round 3 safety | acted | 2.6: the door's process picks `consent`, MCP fails closed |
+| 89 | Grants must fail closed | round 3 safety | acted | a corrupt or zoneless grant test lands with the bench move |
+| 90 | Schema versions differ per reader | round 3 safety | acted | S17, `RecordSchema(kind, version, rules)` |
+| 91 | Records read the environment in many places | round 3 safety | acted | one `Layers` Value, only `records` reads `SPARK_HOME` (S3) |
+| 92 | File writes are spread out | round 3 safety | acted | S16: only `records` writes, through `write_file` or `FileWriter` |
+| 93 | Dry run is a convention | round 3 safety | acted | 2.6: `run_door` swaps in recording Fakes, AC 9 |
+| 94 | The Wokwi token could leak | round 3 safety | acted | `run_door` masks `account_env` values, S18 marker test |
+| 95 | A `Clock` collaborator for aware times | round 3 safety | rejected | `board_grant` already refuses a zoneless time, no second need |
+| 96 | Errors leak home paths | round 3 safety | acted | `run_door` shortens paths, traceback only with `--debug` (2.6, S18) |
