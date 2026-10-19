@@ -26,6 +26,8 @@ CODE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 COUNT_WORDS = re.compile(r"\b(importers?|uses?|rows|files|tests|lines|classes|modules|paths|calls|sites)\b")
 #: Names from Python itself that a plan may quote.
 STANDARD = {"os.environ", "sys.exit", "sys.path", "time.time", "mock.patch", "Exception"}
+#: Folders that hold no tracked file, skipped when there is no git to ask.
+UNTRACKED = {".git", "node_modules", "__pycache__", ".claude"}
 OK, MISSING, PAST_END, AMBIGUOUS = "ok", "missing", "past end", "ambiguous"
 
 
@@ -41,8 +43,12 @@ class PlanCheck:
 
     @classmethod
     def for_repository(cls, root=ROOT):
-        listed = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True, check=True).stdout
-        return cls(root, [root / line for line in listed.splitlines() if (root / line).is_file()])
+        """The files git tracks under `root`. Without git (the push gate tests an archive of the commit), every file
+        outside the folders git ignores here."""
+        listed = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True)
+        if listed.returncode == 0:
+            return cls(root, [root / line for line in listed.stdout.splitlines() if (root / line).is_file()])
+        return cls(root, [p for p in root.rglob("*") if p.is_file() and not UNTRACKED.intersection(p.relative_to(root).parts)])
 
     def _defined_names(self):
         names = set()

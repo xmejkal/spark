@@ -62,6 +62,16 @@ class NameAndCountTest(unittest.TestCase):
         self.assertEqual(said, ["It touches 34 importers."])
 
 
+class NoGitTest(unittest.TestCase):
+    def test_without_git_it_lists_the_files_itself_and_skips_caches(self):
+        root = Path(tempfile.mkdtemp())
+        (root / "__pycache__").mkdir()
+        (root / "__pycache__" / "x.pyc").write_text("")
+        (root / "kept.py").write_text("z = 3\n")
+        check = factcheck.PlanCheck.for_repository(root)
+        self.assertEqual([p.name for p in check.files], ["kept.py"])
+
+
 class MainTest(unittest.TestCase):
     def run_main(self, text):
         plan = Path(tempfile.mkdtemp()) / "plan.md"
