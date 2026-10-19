@@ -40,6 +40,8 @@ from firmware_platform import FirmwarePlatform
 from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
+#: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
+DEPLOYED_LINE = "image sha256: %s, yes: %s"
 #: The last line: how the person sees the firmware start.
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: What --help says beyond the arguments.
@@ -150,6 +152,15 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     return code
 
 
+def who_said_yes(consent):
+    """Whose yes it was, as a phrase, read once. getpass can find no user (OSError since Python 3.13, KeyError before
+    it), and then the phrase says so; the store record names the error itself."""
+    try:
+        return consent.who
+    except (OSError, KeyError) as cannot:
+        return "not known (%s)" % cannot
+
+
 def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
     """The deploy main parses for. Every line a person reads goes to `out` (None: stdout). What `--json` reports it puts in
     `reached`. Returns the exit code."""
@@ -181,10 +192,12 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
         yes_kind = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
         reached["stage"] = board_envelope.STAGE_GATE
         planned = service.deploy(report, args.token, consent, lambda line: show_line(line, out))
-        reached.update(consent=consent, yes_kind=yes_kind)  # the gate is passed: only now is there a yes to report
+        # the gate is passed: only now is there a yes to report
+        reached.update(consent=consent, yes_kind=yes_kind, who=who_said_yes(consent))
     except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
         if isinstance(cannot, FlashError):
-            reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind)
+            reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind,
+                           who=who_said_yes(consent))
         reached["refusal"] = str(cannot)
         print("deploy.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
@@ -202,11 +215,13 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
     reached["person_action"] = download_mode.PRESS_RESET
     if ready.verdict != ready_check.SEEN:
         reached["refusal"] = ready.sentence
-    say("  %s\n  %s: %s\n  board log: %s" % (result.facts_line, ready.verdict, ready.sentence, result.log_path))
+    who = reached["who"]
+    say("  %s\n  %s\n  %s: %s\n  board log: %s" % (result.facts_line, DEPLOYED_LINE % (result.image_sha256, who),
+                                                ready.verdict, ready.sentence, result.log_path))
     try:
         reached["store_record"] = str(service.record(result, consent))
         say("  store record: %s" % reached["store_record"])
-    except (OSError, store.StoreProblem) as cannot:
+    except (OSError, KeyError, store.StoreProblem) as cannot:  # KeyError: getpass before Python 3.13
         reached["store_record_error"] = str(cannot)
         reached["notes"] = ["the store record was not written: %s" % cannot]
         say("  store record: not written: %s" % cannot)

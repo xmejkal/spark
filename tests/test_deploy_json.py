@@ -1,5 +1,6 @@
 """P213 PR a (#192): look.py --json and deploy.py --json print one outcomes.envelope, and change no text and no exit code."""
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -134,6 +135,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual(data["commands"][0][-1], "erase_flash")
         self.assertTrue(Path(data["board_log"]).is_file())
         self.assertTrue(data["facts_line"].startswith("facts file spark.json sha256: "))
+        self.assertEqual(data["image_sha256"], hashlib.sha256(self.image.read_bytes()).hexdigest())  # P213
         self.assertIn("ready seen", err)  # the lines a person reads went to stderr
 
     def test_the_text_run_still_prints_the_same_lines_on_stdout(self):
@@ -161,6 +163,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((code, said["status"], said["data"]["stage"], self.flashed()), (2, "could-not-run", "gate", []))
         self.assertIn("no terminal", said["unchecked"][0]["sentence"])
         self.assertIsNone(said["data"]["yes"])  # no yes was given
+        self.assertIsNone(said["data"]["image_sha256"])  # nothing was flashed (P213)
         self.assertIn("--token %s" % token, said["data"]["run_in_terminal"])
         ops = [step["op"] for step in said["next"]]
         self.assertEqual(ops, ["deploy", "grant"])
@@ -218,6 +221,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((code, said["status"], said["data"]["dry_run"], self.ran), (0, "ok", True, []))
         self.assertEqual(len(said["data"]["commands"]), 2)
         self.assertEqual([s["op"] for s in said["next"]], ["look"])
+        self.assertIsNone(said["data"]["image_sha256"])  # nothing was flashed
         self.assertEqual(said["next"][0]["argv"], ["--project", str(self.project.resolve()), "--port", PORT])
 
     def test_ready_not_seen_is_a_problem(self):

@@ -1,6 +1,7 @@
 """P239 PR 8: DeployService runs a deploy without a terminal, over a FirmwarePlatform, and prints nothing."""
 
 import ast
+import json
 import shlex
 import subprocess
 import sys
@@ -125,6 +126,17 @@ class TheVerifyTest(ServiceCase):
         self.assertEqual(code, 0)
         self.assertTrue(lines[-1].startswith("  store record: not written: no user"), lines[-1])
         self.assertTrue(lines[-2].startswith("  board log: "), lines[-2])
+
+    def test_a_who_that_cannot_be_read_still_gives_the_envelope_after_the_flash(self):
+        class Nobody(FakeConsent):
+            @property
+            def who(self):
+                raise KeyError("getpwuid(): uid not found: 501")  # what getpass raises before Python 3.13
+        code, said, _ = self.deploy("--json", "--token", self.token(), consent=Nobody(True))
+        envelope = json.loads(said)
+        self.assertEqual((code, envelope["data"]["yes"]["who"]), (0, "not known ('getpwuid(): uid not found: 501')"))
+        self.assertIsNone(envelope["data"]["store_record"])  # the record cannot say whose yes, so it is not written
+        self.assertIn("uid not found", envelope["data"]["store_record_error"])
 
 
 class ThePlanTest(ServiceCase):

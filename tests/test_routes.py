@@ -280,6 +280,15 @@ class TextIsDataTest(unittest.TestCase):
         missing = [str(path.relative_to(ROOT)) for path in files if TEXT_IS_DATA not in " ".join(path.read_text().split())]
         self.assertEqual(missing, [])
 
+    def test_the_deploy_command_runs_the_look_and_deploy_but_never_the_grant(self):
+        # P213: the grant is the person's yes in their own terminal, so Claude Code asks before grant.py runs
+        front = (ROOT / "commands" / "deploy.md").read_text().split("---")[1]
+        allowed = re.search(r"allowed-tools:(.*)", front).group(1)
+        self.assertIn("scripts/look.py", allowed)
+        self.assertIn("scripts/deploy.py", allowed)
+        self.assertNotIn("grant.py", allowed)
+        self.assertRegex(front, r"description: \S")
+
     def test_the_drawer_command_cannot_reach_the_network_without_the_person(self):
         # §6.4.5: a network operation is left out of allowed-tools, so Claude Code's permission prompt is the yes.
         front = (ROOT / "commands" / "drawer.md").read_text().split("---")[1]
