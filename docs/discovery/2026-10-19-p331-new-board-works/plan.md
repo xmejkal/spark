@@ -107,7 +107,7 @@ Existing cards keep their numbers. New cards are named here and filed after the 
 | P340 (#434) | research from the open facts, which asks to look further | M | A, then D |
 | P335 (#429) | the ESP32_GENERIC image, its interpreter padded to 0x1000 inside the image | S | B |
 | P332 (#426) | built-in parts in the record, their pins never handed out, their names in `pins.py` (`scripts/assign_pins.py:416`), and drawn in the Wokwi diagram, both for a board alone and with parts (`scripts/check_spine.py:508-513, 543-555`) | M | B |
-| P336 (#430) | the display driver as a pinned third-party download into `firmware/`, never committed; spark writes no driver (AGENTS.md), it points to one, so this needs the PO's yes | M | B |
+| P336 (#430) | driver records in the store, matched to displays by controller (see "Display drivers"); the MicroPython entry first, a pinned third-party file never committed to spark | M | B |
 | P337 (#431) | the gate for a display Wokwi cannot model, after the journey review | M | B |
 | new: what a run did not cover | a "not covered" line in the run log, shown before a deploy (`scripts/run_scenario.py:212`, `scripts/project_image.py:57`) | S | B, C |
 | new: XIAO current rating | the 3.3 V regulator's rating with its datasheet, so the physics check can run (`boards/xiao-esp32-c6.json:209`) | S | C |
@@ -138,6 +138,31 @@ the choice into the record with its source, and it lists what the simulation wil
 perhaps the screen, the battery sense), so each later run can say "not covered" instead of passing it. When it finds
 nothing, it says so and asks the person, like the research step. The spike above is this step done once by hand for
 the ST7789, and its notes become the step's first rules.
+
+## Display drivers (decided by the PO, 2026-10-19)
+
+The PO asked for drivers that are easy to switch, kept and reused across boards, fast enough for a display, and ready
+for other frameworks later (Arduino, ESP-IDF). He said yes to this design:
+
+```
+display facts (part or board record)     driver records (in the store)
+  controller, size, offsets,               supports: [controllers]
+  rotation, colour order, pins             one entry per framework:
+           |                                 micropython: a .py or .mpy file (URL, version, sha256, license)
+           +---- matched by controller ----  arduino:     a library and its version (later)
+                 many to many                esp-idf:     a component (later)
+```
+
+- A driver lists the controllers it supports, and a display names its controller, so one driver serves many displays
+  and one display can have several drivers. The panel's facts are the driver's settings.
+- When several drivers fit, the project's choice wins, then a default, and the match says why.
+- `FirmwarePlatform` (`scripts/firmware_platform.py:41`) picks the entry for its framework and delivers it: today the
+  MicroPython platform copies the file into the image.
+- Speed: draw in MicroPython's built-in `framebuf` and send the frame in one SPI write; measure frames per second and
+  free memory on the T-Display. A native `.mpy` driver if that is too slow; a firmware with the driver built in last.
+- Spark writes no driver (AGENTS.md). A driver is third-party, pinned and kept in the store, never in the repository.
+- A driver is one more record kind for the shared core: identified, researched, kept with its sources, offered
+  everywhere.
 
 ## The walks and their checks
 
