@@ -426,7 +426,7 @@ class TheBoardInDownloadModeTest(GateCase):
         probe = FakeConsoleProbe("boot:0x4 (DOWNLOAD)\nwaiting for download\n", on_reset=self.answers)
         code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (0, ["console", "reset"]))
-        self.assertIn("press the board's R (reset) button once", said)
+        self.assertIn("press the board's RESET (R, top left, beside the USB-C) once", said)
         self.assertIn("ready seen", said)
         self.assertIn("facts file spark.json sha256", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
@@ -438,7 +438,7 @@ class TheBoardInDownloadModeTest(GateCase):
         code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n", reset=False))
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
-                      "press its R button", said)
+                      "press its RESET (R, top left, beside the USB-C).", said)
         self.assertIn("waiting for download\nno reset", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_silent_board_not_in_download_mode_stays_unknown_and_asks_nothing(self):

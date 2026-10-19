@@ -19,7 +19,7 @@ from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_l
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
 RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
-           "written. If it then waits in download mode, press its R button once.")
+           "written. If it then waits in download mode, press its RESET once.")
 EPILOG = """grant.py --minutes N reads the board on USB once with esptool (the board restarts), and asks you in your own
 terminal to let Claude run code on that board for N minutes from your yes (1 to 1440, one day). A pipe, a heredoc or
 Claude Code's ! is no terminal, so grant.py gives no grant there. Your yes is kept in your store as a file named by the

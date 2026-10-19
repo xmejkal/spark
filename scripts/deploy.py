@@ -30,6 +30,7 @@ from pathlib import Path
 import board_envelope
 import board_grant
 import board_look
+import boards
 import deploy_gate
 import download_mode
 import ready_check
@@ -69,7 +70,7 @@ passed run's sha256s and the firmware printed `ready` within %d s. The board's l
 that stops with an error is not seen. If mpremote cannot reach the board, for example because its port changed after
 the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
 If ready is unknown and the passed log names files, deploy.py reads the port with DTR and RTS off. If it reads `waiting for download`, the
-board waits in its download mode: deploy.py asks you to press the board's R (reset) button once, waits %d s for the
+board waits in its download mode: deploy.py asks you to press the board's RESET once (with its place when the board record has it), waits %d s for the
 port to go and come back under the same name, and reads the board again. If it reads the firmware's `ready`, the
 board finished its restart late, and deploy.py reads it again at once. What the port printed, `nothing`, or why it could
 not be read goes in the board log.
@@ -212,7 +213,7 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
     reached["stage"] = board_envelope.STAGE_VERIFY
     result = reached["result"] = service.verify(report, planned, lambda line: show_line(line, out))
     ready = result.ready
-    reached["person_action"] = download_mode.PRESS_RESET
+    reached["person_action"] = download_mode.press_reset(boards.ButtonPlaces.of_project(args.project))
     if ready.verdict != ready_check.SEEN:
         reached["refusal"] = ready.sentence
     who = reached["who"]

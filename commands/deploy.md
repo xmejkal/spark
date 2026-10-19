@@ -48,7 +48,7 @@ order: the look, its token, then the person's yes.
    image of any project for N minutes (1 to 1440). Never run it yourself, and never write a grant file: it is the person's yes in their own terminal.
    A deploy grant covers only a look with no warning, no unknown field and no stop, and never `--ignore-older-runs`;
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
-4. When deploy.py prints "press the board's R (reset) button once", relay that line to the person at once: only a hand
+4. When deploy.py prints "press the board's RESET ... once", relay that line to the person at once: only a hand
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
    run it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
 
@@ -80,7 +80,7 @@ firmware stopped with an error. `ready unknown` (exit 2) means mpremote could no
 log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The line ends with mpremote's
 own words, and the board's log keeps all it printed. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
 If ready is unknown and the passed run's log names files, deploy.py reads the port with DTR and RTS off. If the port says `waiting for download`, the
-board waits in its download mode. deploy.py then asks you to press the board's R (reset) button once, waits 60 s for
+board waits in its download mode. deploy.py then asks you to press the board's RESET once, with its place when the board record has it, waits 60 s for
 the port to go and come back under the same name, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)).
 The board's port name can change after the flash, because MicroPython can bring its own USB serial port, and then the
 read is unknown. `python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py

@@ -31,11 +31,6 @@ def record_of(project):
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot))
 
 
-def chip_of(project):
-    """The board's chip as esptool names it, from requirements.json's board."""
-    return record_of(project)["chip"]
-
-
 def _esptool_flasher(project):
     """The EsptoolFlasher for the project's chip and button places. The record is read first, so a record problem shows
     before a missing tool."""

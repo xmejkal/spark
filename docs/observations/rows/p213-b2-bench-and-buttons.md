@@ -10,3 +10,5 @@ The bench walk and the plan council of P213 part b2 (#192). Plan: [`plan.md`](..
 | 4 | A changed fixture test: test_xiao_record.py compares the record's `physical` with a fixture | plan council, round 1 | acted | the fixture gets the field |
 | 5 | The doctor's sentences are read by `describe` and `look_stop_envelope`, not by the service | plan council, round 2 | acted | one `step_sentence` |
 | 6 | A shape check in `boards.py --validate` and the PortFinder plumbing are not needed for the card | plan council, round 2 | rejected | cut |
+| 7 | `download_mode.PRESS_RESET` and `NO_RESET` also name R with no place, and the plan left them out | implementer | acted | templates with `press_reset` and `no_reset`; the plain word is RESET, as in the doctor's steps |
+| 8 | `firmware_platform.chip_of` has no caller after `record_of` | implementer | acted | removed |

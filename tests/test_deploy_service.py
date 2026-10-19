@@ -176,7 +176,7 @@ class TheFirmwarePlatformTest(ServiceCase):
         hint = firmware_platform.FirmwarePlatform.micropython(self.project).make_flasher().boot_hint
         self.assertIn("BOOT button (B, top right, beside the USB-C)", hint)
         self.assertIn("RESET (R, top left, beside the USB-C)", hint)
-        self.assertEqual(firmware_platform.chip_of(self.project), "esp32c6")
+        self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32c6")
 
     def test_an_unknown_board_is_a_deploy_error_before_a_missing_tool(self):
         (self.project / "requirements.json").write_text(json.dumps({"board": "no-such-board"}))

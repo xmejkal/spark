@@ -244,7 +244,7 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.ready(probe=FakeConsoleProbe("waiting for download\n", reset=False))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual(code, 2)
-        self.assertIn("R (reset) button", said["data"]["person_action"])
+        self.assertIn("press the board's RESET (R, top left, beside the USB-C) once", said["data"]["person_action"])
         self.assertEqual(said["next"][0]["op"], "watch")
         self.assertIn("R", said["next"][0]["why"])
 

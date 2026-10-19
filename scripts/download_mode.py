@@ -7,19 +7,30 @@ docs/observations/2026-10-14-p238-spike/finding.md). This module holds the ROM's
 them. board_console.py's `ConsoleProbe` reads the console and waits for the press of R (P251 moved it there).
 """
 
+import boards
 from run_scenario import READY
 
 #: What the ESP32 ROM prints when it boots into download mode, as the XIAO C6 printed it on 2026-10-14 (AT157).
 DOWNLOAD_MODE = "waiting for download"
-#: What deploy.py asks the person to do.
-PRESS_RESET = "the board waits in download mode: press the board's R (reset) button once"
+#: What deploy.py asks the person to do, formatted by press_reset.
+PRESS_RESET = "the board waits in download mode: press the board's %(reset)s once"
 #: How long the person has to press R, in seconds.
 RESET_WAIT_S = 60
-#: What deploy.py says when no reset came. The wait looks for the same port name only.
-NO_RESET = ("the board waits in download mode, and its port did not go and come back in %d s: press its R button. If "
-            "the port came back under another name, `python3 -m mpremote devs` lists the ports" % RESET_WAIT_S)
+#: What deploy.py says when no reset came, formatted by no_reset. The wait looks for the same port name only.
+NO_RESET = ("the board waits in download mode, and its port did not go and come back in %(wait)d s: press its %(reset)s. "
+            "If the port came back under another name, `python3 -m mpremote devs` lists the ports")
 #: What the board log adds when the console heard the firmware's `ready`, and deploy.py read the board again (P245).
 READ_AGAIN = "read again"
+
+
+def press_reset(places=boards.ButtonPlaces.EMPTY):
+    """PRESS_RESET with the RESET button's place from `places`, a boards.ButtonPlaces."""
+    return PRESS_RESET % {"reset": places.reset}
+
+
+def no_reset(places=boards.ButtonPlaces.EMPTY):
+    """NO_RESET with the wait and the RESET button's place from `places`."""
+    return NO_RESET % {"wait": RESET_WAIT_S, "reset": places.reset}
 
 
 def booted(console):
