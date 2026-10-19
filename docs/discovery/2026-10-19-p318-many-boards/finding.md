@@ -2,7 +2,8 @@
 
 > Keep one board per project until after the MVP. A board that needs its own firmware gets its own project folder
 > today. Fix only the message that stops `check_all --project` on rc-car, so that it says this. The many-board
-> project comes later as a list of such folders, and the one-board code built now needs no rework for it.
+> project comes later as a list of such folders. The one-board code built now needs no rework for it, if each board
+> folder stays the store's project.
 
 Spike [P318 (#402)](https://github.com/xmejkal/spark/issues/402), 2026-10-19. It informs
 [P223 (#205)](https://github.com/xmejkal/spark/issues/205). North star: [P203 (#163)](https://github.com/xmejkal/spark/issues/163).
@@ -65,18 +66,19 @@ classDiagram
 | --- | --- | --- | --- | --- |
 | A | A board is a folder, and a thin `project.json` lists the folders | about 10 files, 300 to 500 lines, 5 stories | medium: every stage, and the stores keyed by project | low: a refactor into `Board` |
 | B | One requirements file names many boards | about 15 files, a schema change | high: a schema change before a second project needs it, against "records grow by need" | the same as A, but harder to undo |
-| C | One board per project folder, and rc-car becomes two folders | the message below, and in each folder an init and its own `parts/` | low | none, if A keeps each board folder as the store's project (`projects.json`, history events) |
+| C | One board per project folder, and rc-car becomes two folders | the message below, and in each folder an init and its own `parts/` | low | no rework of spark code, if A keeps each board folder as the store's project (`projects.json`, history events) |
 
 ## Recommendation: C now, A after the MVP
 
 1. The MVP bar holds with one board per project. The refuter tried it on a copy of rc-car. `remote/` walked the build
-   to the end. `car/` built, but its simulation stops because 3 parts have no `simulation` record, which has nothing
-   to do with folders.
+   to the end. `car/` built, but its simulation stops because 3 parts have no `simulation` record, which is a gap
+   in rc-car's part records, not in spark.
 2. A is the kind of refactor that v0.13, one core ([#94](https://github.com/xmejkal/spark/issues/94)), does anyway. Done
    now, every stage changes twice.
 3. v0.11 and v0.12 still add state per project (built-from, kept moves, board records). The `Project` with many
    boards is easier to design after that state settles.
-4. No one-board code built now needs rework for A, because A's `Board` is today's project folder in one class.
+4. No one-board code built now needs rework for A, because A's `Board` is today's project folder in one class. This
+   holds if A keeps each board folder as the store's project.
 
 What C costs: each folder needs `init_project.py` and its own copy of `parts/`, and the rules are answered again in
 each folder. What C loses: no stage sees that the car and the remote talk to each other (one radio link, one protocol). That is
