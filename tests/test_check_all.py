@@ -17,6 +17,7 @@ import argparse
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -254,6 +255,45 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         found, notes, _ = check_all.discover(root)
         self.assertNotIn("package", found)
         self.assertTrue(any("AMBIGUOUS" in note for note in notes), notes)
+
+    def test_two_circuits_say_one_board_per_project_and_name_a_path_that_works_anywhere(self):
+        # P223, P318: two built designs are two boards, and spark handles one board per project today
+        root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
+        found, notes, ambiguous = check_all.discover(root)
+        reasons = [result["reason"] for result in check_all.run(found, ambiguous)
+                   if result["status"] == "could-not-run"]
+        self.assertTrue(reasons)
+        car = str((root / "dist" / "car" / "circuit.json").resolve())
+        for reason in reasons:
+            self.assertIn("spark handles one board per project today: use one with --circuit %s, or give each board "
+                          "its own folder with its own parts/ and run init_project.py in it" % car, reason)
+        self.assertTrue(any("spark handles one board per project today: use one with --circuit %s, or give each "
+                            "board its own folder with its own parts/ and run init_project.py in it" % car in note
+                            for note in notes), notes)
+
+    def test_a_relative_project_still_names_an_absolute_circuit(self):
+        root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
+        cwd = os.getcwd()
+        os.chdir(root.parent)
+        try:
+            _, _, ambiguous = check_all.discover(root.name)
+        finally:
+            os.chdir(cwd)
+        self.assertTrue(all(Path(path).is_absolute() for path in ambiguous["circuit"]), ambiguous)
+
+    def test_the_circuit_the_reason_names_settles_it(self):
+        root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_all.main(["--project", str(root), "--circuit", str(root / "dist" / "car" / "circuit.json"),
+                            "--json"])
+        self.assertNotIn("is ambiguous", out.getvalue())
+
+    def test_two_packages_still_say_name_one_with_the_flag(self):
+        root = self._project("old-gerbers.zip", "new-gerbers.zip")
+        found, _, ambiguous = check_all.discover(root)
+        reasons = [result.get("reason", "") for result in check_all.run(found, ambiguous)]
+        self.assertTrue(any("name one with --package" in reason for reason in reasons), reasons)
 
     def test_what_is_missing_says_where_it_looked(self):
         found, notes, _ = check_all.discover(self._project())

@@ -77,8 +77,8 @@ class Check:
             # check did not look. Saying "not asked" would be a check that could not look reading
             # as one that was never wanted.
             return {"check": self.name, "status": COULD_NOT_RUN, "what": self.what,
-                    "reason": "; ".join("%s is ambiguous: %s — name one with --%s"
-                                        % (need, ", ".join(ambiguous[need]), need)
+                    "reason": "; ".join("%s is ambiguous: %s — %s" % (need, ", ".join(ambiguous[need]),
+                                                                       how_to_choose(need, ambiguous[need]))
                                         for need in unchosen)}
         missing = [need for need in self.needs if not inputs.get(need)]
         if missing:
@@ -308,6 +308,17 @@ CONVENTIONS = {
 }
 
 
+#: {input: the sentence that says how to choose between its matches}. An input not here gets "name one with --<it>".
+#: Two circuits are two boards, and spark handles one board per project today (P223, P318).
+CHOOSING = {"circuit": design.one_board_message}
+
+
+def how_to_choose(need, matches):
+    """What a person does when `need` has several matches (absolute paths)."""
+    chooser = CHOOSING.get(need)
+    return chooser(matches) if chooser else "name one with --%s" % need
+
+
 def discover(project):
     """
     Find each input by convention, and say what was found and what was looked for.
@@ -338,10 +349,11 @@ def discover(project):
             # I refused to choose". On a two-board project that turned six of seven checks off and
             # still exited 0 with a top-level status of "ok", which is this tool's own founding
             # rule broken at the top level.
-            ambiguous[name] = [str(m.relative_to(project)) for m in matches]
-            notes.append("%-12s AMBIGUOUS, %d matches: %s — name one explicitly"
-                         % (name, len(matches),
-                            ", ".join(str(m.relative_to(project)) for m in matches)))
+            # absolute, so the path a reason names works as the flag from any folder (P223); the note stays relative
+            ambiguous[name] = [str(m.resolve()) for m in matches]
+            notes.append("%-12s AMBIGUOUS, %d matches: %s — %s"
+                         % (name, len(matches), ", ".join(str(m.relative_to(project)) for m in matches),
+                            how_to_choose(name, ambiguous[name])))
         else:
             notes.append("%-12s not found (looked for %s)" % (name, ", ".join(patterns)))
 

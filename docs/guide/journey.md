@@ -869,6 +869,12 @@ keeps them in DIR ([P116](https://github.com/xmejkal/spark/issues/50)). It does 
 
 ## Checks
 
+**One board per project.** Since 2026-10-19 ([P223](https://github.com/xmejkal/spark/issues/205)) a folder with two
+built designs, such as `dist/car/` and `dist/remote/`, gets a reason instead of a silent stop: spark handles one board
+per project today. The reason names the first design's absolute path for `--circuit`, or tells you to give each board
+its own folder with its own `parts/` and to run init in it. Many boards in one project come with v0.13
+([#94](https://github.com/xmejkal/spark/issues/94)).
+
 **Works.** After a build, running init again with `--force` names the rails from the board. It lists the fields it
 writes as `null`. Until a bug is fixed, it lists them even when `.spark/rules.json` already holds your answer
 ([P114](https://github.com/xmejkal/spark/issues/48)), so the values in that file are what count:

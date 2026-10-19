@@ -328,7 +328,7 @@ The fields:
 | `results[].problems` | what is wrong |
 | `results[].unchecked` | what it could not look at |
 | `results[].unmeasured` | advisories and values that need measuring; they do not change the outcome |
-| `results[].reason` | why a check was skipped, or why it could not run when an input was ambiguous (two candidates: name one with its flag) |
+| `results[].reason` | why a check was skipped, or why it could not run when an input was ambiguous (two candidates: name one with its flag). Two circuits say "spark handles one board per project today" and name the first one's absolute path for `--circuit`, or one folder per board with its own `parts/` (P223) |
 
 **When a field is absent.** A field with nothing to say may be absent:
 

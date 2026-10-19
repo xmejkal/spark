@@ -25,7 +25,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/check_all.py --project .
 
 Read the resolution block first, every time. `not found` is a check that will be skipped, and it
 says where it looked. `AMBIGUOUS` is two candidates it refused to choose between — name that one
-with its own flag (`--circuit`, `--rules`, `--package`), which always beats the convention.
+with its own flag (`--circuit`, `--rules`, `--package`), which always beats the convention. Two circuits are two
+boards, and spark handles one board per project today: the reason names an absolute `--circuit` path, or one folder per board with its own `parts/`.
 
 | check | owns |
 | --- | --- |
