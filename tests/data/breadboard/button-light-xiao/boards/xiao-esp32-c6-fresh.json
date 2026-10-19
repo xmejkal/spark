@@ -22,6 +22,12 @@
     "//footprint_module": "Left null on purpose: no footprint was drawn and checked for this file. emit_footprint.py makes one from the geometry below.",
     "width_mm": 17.8,
     "height_mm": 21.0,
+    "//buttons": "Where the BOOT and RESET buttons are, from the PO's photo of his own board (docs/observations/2026-10-19-p213b2-xiao-buttons.md). Read by the hints that tell a person to press them.",
+    "buttons": {
+      "seen_from": "the metal shield facing you, USB-C at the top",
+      "boot": {"silkscreen": "B", "place": "top right, beside the USB-C"},
+      "reset": {"silkscreen": "R", "place": "top left, beside the USB-C"}
+    },
     "//thickness_mm": "Not stated in any source read. Not recorded rather than guessed.",
     "header": {
       "rows": 2,
