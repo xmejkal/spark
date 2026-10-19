@@ -250,6 +250,12 @@ To check a project, run one command that answers once:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project . --json
 ```
 
+`--project` names the folder that holds the requirements file and the kept build. The rules, the parts and the boards
+come from the project that the build reads, which is the nearest folder up that holds `.spark/` or
+`boards/active.json` ([P319](https://github.com/xmejkal/spark/issues/403)). The answer's `project` key names that
+project. If that project is not the folder, the first resolved line names it. A `--project` that is not a directory
+is `could-not-run`, and the answer has no `project` key.
+
 This is its answer for the project in the journey guide. It came after a build and
 `init_project.py --project . --board firebeetle2-esp32s3 --force`, which names the rails from the built board:
 

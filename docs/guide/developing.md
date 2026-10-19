@@ -292,7 +292,9 @@ the PO's grant.
 ## One board per project
 
 Spark handles one board per project folder today. A gadget with two boards, such as rc-car's car and remote, is two
-project folders, each with its own `init_project.py` run and its own `parts/`. When `check_all.py --project` or
+project folders, each with its own `init_project.py` run and its own `parts/`. Until a board folder has its own
+`.spark/`, the build and `check_all.py --project` both read its parent's rules and parts
+([P319](https://github.com/xmejkal/spark/issues/403)). When `check_all.py --project` or
 `init_project.py` finds two built designs, `design.one_board_message` says so and names a `--circuit` path. Many
 boards in one project come with v0.13 ([#94](https://github.com/xmejkal/spark/issues/94)): a board is a folder, and
 the project lists the folders. The decision and its costs are in the P318 finding, in
