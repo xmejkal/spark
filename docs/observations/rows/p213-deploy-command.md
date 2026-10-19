@@ -19,3 +19,4 @@ The plan council of P213 part b1 (#192). Plan: [`plan.md`](../../discovery/2026-
 | 13 | Only the dry run tests `image_sha256` null | refuter, PR | acted | the no-terminal test too; the refuter checked the gate stop and a no in its own run |
 | 14 | The README's Commands list leaves out `/spark:deploy` | refuter, PR | acted | added |
 | 15 | `DEPLOYED_LINE` sat under another constant's comment | refuter, PR | acted | moved |
+| 16 | Mutation: 7 planted, 7 caught (6 in 452 s, then the narrow catch in 387 s) | mutation, PR | verified | `tests/mutations/p213b1-deploy-command.json` |
