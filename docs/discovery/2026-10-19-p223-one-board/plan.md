@@ -8,7 +8,8 @@ What it changed:
 - `Check.run` picks the sentence by the need's key, from a map `{"circuit": design.one_board_message}`. No English
   text is compared, and `package` and `rules` keep "name one with --<need>".
 - The example path is absolute. `--circuit` is read from the current folder, so `dist/car/circuit.json` was wrong
-  when `--project` names another folder. The list of matches stays relative.
+  when `--project` names another folder. The reason lists the matches as absolute paths too, and the discover note
+  keeps them relative (the PR review).
 - "check one with --circuit" became "use one with --circuit", because init seeds rails and does not check.
 - The name is `one_board_message`, after `SAME_NAME_RULE`'s precedent for a message in `design.py`.
 - A test feeds the path from the message back as `--circuit` and finds no ambiguity left.

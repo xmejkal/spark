@@ -262,11 +262,12 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         reasons = [result["reason"] for result in check_all.run(found, ambiguous)
                    if result["status"] == "could-not-run"]
         self.assertTrue(reasons)
-        car = str(root / "dist" / "car" / "circuit.json")
+        car = str((root / "dist" / "car" / "circuit.json").resolve())
         for reason in reasons:
             self.assertIn("spark handles one board per project today: use one with --circuit %s, or give each board "
                           "its own folder and run init_project.py in it" % car, reason)
-        self.assertTrue(any("one board per project today" in note for note in notes), notes)
+        self.assertTrue(any("spark handles one board per project today: use one with --circuit %s, or give each "
+                            "board its own folder and run init_project.py in it" % car in note for note in notes), notes)
 
     def test_the_circuit_the_reason_names_settles_it(self):
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")

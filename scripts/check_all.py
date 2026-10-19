@@ -349,8 +349,8 @@ def discover(project):
             # I refused to choose". On a two-board project that turned six of seven checks off and
             # still exited 0 with a top-level status of "ok", which is this tool's own founding
             # rule broken at the top level.
-            # absolute, so the path a reason names works as the flag from any folder (P223)
-            ambiguous[name] = [str(m) for m in matches]
+            # absolute, so the path a reason names works as the flag from any folder (P223); the note stays relative
+            ambiguous[name] = [str(m.resolve()) for m in matches]
             notes.append("%-12s AMBIGUOUS, %d matches: %s — %s"
                          % (name, len(matches), ", ".join(str(m.relative_to(project)) for m in matches),
                             how_to_choose(name, ambiguous[name])))

@@ -8,3 +8,6 @@ The plan council of P223 (#205). Plan: [`plan.md`](../../discovery/2026-10-19-p2
 | 2 | A relative `--circuit` path fails when `--project` names another folder | council | acted | the ambiguous paths are absolute; test feeds the path back |
 | 3 | "check one" is wrong for init, which seeds rails | council | acted | "use one with --circuit" |
 | 4 | Tests compared with the function's own output | council | rejected | `test_self_confirmation` asks for literals |
+| 5 | The plan says the list stays relative, but the reason lists absolute paths | review, PR | acted | the plan now says the reason is absolute and the note relative |
+| 6 | "Absolute" is false with `--project .`, because `discover` does not resolve | review, PR | acted | `m.resolve()` for the ambiguous paths |
+| 7 | The note test checks only a part of the sentence | review, PR | acted | the full sentence with the path |
