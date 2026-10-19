@@ -13,6 +13,9 @@ next time. So lets now gather the notes and lets evaluate it and have the counci
 change, so that it really all works nicely and seamlessly when a new board is being introduced. I'd like to see some
 animation on the display in the next demo."* Three lenses read the rows (Sonnet): the PO's assistant with UX and
 AI-UX, the architect and tech lead, and a firmware and display lens. Claude merged them and checked the code claims.
+One refuter (Opus) then corrected changes 1 to 6: where the role is derived, empty USB serials, the six readers of
+the board choice, the offset inside the image and not in the flasher, the driver inside the image, and the gate that
+keeps a could-not-run image off the board.
 
 ## The journey we want
 
@@ -33,12 +36,12 @@ Size: S is under about 50 lines, M is a few hundred. "Demo" marks what the anima
 
 | # | change | rows | where | size |
 |---|---|---|---|---|
-| 1 | Demo. The record lists its built-in parts (`onboard_parts`: the display and the buttons, each a part record with its pins), and their pins get a derived role that the pin assigner never hands out | 6, 27, 30 | `scripts/boards.py` (`PIN_ROLES`, one function that derives the role, `validate`), `scripts/assign_pins.py:61` | M |
-| 2 | Demo. One board, one port: ports with the same USB serial are one board, and the no-board hint names the USB-C plug's orientation | 19, 20, 21 | `PortFinder` in `scripts/board_look.py:95-106` | S |
-| 3 | Demo. One board choice: the look and the deploy read `boards/active.json` when `requirements.json` names no board | 17 | `scripts/board_look.py:282`, one helper in `scripts/boards.py` | S |
-| 4 | Demo. The original ESP32's image: an `ESP32_GENERIC` entry with its sha256 in the tools list, and the image offset as a fact per chip (0x1000 on the ESP32, 0x0 today for every chip) | firmware lens | `data/tools.json:150-187`, `scripts/flasher.py:40`, `scripts/flash_image.py` | S |
-| 5 | Demo. The display's driver reaches the board as a pinned download (URL, commit, sha256, license), fetched into the project and copied with the firmware, never committed to spark | firmware lens | the tools list's `download` kind; the deploy's copy step | M |
-| 6 | Demo. Simulation says could-not-run for a display Wokwi does not model, never a pass and never another display in its place; the build still makes the image for the bench | 29 | the simulation stage and the build | S |
+| 1 | Demo. The record lists its built-in parts (`onboard_parts`: the display and the buttons, each a part record with its pins). `boards.load` derives a role for their pins into `pin_roles`, because the pin assigner and the live tries read only `pin_roles`, and the role joins `UNAVAILABLE_ROLES` | 6, 27, 30 | `scripts/boards.py` (`PIN_ROLES`, `load`, `validate`), `scripts/assign_pins.py:61` | M |
+| 2 | Demo. One board, one port: ports with the same USB serial are one board, but only when the serial is not empty, because some boards report none (`tests/test_look.py:140`). The no-board hint names the USB-C plug's orientation | 19, 20, 21 | `PortFinder` in `scripts/board_look.py:95-106` | S |
+| 3 | Demo. One board choice: one helper in `scripts/boards.py` reads `requirements.json`, then `boards/active.json`, and every reader calls it. Six read only `requirements.json` today, and without a board there the image builder takes the S3 image for any board | 17 | `scripts/board_look.py:282`, `scripts/flash_image.py:83`, `scripts/firmware_platform.py:22`, `scripts/boards.py:297`, `scripts/check_spine.py:362`, `scripts/design.py:268` | S |
+| 4 | Demo. The original ESP32's image: an `ESP32_GENERIC` entry with its sha256 in the tools list, and the interpreter's offset as a fact per chip (0x1000 on the ESP32). The flasher keeps writing one whole image at 0x0; the image builder pads the interpreter to its offset and counts it in the size check, so Wokwi and the board load the same file | firmware lens | `data/tools.json:150-187`, `scripts/flash_image.py:63-71` | S |
+| 5 | Demo. The display's driver reaches the board as a pinned download (URL, commit, sha256, license), fetched into the project's `firmware/` before the image is built, so it travels inside the image like the rest of the firmware. Spark never commits it | firmware lens | the tools list's `download` kind; `scripts/run_scenario.py:149` | M |
+| 6 | Demo. A display Wokwi does not model: the simulation says could-not-run, never a pass and never another display in its place. Today an image reaches the board only through a passed run (`scripts/run_scenario.py:149-150` builds it, `scripts/deploy_service.py:90-92` and `scripts/project_image.py:57-69` refuse any other). A bench-only path changes that gate, so it needs its own design and the PO's yes | 29 | the three files named | M |
 | 7 | Input-only pins as a chip fact (`input_only_gpio`), so an output never lands on GPIO 34-39 | 5 | `scripts/assign_pins.py:117-135`, `validate` | S |
 | 8 | Boards that print bare numbers: the vendor check compares by GPIO when no label matches, and says it did | 14, 28 | `scripts/check_vendor_pins.py:81-98` | M |
 | 9 | Honest validation: refuse a null `wokwi_part_type` and an empty `physical`, and count the UNVERIFIED facts beside "ok" | 4, 16 | `scripts/boards.py:353-355` | S |
@@ -76,7 +79,9 @@ the animation. Wokwi's display pages list no ST7789 (the firmware lens read one 
 proof), so the animation is checked only on the bench, and the record of the walk says so.
 
 Before the demo: changes 1 to 6, the PO's yes to reflash his board (it runs MicroPython v1.18 from 2022), and one open
-question for him: may the build make an image for the bench when the simulation could not run?
+question for him (change 6): today no image reaches a board without a passed simulation. A Wokwi run can still boot
+the firmware and pass on everything except the pixels, so that run can be the gate, with the display marked
+could-not-run. Or a bench-only path opens, with his yes for each deploy.
 
 ## Order
 
