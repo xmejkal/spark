@@ -41,9 +41,10 @@ class ReferenceTest(unittest.TestCase):
         return {reference: verdict for reference, verdict, _ in self.check.references(text)}
 
     def test_each_reference_gets_its_verdict(self):
-        said = self.verdicts("core.py:1 core.py:99 gone.py:3 util.py:1 a/util.py:1")
+        said = self.verdicts("core.py:1 core.py:99 gone.py:3 util.py:1 a/util.py:1 tools/core.py:1 "
+                             "https://example.com/blob/main/core.py:12")
         self.assertEqual(said, {"core.py:1": "ok", "core.py:99": "past end", "gone.py:3": "missing",
-                                "util.py:1": "ambiguous", "a/util.py:1": "ok"})
+                                "util.py:1": "ambiguous", "a/util.py:1": "ok", "tools/core.py:1": "missing"})
 
     def test_an_ok_reference_shows_its_line(self):
         self.assertEqual(self.check.references("core.py:5"), [("core.py:5", "ok", "def run_flash():")])
@@ -58,7 +59,7 @@ class NameAndCountTest(unittest.TestCase):
         self.assertEqual(names, ["BrandNewThing", "only_here"])
 
     def test_a_sentence_with_a_count_is_listed_and_a_plain_number_is_not(self):
-        said = factcheck.PlanCheck.counts("It touches 34 importers. Slice 2 is next. Version 10 ships.")
+        said = factcheck.PlanCheck.counts("It touches 34 importers. Slice 2 touches 3 files. Version 10 ships.")
         self.assertEqual(said, ["It touches 34 importers."])
 
 

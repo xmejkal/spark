@@ -5,7 +5,7 @@ in the repository, and the sentences that state a count. It reads only the files
 
     python3 tools/factcheck.py docs/discovery/<folder>/design.md
 
-Exit 1 when a reference names no file, a line past its end, or a file name two files share; 0 otherwise. The names
+Exit 1 when a reference names no file, a line past its end, or a file name two files share, and 0 otherwise. The names
 and the counts are listed for a person to judge: a name a plan proposes is new by design, and a count needs its
 command.
 """
@@ -19,13 +19,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 #: A reference such as `scripts/boards.py:253` or `boards.py:253`.
-REFERENCE = re.compile(r"([\w./-]+\.(?:py|md|json|mjs|tsx)):(\d+)")
+REFERENCE = re.compile(r"(?<![:/\w.])([\w./-]+\.(?:py|md|json|mjs|tsx)):(\d+)")
 #: A name in backticks counts as code when it has an underscore, a dot, or a capital inside a word (CamelCase).
 CODE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 #: A sentence that states a count: a number of two digits or more beside a word that counts things.
 COUNT_WORDS = re.compile(r"\b(importers?|uses?|rows|files|tests|lines|classes|modules|paths|calls|sites)\b")
-#: Names from Python itself that a plan may quote.
-STANDARD = {"os.environ", "sys.exit", "sys.path", "time.time", "mock.patch", "Exception"}
 #: Folders that hold no tracked file, skipped when there is no git to ask.
 UNTRACKED = {".git", "node_modules", "__pycache__", ".claude"}
 OK, MISSING, PAST_END, AMBIGUOUS = "ok", "missing", "past end", "ambiguous"
@@ -74,7 +72,7 @@ class PlanCheck:
         for name, number in sorted(set(REFERENCE.findall(text))):
             line = int(number)
             exact = [p for p in self.files if p.relative_to(self.root).as_posix() == name]
-            hits = exact or self.by_name.get(Path(name).name, [])
+            hits = exact if "/" in name else self.by_name.get(name, [])
             if not hits:
                 found.append(("%s:%d" % (name, line), MISSING, ""))
             elif len(hits) > 1:
@@ -97,7 +95,7 @@ class PlanCheck:
             for token in CODE_NAME.findall(quoted):
                 last = token.split(".")[-1]
                 looks_like_code = "_" in last or "." in token or (last[:1].isupper() and any(c.islower() for c in last[1:]))
-                if (not looks_like_code or token in STANDARD or last in self.defined or token in self.by_name
+                if (not looks_like_code or last in self.defined or token in self.by_name
                         or re.search(r"\b%s\b" % re.escape(last), corpus) or token in unknown):
                     continue
                 unknown.append(token)
@@ -112,7 +110,8 @@ class PlanCheck:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Check a plan's file:line references, new names and counts against the repository.",
-                                     epilog="Exit 1 when a file:line reference is broken; the names and counts are for a person.")
+                                     epilog="Exit 1 when a file:line reference names no file, a line past the end, or a shared file name. "
+                                            "A person judges the names and counts.")
     parser.add_argument("plan", type=Path, help="the plan or design file to check")
     args = parser.parse_args(argv)
     plan = args.plan.resolve()
