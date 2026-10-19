@@ -182,7 +182,8 @@ tscircuit's viewer.
 - `/spark:idea`: a goal to needs, a part picked per need, and a requirements file;
 - `/spark:research`: a missing part;
 - `/spark:identify`: a module from a photo;
-- `/spark:build`: a requirements file to a board.
+- `/spark:build`: a requirements file to a board;
+- `/spark:deploy`: the image that passed onto the board.
 
 **Skills**, which Claude picks up from your words: `spark-design` designs a board; `spark-review` reviews it and gates
 it before ordering; `spark-reverse-engineer` reads a board from its photo (not run here; its bench-protocol template

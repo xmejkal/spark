@@ -40,9 +40,9 @@ from firmware_platform import FirmwarePlatform
 from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
-#: The last line: how the person sees the firmware start.
 #: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
 DEPLOYED_LINE = "image sha256: %s, yes: %s"
+#: The last line: how the person sees the firmware start.
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image

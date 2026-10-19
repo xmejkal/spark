@@ -163,6 +163,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((code, said["status"], said["data"]["stage"], self.flashed()), (2, "could-not-run", "gate", []))
         self.assertIn("no terminal", said["unchecked"][0]["sentence"])
         self.assertIsNone(said["data"]["yes"])  # no yes was given
+        self.assertIsNone(said["data"]["image_sha256"])  # nothing was flashed (P213)
         self.assertIn("--token %s" % token, said["data"]["run_in_terminal"])
         ops = [step["op"] for step in said["next"]]
         self.assertEqual(ops, ["deploy", "grant"])

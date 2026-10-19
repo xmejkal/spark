@@ -15,3 +15,7 @@ The plan council of P213 part b1 (#192). Plan: [`plan.md`](../../discovery/2026-
 | 9 | 84 rows of the mutation tables have anchors that no longer match | lead, `mutate.py --anchors` | raised | the same 84 on main; not this PR's |
 | 10 | getpass raises KeyError before Python 3.13, so `--json` and the store record could crash after the flash | review, PR | acted | `who_said_yes` reads it once and catches KeyError; the record's except catches it; a `--json` test |
 | 11 | `agents.md` named only build.md's `allowed-tools` for deploy.py | review, PR | acted | names `/spark:deploy`'s too |
+| 12 | The same KeyError crash after the flash, reproduced with `getuser` patched | refuter, PR | acted | row 10 |
+| 13 | Only the dry run tests `image_sha256` null | refuter, PR | acted | the no-terminal test too; the refuter checked the gate stop and a no in its own run |
+| 14 | The README's Commands list leaves out `/spark:deploy` | refuter, PR | acted | added |
+| 15 | `DEPLOYED_LINE` sat under another constant's comment | refuter, PR | acted | moved |
