@@ -74,7 +74,7 @@ class TheFlashTest(ServiceCase):
         with self.assertRaises(project_image.DeployError) as failed:
             self.service().deploy(report, report.token(), FakeConsent(True), self.lines.append)
         self.assertTrue(str(failed.exception).startswith("`"))
-        self.assertTrue(str(failed.exception).endswith(": " + flasher.EsptoolFlasher.BOOT_HINT))
+        self.assertTrue(str(failed.exception).endswith(": if esptool could not connect, " + "hold the board's BOOT button (B, top right, beside the USB-C), press and release RESET (R, top left, beside the USB-C), release BOOT, and run it again. Left and right as seen with the metal shield facing you, USB-C at the top"))  # the XIAO record names the places
         self.assertEqual(len(self.lines), 2)  # the erase and its one retry were shown; the write never started
         self.assertEqual((self.lines[1].startswith("  retry in 5 s: "), self.slept, len(self.commands)), (True, [5], 2))
 
@@ -171,6 +171,20 @@ class TheFirmwarePlatformTest(ServiceCase):
         self.assertIsInstance(platform.make_ready_check(connection), ready_check.ReadyCheck)
         self.assertIsNone(platform.make_console_probe(None))
         self.assertEqual(platform.board_of(), "xiao-esp32-c6")
+
+    def test_the_flasher_carries_the_places_of_the_projects_record(self):
+        hint = firmware_platform.FirmwarePlatform.micropython(self.project).make_flasher().boot_hint
+        self.assertIn("BOOT button (B, top right, beside the USB-C)", hint)
+        self.assertIn("RESET (R, top left, beside the USB-C)", hint)
+        self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32c6")
+
+    def test_an_unknown_board_is_a_deploy_error_before_a_missing_tool(self):
+        (self.project / "requirements.json").write_text(json.dumps({"board": "no-such-board"}))
+        asked = []
+        with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: asked.append(name) or find(name)):
+            with self.assertRaises(project_image.DeployError):
+                firmware_platform.FirmwarePlatform.micropython(self.project).make_flasher()
+        self.assertEqual(asked, [])
 
 
 class TheServiceHoldsNoPrintTest(unittest.TestCase):

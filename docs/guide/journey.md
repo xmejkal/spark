@@ -1198,7 +1198,7 @@ Hard resetting via RTS pin...
 Then `python3 -m mpremote connect /dev/cu.usbmodem101 repl` talks to the running firmware: `200` and Enter make the LED
 blink every 200 ms. Ctrl-C stops the firmware and gives MicroPython's `>>>` prompt, Ctrl-D starts it again, and Ctrl-]
 leaves mpremote. If the board waits in its download mode after the flash, deploy.py prints `the board waits in download
-mode: press the board's R (reset) button once`. Press R once. deploy.py waits 60 s for the port to go and come back,
+mode: press the board's RESET (R, top left, beside the USB-C) once`. Press R once. deploy.py waits 60 s for the port to go and come back,
 and then reads the board again ([P243](https://github.com/xmejkal/spark/issues/252),
 [the bench log](../observations/2026-10-14-p243-bench.md)). The XIAO's R and B buttons are the small parts at the two top
 corners, beside the USB plug.
@@ -1258,7 +1258,7 @@ While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: sta
 looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
 record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
 terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
-If the board then waits in its download mode, Claude tells you to press its R button once.
+If the board then waits in its download mode, Claude tells you to press its RESET button once, and where it is.
 If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` is set), Claude stops, tells you why,
 and gives you the line to run in your own terminal. grant.py prints the file's full path and the `rm` line that ends the grant.
 

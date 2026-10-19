@@ -13,6 +13,7 @@ import subprocess
 import time
 
 import board_facts
+import boards
 import board_grant
 import board_look
 import deploy_gate
@@ -123,7 +124,7 @@ class DeployService:
             try:
                 self._run_flash(command, planned.flasher, consent, show_line, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:
-                hint = planned.flasher.BOOT_HINT
+                hint = planned.flasher.boot_hint
                 raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""))
         return planned
 
@@ -164,12 +165,13 @@ class DeployService:
                 waits, console = probe.waits_in_download_mode()
                 heard = "console with DTR and RTS off: %s\n" % (console.strip() or "nothing")
                 if waits:
-                    show_line("  %s" % download_mode.PRESS_RESET)
+                    places = boards.ButtonPlaces.of_project(self.project)
+                    show_line("  %s" % download_mode.press_reset(places))
                     reset = reset_seen = probe.wait_for_reset()
                     if reset:
                         facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
                     else:
-                        ready = ready._replace(sentence=download_mode.NO_RESET)
+                        ready = ready._replace(sentence=download_mode.no_reset(places))
                     heard += "reset seen\n" if reset else "no reset\n"
                 elif download_mode.booted(console):  # P245: mpremote asked while the board still restarted
                     facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)

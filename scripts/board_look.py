@@ -28,7 +28,6 @@ import outcomes
 import project_image
 import tools
 
-BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT  # the look's name for the flasher's hint
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"
 Port = namedtuple("Port", "device serial usb product")
@@ -78,7 +77,7 @@ class PortFinder:
             raise LookStop("could not list the boards on USB: %s" % cannot)
         except subprocess.TimeoutExpired:
             raise LookStop("could not list the boards on USB: mpremote took more than %d s. %s"
-                           % (LIST_TIMEOUT_S, BOOT_HINT))
+                           % (LIST_TIMEOUT_S, flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY)))
         if done.returncode:
             lines = (done.stderr or "").strip().splitlines()
             raise LookStop("could not list the boards on USB: %s" % (lines[-1] if lines else "mpremote exited with %d" % done.returncode))
@@ -118,8 +117,8 @@ class BoardReader:
 class EsptoolReader(BoardReader):
     """esptool 5.5.0's `flash_id` output, parsed with anchored lines. A field that does not parse is None."""
 
-    def __init__(self, flasher_tool, run=subprocess.run):
-        self.flasher_tool, self.run = flasher_tool, run
+    def __init__(self, flasher_tool, run=subprocess.run, boot_hint=flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY)):
+        self.flasher_tool, self.run, self.boot_hint = flasher_tool, run, boot_hint
 
     def read(self, port):
         if self.flasher_tool.name != "esptool":
@@ -131,9 +130,9 @@ class EsptoolReader(BoardReader):
             raise LookStop("could not read the board on %s: %s" % (port, cannot), port)
         except subprocess.TimeoutExpired:
             raise LookStop("could not read the board on %s: esptool took more than %d s. %s"
-                           % (port, READ_TIMEOUT_S, BOOT_HINT), port)
+                           % (port, READ_TIMEOUT_S, self.boot_hint), port)
         if done.returncode:
-            raise LookStop("could not read the board on %s. %s" % (port, BOOT_HINT), port,
+            raise LookStop("could not read the board on %s. %s" % (port, self.boot_hint), port,
                            esptool_said(done.stderr))
         return self.parse(done.stdout)
 
@@ -293,6 +292,8 @@ class LookService:
 def looker(project, run=subprocess.run):
     """A LookService with mpremote and esptool as the project's tools list finds them. tools.ToolProblem becomes a LookStop."""
     try:
-        return LookService(PortFinder(tools.find("board-shell", project), run), EsptoolReader(tools.find("flasher", project), run))
+        hint = flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.of_project(project))
+        return LookService(PortFinder(tools.find("board-shell", project), run),
+                           EsptoolReader(tools.find("flasher", project), run, hint))
     except tools.ToolProblem as cannot:
         raise LookStop(str(cannot))

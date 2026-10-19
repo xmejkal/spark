@@ -93,7 +93,7 @@ class DoctorTest(GrantCase):
         self.assertIn("  said    ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data "
                       "received.", lines)
         self.assertIn("  check   console: the console was silent for 2 s", lines)
-        self.assertTrue(lines[-1].startswith("  next    hold the board's BOOT (B) button"))
+        self.assertTrue(lines[-1].startswith("  next    hold the board's BOOT button"))
         self.assertFalse((self.home / "grants").exists())
 
 
@@ -109,6 +109,7 @@ class IssueTest(GrantCase):
                          (MAC, "2026-10-17T11:00:00+02:00", "2026-10-17T11:30:00+02:00"))
         self.assertEqual(len(kept["board_token"]), 4)
         self.assertIn("the board restarts while it is read", out)
+        self.assertIn("If it then waits in download mode, press its RESET", out)
         self.assertEqual(stat.S_IMODE((self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").stat().st_mode), 0o600)
 
     def test_the_token_is_the_first_half_of_the_looks_token(self):

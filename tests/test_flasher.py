@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_look  # noqa: E402
+import boards  # noqa: E402
 import flasher  # noqa: E402
 import tools  # noqa: E402
 
@@ -49,21 +50,39 @@ class TheEsptoolFlasherTest(unittest.TestCase):
         self.assertEqual((flasher.EsptoolFlasher.RETRY_EXIT_CODE, flasher.EsptoolFlasher.RETRY_WAIT_S), (2, 5))
         self.assertEqual((flasher.Flasher.RETRY_EXIT_CODE, flasher.Flasher.RETRY_WAIT_S), (None, 0))
 
-    def test_the_boot_hint_is_the_one_the_look_prints_too(self):
-        steps = ["hold the board's BOOT button", "press and release RESET", "release BOOT", "run it again"]
-        hint = flasher.EsptoolFlasher.BOOT_HINT
+    PLACES = boards.ButtonPlaces.from_record({"physical": {"buttons": {
+        "seen_from": "the shield facing you", "boot": {"silkscreen": "B", "place": "top right"},
+        "reset": {"silkscreen": "R", "place": "top left"}}}})
+
+    def test_the_plain_boot_hint_is_the_sentence_the_flasher_always_had(self):
+        self.assertEqual(flasher.EsptoolFlasher(ESPTOOL, "esp32s3").boot_hint,
+                         "if esptool could not connect, hold the board's BOOT button, press and release RESET, "
+                         "release BOOT, and run it again")
+
+    def test_the_boot_hint_names_the_places_in_the_order_of_the_steps(self):
+        hint = flasher.EsptoolFlasher(ESPTOOL, "esp32c6", self.PLACES).boot_hint
+        self.assertEqual(hint, "if esptool could not connect, hold the board's BOOT button (B, top right), press and "
+                               "release RESET (R, top left), release BOOT, and run it again. Left and right as seen "
+                               "with the shield facing you")
+        steps = ["hold the board's BOOT", "press and release RESET", "release BOOT", "run it again"]
         self.assertEqual([hint.index(step) for step in steps], sorted(hint.index(step) for step in steps))
+
+    def test_the_look_prints_the_hint_it_is_given(self):
         failed = types.SimpleNamespace(returncode=1, stdout="", stderr="")
+        hint = flasher.EsptoolFlasher.boot_hint_for(self.PLACES)
+        with self.assertRaises(board_look.LookStop) as stop:
+            board_look.EsptoolReader(ESPTOOL, lambda argv, **kw: failed, boot_hint=hint).read(PORT)
+        self.assertTrue(str(stop.exception).endswith(hint), str(stop.exception))
         with self.assertRaises(board_look.LookStop) as stop:
             board_look.EsptoolReader(ESPTOOL, lambda argv, **kw: failed).read(PORT)
-        self.assertIn(flasher.EsptoolFlasher.BOOT_HINT, str(stop.exception))
+        self.assertIn(flasher.EsptoolFlasher(ESPTOOL, "esp32s3").boot_hint, str(stop.exception))
 
-    def test_the_port_finder_prints_the_same_hint_when_mpremote_times_out(self):
+    def test_the_port_finder_prints_the_plain_hint_when_mpremote_times_out(self):
         def timed_out(argv, **kw):
             raise subprocess.TimeoutExpired(argv, 15)
         with self.assertRaises(board_look.LookStop) as stop:
             board_look.PortFinder(ESPTOOL, timed_out).boards()
-        self.assertIn(flasher.EsptoolFlasher.BOOT_HINT, str(stop.exception))
+        self.assertIn(flasher.EsptoolFlasher(ESPTOOL, "esp32s3").boot_hint, str(stop.exception))
 
     def test_the_prefix_puts_chip_before_port_and_both_are_optional(self):
         self.assertEqual(flasher.build_esptool_prefix(ESPTOOL, PORT, "esp32s3"), BASE + ["--chip", "esp32s3", "--port", PORT])
@@ -78,9 +97,9 @@ class TheBaseTest(unittest.TestCase):
 
     def test_the_base_has_no_hint_and_a_caller_can_swap_a_subclass_in(self):
         other = SecondFlasher()
-        self.assertEqual(flasher.Flasher.BOOT_HINT, "")
+        self.assertEqual(flasher.Flasher.boot_hint, "")
         self.assertEqual(other.build_commands("i", PORT), [["probe", "i", "on", PORT]])
-        self.assertEqual(other.BOOT_HINT, "")
+        self.assertEqual(other.boot_hint, "")
 
 
 class DeployHoldsNoEsptoolWordTest(unittest.TestCase):
@@ -101,10 +120,10 @@ class DeployHoldsNoEsptoolWordTest(unittest.TestCase):
     def test_deploy_reads_the_hint_from_its_plan_and_names_no_flash_constant(self):
         tree = ast.parse((ROOT / "scripts" / "deploy.py").read_text())
         names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
-        self.assertFalse(names & {"ERASE", "WRITE", "IMAGE_OFFSET", "BOOT_HINT"})
-        owners = {node.value.id for node in ast.walk(tree) if isinstance(node, ast.Attribute) and node.attr == "BOOT_HINT"
+        self.assertFalse(names & {"ERASE", "WRITE", "IMAGE_OFFSET", "BOOT_HINT_TEMPLATE"})
+        owners = {node.value.id for node in ast.walk(tree) if isinstance(node, ast.Attribute) and node.attr == "boot_hint_for"
                   and isinstance(node.value, ast.Name)}
-        self.assertEqual(owners, set())  # planned.flasher.BOOT_HINT, not board_look.BOOT_HINT
+        self.assertEqual(owners, set())  # planned.flasher.boot_hint, not a builder of its own
 
 
 if __name__ == "__main__":

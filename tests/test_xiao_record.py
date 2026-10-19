@@ -92,6 +92,14 @@ class TheCopiedFactsEqualTheCheckedRecordTest(unittest.TestCase):
         self.assertEqual(left, right)
         self.assertEqual(SHIPPED["physical"]["footprint_module"], "XIAO-ESP32-C6-SMD")
 
+    def test_the_buttons_name_a_silkscreen_and_a_place_and_cite_the_photo_note(self):
+        buttons = SHIPPED["physical"]["buttons"]
+        self.assertEqual((buttons["boot"]["silkscreen"], buttons["reset"]["silkscreen"]), ("B", "R"))
+        self.assertIn("top right", buttons["boot"]["place"])
+        self.assertIn("top left", buttons["reset"]["place"])
+        self.assertTrue(buttons["seen_from"])
+        self.assertIn("2026-10-19-p213b2-xiao-buttons.md", SHIPPED["physical"]["//buttons"])
+
     def test_the_header_pins_equal_in_both_records(self):
         for name, gpio in SHIPPED["pins"].items():
             self.assertEqual(FRESH["pins"][name], gpio, name)

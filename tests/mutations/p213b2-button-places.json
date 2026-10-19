@@ -1,0 +1,14 @@
+[
+{"file":"scripts/boards.py","name":"both-or-nothing becomes either","find":"if boot and reset else cls.EMPTY","replace":"if boot or reset else cls.EMPTY"},
+{"file":"scripts/boards.py","name":"seen_from type not checked","find":"or not isinstance(buttons.get(\"seen_from\"), str):","replace":"or False:"},
+{"file":"scripts/boards.py","name":"place type not checked","find":" and isinstance(one.get(\"place\"), str):","replace":":"},
+{"file":"scripts/boards.py","name":"of_project BoardError not caught","find":"except (OSError, ValueError, AttributeError, BoardError):","replace":"except (OSError, ValueError, AttributeError):"},
+{"file":"scripts/boards.py","name":"of_project ignores board name","find":"return cls.from_record(load(project, name)) if name else cls.EMPTY","replace":"return cls.from_record(load(project, None)) if name else cls.EMPTY"},
+{"file":"scripts/boards.py","name":"orientation always empty","find":"if self.seen_from else \"\"","replace":"if False else \"\""},
+{"file":"scripts/flasher.py","name":"flasher drops places","find":"self.boot_hint = self.boot_hint_for(places)","replace":"self.boot_hint = self.boot_hint_for(boards.ButtonPlaces.EMPTY)"},
+{"file":"scripts/firmware_platform.py","name":"record_of lets BoardError out","find":"except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:","replace":"except (OSError, ValueError, AttributeError) as cannot:"},
+{"file":"scripts/board_look.py","name":"reader ignores its hint","find":"raise LookStop(\"could not read the board on %s. %s\" % (port, self.boot_hint), port,","replace":"raise LookStop(\"could not read the board on %s. %s\" % (port, flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY)), port,"},
+{"file":"scripts/board_look.py","name":"looker drops project hint","find":"EsptoolReader(tools.find(\"flasher\", project), run, hint))","replace":"EsptoolReader(tools.find(\"flasher\", project), run))"},
+{"file":"scripts/deploy_service.py","name":"no_reset uses empty places","find":"download_mode.no_reset(places)","replace":"download_mode.no_reset()"},
+{"file":"scripts/deploy.py","name":"deploy press_reset ignores project","find":"download_mode.press_reset(boards.ButtonPlaces.of_project(args.project))","replace":"download_mode.press_reset()"}
+]

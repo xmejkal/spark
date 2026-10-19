@@ -158,7 +158,8 @@ These only read:
   doctor result is never a pass, and a `next_step` of null means the doctor could not look. Its console check opens
   the port, which can restart the board, so say so before you run a command that may call it. Each tool's
   `silent_step` in the tools list (`hold_boot` for esptool, `press_reset` for mpremote) sets the step for a silent
-  board; never change it for the person;
+  board; never change it for the person. When the board record holds `physical.buttons`, a step and a `fix` that name BOOT
+  or RESET say where each button is: relay the sentence as printed;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.
@@ -483,7 +484,7 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could
   cover it. Never run either one yourself.
 - `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
-  board's R button, `data.person_action` says so, but only after the wait for the press ran out. So tell the person before you run
+  board's RESET, `data.person_action` says so, with its place when the board record has it, but only after the wait for the press ran out. So tell the person before you run
   `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
   board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`.
 - A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.
@@ -703,7 +704,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    <login> at <time>, until <time>`. After the flash, only `ready seen` (exit 0) is a pass:
    the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
    a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).
-   If the board waits in its download mode, deploy.py prints "press the board's R (reset) button once" and waits 60 s
+   If the board waits in its download mode, deploy.py prints "press the board's RESET ... once" (the place in brackets when the board record has it) and waits 60 s
    for the port to go and come back under the same name. Relay that line to the person at once, because only a hand on the board can do it
    ([P243](https://github.com/xmejkal/spark/issues/252)). The board log keeps what the port printed, `nothing`, or why it could not be read
    ([P244](https://github.com/xmejkal/spark/issues/255)). If the port printed the firmware's `ready`, the board

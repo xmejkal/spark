@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_doctor  # noqa: E402
+import boards  # noqa: E402
 import tools  # noqa: E402
 from board_console import ConsoleReadResult  # noqa: E402
 from board_look import LookStop, Port  # noqa: E402
@@ -141,8 +142,27 @@ class OutputTest(unittest.TestCase):
             "said    could not enter raw repl",
             "check   port-listed: mpremote devs lists /dev/cu.usbmodem1101, USB serial 8C:BF:EA:CC:97:70",
             "check   console: the console was silent for 2 s",
-            "next    press the board's R (reset) button once and run it again",
+            "next    press the board's RESET once and run it again",
             "if not  unplug the board, plug it in again, and run it again"])
+
+    def test_the_two_button_steps_name_the_places_when_given_them(self):
+        places = boards.ButtonPlaces.from_record({"physical": {"buttons": {
+            "seen_from": "the shield facing you", "boot": {"silkscreen": "B", "place": "top right"},
+            "reset": {"silkscreen": "R", "place": "top left"}}}})
+        self.assertEqual(board_doctor.step_sentence("press_reset", places),
+                         "press the board's RESET (R, top left) once and run it again. Left and right as seen with the shield facing you")
+        self.assertEqual(board_doctor.step_sentence("hold_boot", places),
+                         "hold the board's BOOT button (B, top right), press and release RESET (R, top left), release BOOT, "
+                         "and run it again. After it, press RESET once so the firmware starts. Left and right as seen "
+                         "with the shield facing you")
+        result, _ = examine(ConsoleReadResult("read", "", None), tool=MPREMOTE)
+        self.assertIn("next    press the board's RESET (R, top left) once and run it again. Left and right as seen with the shield "
+                      "facing you", board_doctor.describe(result, places))
+        self.assertIn("press the board's RESET once and run it again", board_doctor.step_sentence("press_reset"))
+
+    def test_a_step_without_a_button_is_the_same_with_or_without_places(self):
+        self.assertEqual(board_doctor.step_sentence("replug"),
+                         "unplug the board, plug it in again, and run it again")
 
     def test_the_json_holds_codes_and_never_a_pass(self):
         result, _ = examine(ConsoleReadResult("read", "", None))

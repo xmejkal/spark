@@ -214,6 +214,23 @@ class CompareTest(unittest.TestCase):
         self.assertEqual(board_look.compare(board_look.BoardReading("esp32c6", 4, "m"), {"chip": "esp32c6", "flash_mb": 4})["flash"], "same")
 
 
+class LookNamesTheButtonsTest(LookCase):
+    PLACES = "hold the board's BOOT button (B, top right, beside the USB-C), press and release RESET (R, top left, beside the USB-C)"
+
+    def test_a_failed_read_on_the_xiao_names_where_the_buttons_are(self):
+        with self.assertRaises(board_look.LookStop) as stop:
+            self.look(esptool_code=2)
+        self.assertIn(self.PLACES, str(stop.exception))
+        self.assertTrue(str(stop.exception).endswith("Left and right as seen with the metal shield facing you, USB-C at the top"))
+
+    def test_a_failed_read_on_a_record_without_buttons_says_the_plain_words(self):
+        self.board("firebeetle2-esp32s3")
+        with self.assertRaises(board_look.LookStop) as stop:
+            self.look(esptool_code=2)
+        self.assertIn("hold the board's BOOT button, press and release RESET, release BOOT", str(stop.exception))
+        self.assertNotIn("Left and right", str(stop.exception))
+
+
 class LookTest(LookCase):
     def test_a_matching_board_passes_with_a_token(self):
         self.run_the_scenario()

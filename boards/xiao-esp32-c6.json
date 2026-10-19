@@ -23,6 +23,12 @@
     "//footprint_module": "Seeed's SMD footprint name, kept from the earlier record. No file in this repository draws it: emit_footprint.py generates XiaoEsp32C6 from the header below. boards.py --for-fab trusts this name, so that gate does not prove a footprint was drawn and checked (docs/discovery/2026-10-18-p278-xiao-record/rows.md).",
     "width_mm": 17.8,
     "height_mm": 21.0,
+    "//buttons": "Where the BOOT and RESET buttons are, from the PO's photo of his own board (docs/observations/2026-10-19-p213b2-xiao-buttons.md). Read by the hints that tell a person to press them.",
+    "buttons": {
+      "seen_from": "the metal shield facing you, USB-C at the top",
+      "boot": {"silkscreen": "B", "place": "top right, beside the USB-C"},
+      "reset": {"silkscreen": "R", "place": "top left, beside the USB-C"}
+    },
     "//thickness_mm": "Not stated in any source read. Not recorded rather than guessed.",
     "header": {
       "rows": 2,

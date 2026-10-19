@@ -261,6 +261,61 @@ def load(project: Path, board_id: str = None) -> dict:
     return board
 
 
+def _words(value):
+    """True for a string with words in it: an empty place would print half a hint."""
+    return isinstance(value, str) and bool(value.strip())
+
+
+class ButtonPlaces:
+    """Value: the words that name the BOOT and RESET buttons in a hint, from a record's `physical.buttons`. A record with no
+    buttons, or a part of them missing or of the wrong type, gives EMPTY: the plain words, never half a hint."""
+
+    def __init__(self, seen_from=None, boot=None, reset=None):
+        self.seen_from, self._boot, self._reset = seen_from, boot, reset
+
+    @staticmethod
+    def _button(buttons, key):
+        one = buttons.get(key)
+        if isinstance(one, dict) and _words(one.get("silkscreen")) and _words(one.get("place")):
+            return "%s, %s" % (one["silkscreen"], one["place"])
+        return None
+
+    @classmethod
+    def from_record(cls, record):
+        """The places in a board record, or EMPTY."""
+        physical = record.get("physical") if isinstance(record, dict) else None
+        buttons = physical.get("buttons") if isinstance(physical, dict) else None
+        if not isinstance(buttons, dict) or not _words(buttons.get("seen_from")):
+            return cls.EMPTY
+        boot, reset = cls._button(buttons, "boot"), cls._button(buttons, "reset")
+        return cls(buttons["seen_from"], boot, reset) if boot and reset else cls.EMPTY
+
+    @classmethod
+    def of_project(cls, project):
+        """The places in the record requirements.json names, or EMPTY when that record cannot be read."""
+        try:
+            name = json.loads((Path(project) / "requirements.json").read_text()).get("board")
+            return cls.from_record(load(project, name)) if name else cls.EMPTY
+        except (OSError, ValueError, AttributeError, BoardError):
+            return cls.EMPTY
+
+    @property
+    def boot(self):
+        return "BOOT button (%s)" % self._boot if self._boot else "BOOT button"
+
+    @property
+    def reset(self):
+        return "RESET (%s)" % self._reset if self._reset else "RESET"
+
+    @property
+    def orientation(self):
+        """The words after a hint that say which way left and right are seen, or nothing."""
+        return ". Left and right as seen with %s" % self.seen_from if self.seen_from else ""
+
+
+ButtonPlaces.EMPTY = ButtonPlaces()
+
+
 def resolve(project: Path) -> Path:
     """
     Write the active board, validated, to one known path.

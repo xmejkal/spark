@@ -96,6 +96,21 @@ took the wake-capable pin count from 3 usable to 22, which changed every assignm
 2: `[16, 4]`). Write its `//flash_mb` source beside it. `board_look.py` compares what esptool reads from a board with it. A record without `flash_mb` makes the flash field
 unknown, and that is a warning.
 
+## Button places
+
+`physical.buttons` says where the BOOT and RESET buttons are. Each hint that tells a person to press one reads it.
+Write `seen_from` (how to hold the board), then `boot` and `reset`, each with its `silkscreen` letter and its `place`.
+Write its `//buttons` source beside it. Write it only from a photo of a board you hold or from the maker's page. A
+record without it, or with a part missing, gives the plain hint: "the BOOT button" and "RESET", with no place.
+
+```json
+"buttons": {
+  "seen_from": "the metal shield facing you, USB-C at the top",
+  "boot":  {"silkscreen": "B", "place": "top right, beside the USB-C"},
+  "reset": {"silkscreen": "R", "place": "top left, beside the USB-C"}
+}
+```
+
 ## Simulation
 
 `wokwi_part_type` names the part the generated Wokwi diagram uses. If Wokwi has no model of the

@@ -11,13 +11,15 @@ from pathlib import Path
 import board_doctor
 import board_grant
 import board_look
+import boards
+import flasher
 import store
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
 RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
-           "written. If it then waits in download mode, press its R button once.")
+           "written. If it then waits in download mode, press its %(reset)s once%(orientation)s.")
 EPILOG = """grant.py --minutes N reads the board on USB once with esptool (the board restarts), and asks you in your own
 terminal to let Claude run code on that board for N minutes from your yes (1 to 1440, one day). A pipe, a heredoc or
 Claude Code's ! is no terminal, so grant.py gives no grant there. Your yes is kept in your store as a file named by the
@@ -88,12 +90,14 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
             result = board_grant.GrantService(finder, now=now).check(args.port)
             print(to_json(result) if args.json else describe(result))
             return EXIT_OK if result.granted else EXIT_PROBLEMS
-        reader = board_look.EsptoolReader(tools.find("flasher", args.project), run)
+        places = boards.ButtonPlaces.of_project(args.project)
+        hint = flasher.EsptoolFlasher.boot_hint_for(places)
+        reader = board_look.EsptoolReader(tools.find("flasher", args.project), run, hint)
         line = format_rerun_line(__file__, (["--scope", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])
                                  + ["--minutes", args.minutes, "--project", args.project.resolve()]
                                  + (["--port", args.port] if args.port else []))
         grant = board_grant.GrantService(finder, reader, now=now).issue(
-            args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print("  " + RESTART),
+            args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print("  " + RESTART % {"reset": places.reset, "orientation": places.orientation}),
             scope=args.scope)
     except GateClosedError as closed:
         print("grant.py: %s" % closed, file=sys.stderr)

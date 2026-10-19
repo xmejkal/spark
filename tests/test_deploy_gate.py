@@ -237,7 +237,7 @@ class TheGateTest(GateCase):
         self.assertIn("hold the board's BOOT button", problems)
         line = problems.strip().splitlines()[-1]
         self.assertTrue(line.startswith("deploy.py: `"), line)
-        self.assertTrue(line.endswith("): " + flasher.EsptoolFlasher.BOOT_HINT), line)
+        self.assertTrue(line.endswith("): if esptool could not connect, " + "hold the board's BOOT button (B, top right, beside the USB-C), press and release RESET (R, top left, beside the USB-C), release BOOT, and run it again. Left and right as seen with the metal shield facing you, USB-C at the top"), line)  # the XIAO record names the places
 
     def test_a_flasher_with_no_hint_ends_the_failure_line_at_the_error(self):
         self.run_the_scenario()
@@ -426,7 +426,7 @@ class TheBoardInDownloadModeTest(GateCase):
         probe = FakeConsoleProbe("boot:0x4 (DOWNLOAD)\nwaiting for download\n", on_reset=self.answers)
         code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (0, ["console", "reset"]))
-        self.assertIn("press the board's R (reset) button once", said)
+        self.assertIn("press the board's RESET (R, top left, beside the USB-C) once", said)
         self.assertIn("ready seen", said)
         self.assertIn("facts file spark.json sha256", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
@@ -438,7 +438,7 @@ class TheBoardInDownloadModeTest(GateCase):
         code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n", reset=False))
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
-                      "press its R button", said)
+                      "press its RESET (R, top left, beside the USB-C).", said)
         self.assertIn("waiting for download\nno reset", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_silent_board_not_in_download_mode_stays_unknown_and_asks_nothing(self):

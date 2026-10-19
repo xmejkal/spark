@@ -229,5 +229,22 @@ class TheCureTest(unittest.TestCase):
             exec(board_console.READ_CONSOLE, {})
         self.assertEqual(out.getvalue(), "rst:0x15\n")
 
+
+class ResetSentenceTest(unittest.TestCase):
+    """P213 b2: the download-mode sentences name RESET, with its place only when a board record gives one."""
+
+    def test_a_board_with_no_places_gets_the_plain_words(self):
+        self.assertEqual(download_mode.press_reset(), "the board waits in download mode: press the board's RESET once")
+        self.assertIn("in 60 s: press its RESET. If", download_mode.no_reset())
+
+    def test_a_board_with_places_names_where_reset_is(self):
+        record = {"physical": {"buttons": {"seen_from": "USB-C at the top", "boot": {"silkscreen": "B", "place": "top right"},
+                                           "reset": {"silkscreen": "R", "place": "top left"}}}}
+        places = download_mode.boards.ButtonPlaces.from_record(record)
+        self.assertEqual(download_mode.press_reset(places), "the board waits in download mode: press the board's RESET (R, top left) once. Left and right as seen "
+                         "with USB-C at the top")
+        self.assertIn("press its RESET (R, top left). Left and right as seen with USB-C at the top. If",
+                      download_mode.no_reset(places))
+
 if __name__ == "__main__":
     unittest.main()

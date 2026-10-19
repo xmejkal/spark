@@ -123,6 +123,58 @@ class WhereABoardComesFromTest(unittest.TestCase):
         self.assertEqual(boards.active_id(project()), "firebeetle2-esp32s3")
 
 
+BUTTONS = {"seen_from": "the shield facing you, USB-C at the top",
+           "boot": {"silkscreen": "B", "place": "top right"}, "reset": {"silkscreen": "R", "place": "top left"}}
+
+
+def with_buttons(buttons):
+    return {"physical": {"buttons": buttons}}
+
+
+class ButtonPlacesTest(unittest.TestCase):
+    """The words that name BOOT and RESET in a hint, from the record's physical.buttons."""
+
+    def test_a_full_record_names_each_button_with_its_silkscreen_and_place(self):
+        places = boards.ButtonPlaces.from_record(with_buttons(BUTTONS))
+        self.assertEqual(places.boot, "BOOT button (B, top right)")
+        self.assertEqual(places.reset, "RESET (R, top left)")
+        self.assertEqual(places.orientation, ". Left and right as seen with the shield facing you, USB-C at the top")
+
+    def test_a_record_without_buttons_gives_the_plain_words(self):
+        for record in ({}, {"physical": {}}, {"physical": None}, None, [], with_buttons("x"), with_buttons(None)):
+            places = boards.ButtonPlaces.from_record(record)
+            self.assertEqual((places.boot, places.reset, places.orientation), ("BOOT button", "RESET", ""), record)
+        self.assertEqual(boards.ButtonPlaces.EMPTY.boot, "BOOT button")
+
+    def test_a_part_missing_or_of_the_wrong_type_gives_the_plain_words_not_half_a_hint(self):
+        for broken in ({k: v for k, v in BUTTONS.items() if k != "seen_from"},
+                       {k: v for k, v in BUTTONS.items() if k != "reset"},
+                       dict(BUTTONS, boot={"silkscreen": "B"}),
+                       dict(BUTTONS, boot={"silkscreen": "B", "place": 3}),
+                       dict(BUTTONS, reset="R"),
+                       dict(BUTTONS, seen_from=" "),
+                       dict(BUTTONS, boot={"silkscreen": "", "place": "top right"}),
+                       dict(BUTTONS, reset={"silkscreen": "R", "place": ""})):
+            places = boards.ButtonPlaces.from_record(with_buttons(broken))
+            self.assertEqual((places.boot, places.reset, places.orientation), ("BOOT button", "RESET", ""), broken)
+
+    def test_of_project_reads_the_record_requirements_names(self):
+        root = project(own={"mine": definition("mine", physical={"footprint_module": "X", "footprint_export": "X",
+                                                                 "buttons": BUTTONS})})
+        (root / "requirements.json").write_text(json.dumps({"board": "mine"}))
+        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button (B, top right)")
+
+    def test_of_project_gives_the_plain_words_when_the_record_cannot_be_read(self):
+        root = project()
+        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")  # no requirements.json
+        (root / "requirements.json").write_text("{not json")
+        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
+        (root / "requirements.json").write_text(json.dumps({"board": "no-such-board"}))
+        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
+        (root / "requirements.json").write_text(json.dumps({}))
+        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
+
+
 class ResolvingTest(unittest.TestCase):
     def test_resolve_writes_the_board_to_one_known_path(self):
         root = project()
