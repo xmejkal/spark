@@ -68,6 +68,22 @@ wider guide is one epic with his words, not part of this plan.
 The guide comes with change 10, because it leads to a record in the store. The demo walk does not wait for it:
 Claude leads that walk by hand again, and its steps become the guide's script.
 
+## Research that keeps looking
+
+The PO, during the council: *"And I'd really like the system to really look well for information and schema and
+datasheet and maybe pictures or other data about the new part/board/module, it even asks for more research when it
+still needs some more info."*
+
+On this walk, Claude found the maker's repository, schematic, README and the Arduino header, but kept no ESP32
+datasheet and no Wokwi page, so ten facts stayed UNVERIFIED (row 15). Nothing in spark noticed that and asked for
+more. The guide's research step works from the record's open facts: for each UNVERIFIED or null fact, it names the
+kind of source that would settle it (the chip's datasheet, the maker's schematic, the simulator's part page). It
+looks there, keeps each source with its checksum, and shows what is still open. When facts stay open, it says which
+ones, why they matter, and which source to try next, and asks the person whether to look further. It also keeps
+pictures: the maker's pinout image and the person's own photos, in the store and never in the repository. The open
+facts already have a reader, `parts.py --unverified`, so the step extends that pattern to boards (change 9). This is
+the same need as the parts import of P329 (#421), so the two share one research step.
+
 ## The next demo: an animation on the T-Display
 
 The PO leads it from his own idea, as walk 1 does. The smallest first slice: the screen fills with one color, then
