@@ -41,6 +41,8 @@ from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
 #: The last line: how the person sees the firmware start.
+#: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
+DEPLOYED_LINE = "image sha256: %s, yes: %s"
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
@@ -202,7 +204,12 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
     reached["person_action"] = download_mode.PRESS_RESET
     if ready.verdict != ready_check.SEEN:
         reached["refusal"] = ready.sentence
-    say("  %s\n  %s: %s\n  board log: %s" % (result.facts_line, ready.verdict, ready.sentence, result.log_path))
+    try:
+        who = consent.who
+    except OSError as cannot:  # getpass found no user: the store record below says so too
+        who = "not known (%s)" % cannot
+    say("  %s\n  %s\n  %s: %s\n  board log: %s" % (result.facts_line, DEPLOYED_LINE % (result.image_sha256, who),
+                                                ready.verdict, ready.sentence, result.log_path))
     try:
         reached["store_record"] = str(service.record(result, consent))
         say("  store record: %s" % reached["store_record"])

@@ -31,7 +31,8 @@ DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote not
 #: Result: what `verify` returns. `facts` are the board's facts, `ready` is a ReadyResult, `log_path` the board log's file.
 #: `repl_command` is the argv that opens the board's REPL.
 #: `reset_seen` is None when the person was never asked to press R, else whether the port came back.
-DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command reset_seen", defaults=(None,))
+DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command reset_seen image_sha256",
+                                      defaults=(None, None))
 
 
 class FlashError(DeployError):
@@ -173,9 +174,10 @@ class DeployService:
                 elif download_mode.booted(console):  # P245: mpremote asked while the board still restarted
                     facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
                     heard += download_mode.READ_AGAIN + "\n"
-        log_path = write_board_log(self.project, BoardLog(moment, report.port, image.sha256,
+        image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
+        log_path = write_board_log(self.project, BoardLog(moment, report.port, image_sha256,
                                                           facts_line, ready.verdict, ready.sentence, heard + ready.log))
-        return DeployResult(facts, facts_line, ready, log_path, connection.repl_command(), reset_seen)
+        return DeployResult(facts, facts_line, ready, log_path, connection.repl_command(), reset_seen, image_sha256)
 
     @staticmethod
     def record(result, consent):

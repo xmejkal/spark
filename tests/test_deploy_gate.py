@@ -518,6 +518,10 @@ class TheFactsAfterTheFlashTest(GateCase):
         line = "facts file spark.json sha256: %s" % hashlib.sha256(self.copied["spark.json"].encode()).hexdigest()
         self.assertIn(line, said)
         self.assertIn(line, next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+        # P213, card A: the image on the board and whose yes erased it, after the facts line and before ready
+        lines = said.splitlines()
+        deployed = "  image sha256: %s, yes: a test" % hashlib.sha256(self.image.read_bytes()).hexdigest()
+        self.assertEqual(lines.index(deployed), lines.index("  " + line) + 1)
 
     def test_the_store_keeps_one_record_per_mac_and_adds_each_deploy(self):
         _, said, _ = self.flash()
@@ -708,6 +712,8 @@ class TheStandingYesTest(GateCase):
         who = "standing yes typed by ada at 2026-10-17T11:00:00+02:00, until 2026-10-17T11:30:00+02:00"
         self.assertIn("  yes: %s" % who, said.splitlines())
         self.assertEqual(self.record(), who)
+        sha256 = hashlib.sha256(self.image.read_bytes()).hexdigest()
+        self.assertIn("  image sha256: %s, yes: %s" % (sha256, who), said.splitlines())  # P213, card A
 
     def test_a_consent_given_to_main_wins_over_a_valid_grant(self):
         self.give()

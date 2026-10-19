@@ -110,6 +110,7 @@ def deploy_envelope(reached, code):
         "yes": {"kind": reached["yes_kind"], "who": consent.who} if consent else None,
         "ready": {"verdict": ready.verdict, "sentence": ready.sentence} if ready else None,
         "facts_line": result.facts_line if result else None,
+        "image_sha256": result.image_sha256 if result else None,
         "board_log": str(result.log_path) if result else None,
         "repl_command": list(result.repl_command) if result else None,
         "store_record": reached.get("store_record"), "store_record_error": reached.get("store_record_error"),
