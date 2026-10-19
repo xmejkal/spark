@@ -32,6 +32,7 @@ classDiagram
     identify()
     research_open_facts()
     keep_sources()
+    find_simulation()
     write()
     hand_checks()
     validate()
@@ -122,6 +123,15 @@ controller), and a search finds Wokwi projects with ST7789 displays but no part 
 part in Wokwi's diagram format, or else a Wokwi custom chip that draws on a display. An ILI9341 in its place is not a
 test of this board, because its controller and its start-up commands differ. If the spike finds a way, P337 becomes
 small: the screen is simulated, and the gate stays as it is.
+
+The PO then: *"And this part, to find out what to do and how to simulate it best, that should also work."* So finding
+the best simulation is a step of the shared core, `find_simulation`, for every kind. For a new part, module or board
+it looks for, in this order: Wokwi's own part for the exact thing; the same chip or controller on another Wokwi part
+(a stand-in, as the XIAO and FireBeetle records already say with `wokwi_is_stand_in`); then a custom chip. It writes
+the choice into the record with its source, and it lists what the simulation will not cover (for the T-Display:
+perhaps the screen, the battery sense), so each later run can say "not covered" instead of passing it. When it finds
+nothing, it says so and asks the person, like the research step. The spike above is this step done once by hand for
+the ST7789, and its notes become the step's first rules.
 
 ## The walks and their checks
 
