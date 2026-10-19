@@ -1,0 +1,7 @@
+[
+ {"file": "scripts/check_all.py", "name": "the circuit gets the generic sentence", "find": "CHOOSING = {\"circuit\": design.one_board_message}", "replace": "CHOOSING = {}"},
+ {"file": "scripts/check_all.py", "name": "a need with no chooser gets nothing", "find": "return chooser(matches) if chooser else \"name one with --%s\" % need", "replace": "return chooser(matches) if chooser else \"\""},
+ {"file": "scripts/check_all.py", "name": "the ambiguous paths are relative again", "find": "ambiguous[name] = [str(m) for m in matches]", "replace": "ambiguous[name] = [str(m.relative_to(project)) for m in matches]"},
+ {"file": "scripts/check_all.py", "name": "the discover note says no way to choose", "find": "                            how_to_choose(name, ambiguous[name])))", "replace": "                            \"\"))"},
+ {"file": "scripts/init_project.py", "name": "init says the old sentence", "find": "one_board_message([str(m) for m in matches])))", "replace": "\"Name one with --circuit\"))"}
+]

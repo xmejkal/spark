@@ -39,7 +39,7 @@ import ai_files  # noqa: E402
 import boards  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
-from design import CIRCUIT_PATHS  # noqa: E402
+from design import CIRCUIT_PATHS, one_board_message  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
 
@@ -450,11 +450,10 @@ def main(argv=None):
                 # canonical example of one in its L9110S, had `must_not_float: []` for two
                 # sprints (backlog P53).
                 ambiguous = ("%d built designs here, so the rails were NOT seeded — the rails of "
-                             "one board are not the rules for both:\n    %s\n  Name one with "
-                             "--circuit, or run this in each design's own project. Everything "
+                             "one board are not the rules for both:\n    %s\n  %s. Everything "
                              "that comes from the part records was seeded."
-                             % (len(matches), "\n    ".join(str(m.relative_to(project))
-                                                           for m in matches)))
+                             % (len(matches), "\n    ".join(str(m.relative_to(project)) for m in matches),
+                                one_board_message([str(m) for m in matches])))
                 circuit = None
                 break
             if matches:

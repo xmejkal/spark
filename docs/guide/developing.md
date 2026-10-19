@@ -289,6 +289,15 @@ board on USB and cures it once when its USB output died at power-on (P251,
 bench log) and `--cure-first` (the bench's cold arm). It is not in [agents.md](agents.md) until P247 puts it behind
 the PO's grant.
 
+## One board per project
+
+Spark handles one board per project folder today. A gadget with two boards, such as rc-car's car and remote, is two
+project folders, each with its own `init_project.py` run and its own `parts/`. When `check_all.py --project` or
+`init_project.py` finds two built designs, `design.one_board_message` says so and names a `--circuit` path. Many
+boards in one project come with v0.13 ([#94](https://github.com/xmejkal/spark/issues/94)): a board is a folder, and
+the project lists the folders. The decision and its costs are in the P318 finding, in
+[PR #404](https://github.com/xmejkal/spark/pull/404).
+
 ## The docs name only what is there
 
 [`tools/check_docs.py`](../../tools/check_docs.py) reads `README.md`, `AGENTS.md` and these guides. The suite runs it

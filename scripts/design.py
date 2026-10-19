@@ -53,6 +53,13 @@ RULES_PATH = Path(".spark") / "rules.json"
 CIRCUIT_PATHS = ("dist/board/circuit.json", "dist/*/circuit.json")
 
 
+def one_board_message(circuits):
+    """The sentence that two built designs in one project get from every tool (P223, P318): spark handles one board
+    per project today. `circuits` are absolute paths, the first one the example. Many boards come with v0.13 (#94)."""
+    return ("spark handles one board per project today: use one with --circuit %s, or give each board its own folder "
+            "and run init_project.py in it" % circuits[0])
+
+
 class DesignError(Exception):
     """The input cannot be loaded, and this is why. Always a sentence, never a traceback."""
 
