@@ -42,6 +42,7 @@ days after that changed (audit B18, 2026-09-29). Five checks running clean will 
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -51,6 +52,7 @@ SCRIPTS = Path(__file__).resolve().parent
 # were different objects, so an `except` for one could not catch the other. Audit A7.
 sys.path.insert(0, str(SCRIPTS))
 
+import boards  # noqa: E402
 import design  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
@@ -175,11 +177,11 @@ def placeholder_components_in(project):
         return (), []
     import design
     import emit_board
-    root = Path(project)
     names, notes = set(), []
-    for requirements in sorted(root.glob("*requirements.json")):
+    for requirements in sorted(Path(project).glob("*requirements.json")):
         try:
-            part_list = design.parts_of(design.read(requirements), root)
+            # the file's own project, the one the build reads (P319)
+            part_list = design.parts_of(design.read(requirements), design.project_for(requirements))
             names |= set(emit_board.placeholder_components(part_list))
         except design.DesignError as broken:
             notes.append("%s could not be read, so any stand-in footprint it names was "
@@ -199,12 +201,11 @@ def rail_loads_in(project, circuit):
     if not project:
         return None, []
     import emit_board
-    root = Path(project)
     present = {e.get("name") for e in circuit if e.get("type") == "source_component"}
     matched, notes = [], []
-    for requirements in sorted(root.glob("*requirements.json")):
+    for requirements in sorted(Path(project).glob("*requirements.json")):
         try:
-            made = design.load(requirements, root)
+            made = design.load(requirements)  # the file's own project, the one the build reads (P319)
         except design.DesignError as broken:
             notes.append("%s could not be read: %s" % (requirements.name, broken))
             continue
@@ -301,11 +302,42 @@ CHECKS = [
 #: and got two of them wrong: it globbed `boards/*.json`, which matches the selection file rather
 #: than a board definition, and it never passed `--design` or `--firmware` at all — so the
 #: flagship check was permanently unasked and the review still called itself complete.
+#: Each input is read in one of two roots (P319): the FOLDER `--project` names, where the build and the requirements
+#: are, or the PROJECT the build reads, where the records are.
+FOLDER, PROJECT = "folder", "project"
 CONVENTIONS = {
-    "circuit": list(design.CIRCUIT_PATHS),
-    "rules": [str(design.RULES_PATH)],
-    "package": ["*-gerbers.zip", "fab/*.zip"],
+    "circuit": (FOLDER, list(design.CIRCUIT_PATHS)),
+    "rules": (PROJECT, [str(design.RULES_PATH)]),
+    "package": (FOLDER, ["*-gerbers.zip", "fab/*.zip"]),
 }
+
+
+@dataclass(frozen=True)
+class CheckedFolder:
+    """
+    The folder `--project` names and the project the build reads for it (P319): one job, to say where each input is
+    read. A board folder with no `.spark/` builds with its parent's records, so its checks read the parent's too.
+    """
+    folder: Path
+    project: Path
+
+    @classmethod
+    def at(cls, folder):
+        """The folder and its project, found the way `design.project_for` finds a requirements file's."""
+        folder = Path(folder)
+        if not folder.is_dir():
+            # a folder that is not there walked up to a project nobody named
+            raise design.DesignError("no directory at %s — `--project` names a project directory" % folder)
+        project = boards.project_or_library(folder.resolve())
+        return cls(folder, folder if project == folder.resolve() else project)  # the folder as given, when it is one
+
+    def root(self, where):
+        """The root a `CONVENTIONS` entry is read in."""
+        return self.project if where == PROJECT else self.folder
+
+    def elsewhere(self):
+        """Whether the records come from a project other than the folder itself."""
+        return self.project != self.folder
 
 
 #: {input: the sentence that says how to choose between its matches}. An input not here gets "name one with --<it>".
@@ -319,7 +351,7 @@ def how_to_choose(need, matches):
     return chooser(matches) if chooser else "name one with --%s" % need
 
 
-def discover(project):
+def discover(checked):
     """
     Find each input by convention, and say what was found and what was looked for.
 
@@ -330,19 +362,23 @@ def discover(project):
       * a glob matching more than one file is AMBIGUOUS, not a coin toss. Two fab packages in a
         directory is exactly when checking the wrong one costs money.
     """
-    project = Path(project)
-    found, notes = {}, []
-
-    ambiguous = {}
-    for name, patterns in CONVENTIONS.items():
+    found, notes, ambiguous = {}, [], {}
+    project = checked.project
+    if design.is_library(project):
+        notes.append("%-12s none up from here, so the boards come from the plugin's library and there are no rules"
+                     % PROJECT)
+    elif checked.elsewhere():
+        notes.append("%-12s %s (the project up from here, the one the build reads)" % (PROJECT, project))
+    for name, (where, patterns) in CONVENTIONS.items():
+        root = checked.root(where)
         matches = []
         for pattern in patterns:
-            matches = sorted(project.glob(pattern))
+            matches = sorted(root.glob(pattern))
             if matches:
                 break
         if len(matches) == 1:
             found[name] = str(matches[0])
-            notes.append("%-12s %s" % (name, matches[0].relative_to(project)))
+            notes.append("%-12s %s" % (name, matches[0].relative_to(checked.folder) if root == checked.folder else matches[0]))
         elif matches:
             # Recorded, not dropped. Leaving the input unset made every check that needed it
             # report SKIPPED — "I was not asked" — when the truth is "there were two of these and
@@ -352,7 +388,7 @@ def discover(project):
             # absolute, so the path a reason names works as the flag from any folder (P223); the note stays relative
             ambiguous[name] = [str(m.resolve()) for m in matches]
             notes.append("%-12s AMBIGUOUS, %d matches: %s — %s"
-                         % (name, len(matches), ", ".join(str(m.relative_to(project)) for m in matches),
+                         % (name, len(matches), ", ".join(str(m.relative_to(root)) for m in matches),
                             how_to_choose(name, ambiguous[name])))
         else:
             notes.append("%-12s not found (looked for %s)" % (name, ", ".join(patterns)))
@@ -360,7 +396,6 @@ def discover(project):
     # The board library knows where board definitions are; a glob does not, and guessing is how
     # the selection file ended up being checked against a vendor header it does not have.
     try:
-        import boards
         definitions = [str(boards.definition_path(project, board_id))
                        for board_id in boards.available(project)]
         if definitions:
@@ -375,17 +410,18 @@ def discover(project):
     return found, notes, ambiguous
 
 
-def inputs_for(args):
+def inputs_for(args, checked=None):
     """
     What each check will be given, and the record of where it came from.
 
     An explicit flag always beats a convention, so `--project` is a starting point rather than a
-    straitjacket: discover the usual layout, then let the caller correct any one of them.
+    straitjacket: discover the usual layout, then let the caller correct any one of them. `checked` is the
+    `CheckedFolder` of `--project`, found here when the caller has not found it.
     """
     explicit = {key: value for key, value in vars(args).items() if value}
     if not args.project:
         return vars(args), [], {}
-    discovered, resolved, ambiguous = discover(args.project)
+    discovered, resolved, ambiguous = discover(checked or CheckedFolder.at(args.project))
     # An explicit flag settles an ambiguity: that is what naming one is for.
     ambiguous = {name: matches for name, matches in ambiguous.items() if name not in explicit}
     return dict(discovered, **explicit), resolved, ambiguous
@@ -474,8 +510,9 @@ def main(argv=None):
         prog="check_all.py",
         description="Run every deterministic check and answer once.")
     parser.add_argument("--project",
-                        help="a project directory; every input is discovered in it by "
-                             "convention, and each resolved path is printed")
+                        help="the folder the requirements file and the kept build (--keep) are in; every input is "
+                             "discovered by convention and each resolved path is printed. The rules, parts and boards "
+                             "come from the project the build reads: the nearest one up from the folder")
     parser.add_argument("--boards", nargs="*", default=[],
                         help="board definitions to verify against their vendor headers")
     parser.add_argument("--circuit", help="the built netlist")
@@ -486,13 +523,24 @@ def main(argv=None):
                              "`unmeasured` (how many ? lines the answer rests on) and each check's result")
     args = parser.parse_args(argv)
 
-    inputs, resolved, ambiguous = inputs_for(args)
+    try:
+        checked = CheckedFolder.at(args.project) if args.project else None
+    except design.DesignError as broken:
+        if args.json:
+            print(json.dumps({"tool": "check_all", "status": COULD_NOT_RUN, "reason": str(broken)}, indent=2))
+        else:
+            print("  [????] check_all          %s" % broken)
+        return EXIT_FOR[COULD_NOT_RUN]
+    inputs, resolved, ambiguous = inputs_for(args, checked)
     results = run(inputs, ambiguous)
     overall = verdict(results)
 
     if args.json:
-        print(json.dumps({"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
-                          "resolved": resolved, "results": results}, indent=2))
+        answer_json = {"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
+                       "resolved": resolved, "results": results}
+        if checked:
+            answer_json["project"] = str(checked.project)  # the project the build reads (P319)
+        print(json.dumps(answer_json, indent=2))
     else:
         if resolved:
             # Printed every time, not on a flag. Silently picking up a stale artifact is the one

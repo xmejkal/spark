@@ -244,7 +244,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
 
     def test_it_finds_what_a_usual_layout_holds(self):
         root = self._project("dist/board/circuit.json", ".spark/rules.json", "board-gerbers.zip")
-        found, _, _ = check_all.discover(root)
+        found, _, _ = check_all.discover(check_all.CheckedFolder.at(root))
         self.assertEqual(found["circuit"], str(root / "dist/board/circuit.json"))
         self.assertEqual(found["rules"], str(root / ".spark/rules.json"))
         self.assertEqual(found["package"], str(root / "board-gerbers.zip"))
@@ -252,14 +252,14 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
     def test_two_candidates_are_ambiguous_rather_than_a_coin_toss(self):
         # Two fab packages in one directory is exactly when checking the wrong one costs money.
         root = self._project("old-gerbers.zip", "new-gerbers.zip")
-        found, notes, _ = check_all.discover(root)
+        found, notes, _ = check_all.discover(check_all.CheckedFolder.at(root))
         self.assertNotIn("package", found)
         self.assertTrue(any("AMBIGUOUS" in note for note in notes), notes)
 
     def test_two_circuits_say_one_board_per_project_and_name_a_path_that_works_anywhere(self):
         # P223, P318: two built designs are two boards, and spark handles one board per project today
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
-        found, notes, ambiguous = check_all.discover(root)
+        found, notes, ambiguous = check_all.discover(check_all.CheckedFolder.at(root))
         reasons = [result["reason"] for result in check_all.run(found, ambiguous)
                    if result["status"] == "could-not-run"]
         self.assertTrue(reasons)
@@ -276,7 +276,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         cwd = os.getcwd()
         os.chdir(root.parent)
         try:
-            _, _, ambiguous = check_all.discover(root.name)
+            _, _, ambiguous = check_all.discover(check_all.CheckedFolder.at(root.name))
         finally:
             os.chdir(cwd)
         self.assertTrue(all(Path(path).is_absolute() for path in ambiguous["circuit"]), ambiguous)
@@ -291,12 +291,12 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
 
     def test_two_packages_still_say_name_one_with_the_flag(self):
         root = self._project("old-gerbers.zip", "new-gerbers.zip")
-        found, _, ambiguous = check_all.discover(root)
+        found, _, ambiguous = check_all.discover(check_all.CheckedFolder.at(root))
         reasons = [result.get("reason", "") for result in check_all.run(found, ambiguous)]
         self.assertTrue(any("name one with --package" in reason for reason in reasons), reasons)
 
     def test_what_is_missing_says_where_it_looked(self):
-        found, notes, _ = check_all.discover(self._project())
+        found, notes, _ = check_all.discover(check_all.CheckedFolder.at(self._project()))
         self.assertNotIn("circuit", found)
         self.assertTrue(any("circuit" in n and "dist/board/circuit.json" in n for n in notes))
 
@@ -304,7 +304,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         # The one way discovery is worse than five explicit paths is by silently picking up a
         # stale artifact, so nothing may be used without being named.
         root = self._project("dist/board/circuit.json", ".spark/rules.json")
-        found, notes, _ = check_all.discover(root)
+        found, notes, _ = check_all.discover(check_all.CheckedFolder.at(root))
         for name in found:
             with self.subTest(input=name):
                 self.assertTrue(any(note.startswith(name) for note in notes))
@@ -338,6 +338,7 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
     @staticmethod
     def _project(placeholder):
         root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()  # a project, as init leaves it: the build reads its parts (P319)
         (root / "parts").mkdir()
         record = {"schema": 1, "id": "inlet", "name": "inlet", "kind": "connector", "needs": [],
                   # jst_ph_2 has TWO pads, and the contract checks pin_order against the
@@ -452,6 +453,7 @@ class TheRecordsReachPhysicsTest(unittest.TestCase):
     @staticmethod
     def _project():
         root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()  # a project, as init leaves it: the build reads its parts (P319)
         (root / "parts").mkdir()
         probe = {"schema": 1, "id": "probe", "name": "probe", "kind": "sensor", "needs": [],
                  "power": [{"pin": "VCC", "rail": "logic", "direction": "in",
@@ -491,6 +493,79 @@ class TheRecordsReachPhysicsTest(unittest.TestCase):
         result = check.run({"circuit": str(root / "circuit.json"), "rules": str(root / "rules.json"),
                             "project": str(root)})
         self.assertIn("Soil1.VCC", json.dumps(result), result)
+
+
+class TheBuildsProjectIsCheckedTest(unittest.TestCase):
+    """
+    P319: a board folder with no `.spark/` builds with its parent's records (`design.project_for` walks up), and
+    `check_all --project` read the folder alone, so one build and its checks read two projects. Now the folder holds
+    the build and the requirements, and the project the build reads holds the rules, the parts and the boards.
+    """
+
+    def setUp(self):
+        store = tempfile.mkdtemp()
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": store})  # no part from the person's own store
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.parent = Path(tempfile.mkdtemp())
+        (self.parent / ".spark").mkdir()
+        (self.parent / ".spark" / "rules.json").write_text(json.dumps({"physics": {"rails": {}}}))
+        (self.parent / "parts").mkdir()
+        probe = {"schema": 1, "id": "p319-probe", "name": "p319-probe", "kind": "sensor", "needs": [],
+                 "power": [{"pin": "VCC", "rail": "logic", "direction": "in"},
+                           {"pin": "GND", "rail": "ground", "direction": "in"}],
+                 "pin_order": ["VCC", "GND"], "pin_order_proof": {"verified": False, "source": "a test fixture"},
+                 "footprint": "jst_ph_2", "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}
+        (self.parent / "parts" / "p319-probe.json").write_text(json.dumps(probe))
+        self.car = self.parent / "car"
+        (self.car / "dist" / "board").mkdir(parents=True)
+        (self.car / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": [{"part": "p319-probe", "name": "Probe1"}]}))
+        self.circuit = [{"type": "source_component", "source_component_id": "c", "name": "Probe1"}]
+        (self.car / "dist" / "board" / "circuit.json").write_text(json.dumps(self.circuit))
+
+    def _answer(self, *flags):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_all.main(["--project", str(self.car), "--json", *flags])
+        return code, json.loads(out.getvalue())
+
+    def _inputs(self, **flags):
+        args = argparse.Namespace(**dict(dict(project=str(self.car), circuit=None, rules=None, boards=None,
+                                              package=None, json=False), **flags))
+        return check_all.inputs_for(args)[0]
+
+    def test_the_checks_read_the_project_the_build_reads(self):
+        _, answer = self._answer()
+        self.assertEqual(answer["project"], str(design.project_for(self.car / "requirements.json")))
+        inputs = self._inputs()
+        self.assertEqual(Path(inputs["rules"]).resolve(), (self.parent / ".spark" / "rules.json").resolve())
+        self.assertEqual(inputs["circuit"], str(self.car / "dist" / "board" / "circuit.json"))
+
+    def test_the_parts_come_from_the_parent_and_the_requirements_from_the_folder(self):
+        loads, notes = check_all.rail_loads_in(str(self.car), self.circuit)
+        self.assertIsNotNone(loads, notes)
+        self.assertEqual(check_all.placeholder_components_in(str(self.car)), ((), []))
+
+    def test_the_nearest_project_wins(self):
+        (self.car / ".spark").mkdir()
+        (self.car / ".spark" / "rules.json").write_text("{}")
+        _, answer = self._answer()
+        self.assertEqual(answer["project"], str(self.car))
+        self.assertEqual(self._inputs()["rules"], str(self.car / ".spark" / "rules.json"))
+
+    def test_an_explicit_rules_file_still_wins(self):
+        chosen = written("chosen-rules.json", {})
+        self.assertEqual(self._inputs(rules=chosen)["rules"], chosen)
+
+    def test_a_folder_that_is_not_there_names_no_project(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_all.main(["--project", str(self.car / "nowhere"), "--json"])
+        answer = json.loads(out.getvalue())
+        self.assertEqual(code, check_all.EXIT_COULD_NOT_RUN)
+        self.assertEqual(answer["status"], check_all.COULD_NOT_RUN)
+        self.assertNotIn("project", answer)
 
 
 class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
@@ -547,7 +622,7 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
 
     def test_two_circuits_with_no_choice_made_are_reported_ambiguous(self):
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
-        _, _, ambiguous = check_all.discover(root)
+        _, _, ambiguous = check_all.discover(check_all.CheckedFolder.at(root))
         self.assertEqual(len(ambiguous.get("circuit", [])), 2)
 
     @staticmethod
@@ -774,7 +849,7 @@ class OneCircuitConventionTest(unittest.TestCase):
         # A6). G10's fix made both refuse two matches; a third path added to one would not have
         # reached the other.
         import init_project
-        self.assertEqual(check_all.CONVENTIONS["circuit"], list(design.CIRCUIT_PATHS))
+        self.assertEqual(check_all.CONVENTIONS["circuit"], (check_all.FOLDER, list(design.CIRCUIT_PATHS)))
         self.assertIs(init_project.CIRCUIT_PATHS, design.CIRCUIT_PATHS)
 
 if __name__ == "__main__":
