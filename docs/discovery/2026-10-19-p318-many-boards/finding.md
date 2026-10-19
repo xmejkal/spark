@@ -22,17 +22,17 @@ grouped by stage. The rows with "yes" already take a path or a flag.
 
 | Stage | Where | What it assumes | Takes a path? |
 | --- | --- | --- | --- |
-| Idea | `parts.py:2232`, `needs.py:396` | writes `<project>/requirements.json` | no |
+| Idea | `parts.py:2232`, `needs.py:396` | writes `<project>/requirements.json` | a project folder, so the file name is fixed |
 | Build | `design.py:53` `CIRCUIT_PATHS` | `dist/board/` or one `dist/*/` | partly: the source of the ambiguity |
 | Build | `check_spine.py:392,436` | the build always gives `dist/board/` | no |
-| Build | `check_spine.py:737` `kept_into` | `--keep DIR` writes `board.tsx`, `dist/`, `sim/` into DIR | yes |
+| Build | `check_spine.py:709` `kept_into` | `--keep DIR` writes `board.tsx`, `dist/`, `sim/` into DIR | yes |
 | Build | `check_spine.py:759` | a board-only build removes `DIR/dist` whole | no |
-| Checks | `check_all.py:325` `discover` | one circuit, and two give "ambiguous" | `--circuit` |
-| Checks | `check_all.py:464` | one `.spark/rules.json` for the project | `--rules` |
+| Checks | `check_all.py:311` `discover` | one circuit, and two give "ambiguous" | `--circuit` |
+| Checks | `check_all.py:470` | one `.spark/rules.json` for the project | `--rules` |
 | Breadboard | `breadboard.py:66,69` | `dist/board/circuit.json`, `breadboard.md` | `--out` only |
 | Firmware | `check_spine.py:88` | `firmware/pins.py` under the keep folder | no |
 | Deploy | `deploy.py:133`, `firmware_platform.py:21`, `flash_image.py:79` | `project/requirements.json`, `project/sim/` | `--project` is a folder |
-| Board | `boards.py:195` `active_id` | one active board, and its docstring says two boards "means two projects" | no, by an earlier decision |
+| Board | `boards.py:187` `active_id` | one active board, and its docstring says two boards "means two projects" | no, by an earlier decision |
 | Store | `store.py:255` `add_project` | one entry, one folder | no |
 
 rc-car today has `car.requirements.json` and `remote.requirements.json` in one folder, and its `dist/car/` and
@@ -65,18 +65,21 @@ classDiagram
 | --- | --- | --- | --- | --- |
 | A | A board is a folder, and a thin `project.json` lists the folders | about 10 files, 300 to 500 lines, 5 stories | medium: every stage, and the stores keyed by project | low: a refactor into `Board` |
 | B | One requirements file names many boards | about 15 files, a schema change | high: a schema change before a second project needs it, against "records grow by need" | the same as A, but harder to undo |
-| C | One board per project folder, and rc-car becomes two folders | the message below only | low | none: a folder of C is a board of A |
+| C | One board per project folder, and rc-car becomes two folders | the message below, and in each folder an init and its own `parts/` | low | none, if A keeps each board folder as the store's project (`projects.json`, history events) |
 
 ## Recommendation: C now, A after the MVP
 
-1. The MVP bar holds with one board per project. Each rc-car board can walk the v0.10 journey on its own.
+1. The MVP bar holds with one board per project. The refuter tried it on a copy of rc-car. `remote/` walked the build
+   to the end. `car/` built, but its simulation stops because 3 parts have no `simulation` record, which has nothing
+   to do with folders.
 2. A is the kind of refactor that v0.13, one core ([#94](https://github.com/xmejkal/spark/issues/94)), does anyway. Done
    now, every stage changes twice.
 3. v0.11 and v0.12 still add state per project (built-from, kept moves, board records). The `Project` with many
    boards is easier to design after that state settles.
 4. No one-board code built now needs rework for A, because A's `Board` is today's project folder in one class.
 
-What C loses: no stage sees that the car and the remote talk to each other (one radio link, one protocol). That is
+What C costs: each folder needs `init_project.py` and its own copy of `parts/`, and the rules are answered again in
+each folder. What C loses: no stage sees that the car and the remote talk to each other (one radio link, one protocol). That is
 outside the MVP bar, and it is A's job later.
 
 ## What to do now
@@ -86,11 +89,18 @@ outside the MVP bar, and it is A's job later.
    board for the whole journey. The same message goes in `init_project.py`. About 10 lines and a test.
 2. One paragraph in `docs/guide/developing.md` and the README's status: one board per project, so several boards
    means several project folders.
-3. One line on v0.13 (#94): "many boards: a board is a folder, and the project lists them (P318, option A)".
+3. A defect the refuter found, now [P319 (#403)](https://github.com/xmejkal/spark/issues/403): a folder with no `.spark/` builds with its parent's project, because
+   `design.project_for` walks up (`boards.py:138`), but `check_all --project .` does not walk up. So one build and its
+   checks read two different projects. The P223 message says to run init in each board folder until that card is done.
+4. One line on v0.13 (#94): "many boards: a board is a folder, and the project lists them (P318, option A)".
 
 Not in spark: moving rc-car into two folders is a change in a demo project. The PO decides it after an epic, by the
 rule "spark is the product".
 
 ## Refuter
 
-(Filled in after the refuter's run.)
+The refuter (Opus) copied rc-car into a scratch folder, made `car/` and `remote/`, and ran init, `check_spine --keep .`
+and `check_all --project .` in each, with an empty store. It deleted the copy after. What it changed in this finding:
+the cost of C (init and `parts/` in each folder), the walk-up defect, the condition on "cost later: none" (the store
+keys by folder name), the result per board, and four line numbers. The sizes of A and B are estimates that nobody
+measured.
