@@ -551,8 +551,24 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
         (self.car / ".spark").mkdir()
         (self.car / ".spark" / "rules.json").write_text("{}")
         _, answer = self._answer()
-        self.assertEqual(answer["project"], str(self.car))
+        self.assertEqual(answer["project"], str(self.car.resolve()))
         self.assertEqual(self._inputs()["rules"], str(self.car / ".spark" / "rules.json"))
+
+    def test_the_notes_name_the_parent(self):
+        _, notes, _ = check_all.discover(check_all.CheckedFolder.at(self.car))
+        self.assertIn("project      %s (the project up from here, the one the build reads)"
+                      % self.parent.resolve(), notes)
+
+    def test_a_folder_in_no_project_says_so_and_names_none(self):
+        bare = Path(tempfile.mkdtemp())
+        _, notes, _ = check_all.discover(check_all.CheckedFolder.at(bare))
+        self.assertIn("project      none up from here, so the parts and boards come from the plugin's library and "
+                      "there are no rules", notes)
+        self.assertTrue(any(note.startswith("rules        not found") for note in notes), notes)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_all.main(["--project", str(bare), "--json"])
+        self.assertIsNone(json.loads(out.getvalue())["project"])
 
     def test_an_explicit_rules_file_still_wins(self):
         chosen = written("chosen-rules.json", {})

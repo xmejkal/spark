@@ -365,8 +365,8 @@ def discover(checked):
     found, notes, ambiguous = {}, [], {}
     project = checked.project
     if design.is_library(project):
-        notes.append("%-12s none up from here, so the boards come from the plugin's library and there are no rules"
-                     % PROJECT)
+        notes.append("%-12s none up from here, so the parts and boards come from the plugin's library and there are "
+                     "no rules" % PROJECT)
     elif checked.elsewhere():
         notes.append("%-12s %s (the project up from here, the one the build reads)" % (PROJECT, project))
     for name, (where, patterns) in CONVENTIONS.items():
@@ -539,7 +539,9 @@ def main(argv=None):
         answer_json = {"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
                        "resolved": resolved, "results": results}
         if checked:
-            answer_json["project"] = str(checked.project)  # the project the build reads (P319)
+            # the project the build reads (P319), resolved as `design.project_for` resolves it; null for none, never
+            # the plugin's own folder
+            answer_json["project"] = None if design.is_library(checked.project) else str(checked.project.resolve())
         print(json.dumps(answer_json, indent=2))
     else:
         if resolved:
