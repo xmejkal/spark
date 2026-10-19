@@ -22,19 +22,25 @@ def board_of(project):
     return json.loads((project / "requirements.json").read_text()).get("board")
 
 
-def chip_of(project):
-    """The board's chip as esptool names it, from requirements.json's board (P192: no chip table)."""
+def record_of(project):
+    """The board record requirements.json names (P192: no chip table). DeployError says why it cannot be read."""
     requirements = project / "requirements.json"
     try:
-        return boards.get(project, "chip", board_of(project))
+        return boards.load(project, board_of(project))
     except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot))
 
 
+def chip_of(project):
+    """The board's chip as esptool names it, from requirements.json's board."""
+    return record_of(project)["chip"]
+
+
 def _esptool_flasher(project):
-    """The EsptoolFlasher for the project's chip. The chip is read first, so a chip problem shows before a missing tool."""
-    chip = chip_of(project)
-    return flasher.EsptoolFlasher(tools.find("flasher", project), chip)
+    """The EsptoolFlasher for the project's chip and button places. The record is read first, so a record problem shows
+    before a missing tool."""
+    record = record_of(project)
+    return flasher.EsptoolFlasher(tools.find("flasher", project), record["chip"], boards.ButtonPlaces.from_record(record))
 
 
 class FirmwarePlatform:

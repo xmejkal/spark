@@ -123,7 +123,7 @@ class DeployService:
             try:
                 self._run_flash(command, planned.flasher, consent, show_line, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:
-                hint = planned.flasher.BOOT_HINT
+                hint = planned.flasher.boot_hint
                 raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""))
         return planned
 

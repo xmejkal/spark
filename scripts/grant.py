@@ -11,6 +11,8 @@ from pathlib import Path
 import board_doctor
 import board_grant
 import board_look
+import boards
+import flasher
 import store
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
@@ -88,7 +90,8 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
             result = board_grant.GrantService(finder, now=now).check(args.port)
             print(to_json(result) if args.json else describe(result))
             return EXIT_OK if result.granted else EXIT_PROBLEMS
-        reader = board_look.EsptoolReader(tools.find("flasher", args.project), run)
+        hint = flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.of_project(args.project))
+        reader = board_look.EsptoolReader(tools.find("flasher", args.project), run, hint)
         line = format_rerun_line(__file__, (["--scope", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])
                                  + ["--minutes", args.minutes, "--project", args.project.resolve()]
                                  + (["--port", args.port] if args.port else []))

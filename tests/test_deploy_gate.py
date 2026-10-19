@@ -237,7 +237,7 @@ class TheGateTest(GateCase):
         self.assertIn("hold the board's BOOT button", problems)
         line = problems.strip().splitlines()[-1]
         self.assertTrue(line.startswith("deploy.py: `"), line)
-        self.assertTrue(line.endswith("): " + flasher.EsptoolFlasher.BOOT_HINT), line)
+        self.assertTrue(line.endswith("): if esptool could not connect, " + "hold the board's BOOT button (B, top right, beside the USB-C), press and release RESET (R, top left, beside the USB-C), release BOOT, and run it again. Left and right as seen with the metal shield facing you, USB-C at the top"), line)  # the XIAO record names the places
 
     def test_a_flasher_with_no_hint_ends_the_failure_line_at_the_error(self):
         self.run_the_scenario()
