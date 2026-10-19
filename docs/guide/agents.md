@@ -689,7 +689,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    terminal, lets you run `deploy.py --token T` for N minutes (1 to 1440) on that board, and deploy.py prints
    `yes: standing yes typed by ...` and erases with no question. Its question says it allows an erase of ALL of the flash and any
    passed image of any project. It covers only a look with no warning, no unknown field and no stop, and never
-   `--ignore-older-runs`; for those deploy.py asks in the terminal. deploy.py is on build.md's `allowed-tools`, so Claude Code
+   `--ignore-older-runs`; for those deploy.py asks in the terminal. deploy.py is on `/spark:deploy`'s (and build.md's) `allowed-tools`, so Claude Code
    does not ask before it runs: the grant is the gate. Never run `grant.py --scope deploy` yourself, and never write or
    change a grant file. A grant file is not tamper-proof: its token is derived from the MAC, and the store accepts what you write. The rule is the guard, and the person accepts that risk. The store's deploy record says `standing yes typed by
    <login> at <time>, until <time>`. After the flash, only `ready seen` (exit 0) is a pass:

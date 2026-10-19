@@ -107,7 +107,7 @@ def deploy_envelope(reached, code):
         "stage": stage, "dry_run": bool(reached.get("dry_run")), "token": reached.get("token"),
         "commands": [list(command) for command in plan.commands] if plan else None,
         "look": report.to_dict() if report else None,
-        "yes": {"kind": reached["yes_kind"], "who": consent.who} if consent else None,
+        "yes": {"kind": reached["yes_kind"], "who": reached["who"]} if consent else None,
         "ready": {"verdict": ready.verdict, "sentence": ready.sentence} if ready else None,
         "facts_line": result.facts_line if result else None,
         "image_sha256": result.image_sha256 if result else None,
