@@ -3,7 +3,7 @@
 The score today:
 
 ```
-SCORE classes 16% | fat CLIs 9 | thin CLIs 4 | private imports 3 | outcome literals 42 | roles stated 56/103
+SCORE classes 16% | fat CLIs 3 | thin CLIs 4 | private imports 3 | outcome literals 10 | roles stated 56/103
 ```
 
 The input for the Miro diagrams. The numbers come from `measure.py` in this folder. Rerun it from the repository root.
@@ -36,24 +36,69 @@ The deploy core:
 
 ```mermaid
 classDiagram
-  class DeployService { <<Service>> plan() look() deploy() verify() }
-  class FirmwarePlatform { <<Platform>> make_flasher() make_connection() make_ready_check() make_console_probe() }
-  class Flasher { <<Strategy>> build_commands() }
-  class EsptoolFlasher { boot_hint_for(places) }
-  class LookService { <<Service>> run() }
+  class DeployService {
+    <<Service>>
+    plan()
+    look()
+    deploy()
+    verify()
+  }
+  class FirmwarePlatform {
+    <<Platform>>
+    make_flasher()
+    make_connection()
+    make_ready_check()
+    make_console_probe()
+  }
+  class Flasher {
+    <<Strategy>>
+    build_commands()
+  }
+  class EsptoolFlasher {
+    boot_hint_for(places)
+  }
+  class LookService {
+    <<Service>>
+    run()
+  }
   class PortFinder
-  class BoardReader { <<Strategy>> read(port) }
+  class BoardReader {
+    <<Strategy>>
+    read(port)
+  }
   class EsptoolReader
-  class LookReport { <<Value>> token() to_dict() }
-  class ConsentStrategy { <<Strategy>> ask() require_ready() }
+  class LookReport {
+    <<Value>>
+    token()
+    to_dict()
+  }
+  class ConsentStrategy {
+    <<Strategy>>
+    ask()
+    require_ready()
+  }
   class TerminalConsentStrategy
   class StandingConsentStrategy
-  class GrantService { <<Service>> issue() consent_for_deploy() }
-  class GrantStore { <<Store>> }
-  class ButtonPlaces { <<Value>> }
-  class BoardConnection { <<Adapter>> }
-  class RetryingBoardConnection { <<Decorator>> }
-  class ConsoleProbe { <<Adapter>> }
+  class GrantService {
+    <<Service>>
+    issue()
+    consent_for_deploy()
+  }
+  class GrantStore {
+    <<Store>>
+  }
+  class ButtonPlaces {
+    <<Value>>
+  }
+  class BoardConnection {
+    <<Adapter>>
+  }
+  class RetryingBoardConnection {
+    <<Decorator>>
+  }
+  class ConsoleProbe {
+    <<Adapter>>
+  }
   class ReadyCheck
   Flasher <|-- EsptoolFlasher
   BoardReader <|-- EsptoolReader
@@ -78,16 +123,38 @@ The breadboard drawing:
 
 ```mermaid
 classDiagram
-  class BreadboardSteps { <<Value>> walk() }
-  class Anchor { <<Strategy>> }
-  class BreadboardPlanner { <<Pure>> plan(steps) }
-  class PartPlacement { <<Strategy>> place() }
-  class JumperPlacement { <<Strategy>> place_jumpers() }
+  class BreadboardSteps {
+    <<Value>>
+    walk()
+  }
+  class Anchor {
+    <<Strategy>>
+  }
+  class BreadboardPlanner {
+    <<Pure>>
+    plan(steps)
+  }
+  class PartPlacement {
+    <<Strategy>>
+    place()
+  }
+  class JumperPlacement {
+    <<Strategy>>
+    place_jumpers()
+  }
   class HoleLedger
-  class WokwiBreadboardDiagram { <<Renderer>> }
-  class SvgBreadboardDiagram { <<Renderer>> }
-  class NumberedList { <<Renderer>> }
-  class MermaidDiagram { <<Renderer>> }
+  class WokwiBreadboardDiagram {
+    <<Renderer>>
+  }
+  class SvgBreadboardDiagram {
+    <<Renderer>>
+  }
+  class NumberedList {
+    <<Renderer>>
+  }
+  class MermaidDiagram {
+    <<Renderer>>
+  }
   Anchor <|-- RowAnchor
   Anchor <|-- RailAnchor
   PartPlacement <|-- FirstFitPartPlacement
@@ -103,8 +170,15 @@ The matching (no role words yet):
 
 ```mermaid
 classDiagram
-  class Matcher { rank() score() admits() }
-  class Offer { from_record() from_entry() }
+  class Matcher {
+    rank()
+    score()
+    admits()
+  }
+  class Offer {
+    from_record()
+    from_entry()
+  }
   Matcher <|-- SameWords
   Matcher <|-- NameContains
   Matcher <|-- WordOverlap
@@ -167,11 +241,11 @@ sequenceDiagram
 
 ## d. The code style today, measured
 
-59 modules, 14,313 code lines, 103 classes, 647 top-level functions. 16% of the code is in classes, 67% in top-level functions. Kinds: 35 library, 4 thin CLI, 11 CLI with library, 9 fat CLI.
+59 modules, 14,313 code lines, 103 classes, 647 top-level functions. 16% of the code is in classes, 67% in top-level functions, 0% in `__main__` blocks; the rest (2,162 lines) is module-level code. Kinds: 35 library, 4 thin CLI, 17 CLI with library, 3 fat CLI. One threshold for fat: a `main()` over 80 lines holds logic. Thin is a `main()` of 40 lines or fewer with at most 3 other functions. The rest of the CLIs are "CLI with library". `measure.py` prints every figure here except those marked (counted by hand).
 
 Good:
 
-- `deploy.py` `main()` is 28 lines and only parses and prints (deploy.py:126). The flow is in `DeployService` (deploy_service.py:69).
+- `deploy.py` `main()` is 28 lines and only parses and prints (counted by hand, deploy.py:126). The flow is in `DeployService` (deploy_service.py:69).
 - `FirmwarePlatform` (firmware_platform.py:41) makes the language swappable.
 - Swappable placement strategies (breadboard_drawing.py:149, breadboard_keep.py:158) and renderers listed in `DRAWING_RENDERERS` (breadboard.py:94).
 - `look.py`, `live.py`, `reach.py`, `import_firmware.py` are thin CLIs.
@@ -180,13 +254,13 @@ Gaps:
 
 1. `parts.py` is 1,899 lines with 121 functions behind one CLI. `validate` alone is 240 lines (parts.py:621).
 2. `check_spine.run` is one 192-line procedure (check_spine.py:347). It runs `emit_board.py` as a subprocess, not as a call.
-3. Fat CLIs: emit_board `main` 115 lines (emit_board.py:1054), init_project 112 (init_project.py:407), tools 83 (tools.py:568), plus assign_pins, boards, check_all, check_vendor_pins, grant, check_spine.
-4. Private names across modules: `needs.py` uses `parts._problem` 14 times and `parts._parse` 4 times (needs.py:81). `drawer.py` uses `parts._problem` 8 times.
-5. Magic strings: 42 bare outcome words where `outcomes.OK` exists (check_vendor_pins.py:207, 11 uses). Only 3 of 16 `--json` scripts print `outcomes.envelope`.
+3. Fat CLIs, a `main()` over 80 lines: emit_board 115 lines (emit_board.py:1054), init_project 112 (init_project.py:407), tools 83 (tools.py:568). Other long functions: `assign_pins.assign` 118, `check_physics.check_resistor_power` 98.
+4. Private names across modules: 3 modules (drawer, init_project, needs) use 32 private names of other scripts. The most used are `parts._problem` (22) and `parts._parse` (5). `needs.py` uses `parts._problem` 14 times and `parts._parse` 4 times, and `drawer.py` uses `parts._problem` 8 times (counted by hand; needs.py:81).
+5. Magic strings: 10 bare outcome words, compared or assigned as a status, where `outcomes.OK` exists: check_vendor_pins 8 (check_vendor_pins.py:207 is one) and check_all 2. Only 2 of 16 `--json` scripts (deploy, look) print an envelope.
 6. Two validators of the same kind: `parts.validate` and `boards.validate` (boards.py:340, 161 lines).
-7. 47 of 103 classes state no role, for example `Check` and its five checks in check_all.py:63.
+7. 47 of 103 classes state no role (103 less 56), for example `Check` and its five checks in check_all.py:63 (counted by hand).
 
-Progress score, printed as the last line of `measure.py`: share of code in classes, fat CLIs, thin CLIs, modules using a private name, outcome literals, classes with a stated role.
+Progress score, printed as the last line of `measure.py`: share of code in classes, fat CLIs, thin CLIs, modules using a private name, outcome literals (a bare outcome word compared, assigned to status/verdict/outcome, or stored under a status key), classes with a stated role.
 
 ## e. Target shape and the five refactors
 
@@ -194,8 +268,8 @@ v0.13 (P158, #94) makes spark a package that the CLI, MCP and Claude call, so no
 
 Smallest first:
 
-1. Replace the 42 outcome literals with `outcomes` constants (8 modules).
+1. Replace the 10 outcome literals with `outcomes` constants (2 modules).
 2. Make `parts._problem` and `parts._parse` public, so private imports go to 0.
 3. Give the 47 classes a role word in their docstrings.
-4. Move the long mains of init_project, tools and grant into Services, so the fat CLIs go from 9 to 6.
+4. Move the long mains of emit_board, init_project and tools into Services, so the fat CLIs go from 3 to 0.
 5. Turn `check_spine.run` into a `BuildService` with one step per stage, and call emit_board in-process.
