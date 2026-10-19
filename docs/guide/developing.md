@@ -245,9 +245,11 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
 gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. PR 4
 gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `DeployError`, `tools.command_for` and
-`board_look.BOOT_HINT` (PR 7 moved it to the flasher). PR 6 gave `LookReport` (with `to_dict()`), `LookService`,
+`board_look.BOOT_HINT` (PR 7 moved it to the flasher, and P213 b2 made it `boot_hint`). PR 6 gave `LookReport` (with `to_dict()`), `LookService`,
 `BoardReading` and `board_look.report_lines`. PR 7 gave `flasher.Flasher`, `flasher.EsptoolFlasher` (which holds `ERASE`, `WRITE`,
-`IMAGE_OFFSET` and `BOOT_HINT`) and `flasher.build_esptool_prefix`; `board_look.BOOT_HINT` is now that class's hint.
+`IMAGE_OFFSET` and `BOOT_HINT_TEMPLATE`) and `flasher.build_esptool_prefix`. P213 b2 replaced the constant: `boot_hint` is the
+sentence an `EsptoolFlasher` holds, `boot_hint_for(places)` builds it, and `boards.ButtonPlaces` (a Value) names the
+buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does the same for the doctor's steps.
 PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
 `firmware_platform.FirmwarePlatform`. `deploy.py` only parses, prints and maps the exit code.
 

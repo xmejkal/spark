@@ -158,7 +158,8 @@ These only read:
   doctor result is never a pass, and a `next_step` of null means the doctor could not look. Its console check opens
   the port, which can restart the board, so say so before you run a command that may call it. Each tool's
   `silent_step` in the tools list (`hold_boot` for esptool, `press_reset` for mpremote) sets the step for a silent
-  board; never change it for the person;
+  board; never change it for the person. When the board record holds `physical.buttons`, a step and a `fix` that name BOOT
+  or RESET say where each button is: relay the sentence as printed;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`,
   `--need`, `--match`, `--needs`, `--audit`, `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches
   the network.

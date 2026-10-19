@@ -65,7 +65,8 @@ names the log in a note. The chip comes from the board in `requirements.json`, a
 another chip.
 
 esptool and mpremote come from `/spark:setup`, as the tools list's `flasher` and `board-shell`. If esptool cannot
-connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again. Before that hint,
+connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again. When the board record
+says where the buttons are (`physical.buttons`, the XIAO ESP32-C6's does), the hint names each button's place. Before that hint,
 deploy.py makes one retry of an erase that stopped with exit 2, after 5 s, and prints `retry in 5 s: ...`
 ([P290](https://github.com/xmejkal/spark/issues/347)). Relay that line.
 
