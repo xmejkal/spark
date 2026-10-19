@@ -16,15 +16,21 @@
   simulation that is not compulsory (PR #424).
 
 Three lenses read the plans and the code (Sonnet): the PO's assistant with UX and AI-UX, the architect, and a
-firmware and test lens. Claude merged them.
+firmware and test lens. Claude merged them. One refuter (Opus) then corrected seven points: which functions a board
+can reuse, the store place, the vendor check, what blocks walk 1, drawing a built-in display, the driver rule, and
+a validation that would have locked out the T-Display.
 
 ## The shared core: adding any record
 
 Today a part or a module has a path (`/spark:research`, `/spark:identify`, three agents, `parts.py`), and a board has
-none: it is a JSON file written by hand. The pieces the core needs mostly exist in `scripts/parts.py`: `skeleton`
-(:1429), `keep_in_store` (:1102), `fetch_documents` (:1326), `unverified` (:889), `promote` (:1366), `shelve`
-(:1028), with `store.keep` (`scripts/store.py:384`) and the picture strategy `PartPictures`
-(`scripts/part_pictures.py:27`). The core puts them in one order and adds the board's kind.
+none: it is a JSON file written by hand. Only a few pieces are generic today: `keep_in_store`
+(`scripts/parts.py:1102`), `store.keep` (`scripts/store.py:384`) and the picture strategy `PartPictures`
+(`scripts/part_pictures.py:27`). The rest is tied to part records. The refuter ran them on the XIAO's record:
+`unverified` (`scripts/parts.py:903`) and `fetch_documents` (:1326) find no part by that id, `open_questions_of`
+(:889) reads only a part's `facts` and so calls the XIAO settled although its regulator rating is null, and
+`skeleton` (:1429), `promote` (:1366) and `shelve` (:1028) write a part's shape and its layers. So the core moves
+these behind `RecordKind`: the part kind keeps today's functions, and the board kind gets its own record finder,
+open-facts reader (over `power`, `pin_roles` and the UNVERIFIED notes), validator and store place.
 
 ```mermaid
 classDiagram
@@ -92,16 +98,16 @@ Existing cards keep their numbers. New cards are named here and filed after the 
 
 | card | change | size | phase |
 |---|---|---|---|
-| new: store place for boards | a board kind in `store.layers` (`scripts/store.py:73-84`), read by `boards.records` (`scripts/boards.py:216`) | S | A |
-| new: RecordAdder and BoardKind | the shared core, board first: keep the record, its sources and pictures, list the open facts | M | A |
-| new: honest validation | refuse a null `wokwi_part_type` or an empty `physical`, count the UNVERIFIED facts beside "ok" (`scripts/boards.py:353-355`) | S | A |
+| new: store place for boards | a new store place for board records, because the `boards` place already holds the deploy records by MAC (`scripts/board_facts.py:64-73`); a layer in `store.layers` (`scripts/store.py:73-84`) read by `boards.records` (`scripts/boards.py:216`); the vendor check accepts a board the store owns (`scripts/check_vendor_pins.py:123`) | M | A |
+| new: RecordAdder and BoardKind | the shared core, board first: keep the record, its sources and pictures, list the open facts, find the simulation; the board kind's own finder, reader and validator | L | A |
+| new: honest validation | count the UNVERIFIED and null facts beside "ok", a missing simulation included, without refusing the board: a refusal would lock out a board that the simulation stage already reports as could-not-run (`scripts/boards.py:353-355`) | S | A |
 | P333 (#427) | one board is one port (non-empty USB serial), the USB-C orientation hint | S | A |
 | P334 (#428) | one helper for the board choice, used by all six readers | S | A |
 | P339 (#433) | the guide `/spark:board` over RecordAdder: step N of M, one action, a check after each | M | A |
 | P340 (#434) | research from the open facts, which asks to look further | M | A, then D |
 | P335 (#429) | the ESP32_GENERIC image, its interpreter padded to 0x1000 inside the image | S | B |
-| P332 (#426) | built-in parts in the record, their pins never handed out, and their names in `pins.py` (`scripts/assign_pins.py:416`) | M | B |
-| P336 (#430) | the display driver as a pinned download into `firmware/` | M | B |
+| P332 (#426) | built-in parts in the record, their pins never handed out, their names in `pins.py` (`scripts/assign_pins.py:416`), and drawn in the Wokwi diagram, both for a board alone and with parts (`scripts/check_spine.py:508-513, 543-555`) | M | B |
+| P336 (#430) | the display driver as a pinned third-party download into `firmware/`, never committed; spark writes no driver (AGENTS.md), it points to one, so this needs the PO's yes | M | B |
 | P337 (#431) | the gate for a display Wokwi cannot model, after the journey review | M | B |
 | new: what a run did not cover | a "not covered" line in the run log, shown before a deploy (`scripts/run_scenario.py:212`, `scripts/project_image.py:57`) | S | B, C |
 | new: XIAO current rating | the 3.3 V regulator's rating with its datasheet, so the physics check can run (`boards/xiao-esp32-c6.json:209`) | S | C |
@@ -150,7 +156,9 @@ the PO's yes. The journey review on optional simulation comes after walk 1, with
 
 ## Order
 
-1. Walk 1 on the XIAO now, with "what a run did not cover" and the XIAO current rating first (both S).
+1. Walk 1 on the XIAO now. Nothing blocks it: the deploy asks only for a passed run, a look and a yes
+   (`scripts/project_image.py:57-69`), not for the full check. "What a run did not cover" and the XIAO current rating
+   make its record more honest and can land during the walk.
 2. Phase A, at most four in flight: the store place, P333, P334 and honest validation, then RecordAdder and the
    guide, then the T-Display added again through the guide.
 3. The journey review with the PO.
@@ -161,7 +169,8 @@ the PO's yes. The journey review on optional simulation comes after walk 1, with
 
 - A board-alone project does not make `check_all` exit 2 (the P327 plan predicted it): the architect ran it on
   `blink-c6`, and it answered ok with physics skipped. A project with parts does stop at physics, because the XIAO's
-  regulator rating is null. Hence the XIAO current rating card.
+  regulator rating is null, and also when any part's current draw is missing (`scripts/check_physics.py:300`). The
+  deploy does not read the full check, so this does not block walk 1.
 - The P326 plan's claim that the second button's new name breaks the import check does not hold: only the constant's
   name changes.
 - Wokwi simulates Wi-Fi on every ESP32 variant and does not implement Bluetooth (docs.wokwi.com/guides/esp32, read by
