@@ -45,7 +45,7 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 39 | No MCU is not "nothing": `REQUIRED_KEYS` needs `chip` (`boards.py:62`), a missing board loads the active ESP32 (`boards.py:253`) | round 3 extensions | acted | D16: `no_board` instead of a silent default, seam test in AC 6, a no-MCU platform deferred |
 | 40 | Check codes are listed in two places | round 3 extensions | acted | each `Check` declares `codes`, `check_all`'s are the union (2.4) |
 | 41 | `SimulationEngine` with one `run` cannot swap Wokwi | round 3 extensions | acted | `prepare(design)` and `run(scenario)`, engine facts under `simulation.<engine>` later (2.5) |
-| 42 | `run_door` mixes parse, run and print, so an MCP door would copy it | round 3 extensions | acted | `run_operation` split in slice 2 (2.6). `Argument.kind` waits for the MCP door. |
+| 42 | `run_door` mixes parse, run and print, so an MCP door would copy it | round 3 extensions | acted | `run_operation` split in slice 2 (2.6). `Argument.kind` waits for the MCP door (2.4). |
 | 43 | An online store layer needs one sync Operation with the `network` effect | round 3 extensions | raised | for P178, no second case yet |
 | 44 | The wiring page needs a `project` area above `build` | round 3 extensions | rejected | no slice needs it yet, deferred to P297 (section 7) |
 | 45 | fab, copper and emit_footprint have no area, exports have no registry | round 3 extensions | acted | placed in `design` (2.1). `EXPORTERS` deferred until a second export. |
@@ -74,7 +74,7 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 68 | Tool code sits in two areas | round 3 simplicity | acted | `records/tools` holds finder and install |
 | 69 | Test shape per role is not written down | round 3 testing | acted | developing.md in slice 1b |
 | 70 | Fakes can drift from their real class | round 3 testing | acted | S14 contract mixins, Fakes pass them |
-| 71 | Contract tests have no shape | round 3 testing | acted | S14 mixins land with each area, the platform mixin loops over board records |
+| 71 | Contract tests have no shape | round 3 testing | acted | S14: contract classes land with each area, the `FirmwarePlatform` contract loops over every board record |
 | 72 | A bulk golden update turns a bug into truth | round 3 testing | acted | slice 1a: one file per Operation and outcome, `--accept <op>` only |
 | 73 | Hand-retargeted mutation rows can guard nothing | round 3 testing | acted | `mutate.py --retarget` in slice 2, "rows N, caught N" |
 | 74 | Suite speed | round 3 testing | acted | parse once, suite seconds in measure, shard at 150 s |
@@ -92,7 +92,7 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 86 | Nothing checks firmware imports the pin map | round 3 Claude operator | raised | a `firmware_pins` Check is a feature card |
 | 87 | Gates are not tied to effects | round 3 safety | acted | S15 and `run_door`'s consent refusal, planted in slice 2 |
 | 88 | A yes must never be an input | round 3 safety | acted | 2.6: the door's process picks `consent`, MCP fails closed |
-| 89 | Grants must fail closed | round 3 safety | acted | a corrupt or zoneless grant test lands with the bench move |
+| 89 | Grants must fail closed | round 3 safety | acted | 5.3: a corrupt or zoneless grant test lands with the bench move |
 | 90 | Schema versions differ per reader | round 3 safety | acted | S17, `RecordSchema(kind, version, rules)` |
 | 91 | Records read the environment in many places | round 3 safety | acted | one `Layers` Value, only `records` reads `SPARK_HOME` (S3) |
 | 92 | File writes are spread out | round 3 safety | acted | S16: only `records` writes, through `write_file` or `FileWriter` |
@@ -100,3 +100,12 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 94 | The Wokwi token could leak | round 3 safety | acted | `run_door` masks `account_env` values, S18 marker test |
 | 95 | A `Clock` collaborator for aware times | round 3 safety | rejected | `board_grant` already refuses a zoneless time, no second need |
 | 96 | Errors leak home paths | round 3 safety | acted | `run_door` shortens paths, traceback only with `--debug` (2.6, S18) |
+| 97 | The area graph has upward edges and a firmware-bench cycle with today's imports, and `part_pictures` has no area | refuter round 2 | acted | 2.1: `FirmwarePlatform` in bench, `needs` in design, `part_pictures` in breadboard, graph re-derived by an `ast` scan. 5.3 lists the four upward edges left and the move that removes each. |
+| 98 | The platform is chosen twice: `deploy.py:171` hard-codes MicroPython and `micropython_port` (`flash_image.py:89`) picks the build | refuter round 2 | acted | 2.5: the requirements' `platform` key is the only choice, `micropython_port` is a fact the platform reads |
+| 99 | "firmware" names the area, the requirements key, the project folder and `check_spine --firmware` | refuter round 2 | acted | the requirements key is `platform` in design.md |
+| 100 | `no_board` breaks `boards/active.json`, which `init_project --board` writes (`boards.py:253`, `boards/README.md:21`) | refuter round 2 | acted | D16, 5.1, AC 6: `no_board` only when neither names a board. Callers `live.py:91`, `check_all.py:406`, `emit_footprint.py:208`, `design.py:377` listed. |
+| 101 | `run_door` breaks S3, the core rule and the Fakes' home | refuter round 2 | acted | 2.6: the door passes `shorten`, `secrets` and `writer`. Production versions live in `records`. |
+| 102 | S14, S15 and S17 are not AST-checkable as written | refuter round 2 | acted | S14 checks `<Name>Contract` classes and inheritance, S15 direct imports of the erase Adapter, S17's last sentence dropped |
+| 103 | Goldens hold a home path and tool versions, and a non-failing deploy golden needs a kept simulated project | refuter round 2 | acted | 5.2: a fixture under `tests/data/`, `<project>` for the root, versions normalised, 1a records only goldens that meet these rules. 1a grows to about 220 lines (section 8). |
+| 104 | `status` is both the outcome's key and the exit status, "library shim" misuses library, `developing.md:225` is off by three | refuter round 2 | acted | section 4: "exit code" for the process, "module shim" in D14, 5.3 and 7, `developing.md:222`. Other "exit code" lines change in later slices. |
+| 105 | Rows 89, 71 and 42 are acted but have no text in design.md | refuter round 2 | acted | text added in 5.3 (89), S14 (71) and 2.4 (42) |
