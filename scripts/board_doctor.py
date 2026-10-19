@@ -18,6 +18,7 @@ the project can change in their own layers): esptool needs download mode, mpremo
 
 from collections import namedtuple
 
+import boards
 import tools
 from board_console import KIND_BUSY, KIND_READ, ConsoleProbe, shows_boot
 from board_look import LookStop, PortFinder
@@ -28,7 +29,7 @@ NEXT_PLUG_IN, NEXT_CLOSE_OTHER, NEXT_PRESS_RESET = "plug_in", "close_other", "pr
 NEXT_RUN_AGAIN, NEXT_HOLD_BOOT, NEXT_REPLUG = "run_again", "hold_boot", "replug"
 #: The codes a tool entry's `silent_step` may name.
 STEP_CODES = (NEXT_HOLD_BOOT, NEXT_PRESS_RESET)
-#: The sentence of each step.
+#: The sentence of each step, with `%(boot)s`, `%(reset)s` and `%(orientation)s` where a button is named (ButtonPlaces).
 MESSAGE_FOR = {
     # board_look's own stop when mpremote devs does not list the board (P218).
     NEXT_PLUG_IN: "plug the board straight into the computer with a data cable, not a hub that gives power only, "
@@ -36,12 +37,12 @@ MESSAGE_FOR = {
     # mpremote and esptool lock the port while they run (mpremote 1.29 transport_serial.py:52).
     NEXT_CLOSE_OTHER: "another program holds the port, for example mpremote or esptool: close it and run it again",
     # A board that waited in download mode booted after one press of R (the P236 bench, AT157).
-    NEXT_PRESS_RESET: "press the board's R (reset) button once and run it again",
+    NEXT_PRESS_RESET: "press %(reset)s once and run it again%(orientation)s",
     # The doctor's own open restarted the board (the P251 cure, AT187), so the first failure tells little now.
     NEXT_RUN_AGAIN: "the doctor's look at the console restarted the board: run it again",
     # esptool got in after the PO pressed BOOT and R (p238 finding.md:52, n = 1).
-    NEXT_HOLD_BOOT: "hold the board's BOOT (B) button, press and release R, release BOOT, and run it again. After "
-                    "it, press R once so the firmware starts",
+    NEXT_HOLD_BOOT: "hold the board's %(boot)s, press and release %(reset)s, release BOOT, and run it again. After "
+                    "it, press RESET once so the firmware starts%(orientation)s",
     # 7 of 10 tries after a replug reached the board (the P235 reach test); a replug also wakes a C6 from light sleep
     # (the esp-idf USB-Serial/JTAG console guide).
     NEXT_REPLUG: "unplug the board, plug it in again, and run it again",
@@ -161,6 +162,11 @@ def after_esptool(stop, project, run):
     return doctor.examine(stop.port, tools.find("flasher", project), stop.tool_said)
 
 
+def step_sentence(code, places=boards.ButtonPlaces.EMPTY):
+    """The sentence of step `code`, naming the buttons as `places` (ButtonPlaces) does."""
+    return MESSAGE_FOR[code] % {"boot": places.boot, "reset": places.reset, "orientation": places.orientation}
+
+
 def stop_answer(script, stop, project, run):
     """(the lines a script prints, the BoardDoctorResult or None) when esptool's look stopped with `stop`. After a failed
     read, the board doctor's facts and next step follow, and the next step is the last line."""
@@ -170,7 +176,8 @@ def stop_answer(script, stop, project, run):
         return ["%s: %s (no doctor: %s)" % (script, stop, cannot)], None
     if result is None:
         return ["%s: %s" % (script, stop)], None
-    return ["%s: could not read the board on %s" % (script, stop.port)] + ["  " + line for line in describe(result)], result
+    return ["%s: could not read the board on %s" % (script, stop.port)] + [
+        "  " + line for line in describe(result, boards.ButtonPlaces.of_project(project))], result
 
 
 def stop_lines(script, stop, project, run):
@@ -178,13 +185,13 @@ def stop_lines(script, stop, project, run):
     return stop_answer(script, stop, project, run)[0]
 
 
-def describe(result):
-    """The lines a person reads for a BoardDoctorResult, without indent."""
+def describe(result, places=boards.ButtonPlaces.EMPTY):
+    """The lines a person reads for a BoardDoctorResult, without indent. `places` names the buttons the steps mention."""
     out = ["said    %s" % result.tool_said] if result.tool_said else []
     out += ["check   %s: %s" % (check.name, check.fact) for check in result.checks]
-    out.append("next    %s" % (MESSAGE_FOR[result.next_step] if result.next_step else "no step: the doctor could not look"))
+    out.append("next    %s" % (step_sentence(result.next_step, places) if result.next_step else "no step: the doctor could not look"))
     if result.if_not_helped:
-        out.append("if not  %s" % MESSAGE_FOR[result.if_not_helped])
+        out.append("if not  %s" % step_sentence(result.if_not_helped, places))
     return out
 
 

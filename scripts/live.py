@@ -45,8 +45,8 @@ Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board 
 live.py could not run, and the last line says why. With two or more boards on USB, --port is needed.""" % board_grant.GRANT_COMMAND
 
 
-def describe(result):
-    """The lines a person reads, for a LiveTryResult."""
+def describe(result, places=boards.ButtonPlaces.EMPTY):
+    """The lines a person reads, for a LiveTryResult. `places` names the buttons the doctor's steps mention."""
     out = ["answer  %s" % result.answer]
     out += ["why     %s" % result.why] if result.why else []
     out += ["output  %s" % line for line in result.output.splitlines()]
@@ -56,7 +56,7 @@ def describe(result):
         out.append("gpio    the code writes %s, each a GPIO of this board"
                    % ", ".join(str(gpio) for gpio in result.gpio_numbers_in_code))
     if result.doctor:
-        out += board_doctor.describe(result.doctor)
+        out += board_doctor.describe(result.doctor, places)
     return "\n".join("  " + line for line in out)
 
 
@@ -96,7 +96,7 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.read_local_t
             print(json.dumps(dict(empty, answer=COULD_NOT_RUN, why=str(cannot), port=port)))
         print("live.py: %s" % cannot, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    print(to_json(port, result) if args.json else describe(result))
+    print(to_json(port, result) if args.json else describe(result, boards.ButtonPlaces.of_project(args.project)))
     return board_live.exit_code(result)
 
 

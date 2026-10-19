@@ -9,6 +9,7 @@ from pathlib import Path
 import board_doctor
 import board_envelope
 import board_look
+import boards
 from outcomes import EXIT_COULD_NOT_RUN
 
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
@@ -54,7 +55,7 @@ def main(argv=None, run=subprocess.run):
         lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
         print("\n".join(lines), file=sys.stderr)
         if args.json:
-            _print_json(board_envelope.look_stop_envelope(str(stop), doctor))
+            _print_json(board_envelope.look_stop_envelope(str(stop), doctor, boards.ButtonPlaces.of_project(args.project)))
         return EXIT_COULD_NOT_RUN
     if args.json:
         _print_json(board_envelope.look_envelope(report, args.project.resolve(), args.ignore_older_runs))

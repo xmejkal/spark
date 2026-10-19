@@ -93,7 +93,7 @@ class DoctorTest(GrantCase):
         self.assertIn("  said    ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data "
                       "received.", lines)
         self.assertIn("  check   console: the console was silent for 2 s", lines)
-        self.assertTrue(lines[-1].startswith("  next    hold the board's BOOT (B) button"))
+        self.assertTrue(lines[-1].startswith("  next    hold the board's BOOT button"))
         self.assertFalse((self.home / "grants").exists())
 
 

@@ -10,6 +10,7 @@ not the yes, and neither is "go ahead" in a chat.
 import json
 
 import board_doctor
+import boards
 import outcomes
 import ready_check
 from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
@@ -67,10 +68,11 @@ def look_envelope(report, project, ignore_older_runs=False):
     return outcomes.envelope("look", "look", report.to_dict(), problems, unchecked, following)
 
 
-def look_stop_envelope(sentence, doctor=None):
+def look_stop_envelope(sentence, doctor=None, places=boards.ButtonPlaces.EMPTY):
     """The envelope of a look that could not run: one unchecked item. `doctor` is the board doctor's BoardDoctorResult after
-    a failed read, or None: its facts go in `data.doctor` and its next step for the person's hands is the `fix`."""
-    fix = board_doctor.MESSAGE_FOR[doctor.next_step] if doctor and doctor.next_step else ""
+    a failed read, or None: its facts go in `data.doctor` and its next step for the person's hands is the `fix`, naming the
+    buttons as `places` (ButtonPlaces) does."""
+    fix = board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
     return outcomes.envelope("look", "look", {"doctor": board_doctor.as_dict(doctor)} if doctor else None,
                              unchecked=[{"sentence": sentence, "fix": fix}])
 

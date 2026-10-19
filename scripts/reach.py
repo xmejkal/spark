@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 import board_doctor
+import boards
 import board_look
 import board_reach
 import tools
@@ -95,7 +96,7 @@ def main(argv=None, run=subprocess.run, probe=None):
     if args.json:
         print(to_json(port, result, args.cure_first, doctor))
     else:
-        lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor)] if doctor else [])
+        lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor, boards.ButtonPlaces.of_project(args.project))] if doctor else [])
         print("\n".join(lines))
     return EXIT_OK if result.reached else EXIT_COULD_NOT_RUN
 
