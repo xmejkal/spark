@@ -39,6 +39,7 @@ The [journey guide](journey.md) shows these commands on real runs.
 | `/spark:research` | a part the library lacks |
 | `/spark:identify` | a module you own, from a photo |
 | `/spark:build` | you have a [requirements file](../../GLOSSARY.md#the-requirements-file) |
+| `/spark:deploy` | a scenario passed and the board is on USB |
 
 ### `/spark:init`
 
@@ -213,6 +214,14 @@ Each stage reads `[ok  ]`, `[!!  ]` for a defect in the design, named, or `[????
 which is not a pass.
 
 Page: [`commands/build.md`](../../commands/build.md).
+
+### `/spark:deploy`
+
+Puts the flash image that passed the simulation on the board on USB ([journey: Bench](journey.md#bench)). It runs
+`look.py` first, which reads the board and changes nothing, and gives a token. `deploy.py --token` erases and writes only
+after the person's yes, typed in their own terminal, or their deploy grant. After the flash it names the image's
+sha256 and whose yes it was, then reads the board back and waits for the firmware's `ready`. The steps are in
+[`commands/deploy.md`](../../commands/deploy.md).
 
 ## Skills
 

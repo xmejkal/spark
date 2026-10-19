@@ -466,7 +466,7 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   token, `next` holds a `deploy` step, whatever the status. A warning or an unknown field is not a pass: relay it.
 - `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
-  `facts_line`, `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
+  `facts_line`, `image_sha256` (the image on the board, null before a flash, P213), `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
   `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`. Keys not reached are null.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
