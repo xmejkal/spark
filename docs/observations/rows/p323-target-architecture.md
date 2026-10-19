@@ -109,3 +109,8 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 103 | Goldens hold a home path and tool versions, and a non-failing deploy golden needs a kept simulated project | refuter round 2 | acted | 5.2: a fixture under `tests/data/`, `<project>` for the root, versions normalised, 1a records only goldens that meet these rules. 1a grows to about 220 lines (section 8). |
 | 104 | `status` is both the outcome's key and the exit status, "library shim" misuses library, `developing.md:225` is off by three | refuter round 2 | acted | section 4: "exit code" for the process, "module shim" in D14, 5.3 and 7, `developing.md:222`. Other "exit code" lines change in later slices. |
 | 105 | Rows 89, 71 and 42 are acted but have no text in design.md | refuter round 2 | acted | text added in 5.3 (89), S14 (71) and 2.4 (42) |
+| 106 | `mock.patch` 336 read as uses, but it counts lines: 350 uses on 336 lines | fact check (script) | acted | D8 and the progress table say lines |
+| 107 | "Exit code" in 33 files had no scope: 149 files repository-wide | fact check (script) | acted | scope named: `scripts/`, the guides, the commands (28 + 4 + 1) |
+| 108 | The bench move's 17 modules, 34 importers, 188 rows could not be reproduced: another file list gives 15, 19, 236 | fact check (script) | acted | a range, marked as an estimate |
+| 109 | 110 plugin paths, 39 importers of outcomes, 11 OPTIONS rows, 6 item sites, design.py:377 and every other file:line reference | fact check (script) | verified | reproduced by grep and the script |
+| 110 | Every name that exists nowhere in the repository is a proposed new name | fact check (by hand) | verified | 25 names, each introduced as new in the design |

@@ -60,6 +60,14 @@ and a `firmware_pins` check.
 | Terms | "exit code" for the process, "module shim", `developing.md:222` |
 | Rows 89, 71, 42 had no text | Added to 2.4, S14 and 5.3 |
 
+## Fact check (2026-10-19)
+
+A script, not a model, checked the design against the repository after the last fix round. Every `file:line`
+reference holds what the text says. Every name that exists nowhere yet is one the design proposes (the new
+classes, `run_door`, `run_operation` and the starter codes). Counts that a grep reproduces: 110 plugin paths, 39
+importers of `outcomes`, 11 `OPTIONS` rows, 6 item sites in `board_envelope`, 336 lines with `mock.patch`, 33
+files with "exit code". The bench move's size and every slice's line count are estimates.
+
 ## 1. Decisions
 
 | # | Decision | Choice | Why |
@@ -71,7 +79,7 @@ and a `firmware_pins` check.
 | D5 | MCP | A tool's MCP version is a setting (`kind: mcp` rows). An MCP door for spark comes last, on a trigger: a host with no shell, or P178. | It costs a process and tool definitions in every session. |
 | D6 | Type checker | None. Public functions carry hints. | Free, few, local. |
 | D7 | Size limits | Function 60 lines, module 600, door file 40. | A ratchet, not a big bang. |
-| D8 | `mock.patch` | None new except `os.environ`. A file's count never rises. | 336 today. |
+| D8 | `mock.patch` | None new except `os.environ`. A file's count never rises. | 336 lines use it today (350 uses). |
 | D9 | Errors | One `SparkError(outcome, code, fix)`, area subclasses ending in `Error`. A crash is `could-not-run`, code `crash`, exit 2. | `agents.md:501`: exit 2 is "it could not look". |
 | D10 | Enforcement | One test, `tests/test_architecture.py` (class `ArchitectureRules`), with `tests/architecture_baseline.json`. | One tool, no hook edit. |
 | D11 | Roles | Add **Operation** and **Records** to developing.md's table. | `Command` and `Library` mean other things. |
@@ -394,7 +402,7 @@ removed key and on an unlisted code.
 - A move PR moves the modules, updates every importer, retargets every patch and mutation row with `--retarget`, and
   keeps private names reachable where tests use them. No module shim. A door keeps its path.
 - Guard regexes (`test_store:78`, `test_orphans:52,82`) learn the package form in the same PR.
-- The bench move, for scale: 17 modules with `FirmwarePlatform`, 34 importers, 188 mutation rows. Contract mixins land
+- The bench move, for scale (an estimate, because the file list is fixed only at the move): 15 to 17 modules, 19 to 34 importers and 190 to 240 mutation rows, from two counts with different file lists on 2026-10-19. Contract mixins land
   with their area. Its tests add a corrupt or zoneless grant that fails closed.
 - Four upward edges remain today. The checks move removes parts to checks (`parts.py:495` takes `compare_design`'s
   pull-up limits, which move down). The records and parts move removes parts to design (`parts.py` imports
@@ -409,7 +417,7 @@ removed key and on an unlisted code.
 
 ```
 SCORE classes 16% | fat CLIs 3 | thin CLIs 4 | private imports 3 | outcome literals 10 | roles stated 56/103
-      | baseline N | mock.patch 336 | suite 110 s
+      | baseline N | mock.patch lines 336 | suite 110 s
 ```
 
 A new column enters in the slice that first moves it. No column may get worse.
@@ -438,7 +446,7 @@ Each is checked by a test or by `measure.py`.
 
 The same PR as this design edits `developing.md:237` and `:278` (the Error suffix now spreads beyond the deploy area),
 `:222` and `measure.py`'s module kind `library` (now `module`), `developing.md:301`, `journey.md:875`, and the crash
-line in agents.md's exit table. "Exit code" in 33 files changes only where this design touches it, the others in
+line in agents.md's exit table. "Exit code" in 33 files of `scripts/`, the guides and the commands changes only where this design touches it, the others in
 later slices.
 
 ## 8. The one question for the PO
