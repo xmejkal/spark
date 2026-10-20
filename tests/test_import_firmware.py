@@ -160,6 +160,24 @@ class APwmKeepsWhatWasLastSetTest(unittest.TestCase):
         led.deinit()
         self.assertTrue(led.deinited)
 
+    def test_init_after_deinit_turns_it_on_again(self):
+        led = self.PWM(self.Pin(15))
+        led.deinit()
+        led.init(freq=1000)
+        self.assertFalse(led.deinited)
+
+    def test_the_frequency_can_be_given_by_position_as_on_the_esp32(self):
+        led = self.PWM(self.Pin(15), 1000)
+        self.assertEqual(led.freq(), 1000)
+        led.init(500)
+        self.assertEqual(led.freq(), 500)
+
+    def test_duty_ns_and_invert_are_kept_from_the_constructor(self):
+        led = self.PWM(self.Pin(15), freq=1, duty_ns=2, invert=True)
+        self.assertEqual(led.duty_ns(), 2)
+        led.init(invert=False)
+        self.assertEqual(led.settings["invert"], False)
+
     def test_a_pwm_takes_a_pin_number_too(self):
         self.assertEqual(self.PWM(15, freq=50).freq(), 50)
 

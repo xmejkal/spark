@@ -53,12 +53,16 @@ class Pin:
 class PWM:
     """MicroPython's PWM as calls only: each setter keeps its value, each getter returns it, None while unset."""
 
-    def __init__(self, dest, **settings):
-        self.pin, self.settings, self.deinited = dest, {}, False
-        self.init(**settings)
+    def __init__(self, dest, freq=None, **settings):
+        self.pin, self.settings = dest, {}
+        self.init(freq, **settings)
 
-    def init(self, **settings):
+    def init(self, freq=None, **settings):
+        """As on the ESP32, the frequency can come by position. An init after a deinit turns it on again."""
+        if freq is not None:
+            settings["freq"] = freq
         self.settings.update(settings)
+        self.deinited = False
 
     def deinit(self):
         self.deinited = True
