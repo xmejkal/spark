@@ -10,6 +10,7 @@ import board_doctor
 import board_envelope
 import board_look
 import boards
+from image_evidence import PassedRunEvidence
 from outcomes import EXIT_COULD_NOT_RUN
 
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
@@ -49,8 +50,9 @@ def main(argv=None, run=subprocess.run):
                         help="give a token even when a log in sim/runs/ tested another image (default: no token)")
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout (docs/guide/agents.md)")
     args = parser.parse_args(argv)
+    evidence = PassedRunEvidence(args.ignore_older_runs)
     try:
-        report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
+        report = board_look.looker(args.project, run).run(args.project, args.port, evidence)
     except board_look.LookStop as stop:
         lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
         print("\n".join(lines), file=sys.stderr)
@@ -58,7 +60,7 @@ def main(argv=None, run=subprocess.run):
             _print_json(board_envelope.look_stop_envelope(str(stop), doctor, boards.ButtonPlaces.of_project(args.project)))
         return EXIT_COULD_NOT_RUN
     if args.json:
-        _print_json(board_envelope.look_envelope(report, args.project.resolve(), args.ignore_older_runs))
+        _print_json(board_envelope.look_envelope(report, args.project.resolve(), evidence))
     else:
         print("\n".join(board_look.report_lines(report)))
     return report.exit_code()

@@ -31,6 +31,7 @@ class ProjectImage:
         if not self.path.is_file():
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it"
                               % self.path)
+        self.project = project
         #: run_scenario.py writes every log here, in whichever sub-folder of sim/ the image is
         self.runs = project / "sim" / "runs"
 
