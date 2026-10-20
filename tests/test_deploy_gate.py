@@ -30,6 +30,7 @@ import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import store  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, pin_time_zone  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
@@ -482,7 +483,7 @@ class TheBoardInDownloadModeTest(GateCase):
 
     def test_a_passed_log_that_names_no_files_is_never_probed(self):
         probe = FakeConsoleProbe("waiting for download\n")
-        with mock.patch.object(deploy_service, "file_hashes", side_effect=lambda log: {}):
+        with mock.patch.object(image_evidence, "file_hashes", side_effect=lambda log: {}):
             code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (2, []))
         self.assertIn("ready unknown: the passed run's log names no files", said)
@@ -876,7 +877,7 @@ class TheRerunLineTest(unittest.TestCase):
     def test_deploy_keeps_ignore_older_runs_in_its_line(self):
         import argparse
         args = argparse.Namespace(project=Path("."), token="aaaa-bbbb", ignore_older_runs=True)
-        self.assertTrue(deploy.rerun_line(args, "/dev/cu.usbmodem101").endswith(" --ignore-older-runs"))
+        self.assertTrue(deploy.rerun_line(args, "/dev/cu.usbmodem101", image_evidence.PassedRunEvidence(True)).endswith(" --ignore-older-runs"))
 
     def test_a_path_with_a_space_is_quoted(self):
         self.assertEqual(deploy_gate.format_rerun_line("/my spark/grant.py", []), "'/my spark/grant.py'")

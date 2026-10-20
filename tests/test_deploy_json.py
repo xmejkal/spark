@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import board_doctor  # noqa: E402
 import deploy_service  # noqa: E402
 import firmware_platform  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 import outcomes  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe  # noqa: E402
@@ -261,7 +262,7 @@ class DeployJsonTest(JsonCase, GateCase):
         platform = firmware_platform.FirmwarePlatform.micropython(self.project)
         for echo_to, expected in ((2, {"stdout": 2}), (None, {})):
             seen.clear()
-            service = deploy_service.DeployService(self.project, platform, echo_to=echo_to,
+            service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(), echo_to=echo_to,
                                                    run=lambda command, **kw: seen.append(kw) or done(""))
             with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)):
                 service.deploy(self.look(), self.token(), FakeConsent(True), lambda line: None)

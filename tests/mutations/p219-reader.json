@@ -92,14 +92,14 @@
  {
   "file": "scripts/board_look.py",
   "name": "older runs never a reason",
-  "find": "or (None if ignore_older_runs else found.why_other_runs())",
-  "replace": ""
+  "find": "why = evidence.why_not_ready(found)",
+  "replace": "why = found.why_untested()"
  },
  {
-  "file": "scripts/board_look.py",
+  "file": "scripts/image_evidence.py",
   "name": "ignore flag inverted",
-  "find": "None if ignore_older_runs else found",
-  "replace": "None if not ignore_older_runs else found"
+  "find": "if why or self.ignore_older_runs:",
+  "replace": "if why or not self.ignore_older_runs:"
  },
  {
   "file": "scripts/board_look.py",

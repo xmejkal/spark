@@ -23,6 +23,7 @@ import firmware_platform  # noqa: E402
 from project_image import DeployError  # noqa: E402
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 
 FAKE_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
@@ -69,9 +70,9 @@ class ProjectCase(unittest.TestCase):
 
     def plan(self, port=None, ignore_older_runs=False):
         """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
-        kwargs = {"ignore_older_runs": True} if ignore_older_runs else {}  # the default is the refusal
+        evidence = image_evidence.PassedRunEvidence(ignore_older_runs)  # the default is the refusal
         return deploy_service.DeployService(
-            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), **kwargs).plan(port)
+            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), evidence).plan(port)
 
     def deploy(self, *argv, find=found, run=None):
         """(exit code, stdout, stderr, the commands run) of deploy.py in this project."""

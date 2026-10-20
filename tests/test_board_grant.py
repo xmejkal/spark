@@ -28,6 +28,7 @@ import board_grant  # noqa: E402
 import board_look  # noqa: E402
 import deploy_gate  # noqa: E402
 import grant  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeLocalClock, pin_time_zone  # noqa: E402
 from test_board_look import data, done  # noqa: E402
@@ -450,7 +451,7 @@ class ConsentForDeployTest(unittest.TestCase):
         self.service = board_grant.GrantService(now=self.clock)
 
     def choose(self, report=None, ignore_older_runs=False):
-        return self.service.consent_for_deploy(report or a_report(), ignore_older_runs, self.terminal)
+        return self.service.consent_for_deploy(report or a_report(), image_evidence.PassedRunEvidence(ignore_older_runs), self.terminal)
 
     def assertTerminal(self, why, **kw):
         chosen = self.choose(**kw)
@@ -540,7 +541,7 @@ class ConsentForDeployTest(unittest.TestCase):
 
     def test_the_standing_yes_works_with_the_real_clock(self):
         board_grant.GrantStore().save(a_grant(since=board_grant.read_local_time().replace(microsecond=0)))
-        chosen = board_grant.GrantService().consent_for_deploy(a_report(), False, self.terminal)
+        chosen = board_grant.GrantService().consent_for_deploy(a_report(), image_evidence.PassedRunEvidence(), self.terminal)
         self.assertIsNone(chosen.why)
         self.assertTrue(chosen.consent.ask("x"))
 
