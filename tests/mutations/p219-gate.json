@@ -63,13 +63,13 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "look ignores ignore flag",
-  "find": ".run(self.project, port, self.ignore_older_runs)",
-  "replace": ".run(self.project, port)"
+  "find": ".run(self.project, port, self.evidence)",
+  "replace": ".run(self.project, port, type(self.evidence)())"
  },
  {
   "file": "scripts/look.py",
   "name": "look.py ignores flag",
-  "find": ".run(args.project, args.port, args.ignore_older_runs)",
-  "replace": ".run(args.project, args.port)"
+  "find": ".run(args.project, args.port, evidence)",
+  "replace": ".run(args.project, args.port, PassedRunEvidence())"
  }
 ]

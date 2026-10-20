@@ -22,6 +22,7 @@ import firmware_platform  # noqa: E402
 import flasher  # noqa: E402
 import project_image  # noqa: E402
 import ready_check  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent  # noqa: E402
 from test_board_look import FOUND, found  # noqa: E402
@@ -57,7 +58,7 @@ class ServiceCase(GateCase):
 
     def service(self, **kwargs):
         return deploy_service.DeployService(self.project, firmware_platform.FirmwarePlatform.micropython(self.project),
-                                            run=self.fake_run, **kwargs)
+                                            image_evidence.PassedRunEvidence(), run=self.fake_run, **kwargs)
 
 
 class TheFlashTest(ServiceCase):

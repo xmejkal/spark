@@ -54,9 +54,9 @@
   "replace": "the person runs grant.py --minutes N again\",\n    WHY_NO_ZONE"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/image_evidence.py",
   "name": "deploy-drop-ignore",
-  "find": "[\"--ignore-older-runs\"] if args.ignore_older_runs else []",
+  "find": "return [IGNORE_OLDER_RUNS_FLAG] if self.ignore_older_runs else []",
   "replace": "[]"
  },
  {

@@ -1,39 +1,39 @@
 [
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/image_evidence.py",
   "name": "refuse-never",
-  "find": "if other and not self.ignore_older_runs:",
-  "replace": "if False:"
+  "find": "if why or self.ignore_older_runs:",
+  "replace": "if why or True:"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/image_evidence.py",
   "name": "refuse-always",
-  "find": "if other and not self.ignore_older_runs:",
-  "replace": "if other:"
+  "find": "if why or self.ignore_older_runs:",
+  "replace": "if why:"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/image_evidence.py",
   "name": "inverted-flag",
-  "find": "if other and not self.ignore_older_runs:",
-  "replace": "if other and self.ignore_older_runs:"
+  "find": "if why or self.ignore_older_runs:",
+  "replace": "if why or not self.ignore_older_runs:"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/image_evidence.py",
   "name": "note-dropped",
-  "find": "    notes += [other] if other else []\n",
-  "replace": "    notes += []\n"
+  "find": "return notes + [other] if other else notes",
+  "replace": "return notes"
  },
  {
   "file": "scripts/deploy.py",
   "name": "flag-not-passed",
-  "find": "service = DeployService(args.project, FirmwarePlatform.micropython(args.project), args.ignore_older_runs, run,",
-  "replace": "service = DeployService(args.project, FirmwarePlatform.micropython(args.project), False, run,"
+  "find": "evidence = PassedRunEvidence(args.ignore_older_runs)",
+  "replace": "evidence = PassedRunEvidence(False)"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/image_evidence.py",
   "name": "flag-default-true",
-  "find": "ignore_older_runs=False, run=subprocess.run",
-  "replace": "ignore_older_runs=True, run=subprocess.run"
+  "find": "def __init__(self, ignore_older_runs=False):",
+  "replace": "def __init__(self, ignore_older_runs=True):"
  },
  {
   "file": "scripts/deploy.py",
@@ -42,21 +42,21 @@
   "replace": "\"--ignore-older-runs\", action=\"store_false\""
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/image_evidence.py",
   "name": "way-out-dropped",
-  "find": "raise DeployError(other + OLDER_RUNS_WAY_OUT)",
-  "replace": "raise DeployError(other)"
+  "find": "return OLDER_RUNS_WAY_OUT if refused_for_other_runs else \"\"",
+  "replace": "return \"\""
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/image_evidence.py",
   "name": "way-out-no-flag",
-  "find": "To flash anyway, pass --ignore-older-runs, and ",
-  "replace": "To flash anyway, pass nothing, and "
+  "find": "IGNORE_OLDER_RUNS_FLAG = \"--ignore-older-runs\"",
+  "replace": "IGNORE_OLDER_RUNS_FLAG = \"\""
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "check-after-tools",
-  "find": "        other = image.why_other_runs()\n        if other and not self.ignore_older_runs:\n            raise DeployError(other + OLDER_RUNS_WAY_OUT)\n        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n",
-  "replace": "        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n        other = image.why_other_runs()\n"
+  "find": "        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image))\n        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n",
+  "replace": "        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image))\n"
  }
 ]

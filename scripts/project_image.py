@@ -31,6 +31,7 @@ class ProjectImage:
         if not self.path.is_file():
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it"
                               % self.path)
+        self.project = project
         #: run_scenario.py writes every log here, in whichever sub-folder of sim/ the image is
         self.runs = project / "sim" / "runs"
 
@@ -73,6 +74,12 @@ class ProjectImage:
         """The first log in the runs folder that passed on this image's sha256, or None. Its file lines are what a board must hold."""
         return next((log for log, verdict, sha256 in self.read_run_logs()
                      if sha256 == self.sha256 and verdict == "passed"), None)
+
+    def find_newer_files(self):
+        """The files under firmware/ changed after the image was made, as project paths. The board gets the image, not them."""
+        made = self.path.stat().st_mtime
+        return sorted(str(path.relative_to(self.project)) for path in (self.project / "firmware").rglob("*")
+                      if path.is_file() and "__pycache__" not in path.parts and path.stat().st_mtime > made)
 
     def why_other_runs(self):
         """A sentence naming each log in the runs folder that does not name this image's sha256, or None when every log does."""

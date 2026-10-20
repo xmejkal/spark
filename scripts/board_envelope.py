@@ -25,14 +25,14 @@ STAGE_PLAN, STAGE_LOOK, STAGE_GATE, STAGE_FLASH, STAGE_VERIFY = "plan", "look", 
 MAY_BE_ERASED = "may_be_erased"
 
 
-def deploy_argv(project, token, port, ignore_older_runs=False):
+def deploy_argv(project, token, port, evidence):
     """The arguments of deploy.py for this board and image (not the script's name, as parts.py's steps)."""
-    return ["--project", str(project), "--token", token or "", "--port", port] + (["--ignore-older-runs"] if ignore_older_runs else [])
+    return ["--project", str(project), "--token", token or "", "--port", port] + evidence.argv()
 
 
-def look_argv(project, port=None, ignore_older_runs=False):
+def look_argv(project, port, evidence):
     """The arguments of look.py."""
-    return ["--project", str(project)] + (["--port", port] if port else []) + (["--ignore-older-runs"] if ignore_older_runs else [])
+    return ["--project", str(project)] + (["--port", port] if port else []) + evidence.argv()
 
 
 def dumps(envelope):
@@ -40,18 +40,18 @@ def dumps(envelope):
     return json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
 
 
-def look_step(project, port=None, ignore_older_runs=False, why="read the board first: the board restarts while it is read"):
+def look_step(project, port, evidence, why="read the board first: the board restarts while it is read"):
     """The step that runs look.py. It writes nothing."""
-    return outcomes.step("look", look_argv(project, port, ignore_older_runs), why)
+    return outcomes.step("look", look_argv(project, port, evidence), why)
 
 
-def deploy_step(project, token, port, ignore_older_runs, why):
+def deploy_step(project, token, port, evidence, why):
     """The step that runs deploy.py: it erases ALL of the flash, so it needs the person's yes."""
-    return outcomes.step("deploy", deploy_argv(project, token, port, ignore_older_runs), why,
+    return outcomes.step("deploy", deploy_argv(project, token, port, evidence), why,
                          effects=["deletes", "writes"], needs_yes=True)
 
 
-def look_envelope(report, project, ignore_older_runs=False):
+def look_envelope(report, project, evidence):
     """The envelope of a LookReport. `problems` are its stops and its warnings (a field that differs), `unchecked` its
     unknown fields and a missing token: the lists LookReport.status counts. A token, whatever the status, brings the
     deploy step."""
@@ -63,7 +63,7 @@ def look_envelope(report, project, ignore_older_runs=False):
     if report.no_token_reason():
         unchecked.append({"sentence": "no token: %s" % report.no_token_reason(), "fix": "fix that, then run look.py again"})
     token = report.token()
-    following = [deploy_step(project, token, report.port, ignore_older_runs,
+    following = [deploy_step(project, token, report.port, evidence,
                              "erases ALL of the flash, then writes the passed image. Relay the warnings first. " + YES_RULE)] if token else []
     return outcomes.envelope("look", "look", report.to_dict(), problems, unchecked, following)
 
@@ -79,24 +79,23 @@ def look_stop_envelope(sentence, doctor=None, places=boards.ButtonPlaces.EMPTY):
 
 def deploy_envelope(reached, code):
     """
-    The envelope of one deploy run. `reached` is a dict main filled as it went (the keys read below, all optional), `code` the
+    The envelope of one deploy run. `reached` is a dict main filled as it went (the keys read below: `evidence` always, the rest optional), `code` the
     exit code it returns: 0 no item, 1 `problems`, 2 `unchecked`, so the status is the code's.
     """
     report, result, plan, consent = reached.get("report"), reached.get("result"), reached.get("plan"), reached.get("consent")
     project, port = reached["project"], reached.get("port") or (report.port if report else None)
-    ignore = reached.get("ignore_older_runs", False)
-    next_op = reached.get("next_op")
+    evidence, next_op = reached["evidence"], reached.get("next_op")
     stage = reached["stage"]
     sentence = reached.get("refusal")
     item = {"subject": "ready" if result else stage, "sentence": sentence, "fix": FIX_FOR_NEXT.get(next_op, "")}
     ready = result.ready if result else None
     following = []
     if reached.get("dry_run"):
-        following = [look_step(project, port, ignore, "deploy.py --dry-run did not look at the board")]
+        following = [look_step(project, port, evidence, "deploy.py --dry-run did not look at the board")]
     elif next_op == NEXT_LOOK:
-        following = [look_step(project, port, ignore, "the look is missing or stale")]
+        following = [look_step(project, port, evidence, "the look is missing or stale")]
     elif next_op == NEXT_DEPLOY:
-        following = [deploy_step(project, reached.get("token"), port, ignore,
+        following = [deploy_step(project, reached.get("token"), port, evidence,
                                  "the person runs data.run_in_terminal in their own terminal: " + YES_RULE)]
         if reached.get("grant_argv"):
             following.append(outcomes.step("grant", reached["grant_argv"],

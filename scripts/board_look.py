@@ -1,7 +1,7 @@
 """
 Read the board on USB without changing it, and compare it with the project's board record (P219, #201).
 
-A library: look.py only parses arguments, calls `looker(project).run(project, port)` and prints `report_lines(report)`.
+A library: look.py only parses arguments, calls `looker(project).run(project, port, evidence)` and prints `report_lines(report)`.
 deploy.py calls `looker` and `report_lines` too. It reads the image checks from project_image.py and never imports deploy.py.
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
@@ -257,7 +257,7 @@ class LookService:
     def __init__(self, finder, reader):
         self.finder, self.reader = finder, reader
 
-    def run(self, project, port=None, ignore_older_runs=False):
+    def run(self, project, port, evidence):
         """A LookReport. LookStop says why not: no record, no board, two boards without a port, a read that failed."""
         record = self.record_of(project)
         port = port or self.only_port()
@@ -266,7 +266,7 @@ class LookService:
         try:
             found = project_image.ProjectImage(project)
             image = found.path
-            why = found.why_untested() or (None if ignore_older_runs else found.why_other_runs())
+            why = evidence.why_not_ready(found)
         except project_image.DeployError as cannot:
             why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
         return LookReport(port, reading, record, image, why)

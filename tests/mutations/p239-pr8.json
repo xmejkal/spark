@@ -14,7 +14,7 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "verify-no-expected",
-  "find": "expected = file_hashes(passed) if passed else {}",
+  "find": "expected = self.evidence.expected_files(image)",
   "replace": "expected = {}"
  },
  {
@@ -42,10 +42,10 @@
   "replace": "pass  #"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/image_evidence.py",
   "name": "plan-older-runs-always-refuse",
-  "find": "if other and not self.ignore_older_runs:",
-  "replace": "if other:"
+  "find": "if why or self.ignore_older_runs:",
+  "replace": "if why:"
  },
  {
   "file": "scripts/firmware_platform.py",

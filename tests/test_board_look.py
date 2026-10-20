@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import board_look  # noqa: E402
 import project_image  # noqa: E402
 import outcomes  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from test_deploy import FOUND, PORT, ProjectCase, found  # noqa: E402
 
@@ -45,7 +46,7 @@ class LookCase(ProjectCase):
         (self.project / "requirements.json").write_text(json.dumps({"board": name, "parts": []}))
 
     def look(self, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", port=None, flasher=None, esptool_code=0,
-             text=None, **kwargs):
+             text=None, ignore_older_runs=False):
         """The LookReport of LookService.run with fake tools. `text` is what esptool prints, in place of the file. LookStop propagates."""
         def run(argv, **kw):
             self.ran.append(argv)
@@ -55,7 +56,7 @@ class LookCase(ProjectCase):
 
         flasher = flasher or FOUND["flasher"]
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: flasher if name == "flasher" else found(name)):
-            return board_look.looker(self.project, run).run(self.project, port, **kwargs)
+            return board_look.looker(self.project, run).run(self.project, port, image_evidence.PassedRunEvidence(ignore_older_runs))
 
 
 class PortFinderTest(LookCase):

@@ -38,6 +38,7 @@ import store
 import tools
 from deploy_service import DeployService, FlashError
 from firmware_platform import FirmwarePlatform
+from image_evidence import PassedRunEvidence
 from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
@@ -85,10 +86,10 @@ came, 2 it could not run, you answered no, there was no terminal, or ready is un
     ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
-def rerun_line(args, port):
+def rerun_line(args, port, evidence):
     """The line that runs this deploy again, for the person's own terminal."""
     return deploy_gate.format_rerun_line(__file__, board_envelope.deploy_argv(args.project.resolve(), args.token, port,
-                                                                            args.ignore_older_runs))
+                                                                            evidence))
 
 
 def grant_argv(args, port, minutes="N"):
@@ -104,14 +105,14 @@ def grant_hint(args, port):
             "allows an erase of ALL of the flash and any passed image of any project:\n  %s" % line)
 
 
-def choose_consent(args, report, grant_service, out=None):
+def choose_consent(args, report, grant_service, evidence, out=None):
     """The ConsentStrategy for this deploy, after the look: the standing yes of a valid deploy grant when the look
     matched and the deploy ignores no older run, else a yes typed in this terminal. Prints one line that says which, and
     why not when it is the terminal."""
-    line = rerun_line(args, report.port)
-    if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:
+    line = rerun_line(args, report.port, evidence)
+    if report.verdict == board_look.VERDICT_MATCH and evidence.grant_refusal is None:
         line += grant_hint(args, report.port)
-    chosen = grant_service.consent_for_deploy(report, args.ignore_older_runs, deploy_gate.TerminalConsentStrategy(line, stdout=out))
+    chosen = grant_service.consent_for_deploy(report, evidence, deploy_gate.TerminalConsentStrategy(line, stdout=out))
     if chosen.why not in (None, board_grant.WHY_NO_GRANT):  # a person with no grant is told only by the no-terminal text
         said = board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]
         print("  standing yes: not used: %s" % said, flush=True, file=out)
@@ -145,9 +146,10 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
                         "stderr (docs/guide/agents.md)")
     args = parser.parse_args(argv)
+    evidence = PassedRunEvidence(args.ignore_older_runs)
     reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
-            "ignore_older_runs": args.ignore_older_runs, "dry_run": args.dry_run}
-    code = _deploy(args, run or subprocess.run, consent, probe, clock, grant_service, sys.stderr if args.json else None, reached)
+            "evidence": evidence, "dry_run": args.dry_run}
+    code = _deploy(args, evidence, run or subprocess.run, consent, probe, clock, grant_service, sys.stderr if args.json else None, reached)
     if args.json:
         print(board_envelope.dumps(board_envelope.deploy_envelope(reached, code)))
     return code
@@ -162,13 +164,13 @@ def who_said_yes(consent):
         return "not known (%s)" % cannot
 
 
-def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
+def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reached):
     """The deploy main parses for. Every line a person reads goes to `out` (None: stdout). What `--json` reports it puts in
     `reached`. Returns the exit code."""
     def say(line):
         print(line, file=out)
 
-    service = DeployService(args.project, FirmwarePlatform.micropython(args.project), args.ignore_older_runs, run,
+    service = DeployService(args.project, FirmwarePlatform.micropython(args.project), evidence, run,
                             clock, probe, echo_to=None if out is None else 2)
     try:
         planned = service.plan(args.port)
@@ -189,7 +191,7 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
         report = reached["report"] = service.look(args.port)
         print("\n".join(board_look.report_lines(report, token=False)), flush=True, file=out)
         reached["port"] = report.port
-        consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), out)
+        consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), evidence, out)
         yes_kind = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
         reached["stage"] = board_envelope.STAGE_GATE
         planned = service.deploy(report, args.token, consent, lambda line: show_line(line, out))
@@ -205,8 +207,8 @@ def _deploy(args, run, consent, probe, clock, grant_service, out, reached):
     except deploy_gate.GateClosedError as shut:
         reached.update(refusal=str(shut), next_op=shut.next_op)
         if shut.next_op == deploy_gate.NEXT_DEPLOY:
-            reached["run_in_terminal"] = rerun_line(args, report.port)
-            if report.verdict == board_look.VERDICT_MATCH and not args.ignore_older_runs:
+            reached["run_in_terminal"] = rerun_line(args, report.port, evidence)
+            if report.verdict == board_look.VERDICT_MATCH and evidence.grant_refusal is None:
                 reached["grant_argv"] = grant_argv(args, report.port, "60")
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code

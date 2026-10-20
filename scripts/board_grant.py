@@ -240,9 +240,9 @@ class GrantService:
         why = grant.why_not_valid(self.now())
         return GrantCheckResult(why is None, grant, why)
 
-    def consent_for_deploy(self, report, ignore_older_runs, fallback):
+    def consent_for_deploy(self, report, evidence, fallback):
         """A DeployConsentResult for deploy.py: the StandingConsentStrategy when the look `report` is a match, deploy
-        does not ignore older runs and a deploy grant holds for the look's MAC; else `fallback` (the terminal) and the
+        the `evidence` (an ImageEvidence) has no `grant_refusal` and a deploy grant holds for the look's MAC; else `fallback` (the terminal) and the
         WHY_ code that says why. A grant file that cannot be trusted is no grant."""
         try:
             grant = self.grants.find(report.reading.mac, SCOPE_DEPLOY)
@@ -252,8 +252,8 @@ class GrantService:
             return DeployConsentResult(fallback, WHY_NO_GRANT)
         if report.verdict != board_look.VERDICT_MATCH:
             return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)
-        if ignore_older_runs:
-            return DeployConsentResult(fallback, WHY_IGNORE_OLDER_RUNS)
+        if evidence.grant_refusal:
+            return DeployConsentResult(fallback, evidence.grant_refusal)
         why = grant.why_not_valid(self.now())
         if why:
             return DeployConsentResult(fallback, why)

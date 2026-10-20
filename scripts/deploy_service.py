@@ -20,11 +20,6 @@ import deploy_gate
 import download_mode
 import ready_check
 from project_image import DeployError, ProjectImage
-from run_scenario import file_hashes
-
-#: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
-OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the person says yes. To flash anyway, pass "
-                      "--ignore-older-runs, and deploy.py names the log in a note")
 
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
 #: the board shell's command, and `notes` are sentences for the person.
@@ -59,24 +54,17 @@ def write_board_log(project, log):
     return path
 
 
-def newer_files(project, image):
-    """The files under firmware/ changed after the image was made, as project paths. The board gets the image, not them."""
-    made = image.stat().st_mtime
-    return sorted(str(path.relative_to(project)) for path in (project / "firmware").rglob("*")
-                  if path.is_file() and "__pycache__" not in path.parts and path.stat().st_mtime > made)
-
-
 class DeployService:
     """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `run` runs a command, `clock` reads the
     time (default: board_grant.read_local_time, called once), `probe` finds a board in download mode (default: the platform's).
-    `ignore_older_runs` holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
+    `evidence` (an ImageEvidence) holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
     `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
 
     #: How the service waits before its flasher's retry. A test replaces it.
     sleep = staticmethod(time.sleep)
 
-    def __init__(self, project, platform, ignore_older_runs=False, run=subprocess.run, clock=None, probe=None, echo_to=None):
-        self.project, self.platform, self.ignore_older_runs = project, platform, ignore_older_runs
+    def __init__(self, project, platform, evidence, run=subprocess.run, clock=None, probe=None, echo_to=None):
+        self.project, self.platform, self.evidence = project, platform, evidence
         self.run, self.clock, self.probe = run, clock, probe
         self.echo_to = echo_to  # a file descriptor for the flash tool's own output (2 under --json), or None: as it is
 
@@ -84,26 +72,20 @@ class DeployService:
         """
         A DeployPlan (the flash commands, the shell's command, notes) for this project. Nothing runs here. A DeployError or
         a tools.ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
-        A run log that tested another image refuses the flash, unless `ignore_older_runs` makes it a note.
+        A run log that tested another image refuses the flash, unless the evidence makes it a note.
         """
         image = ProjectImage(self.project)
-        why = image.why_untested()
+        why = self.evidence.why_not_ready(image)
         if why:
-            raise DeployError(why)
-        other = image.why_other_runs()
-        if other and not self.ignore_older_runs:
-            raise DeployError(other + OLDER_RUNS_WAY_OUT)
+            raise DeployError(why + self.evidence.way_out(image))
         project_flasher = self.platform.make_flasher()
         shell_command = self.platform.make_shell_command()
-        changed = newer_files(self.project, image.path)
-        notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
-                 "scenario again to test it." % ", ".join(changed)] if changed else []
-        notes += [other] if other else []
+        notes = self.evidence.notes(image)
         return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), shell_command, notes)
 
     def look(self, port=None):
         """The LookReport of the board on USB. Raises LookStop to say why not."""
-        return board_look.looker(self.project, self.run).run(self.project, port, self.ignore_older_runs)
+        return board_look.looker(self.project, self.run).run(self.project, port, self.evidence)
 
     def deploy(self, report, token, consent, show_line):
         """
@@ -153,8 +135,7 @@ class DeployService:
         tools.ToolProblem when a tool is missing: after the flash they are not turned into a sentence. `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
         """
         image = ProjectImage(self.project)  # fresh: the flash and the person's wait are behind us
-        passed = image.find_passed_log()
-        expected = file_hashes(passed) if passed else {}
+        expected = self.evidence.expected_files(image)
         connection = self.platform.make_connection(planned.mpremote, report.port, self.run)
         moment = (self.clock or board_grant.read_local_time)()  # once: the facts file and the board log share it
         facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
