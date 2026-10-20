@@ -2,8 +2,8 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "image-differs-passes",
-  "find": "if image.path.read_bytes() != built:",
-  "replace": "if image.path.read_bytes() == built:"
+  "find": "if held != built:",
+  "replace": "if held == built:"
  },
  {
   "file": "scripts/image_evidence.py",
@@ -14,8 +14,8 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "no-main-passes",
-  "find": "if not (firmware / \"main.py\").is_file():",
-  "replace": "if (firmware / \"main.py\").is_file() and False:"
+  "find": "if not (self.project / \"firmware\" / \"main.py\").is_file():",
+  "replace": "if (self.project / \"firmware\" / \"main.py\").is_file() and False:"
  },
  {
   "file": "scripts/image_evidence.py",
@@ -38,8 +38,8 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "no-caveat",
-  "find": "else \"no simulation tested this image\"",
-  "replace": "else None"
+  "find": "caveat = NO_SIMULATION_CAVEAT",
+  "replace": "caveat = None"
  },
  {
   "file": "scripts/deploy_gate.py",
@@ -60,15 +60,39 @@
   "replace": "self.image_sha256, \"passed\", self.facts_line,"
  },
  {
-  "file": "scripts/look.py",
+  "file": "scripts/image_evidence.py",
   "name": "look-ignores-flag",
-  "find": "NoSimulationEvidence(args.project) if args.no_simulation else",
-  "replace": "PassedRunEvidence(args.ignore_older_runs) if args.no_simulation else"
+  "find": "return NoSimulationEvidence(project) if no_simulation else",
+  "replace": "return PassedRunEvidence(ignore_older_runs) if no_simulation else"
  },
  {
   "file": "scripts/deploy.py",
   "name": "both-flags-allowed",
   "find": "which = parser.add_mutually_exclusive_group()",
   "replace": "which = parser"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "recursion-uncaught",
+  "find": "except (RecursionError, MemoryError):",
+  "replace": "except (ZeroDivisionError, MemoryError):"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "littlefs-uncaught",
+  "find": "if type(cannot).__name__ != \"LittleFSError\":",
+  "replace": "if True:"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "failed-run-ignored",
+  "find": "if sha256 == image.sha256 and verdict != \"passed\":",
+  "replace": "if sha256 == image.sha256 and verdict == \"passed\" and False:"
+ },
+ {
+  "file": "scripts/board_envelope.py",
+  "name": "grant-clause-always",
+  "find": "(\"\" if evidence.grant_refusal else GRANT_CLAUSE)",
+  "replace": "GRANT_CLAUSE"
  }
 ]

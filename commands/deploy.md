@@ -1,6 +1,6 @@
 ---
 description: Put the flash image on the board on USB, one that a passed simulation tested or, on the person's yes, one of firmware/ that no simulation tested: look at the board first, then the person's yes, then erase and write, then read the board back. The look and the dry run change nothing.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py *)
 ---
 
 # spark:deploy

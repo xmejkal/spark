@@ -94,7 +94,7 @@ class DeployService:
         tools.ToolProblem say why nothing, or not everything, was flashed.
         """
         image_path = ProjectImage(self.project).path.relative_to(self.project)
-        deploy_gate.require_open_gate(report, token, consent, image_path, self.evidence.caveat())
+        deploy_gate.require_open_gate(report, token, consent, image_path, self.evidence.caveat)
         if isinstance(consent, board_grant.StandingConsentStrategy):
             show_line("  yes: %s" % consent.who)
         planned = self.plan(report.port)

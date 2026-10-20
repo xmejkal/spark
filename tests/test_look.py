@@ -148,6 +148,15 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual((code, envelope["data"]["simulation"]), (0, "none"))
         self.assertIn("--no-simulation", envelope["next"][0]["argv"])
 
+    def test_the_next_step_names_a_deploy_grant_only_where_a_grant_may_answer(self):
+        self.build_from_firmware()
+        none = json.loads(self.go("--no-simulation", "--json")[1][-1])["next"][0]["why"]
+        self.assertIn("types yes in their own terminal;", none)
+        self.assertNotIn("grant", none)
+        self.run_the_scenario()
+        passed = json.loads(self.go("--json")[1][-1])["next"][0]["why"]
+        self.assertIn("or a deploy grant stands", passed)
+
     def test_both_flags_are_an_argument_error(self):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             self.go("--no-simulation", "--ignore-older-runs")

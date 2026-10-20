@@ -1190,7 +1190,7 @@ $ deploy.py --project . --token xxxx-f34b
 ...
 Hard resetting via RTS pin...
   facts file spark.json sha256: aab5fd6e5ddc3864c9d9ea22539132ad9bb4ff606e164cf1bf8c41f7dc1bb0d2
-  ready seen: the firmware printed 'ready' and the board's 3 files match the image
+  ready seen: the firmware printed 'ready' and the board's 3 files match the run that passed
   board log: sim/runs/board/2026-10-14T14-12-17.log
   store record: <store>/boards/8c-bf-ea-xx-xx-xx.json
 ```
@@ -1218,7 +1218,7 @@ $ deploy.py --token xxxx-08bc
 ...
 Hard resetting via RTS pin...
   facts file spark.json sha256: cd926eeb3dd2081e8762341544d6e332dca7c92a1d63e57a92e933a479760756
-  ready seen: the firmware printed 'ready' and the board's 3 files match the image
+  ready seen: the firmware printed 'ready' and the board's 3 files match the run that passed
   board log: sim/runs/board/2026-10-15T02-10-31.log
   store record: <store>/boards/8c-bf-ea-xx-xx-xx.json
 ```

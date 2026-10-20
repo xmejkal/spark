@@ -489,6 +489,19 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`.
 - A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.
 
+### Deploy without a simulation
+
+For firmware that no simulation can test (P337). Three steps, then the person's yes:
+
+1. `flash_image.py --project <p> --files firmware -o <image>`, where `<image>` is the file `sim/wokwi.toml` names.
+2. `look.py --project <p> --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file
+   under `firmware/` compiles, no run in `sim/runs/` failed on the image, and the image holds `firmware/` as it is now.
+3. `deploy.py --project <p> --no-simulation --token <token>`. The question starts with "no simulation tested this image".
+
+The person types the yes in their own terminal. A deploy grant never answers it, and the `next` step's `why` omits the
+grant clause. The facts file, the board log, the store record and `data.simulation` say `none`. Nothing ran the firmware
+before the flash, so relay that.
+
 ## The outcomes and their exit codes
 
 The exit codes are defined once, in [`scripts/outcomes.py`](../../scripts/outcomes.py); the command-line scripts

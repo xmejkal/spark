@@ -16,6 +16,8 @@ from run_scenario import NO_MAIN, READY, file_hashes
 
 #: What `ImageEvidence.simulation` says: a passed run tested the image, or no simulation did (the records keep it).
 SIMULATION_PASSED, SIMULATION_NONE = "passed", "none"
+#: What the person reads before the gate question when no simulation tested the image (deploy.py's docs quote it).
+NO_SIMULATION_CAVEAT = "no simulation tested this image"
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
@@ -35,9 +37,8 @@ class ImageEvidence(abc.ABC):
     #: SIMULATION_PASSED or SIMULATION_NONE
     simulation = SIMULATION_PASSED
 
-    def caveat(self):
-        """What the person reads before the gate question, or None when a passed run tested the image."""
-        return None if self.simulation == SIMULATION_PASSED else "no simulation tested this image"
+    #: What the person reads before the gate question, or None when a passed run tested the image.
+    caveat = None
 
     @abc.abstractmethod
     def why_not_ready(self, image):
@@ -47,9 +48,9 @@ class ImageEvidence(abc.ABC):
         """What to do instead of a refusal, as words that end its sentence, or "" when there is nothing to add."""
         return ""
 
-    @abc.abstractmethod
     def notes(self, image):
-        """Sentences for the person about this evidence and `image`."""
+        """Sentences for the person about this evidence and `image`, or [] when there are none."""
+        return []
 
     @abc.abstractmethod
     def expected_files(self, image):
@@ -103,34 +104,64 @@ class NoSimulationEvidence(ImageEvidence):
     """
 
     simulation = SIMULATION_NONE
+    caveat = NO_SIMULATION_CAVEAT
     grant_refusal = board_grant.WHY_NO_SIMULATION
 
     def __init__(self, project):
         self.project = Path(project)
 
     def why_not_ready(self, image):
-        firmware = self.project / "firmware"
-        if not (firmware / "main.py").is_file():
+        """None, or one sentence. It never raises for firmware/ or the image: a broken file is a sentence."""
+        return (self._why_no_main() or self._why_not_compiling() or self._why_run_failed(image)
+                or self._why_image_differs(image))
+
+    def _why_no_main(self):
+        if not (self.project / "firmware" / "main.py").is_file():
             return NO_MAIN % (self.project, READY)
-        try:
-            for source in sorted(firmware.rglob("*.py")):
-                if "__pycache__" in source.parts:
-                    continue
-                try:
-                    compile(source.read_bytes(), str(source), "exec")
-                except SyntaxError as broken:
-                    return "%s, line %s does not compile: %s" % (source.relative_to(self.project), broken.lineno, broken.msg)
-            built = flash_image.image(flash_image.interpreter_path(None, self.project).read_bytes(),
-                                      flash_image.files_under(firmware))
-            if image.path.read_bytes() != built:
-                return ("%s does not hold firmware/ as it is now: build it with flash_image.py --project %s --files "
-                        "firmware -o %s" % (image.path.name, self.project.resolve(), image.path))
-        except (tools.ToolProblem, OSError, ValueError, ImportError) as cannot:
-            return "cannot check %s against firmware/: %s" % (image.path.name, cannot)
         return None
 
-    def notes(self, image):
-        return []
+    def _why_not_compiling(self):
+        for source in sorted((self.project / "firmware").rglob("*.py")):
+            if "__pycache__" in source.parts:
+                continue
+            name = source.relative_to(self.project)
+            try:
+                code = source.read_bytes()
+            except OSError as cannot:
+                return "cannot read %s: %s" % (name, cannot)
+            try:
+                compile(code, str(source), "exec")
+            except SyntaxError as broken:
+                return "%s, line %s does not compile: %s" % (name, broken.lineno, broken.msg)
+            except (RecursionError, MemoryError):
+                return "%s is too deeply nested or too big to compile" % name
+            except ValueError as broken:  # a source with a null byte
+                return "%s does not compile: %s" % (name, broken)
+        return None
+
+    def _why_run_failed(self, image):
+        """A run that did not pass on this image refuses here too: a passed run is not needed, a failed one still counts."""
+        for log, verdict, sha256 in image.read_run_logs():
+            if sha256 == image.sha256 and verdict != "passed":
+                return ("%s did not pass on this image (verdict: %s): deploy.py flashes no image that a run failed"
+                        % (log.name, verdict))
+        return None
+
+    def _why_image_differs(self, image):
+        try:
+            built = flash_image.image(flash_image.interpreter_path(None, self.project).read_bytes(),
+                                      flash_image.files_under(self.project / "firmware"))
+            held = image.path.read_bytes()
+        except (tools.ToolProblem, OSError, ValueError, ImportError) as cannot:
+            return "cannot check %s against firmware/: %s" % (image.path.name, cannot)
+        except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as flash_image does
+            if type(cannot).__name__ != "LittleFSError":
+                raise
+            return "firmware/ does not fit the image's file system: %s" % cannot
+        if held != built:
+            return ("%s does not hold firmware/ as it is now: build it with flash_image.py --project %s --files "
+                    "firmware -o %s" % (image.path.name, self.project.resolve(), image.path))
+        return None
 
     def expected_files(self, image):
         return {path: hashlib.sha256(data).hexdigest()
@@ -138,3 +169,8 @@ class NoSimulationEvidence(ImageEvidence):
 
     def argv(self):
         return [NO_SIMULATION_FLAG]
+
+
+def evidence_for(project, no_simulation, ignore_older_runs):
+    """The evidence the flags of look.py and deploy.py select (they exclude each other in argparse)."""
+    return NoSimulationEvidence(project) if no_simulation else PassedRunEvidence(ignore_older_runs)

@@ -17,6 +17,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_envelope  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
 import flash_image  # noqa: E402
@@ -307,6 +308,20 @@ class WhatDeployNeedsTest(ProjectCase):
         code, said, _, _ = self.deploy("--dry-run")
         self.assertEqual(code, deploy.EXIT_OK)
         self.assertIn("note: firmware/main.py changed after this image was made", said)
+
+
+class TheDeployEnvelopeYesRuleTest(unittest.TestCase):
+    """P337 B: the NEXT_DEPLOY step names a deploy grant only where a grant may answer."""
+
+    def step_why(self, evidence):
+        reached = {"project": Path("p"), "evidence": evidence, "stage": "gate", "next_op": "deploy",
+                   "token": "t", "port": "/dev/x", "refusal": "no yes"}
+        return board_envelope.deploy_envelope(reached, 2)["next"][0]["why"]
+
+    def test_no_simulation_drops_the_grant_clause_and_a_passed_run_keeps_it(self):
+        self.assertNotIn("grant", self.step_why(image_evidence.NoSimulationEvidence("p")))
+        self.assertNotIn("grant", self.step_why(image_evidence.PassedRunEvidence(True)))
+        self.assertIn("or a deploy grant stands", self.step_why(image_evidence.PassedRunEvidence()))
 
 
 if __name__ == "__main__":

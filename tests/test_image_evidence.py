@@ -106,7 +106,7 @@ class PassedRunEvidenceTest(unittest.TestCase):
             PassedRunEvidence().why_not_ready(self.image)
 
     def test_a_passed_run_is_simulation_passed_with_no_caveat(self):
-        self.assertEqual((PassedRunEvidence().simulation, PassedRunEvidence().caveat()), ("passed", None))
+        self.assertEqual((PassedRunEvidence().simulation, PassedRunEvidence().caveat), ("passed", None))
 
 
 class NoSimulationEvidenceTest(unittest.TestCase):
@@ -174,6 +174,26 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.interpreter.unlink()
         self.assertIn("cannot check", self.why())
 
+    def test_a_very_deep_expression_is_a_sentence_not_a_recursion_error(self):
+        (self.firmware / "deep.py").write_text("x = " + "1+" * 200000 + "1\n")
+        why = self.why()
+        self.assertIn("firmware/deep.py", why)
+        self.assertIn("too deeply nested", why)
+
+    def test_a_file_too_big_for_the_image_is_a_sentence_not_a_littlefs_error(self):
+        (self.firmware / "big.bin").write_bytes(os.urandom(2200 * 1024))
+        self.assertIn("firmware/ does not fit the image's file system", self.why())
+
+    def test_a_failed_run_of_this_image_refuses_and_names_the_log_and_its_verdict(self):
+        write_log(self.project, "bad.log", FAILED, ProjectImage(self.project).sha256)
+        why = self.why()
+        self.assertIn("bad.log did not pass on this image", why)
+        self.assertIn(FAILED, why)
+
+    def test_a_passed_run_of_this_image_does_not_matter(self):
+        write_log(self.project, "a.log", "passed", ProjectImage(self.project).sha256)
+        self.assertIsNone(self.why())
+
     def test_the_expected_files_are_the_sha256_of_each_file_under_firmware(self):
         (self.firmware / "lib").mkdir()
         (self.firmware / "lib" / "a.py").write_text("a = 1\n")
@@ -183,7 +203,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_it_says_none_with_its_caveat_flag_and_no_notes_and_never_answers_for_a_grant(self):
         evidence = NoSimulationEvidence(self.project)
-        self.assertEqual((evidence.simulation, evidence.caveat(), evidence.argv(), evidence.notes(self.image)),
+        self.assertEqual((evidence.simulation, evidence.caveat, evidence.argv(), evidence.notes(self.image)),
                          ("none", "no simulation tested this image", ["--no-simulation"], []))
         self.assertEqual(evidence.grant_refusal, "no simulation")
         self.assertEqual(evidence.way_out(self.image), "")
