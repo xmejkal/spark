@@ -184,7 +184,7 @@ class LookReport:
 
     def __init__(self, port, reading, record, image, image_why):
         self.port, self.reading, self.record = port, reading, record
-        self.image, self.image_why = image, image_why  # the image Path or None; why no passed run names it, or None
+        self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.fields = compare(reading, record)
         self.stops, self.warnings = [], []
         if self.fields["chip"] == "differs":

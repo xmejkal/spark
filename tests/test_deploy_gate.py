@@ -143,7 +143,7 @@ class TheGateTest(GateCase):
         self.assertEqual(self.flashed(), ["erase_flash", str(self.image)])
         self.assertTrue(all("/dev/cu.usbmodem101" in c for c in self.ran if "erase_flash" in c or "write_flash" in c))
         self.assertIn("erase ALL of this board's flash", consent.asked[0])
-        self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the run that passed", said)
+        self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the image", said)
 
     def test_deploy_prints_the_look_without_a_token_line(self):
         self.run_the_scenario()
@@ -321,13 +321,13 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.files_on_board = {"/main.py": b"print('old')\n"}
         code, said, _ = self.flash()
         self.assertEqual(code, 1)
-        self.assertIn("ready not seen: the board's /main.py is not the files that passed", said)
+        self.assertIn("ready not seen: the board's /main.py is not the files of the image", said)
 
     def test_a_file_missing_on_the_board_is_named(self):
         self.files_on_board = {}
         code, said, _ = self.flash()
         self.assertEqual(code, 1)
-        self.assertIn("/main.py is not the files that passed", said)
+        self.assertIn("/main.py is not the files of the image", said)
 
     def test_a_firmware_that_prints_no_ready_is_not_seen(self):
         self.prints = "booting\n"
@@ -565,11 +565,11 @@ class TheFactsAfterTheFlashTest(GateCase):
     def test_the_facts_carry_the_moment_given_and_no_clock(self):
         moment = datetime.datetime(2026, 1, 2, 3, 4, 5)
         self.run_the_scenario()
-        said = board_facts.facts(self.project, "xiao-esp32-c6", "aa:bb", self.image, {}, moment)
+        said = board_facts.facts(self.project, "xiao-esp32-c6", "aa:bb", self.image, {}, moment, "passed")
         self.assertEqual(said["deployed"], "2026-01-02T03:04:05")
 
     def test_the_record_writes_the_who_it_is_given(self):
-        said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "deployed": "d"}
+        said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "simulation": "passed", "deployed": "d"}
         path = board_facts.record_deploy(said, "ready seen", "a test")
         self.assertEqual(json.loads(path.read_text())["deploys"][-1]["yes"], "a test")
 
@@ -629,16 +629,16 @@ class TheBoardLogTextTest(unittest.TestCase):
     def log(self, **kw):
         return deploy_service.BoardLog(**dict(dict(moment=self.MOMENT, port="/dev/x", image_sha256="abc",
                                            facts_line="facts file spark.json sha256: f", verdict="ready seen",
-                                           sentence="it is up", heard="the board said\n"), **kw))
+                                           sentence="it is up", heard="the board said\n", simulation="passed"), **kw))
 
     def test_a_ready_seen_log_reads_as_it_always_did(self):
-        self.assertEqual(self.log().text(), "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\n"
+        self.assertEqual(self.log().text(), "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\nsimulation: passed\n"
                          "facts file spark.json sha256: f\nready seen: it is up\n\nthe board said\n\n")
 
     def test_a_log_with_no_reset_keeps_the_console_text_before_the_board_s(self):
         text = self.log(verdict="ready unknown", sentence="no reset came",
                         heard="console with DTR and RTS off: waiting for download\nno reset\nOSError\n").text()
-        self.assertEqual(text, "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\n"
+        self.assertEqual(text, "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\nsimulation: passed\n"
                          "facts file spark.json sha256: f\nready unknown: no reset came\n\n"
                          "console with DTR and RTS off: waiting for download\nno reset\nOSError\n\n")
 
@@ -867,6 +867,87 @@ class TheStandingYesTest(GateCase):
         self.assertNotIn("--scope deploy", problems)
 
 
+class TheNoSimulationDeployTest(GateCase):
+    """P337 B: --no-simulation puts firmware/ on the board with no run log, and every record says so."""
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.build_image()
+
+    def build_image(self):
+        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
+
+    def evidence(self):
+        return image_evidence.NoSimulationEvidence(self.project)
+
+    def flash(self, *argv, **kw):
+        return self.deploy("--no-simulation", "--token", self.token(evidence=self.evidence()), *argv, **kw)
+
+    def test_a_project_with_no_run_log_deploys_and_every_record_says_none(self):
+        consent = FakeConsent(True)
+        code, said, _ = self.flash(consent=consent)
+        self.assertEqual((code, self.flashed()), (0, ["erase_flash", str(self.image)]))
+        self.assertFalse(list((self.project / "sim" / "runs").glob("*.log")))
+        self.assertEqual(json.loads(self.copied["spark.json"])["simulation"], "none")
+        self.assertIn("simulation: none", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+        record = Path(said.split("store record: ")[1].strip())
+        self.assertEqual(json.loads(record.read_text())["deploys"][-1]["simulation"], "none")
+        self.assertIn("ready seen", said)
+
+    def test_the_question_starts_with_the_caveat(self):
+        consent = FakeConsent(True)
+        self.flash(consent=consent)
+        self.assertTrue(consent.asked[0].startswith("no simulation tested this image. erase ALL of this board's flash"),
+                        consent.asked[0])
+
+    def test_the_json_envelope_says_none(self):
+        code, said, _ = self.flash("--json", consent=FakeConsent(True))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(said)["data"]["simulation"], "none")
+
+    def test_a_passed_run_deploy_says_passed_in_its_records(self):
+        self.run_the_scenario()
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(self.copied["spark.json"])["simulation"], "passed")
+        self.assertIn("simulation: passed", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
+    def test_a_firmware_file_changed_after_the_image_refuses_and_names_the_build(self):
+        token = self.token(evidence=self.evidence())
+        (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
+        code, _, problems = self.deploy("--no-simulation", "--token", token, consent=FakeConsent(True))
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("flash_image.py --project %s --files firmware -o %s" % (self.project.resolve(), self.image), problems)
+
+    def test_without_the_flag_a_project_with_no_run_log_is_refused_as_before(self):
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True))
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("no run in sim/runs/ tested", problems)
+
+    def test_both_flags_are_an_argument_error(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            self.deploy("--no-simulation", "--ignore-older-runs")
+
+    def test_a_deploy_grant_is_not_used_and_no_grant_is_offered(self):
+        clock = FakeLocalClock(datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc))
+        pin_time_zone(self)
+        mac = "8c:bf:ea:xx:xx:xx"
+        board_grant.GrantStore().save(board_grant.Grant(
+            mac, board_grant.board_look.board_token(mac), "ada", clock.now.isoformat(),
+            (clock.now + datetime.timedelta(minutes=30)).isoformat(), "deploy"))
+        code, said, problems = self.flash(grant_service=board_grant.GrantService(now=clock))
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("--no-simulation is never covered by a deploy grant", said)
+        self.assertIn("no terminal to ask you in", problems)
+        self.assertNotIn("--scope deploy", problems)
+
+
 class TheRerunLineTest(unittest.TestCase):
     """P283: the line a person runs in their own terminal names the script by its whole path, from any folder."""
 
@@ -881,6 +962,18 @@ class TheRerunLineTest(unittest.TestCase):
 
     def test_a_path_with_a_space_is_quoted(self):
         self.assertEqual(deploy_gate.format_rerun_line("/my spark/grant.py", []), "'/my spark/grant.py'")
+
+
+class TheCaveatTest(GateCase):
+    def test_the_caveat_comes_first_in_the_question(self):
+        self.run_the_scenario()
+        report = self.look()
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", "no simulation tested this image")
+        self.assertEqual(consent.asked, ["no simulation tested this image. erase ALL of this board's flash and write x.bin?"])
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin")
+        self.assertEqual(consent.asked, ["erase ALL of this board's flash and write x.bin?"])
 
 
 class TerminalConsentTest(unittest.TestCase):

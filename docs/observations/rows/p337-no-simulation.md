@@ -45,3 +45,22 @@ The refuter ran 10 cases on main and on the branch, and every refusal and note w
 | 22 | `p283-full-path-lines.json` `deploy-drop-ignore` matches no line | refuter | acted | now on `image_evidence.py` |
 | 23 | `deploy_envelope`'s docstring says every key is optional, but `evidence` is required | refuter | acted | docstring |
 | 24 | The mutation `>` to `>=` in `newer_files` escaped: no test has a file as old as the image | mutation run, 10 planted, 9 caught | acted | new test, row in `tests/mutations/p337-image-evidence.json` |
+
+## PR B's review (#456): the refuter (Opus), a design lens (Sonnet)
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 25 | `why_not_ready` raises `LittleFSError` for a 2.2 MB file in firmware/ and `RecursionError` for a 200000-deep expression | refuter (R1), reproduced | acted | both are sentences now; two tests with a big file and a deep expression in a temp project; mutations `recursion-uncaught`, `littlefs-uncaught` |
+| 26 | An image that a run failed on is accepted under `--no-simulation` | refuter (R2), reproduced | acted | `_why_run_failed` reuses `ProjectImage.read_run_logs` and names the log and its verdict; a passed run is fine; mutation `failed-run-ignored` |
+| 27 | The look and deploy next steps say "(or a deploy grant stands)" where a grant never answers | refuter (R3), reproduced | acted | `yes_rule(evidence)` drops the clause when `grant_refusal` is set; tests on look and deploy envelopes; mutation `grant-clause-always` |
+| 28 | `commands/deploy.md` calls `flash_image.py` without it in `allowed-tools`; the dated 2026-10-14/15 bench quotes were rewritten | refuter (R6) | acted | `flash_image.py` listed; README and journey quotes back to "match the run that passed" |
+| 29 | `docs/guide/agents.md` has no steps for a deploy without a simulation | design lens (L1) | acted | subsection "Deploy without a simulation" |
+| 30 | The caveat text is a literal, and `caveat()` compares `self.simulation` | design lens (L2) | acted | `NO_SIMULATION_CAVEAT`; each class has its own `caveat` attribute; deploy.py's epilog quotes the constant |
+| 31 | Flags are written twice, and the evidence is chosen in two places | design lens (L3) | acted | `NO_SIMULATION_FLAG`, `IGNORE_OLDER_RUNS_FLAG` in `add_argument`; one `evidence_for(project, no_simulation, ignore_older_runs)` |
+| 32 | `why_not_ready` is one long method with one wide `try` | design lens (L4) | acted | four private helpers, cheapest first; each `except` wraps only what raises it |
+| 33 | deploy.py's docstring carries the `--no-simulation` material | design lens (L6) | acted | shorter docstring, the material is in the epilog; added lines wrapped at 120 |
+| 34 | The README row must say what works and that no board was flashed with the flag | design lens (L7) | acted | "No board has been flashed with it yet" |
+| 35 | `notes()` is abstract, and `NoSimulationEvidence` has a stub | design lens (L8) | acted | default `[]` in the base class, stub dropped |
+| 36 | Rename `WHY_NO_SIMULATION`'s value | design lens (item 5) | rejected | the other `WHY_` codes (`WHY_IGNORE_OLDER_RUNS` = "ignore older runs") are prose too |
+| 37 | The token can skip a check | refuter | rejected | the token is checked against the board and the image, never in place of the evidence |
+| 38 | The byte-for-byte image comparison misses a changed interpreter, config, hidden files, lib or long names | refuter | rejected | the comparison rebuilds the whole image with the same interpreter and files, so each of those changes the bytes |

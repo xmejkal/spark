@@ -1,8 +1,8 @@
 """
-After a flash: do the board's files match the passed run's hashes, and does the firmware print `ready`? (P215, D33)
+After a flash: do the board's files match the expected hashes, and does the firmware print `ready`? (P215, D33)
 
 A library. `ReadyCheck` runs code on the board twice, through its BoardConnection. First it hashes each file that
-the passed run's log names (run_scenario.file_hashes), on the board itself. Then it imports `main`, as the board does
+the evidence names (a passed run's log, or firmware/), on the board itself. Then it imports `main`, as the board does
 at boot, and reads its output for READY_WAIT_S seconds. Ready is seen only when both agree. When mpremote cannot reach
 the board, it is unknown, never seen. So is a passed run's log from before P215, which names no files.
 """
@@ -65,11 +65,11 @@ class ReadyCheck:
             return ReadyResult(UNKNOWN, "mpremote could not start the firmware: %s" % cannot, hashes + cannot.output)
         log = hashes + said
         if differ:
-            return ReadyResult(NOT_SEEN, "the board's %s %s not the files that passed" % (
+            return ReadyResult(NOT_SEEN, "the board's %s %s not the files of the image" % (
                 ", ".join(differ), "is" if len(differ) == 1 else "are"), log)
         if stopped is not None:
             return ReadyResult(NOT_SEEN, "the firmware stopped with an error: %s" % stopped, log)
         if READY not in said:
             return ReadyResult(NOT_SEEN, "the firmware printed no %r in %d s" % (READY, READY_WAIT_S), log)
-        return ReadyResult(SEEN, "the firmware printed %r and the board's %d files match the run that passed" % (
+        return ReadyResult(SEEN, "the firmware printed %r and the board's %d files match the image" % (
             READY, len(expected)), log)

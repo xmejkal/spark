@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-Put the flash image that passed the simulation onto the board (P192).
+Put the flash image onto the board: one that a passed run names (P192), or, with --no-simulation, firmware/ (P337).
 
     deploy.py --dry-run                          # in the project folder: print what it would run, run nothing
     look.py                                      # read the board on USB and print its token
     deploy.py --token 3f9a-0c1e                  # look again, ask yes in your terminal, erase, then write the image
+    deploy.py --no-simulation --token 3f9a-0c1e  # the same for an image no simulation tested (--help)
 
 The image is the one sim/wokwi.toml names. run_scenario.py writes it, MicroPython and the project's firmware/ in one
 flash image, and tests it: each run's log names the image's sha256. This flashes the image only when a run that passed
 names it and no run with another verdict does. esptool erases the flash and writes the image at 0x0, where the
 simulator loaded it. Then deploy.py copies a facts file, spark.json, to the board and reads it back (board_facts.py,
-P215), and reads the board with mpremote (ready_check.py): each file's sha256 against the passed run's log, then the
-firmware's start, which prints `ready` (the ready contract, commands/build.md). The board's log goes to
-sim/runs/board/, and the store keeps a record of the board by its MAC.
+P215), and reads the board with mpremote (ready_check.py): each file's sha256, then the firmware's start, which prints
+`ready` (the ready contract, commands/build.md). The board's log goes to sim/runs/board/, and the store keeps a record
+of the board by its MAC.
 
 Before the erase, deploy.py looks at the board as look.py does (P219). It refuses a stop, a token that is not this
 board's and this image's, and a deploy with no yes: one typed in the person's own terminal, or the standing yes of a
@@ -38,7 +39,7 @@ import store
 import tools
 from deploy_service import DeployService, FlashError
 from firmware_platform import FirmwarePlatform
-from image_evidence import PassedRunEvidence
+from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 
@@ -48,7 +49,17 @@ DEPLOYED_LINE = "image sha256: %s, yes: %s"
 WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
-(--ignore-older-runs flashes anyway). It erases the board's flash first. If the erase stops with esptool's exit 2,
+(--ignore-older-runs flashes anyway).
+
+--no-simulation flashes an image that no simulation tested, as the board is the test. Build the image first with
+`flash_image.py --project . --files firmware -o <the image sim/wokwi.toml names>`. Then look.py and deploy.py both need
+--no-simulation. deploy.py refuses when firmware/main.py is missing, a .py file under firmware/ does not compile, a run
+in sim/runs/ failed on this image, or the image is not firmware/ as it is now. It does not run the firmware, so a
+firmware that fails on the board shows only after the flash. The question starts with "%s", only a typed yes
+answers it (a deploy grant never does), and the spark.json, the board log, the store record and the --json data say
+`simulation: none`. It cannot be given with --ignore-older-runs.
+
+It erases the board's flash first. If the erase stops with esptool's exit 2,
 it makes one retry after 5 s and prints `retry in 5 s: ...` (P290).
 
 The gate: run look.py first and pass its token. deploy.py looks at the board again (the board restarts) and refuses a
@@ -57,24 +68,24 @@ asks in your terminal, naming every warning: type yes to accept them and erase. 
 A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. "Go
 ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
-The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for
-this board's MAC. While it lasts, deploy.py takes it as the yes, prints `yes: standing yes typed by ...` and erases with no question,
-but only when the look matched the board record (no warning, no unknown field, no stop) and --ignore-older-runs is not
-given. Then the token and the check that the image did not change still hold. For anything else, or with no grant or an
-ended one, deploy.py asks in the terminal as above and says why it did not use the grant. The grant covers any passed
-image of any project on that board. The store's record names whose yes it was.
+The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for this
+board's MAC. While it lasts, deploy.py takes it as the yes, prints `yes: standing yes typed by ...` and erases with no
+question, but only when the look matched the board record (no warning, no unknown field, no stop) and neither
+--ignore-older-runs nor --no-simulation is given. Then the token and the check that the image did not change still hold.
+For anything else, or with no grant or an ended one, deploy.py asks in the terminal as above and says why it did not use
+the grant. The grant covers any passed image of any project on that board. The store's record names whose yes it was.
 
 After the flash it copies spark.json to the board: spark's version, the project, the board type, the MAC, the image's
-sha256 and each file's sha256. The board log names the file's sha256, and the store's boards/<MAC>.json adds this
-deploy with its verdict and whose yes it was. Then it reads the board: ready seen means the board's files match the
-passed run's sha256s and the firmware printed `ready` within %d s. The board's log goes to sim/runs/board/. A firmware
-that stops with an error is not seen. If mpremote cannot reach the board, for example because its port changed after
-the flash, or the passed run's log is from before P215 and names no files, ready is unknown, never seen.
-If ready is unknown and the passed log names files, deploy.py reads the port with DTR and RTS off. If it reads `waiting for download`, the
-board waits in its download mode: deploy.py asks you to press the board's RESET once (with its place when the board record has it), waits %d s for the
-port to go and come back under the same name, and reads the board again. If it reads the firmware's `ready`, the
-board finished its restart late, and deploy.py reads it again at once. What the port printed, `nothing`, or why it could
-not be read goes in the board log.
+sha256, each file's sha256 and `simulation` (passed or none). The board log names the file's sha256 and the simulation,
+and the store's boards/<MAC>.json adds this deploy with its verdict, its simulation and whose yes it was. Then it reads
+the board: ready seen means the board's files match the evidence's sha256s and the firmware printed `ready` within %d s.
+The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the
+board, for example because its port changed after the flash, or the passed run's log is from before P215 and names no
+files, ready is unknown, never seen. If ready is unknown and the passed log names files, deploy.py reads the port with
+DTR and RTS off. If it reads `waiting for download`, the board waits in its download mode: deploy.py asks you to press
+the board's RESET once (with its place when the board record has it), waits %d s for the port to go and come back under
+the same name, and reads the board again. If it reads the firmware's `ready`, the board finished its restart late, and
+deploy.py reads it again at once. What the port printed, `nothing`, or why it could not be read goes in the board log.
 
 --json prints one envelope on stdout (docs/guide/agents.md): the token, the look, the stage the run reached, the yes, the
 board log and the store record in `data`, and in `next` the step that waits for the person (`needs_yes`). Every line above
@@ -83,7 +94,7 @@ code's. An argument error prints usage on stderr and no envelope.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
-    ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
+    NO_SIMULATION_CAVEAT, ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
 def rerun_line(args, port, evidence):
@@ -107,8 +118,8 @@ def grant_hint(args, port):
 
 def choose_consent(args, report, grant_service, evidence, out=None):
     """The ConsentStrategy for this deploy, after the look: the standing yes of a valid deploy grant when the look
-    matched and the deploy ignores no older run, else a yes typed in this terminal. Prints one line that says which, and
-    why not when it is the terminal."""
+    matched and the evidence allows it (a passed run's, with no ignored older run), else a yes typed in this terminal.
+    Prints one line that says which, and why not when it is the terminal."""
     line = rerun_line(args, report.port, evidence)
     if report.verdict == board_look.VERDICT_MATCH and evidence.grant_refusal is None:
         line += grant_hint(args, report.port)
@@ -139,14 +150,18 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on "
                         "USB: the look lists them")
     parser.add_argument("--token", help="the token look.py printed for this board and this image")
-    parser.add_argument("--ignore-older-runs", action="store_true",
-                        help="flash even when a log in sim/runs/ tested another image, and name it in a note "
-                        "(default: refuse)")
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument(IGNORE_OLDER_RUNS_FLAG, action="store_true",
+                       help="flash even when a log in sim/runs/ tested another image, and name it in a note "
+                       "(default: refuse)")
+    which.add_argument(NO_SIMULATION_FLAG, action="store_true",
+                       help="flash an image that no simulation tested: firmware/ must have a main.py, compile and be "
+                       "what the image holds. Needs look.py --no-simulation. The person's typed yes names the caveat")
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
                         "stderr (docs/guide/agents.md)")
     args = parser.parse_args(argv)
-    evidence = PassedRunEvidence(args.ignore_older_runs)
+    evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
     reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
             "evidence": evidence, "dry_run": args.dry_run}
     code = _deploy(args, evidence, run or subprocess.run, consent, probe, clock, grant_service, sys.stderr if args.json else None, reached)

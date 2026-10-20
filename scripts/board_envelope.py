@@ -16,13 +16,21 @@ import ready_check
 from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
 #: What the person must do first, said in a step's `why`.
-YES_RULE = "the person types yes in their own terminal (or a deploy grant stands); the token and \"go ahead\" in a chat are not the yes"
+YES_RULE = "the person types yes in their own terminal%s; the token and \"go ahead\" in a chat are not the yes"
+#: What YES_RULE adds when a deploy grant may answer.
+GRANT_CLAUSE = " (or a deploy grant stands)"
+
 #: A `fix` for each thing a deploy can wait for.
 FIX_FOR_NEXT = {NEXT_DEPLOY: "the person runs data.run_in_terminal in their own terminal", NEXT_LOOK: "run look.py again"}
 #: The stages of a deploy, the last one reached is `data.stage`.
 STAGE_PLAN, STAGE_LOOK, STAGE_GATE, STAGE_FLASH, STAGE_VERIFY = "plan", "look", "gate", "flash", "verify"
 #: The board's state after a flash command failed.
 MAY_BE_ERASED = "may_be_erased"
+
+
+def yes_rule(evidence):
+    """YES_RULE for this evidence: the grant clause only where a grant may answer."""
+    return YES_RULE % ("" if evidence.grant_refusal else GRANT_CLAUSE)
 
 
 def deploy_argv(project, token, port, evidence):
@@ -64,8 +72,8 @@ def look_envelope(report, project, evidence):
         unchecked.append({"sentence": "no token: %s" % report.no_token_reason(), "fix": "fix that, then run look.py again"})
     token = report.token()
     following = [deploy_step(project, token, report.port, evidence,
-                             "erases ALL of the flash, then writes the passed image. Relay the warnings first. " + YES_RULE)] if token else []
-    return outcomes.envelope("look", "look", report.to_dict(), problems, unchecked, following)
+                             "erases ALL of the flash, then writes the image. Relay the warnings first. " + yes_rule(evidence))] if token else []
+    return outcomes.envelope("look", "look", dict(report.to_dict(), simulation=evidence.simulation), problems, unchecked, following)
 
 
 def look_stop_envelope(sentence, doctor=None, places=boards.ButtonPlaces.EMPTY):
@@ -96,7 +104,7 @@ def deploy_envelope(reached, code):
         following = [look_step(project, port, evidence, "the look is missing or stale")]
     elif next_op == NEXT_DEPLOY:
         following = [deploy_step(project, reached.get("token"), port, evidence,
-                                 "the person runs data.run_in_terminal in their own terminal: " + YES_RULE)]
+                                 "the person runs data.run_in_terminal in their own terminal: " + yes_rule(evidence))]
         if reached.get("grant_argv"):
             following.append(outcomes.step("grant", reached["grant_argv"],
                                            "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)",
@@ -105,7 +113,7 @@ def deploy_envelope(reached, code):
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"
         following = [outcomes.step("watch", list(result.repl_command), again + (". First the person presses the board's %s" % boards.ButtonPlaces.of_project(project).reset if result.reset_seen is False else ""))]
     data = {
-        "stage": stage, "dry_run": bool(reached.get("dry_run")), "token": reached.get("token"),
+        "stage": stage, "simulation": evidence.simulation, "dry_run": bool(reached.get("dry_run")), "token": reached.get("token"),
         "commands": [list(command) for command in plan.commands] if plan else None,
         "look": report.to_dict() if report else None,
         "yes": {"kind": reached["yes_kind"], "who": reached["who"]} if consent else None,

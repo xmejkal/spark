@@ -1123,7 +1123,7 @@ per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
-**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../commands/deploy.md), P213). spark's own hardware step is
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, but only on a typed yes that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../commands/deploy.md), P213). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v0.10](../../scrum/VISION.md#versions)).
 
@@ -1256,10 +1256,10 @@ for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file 
 `grants/8c-bf-ea-cc-97-70-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
 While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: standing yes typed by ...` instead of asking. It still
 looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
-record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
+record (no warning, no unknown field, no stop) and never `--ignore-older-runs` or `--no-simulation`: for those deploy.py asks in your
 terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
 If the board then waits in its download mode, Claude tells you to press its RESET button once, and where it is.
-If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` is set), Claude stops, tells you why,
+If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` or `--no-simulation` is set), Claude stops, tells you why,
 and gives you the line to run in your own terminal. grant.py prints the file's full path and the `rm` line that ends the grant.
 
 While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal/spark/issues/267)):

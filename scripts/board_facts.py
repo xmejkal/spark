@@ -3,8 +3,8 @@ What spark put on a board, said in two places (P215 step 3, D22, D23, D44).
 
 A library. On the board: `FactsFile` copies a small facts file, FACTS_FILE, with mpremote after the flash and reads it
 back, so the image stays the one that passed. It names spark's version, the project, the board type, the MAC, the
-image's sha256 and each file's sha256. In the person's store: `record_deploy` keeps one record per physical board, by
-its MAC, with each deploy, its verdict and whose yes it was.
+image's sha256, each file's sha256 and what tested the image (`simulation`). In the person's store: `record_deploy` keeps one record per physical board, by
+its MAC, with each deploy, its verdict, its simulation and whose yes it was.
 """
 
 import hashlib
@@ -20,11 +20,12 @@ FACTS_FILE = "spark.json"
 PLUGIN_JSON = Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
 
 
-def facts(project, board, mac, image, files, moment):
-    """The facts file's content: what spark put on this board, from records it holds, at `moment` (a datetime)."""
+def facts(project, board, mac, image, files, moment, simulation):
+    """The facts file's content: what spark put on this board, from records it holds, at `moment` (a datetime). `simulation` is
+    "passed" or "none": what tested the image (ImageEvidence.simulation)."""
     return {"spark": json.loads(PLUGIN_JSON.read_text())["version"], "project": Path(project).resolve().name,
             "board": board, "mac": mac, "image_sha256": hashlib.sha256(Path(image).read_bytes()).hexdigest(),
-            "files": files, "deployed": moment.isoformat(timespec="seconds")}
+            "files": files, "simulation": simulation, "deployed": moment.isoformat(timespec="seconds")}
 
 
 def facts_text(said):
@@ -59,7 +60,7 @@ def record_deploy(facts, verdict, who):
     """
     key = store.slug(facts["mac"])
     deploy = {"project": facts["project"], "image_sha256": facts["image_sha256"], "deployed": facts["deployed"],
-              "verdict": verdict, "yes": who}
+              "verdict": verdict, "simulation": facts["simulation"], "yes": who}
     with store.locked():
         path = store.place("boards") / (key + ".json")
         try:

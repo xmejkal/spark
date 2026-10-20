@@ -140,8 +140,7 @@ class ScenarioRun:
         if not all((self.sim / name).is_file() for name in ("diagram.json", "wokwi.toml")):
             return "no simulation project in %s: build first with /spark:build --keep ." % self.sim
         if not (self.project / "firmware" / "main.py").is_file():
-            return ("no firmware/main.py in %s: the board would boot to a bare prompt and never print %r"
-                    % (self.project, READY))
+            return NO_MAIN % (self.project, READY)
         try:
             self.steps = with_ready_wait(self.scenario.read_text())
             tools.find("littlefs")
@@ -221,6 +220,10 @@ def run_record(log):
         return next((line[len(prefix):].strip() for line in header if line.startswith(prefix)), None)
 
     return field("verdict: "), field(IMAGE_LINE)
+
+
+#: Why a project with no firmware/main.py cannot go on a board: %s are the project and READY.
+NO_MAIN = "no firmware/main.py in %s: the board would boot to a bare prompt and never print %r"
 
 
 def file_hashes(log):

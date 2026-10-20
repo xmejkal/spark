@@ -450,8 +450,8 @@ class ConsentForDeployTest(unittest.TestCase):
         self.clock, self.terminal = FakeLocalClock(START), FakeConsent(False)
         self.service = board_grant.GrantService(now=self.clock)
 
-    def choose(self, report=None, ignore_older_runs=False):
-        return self.service.consent_for_deploy(report or a_report(), image_evidence.PassedRunEvidence(ignore_older_runs), self.terminal)
+    def choose(self, report=None, ignore_older_runs=False, evidence=None):
+        return self.service.consent_for_deploy(report or a_report(), evidence or image_evidence.PassedRunEvidence(ignore_older_runs), self.terminal)
 
     def assertTerminal(self, why, **kw):
         chosen = self.choose(**kw)
@@ -528,6 +528,10 @@ class ConsentForDeployTest(unittest.TestCase):
     def test_ignore_older_runs_asks_in_the_terminal(self):
         board_grant.GrantStore().save(a_grant())
         self.assertTerminal("ignore older runs", ignore_older_runs=True)
+
+    def test_no_simulation_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant())
+        self.assertTerminal("no simulation", evidence=image_evidence.NoSimulationEvidence(self.home))
 
     def test_the_standing_yes_stops_when_the_grant_ends_before_the_erase(self):
         board_grant.GrantStore().save(a_grant())
