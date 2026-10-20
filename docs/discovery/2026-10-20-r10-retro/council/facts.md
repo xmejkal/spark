@@ -27,7 +27,7 @@ not in the repository. Window: R9's hold, 2026-10-18 10:00 Prague (08:00 UTC), t
 
 - 30 PRs, #359 to #456. Per Prague day: 13 on 10-18 (from 10:00), 12 on 10-19, 5 on 10-20 (to 14:56).
   About 13.6 per day over 53 hours (R9: 12.8).
-- Open to merge: median 25 min, 85th percentile 122 min; 8 of 30 under 15 min (R9: 24 and 190).
+- Open to merge: median 25 min, 85th percentile 122 min. 8 of 30 under 15 min (R9: 24 and 190).
   Longest: #447 P326 822 min, #449 P351 814 min, #400 P279 477 min, #397 P300 124 min, #456 P337 B 122 min.
 - Docs-only 14 PRs, code 16 (code = a file under scripts/ tools/ src/ lib/ or a .py outside docs/).
   Lines added plus deleted: 4644 in code files, 7748 in all others.
@@ -35,9 +35,9 @@ not in the repository. Window: R9's hold, 2026-10-18 10:00 Prague (08:00 UTC), t
 
 ## R9's check column
 
-- R9.1 WIP slips at the pull. The inbox (`/Users/petr/.claude/projects/-Users-petr-Development-spark/memory/retro-inbox.md`)
+- R9.1 WIP slips at the pull. The inbox (`~/.claude/projects/<spark>/memory/retro-inbox.md`)
   has 0 new WIP-slip lines dated after the hold. Its only slip lines are before it (P272 10-17, P295 10-18).
-  The board now shows Design 5 cards, 3 of them epics; the gate counts 2. Hook refusals over the limit: not found
+  The board now shows Design 5 cards, 3 of them epics. The gate counts 2. Hook refusals over the limit: not found
   (see Not found).
 - R9.2 Merges of main into a branch (`git log origin/main --since=2026-10-18T08:00:00Z --merges`, subject
   "Merge ... main", not "pull request"): 2, both on 10-18 before 13:00 UTC: `72796e0` (P213a, README) and
@@ -47,27 +47,27 @@ not in the repository. Window: R9's hold, 2026-10-18 10:00 Prague (08:00 UTC), t
   planted, 0 escaped, 6 real gaps, 50 min. Runs that left no card field: the P337 A run (log 09:47 UTC 10-20).
   Planted-per-story and real-gaps-per-story are known only for those 3 cards.
 - R9.4 Incidents. GraphQL rate-limit text in tool results (`API rate limit exceeded`, string match, all sessions):
-  10-18 subagents 19, main session 9; 10-19 main session 5; 10-20 0. Plan-mode text in an error result: 2
+  10-18 subagents 19, main session 9. 10-19 main session 5. 10-20 0. Plan-mode text in an error result: 2
   (10-18 one, 10-19 one), string match only. Stray `git checkout` in main: not found. Edit-script blowups: not found.
 - R9.5 Typed `task` sub-issues (`gh api repos/xmejkal/spark/issues/N/sub_issues`) on the 6 stories closed after
   P278 (#314): P279 #317 0, P299 #365 0, P300 #366 1, P330 #423 0, P326 #418 0, P337 #431 0. Stories with 2 or more
   tasks: 0 of 6 (target 3 of 3). The cards with 3 tasks (P296, P290) are a chore and a bug.
-- WIP A (epic does not count): board has 3 epics in Design and 2 stories; gate reads 2 of 2. PRs per day 13.6, not
+- WIP A (epic does not count): board has 3 epics in Design and 2 stories. Gate reads 2 of 2. PRs per day 13.6, not
   lower than R9's 12.8.
-- WIP B (Review wait): 0 cards in Review now; no "Waiting since" history. 30 PRs merged since, over the 20 asked.
+- WIP B (Review wait): 0 cards in Review now. No "Waiting since" history. 30 PRs merged since, over the 20 asked.
   Open to merge median 25 min, p85 122 min, as above. Card-side wait: not found.
 - WIP C (same files, no parallel work): merges of main not about rows: 2 (both listed above). Largest single run
   below: 26 M tokens (R9: 103 M).
 - Cadence: R10 held 2026-10-20, 2 days after 10-18, within 7 days: yes. PRs since the hold: 30, over 10.
 
-## Agent logs (`/Users/petr/.claude/projects/-Users-petr-Development-spark/*/subagents/agent-*.jsonl`)
+## Agent logs (`~/.claude/projects/<spark>/*/subagents/agent-*.jsonl`)
 
 182 files modified after 2026-10-18 10:00 Prague, first message 09:46 Prague 10-18, last 16:28 Prague 10-20. Read by a
 `python3 -I` script, line by line. Types from each file's `.meta.json` `agentType`. Input tokens add input, cache
 creation and cache read of every assistant turn. Minutes are last minus first message. Push refused counts the text
 "failed to push some refs" (hook refusals and stale rejects together). Rate limit counts "rate limit exceeded".
 Full-suite is any Bash call with pytest, unittest or check_commit and no single test file, `-k` or `::`.
-It is a wide match; R9's rule is not written down, so compare with care.
+It is a wide match. R9's rule is not written down, so compare with care.
 
 | type | agents | tool calls | minutes (sum) | input tokens incl. cache (M) | push refused | git CONFLICT | rate limit | full-suite runs | tool errors |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -82,9 +82,9 @@ It is a wide match; R9's rule is not written down, so compare with care.
 
 - `CONFLICT` here is git's own `CONFLICT (content)` line (R9 used a word match: 29). Rate limit is the GitHub
   text, not any use of the words.
-- The 5 largest runs by tokens: P278 "shipped XIAO record builds" 26 M (113 calls, 30 min, 10-18 10:55);
-  "Implement P300 change list" 25 M (90 calls, 71 min); P213a "look and deploy --json" 16 M (73 calls, 47 min);
-  "R9 retro with Lean/Agile council" 12 M (75 calls, 19 min); "Implement P337 PR B" 11 M (58 calls, 31 min).
+- The 5 largest runs by tokens: P278 "shipped XIAO record builds" 26 M (113 calls, 30 min, 10-18 10:55),
+  "Implement P300 change list" 25 M (90 calls, 71 min). P213a "look and deploy --json" 16 M (73 calls, 47 min),
+  "R9 retro with Lean/Agile council" 12 M (75 calls, 19 min), "Implement P337 PR B" 11 M (58 calls, 31 min).
 - Refuter-style agents by description: 24 refuters plus 1 general-purpose run named refuter, against 30 PRs.
   Mutation runs by description: 6 (the other 3 mutation-tester files have other descriptions).
 - Tool errors: 156 results flagged as errors (R9: 287 in 21 hours).
@@ -96,12 +96,12 @@ It is a wide match; R9's rule is not written down, so compare with care.
   p337-no-simulation.md (2 hits, "16 references ok, 0 broken, 4 new names") and p221-arduino.md (1 hit). The
   inbox of 10-20 says it was skipped on P337 until asked. Other plans of the window (P331, P330, P326): no hit.
 - Refuter rows (the source column says refuter, in those 18 files, table parse): 122 rows. Status: acted 98,
-  rejected 13, closed 4, raised 5, verified 2. All rows of those files: 314; acted 205, rejected 33, raised 42,
+  rejected 13, closed 4, raised 5, verified 2. All rows of those files: 314. Acted 205, rejected 33, raised 42,
   verified 21, closed 9. The parse is rough, since columns vary by file. R9's crude count was 257 mentions,
   186 acted, 33 rejected (different base).
-- The course change of 10-19 (one refuter per plan; no new council, spike or Miro unless asked). Refuter-agent
-  starts after 10-19 18:00 Prague (16:00 UTC): 8. Per plan or PR: P331 plan 2 (16:19 and 16:51 UTC), P337 plan 1,
-  P337 A 1, P337 B 1, P221 finding 1, P221 final plan 1. So two plans got a second refuter.
+- The course change of 10-19 (one refuter per plan. No new council, spike or Miro unless asked). Refuter-agent
+  starts after 10-19 18:00 Prague (16:00 UTC): 8, and 7 of them match a card. Per plan or PR: P331 plan 2 (16:19 and 16:51 UTC), P337 plan 1,
+  P337 A 1, P337 B 1, P221 finding 1, P221 final plan 1. So P331's plan got a second refuter, and P221 got two (one on the finding, one on the plan).
 - Spikes filed since 10-19 18:00 Prague (`gh issue list --search "created:>=2026-10-19"`): P361 #462 (10-20 11:18
   UTC, inside the P356 plan). Spikes filed 10-19 at 17:00 Prague, just before: P344 #439, P348 #443. Councils: no
   council-named agent or card since that evening. Miro: not measured.
@@ -112,10 +112,19 @@ It is a wide match; R9's rule is not written down, so compare with care.
 - Hook refusals over the WIP limit: the hook's own line is not in the subagent logs, and the hold's run of the
   main session is not read. Only "failed to push" is counted (5, subagents).
 - Slips per day at the pull: no new inbox line, and the board has no pull history.
-- Wait in Review per card: no stage history on the board; no card is in Review now.
+- Wait in Review per card: no stage history on the board. No card is in Review now.
 - Stray `git checkout` in the main checkout and edit-script blowups: the logs do not give the working directory
   of each call, so an agent's checkout cannot be placed in main. The main session's own checkouts are by design and not counted.
 - Real gaps and planted mutants for stories without a filled Mutation field (P299, P300, P330, P326, P337): not
   on the board. The mutation-tester return text was not read.
 - Tool calls and tokens of the main session: only subagent files were read.
 - Miro board state and the PO's word on whether typed tasks helped him follow the work: not read.
+
+## Numbers the retro page takes from other sources
+
+- R9's baselines (2.3 real gaps per card, 17 rate-limit hits in 21 hours, 11 of 51 merges naming rows): R9's page,
+  `docs/discovery/2026-10-18-r9-retro/retro.md`, and `scrum/RETROSPECTIVES.md` (R9). The 51 is R9's count of PRs merged.
+- Walk 1's 21 rows (19 from the walk, 2 from the PR review): `docs/observations/rows/p326-walk1.md`.
+- P337's plan: 1 false claim and 8 gaps, all 9 caught by the refuter: `docs/observations/rows/p337-no-simulation.md`.
+- Cards opened since the hold: 73 at 16:30 Prague on 2026-10-20 (74 at the review, when one more card was filed),
+  `gh issue list --state all --search "created:>=2026-10-18T08:00:00Z" --limit 300 --json number --jq length`.

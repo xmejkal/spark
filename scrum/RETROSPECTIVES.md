@@ -265,7 +265,7 @@ counts as a slip in the inbox.
 | **R10.1** | Walk 2 (P100 round A) runs by 2026-10-27 with the board's own button and LED, after the walk-1 fixes. | yes | steps outside spark: 0 (walk 1: 1, the copy by `mpremote`) |
 | **R10.2** | A found row becomes a card only if it blocks the next walk step or is a real bug. Every other row stays "raised" in its rows file. | yes, plus bugs | cards opened per card closed: 1 or less (now 73 to 29) |
 | **R10.3** | The push hook runs `tools/factcheck.py` on every plan file that a push changes, and a broken reference fails the push. | yes | plans pushed with a factcheck result: all (now 2 of 5) |
-| **R10.4** | Drop typed tasks and the Review-wait fields. Each story's rows file holds one line "N planted, M escaped, K real gaps". | yes | stories with that line: all; rate-limit hits: 0 |
+| **R10.4** | Drop typed tasks and the Review-wait fields. Each story's rows file holds one line "N planted, M escaped, K real gaps". | yes | stories with that line: all. Rate-limit hits: 0 |
 
 ---
 

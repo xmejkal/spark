@@ -33,7 +33,7 @@ Every number is from [council/facts.md](council/facts.md) unless a line names it
 | --- | --- | --- |
 | P324 #415: the builder checks plan claims, `tools/factcheck.py` checks plans, one refuter | factcheck is named in 2 of 18 rows files (P337, P221). P331, P330 and P326 have no hit. On P337 it ran only after Petr asked, and claims were marked "seen" before a grep. The builder's false claim ("tests pass unchanged") was caught by the refuter, not by the builder. | change: the push hook runs factcheck on plan files (theme 3). Drop "the builder checks each claim" as a written step, since it did not happen. |
 | The refuter on Opus (P261) | 38 refuter agents, 48.1 M of 319.1 M agent tokens (15%), 169 min. 122 of 314 rows have the refuter as source, 98 acted, 13 rejected. It caught all 9 of P337's plan problems. | keep, one per plan and one per PR that holds logic. No refuter on a docs-only PR (14 of 30 PRs). |
-| The course change of 10-19 (walk 1 first, one refuter, no new council, spike or Miro unless asked) | Walk 1 ran that evening and the LED lit. Councils since: 0. Spikes since: 1 (P361, inside a plan), 2 the hour before. Second refuters: 2 (both on the P331 plan, 18:19 and 18:51). Lines changed: 4644 in code, 7748 in other files (ratio 1.7). | keep. Count a second refuter on one plan as a slip in the inbox. |
+| The course change of 10-19 (walk 1 first, one refuter, no new council, spike or Miro unless asked) | Walk 1 ran that evening and the LED lit. Councils since: 0. Spikes since: 1 (P361, inside a plan), 2 the hour before. Second refuters: P331's plan got 2 (18:19 and 18:51), and P221 got 2 (finding and plan). Lines changed: 4644 in code, 7748 in other files (ratio 1.7). | keep. Count a second refuter on one plan as a slip in the inbox. |
 
 ## Theme 1. The bench finds what reviews do not
 
@@ -48,12 +48,12 @@ Every number is from [council/facts.md](council/facts.md) unless a line names it
 
 ## Theme 2. Cards grow faster than they close
 
-- Numbers: 73 cards opened since the hold (`gh issue list --state all --search "created:>=2026-10-18T08:00:00Z"`),
+- Numbers: 73 cards opened since the hold (at 16:30) (`gh issue list --state all --search "created:>=2026-10-18T08:00:00Z"`),
   29 closed. The board holds 115 Ideas. Walk 1 and the P221 plan filed 7 cards each. P299 was filed from a backlog
   Petr approved with one "yes", and he closed it at its first question (inbox 10-18).
-- Why? Every raised row may become a card, and a plan files its follow-ups as cards. Why? The rule "suggest cards for
+- Why? Every raised row can become a card, and a plan files its follow-ups as cards. Why? The rule "suggest cards for
   found bugs" has no bar. Lean waste: inventory, and overproduction of text (14 of 30 PRs are docs-only).
-- Experiment: to R11, a row becomes a card only if it blocks the next walk step. Every other row stays "raised" in
+- Experiment: to R11, a row becomes a card only if it blocks the next walk step or is a real bug (Petr added the bug part at the hold). Every other row stays "raised" in
   its rows file. Measure: cards opened per closed card (now 73 to 29). Target: 1 or less. Cost: saves tokens and
   board writes. No PO time.
 
@@ -65,7 +65,7 @@ Every number is from [council/facts.md](council/facts.md) unless a line names it
   and the hook is the only gate that always runs. Lean waste: a defect that passes the builder and reaches the last station.
 - Experiment: the push hook runs `tools/factcheck.py` on every plan file a push changes, and a broken reference fails
   the push. Measure: plans pushed with a factcheck result (now 2 of 5), and false claims the refuter still finds that
-  factcheck could have found. Target: 5 of 5 plans. Cost: one small chore, a few seconds per push. The trend line per
+  factcheck can find. Target: 5 of 5 plans. Cost: one small chore, a few seconds per push. The trend line per
   rows file (inbox 10-20, proposal 1) waits, as it adds a record by hand.
 
 ## Theme 4. Records written by hand are not written
@@ -90,7 +90,7 @@ Every number is from [council/facts.md](council/facts.md) unless a line names it
 ## Questions for Petr
 
 1. Theme 1: does walk 2 (P100 round A) run by 2026-10-27 with the board's own button and LED, yes or no?
-2. Theme 2: does a row become a card only when it blocks the next walk step, yes or no?
+2. Theme 2: does a row become a card only when it blocks the next walk step, yes or no? (Petr: yes, plus real bugs.)
 3. Theme 3: does the push hook run factcheck on changed plan files, yes or no?
 4. Theme 4: drop typed tasks and the Review-wait fields, and keep only the mutation line per story, yes or no?
 
