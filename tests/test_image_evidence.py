@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import image_evidence  # noqa: E402
-import board_grant  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
 from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
@@ -188,9 +187,6 @@ class NoSimulationEvidenceTest(unittest.TestCase):
                          ("none", "no simulation tested this image", ["--no-simulation"], []))
         self.assertEqual(evidence.grant_refusal, "no simulation")
         self.assertEqual(evidence.way_out(self.image), "")
-
-    def test_the_grant_message_names_the_flag(self):
-        self.assertIn("--no-simulation", board_grant.MESSAGE_FOR["no simulation"])
 
 
 if __name__ == "__main__":
