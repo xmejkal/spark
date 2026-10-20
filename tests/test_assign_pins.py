@@ -479,7 +479,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         assignments, text = self._module()
         names = {}
         exec(text, names)       # plain Python: no `const`, no import of `micropython`
-        own = set(assign_pins.ONBOARD_NAMES.values())  # the board's own parts are lines of their own (P353)
+        own = {"ONBOARD_LED", "ONBOARD_BUTTON"}  # the board's own parts are lines of their own (P353)
         self.assertEqual({k: v for k, v in names.items() if not k.startswith("__") and k not in own},
                          {entry["signal"]: entry["gpio"] for entry in assignments})
         for entry in assignments:
