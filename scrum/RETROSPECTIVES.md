@@ -231,6 +231,44 @@ found a commit that does not pass its own suite as committed (C3), a regression 
 three misnumbered commit messages — all of which this retro should have carried. R5 follows R4.3:
 the audit first, then the retro, citing its report.
 
+## R10 — 2026-10-20, on two days after R9
+
+Prepared by a facts agent (Sonnet) and one Lean and Agile council agent (Opus), with the agent logs as the team's
+voice. Held with Petr on 2026-10-20 (Prague), one question per theme. The full page, with every number and its
+command: [`docs/discovery/2026-10-20-r10-retro/retro.md`](../docs/discovery/2026-10-20-r10-retro/retro.md).
+
+30 PRs merged and 29 cards closed in 54 hours, but 73 cards were opened. Walk 1 lit the LED on 10-19 and produced
+21 rows, more than any review found. The changes that removed collisions held. The changes that asked Claude to
+write a record by hand mostly did not happen.
+
+### R9's actions, checked as written
+
+| | |
+| --- | --- |
+| **R9.2**, **WIP C**, the cadence, logs as the voice | **held**: merges of main naming rows 0 of 2 (was 11 of 51), largest run 26 M tokens (was 103 M), R10 two days after R9 |
+| **R9.1**, **WIP A** | **held on a weak measure**: 0 slips in the inbox, but the launch line and the hook refusals are not in the logs |
+| **R9.3** | **not measurable**: the Mutation field is on 3 of 8 cards |
+| **R9.4** | **not held, then fixed**: rate-limit hits 28 on 10-18, 5 on 10-19, 0 on 10-20 |
+| **R9.5**, **WIP B** | **not held**: typed tasks on 0 of 6 stories, Review-wait fields on 0 cards. Dropped by R10.4. |
+
+### Experiments judged
+
+P324's written step "the builder checks each claim" did not happen on P337, so it is dropped and replaced by R10.3.
+The refuter on Opus stays: one per plan and one per PR that holds logic, none on a docs-only PR (15% of agent
+tokens, all 9 of P337's plan problems caught). The course change of 10-19 stays, and a second refuter on one plan
+counts as a slip in the inbox.
+
+### Actions, as Petr decided them (all to R11, due by 2026-10-27 or after 10 merged stories)
+
+| # | change | decision | check at R11 |
+| --- | --- | --- | --- |
+| **R10.1** | Walk 2 (P100 round A) runs by 2026-10-27 with the board's own button and LED, after the walk-1 fixes. | yes | steps outside spark: 0 (walk 1: 1, the copy by `mpremote`) |
+| **R10.2** | A found row becomes a card only if it blocks the next walk step or is a real bug. Every other row stays "raised" in its rows file. | yes, plus bugs | cards opened per card closed: 1 or less (now 73 to 29) |
+| **R10.3** | The push hook runs `tools/factcheck.py` on every plan file that a push changes, and a broken reference fails the push. | yes | plans pushed with a factcheck result: all (now 2 of 5) |
+| **R10.4** | Drop typed tasks and the Review-wait fields. Each story's rows file holds one line "N planted, M escaped, K real gaps". | yes | stories with that line: all. Rate-limit hits: 0 |
+
+---
+
 ## R9 — 2026-10-18, on four days of Kanban without a retro
 
 Prepared by Claude with a Lean and Agile council and six team voices drawn from the agents' logs. Held with Petr on
