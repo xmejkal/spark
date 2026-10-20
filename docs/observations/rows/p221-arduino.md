@@ -44,3 +44,4 @@ Gaps and findings from the agent runs of P221 #203 (2026-10-20). The plan is
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
 | 22 | The PO stopped round 1's fixes and asked for round 2 with ESP-IDF and PlatformIO as certain platforms | PO, 2026-10-20 | acted | round 2 ran three agents, then the refuter |
+| 23 | The PO decided: no C6 support for compiled platforms in the MVP or early versions. He has plenty of boards | PO, 2026-10-20 | acted | MVP board is the FireBeetle 2 ESP32-S3 and the second is the T-Display ESP32 v1.1. The C6 and the pioarduino fork moved to Later; A0 measures a fresh install per route |
