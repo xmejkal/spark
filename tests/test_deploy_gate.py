@@ -940,7 +940,7 @@ class TheNoSimulationDeployTest(GateCase):
         mac = "8c:bf:ea:xx:xx:xx"
         board_grant.GrantStore().save(board_grant.Grant(
             mac, board_grant.board_look.board_token(mac), "ada", clock.now.isoformat(),
-            (clock.now + datetime.timedelta(minutes=30)).isoformat(), board_grant.SCOPE_DEPLOY))
+            (clock.now + datetime.timedelta(minutes=30)).isoformat(), "deploy"))
         code, said, problems = self.flash(grant_service=board_grant.GrantService(now=clock))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("--no-simulation is never covered by a deploy grant", said)

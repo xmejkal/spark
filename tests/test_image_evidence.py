@@ -186,11 +186,11 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         evidence = NoSimulationEvidence(self.project)
         self.assertEqual((evidence.simulation, evidence.caveat(), evidence.argv(), evidence.notes(self.image)),
                          ("none", "no simulation tested this image", ["--no-simulation"], []))
-        self.assertEqual(evidence.grant_refusal, board_grant.WHY_NO_SIMULATION)
+        self.assertEqual(evidence.grant_refusal, "no simulation")
         self.assertEqual(evidence.way_out(self.image), "")
 
     def test_the_grant_message_names_the_flag(self):
-        self.assertIn("--no-simulation", board_grant.MESSAGE_FOR[board_grant.WHY_NO_SIMULATION])
+        self.assertIn("--no-simulation", board_grant.MESSAGE_FOR["no simulation"])
 
 
 if __name__ == "__main__":
