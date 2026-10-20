@@ -197,6 +197,8 @@ firmware owns them), the C++ pin guard (it says `skipped`), Kconfig pin maps, `i
 
 ## 6. Decisions for the PO
 
+The PO answered on 2026-10-20: yes to all 10, each as recommended.
+
 1. Slice 0 right after A0, MicroPython only, before any platform code? **Yes.** It adds nothing new for the person. It pays off as cleaner code and tests, and no caller gets an `if platform`.
 2. Arduino by arduino-cli second, then ESP-IDF, then PlatformIO? **Yes.** The S3 needs no fork on any route (unverified).
 3. One `platform` key, and the build tool as a role in `data/tools.json`, no `toolchain` key? **Yes.** One setting per choice.
