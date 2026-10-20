@@ -1,7 +1,7 @@
 # P372 what a part record needs: findings rows
 
 Findings from the Opus refuter on the synthesis `finding.md` at 15a0560 (2026-10-20, Prague), after five Sonnet
-council lenses. R10.2 applies: a row becomes a card only if it is a real bug or blocks the next walk.
+council lenses. R10.2 (`scrum/RETROSPECTIVES.md`) applies: a row becomes a card only if it is a real bug or blocks the next walk.
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
@@ -14,3 +14,4 @@ council lenses. R10.2 applies: a row becomes a card only if it is a real bug or 
 | 7 | "The only fact of the 8 that a stage reads" was wrong | refuter | acted | `conflicts_of` reads `supply_range_v` (`parts.py:1500`), so two facts are read |
 | 8 | Three names for one thing: "open", `--unverified` and `open_questions`, plus `usable` in card 5 | refuter | acted | the finding uses `unverified` and `level` throughout. `--level` returns `level`, `owes`, `unverified` |
 | 9 | `--unverified` misses a guessed `body_mm`, and the pin map's unverified output reads the same list | refuter | verified | `open_questions_of` (`parts.py:889`) reads only `facts` and `pin_order_proof`. `assign_pins.py:489` calls it. Card 1, it blocks P364 |
+| 10 | Docs review: a long table cell, `owes` and unverified not defined at first use, "the one above it" backwards, P331 and R10.2 without a pointer | Sonnet docs reviewer | acted | the note below the stage table, two definitions in the summary, PR #435 and `scrum/RETROSPECTIVES.md` named |

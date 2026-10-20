@@ -2,16 +2,17 @@
 
 > **TL;DR.** The joystick record is good enough to build with today, but spark cannot tell how far a record is.
 > The chain needs only a few fields, and almost every fact in the record is for people. Spark refuses a record
-> only when one of ten fields is absent, and nothing checks whether a guessed value was ever measured. Records
+> only when one of ten fields (5 required keys and 5 chain facts) is absent, and nothing checks whether a guessed value was ever measured. Records
 > get three levels: `findable`, `buildable` and `proven`. Spark works out the level from the record and never
 > stores it. The answer on types is traits, not a hierarchy. `kind` stays a label that decides nothing. One
 > process covers a new part and an update. Three cards follow. One fixes a real bug, and one unblocks the bench.
 
-Summary. Five council lenses read the code stage by stage. The synthesis and an Opus refuter checked the main
-claims in the code. The joystick `joystick-module-mh` owes nothing. It builds, and it sits at `buildable` with 9
-unverified facts. `--unverified` hides its guessed body size, which is a real bug. `--fact-set` cannot write a bench
+Summary. Five council lenses (reviewers, each with one question) read the code stage by stage. The synthesis and a
+refuter (a reviewer that tries to prove the claims wrong) checked the main claims in the code. `owes()` lists the
+fields a record lacks that the chain needs. An unverified fact is one with `verified: false`. The joystick
+`joystick-module-mh` owes nothing. It builds, and it sits at `buildable` with 9 unverified facts. `--unverified` hides its guessed body size, which is a real bug. `--fact-set` cannot write a bench
 result into `facts`, so the bench checks have no way back into the record. A board's fields differ from a part's, so this finding
-adds a stage table for boards. The shared way to add a record is in the P331 plan (see Sources), and this finding
+adds a stage table for boards. The shared way to add a record is in the P331 plan (PR #435, see Sources), and this finding
 does not repeat it.
 
 ## 1. The joystick, stage by stage
@@ -21,7 +22,7 @@ does not repeat it.
 | Stage | What it reads | What the joystick holds | Gap, and why |
 |---|---|---|---|
 | Idea, `--need` | `id`, `name`, `kind`, `also_known_as` (`scripts/matching.py`, `NameContains`) | all four | none. Walk row 1 found it by "joystick" |
-| Idea, `--match` | `function`, else `KIND_FUNCTION[kind]` (`scripts/parts.py:66-84`), then the drawer entries' `function` | no `function`, and `joystick` is not in `KIND_FUNCTION` | A gap, not a bug today. Checked: `function_of` returns `[]`. With the record alone, `SameWords.admits` is False for `{does: input, what: joystick}`. The PO's drawer entry gives the function, and the drawer is one per store (`drawer.entries()` reads `store.place("drawer")`), so every project sees it. A store record with no drawer entry stays hidden from `--match`. The research rules have no step that writes `function` |
+| Idea, `--match` | `function`, else `KIND_FUNCTION[kind]` (`scripts/parts.py:66-84`), then the drawer entries' `function` | no `function`, and `joystick` is not in `KIND_FUNCTION` | A gap, not a bug today (see the note below the table) |
 | Requirements | `owes()`: the required keys plus `footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation` | all of them | none. Checked: `owes` returns `[]` |
 | Pin map (`assign_pins.py`) | `needs[].signal`, `.needs` (only `wake`, `adc`, `pwm`), `.bus` | `JOY_X`, `JOY_Y` ask `adc`. `JOY_SW` asks nothing | "ADC1 only, 11 dB" is prose in `host_requirements`. No capability word says it |
 | Pull choice (`design.py:285-297`) | `host_parts[kind=pullup].internal_will_do` | a 10k pull-up, `internal_will_do: true` | the fact `module_has_switch_pullup` repeats it, and nothing compares the two |
@@ -34,6 +35,11 @@ does not repeat it.
 | Drawer match by number | `sku`, `vendor` | both `null` | a maker-less AliExpress module has neither. The aliases find it |
 | Firmware, deploy | nothing from the record | not applicable | a guess in the record reaches the bench unchanged |
 
+Note on `--match`. `function_of` returns `[]` for the joystick. With the record alone, `SameWords.admits` is False for
+`{does: input, what: joystick}`. The PO's drawer entry gives the function. The drawer is one per store
+(`drawer.entries()` reads `store.place("drawer")`), so every project sees it. A store record with no drawer entry
+stays hidden from `--match`. The research rules have no step that writes `function`.
+
 Why the gaps exist. The module has no chip and no maker, so every fact rests on Joy-IT's KY-023 documents (a
 look-alike from another seller) or on photos. The research rules assume a chip datasheet (walk row 6). Six of the 8
 facts are read by no stage. They are notes for the person and Claude who write the firmware. That is correct, because
@@ -41,7 +47,7 @@ spark exports facts and the conversation writes the firmware. Nothing marks a fa
 
 ## 2. Record levels
 
-One word per level. Each level includes the one above it. Spark works out the level from facts the record and the
+One word per level. Each level includes the one before it. Spark works out the level from facts the record and the
 drawer already hold, so no new field stores it and it never goes stale. A missing value is not a pass at any level,
 and `verified: false` is not a pass either.
 
@@ -168,7 +174,7 @@ unverified. A nameless board takes its seller's label as its name. This rule is 
 
 ## 5. Proposed cards
 
-R10.2 applies: a row becomes a card only if it is a real bug or blocks the next walk. The next walks are P364 (#466),
+R10.2 (`scrum/RETROSPECTIVES.md`) applies: a row becomes a card only if it is a real bug or blocks the next walk. The next walks are P364 (#466),
 P370 (#472) and P100 walk 2 (#6). Smallest first.
 
 1. **Bug.** `--unverified` lists a `body_mm` with `verified: false` (`open_questions_of`, `scripts/parts.py:889`).
@@ -208,11 +214,12 @@ Council lenses, in `docs/discovery/2026-10-20-p372-part-record-needs/council/`: 
 `stages-boards.md` (board lens), `types-or-traits.md` (architect), `process.md` (spark engineering senior),
 `po-ux.md` (the PO's assistant with UX and AI-UX).
 
-- The PO's words: https://github.com/xmejkal/spark/issues/477. Walks: #466, #472 and #6 on the same repository.
+- The PO's words: https://github.com/xmejkal/spark/issues/477. Walks: https://github.com/xmejkal/spark/issues/466, https://github.com/xmejkal/spark/issues/472 and
+  https://github.com/xmejkal/spark/issues/6.
 - The record: `joystick-module-mh.json` in the PO's store `shelf/`, and its drawer entry
   `analog-joystick-module-ps2-style-5-pins-mh-on-the-board.json` in `drawer/`.
 - The walk rows: `docs/observations/rows/p366-photo-walk.md` (rows 1, 4, 6, 14, 15 cited here).
-- Prior work: `docs/discovery/2026-10-19-p331-new-board-works/plan.md` (`RecordAdder`, honest validation).
+- Prior work: `docs/discovery/2026-10-19-p331-new-board-works/plan.md` (PR #435) (`RecordAdder`, honest validation).
 - Code the synthesis checked on 2026-10-20: `scripts/parts.py` (`KIND_FUNCTION` :66, `function_of` :76,
   `RECORD_TYPES` :311, `cites` check :469, `open_questions_of` :889), `scripts/matching.py` (`Offer.from_record`,
   `Matcher.admits`, `NameContains`), `scripts/init_project.py:100`, `scripts/emit_board.py`, `scripts/design.py`,
