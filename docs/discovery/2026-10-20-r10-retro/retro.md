@@ -93,3 +93,13 @@ Every number is from [council/facts.md](council/facts.md) unless a line names it
 2. Theme 2: does a row become a card only when it blocks the next walk step, yes or no?
 3. Theme 3: does the push hook run factcheck on changed plan files, yes or no?
 4. Theme 4: drop typed tasks and the Review-wait fields, and keep only the mutation line per story, yes or no?
+
+## Petr's decisions (2026-10-20, Prague)
+
+1. Theme 1: yes, walk 2 by 2026-10-27.
+2. Theme 2: yes, plus bugs. A real bug also becomes a card.
+3. Theme 3: yes, in the hook, and a broken reference fails the push.
+4. Theme 4: yes.
+
+The experiment proposals (P324 changed, the refuter kept, the course change kept) were decided by the council under
+the delegated row decisions. They are recorded in `scrum/RETROSPECTIVES.md` as R10.
