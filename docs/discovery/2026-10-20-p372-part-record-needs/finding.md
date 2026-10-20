@@ -2,15 +2,15 @@
 
 > **TL;DR.** The joystick record is good enough to build with today, but spark cannot tell how far a record is.
 > The chain needs only a few fields, and almost every fact in the record is for people. Spark refuses a record
-> only when one of five fields is absent, and nothing checks whether a guessed value was ever measured. Records
+> only when one of ten fields is absent, and nothing checks whether a guessed value was ever measured. Records
 > get three levels: `findable`, `buildable` and `proven`. Spark works out the level from the record and never
 > stores it. The answer on types is traits, not a hierarchy. `kind` stays a label that decides nothing. One
-> process covers a new part and an update. Five cards follow, and two of them fix real bugs.
+> process covers a new part and an update. Three cards follow. One fixes a real bug, and one unblocks the bench.
 
-Summary. Five council lenses read the code stage by stage, and the synthesis checked their main claims in the code.
-The joystick `joystick-module-mh` owes nothing. It builds, and it sits at `buildable` with 9 facts nobody has
-checked. Two real bugs came out of the review. `--match` drops the record when no drawer entry gives it a
-function, and `--unverified` hides its guessed body size. A board's fields differ from a part's, so this finding
+Summary. Five council lenses read the code stage by stage. The synthesis and an Opus refuter checked the main
+claims in the code. The joystick `joystick-module-mh` owes nothing. It builds, and it sits at `buildable` with 9
+unverified facts. `--unverified` hides its guessed body size, which is a real bug. `--fact-set` cannot write a bench
+result into `facts`, so the bench checks have no way back into the record. A board's fields differ from a part's, so this finding
 adds a stage table for boards. The shared way to add a record is in the P331 plan (see Sources), and this finding
 does not repeat it.
 
@@ -21,15 +21,16 @@ does not repeat it.
 | Stage | What it reads | What the joystick holds | Gap, and why |
 |---|---|---|---|
 | Idea, `--need` | `id`, `name`, `kind`, `also_known_as` (`scripts/matching.py`, `NameContains`) | all four | none. Walk row 1 found it by "joystick" |
-| Idea, `--match` | `function`, else `KIND_FUNCTION[kind]` (`scripts/parts.py:66-84`), then the drawer entries' `function` | no `function`, and `joystick` is not in `KIND_FUNCTION` | **Bug.** Checked: `function_of` returns `[]`. With the record alone, `SameWords.admits` is False for `{does: input, what: joystick}`. Only the drawer entry's `function` brings it back. In a project whose drawer lacks it, `--match` never shows it. The research rules have no step that writes `function` |
+| Idea, `--match` | `function`, else `KIND_FUNCTION[kind]` (`scripts/parts.py:66-84`), then the drawer entries' `function` | no `function`, and `joystick` is not in `KIND_FUNCTION` | A gap, not a bug today. Checked: `function_of` returns `[]`. With the record alone, `SameWords.admits` is False for `{does: input, what: joystick}`. The PO's drawer entry gives the function, and the drawer is one per store (`drawer.entries()` reads `store.place("drawer")`), so every project sees it. A store record with no drawer entry stays hidden from `--match`. The research rules have no step that writes `function` |
 | Requirements | `owes()`: the required keys plus `footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation` | all of them | none. Checked: `owes` returns `[]` |
 | Pin map (`assign_pins.py`) | `needs[].signal`, `.needs` (only `wake`, `adc`, `pwm`), `.bus` | `JOY_X`, `JOY_Y` ask `adc`. `JOY_SW` asks nothing | "ADC1 only, 11 dB" is prose in `host_requirements`. No capability word says it |
 | Pull choice (`design.py:285-297`) | `host_parts[kind=pullup].internal_will_do` | a 10k pull-up, `internal_will_do: true` | the fact `module_has_switch_pullup` repeats it, and nothing compares the two |
 | Board file (`emit_board.py`) | `pin_order`, `footprint`, `body_mm`, `power[]`, `host_parts`, the fact a `draws` names | all present | `body_mm` 34 x 26 is a guess with `verified: false`, and the chain builds on it as a number |
-| Rail current | `power[VCC].draws` points at `facts.supply_current_ma` | 0.66 mA, computed from an unverified pot value | the only fact of the 8 that a stage reads |
+| Rail current | `power[VCC].draws` points at `facts.supply_current_ma` | 0.66 mA, computed from an unverified pot value | one of the 2 facts of the 8 that a stage reads. `conflicts_of` reads `supply_range_v` (`parts.py:1500`) and stops early here, because the module has no pull-up fact |
 | Breadboard sheet | `host_parts`, `legs`, `host_requirements`, `unused_pins` | all present | `legs` and `host_requirements` have no type check (`RECORD_TYPES`, `parts.py:311`), so a typo drops them in silence |
 | Simulation | `simulation.wokwi` | `wokwi-analog-joystick`, mapped by pin name | the axis directions are not measured, as `stand_in` says |
-| Review (`--unverified`) | `facts[*].verified`, `pin_order_proof.verified` (`open_questions_of`, `parts.py:889`) | 9 open facts | **Bug.** Checked: `body_mm.verified: false` is not on the list (walk row 14) |
+| Review (`--unverified`) | `facts[*].verified`, `pin_order_proof.verified` (`open_questions_of`, `parts.py:889`) | 9 unverified facts | **Bug.** Checked: `body_mm.verified: false` is not on the list (walk row 14). The pin map's own unverified list comes from the same function (`assign_pins.py:489`), so it hides the guess too |
+| Bench result write (`--fact-set`) | only `CHAIN_FACTS` and `about`, `description`, `tags` (`parts.py:2040`) | 8 `facts` entries | **Blocks the bench.** A write to `facts.pot_resistance_ohms` is refused (exit 1). A verified fact with a prose source already validates, so only the write is missing |
 | Drawer match by number | `sku`, `vendor` | both `null` | a maker-less AliExpress module has neither. The aliases find it |
 | Firmware, deploy | nothing from the record | not applicable | a guess in the record reaches the bench unchanged |
 
@@ -40,18 +41,27 @@ spark exports facts and the conversation writes the firmware. Nothing marks a fa
 
 ## 2. Record levels
 
-One word per level. Each level includes the one above it. Spark works out the level from the record, so it never
-goes stale. A missing value is not a pass at any level, and `verified: false` is not a pass either.
+One word per level. Each level includes the one above it. Spark works out the level from facts the record and the
+drawer already hold, so no new field stores it and it never goes stale. A missing value is not a pass at any level,
+and `verified: false` is not a pass either.
 
-| Level | The test | Part (an LED) | Module (the joystick) | Board (the XIAO) |
+| Level | The test, from what spark holds | Part (an LED) | Module (the joystick) | Board (the XIAO) |
 |---|---|---|---|---|
-| `findable` | the idea stage finds it by a name and by what it does | `id`, `name`, `kind`, `function` with one of the 13 verbs | the same, with `also_known_as` for seller names | the nine keys `boards.py --validate` checks, with real `pins`, `name`, `chip` |
-| `buildable` (the PO's "even possible to use it in spark") | pin map, board file, sheet and build run, and every fact is cited or marked `verified: false` | `owes()` empty: `needs`, `power`, `footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation` (or `simulation.skip`) | the same, plus `host_parts` for every duty the host owes (the SW pull-up) | real `wake_capable_gpio` and `adc_gpio`, the footprint block (`physical.header`, `width_mm`, `height_mm`, `header_order`, `footprint_export`), `power_pads`, `wokwi_part_type`, `wokwi_pin_naming`, `micropython_port` with its `data/tools.json` entry |
-| `proven` (the PO's "fully usable") | every fact a stage reads is verified by a primary source or on the bench, and each drawing has its picture | verified pin order and body size, a picture (P370) | the bench checks of walk row 15 done and written back, a picture | power facts verified (`regulator_3v3_a` is null on the XIAO), `vendor.arduino_variant`, an entry in `data/wokwi-geometry.json`, full `pin_roles`, one flash and look on the bench |
+| `findable` | `--need` finds it by name, and `--match` finds it by what it does | the required keys `schema`, `id`, `name`, `kind`, `needs`, and a `function` from the record, from `KIND_FUNCTION`, or from a drawer entry | the same, with `also_known_as` for seller names | `boards.py --validate` passes (nine keys, real `pins`), and the board kind gives `compute` |
+| `buildable` (the PO's "even possible to use it in spark") | `owes()` is empty, so the pin map, the board file, the sheet and the build run | the five chain facts `footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation` (or `simulation.skip`) | the same | real `wake_capable_gpio` and `adc_gpio`, the footprint block (`physical.header`, `width_mm`, `height_mm`, `header_order`, `footprint_export`), `power_pads`, `wokwi_part_type`, `micropython_port` |
+| `proven` (the PO's "fully usable") | `buildable`, and the `unverified` list is empty: every fact the record holds, read by a stage or not, is verified | verified pin order and body size | the walk row 15 bench checks written back with `verified: true` | no null or unverified power fact (`regulator_3v3_a` is null on the XIAO) |
 
-The joystick is `buildable`. Walk P364 (#466) starts at `buildable`. Its sheet carries "check with a meter first" until
-the bench closes the pin order and `runs_at_3v3`. A board's stage table is in the board lens (see Sources), and
-P331's "honest validation" card counts a board's open facts. That card uses these level words.
+The joystick is `findable` only through its drawer entry, because its record has no `function`. It is `buildable`,
+with 9 unverified facts (10 once card 1 lands). Walk P364 (#466) starts at `buildable`. Its sheet carries "check with
+a meter first" until the bench closes the pin order and `runs_at_3v3`.
+
+`proven` counts every fact, also the six that no stage reads. A note for the firmware is still a claim about the
+part. The bench result needs no new field: a fact with `verified: true` and a prose source such as "bench
+2026-10-21, meter, PO" validates today. A picture, a symbol and a bench trial have no field yet. Each enters with the
+card that needs it (P370, P371), and then joins `proven`. For a board, `vendor.arduino_variant`, the
+`data/wokwi-geometry.json` entry and full `pin_roles` stay outside the levels, and their own stages say when one is
+missing. The board stage table is in the board lens, and P331's "honest validation" card counts the same unverified
+facts.
 
 A later stage adds its own field names to one level and nothing else changes, as a symbol or a 3D model (P370, P371).
 
@@ -135,8 +145,8 @@ flowchart TD
   S1[1 Identify<br/>photo or name] --> C1{findable?}
   C1 --> S2[2 Write the record<br/>skeleton plus research]
   S2 --> C2{buildable?<br/>owes nothing}
-  C2 --> S3[3 Grow by need<br/>one owed or open fact]
-  S3 --> C3{proven?<br/>open list empty}
+  C2 --> S3[3 Grow by need<br/>one owed or unverified fact]
+  S3 --> C3{proven?<br/>unverified list empty}
   C3 --> S4[4 Bench checks<br/>the person measures]
   S4 --> S3
   C3 --> S5[5 Promote to the library]
@@ -146,15 +156,15 @@ flowchart TD
 | Step | Input | Output | Tool | Done when | Exists or new |
 |---|---|---|---|---|---|
 | 1 Identify | photos of both sides with a ruler, or a name | one line: "this is X, sold as Y, seen in photo Z" | Claude reads the image, `--need`, `--kept`, a web search | `--need` finds no record of it, or finds it and the path stops here | exists. The web search becomes required in `commands/identify.md` (walk row 4) |
-| 2 Write the record | the step 1 line | `parts/<id>.json` with `function` | `--skeleton`, `parts-researcher` (module) or `part-finder` (commodity part) | `--validate` ok and the level is `buildable` | exists. Writing `function` is new (card 2) |
-| 3 Grow by need | the name of one owed or open fact | that fact with `value`, `verified`, `source` | `datasheet-reader`, `--read`, `--fact-set` | the fact leaves the owed or open list | exists |
-| 4 Bench checks | the open list, each item with how to check it | the fact with `verified: true` and a bench citation | the person with a meter and a ruler, then Claude with `--fact-set` | each item is verified, or the person accepts it by name | new: the bench citation form (card 3) |
-| 5 Promote | a `proven` record, or a `buildable` one the person accepts | the record in the library | `--promote`, `--sources` | `--sources` all ok, `--audit` lists it | exists |
-| Throughout | a record | its level and what it still owes | `--level PART` | one line for the person, one field for Claude | new (card 5) |
+| 2 Write the record | the step 1 line | `parts/<id>.json`, with `function` or a drawer entry that gives one | `--skeleton`, `parts-researcher` (module) or `part-finder` (commodity part), `--drawer-set` | `--validate` ok and the level is `buildable` | exists. A record that writes its own `function` is a raised gap |
+| 3 Grow by need | the name of one owed or unverified fact | that fact with `value`, `verified`, `source` | `datasheet-reader`, `--read`, `--fact-set` | the fact leaves the `owes()` or `unverified` list | exists for chain facts. A write to `facts.*` is new (card 2) |
+| 4 Bench checks | the `unverified` list, each item with how to check it | the fact with `verified: true` and a prose source "bench, date, tool, who" | the person with a meter and a ruler, then Claude with `--fact-set` | the `unverified` list is empty | new: the `facts.*` write (card 2). The citation form exists |
+| 5 Promote | a `proven` record, or a `buildable` one when the person says so | the record in the library | `--promote`, `--sources` | `--sources` all ok, `--audit` lists it | exists |
+| Throughout | a record | its level, what it owes, what is unverified | `--level PART` | one line for the person, one field for Claude | new (card 3) |
 
 A chipless module follows the same path, with one more rule in `commands/research.md`. A look-alike maker's document
 is cited with `verified: false` and the words "look-alike". A value computed from an unverified fact stays
-unverified. A nameless board takes its seller's label as its name. This rule is text only, so it goes into card 2.
+unverified. A nameless board takes its seller's label as its name. This rule is text only, and it stays a raised row.
 
 ## 5. Proposed cards
 
@@ -162,33 +172,31 @@ R10.2 applies: a row becomes a card only if it is a real bug or blocks the next 
 P370 (#472) and P100 walk 2 (#6). Smallest first.
 
 1. **Bug.** `--unverified` lists a `body_mm` with `verified: false` (`open_questions_of`, `scripts/parts.py:889`).
-   Done when `--unverified joystick-module-mh` lists 10 facts and a test pins it. It blocks P364's bench list.
-2. **Bug.** `/spark:research`, `/spark:identify` and `--skeleton` write `function`, and the chipless rule enters
-   `commands/research.md`. Done when a record made by `--skeleton` has a `function`, and `--match` with an empty
-   drawer offers the joystick for `{does: input, what: joystick}`.
-3. The joystick record gets `function` (input, two-axis position and a push button) through `--function-set`, in the
-   PO's store only. Done when `function_of` returns it. It blocks P364 only when the game's drawer lacks the
-   joystick, so it rides with P364's preparation.
-4. A bench citation form, `cites: {document: "bench", at: "2026-10-21, meter, PO"}`, that `--validate` accepts. Today
-   a `cites` must name a key in `documents` (`scripts/parts.py:469`). Done when the walk row 15 checks are written
-   back and the record validates. It blocks P364, whose bench checks come first.
-5. `parts.py --level PART`: a level derived from the record, one line for the person and
-   `usable: {level, owes, open}` in the JSON envelope's `data`. It also covers boards through P331's
-   `RecordAdder`. Done when the joystick prints `buildable, 10 open` and a test covers each of the three levels.
-   This card is the spike's outcome, not a row. It waits on the PO's answers below.
+   The pin map's unverified list reads the same function (`assign_pins.py:489`). Done when `--unverified
+   joystick-module-mh` lists 10 facts and a test pins it. It blocks P364's bench list.
+2. **Blocks P364.** `--fact-set` accepts `facts.*` entries, each with `value`, `verified` and `source`. Today it takes
+   only `CHAIN_FACTS` and `about`, `description`, `tags` (`parts.py:2040`). Done when the joystick's walk row 15 bench
+   results are written with it and the record validates. A prose source "bench 2026-10-21, meter, PO" validates
+   today, so no new `cites` form is needed.
+3. `parts.py --level PART`: a level derived from the record and the drawer, one line for the person and `level`,
+   `owes`, `unverified` in the JSON envelope's `data`. It also covers boards through P331's `RecordAdder`. Done when
+   the joystick prints `buildable, 10 unverified` and a test covers each of the three levels. This card is the
+   spike's outcome, not a row. It waits on the PO's answers below.
 
-Not cards now (R10.2): retiring `KIND_FUNCTION`, a test that each closed list has a reader, typing `legs` and
+Not cards now (R10.2): research, identify and `--skeleton` writing `function`, the joystick's own `function`, the
+chipless rule, retiring `KIND_FUNCTION`, a test that each closed list has a reader, typing `legs` and
 `host_requirements`, the board validation gaps (they go into P331's honest validation card), and walk rows 3, 5, 7
-to 10, 12 and 13. Each stays a raised row.
+to 10, 12 and 13. The drawer gives the joystick its function in every project, so none of these blocks a next walk.
+Each stays a raised row.
 
 ## 6. The PO's decisions, one at a time
 
 1. **Is an unverified pin order `buildable`?** The joystick's order comes from a photo, and a wrong order puts 3.3 V on
    a wiper. A: yes, and the sheet says "check with a meter first". B: no, the bench comes first.
-2. **Does `proven` need the part's own picture?** Without P370 the sheet draws a plain box for the joystick. A: a box
-   is enough for `proven`. B: only its own picture is.
+2. **Does a picture join `proven` once P370 gives it a field?** Without P370 the sheet draws a plain box for the
+   joystick. A: `proven` stays facts only. B: `proven` waits for the part's own picture.
 3. **Are the three words right?** `findable`, `buildable`, `proven`. The council's other choice is your
-   "minimal" and "full". Example line: `joystick-module-mh: buildable, 10 open, no picture`.
+   "minimal" and "full". Example line: `joystick-module-mh: buildable, 10 unverified`.
 4. **Signal `direction`: export it or drop it?** Today no stage reads `out` on the joystick's `JOY_X`. A: `pins.py`
    writes it beside each pin as a fact for the firmware. B: records stop carrying it.
 5. **Is a bench result true for the part or for one project?** You measure the joystick's pot at 10 kOhm in the game.
