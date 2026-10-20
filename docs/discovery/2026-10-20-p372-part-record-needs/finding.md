@@ -199,6 +199,12 @@ Each stays a raised row.
 
 1. **Is an unverified pin order `buildable`?** The joystick's order comes from a photo, and a wrong order puts 3.3 V on
    a wiper. A: yes, and the sheet says "check with a meter first". B: no, the bench comes first.
+   The PO's answer (2026-10-20): *"the best is when its exactly from the picture for example or datasheet of the exat
+   part, then from a general lookalike part wheree we do have the sheet, or googling maybe, ... there should be like
+   various trustworthiness levels or like what to believe when there is more info andwhat quality of info is better
+   etc."* So each fact's source gets a rank, best first: the exact part's own photo or datasheet, a look-alike's
+   datasheet, then a web search. A higher rank wins when sources disagree. This becomes card 4 below the three
+   cards, beside P368 #470 (settings for the part search).
 2. **Does a picture join `proven` once P370 gives it a field?** Without P370 the sheet draws a plain box for the
    joystick. A: `proven` stays facts only. B: `proven` waits for the part's own picture.
 3. **Are the three words right?** `findable`, `buildable`, `proven`. The council's other choice is your
