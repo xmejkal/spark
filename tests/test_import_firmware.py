@@ -116,14 +116,52 @@ class ThePinsRememberTheirLevelsTest(unittest.TestCase):
         self.assertEqual(button.value(), 1)
 
     def test_what_the_stand_in_lacks_is_an_import_error_that_names_it(self):
-        for statement in ("from machine import PWM", "import machine; machine.I2C"):
+        for statement in ("from machine import I2C", "import machine; machine.SPI"):
             with self.subTest(statement=statement):
                 done = subprocess.run([sys.executable, "-c", statement], capture_output=True, text=True,
                                       env={"PYTHONPATH": str(STAND_IN.parent)})
                 self.assertNotEqual(done.returncode, 0)
                 self.assertIn("ImportError", done.stderr)
                 self.assertIn("stand-in", done.stderr)
-                self.assertIn("Pin only", done.stderr)
+                self.assertIn("Pin and PWM only", done.stderr)
+
+
+class APwmKeepsWhatWasLastSetTest(unittest.TestCase):
+    """P352: walk 1's dimmed LED (`effects.py`) used PWM, and the import check refused it."""
+
+    def setUp(self):
+        self.machine = a_stand_in()
+        self.PWM, self.Pin = self.machine.PWM, self.machine.Pin
+
+    def test_the_walks_effects_pattern_runs(self):
+        led = self.PWM(self.Pin(15), freq=1000, duty_u16=0)
+        led.duty_u16(32768)
+        self.assertEqual(led.duty_u16(), 32768)
+        self.assertEqual(led.freq(), 1000)
+
+    def test_each_setter_keeps_its_value_for_the_getter(self):
+        led = self.PWM(self.Pin(15))
+        led.freq(500)
+        led.duty(512)
+        led.duty_ns(1000)
+        self.assertEqual((led.freq(), led.duty(), led.duty_ns()), (500, 512, 1000))
+
+    def test_init_sets_what_it_is_given_and_keeps_the_rest(self):
+        led = self.PWM(self.Pin(15), freq=1000, duty_u16=100)
+        led.init(duty_u16=200)
+        self.assertEqual((led.freq(), led.duty_u16()), (1000, 200))
+
+    def test_nothing_set_reads_none(self):
+        self.assertIsNone(self.PWM(self.Pin(15)).duty_u16())
+
+    def test_deinit_is_remembered(self):
+        led = self.PWM(self.Pin(15))
+        self.assertFalse(led.deinited)
+        led.deinit()
+        self.assertTrue(led.deinited)
+
+    def test_a_pwm_takes_a_pin_number_too(self):
+        self.assertEqual(self.PWM(15, freq=50).freq(), 50)
 
 
 def a_project(**modules):
@@ -242,10 +280,16 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         self.assertEqual(module_named(answer, "slow")["status"], "timed out")
         self.assertIn("within 0.5 s", module_named(answer, "slow")["detail"])
 
-    def test_a_module_that_needs_more_than_pin_is_named_as_the_stand_in_s_limit(self):
-        project = a_project(light="from machine import PWM\n")
+    def test_a_module_that_needs_more_than_pin_and_pwm_is_named_as_the_stand_in_s_limit(self):
+        project = a_project(light="from machine import I2C\n")
         _, answer = answer_for(project)
         self.assertIn("stand-in", module_named(answer, "light")["detail"])
+
+    def test_a_module_that_dims_an_led_with_pwm_imports(self):
+        project = a_project(effects="from machine import Pin, PWM\n"
+                                    "led = PWM(Pin(15), freq=1000)\nled.duty_u16(32768)\n")
+        _, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "effects")["status"], "imported")
 
     def test_a_module_that_loops_at_import_is_cut_off_and_told_to_use_a_function(self):
         project = a_project(spin="while True:\n    pass\n", pins="BUTTON = 4\n")
