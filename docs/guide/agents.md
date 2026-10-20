@@ -470,13 +470,13 @@ the flash tool's own output, on **stderr**, so stdout holds the envelope alone. 
 A raise after the flash (a traceback) prints no envelope either; read the exit code and stderr.
 
 - `look.py` `data`: `port`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
-  `status`, `token`, `no_token_reason`. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
+  `status`, `token`, `no_token_reason`, `simulation`. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
   `unchecked` are the unknown fields and a missing token. A look that could not run has `data: null` (or `data.doctor` after a failed read). When there is a
   token, `next` holds a `deploy` step, whatever the status. A warning or an unknown field is not a pass: relay it.
 - `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
   `facts_line`, `image_sha256` (the image on the board, null before a flash, P213), `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
-  `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`. Keys not reached are null.
+  `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`, and `simulation` (`passed`, or `none` with `--no-simulation`: no simulation tested the image, P337). Keys not reached are null.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
@@ -698,7 +698,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    terminal, lets you run `deploy.py --token T` for N minutes (1 to 1440) on that board, and deploy.py prints
    `yes: standing yes typed by ...` and erases with no question. Its question says it allows an erase of ALL of the flash and any
    passed image of any project. It covers only a look with no warning, no unknown field and no stop, and never
-   `--ignore-older-runs`; for those deploy.py asks in the terminal. deploy.py is on `/spark:deploy`'s (and build.md's) `allowed-tools`, so Claude Code
+   `--ignore-older-runs` or `--no-simulation`; for those deploy.py asks in the terminal. deploy.py is on `/spark:deploy`'s (and build.md's) `allowed-tools`, so Claude Code
    does not ask before it runs: the grant is the gate. Never run `grant.py --scope deploy` yourself, and never write or
    change a grant file. A grant file is not tamper-proof: its token is derived from the MAC, and the store accepts what you write. The rule is the guard, and the person accepts that risk. The store's deploy record says `standing yes typed by
    <login> at <time>, until <time>`. After the flash, only `ready seen` (exit 0) is a pass:

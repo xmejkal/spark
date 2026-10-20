@@ -1,5 +1,5 @@
 ---
-description: Put the flash image that passed the simulation on the board on USB: look at the board first, then the person's yes, then erase and write, then read the board back. The look and the dry run change nothing.
+description: Put the flash image on the board on USB, one that a passed simulation tested or, on the person's yes, one of firmware/ that no simulation tested: look at the board first, then the person's yes, then erase and write, then read the board back. The look and the dry run change nothing.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *)
 ---
 
@@ -56,13 +56,21 @@ If deploy.py refuses, relay its sentence word for word. The token is not the yes
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. On macOS the board
 shows as `/dev/cu.usbmodem…`.
 
-deploy.py flashes only an image that passed. The image is the one `sim/wokwi.toml` names. A log in `sim/runs/` must name
+deploy.py flashes only an image that passed, unless the person chose `--no-simulation` (below). The image is the one `sim/wokwi.toml` names. A log in `sim/runs/` must name
 its sha256 with `verdict: passed`, and no log may name it with another verdict. A log from an older spark names no image,
 so run the scenario again. If a file in `firmware/` changed after the run, deploy.py says so: the board gets the image
 that passed, not the change. A run log that tested another image refuses the flash, because its scenario never tested
 this one. Run that scenario again, or, after the person says yes, delete the log if its scenario is gone. A dry run refuses too. `--ignore-older-runs` flashes anyway and
 names the log in a note. The chip comes from the board in `requirements.json`, and esptool refuses a board with
 another chip.
+
+**No simulation (P337).** A walk on a real board may have no passed run, for example when the firmware uses PWM, which the simulator lacks. Then the board is the test. The flow:
+
+1. Build the image from `firmware/`: `${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --project . --files firmware -o <the image sim/wokwi.toml names>`.
+2. `look.py --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file under `firmware/` compiles and the image holds `firmware/` as it is now. Else it says why, and names the build command.
+3. `deploy.py --no-simulation --json --token <the token>`. Its question starts with "no simulation tested this image". Only the person's typed yes answers it. A deploy grant never does, and deploy.py offers no grant line. The flag cannot be given with `--ignore-older-runs`.
+
+Say to the person that nothing ran this firmware before the flash. A firmware that fails shows only on the board. `spark.json`, the board log, the store record and `data.simulation` say `none`.
 
 esptool and mpremote come from `/spark:setup`, as the tools list's `flasher` and `board-shell`. If esptool cannot
 connect, hold the board's BOOT button, press and release RESET, then release BOOT and run it again. When the board record
@@ -71,9 +79,9 @@ deploy.py makes one retry of an erase that stopped with exit 2, after 5 s, and p
 ([P290](https://github.com/xmejkal/spark/issues/347)). Relay that line.
 
 After the flash, deploy.py copies a facts file, `spark.json`, to the board and reads it back. It names spark's
-version, the project, the board type, the MAC, the image's sha256 and each file's sha256. The board's log names the
+version, the project, the board type, the MAC, the image's sha256 and each file's sha256 and `simulation` (`passed` or `none`). The board's log names the
 facts file's sha256, and your store keeps one record for each board by its MAC, `boards/<MAC>.json`, with each
-deploy, its verdict and whose yes it was. Then deploy.py reads the board with mpremote. It hashes each file that the passed run's log names, on the
+deploy, its verdict and whose yes it was. Then deploy.py reads the board with mpremote. It hashes each file that the evidence names (the passed run's log, or `firmware/` with `--no-simulation`), on the
 board, and then starts the firmware and reads its output. `ready seen` (exit 0) means the files match and the firmware
 printed `ready`. `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
 firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
