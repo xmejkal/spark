@@ -205,6 +205,11 @@ Each stays a raised row.
    etc."* So each fact's source gets a rank, best first: the exact part's own photo or datasheet, a look-alike's
    datasheet, then a web search. A higher rank wins when sources disagree. This becomes card 4 below the three
    cards, beside P368 #470 (settings for the part search).
+   Follow-up, the PO: *"I'd say one generally, but we should first try to see what we have and we do have photos where
+   the pin names are visible so that should be used"*. So `buildable` needs a rank-1 pin order in general. The
+   joystick's order already comes from his photo of the silkscreen (`pin_order_proof.source`), but the record cites
+   the look-alike's manual and says `verified: false`, because `/spark:identify` marks every fact from a photo alone
+   unverified. A clear photo of the exact part's own labels is rank 1, so that rule changes with card 4.
 2. **Does a picture join `proven` once P370 gives it a field?** Without P370 the sheet draws a plain box for the
    joystick. A: `proven` stays facts only. B: `proven` waits for the part's own picture.
 3. **Are the three words right?** `findable`, `buildable`, `proven`. The council's other choice is your
