@@ -13,3 +13,4 @@ Findings from building P353 (2026-10-20, Prague). The plan is item 3 of the P351
 | 7 | `ONBOARD_BUTTON_ON` is written for a button record with `active_level`, but no doc named it | reviewer | acted | `commands/build.md`, `docs/guide/agents.md`, the `--help` text and the docstring name it |
 | 8 | Mutation run 1: 11 planted, 9 caught. No test gave a role two GPIOs, and no test checked the button line without a level | mutation tester | acted | two tests added, the table kept as `tests/mutations/p353-onboard-roles.json` |
 | 9 | `docs/guide/agents.md:226` says "It may also compile" | reviewer | rejected | older than this PR, not in its lines |
+| 10 | Mutation run 2: 12 planted, 12 caught | tools/mutate.py --copy | verified | "every mutation was caught, and the suite is green with the files restored" |
