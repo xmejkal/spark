@@ -398,7 +398,8 @@ def pin_module(board, assignments, source, pulled_up=()):
     (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
     refused, not mangled: a renamed constant is a pin the firmware silently stops finding. A signal in `pulled_up`
     gets a `<SIGNAL>_PULL = "up"` line: the board's internal pull-up holds it, set by the firmware (P204). A board
-    record that names one on-board LED adds `ONBOARD_LED`, so a project with no parts can blink it (P236).
+    record that names one on-board LED or button adds `ONBOARD_LED` or `ONBOARD_BUTTON`, and `ONBOARD_LED_ON` when it
+    holds the level that lights the LED, so a project with no parts can blink it (P236, P353).
     """
     lines = ["%s from %s" % (PIN_MODULE_HEADER, parts_library.one_line(source)),
              "# for the %s. Regenerate it; do not edit it." % parts_library.one_line(board["name"]), ""]
@@ -413,13 +414,34 @@ def pin_module(board, assignments, source, pulled_up=()):
         if entry["signal"] in pulled_up:
             lines.append('%s_PULL = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
                          % (entry["signal"], entry["signal"]))
-    led = ((board.get("pin_roles") or {}).get("onboard_led") or {}).get("gpio") or []
-    if len(led) == 1:
-        if any(entry["signal"] == "ONBOARD_LED" for entry in assignments):
-            raise Impossible("a signal is named ONBOARD_LED, the name pins.py gives the board's own LED: rename it")
-        lines.append("ONBOARD_LED = %d  # %s; its polarity is not in the board record"
-                     % (led[0], role_note(board, "onboard_led")))
+    for role, name in ONBOARD_NAMES.items():
+        lines += onboard_lines(board, assignments, role, name)
     return "\n".join(lines) + "\n"
+
+
+#: The board's own parts that pins.py names, so a project with no parts can use them (P236, P353).
+ONBOARD_NAMES = {"onboard_led": "ONBOARD_LED", "onboard_button": "ONBOARD_BUTTON"}
+
+
+def onboard_lines(board, assignments, role, name):
+    """
+    The lines for one on-board part the record names on one GPIO: its number, and `<NAME>_ON` when the record holds
+    `active_level` (the level that lights the LED or that the pressed button reads). An LED with no level says so.
+    """
+    record = (board.get("pin_roles") or {}).get(role) or {}
+    gpio = record.get("gpio") or []
+    if len(gpio) != 1:
+        return []
+    if any(entry["signal"] == name for entry in assignments):
+        raise Impossible("a signal is named %s, the name pins.py gives the board's own %s: rename it"
+                         % (name, role.replace("onboard_", "")))
+    note = parts_library.one_line(role_note(board, role))
+    if "active_level" in record:
+        return ["%s = %d  # %s" % (name, gpio[0], note),
+                "%s_ON = %d  # the level it is on at, from the board record: see %s" % (name, record["active_level"], name)]
+    if role == "onboard_led":
+        return ["%s = %d  # %s; its polarity is not in the board record" % (name, gpio[0], note)]
+    return ["%s = %d  # %s" % (name, gpio[0], note)]
 
 
 #: How every pin module begins, so a build can tell one spark wrote from a person's own `pins.py` (P196).
@@ -451,7 +473,7 @@ def main(argv=None):
     parser.add_argument("--project", help="the project to resolve the board from")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--emit-pins", metavar="FILE",
-                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED when the board record names one LED")
+                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED, ONBOARD_BUTTON and ONBOARD_LED_ON when the board record names them")
     args = parser.parse_args(argv)
 
     # One loader for the whole chain (`design.py`): the project is the requirements FILE's, the

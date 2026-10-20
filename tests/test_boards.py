@@ -335,6 +335,18 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
             self._problems({boards.CONSOLE_UART: {"gpio": [0], "note": "prints the boot log"}}),
             [])
 
+    def test_an_active_level_of_zero_or_one_passes(self):
+        # P353: the level that lights an LED or that a pressed button reads.
+        for level in (0, 1):
+            with self.subTest(level=level):
+                self.assertEqual(self._problems({"onboard_led": {"gpio": [15], "note": "x", "active_level": level}}), [])
+
+    def test_any_other_active_level_is_refused(self):
+        for level in (2, True, "0"):
+            with self.subTest(level=level):
+                problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "active_level": level}})
+                self.assertTrue(any("active_level" in p for p in problems), problems)
+
     def test_every_role_the_assigner_prices_is_one_a_board_may_use(self):
         # The other half of the same drift: a penalty keyed on a name no board file may carry is
         # a penalty that never fires, and it looks identical to one that does.
