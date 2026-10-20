@@ -5,7 +5,7 @@
 > only when one of ten fields (5 required keys and 5 chain facts) is absent, and nothing checks whether a guessed value was ever measured. Records
 > get three levels: `findable`, `buildable` and `proven`. Spark works out the level from the record and never
 > stores it. The answer on types is traits, not a hierarchy. `kind` stays a label that decides nothing. One
-> process covers a new part and an update. Three cards follow. One fixes a real bug, and one unblocks the bench.
+> process covers a new part and an update. Five cards follow. One fixes a real bug, and two unblock the joystick game walk.
 
 Summary. Five council lenses (reviewers, each with one question) read the code stage by stage. The synthesis and a
 refuter (a reviewer that tries to prove the claims wrong) checked the main claims in the code. `owes()` lists the
@@ -187,7 +187,13 @@ P370 (#472) and P100 walk 2 (#6). Smallest first.
 3. `parts.py --level PART`: a level derived from the record and the drawer, one line for the person and `level`,
    `owes`, `unverified` in the JSON envelope's `data`. It also covers boards through P331's `RecordAdder`. Done when
    the joystick prints `buildable, 10 unverified` and a test covers each of the three levels. This card is the
-   spike's outcome, not a row. It waits on the PO's answers below.
+   spike's outcome, not a row. The PO answered the decisions below, so it is ready to refine.
+4. **Blocks P364.** Each fact's source carries a rank, best first: the exact part's own photo or datasheet, a
+   look-alike's datasheet, a web search. The higher rank wins when sources disagree, and `buildable` needs a rank-1
+   pin order. `/spark:identify` counts a clear photo of the part's own labels as rank 1. Done when the joystick's pin
+   order is rank 1 from the PO's photo, and a record whose pin order is rank 2 is not `buildable`. Beside P368 #470.
+5. `pins.py` writes each signal's `direction` beside its pin, as a fact for the firmware (decision 4). Done when the
+   joystick's `JOY_X` line says the module drives it.
 
 Not cards now (R10.2): research, identify and `--skeleton` writing `function`, the joystick's own `function`, the
 chipless rule, retiring `KIND_FUNCTION`, a test that each closed list has a reader, typing `legs` and
@@ -218,6 +224,11 @@ Each stays a raised row.
    writes it beside each pin as a fact for the firmware. B: records stop carrying it.
 5. **Is a bench result true for the part or for one project?** You measure the joystick's pot at 10 kOhm in the game.
    A: the store record keeps it, and every later project gets it. B: each project measures again.
+
+Answers, the PO, 2026-10-20: decision 1 as written above (rank 1 in general, card 4). Decision 2: A, `proven` stays
+facts only, and a picture is a separate line such as `picture: none`. Decision 3: `findable`, `buildable`, `proven`.
+Decision 4: A, `pins.py` writes `direction` (card 5). Decision 5: A, the store record keeps a bench result at rank 1
+with its source (card 2).
 
 ## 7. Sources
 
