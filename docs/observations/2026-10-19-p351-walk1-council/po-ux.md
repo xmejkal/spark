@@ -26,7 +26,7 @@ TL;DR: The walk reached the board only by going around spark. The stopper is row
 - B. No told way to leave the console. Ctrl-C and Ctrl-D failed, Ctrl-X works. Neither the guide nor the deploy output says so, and a held console blocks the next copy (row 14).
 - C. No record of the person's verdict. "Works like a charm" lives only in the walk prose. Claude cannot read it from JSON, so the next stage cannot tell a played-and-liked board from a copied one.
 - D. No spark copy step that keeps the facts file true (row 8). Any bench copy outside spark leaves spark.json stale.
-- E. The three build words are mixed: "image", "firmware", "build". Use one word per thing: firmware = the person's code, build = the MicroPython binary, image = what is flashed. Today "image that passed a run" blurs these.
+- E. The three build words are mixed: "image", "firmware", "build". Use one word per thing: firmware = the person's code, interpreter = the MicroPython binary (plan.md "Names" settles on "interpreter"), image = what is flashed. Today "image that passed a run" blurs these.
 - F. "Stand-in" and "stub" both appear for machine. Pick "stand-in".
 
 ## Order of the first slice (by the PO's bar)

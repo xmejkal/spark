@@ -36,7 +36,7 @@ walk most. 5 is trust. 6 is for the T-Display walk, P338 #432.
 | 1 boards line | new card, polish: "check_all lists the library as the project's boards → it names the active board first" |
 | 4 drawer hold | closed |
 | 6 serial monitor warning | new card, polish: find the XIAO part's TX and RX names |
-| 7, 8 | closed by item 1 (the erase removes the old spark.json) |
+| 7, 8 | closed if item 1 lands (the erase removes the old spark.json) |
 | 9 raw repl failure | a note on P248 #270. If it repeats, a card |
 | 12 build lookup | P349 #445, next slice |
 | 14 console read | P248 #270 |
