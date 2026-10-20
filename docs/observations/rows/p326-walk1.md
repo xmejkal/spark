@@ -24,3 +24,5 @@ is `docs/observations/2026-10-19-p326-walk1.md`.
 | 17 | The board's v1.18 is a pre-release (v1.18-307) whose `.mpy` variant matches no `mpy-cross` on PyPI (1.12 is v5, 1.19.1 v6 flags differ) | TTGO experiment | raised | "incompatible .mpy file", then "invalid syntax for number"; a reflash to v1.29 removes it, P335 #429 and P349 #445 |
 | 18 | After the driver loads, the largest free RAM block is about 32 KB of 82 KB free, so a full-screen buffer (64.8 KB) does not fit; a 240x68 band does | TTGO experiment | raised | measured on the board; the driver record wants a memory fact beside speed (P336) |
 | 19 | The display's pins are a note in the T-Display record, not pin roles, so firmware types them by hand | TTGO experiment | raised | `lilygo-t-display.json` `//pins`; P332 #426 |
+| 20 | The score table named rows 1 to 14 without saying that they are the walk's rows, while the file holds 19 | PR review | acted | the score line now says "(the walk)" |
+| 21 | P326 #418 closed before its record was reviewed | PR review | rejected | the PO closed it with his words ("yeah, close it"); the record is the review's object, not the card's |
