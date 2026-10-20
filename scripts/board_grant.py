@@ -67,8 +67,9 @@ MAX_MINUTES = 24 * 60
 
 WHY_NO_GRANT, WHY_EXPIRED, WHY_NO_ZONE, WHY_NOT_A_GRANT = "no grant", "expired", "no zone", "not a grant"
 WHY_SERIAL_NOT_MAC, WHY_NO_MAC, WHY_BAD_MINUTES, WHY_ANSWERED_NO = "serial not mac", "no mac", "bad minutes", "answered no"
-#: Why a deploy asks for a typed yes though a deploy grant may exist: the look is no match, or --ignore-older-runs.
+#: Why a deploy asks for a typed yes though a deploy grant may exist: the look is no match, --ignore-older-runs or --no-simulation.
 WHY_LOOK_NOT_MATCH, WHY_IGNORE_OLDER_RUNS = "look not a match", "ignore older runs"
+WHY_NO_SIMULATION = "no simulation"
 WHY_BAD_SCOPE = "bad scope"
 #: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
 WHY_COULD_NOT_RUN = "could not run"
@@ -96,6 +97,7 @@ MESSAGE_FOR = {
     WHY_LOOK_NOT_MATCH: "the look is not a match (a warning, an unknown field or a stop), so a deploy grant does not "
                         "cover this deploy: the person types yes",
     WHY_IGNORE_OLDER_RUNS: "--ignore-older-runs is never covered by a deploy grant: the person types yes",
+    WHY_NO_SIMULATION: "--no-simulation is never covered by a deploy grant: the person types yes",
 }
 #: The sentences for a missing, ended or untrusted deploy grant: they name the deploy grant's command, not the live one.
 DEPLOY_MESSAGE_FOR = {

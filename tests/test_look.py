@@ -3,6 +3,7 @@
 import contextlib
 import hashlib
 import io
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -14,6 +15,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import flash_image  # noqa: E402
 import look  # noqa: E402
 import tools  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
@@ -35,6 +37,13 @@ class LookScriptCase(LookCase):
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = look.main(["--project", str(self.project), *argv], run=run)
         return code, out.getvalue().splitlines(), err.getvalue()
+
+    def build_from_firmware(self):
+        """The image of firmware/ with no run, as flash_image.py writes it."""
+        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
 
     def token(self):
         return "%s-%s" % (hashlib.sha256(MAC.encode()).hexdigest()[:4], hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
@@ -115,6 +124,33 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go("--ignore-older-runs")
         self.assertEqual(code, 0)
         self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+
+    def test_no_simulation_gives_a_token_for_firmware_as_it_is_with_no_run_log(self):
+        self.build_from_firmware()
+        code, said, _ = self.go()
+        self.assertEqual(code, 2)
+        self.assertRegex(said[-1], r"^  no token: .*no run in sim/runs/ tested")
+        code, said, _ = self.go("--no-simulation")
+        self.assertEqual(code, 0)
+        self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+
+    def test_no_simulation_with_firmware_changed_after_the_image_gives_no_token_and_the_build_command(self):
+        self.build_from_firmware()
+        (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(3)\n")
+        code, said, _ = self.go("--no-simulation")
+        self.assertEqual(code, 2)
+        self.assertRegex(said[-1], r"^  no token: .*flash_image\.py --project .* --files firmware -o ")
+
+    def test_the_json_look_says_none_and_its_deploy_step_carries_the_flag(self):
+        self.build_from_firmware()
+        code, said, _ = self.go("--no-simulation", "--json")
+        envelope = json.loads(said[-1])
+        self.assertEqual((code, envelope["data"]["simulation"]), (0, "none"))
+        self.assertIn("--no-simulation", envelope["next"][0]["argv"])
+
+    def test_both_flags_are_an_argument_error(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            self.go("--no-simulation", "--ignore-older-runs")
 
     def test_no_mac_is_no_token(self):
         self.run_the_scenario()

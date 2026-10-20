@@ -35,14 +35,14 @@ class FlashError(DeployError):
     """Error: a flash command failed, so the board may be erased and not written."""
 
 
-class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard")):
+class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard simulation")):
     """Value: the facts of the board's log after a flash. `heard` is the console text, then what the board printed."""
 
     def text(self):
         """The log file's text."""
-        return "# deploy %s on %s\nimage sha256: %s\n%s\n%s: %s\n\n%s\n" % (
-            self.moment.isoformat(timespec="seconds"), self.port, self.image_sha256, self.facts_line, self.verdict,
-            self.sentence, self.heard)
+        return "# deploy %s on %s\nimage sha256: %s\nsimulation: %s\n%s\n%s: %s\n\n%s\n" % (
+            self.moment.isoformat(timespec="seconds"), self.port, self.image_sha256, self.simulation, self.facts_line,
+            self.verdict, self.sentence, self.heard)
 
 
 def write_board_log(project, log):
@@ -94,7 +94,7 @@ class DeployService:
         tools.ToolProblem say why nothing, or not everything, was flashed.
         """
         image_path = ProjectImage(self.project).path.relative_to(self.project)
-        deploy_gate.require_open_gate(report, token, consent, image_path)
+        deploy_gate.require_open_gate(report, token, consent, image_path, self.evidence.caveat())
         if isinstance(consent, board_grant.StandingConsentStrategy):
             show_line("  yes: %s" % consent.who)
         planned = self.plan(report.port)
@@ -159,7 +159,8 @@ class DeployService:
                     heard += download_mode.READ_AGAIN + "\n"
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
         log_path = write_board_log(self.project, BoardLog(moment, report.port, image_sha256,
-                                                          facts_line, ready.verdict, ready.sentence, heard + ready.log))
+                                                          facts_line, ready.verdict, ready.sentence, heard + ready.log,
+                                                          self.evidence.simulation))
         return DeployResult(facts, facts_line, ready, log_path, connection.repl_command(), reset_seen, image_sha256)
 
     @staticmethod
@@ -175,7 +176,8 @@ class DeployService:
 
     def _put_facts(self, image, report, connection, expected, moment):
         """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
-        said = board_facts.facts(self.project, self.platform.board_of(), report.reading.mac, image.path, expected, moment)
+        said = board_facts.facts(self.project, self.platform.board_of(), report.reading.mac, image.path, expected, moment,
+                                 self.evidence.simulation)
         why = board_facts.FactsFile(connection).write(said)
         if why:
             return said, "facts file: not written: %s" % why

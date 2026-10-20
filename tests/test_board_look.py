@@ -46,7 +46,7 @@ class LookCase(ProjectCase):
         (self.project / "requirements.json").write_text(json.dumps({"board": name, "parts": []}))
 
     def look(self, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", port=None, flasher=None, esptool_code=0,
-             text=None, ignore_older_runs=False):
+             text=None, ignore_older_runs=False, evidence=None):
         """The LookReport of LookService.run with fake tools. `text` is what esptool prints, in place of the file. LookStop propagates."""
         def run(argv, **kw):
             self.ran.append(argv)
@@ -56,7 +56,7 @@ class LookCase(ProjectCase):
 
         flasher = flasher or FOUND["flasher"]
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: flasher if name == "flasher" else found(name)):
-            return board_look.looker(self.project, run).run(self.project, port, image_evidence.PassedRunEvidence(ignore_older_runs))
+            return board_look.looker(self.project, run).run(self.project, port, evidence or image_evidence.PassedRunEvidence(ignore_older_runs))
 
 
 class PortFinderTest(LookCase):
