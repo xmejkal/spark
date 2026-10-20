@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/project_image.py",
+  "name": "newer-boundary",
+  "find": "path.stat().st_mtime > made)",
+  "replace": "path.stat().st_mtime >= made)"
+ }
+]

@@ -79,7 +79,7 @@ def look_stop_envelope(sentence, doctor=None, places=boards.ButtonPlaces.EMPTY):
 
 def deploy_envelope(reached, code):
     """
-    The envelope of one deploy run. `reached` is a dict main filled as it went (the keys read below, all optional), `code` the
+    The envelope of one deploy run. `reached` is a dict main filled as it went (the keys read below: `evidence` always, the rest optional), `code` the
     exit code it returns: 0 no item, 1 `problems`, 2 `unchecked`, so the status is the code's.
     """
     report, result, plan, consent = reached.get("report"), reached.get("result"), reached.get("plan"), reached.get("consent")

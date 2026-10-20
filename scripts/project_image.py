@@ -75,6 +75,12 @@ class ProjectImage:
         return next((log for log, verdict, sha256 in self.read_run_logs()
                      if sha256 == self.sha256 and verdict == "passed"), None)
 
+    def find_newer_files(self):
+        """The files under firmware/ changed after the image was made, as project paths. The board gets the image, not them."""
+        made = self.path.stat().st_mtime
+        return sorted(str(path.relative_to(self.project)) for path in (self.project / "firmware").rglob("*")
+                      if path.is_file() and "__pycache__" not in path.parts and path.stat().st_mtime > made)
+
     def why_other_runs(self):
         """A sentence naming each log in the runs folder that does not name this image's sha256, or None when every log does."""
         logs = [(log.name, sha256) for log, _, sha256 in self.read_run_logs() if sha256 != self.sha256]

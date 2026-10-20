@@ -26,3 +26,22 @@ Gaps and findings from the agent runs of P337 #431 (2026-10-20). The plan is
 |---|---|---|---|---|
 | 11 | The builder ran `factcheck.py` on the plan only after the PO asked, and marked one claim "seen" before its grep | builder, the PO's question | raised | retro inbox; proposal: the push hook runs it on plan files |
 | 12 | The PR A implementer did not re-run the whole suite after its last fix | builder | acted | the builder ran it before the PR |
+
+## PR A's review (#454): a design lens (Sonnet), the refuter (Opus), a mutation run (Sonnet)
+
+The refuter ran 10 cases on main and on the branch, and every refusal and note was the same.
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 13 | `simulation` and `caveat()` have no caller in scripts/, only a test | design lens, refuter | acted | moved to PR B |
+| 14 | `why_not_ready(image, with_way_out)` is a boolean flag for one caller's words | design lens | acted | `way_out(image)`, which deploy adds |
+| 15 | `--ignore-older-runs` is written twice | design lens | acted | `IGNORE_OLDER_RUNS_FLAG` |
+| 16 | `notes` reaches into `image.project` for a module function | design lens | acted | `ProjectImage.find_newer_files()` |
+| 17 | `ignore_older_runs` is public state | design lens | rejected | minor. `argv()` and `grant_refusal` are what callers read |
+| 18 | Split the evidence interface for the look | design lens | rejected | not before PR B shows that the roles differ |
+| 19 | A refusal or a note changed | refuter | rejected | the same output on main and on the branch, 10 cases |
+| 20 | The grant answers where it did not before | refuter | rejected | `grant_refusal` is set exactly when the flag is |
+| 21 | `p219-de2.json` `way-out-no-flag` matches no line | refuter | acted | now on `image_evidence.py` |
+| 22 | `p283-full-path-lines.json` `deploy-drop-ignore` matches no line | refuter | acted | now on `image_evidence.py` |
+| 23 | `deploy_envelope`'s docstring says every key is optional, but `evidence` is required | refuter | acted | docstring |
+| 24 | The mutation `>` to `>=` in `newer_files` escaped: no test has a file as old as the image | mutation run, 10 planted, 9 caught | acted | new test, row in `tests/mutations/p337-image-evidence.json` |

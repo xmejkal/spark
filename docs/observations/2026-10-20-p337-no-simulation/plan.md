@@ -167,3 +167,10 @@ sequenceDiagram
 - Per PR, one mutation run (the mutation-tester agent) on the changed logic and one refuter on Opus.
 - End to end on a copy of the walk 1 project with the fake board: `flash_image.py`, `look.py --no-simulation --json`
   and `deploy.py --no-simulation --dry-run`. The real board waits for the PO's bench.
+
+## Changed in PR A's review (2026-10-20)
+
+- `simulation` and `caveat()` move to PR B, where a caller reads them. PR A had only a test that read them.
+- `why_not_ready(image, with_way_out)` became `why_not_ready(image)` and `way_out(image)`. The deploy adds the way out.
+- `newer_files` became `ProjectImage.find_newer_files()`.
+- `reached["ignore_older_runs"]` became `reached["evidence"]`. Nothing printed the old key.

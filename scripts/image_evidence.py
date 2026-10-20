@@ -10,31 +10,28 @@ import abc
 import board_grant
 from run_scenario import file_hashes
 
+#: The flag that turns a run of another image from a refusal into a note.
+IGNORE_OLDER_RUNS_FLAG = "--ignore-older-runs"
 #: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
 OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the person says yes. To flash anyway, pass "
-                      "--ignore-older-runs, and deploy.py names the log in a note")
-
-
-def newer_files(project, image):
-    """The files under firmware/ changed after the image was made, as project paths. The board gets the image, not them."""
-    made = image.stat().st_mtime
-    return sorted(str(path.relative_to(project)) for path in (project / "firmware").rglob("*")
-                  if path.is_file() and "__pycache__" not in path.parts and path.stat().st_mtime > made)
+                      "%s, and deploy.py names the log in a note" % IGNORE_OLDER_RUNS_FLAG)
 
 
 class ImageEvidence(abc.ABC):
     """
-    Strategy: what tested the image a deploy puts on a board. `simulation` is "passed" for a passed run. `grant_refusal`
-    is None, or the board_grant WHY_ code that keeps a deploy grant from answering for this evidence.
+    Strategy: what tested the image a deploy puts on a board. `grant_refusal` is None, or the board_grant WHY_ code
+    that keeps a deploy grant from answering for this evidence.
     """
 
-    simulation = None
     grant_refusal = None
 
     @abc.abstractmethod
-    def why_not_ready(self, image, with_way_out=False):
-        """None when the evidence says `image` may go on a board, else why not. `with_way_out` adds what to do instead.
-        DeployError when a log cannot be read."""
+    def why_not_ready(self, image):
+        """None when the evidence says `image` may go on a board, else why not. DeployError when a log cannot be read."""
+
+    def way_out(self, image):
+        """What to do instead of a refusal, as words that end its sentence, or "" when there is nothing to add."""
+        return ""
 
     @abc.abstractmethod
     def notes(self, image):
@@ -48,10 +45,6 @@ class ImageEvidence(abc.ABC):
     def argv(self):
         """The flags that select this evidence, for rerun lines and the steps of an envelope."""
 
-    def caveat(self):
-        """None, or the words before the gate question."""
-        return None
-
 
 class PassedRunEvidence(ImageEvidence):
     """
@@ -59,21 +52,22 @@ class PassedRunEvidence(ImageEvidence):
     unless `ignore_older_runs` turns it into a note. A log that failed on this image always refuses.
     """
 
-    simulation = "passed"
-
     def __init__(self, ignore_older_runs=False):
         self.ignore_older_runs = ignore_older_runs
         self.grant_refusal = board_grant.WHY_IGNORE_OLDER_RUNS if ignore_older_runs else None
 
-    def why_not_ready(self, image, with_way_out=False):
+    def why_not_ready(self, image):
         why = image.why_untested()
         if why or self.ignore_older_runs:
             return why
-        other = image.why_other_runs()
-        return other + OLDER_RUNS_WAY_OUT if other and with_way_out else other
+        return image.why_other_runs()
+
+    def way_out(self, image):
+        refused_for_other_runs = not self.ignore_older_runs and not image.why_untested() and image.why_other_runs()
+        return OLDER_RUNS_WAY_OUT if refused_for_other_runs else ""
 
     def notes(self, image):
-        changed = newer_files(image.project, image.path)
+        changed = image.find_newer_files()
         notes = ["%s changed after this image was made: the board gets the image that passed, not the change. Run its "
                  "scenario again to test it." % ", ".join(changed)] if changed else []
         other = image.why_other_runs()
@@ -84,4 +78,4 @@ class PassedRunEvidence(ImageEvidence):
         return file_hashes(passed) if passed else {}
 
     def argv(self):
-        return ["--ignore-older-runs"] if self.ignore_older_runs else []
+        return [IGNORE_OLDER_RUNS_FLAG] if self.ignore_older_runs else []

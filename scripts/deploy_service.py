@@ -75,9 +75,9 @@ class DeployService:
         A run log that tested another image refuses the flash, unless the evidence makes it a note.
         """
         image = ProjectImage(self.project)
-        why = self.evidence.why_not_ready(image, with_way_out=True)
+        why = self.evidence.why_not_ready(image)
         if why:
-            raise DeployError(why)
+            raise DeployError(why + self.evidence.way_out(image))
         project_flasher = self.platform.make_flasher()
         shell_command = self.platform.make_shell_command()
         notes = self.evidence.notes(image)

@@ -25,10 +25,8 @@ class PassedRunEvidenceTest(unittest.TestCase):
         self.project = project_with_image()
         self.image = ProjectImage(self.project)
 
-    def test_it_is_an_image_evidence_that_says_passed(self):
-        evidence = PassedRunEvidence()
-        self.assertIsInstance(evidence, ImageEvidence)
-        self.assertEqual((evidence.simulation, evidence.caveat()), ("passed", None))
+    def test_it_is_an_image_evidence(self):
+        self.assertIsInstance(PassedRunEvidence(), ImageEvidence)
 
     def test_a_passed_run_of_this_image_is_ready(self):
         write_log(self.project, "a.log", "passed")
@@ -42,21 +40,21 @@ class PassedRunEvidenceTest(unittest.TestCase):
     def test_no_run_naming_this_image_refuses(self):
         self.assertIn("no run in sim/runs/ tested", PassedRunEvidence().why_not_ready(self.image))
 
-    def test_a_run_of_another_image_refuses_and_the_way_out_is_added_on_ask(self):
+    def test_a_run_of_another_image_refuses_with_its_way_out(self):
         write_log(self.project, "a.log", "passed")
         write_log(self.project, "old.log", "passed", "0")
         evidence = PassedRunEvidence()
         other = self.image.why_other_runs()
         self.assertEqual(evidence.why_not_ready(self.image), other)
-        self.assertEqual(evidence.why_not_ready(self.image, with_way_out=True),
-                         other + ". If a log's scenario is gone, delete the log after the person says yes. To flash anyway, "
+        self.assertEqual(evidence.way_out(self.image), ". If a log's scenario is gone, delete the log after the person says yes. To flash anyway, "
                          "pass --ignore-older-runs, and deploy.py names the log in a note")
 
     def test_ignoring_older_runs_makes_a_run_of_another_image_a_note(self):
         write_log(self.project, "a.log", "passed")
         write_log(self.project, "old.log", "passed", "0")
         evidence = PassedRunEvidence(ignore_older_runs=True)
-        self.assertIsNone(evidence.why_not_ready(self.image, with_way_out=True))
+        self.assertIsNone(evidence.why_not_ready(self.image))
+        self.assertEqual(evidence.way_out(self.image), "")
         self.assertEqual(evidence.notes(self.image), [self.image.why_other_runs()])
 
     def test_a_file_newer_than_the_image_is_a_note(self):
@@ -69,6 +67,15 @@ class PassedRunEvidenceTest(unittest.TestCase):
         notes = PassedRunEvidence().notes(self.image)
         self.assertEqual(len(notes), 1)
         self.assertTrue(notes[0].startswith("firmware/main.py changed after this image was made"))
+
+    def test_a_file_as_old_as_the_image_is_no_note(self):
+        write_log(self.project, "a.log", "passed")
+        firmware = self.project / "firmware"
+        firmware.mkdir()
+        (firmware / "main.py").write_text("x = 1\n")
+        made = self.image.path.stat().st_mtime
+        os.utime(firmware / "main.py", (made, made))
+        self.assertEqual(PassedRunEvidence().notes(self.image), [])
 
     def test_notes_are_empty_when_nothing_is_newer_and_every_log_names_the_image(self):
         write_log(self.project, "a.log", "passed")
