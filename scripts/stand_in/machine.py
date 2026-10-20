@@ -1,9 +1,10 @@
 """
 spark's stand-in for MicroPython's `machine` module (P59), so a firmware imports and runs on the Mac.
 
-It is NOT the chip. It has a `Pin` and nothing else: pins remember the level written to them, and a test sets an input
-with `set_level(gpio, level)` and reads an output with `level(gpio)`. It knows nothing of which GPIO exists, of
-interrupts firing, of PWM, I2C or SPI. A firmware that imports those gets an ImportError that names this file.
+It is NOT the chip. It has a `Pin` and a `PWM` and nothing else: pins remember the level written to them, and a test
+sets an input with `set_level(gpio, level)` and reads an output with `level(gpio)`. A PWM keeps the last frequency and
+duty set on it and makes no signal (P352). It knows nothing of which GPIO exists, of interrupts firing, of I2C or SPI.
+A firmware that imports those gets an ImportError that names this file.
 """
 
 #: GPIO number -> the level the firmware last wrote, or a test last set. Pins share it, as pins of one chip would.
@@ -49,7 +50,42 @@ class Pin:
         self.handler = handler
 
 
+class PWM:
+    """MicroPython's PWM as calls only: each setter keeps its value, each getter returns it, None while unset."""
+
+    def __init__(self, dest, freq=None, **settings):
+        self.pin, self.settings = dest, {}
+        self.init(freq, **settings)
+
+    def init(self, freq=None, **settings):
+        """As on the ESP32, the frequency can come by position. An init after a deinit turns it on again."""
+        if freq is not None:
+            settings["freq"] = freq
+        self.settings.update(settings)
+        self.deinited = False
+
+    def deinit(self):
+        self.deinited = True
+
+    def _kept(self, name, value):
+        if value is None:
+            return self.settings.get(name)
+        self.settings[name] = value
+
+    def freq(self, value=None):
+        return self._kept("freq", value)
+
+    def duty(self, value=None):
+        return self._kept("duty", value)
+
+    def duty_u16(self, value=None):
+        return self._kept("duty_u16", value)
+
+    def duty_ns(self, value=None):
+        return self._kept("duty_ns", value)
+
+
 def __getattr__(name):
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
         raise AttributeError(name)
-    raise ImportError("spark's stand-in machine (scripts/stand_in/machine.py) has Pin only, not %s" % name)
+    raise ImportError("spark's stand-in machine (scripts/stand_in/machine.py) has Pin and PWM only, not %s" % name)

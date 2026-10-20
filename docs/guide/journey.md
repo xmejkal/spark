@@ -1061,8 +1061,9 @@ integers. The firmware does `import pins`; it never types a GPIO number.
 The firmware imports on a Mac before any hardware ([P59](https://github.com/xmejkal/spark/issues/7)).
 `import_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`.
 Each import is a process of its own. Every import uses spark's stand-in for MicroPython's `machine` module. The
-stand-in lives in `scripts/stand_in/`. It has a `Pin` that remembers its level, and nothing else. A test sets an
-input, calls the firmware and reads the output pin.
+stand-in lives in `scripts/stand_in/`. It has a `Pin` that remembers its level, and a `PWM` that keeps its last
+frequency and duty but makes no signal ([P352](https://github.com/xmejkal/spark/issues/450)). It has nothing else. A
+test sets an input, calls the firmware and reads the output pin.
 
 The command leaves `main.py` unrun, because `main.py` starts the loop. Keep it to two lines that call a module. The
 button-and-LED firmware does that (`import light`, then `light.run()`). You write your own, or Claude does. To try the

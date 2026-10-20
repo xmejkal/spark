@@ -10,10 +10,10 @@ Example, in a project after `/spark:build` and the firmware are written:
 
 It imports each PROJECT/firmware/*.py and each package there (a folder holding __init__.py) except the boot files,
 main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's `machine` stand-in
-(scripts/stand_in/machine.py: a Pin that remembers its level, nothing else), firmware/ and firmware/lib, where
-MicroPython looks for drivers, first on sys.path. Per module the answer is one of:
+(scripts/stand_in/machine.py: a Pin that remembers its level and a PWM that keeps its last frequency and duty,
+nothing else), firmware/ and firmware/lib, where MicroPython looks for drivers, first on sys.path. Per module the answer is one of:
   - imported;
-  - raised: the exception's last line, which names the stand-in when the firmware wants more than a Pin;
+  - raised: the exception's last line, which names the stand-in when the firmware wants more than a Pin or a PWM;
   - timed out: it did not return within the timeout (5 s by default). Something at module level loops or waits.
     Put it in a function that main.py calls.
 
