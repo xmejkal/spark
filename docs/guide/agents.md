@@ -148,10 +148,10 @@ These only read:
   code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
   candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool;
 - the board doctor ([P282](https://github.com/xmejkal/spark/issues/326)). When esptool's read fails
-  (`look.py`, `grant.py --minutes`) or mpremote cannot open the port or enter the REPL (`reach.py`, `live.py`), the script adds the doctor's lines:
+  (`look.py`, `grant.py --minutes`, `deploy.py`) or mpremote cannot open the port or enter the REPL (`reach.py`, `live.py`), the script adds the doctor's lines:
   `said` (the tool's own error line, a fact you show and never decide on), one `check` line per check
   (`port-listed`, `console`), and `next`, one step for the person's hands. `live.py --json` and `reach.py --json`
-  carry it as `doctor`: `checks`, `tool_said`, `next_step` and `if_not_helped`. The codes are `plug_in`,
+  carry it as `doctor`, and so does `deploy.py --json` in `data.doctor`: `checks`, `tool_said`, `next_step` and `if_not_helped`. The codes are `plug_in`,
   `close_other`, `press_reset`, `run_again`, `hold_boot` and `replug`. Your part: tell the person the step in its own
   words, wait until they say it is done, and run the same command again. If the same `next_step` comes back after the
   person did it, give the `if_not_helped` step; when that is null, stop and say that spark knows no further step. A
@@ -486,7 +486,9 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
 - `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
   board's RESET, `data.person_action` says so, with its place when the board record has it, but only after the wait for the press ran out. So tell the person before you run
   `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
-  board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`.
+  board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`. A `deploy.py`
+  whose look could not read the board does the same. For `close_other`, the step tells the person to leave mpremote's
+  console with Ctrl-X, because a console left open holds the port ([P354](https://github.com/xmejkal/spark/issues/452)).
 - A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.
 
 ### Deploy without a simulation
