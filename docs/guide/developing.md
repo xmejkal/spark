@@ -261,21 +261,23 @@ to the rules we set". New code follows them now. Today's names change in the nam
 
 1. One word has one meaning in the code, the docs, the JSON and Miro. The P323 glossary holds the words.
 2. A name says what the thing is for, not which tool does it. Only the adapter that wraps a tool carries the tool's
-   name: `ChipReader` is the role, and `EsptoolChipReader` fills it with esptool.
+   name: `BoardReader` is the role, and `EsptoolBoardReader` fills it with esptool.
 3. Each level has one responsibility. You can say it in one sentence without "and".
 
    | Level | Its one responsibility | Its name | Example |
    |---|---|---|---|
-   | Script | one topic for a person and Claude, with one subcommand per job | a noun | `board.py`, with `board.py identify` |
-   | Operation | one job, with one public method, `run()` | a verb, then its object | `IdentifyBoard` |
-   | Helper | one thing, with several methods about it | an `-er` noun or a plain noun | `ChipReader`, `GrantStore` |
+   | CLI | one topic for a person and Claude, with one subcommand per job | a noun | `parts.py`, with `parts.py show` |
+   | Operation | one job, with one public method, `run()` | a verb, then its object | `ShowPart` |
+   | helper | one thing, with several methods about it | an `-er` noun or a plain noun | `BoardReader`, `PortFinder` |
 
-4. An Operation's module, class, op name and subcommand use the same words: the module `identify_board`, `IdentifyBoard`,
-   `"identify-board"`, `board.py identify`.
+4. An Operation's module, class and op name (printed as `op` in the JSON) use the same words: the module `show_part`,
+   the class `ShowPart`, the op `"show-part"`. Its subcommand is the verb alone, because the CLI's topic noun gives
+   the object: `parts.py show`.
 5. A class that only reads says so in its name: `Reader`, `Finder` or `Probe`. A class or a method that changes a
    board, a file or a port has a verb that names the change: `write`, `erase`, `cure`, `save`.
 
-The role table above still applies. Its role words end a name, and `Fake` starts one.
+The role table above still applies. Its role words end a name, and `Fake` starts one. A Service, a Store or an
+Adapter from that table is a helper with its role word, and an Operation calls it.
 
 These rules name a class, a function or a constant:
 

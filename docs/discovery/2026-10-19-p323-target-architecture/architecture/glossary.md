@@ -11,10 +11,10 @@ Back to [the architecture](README.md).
 | Word | One meaning |
 |---|---|
 | CLI | A script in `scripts/` with a `main()`. It parses arguments, runs one Operation and prints. Replaces "door". |
-| subcommand | One job of a CLI, such as `identify` in `board.py identify`. A CLI is one topic, a noun, and has one subcommand per job (P381). |
+| subcommand | One job of a CLI, such as `show` in `parts.py show`. A CLI is one topic, a noun, and has one subcommand per job. The subcommand is the verb alone (P381). |
 | frontend | What a person or Claude talks to: the CLI as text, the CLI with `--json` (Claude's commands, skills and agents), later an MCP server. |
-| Operation | One job, one class with one public method `run()`, named verb + object, such as `IdentifyBoard`. Its module, class, op name and subcommand use the same words: the module `identify_board`, `IdentifyBoard`, `"identify-board"`, `board.py identify` (P381). Its name is printed as `op`. Proposed class. |
-| helper | A class that does one thing for an Operation, with several methods about it. An `-er` noun or a plain noun, such as `ChipReader` or `GrantStore` (P381). |
+| Operation | One job, one class with one public method `run()`, named verb + object, such as `ShowPart`. Its module, class and op name use the same words: the module `show_part`, the class `ShowPart`, the op `"show-part"`, and its subcommand is the verb, `parts.py show` (P381). Its name is printed as `op`. Proposed class. |
+| helper | A class that does one thing for an Operation, with several methods about it. An `-er` noun or a plain noun, such as `BoardReader` or `PortFinder`. A Service, a Store or an Adapter is a helper with its role word (P381). |
 | area | One package folder under `scripts/spark/`, such as `bench`. Proposed. |
 | module | One Python file. Never "library module". |
 | core | The area that holds the contract every other area uses. Proposed. |
@@ -33,7 +33,7 @@ Back to [the architecture](README.md).
 | lines | Text for a person. stdout without `--json`, stderr with it. Replaces the proposed `diagnostics`. |
 | effect | What an Operation does outside: `reads`, `writes`, `runs` (a tool), `network`, `board`, `erases`. `runs` is proposed. |
 | OutsideWorld | The Value that holds the callables for every effect: run, write, fetch, clock, consent, and the `environ` variables the Operation reads. Proposed. |
-| probe | A read-only look at a board or a port: `ConsoleProbe`, `ReadyProbe`, `DoctorProbe`. It changes nothing on the board. | A class that changes the port, such as today's `ConsoleProbe.cure`, is no probe: the names pass (P382) splits it.
+| probe | A read-only look at a board or a port: `ConsoleProbe`, `ReadyProbe`, `DoctorProbe`. It changes nothing on the board. A class that changes the port, such as today's `ConsoleProbe.cure`, is no probe: the names pass (P382) splits it. |
 | backend | A swappable outside thing: a tool, the firmware platform, the store or the simulator. |
 | Backends | The Value that holds every backend choice of one run, built once. Proposed. |
 | registry | A dict in capitals from a name to a class, beside its base class, such as `MATCHERS` (`matching.py:222`). |
@@ -65,7 +65,7 @@ Back to [the architecture](README.md).
 
 | Word | Meanings found today | Settled |
 |---|---|---|
-| door / CLI / interface | design.md's "door", AGENTS.md:27's "interfaces" | CLI. The helper is `run_cli`, proposed. |
+| door / CLI / interface | design.md's "door", AGENTS.md:27's "interfaces" | CLI. The function that runs a CLI is `run_cli`, proposed. |
 | outcome / status | design.md 2.4 "outcome, printed as status". The code has `status_of`, `STATUS_FOR`. | status, four words. The module `outcomes.py` keeps its name. |
 | code | problem code, exit code (`board_envelope.py`), Python for a board (`BoardCodeError`, `board_connection.py:41`) | code is a problem code. New code says `exit_code` and `source`. |
 | verdict | exit code (`check_spine.py`), status (`check_all.py`), a look's stop or warning | private functions become `exit_code_of`, `overall_status`. JSON keys stay. |
