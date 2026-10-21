@@ -20,9 +20,10 @@ Four decisions, one at a time, in this order. Everything else the council decide
    short function and a reusable one conflict, the short one wins. Yes, or another order?
 2. The shape. Scripts become thin CLIs over one package, one Operation per job, one rules test. Example:
    `look.py` shrinks from 72 lines to about 15, and its flags, output and exit codes stay. Yes or no?
-3. Slice 0a before walk 2, or after it. Walk 2 is due 2026-10-27. (a) Slice 0a, about 300 lines of tests with no
-   output change, merges by 2026-10-23, and its goldens catch a change in what walk 2 runs. (b) Walk 2 first, and 0a
-   follows. The council proposes (a) only if it merges by 2026-10-23, otherwise (b).
+3. Slices 0a and 1 before walk 2, or after it. Walk 2 is due 2026-10-27. (a) Slice 0a, about 300 lines of tests
+   with no output change, and slice 1, about 150 lines that add codes and next steps to the bench envelope, both
+   merge by 2026-10-23. Claude then reads codes on the bench, and the goldens catch any other change. (b) Walk 2
+   first, on today's envelope, and both follow. The council proposes (a) only if both merge by 2026-10-23.
 4. When the area moves start. Until v0.13 only a story pulls its area (D13). Example: walk 2 finds a `deploy` gap,
    so that story moves the bench area. Confirm, or name a date.
 
@@ -60,7 +61,8 @@ no Operation.
 
 ## The area map
 
-Nine areas. An arrow points to an area that the area at its tail imports. Nothing imports upward, and every area imports `core`.
+Nine areas. An area imports only the areas it reaches along the arrows (rule U1), so bench imports design through
+firmware. Nothing imports upward, and every area imports `core`. Each area page names its direct imports.
 
 ```mermaid
 flowchart TB
@@ -98,7 +100,8 @@ Every Operation returns an `OperationResult` (proposed). Every frontend renders 
 |---|---|
 | result | `data`, `findings`, `next`, `lines`. `status` comes from `status_of` (`outcomes.py:35`), never declared. |
 | envelope | v1 keys stay: `envelope`, `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated` (`outcomes.py:68`). It only gains keys. |
-| Finding | `severity`, `subject`, `code`, `sentence`, `fix`. Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
+| Finding | `severity`, `subject`, `code`, `sentence`, `fix` (a string, as today), `fix_step` (a NextStep or null, proposed). Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
+| effects | `reads`, `writes`, `runs` (a tool, proposed), `network`, `board`, `erases`. An Operation gets only the outside callables its effects declare. |
 | status words | `ok`, `problems`, `could-not-run`. A check or stage also has `skipped` (`outcomes.py:21-26`). Nothing else under `status`. |
 | exit codes | 0 ok, 1 problems, 2 could-not-run, only from `EXIT_FOR`. A crash is `could-not-run`, code `crash`, exit 2. |
 | codes | snake_case constants in the area's `codes.py`, or `core/codes.py` when two areas use one. Starters: `tool_missing`, `no_project`, `no_board`, `no_port`, `port_busy`, `image_stale`, `sim_failed`, `crash`. |
@@ -116,7 +119,7 @@ test that reads the code with Python's `ast` module. A breach that exists today 
 | 1. Readable | R1 short functions (40 lines in `spark/`), R2 nesting at most 3, R3 at most 5 parameters, R4 public code first, R5 short comments, R6 role word first in a docstring, R7 sentences as constants | `ArchitectureRules` counts R1 to R6. `test_no_magic_strings.py` and review cover R7. |
 | 2. Testable | T1 only Adapters touch the outside, T2 no new `mock.patch`, T3 a contract test per Strategy, T4 no hidden test mode, T5 goldens per Operation | AST for T1 to T4. The golden test for T5. |
 | 3. Exchangeable | X1 a backend is picked only from Backends in `operations.py`, X2 a frontend only parses and renders, X3 one registry form | AST, plus a parity test: text and `--json` carry the same codes. |
-| 4. Reusable | U1 imports follow the area map, U2 import modules, never private names, U3 one home per shared flag, code and shape | AST, plus the contract test of allowed keys. |
+| 4. Reusable | U1 an area imports only areas it reaches along the map's arrows, U2 import modules, never private names, U3 one home per shared flag, code and shape | AST, plus the contract test of allowed keys. |
 | 5. Consistent | C1 the glossary's words, C2 one envelope from every Operation, C3 exit codes only from `EXIT_FOR`, C4 effects declared and gated | AST and the contract test. |
 
 The glossary is [glossary.md](glossary.md): one word per thing, and the public names that keep their spelling.
@@ -147,10 +150,10 @@ sequenceDiagram
   participant S as LookService
   P->>CLI: look.py --project p
   C->>CLI: look.py --project p --json
-  CLI->>RC: run_cli(OPERATIONS, argv)
-  RC->>RC: parse, build Backends and OutsideWorld
-  RC->>RO: run_operation(look, values, outside)
-  RO->>O: look(project, port, ..., outside)
+  CLI->>RC: run_cli(prog, OPERATIONS, argv, build_outside, outside)
+  RC->>RC: parse, build OutsideWorld and Backends
+  RC->>RO: run_operation(look, values, outside, backends)
+  RO->>O: look(project, port, ignore_older_runs, outside, backends)
   O->>S: run(port)
   S-->>O: LookReport
   O-->>RO: OperationResult(data, findings, next, lines)

@@ -1,7 +1,9 @@
 # Area: firmware
 
-Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Names marked "proposed" do not exist
-in the code yet.
+Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
+[refactor plan](../refactor-plan.md#into-firmware).
+
+New names (proposed): `SimulationEngine`, `WokwiCliEngine`, `ENGINES`, `RunLog`, `FlashImageBuilder`, `status_of_run`, `SimulationEngineContract`, the modules `image_builder`, `import_probe`, `scenario_run`, `simulation_engine`, `operations`, and the Operation names below.
 
 ## Level 2: what firmware does
 
@@ -12,9 +14,9 @@ a log of each run, so the bench knows which image a passed simulation tested.
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `flash-image` (proposed name) | `flash_image.py` | reads, writes the image file |
-| `import-firmware` (proposed name) | `import_firmware.py PROJECT` | reads, runs the host Python |
-| `run-scenario` (proposed name) | `run_scenario.py` | reads, runs the simulator, writes a run log under `sim/runs/` |
+| `flash-image` | `flash_image.py` | reads, writes the image file |
+| `import-firmware` | `import_firmware.py PROJECT` | reads, runs the host Python |
+| `run-scenario` | `run_scenario.py` | reads, runs the simulator, reads the Wokwi token from `OutsideWorld.environ`, writes a run log under `sim/runs/` |
 
 The build calls the simulation project step (`sim_project.py`) as one of its stages.
 
@@ -22,12 +24,12 @@ The build calls the simulation project step (`sim_project.py`) as one of its sta
 
 | Module | Holds |
 |---|---|
-| `firmware/image_builder.py` | the image of MicroPython plus the project's files, moved from `flash_image.py` (proposed) |
-| `firmware/import_probe.py` | imports each firmware module on the computer without `main.py`, moved from `import_firmware.py` (proposed) |
+| `firmware/image_builder.py` | the image of MicroPython plus the project's files, moved from `flash_image.py` |
+| `firmware/import_probe.py` | imports each firmware module on the computer without `main.py`, moved from `import_firmware.py` |
 | `firmware/project_image.py` | `ProjectImage` and the run logs that tested it, moved as is |
 | `firmware/sim_project.py` | the Wokwi project a design implies: the part mapping, the limits, the chips, `wokwi.toml` |
-| `firmware/scenario_run.py` | `ScenarioRun` and `RunLog`, moved from `run_scenario.py` (proposed) |
-| `firmware/simulation_engine.py` | `SimulationEngine`, `WokwiCliEngine`, `ENGINES` (all proposed) |
+| `firmware/scenario_run.py` | `ScenarioRun` and `RunLog`, moved from `run_scenario.py` |
+| `firmware/simulation_engine.py` | `SimulationEngine`, `WokwiCliEngine`, `ENGINES` |
 | `firmware/operations.py` | the area's `OPERATIONS` and its index docstring |
 
 ### Its ports and adapters
@@ -38,21 +40,7 @@ The build calls the simulation project step (`sim_project.py`) as one of its sta
 | command runner | `OutsideWorld.run` | a recording `run` | the CLI |
 | file writes | `OutsideWorld.write` | a recording writer | the CLI |
 
-Firmware depends on design (the `Design` Value), records and core.
-
-```mermaid
-flowchart LR
-  DES["design: Design"] --> SP["sim_project"]
-  SP --> ENG["SimulationEngine"]
-  ENG --> WK["WokwiCliEngine: wokwi-cli"]
-  PRJ["project firmware/"] --> IB["image_builder"]
-  IB --> IMG["flash image"]
-  IMG --> SR["ScenarioRun"]
-  SR --> ENG
-  SR --> LOG["RunLog in sim/runs/"]
-  LOG --> PI["ProjectImage"]
-  PI --> BENCH["bench reads it"]
-```
+Firmware imports design (the `Design` Value), records and core.
 
 ## Level 3: how firmware is built
 
@@ -103,7 +91,7 @@ classDiagram
 ```
 
 `ScenarioRun` (`run_scenario.py:124`), `ProjectImage` (`project_image.py:19`) and `DeployError`
-(`project_image.py:15`) exist. `SimulationEngine`, `WokwiCliEngine`, `RunLog` and `FlashImageBuilder` are proposed.
+(`project_image.py:15`) exist.
 `RunLog` replaces the dict that `run_record` builds (`run_scenario.py:212`), and its fields are proposed. The name avoids "record", which means a
 fact file. `DeployError` subclasses `SparkError`.
 
@@ -132,7 +120,7 @@ sequenceDiagram
 ### How firmware is tested alone
 
 - `fake_wokwi_cli.py` stays the fake simulator. It is a process, so the same fake serves the goldens and the unit tests.
-- A `SimulationEngineContract` test (proposed) runs every engine on one tiny scenario with a recording `run`.
+- A `SimulationEngineContract` test runs every engine on one tiny scenario with a recording `run`.
 - `ProjectImage` reads run logs from `tests/data/`. No board, no USB.
 - The patches of `find_toolchain` and `subprocess` go when each Adapter takes `run` (`run_scenario.py:171`,
   `sim_project.py:157`, `import_firmware.py:58`).
@@ -145,13 +133,3 @@ sequenceDiagram
   is MicroPython plus LittleFS (`flash_image.py:33`), and the board's `micropython_port` picks the build
   (`flash_image.py:89`).
 
-### What moves into firmware
-
-| Today | Becomes |
-|---|---|
-| `flash_image.py` logic (`flash_image.py:37-118`) | `firmware/image_builder.py` |
-| `import_firmware.py` logic (`import_firmware.py:53-93`) | `firmware/import_probe.py`, its subprocess behind `run` |
-| `project_image.py` (90 lines) | `firmware/project_image.py` |
-| `sim_project.py` (201 lines), `find_wokwi_cli` (`sim_project.py:20`) | `firmware/sim_project.py`. The tool lookup goes to `Backends.tools`. |
-| `run_scenario.py` `ScenarioRun`, `verdict`, `run_record` (`run_scenario.py:124`, `:98`, `:212`) | `firmware/scenario_run.py`. `verdict` becomes `status_of_run`, `run_record` builds a `RunLog`. |
-| the `wokwi-cli` calls at `run_scenario.py:171` and `sim_project.py:157` | `WokwiCliEngine` |

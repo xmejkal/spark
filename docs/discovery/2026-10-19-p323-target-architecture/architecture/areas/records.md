@@ -1,7 +1,10 @@
 # Area: records
 
-Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Names marked "proposed" do not exist
-in the code yet.
+Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
+[refactor plan](../refactor-plan.md#into-records).
+
+New names (proposed): `RecordFolders`, `Records`, `RecordSchema`, `ToolFinder`, `ToolMissingError`, `Backends`,
+`Choice`, `build_outside`, `FakeToolFinder`, the Operation names below, and the role word Records.
 
 ## Level 2: what records does
 
@@ -12,22 +15,24 @@ the store and the project. It also builds `Backends` once per run, so every back
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `board-list`, `board-get`, `board-validate`, `board-resolve` | `boards.py --list`, `--get`, `--validate`, `--resolve` (`boards.py:553-561`) | reads |
-| `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`tools.py:572-578`) | reads, writes, network for install |
+| `board-get`, `board-validate`, `board-resolve`, and `--path`, `--id`, `--paths` | `boards.py` (`boards.py:553-561`) | reads |
+| `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`tools.py:572-578`) | reads, writes, network and runs for install |
 
-The Operation names are proposed. The flags stay as they are.
+The flags stay as they are. `boards.py --list` is design's `board-list` Operation, because it says which board
+stops at the footprint (`footprint_stop`, called at `boards.py:592`), a design fact. `boards.py` imports both
+areas' `OPERATIONS`, as `parts.py` does.
 
 ### Its components
 
 | Module | Holds |
 |---|---|
 | `records/store.py` | the store's folder, `write_file`, `fetch`, events, `keep`, moved from `scripts/store.py` |
-| `records/record_folders.py` | `RecordFolders` (proposed): the library, store and project folders, built once |
-| `records/reader.py` | `Records` (proposed): one record kind read across the three folders, the nearest wins |
-| `records/schema.py` | `RecordSchema` (proposed): a record kind's version, required keys and rules, `findings(record)` |
+| `records/record_folders.py` | `RecordFolders`: the library, store and project folders, built once |
+| `records/reader.py` | `Records`: one record kind read across the three folders, the nearest wins |
+| `records/schema.py` | `RecordSchema`: a record kind's version, required keys and rules, `findings(record)` |
 | `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, moved from `boards.py` |
-| `records/tool_finder.py` | `ToolFinder` (proposed) over the three `tools.json` layers, install lines |
-| `records/backends.py` | `Backends` and `build_outside` (both proposed) |
+| `records/tool_finder.py` | `ToolFinder` over the three `tools.json` layers, install lines |
+| `records/backends.py` | `Backends` and `build_outside` |
 
 ### Its ports and adapters
 
@@ -38,20 +43,9 @@ The Operation names are proposed. The flags stay as they are.
 | network: `fetch(url) -> bytes` | `store.fetch`, the only `urlopen` (`store.py:357`) | a dict from URL to bytes | none |
 | file writes | `store.write_file` (`store.py:140`) | a recording writer | none |
 
-Records depends only on core. It is the only area that reads `SPARK_HOME` or the environment.
-
-```mermaid
-flowchart LR
-  ENV["SPARK_HOME, XDG_DATA_HOME"] --> RF["RecordFolders"]
-  RF --> RD["Records(kind)"]
-  RD --> SCH["RecordSchema"]
-  TJ["tools.json, three layers"] --> TF["ToolFinder"]
-  REQ["requirements.json platform"] --> BK["Backends"]
-  RF --> BK
-  TF --> BK
-  BK --> BO["build_outside"]
-  BO --> OW["OutsideWorld (core)"]
-```
+Records imports only core. It is the only area that reads `os.environ`. Another area gets the variables it needs
+from `OutsideWorld.environ`, such as `CLAUDE_CODE_SESSION_ID` (`cost.py:69`, `:77`) and the Wokwi token
+(`run_scenario.py:249`).
 
 ## Level 3: how records is built
 
@@ -65,7 +59,7 @@ classDiagram
     from_environ(project)$
   }
   class Records {
-    <<Records>>
+    <<Records role, proposed>>
     kind
     load(record_id)
     all()
@@ -104,10 +98,11 @@ classDiagram
   Backends --> Choice : platform, simulator
 ```
 
-`Backends` holds choices, not built objects. `platform` is a `Choice` such as `micropython` chosen by
-`requirements.json`. Each area's `operations.py` turns a choice into a Strategy with its own registry, so records
-never imports bench or firmware. `Choice` is proposed. The envelope gains a `backends` key with each choice and its
-`chosen_by` (proposed), so a person and Claude see which backend ran and why.
+`Backends` holds choices, not built objects, and it names no backend of its own. `platform` is a `Choice` with the
+name that `requirements.json` gives, or none and `chosen_by: default`. Each area's `operations.py` turns a choice into
+a Strategy with its own registry and its own default, such as bench's `DEFAULT_PLATFORM`. So records never imports
+bench or firmware. The envelope gains a `backends` key with each choice and its `chosen_by`, so a person and Claude
+see which backend ran and why.
 
 A record reader refuses a newer schema with code `schema_too_new`. A schema bump ships one tested `migrate(record)`.
 
@@ -124,7 +119,7 @@ sequenceDiagram
   BO->>BK: Backends.for_project(project, environ)
   BK->>RF: from_environ(project)
   BK->>TF: ToolFinder(folders)
-  BK->>BK: read requirements platform, default micropython
+  BK->>BK: read the requirements platform, or none
   BK-->>BO: Backends
   BO->>BO: OutsideWorld with only the declared effects
   BO-->>RC: OutsideWorld, Backends, Privacy
@@ -146,17 +141,3 @@ sequenceDiagram
   Operation as an input file. spark has no MCP client, so no core Adapter exists for it.
 - An online store is a fourth folder in `RecordFolders`, only when a second user needs it.
 
-### What moves into records
-
-| Today | Becomes |
-|---|---|
-| `scripts/store.py` (407 lines) | `records/store.py`. `home()` (`store.py:46`) feeds `RecordFolders`. |
-| `store.layers`, `store.records` (`store.py:73`, `:86`) | `Records(kind)` over `RecordFolders` |
-| `boards.validate`, `REQUIRED_KEYS` (`boards.py:340`, `:62`) | `RecordSchema("board")` |
-| `parts.validate`, `REQUIRED_KEYS`, `RECORD_TYPES` (`parts.py:621`, `:51`, `:311`) | `RecordSchema("part")`, one named rule per function |
-| `compare_design.PULLUP_MIN_OHM` and `MAX` (read at `parts.py:495`) | `records/schema.py`, which removes the sourcing to checks edge |
-| `boards.load`, `ButtonPlaces`, `BoardError` (`boards.py:253`, `:269`, `:122`) | `records/board_records.py`. `BoardError` subclasses `SparkError`. |
-| `boards.footprint_stop` (`boards.py:236`), which imports `emit_footprint` and `parts` | design, which removes the records to design edge |
-| `tools.find`, `merged`, `ToolProblem` (`tools.py:277`, `:79`, `:63`) | `ToolFinder`, `ToolMissingError` (proposed), code `tool_missing` |
-| `tools.main` (`tools.py:568`, 83 lines, nesting 5) | seven Operations, one function each |
-| the platform hard-coded at `deploy.py:171` and `micropython_port` at `flash_image.py:89` | `Backends.platform`. `micropython_port` stays a board fact the platform reads. |

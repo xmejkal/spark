@@ -1,7 +1,10 @@
 # Area: design
 
-Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Names marked "proposed" do not exist
-in the code yet.
+Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
+[refactor plan](../refactor-plan.md#into-design).
+
+New names (proposed): `PinAssigner`, `PinMap`, `BoardEmitter`, `NeedsService`, `ImpossibleError`, the modules
+`loader`, `pin_assigner`, `board_emitter`, `footprint_emitter`, `operations`, and the Operation names below.
 
 ## Level 2: what design does
 
@@ -13,9 +16,15 @@ the board file that wires them. It writes facts only, the pin map and the board 
 | Operation | CLI | Effects |
 |---|---|---|
 | `need`, `needs`, `needs-set`, `match`, `offer`, `pick`, `requirements` | `parts.py` with that flag | reads, writes for `needs-set`, `pick`, `requirements` |
-| `assign-pins` (proposed name) | `assign_pins.py requirements.json` | reads, writes `pins.py` with `--out` |
-| `emit-board` (proposed name) | `emit_board.py` | reads, writes `board.tsx` |
-| `emit-footprint` (proposed name) | `emit_footprint.py` | reads, writes a footprint file |
+| `audit` | `parts.py --audit` | reads |
+| `board-list` | `boards.py --list` | reads |
+| `assign-pins` | `assign_pins.py requirements.json` | reads, writes `pins.py` with `--out` |
+| `emit-board` | `emit_board.py` | reads, writes `board.tsx` |
+| `emit-footprint` | `emit_footprint.py` | reads, writes a footprint file |
+
+`audit` and `board-list` live here because both ask whether a board stops the chain at the footprint
+(`footprint_gaps`, `footprint_stop`). That is a design fact, so the Operations move up to it. A callback passed down
+into records and sourcing would be a parameter with one value.
 
 ### Its components
 
@@ -24,10 +33,10 @@ the board file that wires them. It writes facts only, the pin map and the board 
 | `design/loader.py` | `load` and the `Design` Value, moved from `design.py` (the name avoids `design/design.py`) |
 | `design/needs.py` | a goal's needs, matched against the store, the pick, moved from `scripts/needs.py` |
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is |
-| `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` (proposed) |
+| `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` |
 | `design/netlist.py` | `Netlist`, moved as is |
-| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1172 lines, proposed) |
-| `design/footprint_emitter.py` | the footprint writer, moved from `emit_footprint.py` (proposed) |
+| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1172 lines) |
+| `design/footprint_emitter.py` | the footprint writer and `footprint_stop`, moved from `emit_footprint.py` and `boards.py:236` |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
 | `design/operations.py` | the area's `OPERATIONS` and its index docstring |
 
@@ -36,22 +45,7 @@ the board file that wires them. It writes facts only, the pin map and the board 
 Design runs no outside program, so it has no Adapter. Its only effect is `OutsideWorld.write`. It reads part and
 board records through records, and offers through sourcing's `Matcher`.
 
-Design depends on sourcing, records and core.
-
-```mermaid
-flowchart LR
-  REQ["requirements.json"] --> LD["loader: Design"]
-  NE["needs: pick"] --> REQ
-  NE --> MT["sourcing: MATCHERS"]
-  LD --> PA["pin_assigner"]
-  PA --> RP["restricted_pins"]
-  LD --> BE["board_emitter"]
-  PA --> BE
-  BE --> CU["copper, fab"]
-  BE --> OUT["board.tsx"]
-  PA --> PINS["pins.py"]
-  LD --> REC["records: Records board and part"]
-```
+Design imports sourcing, records and core.
 
 ## Level 3: how design is built
 
@@ -109,8 +103,7 @@ classDiagram
   NeedsService ..> Design
 ```
 
-`Design` exists as a namedtuple (`design.py:45`). `PinAssigner`, `PinMap`, `BoardEmitter`, `NeedsService` and
-`ImpossibleError` are proposed. `ImpossibleError` is today's `Impossible` (`assign_pins.py:113`), and its class
+`Design` exists as a namedtuple (`design.py:45`). `ImpossibleError` is today's `Impossible` (`assign_pins.py:113`), and its class
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
 The pin map is written as MicroPython's `pins.py` today (`assign_pins.py:392`). It stays in design until a second
@@ -149,14 +142,3 @@ sequenceDiagram
 - A new part is one record in `parts/`. The design reads its facts and needs no code.
 - A pin map for a second platform is a Renderer of `PinMap`, added with that platform.
 
-### What moves into design
-
-| Today | Becomes |
-|---|---|
-| `scripts/design.py` (382 lines), `load` at `design.py:372` | `design/loader.py`. `DesignError` (`design.py:64`) subclasses `SparkError`. |
-| `scripts/needs.py` (655 lines) | `design/needs.py`. Its `parts.py` handlers (`parts.py:2087-2179`) become Operations here. |
-| `assign_pins.py` logic: `assign`, `render`, `pin_module` (`assign_pins.py:199`, `:368`, `:392`) | `design/pin_assigner.py` |
-| `EXIT_IMPOSSIBLE` alias (`assign_pins.py:46`) | gone, `ImpossibleError.status` says `problems` |
-| `emit_board.py` logic (`emit_board.py:64-1172`) | `design/board_emitter.py`, split under 600 lines per module |
-| `emit_footprint.py` logic, and `boards.footprint_stop` (`boards.py:236`) | `design/footprint_emitter.py` |
-| `restricted_pins.py`, `netlist.py`, `fab.py`, `copper.py` | moved as is |

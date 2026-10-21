@@ -16,9 +16,9 @@ collaborator Value, one place for backend choices, readability as goal one, and 
 |---|---|---|
 | N1 | The five goals rank readable, testable, exchangeable, reusable, consistent. | The PO named readability "most of all". |
 | N2 | One result shape, `OperationResult(data, findings, next, lines)`. | Six shapes cross boundaries today, and a reader learns one. |
-| N3 | One `Finding(severity, subject, code, sentence, fix)`. | Five problem shapes today, and `outcomes.answer` already has the three severities (`outcomes.py:49`). |
-| N4 | One `OutsideWorld(run, write, fetch, clock, consent)`, with only the declared effects filled. | Dry run, consent and the test seams become one mechanism. |
-| N5 | `Backends` holds choices, and each area's registry turns a choice into a Strategy. | records sits at the bottom, so it cannot build a bench or firmware object. |
+| N3 | One `Finding(severity, subject, code, sentence, fix, fix_step)`. `fix` stays a string. | Five problem shapes today, and `fix_step` adds the step without changing a key's type (`board_envelope.py:58`). |
+| N4 | One `OutsideWorld(run, write, fetch, clock, consent, environ)`, with only the declared effects filled. `runs` gates `run`. | Dry run, consent and the test seams become one mechanism, and every effect is gated. |
+| N5 | `Backends` holds choices, and each area's registry turns a choice into a Strategy, with the area's own default (`DEFAULT_PLATFORM` in bench). | records sits at the bottom and names no backend, so it cannot build a bench or firmware object. |
 | N6 | An Operation is a plain function with keyword parameters, not a `values` bag. | A typo in a flag name fails at load, and a reader sees the inputs. |
 | N7 | One registry form: a dict in capitals from the class attribute `name` to the class. | `MATCHERS` already has it (`matching.py:222`), and it greps well. |
 | N8 | `FirmwarePlatform` becomes a Strategy base, and it also makes the port finder and the board reader. | 8 tool lookups bypass it today, so a platform swap would edit 5 callers. |
@@ -29,8 +29,14 @@ collaborator Value, one place for backend choices, readability as goal one, and 
 | N13 | A tool's MCP version enters as an input file that Claude passes. | spark has no MCP client (`tools.py:162`). |
 | N14 | `SparkError.status` is a class attribute, `could-not-run` by default. | An argument invites a wrong status, and only `Impossible` needs `problems`. |
 | N15 | Pin map text and image building stay out of `FirmwarePlatform`. | They would add upward edges from design and firmware to bench. |
-| N16 | The envelope gains `code`, `needs_person` and `backends`, and loses nothing. | Claude branches on codes and sees which backend ran. |
-| N17 | Area pages run about 150 to 200 lines, above the 130 asked. | Each holds three diagrams. The prose stays within the budget. |
+| N16 | The envelope gains `code`, `fix_step`, `needs_person` and `backends`, only in output slices. | Claude branches on codes and sees which backend ran, and no move changes a golden. |
+| N17 | After the refuter's trims, area pages run about 130 to 160 lines, and the file moves sit in the plan. | Each page keeps a class and a sequence diagram. The prose stays within the budget. |
+| N18 | A golden changes only in an output slice, never in a move. Each area has an output slice before its move. | One exact rule, and the moves stay provably silent. |
+| N19 | `audit` and `board-list` move to design. | Both ask a design fact (`footprint_gaps`, `footprint_stop`), and a callback passed down is a parameter with one value. |
+| N20 | `OutsideWorld.environ` holds the variables an Operation reads, such as the session id and the Wokwi token. | One field is smaller than a new Backends entry per variable (`cost.py:69`, `run_scenario.py:249`). |
+| N21 | Rule U1 means reachability along the area map's arrows, and each page names its direct imports. | The map stays readable, and today's direct imports (bench to design, `board_live.py:24`) all follow arrows. |
+| N22 | `run_cli` takes one `outside=` override, and a CLI's `main` is `main(argv=None, outside=None)`. | Tests inject one Fake, the CLI holds no wiring (X2), and `main` keeps two parameters (R3). |
+| N23 | `DoctorProbe`, not `DoctorStep`. | "Step" already means a next step and a wiring step, and the doctor's two looks change nothing, like `ReadyProbe`. |
 
 ## Conflicts between the papers, and how they were settled
 
@@ -67,17 +73,17 @@ in `tests/architecture_baseline.json`, which only shrinks. The old ids are in br
 | T2 | No new `mock.patch` except `os.environ`. A file's count never rises. [S8] | AST |
 | T3 | A Strategy base has two subclasses or a Fake in `tests/fakes.py`, and a `<Name>Contract` test that each subclass test inherits. [S13, S14] | AST |
 | T4 | Code never branches on what is imported, such as `"unittest" in sys.modules`. | AST |
-| T5 | Every Operation has a golden per status, and no move changes one. | the golden test |
+| T5 | Every Operation has a golden per status. A golden changes only in an output slice, never in a move. | the golden test |
 | X1 | A concrete Adapter is named only in its area's `operations.py`, picked from `Backends` through a registry. | AST |
 | X2 | No `main`, `print` or `sys.exit` in `spark/`. A CLI calls `run_cli`. [S5] | AST |
 | X3 | A registry is a dict in capitals beside its base class, keyed by the class attribute `name`. | AST |
-| U1 | Imports follow the area map, with no cycle. Another area is reached only through its public modules. [S4] | AST |
+| U1 | An area imports only the areas it reaches along the area map's arrows, with no cycle. Another area is reached only through its public modules. [S4] | AST |
 | U2 | Import modules, not names. No private name crosses a module, as an import or an attribute. | AST |
 | U3 | A shared flag is one `Argument` in core. A code is one constant in its area's `codes.py`. | AST, contract test |
 | C1 | The glossary's words. No vague class words (Validator, Manager and the rest). A file basename is unique. Every exception subclasses `SparkError` and ends in `Error`. [S7, S12] | AST |
 | C2 | Every Operation a command page calls has `--json` and prints one envelope, even for a bad flag. `status` holds only status words. [S10] | contract test |
 | C3 | An exit code comes only from `EXIT_FOR`. No `EXIT_` alias. | AST |
-| C4 | An Operation declares its effects. An erase names its gate. No secret or home path reaches the output. A newer record schema is refused. [S15, S17, S18] | AST, seam and marker tests |
+| C4 | An Operation declares its effects: `reads`, `writes`, `runs`, `network`, `board`, `erases`. An undeclared one is a refusing stub. An erase names its gate. No secret or home path reaches the output. A newer record schema is refused. [S15, S17, S18] | AST, seam and marker tests |
 
 S2 (a Value is frozen) and S11 (public functions carry hints) stay as review rules under R6 and C1.
 

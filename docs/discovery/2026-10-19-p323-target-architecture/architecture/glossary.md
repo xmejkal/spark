@@ -19,16 +19,19 @@ Back to [the architecture](README.md).
 | status | One of `ok`, `problems`, `could-not-run`. A check or a build stage also has `skipped`. Replaces "outcome". |
 | exit code | The number the process exits with: 0, 1 or 2, from `EXIT_FOR` (`outcomes.py:31`). Always two words. |
 | code | A constant in snake_case that names one problem or unchecked item, such as `no_port`. Never an exit code. |
-| Finding | One item in `problems`, `unchecked` or `unmeasured`: severity, subject, code, sentence, fix. Proposed class. |
+| Finding | One item in `problems`, `unchecked` or `unmeasured`: severity, subject, code, sentence, fix, fix_step. Proposed class. |
 | severity | Which list a Finding goes in: `problem`, `unchecked` or `unmeasured` (`outcomes.py:49`). |
 | OperationResult | What an Operation returns: data, findings, next steps and lines. Proposed class. |
 | envelope | The JSON form of an OperationResult, version 1 (`outcomes.py:68`). It only gains keys. |
-| NextStep | One action that comes next, JSON `next`. A `fix` is a NextStep too. Proposed class over `outcomes.step` (`outcomes.py:84`). |
+| NextStep | One action that comes next, JSON `next`. Proposed class over `outcomes.step` (`outcomes.py:84`). |
+| fix | The text that says what to do about a Finding. A string, as today (`board_envelope.py:58`). |
+| fix_step | The same advice as a NextStep, or null. A new key beside `fix`, so the envelope only gains keys. Proposed. |
 | sentence | The text a person reads in a Finding. |
 | why | The text a person reads in a NextStep. |
 | lines | Text for a person. stdout without `--json`, stderr with it. Replaces the proposed `diagnostics`. |
-| effect | What an Operation does outside: `reads`, `writes`, `network`, `board`, `erases`. |
-| OutsideWorld | The Value that holds the callables for every effect: run, write, fetch, clock, consent. Proposed. |
+| effect | What an Operation does outside: `reads`, `writes`, `runs` (a tool), `network`, `board`, `erases`. `runs` is proposed. |
+| OutsideWorld | The Value that holds the callables for every effect: run, write, fetch, clock, consent, and the `environ` variables the Operation reads. Proposed. |
+| probe | A read-only look at a board or a port: `ConsoleProbe`, `ReadyProbe`, `DoctorProbe`. It changes nothing on the board. |
 | backend | A swappable outside thing: a tool, the firmware platform, the store or the simulator. |
 | Backends | The Value that holds every backend choice of one run, built once. Proposed. |
 | registry | A dict in capitals from a name to a class, beside its base class, such as `MATCHERS` (`matching.py:222`). |
@@ -54,7 +57,7 @@ Back to [the architecture](README.md).
 | rule | One line of the code standard, checked by `ArchitectureRules`. Proposed. |
 | baseline | The list of today's rule breaches. It only shrinks. |
 | golden | A file with the expected `--json` and exit code of one Operation on one fixture project. Proposed. |
-| Fake | A stand-in for a real part in tests, in `tests/fakes.py`. |
+| Fake | A stand-in for a real part in tests, in `tests/fakes.py`. `Fake`, then the whole name: `FakeOutsideWorld`, `FakeFirmwarePlatform`. |
 
 ## 2. Clashes and how they are settled
 
@@ -67,7 +70,7 @@ Back to [the architecture](README.md).
 | person text | `sentence`, `why`, `reason` (`check_all.py`), `message` (`emit_footprint.py:236`), `detail` (`check_spine.py`) | new JSON uses only `sentence` and `why`. |
 | finding / problem / failure | `Finding` twice (`check_footprints.py:54`, `check_physics.py:93`), `Failure` (`compare_design.py:44`), `parts._problem` (`parts.py:238`) | one `Finding` in core. The three classes fold into it at the checks move. |
 | answer | `outcomes.answer` (`outcomes.py:49`), `parts.Answer` (`parts.py:230`) | `OperationResult`. "answer" is not a class name. |
-| check | `Check` (`check_all.py:63`), `BoardCheckStrategy` (`board_doctor.py:74`), `ReadyCheck` (`ready_check.py:43`) | `DoctorStep`, `ReadyProbe`, both proposed, in the bench move. |
+| check | `Check` (`check_all.py:63`), `BoardCheckStrategy` (`board_doctor.py:74`), `ReadyCheck` (`ready_check.py:43`) | `DoctorProbe`, `ReadyProbe`, both proposed, in the bench move. "Step" keeps one meaning, and both look without changing. |
 | stage | build stages, deploy's `STAGE_*` (`board_envelope.py:23`) | build only. `DeployPhase` in code, proposed. JSON `stage` stays. |
 | step | next action, wiring `Step` (`breadboard_steps.py:34`) | `NextStep`, `WiringStep` (proposed, breadboard move). |
 | record | fact file, `WiringRecord` (`breadboard_changes.py:103`) | `WiringLog` (proposed). A simulation log is a `RunLog` (proposed). |

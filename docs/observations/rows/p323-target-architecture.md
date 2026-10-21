@@ -173,7 +173,7 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 167 | CLI code duplicated: `GrantService` built in 4 places, `--json` and `--project` declared in 14 files | round 4 testability | acted | bench.md, `COMMON_ARGUMENTS` |
 | 168 | Fakes outside `fakes.py` and two clocks (`fakes.py:59`, `:88`) | round 4 testability | acted | slice 5 |
 | 169 | Seven scripts call `subprocess` with no `run` to inject | round 4 testability | acted | each Adapter takes `run` in its area move (firmware.md, build.md, checks.md, breadboard.md) |
-| 170 | `store.py:40` branches on unittest | round 4 testability | acted | rule T4. Slice 0 gives each child process its own `SPARK_HOME`, since the branch does not fire there |
+| 170 | `store.py:40` branches on unittest | round 4 testability | acted | rule T4. Slice 0 gives each child process its own `SPARK_HOME`, since the branch does not fire there. Reason corrected by row 212 |
 | 171 | Suite 122 s with 44 s in three spots | round 4 testability | acted | slice 7: fast and slow lanes |
 | 172 | Only 17% of tests test from the outside, slice 1a covers 3 of 24 CLIs | round 4 testability | acted | slice 0a, 0b, 0c: a golden per Operation and status, fake tools as processes |
 | 173 | Areas can reach concrete Adapters and each other's internals | round 4 testability | acted | rules X1 and U1 |
@@ -201,9 +201,28 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 195 | 18 rules shown at once | round 4 PO | acted | rules grouped under five goals, the full table in notes.md |
 | 196 | `Layers` does not say its role, and "door" is coined | round 4 PO | acted | `RecordFolders`, CLI |
 | 197 | The PO's decisions are unordered | round 4 PO | acted | README.md Your call: four, in the paper's order |
-| 198 | Goldens that spawn a CLI are not protected by the `store.py:40` test branch, which needs `unittest` imported | synthesis | acted | refactor-plan.md slice 0: each child gets its own `SPARK_HOME` |
+| 198 | Goldens that spawn a CLI are not protected by the `store.py:40` test branch, which needs `unittest` imported | synthesis | acted | refactor-plan.md slice 0: each child gets its own `SPARK_HOME`. Reason corrected by row 212 |
 | 199 | `check_spine.py` does not import any check module, so build has no edge to checks | synthesis | acted | README.md area map |
 | 200 | `parts.py` holds 29 Operations by an `ast` count, not 30 | synthesis | acted | sourcing.md |
 | 201 | The goal Operations of `parts.py` live in design, since `needs.py` imports `design`, `emit_board` and `emit_footprint` | synthesis | acted | design.md and sourcing.md. `parts.py` imports both areas' `OPERATIONS` |
 | 202 | The tools role for the board engine already exists as `board-engine` (`data/tools.json:6`) | synthesis | acted | build.md uses it, no new role |
 | 203 | Area pages run over the 130-line budget | synthesis | acted | notes.md N17: three diagrams each, prose within budget |
+| 204 | The build design broke the `check_spine` golden: wrong stage order, a `BreadboardStage` that does not exist, a stop on any non-ok status (`check_spine.py:391-412`) | refuter round 4 | acted | build.md: today's order, six stages, `goes_on` keeps the schematic-notes rule, the sheet stays a `--keep` side output |
+| 205 | The pages said goldens never change, yet slice 1 accepts them, `backends` had no slice, and per-area codes arrived in moves | refuter round 4 | acted | refactor-plan.md: a golden changes only in an output slice, never in a move. Each area has an output slice before its move (N18) |
+| 206 | "A fix is a NextStep" turns today's string `fix` (`board_envelope.py:58`) into an object | refuter round 4 | acted | `fix` stays a string, `fix_step` is a new key (glossary.md, core.md, README.md, N3) |
+| 207 | `deploy.main`'s five keywords (`tests/test_deploy_gate.py:108`) cannot pass through a 15-line CLI over `run_cli` | refuter round 4 | acted | `run_cli` gets one `outside=` override. Slice 3c changes the deploy tests' call lines and says why (N22) |
+| 208 | Moving `footprint_stop` and `footprint_gaps` to design left `boards.py:592` and `parts.py:165` as upward edges | refuter round 4 | acted | `board-list` and `audit` move to design (N19) |
+| 209 | `cost.py:69,77` and `run_scenario.py:249` read the environment outside records | refuter round 4 | acted | `OutsideWorld.environ` (N20). records.md says only records reads `os.environ` |
+| 210 | A new platform touches firmware and design too, not only bench | refuter round 4 | acted | bench.md states the limit: an image builder and a pin map Renderer come with it |
+| 211 | `Backends.for_project` defaulted to micropython, a backend named outside `operations.py` | refuter round 4 | acted | the default is bench's `DEFAULT_PLATFORM`. Backends names none |
+| 212 | "store.py:40 does not protect a child process" is wrong: children inherit the scratch store (`store.py:35-39`) | refuter round 4 | rejected | the real gap: in a child `store.fetch` refuses `file:` URLs (`store.py:339`), so the 0c fetch goldens run through `main(argv)`. The wrong reason in rows 170 and 198 is corrected in refactor-plan.md |
+| 213 | Slice 3a needs `mutate.py --retarget`, which no slice adds | refuter round 4 | acted | slice 2 adds `tools/mutate.py --retarget OLD NEW` |
+| 214 | The area map lacked direct edges the pages declare, such as bench to design (`board_live.py:24`, `live.py:19`) | refuter round 4 | acted | rule U1 means reachability along the arrows. Each page names its direct imports (N21) |
+| 215 | About 20 new names were not marked proposed | refuter round 4 | acted | each area page lists its new names, checked by grep. `FlasherContract` also does not exist and is marked |
+| 216 | `run_cli` had two signatures, and README's sequence omitted `backends` | refuter round 4 | acted | core's signature in both pages |
+| 217 | `DoctorStep` gave "step" a third meaning | refuter round 4 | acted | `DoctorProbe`, with "probe" in the glossary (N23) |
+| 218 | `FakeOutside` and `FakePlatform` break the Fake naming rule, `<<Records>>` is not a role in the table | refuter round 4 | acted | `FakeOutsideWorld`, `FakeFirmwarePlatform`, the stereotype says proposed role. Slice 2 edits developing.md's table |
+| 219 | No effect word covers running a tool, so `run` was never gated | refuter round 4 | acted | a `runs` effect gates `run` (core.md, C4) |
+| 220 | The plan says walk 2 needs 0a and 1, but the PO was asked only about 0a | refuter round 4 | acted | README.md decision 3 covers slices 0a and 1 |
+| 221 | "Five lambdas" in `FirmwarePlatform`: it is three lambdas and two classes (`firmware_platform.py:55-60`), and `make_shell_command` was missing | refuter round 4 | acted | bench.md text and class diagram fixed |
+| 222 | Area pages ran 154 to 197 lines, mostly mermaid | refuter round 4 | acted | the file moves went to refactor-plan.md, redundant flowcharts and bare class lines dropped. Pages now 131 to 157 lines (N17) |
