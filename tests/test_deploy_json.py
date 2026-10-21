@@ -179,6 +179,16 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.go(consent=FakeConsent(True))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], [s["op"] for s in said["next"]]), (2, "could-not-run", ["look"]))
+        self.assertEqual(said["unchecked"][0]["fix"], "run look.py again")  # no doctor: the fix of the next op
+
+    def test_the_doctor_s_fix_names_the_project_s_own_buttons(self):
+        self.run_the_scenario()
+        hold = test_deploy_gate.TheBusyPortTest.BUSY._replace(next_step="hold_boot")
+        with mock.patch.object(board_doctor, "after_esptool", return_value=hold):
+            code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        fix = self.one(code, said, "deploy", "deploy")["unchecked"][0]["fix"]
+        self.assertEqual(fix, board_doctor.step_sentence("hold_boot", boards.ButtonPlaces.of_project(self.project)))
+        self.assertNotEqual(fix, board_doctor.step_sentence("hold_boot"))
 
     def test_a_stop_is_a_problem_named_gate(self):
         self.run_the_scenario()

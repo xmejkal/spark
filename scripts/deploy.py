@@ -222,9 +222,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         reached["refusal"] = str(cannot)
         lines = ["deploy.py: %s" % cannot]
         if isinstance(cannot, board_look.LookStop):  # P354: a failed read gets the doctor, a busy port its step
-            lines, doctor = board_doctor.stop_answer("deploy.py", cannot, args.project, run)
-            if doctor is not None:
-                reached["doctor"] = doctor
+            lines, reached["doctor"] = board_doctor.stop_answer("deploy.py", cannot, args.project, run)
         print("\n".join(lines), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
