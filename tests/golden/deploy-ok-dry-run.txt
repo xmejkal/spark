@@ -1,0 +1,4 @@
+  would run: <python> -m esptool --chip esp32s3 erase_flash
+  would run: <python> -m esptool --chip esp32s3 write_flash 0x0 '<project>/sim/flash-with-firmware.bin'
+  board: not looked at: run look.py
+  then, to see it start: <python> -m mpremote repl, press Ctrl-C, then Ctrl-D: the firmware prints `ready`. Then leave mpremote's console with Ctrl-X: an open console holds the port, and the next deploy cannot open it
