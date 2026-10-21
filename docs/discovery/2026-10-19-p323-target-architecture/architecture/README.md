@@ -66,10 +66,9 @@ Nine areas. An arrow points to an area that the area at its tail imports. Nothin
 flowchart TB
   BUILD["build"] --> BB["breadboard"]
   BUILD --> FW["firmware"]
-  BUILD --> CHK["checks"]
   BENCH["bench"] --> FW
   BB --> DES["design"]
-  CHK --> DES
+  CHK["checks"] --> DES
   FW --> DES
   DES --> SRC["sourcing"]
   SRC --> REC["records"]
