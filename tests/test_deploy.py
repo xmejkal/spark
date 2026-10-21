@@ -96,7 +96,8 @@ class TheDryRunTest(ProjectCase):
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s write_flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
             "  board: not looked at: run look.py",
             "  then, to see it start: /opt/python3 -m mpremote connect %s repl, press Ctrl-C, then Ctrl-D: "
-            "the firmware prints `ready`" % PORT])
+            "the firmware prints `ready`. Then leave mpremote's console with Ctrl-X: an open console holds the port, "
+            "and the next deploy cannot open it" % PORT])
 
     def test_without_a_port_esptool_and_mpremote_find_the_board(self):
         self.run_the_scenario()

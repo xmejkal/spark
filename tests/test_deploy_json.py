@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_doctor  # noqa: E402
+import board_envelope  # noqa: E402
+import boards  # noqa: E402
 import deploy_service  # noqa: E402
 import firmware_platform  # noqa: E402
 import image_evidence  # noqa: E402
@@ -177,6 +179,16 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.go(consent=FakeConsent(True))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], [s["op"] for s in said["next"]]), (2, "could-not-run", ["look"]))
+        self.assertEqual(said["unchecked"][0]["fix"], "run look.py again")  # no doctor: the fix of the next op
+
+    def test_the_doctor_s_fix_names_the_project_s_own_buttons(self):
+        self.run_the_scenario()
+        hold = test_deploy_gate.TheBusyPortTest.BUSY._replace(next_step="hold_boot")
+        with mock.patch.object(board_doctor, "after_esptool", return_value=hold):
+            code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        fix = self.one(code, said, "deploy", "deploy")["unchecked"][0]["fix"]
+        self.assertEqual(fix, board_doctor.step_sentence("hold_boot", boards.ButtonPlaces.of_project(self.project)))
+        self.assertNotEqual(fix, board_doctor.step_sentence("hold_boot"))
 
     def test_a_stop_is_a_problem_named_gate(self):
         self.run_the_scenario()
@@ -184,6 +196,26 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], said["problems"][0]["subject"], said["next"]), (1, "problems", "gate", []))
+
+    def test_a_busy_port_gives_the_doctor_s_result_and_its_step_as_the_fix(self):
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", return_value=test_deploy_gate.TheBusyPortTest.BUSY):
+            code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["data"]["doctor"]["next_step"]), (2, "close_other"))
+        self.assertEqual(said["unchecked"][0]["fix"], board_doctor.step_sentence("close_other"))
+
+    def test_a_stop_with_no_doctor_result_has_no_doctor_and_no_fix(self):
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, "doctor" in said["data"], said["unchecked"][0]["fix"]), (2, False, ""))
+
+    def test_doctor_fix_is_the_step_s_sentence_or_nothing(self):
+        busy = test_deploy_gate.TheBusyPortTest.BUSY
+        self.assertEqual(board_envelope.doctor_fix(busy, boards.ButtonPlaces.EMPTY), board_doctor.step_sentence("close_other"))
+        self.assertEqual((board_envelope.doctor_fix(None, boards.ButtonPlaces.EMPTY),
+                          board_envelope.doctor_fix(busy._replace(next_step=None), boards.ButtonPlaces.EMPTY)), ("", ""))
 
     def test_the_answer_no_is_unchecked_with_no_next_step(self):
         self.run_the_scenario()

@@ -22,6 +22,8 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_console  # noqa: E402
+import board_doctor  # noqa: E402
 import board_facts  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
@@ -80,7 +82,7 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command. The first flash command
         exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait."""
         self.copied = getattr(self, "copied", {})
@@ -93,7 +95,7 @@ class GateCase(LookCase):
             if "devs" in command:
                 return done(devs_text or data(devs))
             if "flash_id" in command:
-                return done(text or data(esptool))
+                return done(text or data(esptool), 2 if look_fails else 0)
             if "exec" in command:
                 return self.on_board(command)
             flash.append(command)
@@ -299,6 +301,53 @@ class TheGateTest(GateCase):
         code, said, _ = self.deploy("--dry-run")
         self.assertEqual((code, self.ran), (0, []))
         self.assertIn("  board: not looked at: run look.py", said.splitlines())
+
+
+class TheBusyPortTest(GateCase):
+    """P354: a console left open holds the port, so esptool's look fails. The doctor says so, as look.py's does."""
+
+    BUSY = board_doctor.BoardDoctorResult(
+        (board_doctor.CheckResult("console", False, "another program holds the port: locked", "close_other"),),
+        None, "close_other", None)
+
+    def test_a_busy_port_names_the_console_and_ctrl_x_and_flashes_nothing(self):
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", return_value=self.BUSY):
+            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("deploy.py: could not read the board on", problems)
+        self.assertIn("next    another program holds the port, often mpremote's console: leave mpremote's console "
+                      "with Ctrl-X", problems)
+
+    def test_the_real_doctor_finds_the_lock_and_names_ctrl_x(self):
+        real_console = board_console.ConsoleProbe.console
+
+        def held(probe):  # the console script exits as it does when another program holds the port's lock
+            def run(command, **kw):
+                raise subprocess.CalledProcessError(3, command, "",  # READ_CONSOLE's exit on EAGAIN
+                                                    "serial.SerialException: Could not exclusively lock port")
+            probe.run = run
+            return real_console(probe)
+
+        self.run_the_scenario()
+        with mock.patch.object(board_console.ConsoleProbe, "console", held):
+            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertEqual(problems.strip().splitlines()[-1].strip(), "next    " + board_doctor.step_sentence("close_other"))
+
+    def test_with_no_doctor_the_stop_says_why_and_keeps_its_own_words(self):
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", side_effect=tools.ToolProblem("no mpremote")):
+            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        self.assertEqual(code, 2)
+        self.assertIn("(no doctor: no mpremote)", problems)
+
+    def test_a_stop_with_no_port_gets_no_doctor_step(self):
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        self.assertEqual(code, 2)
+        self.assertIn("deploy.py: no board found", problems)
+        self.assertNotIn("next ", problems)
 
 
 class TheBoardAfterTheFlashTest(GateCase):

@@ -35,6 +35,9 @@ UNREAD = "could not read the port: %s"
 #: The console script's exit code when another program holds the port's lock, as mpremote and esptool do while they run
 #: (mpremote 1.29 transport_serial.py:52 opens with exclusive=True). pyserial 3.5 keeps the lock's errno (serialposix.py:387).
 EXIT_PORT_BUSY = 3
+#: How the person leaves mpremote's console and frees the port. mpremote 1.29 quits on Ctrl-] or Ctrl-X (repl.py:14);
+#: in walk 1, Ctrl-C and Ctrl-D did not leave it, and Ctrl-X did (docs/observations/rows/p326-walk1.md, row 14).
+LEAVE_CONSOLE = "leave mpremote's console with Ctrl-X"
 #: The kinds of a console read: it read the port, another program held it, or it could not read it for another reason.
 KIND_READ, KIND_BUSY, KIND_UNREAD = "read", "busy", "unread"
 #: Run with mpremote's Python: print what the port says in `seconds`, opened with DTR and RTS off, so that opening

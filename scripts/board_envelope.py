@@ -80,9 +80,14 @@ def look_stop_envelope(sentence, doctor=None, places=boards.ButtonPlaces.EMPTY):
     """The envelope of a look that could not run: one unchecked item. `doctor` is the board doctor's BoardDoctorResult after
     a failed read, or None: its facts go in `data.doctor` and its next step for the person's hands is the `fix`, naming the
     buttons as `places` (ButtonPlaces) does."""
-    fix = board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
     return outcomes.envelope("look", "look", {"doctor": board_doctor.as_dict(doctor)} if doctor else None,
-                             unchecked=[{"sentence": sentence, "fix": fix}])
+                             unchecked=[{"sentence": sentence, "fix": doctor_fix(doctor, places)}])
+
+
+def doctor_fix(doctor, places):
+    """The `fix` of a BoardDoctorResult: its next step's sentence, naming the buttons as `places` does, or '' when there
+    is no doctor result or it names no step."""
+    return board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
 
 
 def deploy_envelope(reached, code):
@@ -94,8 +99,9 @@ def deploy_envelope(reached, code):
     project, port = reached["project"], reached.get("port") or (report.port if report else None)
     evidence, next_op = reached["evidence"], reached.get("next_op")
     stage = reached["stage"]
-    sentence = reached.get("refusal")
-    item = {"subject": "ready" if result else stage, "sentence": sentence, "fix": FIX_FOR_NEXT.get(next_op, "")}
+    sentence, doctor = reached.get("refusal"), reached.get("doctor")
+    fix = doctor_fix(doctor, boards.ButtonPlaces.of_project(project)) if doctor else FIX_FOR_NEXT.get(next_op, "")
+    item = {"subject": "ready" if result else stage, "sentence": sentence, "fix": fix}
     ready = result.ready if result else None
     following = []
     if reached.get("dry_run"):
@@ -127,6 +133,8 @@ def deploy_envelope(reached, code):
         "person_action": reached.get("person_action") if result and result.reset_seen is False else None,
         "run_in_terminal": reached.get("run_in_terminal"),
     }
+    if doctor:  # P354: a look that esptool could not read, as look.py's envelope carries it
+        data["doctor"] = board_doctor.as_dict(doctor)
     return outcomes.envelope("deploy", "deploy", data, [item] if code == outcomes.EXIT_PROBLEMS else (),
                              [item] if code == outcomes.EXIT_COULD_NOT_RUN else (), following,
                              notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)
