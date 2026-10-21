@@ -104,7 +104,7 @@ Every Operation returns an `OperationResult` (proposed). Every frontend renders 
 | codes | snake_case constants in the area's `codes.py`, or `core/codes.py` when two areas use one. Starters: `tool_missing`, `no_project`, `no_board`, `no_port`, `port_busy`, `image_stale`, `sim_failed`, `crash`. |
 | next steps | `op`, `argv`, `why`, `effects`, `needs_yes` (consent), `needs_person` (a hand on the bench, proposed) |
 | text | the person reads findings, then the status word, then the first next step as the last line |
-| help | generated from the Operation, with three fixed lines: effects, exit codes, the `--json` pointer |
+| help | the summary and flags from the Operation, the CLI's own long text, then three fixed lines: effects, exit codes, the `--json` pointer |
 
 ## The five goals, in the PO's order
 

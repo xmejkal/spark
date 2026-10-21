@@ -1,3 +1,5 @@
+> Superseded by [architecture/README.md](architecture/README.md), the round 4 synthesis of 2026-10-21. This page is kept as the record of rounds 1 to 3.
+
 # P323: spark's target architecture and code standard
 
 Card [P323 #413](https://github.com/xmejkal/spark/issues/413), epic P158 [#94](https://github.com/xmejkal/spark/issues/94).
