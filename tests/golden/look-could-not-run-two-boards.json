@@ -1,0 +1,1 @@
+{"envelope":1,"tool":"look","op":"look","status":"could-not-run","data":null,"problems":[],"unchecked":[{"sentence":"2 boards on USB:\n  /dev/cu.usbmodem101  8c:bf:ea:xx:xx:xx  Espressif USB JTAG/serial debug unit\n  /dev/cu.usbserial-1410  None  USB Serial\nlook.py --port /dev/cu.usbmodem101  (unplug one to tell them apart)","fix":""}],"next":[],"truncated":null}

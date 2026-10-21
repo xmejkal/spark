@@ -1,0 +1,7 @@
+  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
+  port   /dev/cu.usbmodem101
+  mac    dc:da:0c:xx:xx:xx
+  chip   same      esp32s3
+  flash  same      16 MB
+  all fields match the board record firebeetle2-esp32s3.
+  token  5aed-<image>  for deploy.py --token. It is not your yes: deploy.py asks for that.
