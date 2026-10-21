@@ -22,6 +22,7 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_console  # noqa: E402
 import board_doctor  # noqa: E402
 import board_facts  # noqa: E402
 import deploy  # noqa: E402
@@ -317,6 +318,22 @@ class TheBusyPortTest(GateCase):
         self.assertIn("deploy.py: could not read the board on", problems)
         self.assertIn("next    another program holds the port, often mpremote's console: leave mpremote's console "
                       "with Ctrl-X", problems)
+
+    def test_the_real_doctor_finds_the_lock_and_names_ctrl_x(self):
+        real_console = board_console.ConsoleProbe.console
+
+        def held(probe):  # the console script exits as it does when another program holds the port's lock
+            def run(command, **kw):
+                raise subprocess.CalledProcessError(board_console.EXIT_PORT_BUSY, command, "",
+                                                    "serial.SerialException: Could not exclusively lock port")
+            probe.run = run
+            return real_console(probe)
+
+        self.run_the_scenario()
+        with mock.patch.object(board_console.ConsoleProbe, "console", held):
+            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertEqual(problems.strip().splitlines()[-1].strip(), "next    " + board_doctor.step_sentence("close_other"))
 
     def test_with_no_doctor_the_stop_says_why_and_keeps_its_own_words(self):
         self.run_the_scenario()
