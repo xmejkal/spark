@@ -479,7 +479,8 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         assignments, text = self._module()
         names = {}
         exec(text, names)       # plain Python: no `const`, no import of `micropython`
-        self.assertEqual({k: v for k, v in names.items() if not k.startswith("__")},
+        own = {"ONBOARD_LED", "ONBOARD_BUTTON"}  # the board's own parts are lines of their own (P353)
+        self.assertEqual({k: v for k, v in names.items() if not k.startswith("__") and k not in own},
                          {entry["signal"]: entry["gpio"] for entry in assignments})
         for entry in assignments:
             self.assertEqual(text.count("\n%s = " % entry["signal"]), 1, entry["signal"])
@@ -510,6 +511,59 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         assignments, _ = assign_pins.assign(lit, [{"name": "ONBOARD_LED", "needs": []}])
         with self.assertRaises(assign_pins.Impossible):
             assign_pins.pin_module(lit, assignments, "r.json")
+
+    def test_the_level_that_lights_the_board_s_led_is_named_with_its_source(self):
+        # P353: walk 1's firmware guessed the XIAO's LED level. The record holds it now, and the line says where from.
+        lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "lit by a 0 (the bench)", "active_level": 0}})
+        text = assign_pins.pin_module(lit, [], "r.json")
+        names = {}
+        exec(text, names)
+        self.assertEqual(names["ONBOARD_LED_ON"], 0)
+        self.assertIn("the bench", next(l for l in text.splitlines() if l.startswith("ONBOARD_LED = ")))
+        self.assertNotIn("polarity is not in the board record", text)
+
+    def test_a_led_with_no_level_in_the_record_keeps_today_s_note(self):
+        lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the LED"}})
+        text = assign_pins.pin_module(lit, [], "r.json")
+        self.assertIn("polarity is not in the board record", text)
+        self.assertNotIn("ONBOARD_LED_ON", text)
+
+    def test_the_board_s_own_button_is_named_with_its_source(self):
+        pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button (wiki)"}})
+        text = assign_pins.pin_module(pressed, [], "r.json")
+        names = {}
+        exec(text, names)
+        self.assertEqual(names["ONBOARD_BUTTON"], 9)
+        self.assertIn("wiki", next(l for l in text.splitlines() if l.startswith("ONBOARD_BUTTON = ")))
+
+    def test_a_signal_named_like_the_board_s_button_is_refused_not_shadowed(self):
+        pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the button"}})
+        assignments, _ = assign_pins.assign(pressed, [{"name": "ONBOARD_BUTTON", "needs": []}])
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.pin_module(pressed, assignments, "r.json")
+
+    def test_a_button_line_without_a_level_is_its_number_and_its_note(self):
+        pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button"}})
+        lines = assign_pins.pin_module(pressed, [], "r.json").splitlines()
+        self.assertIn("ONBOARD_BUTTON = 9  # onboard_button: the BOOT button", lines)
+        self.assertFalse(any(l.startswith("ONBOARD_BUTTON_ON") for l in lines))
+
+    def test_a_role_on_two_gpios_names_no_single_pin(self):
+        two = board(pin_roles={"onboard_led": {"gpio": [2, 3], "note": "two LEDs", "active_level": 0},
+                               "onboard_button": {"gpio": [4, 5], "note": "two buttons"}})
+        self.assertNotIn("ONBOARD_", assign_pins.pin_module(two, [], "r.json"))
+
+    def test_a_signal_named_like_the_led_s_level_is_refused_not_shadowed(self):
+        # The refuter's repro: a signal ONBOARD_LED_ON on GPIO17, then the level line, and the firmware read 0.
+        lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the LED", "active_level": 0}})
+        assignments, _ = assign_pins.assign(lit, [{"name": "ONBOARD_LED_ON", "needs": []}])
+        with self.assertRaises(assign_pins.Impossible):
+            assign_pins.pin_module(lit, assignments, "r.json")
+
+    def test_the_board_s_whole_note_reaches_its_own_line(self):
+        # The XIAO's BOOT warning is the second sentence of its note, and the firmware writer needs it.
+        pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button. Held at reset it boots."}})
+        self.assertIn("Held at reset it boots", assign_pins.pin_module(pressed, [], "r.json"))
 
     def test_a_board_with_no_led_of_its_own_names_none(self):
         names = {}

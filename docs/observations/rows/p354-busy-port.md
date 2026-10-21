@@ -1,0 +1,21 @@
+# P354 a held console blocks the next deploy: findings rows
+
+Findings from planning and building P354 (2026-10-21, Prague). The plan is item 4 of the P351 plan (PR #449). The
+council ran two rounds: a tech lead on Sonnet and the refuter on Opus, then one Sonnet agent in three roles.
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 1 | deploy.py is the one board script that does not call the board doctor, so a held port gave the hold-BOOT hint | implementer, refuter | acted | `deploy.py` `_deploy` calls `board_doctor.stop_answer` for a `LookStop` |
+| 2 | The doctor's lock really fails against a port that mpremote holds on macOS | refuter | verified | a pty held and opened a second time the probe's way gave errno 35, counted as busy; a real USB port is not yet tried |
+| 3 | The Ctrl-X words were to be written in three places | tech lead | acted | one constant, `board_console.LEAVE_CONSOLE`, used by the doctor and `WATCH` |
+| 4 | The first plan built `fix` from `stop_lines` and a new `reached["fix"]` key, which nothing read | tech lead, refuter | acted | one `stop_answer` call, `reached["doctor"]`, `board_envelope.doctor_fix` shared with `look_stop_envelope` |
+| 5 | The test seam named in the first plan did not exist: `main(probe=)` is the download-mode probe | refuter | acted | the tests patch `board_doctor.after_esptool` |
+| 6 | A `LookStop` can also come from a second look at the gate in `service.deploy` | tech lead | rejected | `deploy_service.py` `deploy` reads the report it is given and runs no look; the test for it was dropped |
+| 7 | The doctor's check line at `board_doctor.py:118` must change to agree with the new step | round 2 | rejected | it already says "another program holds the port" |
+| 8 | A busy port during verify's facts copy (mpremote's `failed to access`) still gives no Ctrl-X step | implementer | raised | the look runs seconds before the copy, so the gap is small; no card yet |
+| 9 | The card asks for one line, and deploy's stderr now has three: could not read, one check, and next | reviewer (Sonnet) | closed | the `next` line is the one line that carries the step, as in look.py |
+| 10 | Every new deploy test mocked `after_esptool`, so the chain from the failed look through the console check to `close_other` had no test | refuter (Opus) | acted | `test_the_real_doctor_finds_the_lock_and_names_ctrl_x` runs the real doctor with a console that exits `EXIT_PORT_BUSY` |
+| 11 | In `--json`, `unchecked[0].sentence` keeps esptool's hold-BOOT hint while `fix` says to leave the console | refuter (Opus) | raised | look.py's envelope does the same, so no regression; text mode drops the hint |
+| 12 | Six other stops (no board, stale token, answer no, two flash failures, a verify problem) print and report the same as on main | refuter (Opus) | verified | byte-identical text and `--json` after masking paths, hashes and times |
+| 13 | The hook refused 87549b4: the new busy fake read `board_console.EXIT_PORT_BUSY`, the code's own number | push hook | acted | `test_self_confirmation`; the fake writes 3, the console script's exit on EAGAIN (ea21b52) |
+| 14 | Mutation run: 12 planted, 9 caught. Escaped: doctor-always-set, fix-doctor-only, places-empty | mutation tester | acted | the `is not None` guard removed (the envelope reads `if doctor`), tests for the fix without a doctor and for the project's own buttons; both escapes then caught by hand |

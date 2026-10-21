@@ -10,6 +10,7 @@ import board_doctor
 import board_envelope
 import board_look
 import boards
+from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from outcomes import EXIT_COULD_NOT_RUN
 
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
@@ -17,14 +18,16 @@ erases nothing and changes no flash. The board restarts while esptool reads it: 
 Nothing else on the board is touched. The board's record is the one requirements.json names. The look compares the chip
 and the flash size, and prints each as same, differs or unknown. It also prints the board's MAC.
 
-The verdict: another chip, or a flash smaller than the image, is a stop (deploy.py will refuse). A flash that differs but
-holds the image, or a field that is unknown, is a warning that the person must accept. The token is two halves of 4
-hex digits: one from the board's MAC and one from the image that a passed run names. It shows that a look was made on this
-board for this image. It is not the yes and it is not a secret. With no MAC, no image or no passed run, there is no token,
-and the line says why.
+The verdict: another chip, or a flash smaller than the image, is a stop (deploy.py will refuse). A flash that differs
+but holds the image, or a field that is unknown, is a warning that the person must accept. The token is two halves of 4
+hex digits: one from the board's MAC and one from the image (the one a passed run names, or with --no-simulation, the
+image file). It shows that a look was made on this board for this image. It is not the yes and it is not a secret. With
+no MAC, no image or no evidence for the image, there is no token, and the line says why.
 
-With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a
-token even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it.
+With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
+even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a
+token for an image that no simulation tested: firmware/ has a main.py, every .py file compiles, no run in sim/runs/ failed on the image and the image holds
+firmware/ as it is now. Else it prints why not, and the command that builds the image. deploy.py needs the same flag.
 
 When esptool's read of the board fails, the board doctor (P282) runs two checks: whether `mpremote devs` lists the
 port, and two seconds of the console with the port's lock. It prints esptool's own error line, each check's fact,
@@ -45,12 +48,17 @@ def main(argv=None, run=subprocess.run):
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with requirements.json and sim/ (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
-    parser.add_argument("--ignore-older-runs", action="store_true",
-                        help="give a token even when a log in sim/runs/ tested another image (default: no token)")
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument(IGNORE_OLDER_RUNS_FLAG, action="store_true",
+                       help="give a token even when a log in sim/runs/ tested another image (default: no token)")
+    which.add_argument(NO_SIMULATION_FLAG, action="store_true",
+                       help="give a token for an image that no simulation tested, when firmware/ has a main.py, "
+                       "compiles and is what the image holds (default: a passed run must name the image)")
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout (docs/guide/agents.md)")
     args = parser.parse_args(argv)
+    evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
     try:
-        report = board_look.looker(args.project, run).run(args.project, args.port, args.ignore_older_runs)
+        report = board_look.looker(args.project, run).run(args.project, args.port, evidence)
     except board_look.LookStop as stop:
         lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
         print("\n".join(lines), file=sys.stderr)
@@ -58,7 +66,7 @@ def main(argv=None, run=subprocess.run):
             _print_json(board_envelope.look_stop_envelope(str(stop), doctor, boards.ButtonPlaces.of_project(args.project)))
         return EXIT_COULD_NOT_RUN
     if args.json:
-        _print_json(board_envelope.look_envelope(report, args.project.resolve(), args.ignore_older_runs))
+        _print_json(board_envelope.look_envelope(report, args.project.resolve(), evidence))
     else:
         print("\n".join(board_look.report_lines(report)))
     return report.exit_code()

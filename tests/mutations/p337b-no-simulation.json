@@ -1,0 +1,98 @@
+[
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "image-differs-passes",
+  "find": "if held != built:",
+  "replace": "if held == built:"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "syntax-error-ignored",
+  "find": "except SyntaxError as broken:",
+  "replace": "except ZeroDivisionError as broken:"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "no-main-passes",
+  "find": "if not (self.project / \"firmware\" / \"main.py\").is_file():",
+  "replace": "if (self.project / \"firmware\" / \"main.py\").is_file() and False:"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "tool-problem-traceback",
+  "find": "except (tools.ToolProblem, OSError, ValueError, ImportError) as cannot:",
+  "replace": "except (OSError, ValueError, ImportError) as cannot:"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "flag-dropped",
+  "find": "return [NO_SIMULATION_FLAG]",
+  "replace": "return []"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "grant-allowed",
+  "find": "grant_refusal = board_grant.WHY_NO_SIMULATION",
+  "replace": "grant_refusal = None"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "no-caveat",
+  "find": "caveat = NO_SIMULATION_CAVEAT",
+  "replace": "caveat = None"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "caveat-last",
+  "find": "question = \"%s. %s\" % (caveat, question)",
+  "replace": "question = \"%s. %s\" % (question, caveat)"
+ },
+ {
+  "file": "scripts/board_facts.py",
+  "name": "record-drops-simulation",
+  "find": "\"simulation\": facts[\"simulation\"], \"yes\": who}",
+  "replace": "\"yes\": who}"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "log-says-passed",
+  "find": "self.image_sha256, self.simulation, self.facts_line,",
+  "replace": "self.image_sha256, \"passed\", self.facts_line,"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "look-ignores-flag",
+  "find": "return NoSimulationEvidence(project) if no_simulation else",
+  "replace": "return PassedRunEvidence(ignore_older_runs) if no_simulation else"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "both-flags-allowed",
+  "find": "which = parser.add_mutually_exclusive_group()",
+  "replace": "which = parser"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "recursion-uncaught",
+  "find": "except (RecursionError, MemoryError):",
+  "replace": "except (ZeroDivisionError, MemoryError):"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "littlefs-uncaught",
+  "find": "if type(cannot).__name__ != \"LittleFSError\":",
+  "replace": "if True:"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "failed-run-ignored",
+  "find": "if sha256 == image.sha256 and verdict != \"passed\":",
+  "replace": "if sha256 == image.sha256 and verdict == \"passed\" and False:"
+ },
+ {
+  "file": "scripts/board_envelope.py",
+  "name": "grant-clause-always",
+  "find": "(\"\" if evidence.grant_refusal else GRANT_CLAUSE)",
+  "replace": "GRANT_CLAUSE"
+ }
+]

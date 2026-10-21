@@ -148,10 +148,10 @@ These only read:
   code set and the firmware never sets can keep its value through the reset; `gpio_numbers_in_code` lists the
   candidates, and it over-claims (`print(1)` lists GPIO1). `reach.py` stays the person's bench tool;
 - the board doctor ([P282](https://github.com/xmejkal/spark/issues/326)). When esptool's read fails
-  (`look.py`, `grant.py --minutes`) or mpremote cannot open the port or enter the REPL (`reach.py`, `live.py`), the script adds the doctor's lines:
+  (`look.py`, `grant.py --minutes`, `deploy.py`) or mpremote cannot open the port or enter the REPL (`reach.py`, `live.py`), the script adds the doctor's lines:
   `said` (the tool's own error line, a fact you show and never decide on), one `check` line per check
   (`port-listed`, `console`), and `next`, one step for the person's hands. `live.py --json` and `reach.py --json`
-  carry it as `doctor`: `checks`, `tool_said`, `next_step` and `if_not_helped`. The codes are `plug_in`,
+  carry it as `doctor`, and so does `deploy.py --json` in `data.doctor`: `checks`, `tool_said`, `next_step` and `if_not_helped`. The codes are `plug_in`,
   `close_other`, `press_reset`, `run_again`, `hold_boot` and `replug`. Your part: tell the person the step in its own
   words, wait until they say it is done, and run the same command again. If the same `next_step` comes back after the
   person did it, give the `if_not_helped` step; when that is null, stop and say that spark knows no further step. A
@@ -223,7 +223,7 @@ These write:
   the host blocks the pictures), say so and stop; do not retry in a loop.
   If the requirements file is there but refused, an old sheet, drawing, page and spark-written `pins.py` are removed,
   and each kept entry gives the refusal as its `why` (P280). A missing requirements file removes nothing.
-  `check_spine.py` also writes `firmware/pins.py` (with `ONBOARD_LED` when the board record names one on-board LED), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
+  `check_spine.py` also writes `firmware/pins.py` (with `ONBOARD_LED` and `ONBOARD_BUTTON` when the board record names the on-board LED and button, and `ONBOARD_LED_ON` or `ONBOARD_BUTTON_ON` when it holds their `active_level`), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
   history. Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
@@ -470,13 +470,13 @@ the flash tool's own output, on **stderr**, so stdout holds the envelope alone. 
 A raise after the flash (a traceback) prints no envelope either; read the exit code and stderr.
 
 - `look.py` `data`: `port`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
-  `status`, `token`, `no_token_reason`. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
+  `status`, `token`, `no_token_reason`, `simulation`. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
   `unchecked` are the unknown fields and a missing token. A look that could not run has `data: null` (or `data.doctor` after a failed read). When there is a
   token, `next` holds a `deploy` step, whatever the status. A warning or an unknown field is not a pass: relay it.
 - `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
   `facts_line`, `image_sha256` (the image on the board, null before a flash, P213), `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
-  `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`. Keys not reached are null.
+  `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`, and `simulation` (`passed`, or `none` with `--no-simulation`: no simulation tested the image, P337). Keys not reached are null.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
@@ -486,8 +486,23 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
 - `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
   board's RESET, `data.person_action` says so, with its place when the board record has it, but only after the wait for the press ran out. So tell the person before you run
   `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
-  board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`.
+  board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`. A `deploy.py`
+  whose look could not read the board does the same. For `close_other`, the step tells the person to leave mpremote's
+  console with Ctrl-X, because a console left open holds the port ([P354](https://github.com/xmejkal/spark/issues/452)).
 - A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.
+
+### Deploy without a simulation
+
+For firmware that no simulation can test (P337). Three steps, then the person's yes:
+
+1. `flash_image.py --project <p> --files firmware -o <image>`, where `<image>` is the file `sim/wokwi.toml` names.
+2. `look.py --project <p> --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file
+   under `firmware/` compiles, no run in `sim/runs/` failed on the image, and the image holds `firmware/` as it is now.
+3. `deploy.py --project <p> --no-simulation --token <token>`. The question starts with "no simulation tested this image".
+
+The person types the yes in their own terminal. A deploy grant never answers it, and the `next` step's `why` omits the
+grant clause. The facts file, the board log, the store record and `data.simulation` say `none`. Nothing ran the firmware
+before the flash, so relay that.
 
 ## The outcomes and their exit codes
 
@@ -698,7 +713,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    terminal, lets you run `deploy.py --token T` for N minutes (1 to 1440) on that board, and deploy.py prints
    `yes: standing yes typed by ...` and erases with no question. Its question says it allows an erase of ALL of the flash and any
    passed image of any project. It covers only a look with no warning, no unknown field and no stop, and never
-   `--ignore-older-runs`; for those deploy.py asks in the terminal. deploy.py is on `/spark:deploy`'s (and build.md's) `allowed-tools`, so Claude Code
+   `--ignore-older-runs` or `--no-simulation`; for those deploy.py asks in the terminal. deploy.py is on `/spark:deploy`'s (and build.md's) `allowed-tools`, so Claude Code
    does not ask before it runs: the grant is the gate. Never run `grant.py --scope deploy` yourself, and never write or
    change a grant file. A grant file is not tamper-proof: its token is derived from the MAC, and the store accepts what you write. The rule is the guard, and the person accepts that risk. The store's deploy record says `standing yes typed by
    <login> at <time>, until <time>`. After the flash, only `ready seen` (exit 0) is a pass:

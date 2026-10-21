@@ -22,6 +22,8 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_console  # noqa: E402
+import board_doctor  # noqa: E402
 import board_facts  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
@@ -30,6 +32,7 @@ import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import store  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, pin_time_zone  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
@@ -79,7 +82,7 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command. The first flash command
         exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait."""
         self.copied = getattr(self, "copied", {})
@@ -92,7 +95,7 @@ class GateCase(LookCase):
             if "devs" in command:
                 return done(devs_text or data(devs))
             if "flash_id" in command:
-                return done(text or data(esptool))
+                return done(text or data(esptool), 2 if look_fails else 0)
             if "exec" in command:
                 return self.on_board(command)
             flash.append(command)
@@ -142,7 +145,7 @@ class TheGateTest(GateCase):
         self.assertEqual(self.flashed(), ["erase_flash", str(self.image)])
         self.assertTrue(all("/dev/cu.usbmodem101" in c for c in self.ran if "erase_flash" in c or "write_flash" in c))
         self.assertIn("erase ALL of this board's flash", consent.asked[0])
-        self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the run that passed", said)
+        self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the image", said)
 
     def test_deploy_prints_the_look_without_a_token_line(self):
         self.run_the_scenario()
@@ -300,6 +303,53 @@ class TheGateTest(GateCase):
         self.assertIn("  board: not looked at: run look.py", said.splitlines())
 
 
+class TheBusyPortTest(GateCase):
+    """P354: a console left open holds the port, so esptool's look fails. The doctor says so, as look.py's does."""
+
+    BUSY = board_doctor.BoardDoctorResult(
+        (board_doctor.CheckResult("console", False, "another program holds the port: locked", "close_other"),),
+        None, "close_other", None)
+
+    def test_a_busy_port_names_the_console_and_ctrl_x_and_flashes_nothing(self):
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", return_value=self.BUSY):
+            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("deploy.py: could not read the board on", problems)
+        self.assertIn("next    another program holds the port, often mpremote's console: leave mpremote's console "
+                      "with Ctrl-X", problems)
+
+    def test_the_real_doctor_finds_the_lock_and_names_ctrl_x(self):
+        real_console = board_console.ConsoleProbe.console
+
+        def held(probe):  # the console script exits as it does when another program holds the port's lock
+            def run(command, **kw):
+                raise subprocess.CalledProcessError(3, command, "",  # READ_CONSOLE's exit on EAGAIN
+                                                    "serial.SerialException: Could not exclusively lock port")
+            probe.run = run
+            return real_console(probe)
+
+        self.run_the_scenario()
+        with mock.patch.object(board_console.ConsoleProbe, "console", held):
+            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertEqual(problems.strip().splitlines()[-1].strip(), "next    " + board_doctor.step_sentence("close_other"))
+
+    def test_with_no_doctor_the_stop_says_why_and_keeps_its_own_words(self):
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", side_effect=tools.ToolProblem("no mpremote")):
+            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        self.assertEqual(code, 2)
+        self.assertIn("(no doctor: no mpremote)", problems)
+
+    def test_a_stop_with_no_port_gets_no_doctor_step(self):
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
+        self.assertEqual(code, 2)
+        self.assertIn("deploy.py: no board found", problems)
+        self.assertNotIn("next ", problems)
+
+
 class TheBoardAfterTheFlashTest(GateCase):
     """P215 step 2 (D33): after the flash, ready is seen only when the board's files match and the firmware says it."""
 
@@ -320,13 +370,13 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.files_on_board = {"/main.py": b"print('old')\n"}
         code, said, _ = self.flash()
         self.assertEqual(code, 1)
-        self.assertIn("ready not seen: the board's /main.py is not the files that passed", said)
+        self.assertIn("ready not seen: the board's /main.py is not the files of the image", said)
 
     def test_a_file_missing_on_the_board_is_named(self):
         self.files_on_board = {}
         code, said, _ = self.flash()
         self.assertEqual(code, 1)
-        self.assertIn("/main.py is not the files that passed", said)
+        self.assertIn("/main.py is not the files of the image", said)
 
     def test_a_firmware_that_prints_no_ready_is_not_seen(self):
         self.prints = "booting\n"
@@ -482,7 +532,7 @@ class TheBoardInDownloadModeTest(GateCase):
 
     def test_a_passed_log_that_names_no_files_is_never_probed(self):
         probe = FakeConsoleProbe("waiting for download\n")
-        with mock.patch.object(deploy_service, "file_hashes", side_effect=lambda log: {}):
+        with mock.patch.object(image_evidence, "file_hashes", side_effect=lambda log: {}):
             code, said, _ = self.flash(probe)
         self.assertEqual((code, probe.asked), (2, []))
         self.assertIn("ready unknown: the passed run's log names no files", said)
@@ -564,11 +614,11 @@ class TheFactsAfterTheFlashTest(GateCase):
     def test_the_facts_carry_the_moment_given_and_no_clock(self):
         moment = datetime.datetime(2026, 1, 2, 3, 4, 5)
         self.run_the_scenario()
-        said = board_facts.facts(self.project, "xiao-esp32-c6", "aa:bb", self.image, {}, moment)
+        said = board_facts.facts(self.project, "xiao-esp32-c6", "aa:bb", self.image, {}, moment, "passed")
         self.assertEqual(said["deployed"], "2026-01-02T03:04:05")
 
     def test_the_record_writes_the_who_it_is_given(self):
-        said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "deployed": "d"}
+        said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "simulation": "passed", "deployed": "d"}
         path = board_facts.record_deploy(said, "ready seen", "a test")
         self.assertEqual(json.loads(path.read_text())["deploys"][-1]["yes"], "a test")
 
@@ -628,16 +678,16 @@ class TheBoardLogTextTest(unittest.TestCase):
     def log(self, **kw):
         return deploy_service.BoardLog(**dict(dict(moment=self.MOMENT, port="/dev/x", image_sha256="abc",
                                            facts_line="facts file spark.json sha256: f", verdict="ready seen",
-                                           sentence="it is up", heard="the board said\n"), **kw))
+                                           sentence="it is up", heard="the board said\n", simulation="passed"), **kw))
 
     def test_a_ready_seen_log_reads_as_it_always_did(self):
-        self.assertEqual(self.log().text(), "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\n"
+        self.assertEqual(self.log().text(), "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\nsimulation: passed\n"
                          "facts file spark.json sha256: f\nready seen: it is up\n\nthe board said\n\n")
 
     def test_a_log_with_no_reset_keeps_the_console_text_before_the_board_s(self):
         text = self.log(verdict="ready unknown", sentence="no reset came",
                         heard="console with DTR and RTS off: waiting for download\nno reset\nOSError\n").text()
-        self.assertEqual(text, "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\n"
+        self.assertEqual(text, "# deploy 2026-10-17T09:08:07 on /dev/x\nimage sha256: abc\nsimulation: passed\n"
                          "facts file spark.json sha256: f\nready unknown: no reset came\n\n"
                          "console with DTR and RTS off: waiting for download\nno reset\nOSError\n\n")
 
@@ -866,6 +916,87 @@ class TheStandingYesTest(GateCase):
         self.assertNotIn("--scope deploy", problems)
 
 
+class TheNoSimulationDeployTest(GateCase):
+    """P337 B: --no-simulation puts firmware/ on the board with no run log, and every record says so."""
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.build_image()
+
+    def build_image(self):
+        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
+
+    def evidence(self):
+        return image_evidence.NoSimulationEvidence(self.project)
+
+    def flash(self, *argv, **kw):
+        return self.deploy("--no-simulation", "--token", self.token(evidence=self.evidence()), *argv, **kw)
+
+    def test_a_project_with_no_run_log_deploys_and_every_record_says_none(self):
+        consent = FakeConsent(True)
+        code, said, _ = self.flash(consent=consent)
+        self.assertEqual((code, self.flashed()), (0, ["erase_flash", str(self.image)]))
+        self.assertFalse(list((self.project / "sim" / "runs").glob("*.log")))
+        self.assertEqual(json.loads(self.copied["spark.json"])["simulation"], "none")
+        self.assertIn("simulation: none", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+        record = Path(said.split("store record: ")[1].strip())
+        self.assertEqual(json.loads(record.read_text())["deploys"][-1]["simulation"], "none")
+        self.assertIn("ready seen", said)
+
+    def test_the_question_starts_with_the_caveat(self):
+        consent = FakeConsent(True)
+        self.flash(consent=consent)
+        self.assertTrue(consent.asked[0].startswith("no simulation tested this image. erase ALL of this board's flash"),
+                        consent.asked[0])
+
+    def test_the_json_envelope_says_none(self):
+        code, said, _ = self.flash("--json", consent=FakeConsent(True))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(said)["data"]["simulation"], "none")
+
+    def test_a_passed_run_deploy_says_passed_in_its_records(self):
+        self.run_the_scenario()
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(self.copied["spark.json"])["simulation"], "passed")
+        self.assertIn("simulation: passed", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
+    def test_a_firmware_file_changed_after_the_image_refuses_and_names_the_build(self):
+        token = self.token(evidence=self.evidence())
+        (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
+        code, _, problems = self.deploy("--no-simulation", "--token", token, consent=FakeConsent(True))
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("flash_image.py --project %s --files firmware -o %s" % (self.project.resolve(), self.image), problems)
+
+    def test_without_the_flag_a_project_with_no_run_log_is_refused_as_before(self):
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True))
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("no run in sim/runs/ tested", problems)
+
+    def test_both_flags_are_an_argument_error(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            self.deploy("--no-simulation", "--ignore-older-runs")
+
+    def test_a_deploy_grant_is_not_used_and_no_grant_is_offered(self):
+        clock = FakeLocalClock(datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc))
+        pin_time_zone(self)
+        mac = "8c:bf:ea:xx:xx:xx"
+        board_grant.GrantStore().save(board_grant.Grant(
+            mac, board_grant.board_look.board_token(mac), "ada", clock.now.isoformat(),
+            (clock.now + datetime.timedelta(minutes=30)).isoformat(), "deploy"))
+        code, said, problems = self.flash(grant_service=board_grant.GrantService(now=clock))
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("--no-simulation is never covered by a deploy grant", said)
+        self.assertIn("no terminal to ask you in", problems)
+        self.assertNotIn("--scope deploy", problems)
+
+
 class TheRerunLineTest(unittest.TestCase):
     """P283: the line a person runs in their own terminal names the script by its whole path, from any folder."""
 
@@ -876,10 +1007,22 @@ class TheRerunLineTest(unittest.TestCase):
     def test_deploy_keeps_ignore_older_runs_in_its_line(self):
         import argparse
         args = argparse.Namespace(project=Path("."), token="aaaa-bbbb", ignore_older_runs=True)
-        self.assertTrue(deploy.rerun_line(args, "/dev/cu.usbmodem101").endswith(" --ignore-older-runs"))
+        self.assertTrue(deploy.rerun_line(args, "/dev/cu.usbmodem101", image_evidence.PassedRunEvidence(True)).endswith(" --ignore-older-runs"))
 
     def test_a_path_with_a_space_is_quoted(self):
         self.assertEqual(deploy_gate.format_rerun_line("/my spark/grant.py", []), "'/my spark/grant.py'")
+
+
+class TheCaveatTest(GateCase):
+    def test_the_caveat_comes_first_in_the_question(self):
+        self.run_the_scenario()
+        report = self.look()
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", "no simulation tested this image")
+        self.assertEqual(consent.asked, ["no simulation tested this image. erase ALL of this board's flash and write x.bin?"])
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin")
+        self.assertEqual(consent.asked, ["erase ALL of this board's flash and write x.bin?"])
 
 
 class TerminalConsentTest(unittest.TestCase):

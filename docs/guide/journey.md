@@ -1061,8 +1061,9 @@ integers. The firmware does `import pins`; it never types a GPIO number.
 The firmware imports on a Mac before any hardware ([P59](https://github.com/xmejkal/spark/issues/7)).
 `import_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`.
 Each import is a process of its own. Every import uses spark's stand-in for MicroPython's `machine` module. The
-stand-in lives in `scripts/stand_in/`. It has a `Pin` that remembers its level, and nothing else. A test sets an
-input, calls the firmware and reads the output pin.
+stand-in lives in `scripts/stand_in/`. It has a `Pin` that remembers its level, and a `PWM` that keeps its last
+frequency and duty but makes no signal ([P352](https://github.com/xmejkal/spark/issues/450)). It has nothing else. A
+test sets an input, calls the firmware and reads the output pin.
 
 The command leaves `main.py` unrun, because `main.py` starts the loop. Keep it to two lines that call a module. The
 button-and-LED firmware does that (`import light`, then `light.run()`). You write your own, or Claude does. To try the
@@ -1123,7 +1124,7 @@ per wokwi.com/pricing (read 2026-10-01).
 
 ## Bench
 
-**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../commands/deploy.md), P213). spark's own hardware step is
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, but only on a typed yes that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../commands/deploy.md), P213). spark's own hardware step is
 [P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
 sheet ([v0.10](../../scrum/VISION.md#versions)).
 
@@ -1180,6 +1181,8 @@ On 2026-10-14 the PO flashed a project with no parts on the same XIAO
 ([P236](https://github.com/xmejkal/spark/issues/233)). Its `requirements.json` says `"board_only": true`, so the build
 skips the parts, schematic, footprint and build stages and simulates the board alone. `firmware/pins.py` names the
 board's own LED, `ONBOARD_LED = 15`, from the board record. The firmware, written in the conversation, blinks that LED.
+Since [P353](https://github.com/xmejkal/spark/issues/451), the XIAO's `pins.py` also names `ONBOARD_LED_ON = 0`, the
+level that lights the LED, and `ONBOARD_BUTTON = 9`, the BOOT button. Each comes from the board record with its source.
 A number typed in the board's console sets the period in milliseconds, and `steady`, `heartbeat` or `random` picks the
 pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut
 here.
@@ -1196,7 +1199,7 @@ Hard resetting via RTS pin...
 ```
 
 Then `python3 -m mpremote connect /dev/cu.usbmodem101 repl` talks to the running firmware: `200` and Enter make the LED
-blink every 200 ms. Ctrl-C stops the firmware and gives MicroPython's `>>>` prompt, Ctrl-D starts it again, and Ctrl-]
+blink every 200 ms. Ctrl-C stops the firmware and gives MicroPython's `>>>` prompt, Ctrl-D starts it again, and Ctrl-X or Ctrl-]
 leaves mpremote. If the board waits in its download mode after the flash, deploy.py prints `the board waits in download
 mode: press the board's RESET (R, top left, beside the USB-C) once`. Press R once. deploy.py waits 60 s for the port to go and come back,
 and then reads the board again ([P243](https://github.com/xmejkal/spark/issues/252),
@@ -1256,10 +1259,10 @@ for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file 
 `grants/8c-bf-ea-cc-97-70-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
 While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: standing yes typed by ...` instead of asking. It still
 looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
-record (no warning, no unknown field, no stop) and never `--ignore-older-runs`: for those deploy.py asks in your
+record (no warning, no unknown field, no stop) and never `--ignore-older-runs` or `--no-simulation`: for those deploy.py asks in your
 terminal. The store's record of the board says whose yes it was: `standing yes typed by <you> at <time>, until <time>`.
 If the board then waits in its download mode, Claude tells you to press its RESET button once, and where it is.
-If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` is set), Claude stops, tells you why,
+If the grant cannot be used (it ended, the look showed a warning, or `--ignore-older-runs` or `--no-simulation` is set), Claude stops, tells you why,
 and gives you the line to run in your own terminal. grant.py prints the file's full path and the `rm` line that ends the grant.
 
 While the grant lasts, Claude runs a live try ([P247](https://github.com/xmejkal/spark/issues/267)):

@@ -329,6 +329,20 @@ asked an isolated agent to rediscover three escapes written down in `scrum/SPRIN
 assumes** — or mark it unverified, the way a part record marks a fact nobody has confirmed. An item may be written with
 an unreproduced criterion; it may not be *closed* on one.
 
+**A plan is claims, and the builder checks them** (2026-10-19, P324, an experiment). A plan or a design will hold
+some wrong claims, however many rounds review it. So a plan marks each claim as measured (with the command that
+measures it), an estimate, or a proposal, and `tools/factcheck.py` runs on it before its PR. Its output goes in the
+PR. One refuter per plan, then the build. Every implementer's brief carries this rule: the plan can be wrong, so
+check each file, line, name and number in the code before you use it. If the code disagrees, follow the code and
+write the mismatch as a row. Stop and ask only if the mismatch changes what the slice does. Each slice starts with
+tests that pin today's behaviour. A retro judges the experiment with those rows.
+
+*Origin:* Petr, 2026-10-19, after two refuter rounds and a script still found wrong claims in P323's design: *"Maybe
+we should rather change the system and just know that we won't have any time when The situation 100% certain that
+there would be no hallucinations. Instead, let's just already accept it and act like there will be some
+hallucinations. Let's instead work on the implementer so that he knows it might happen and always checks
+something"*, and to the five points that followed: *"ok, lets try it and evaluate after some time."*
+
 **Say "wait", then come back** (2026-10-15, P261). When someone asks while you work, answer at once in one line:
 "wait, I finish this first, then I come back", with the step you finish. At its end, come back and say so. An
 expedite interrupts at once. After about three notes back and forth on one point, talk it through live.

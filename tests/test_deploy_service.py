@@ -19,9 +19,11 @@ import board_connection  # noqa: E402
 import deploy_gate  # noqa: E402
 import deploy_service  # noqa: E402
 import firmware_platform  # noqa: E402
+import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import project_image  # noqa: E402
 import ready_check  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent  # noqa: E402
 from test_board_look import FOUND, found  # noqa: E402
@@ -57,7 +59,7 @@ class ServiceCase(GateCase):
 
     def service(self, **kwargs):
         return deploy_service.DeployService(self.project, firmware_platform.FirmwarePlatform.micropython(self.project),
-                                            run=self.fake_run, **kwargs)
+                                            image_evidence.PassedRunEvidence(), run=self.fake_run, **kwargs)
 
 
 class TheFlashTest(ServiceCase):
@@ -91,6 +93,36 @@ class TheFlashTest(ServiceCase):
         report = self.look()
         with self.assertRaises(project_image.DeployError):
             self.service().deploy(report, report.token(), Ended(True), self.lines.append)
+        self.assertEqual(self.commands, [])
+
+
+class TheNoSimulationServiceTest(ServiceCase):
+    def service(self, **kwargs):
+        return deploy_service.DeployService(self.project, firmware_platform.FirmwarePlatform.micropython(self.project),
+                                            image_evidence.NoSimulationEvidence(self.project), run=self.fake_run, **kwargs)
+
+    def build(self):
+        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for log in (self.project / "sim" / "runs").glob("*.log"):
+            log.unlink()
+        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
+
+    def test_the_gate_question_starts_with_the_caveat_and_the_plan_has_no_notes(self):
+        self.build()
+        report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
+        consent = FakeConsent(True)
+        planned = self.service().deploy(report, report.token(), consent, self.lines.append)
+        self.assertTrue(consent.asked[0].startswith("no simulation tested this image. erase ALL"))
+        self.assertEqual((planned.notes, len(self.commands)), ([], 2))
+
+    def test_a_refusal_is_a_deploy_error_before_any_command(self):
+        self.build()
+        (self.project / "firmware" / "main.py").write_text("print('changed')\n")
+        with self.assertRaises(project_image.DeployError) as refused:
+            self.service().plan()
+        self.assertIn("flash_image.py --project", str(refused.exception))
         self.assertEqual(self.commands, [])
 
 

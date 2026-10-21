@@ -1,0 +1,14 @@
+[
+{"file":"scripts/assign_pins.py","name":"gpio-count-loose","find":"if len(gpio) != 1:","replace":"if len(gpio) < 1:"},
+{"file":"scripts/assign_pins.py","name":"collision-check-dropped","find":"    if taken:\n","replace":"    if False:\n"},
+{"file":"scripts/assign_pins.py","name":"level-name-not-guarded","find":"[name] if level is None else [name, name + \"_ON\"]","replace":"[name]"},
+{"file":"scripts/assign_pins.py","name":"active-level-ignored","find":"    if level is not None:\n","replace":"    if False:\n"},
+{"file":"scripts/assign_pins.py","name":"level-value-constant","find":"board record, the source is on the line above\" % (name, level)]","replace":"board record, the source is on the line above\" % (name, 1)]"},
+{"file":"scripts/assign_pins.py","name":"note-first-sentence-only","find":"\"%s: %s\" % (role, record.get(\"note\", \"\").rstrip(\".\"))","replace":"role_note(board, role)"},
+{"file":"scripts/assign_pins.py","name":"button-not-named","find":"\"onboard_led\": \"ONBOARD_LED\", \"onboard_button\": \"ONBOARD_BUTTON\"}","replace":"\"onboard_led\": \"ONBOARD_LED\"}"},
+{"file":"scripts/assign_pins.py","name":"led-no-polarity-note-dropped","find":"    if role == \"onboard_led\":\n","replace":"    if False:\n"},
+{"file":"scripts/assign_pins.py","name":"gpio-number-off","find":"    return [\"%s = %d  # %s\" % (name, gpio[0], note)]\n","replace":"    return [\"%s = %d  # %s\" % (name, gpio[0] + 1, note)]\n"},
+{"file":"scripts/boards.py","name":"level-range-wide","find":"not in (0, 1)):","replace":"not in (0, 1, 2)):"},
+{"file":"scripts/boards.py","name":"level-bool-allowed","find":"type(role[\"active_level\"]) is not int or ","replace":""},
+{"file":"scripts/boards.py","name":"level-check-off","find":"if \"active_level\" in role and","replace":"if False and"}
+]

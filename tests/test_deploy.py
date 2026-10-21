@@ -17,12 +17,15 @@ import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_envelope  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
+import flash_image  # noqa: E402
 import firmware_platform  # noqa: E402
 from project_image import DeployError  # noqa: E402
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
+import image_evidence  # noqa: E402
 import tools  # noqa: E402
 
 FAKE_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
@@ -69,9 +72,9 @@ class ProjectCase(unittest.TestCase):
 
     def plan(self, port=None, ignore_older_runs=False):
         """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
-        kwargs = {"ignore_older_runs": True} if ignore_older_runs else {}  # the default is the refusal
+        evidence = image_evidence.PassedRunEvidence(ignore_older_runs)  # the default is the refusal
         return deploy_service.DeployService(
-            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), **kwargs).plan(port)
+            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), evidence).plan(port)
 
     def deploy(self, *argv, find=found, run=None):
         """(exit code, stdout, stderr, the commands run) of deploy.py in this project."""
@@ -93,7 +96,8 @@ class TheDryRunTest(ProjectCase):
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s write_flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
             "  board: not looked at: run look.py",
             "  then, to see it start: /opt/python3 -m mpremote connect %s repl, press Ctrl-C, then Ctrl-D: "
-            "the firmware prints `ready`" % PORT])
+            "the firmware prints `ready`. Then leave mpremote's console with Ctrl-X: an open console holds the port, "
+            "and the next deploy cannot open it" % PORT])
 
     def test_without_a_port_esptool_and_mpremote_find_the_board(self):
         self.run_the_scenario()
@@ -112,6 +116,44 @@ class TheDryRunTest(ProjectCase):
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
         self.assertIn(shlex.quote(str(sim / "images" / "flash.bin")), said)
         self.assertTrue((sim / "images" / "flash.bin").is_file())
+
+
+class TheNoSimulationDryRunTest(ProjectCase):
+    """P337 B: --no-simulation plans an image of firmware/ that no run tested."""
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
+
+    def test_the_flag_plans_the_flash_lines_with_no_run_log(self):
+        code, said, problems, ran = self.deploy("--port", PORT, "--dry-run", "--no-simulation")
+        self.assertEqual((code, problems, ran), (deploy.EXIT_OK, "", []))
+        self.assertIn("would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase_flash" % PORT, said)
+        self.assertNotIn("changed after this image was made", said)
+
+    def test_without_the_flag_it_is_refused_as_today(self):
+        code, _, problems, _ = self.deploy("--dry-run")
+        self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
+        self.assertIn("no run in sim/runs/ tested flash-with-firmware.bin as it is now", problems)
+
+    def test_the_flag_refuses_firmware_that_does_not_compile(self):
+        (self.project / "firmware" / "main.py").write_text("print(\n")
+        code, _, problems, ran = self.deploy("--dry-run", "--no-simulation")
+        self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
+        self.assertIn("firmware/main.py, line", problems)
+
+    def test_the_dry_run_json_names_the_look_step_with_the_flag(self):
+        code, said, _, _ = self.deploy("--dry-run", "--no-simulation", "--json")
+        envelope = json.loads(said)
+        self.assertEqual((code, envelope["data"]["simulation"]), (deploy.EXIT_OK, "none"))
+        self.assertIn("--no-simulation", envelope["next"][0]["argv"])
+
+    def test_both_flags_are_an_argument_error(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            self.deploy("--dry-run", "--no-simulation", "--ignore-older-runs")
 
 
 class OnlyAnImageThatPassedTest(ProjectCase):
@@ -267,6 +309,20 @@ class WhatDeployNeedsTest(ProjectCase):
         code, said, _, _ = self.deploy("--dry-run")
         self.assertEqual(code, deploy.EXIT_OK)
         self.assertIn("note: firmware/main.py changed after this image was made", said)
+
+
+class TheDeployEnvelopeYesRuleTest(unittest.TestCase):
+    """P337 B: the NEXT_DEPLOY step names a deploy grant only where a grant may answer."""
+
+    def step_why(self, evidence):
+        reached = {"project": Path("p"), "evidence": evidence, "stage": "gate", "next_op": "deploy",
+                   "token": "t", "port": "/dev/x", "refusal": "no yes"}
+        return board_envelope.deploy_envelope(reached, 2)["next"][0]["why"]
+
+    def test_no_simulation_drops_the_grant_clause_and_a_passed_run_keeps_it(self):
+        self.assertNotIn("grant", self.step_why(image_evidence.NoSimulationEvidence("p")))
+        self.assertNotIn("grant", self.step_why(image_evidence.PassedRunEvidence(True)))
+        self.assertIn("or a deploy grant stands", self.step_why(image_evidence.PassedRunEvidence()))
 
 
 if __name__ == "__main__":

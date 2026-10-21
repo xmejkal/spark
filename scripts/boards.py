@@ -431,6 +431,9 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
             # The note is the whole value of a role: "GPIO0 is special" helps nobody, whereas
             # "held low at reset it enters the bootloader" decides whether a button can go there.
             problems.append(f"pin_roles.{role_name} has an empty note; say what the caveat is")
+        if "active_level" in role and (type(role["active_level"]) is not int or role["active_level"] not in (0, 1)):
+            # P353: the level that lights an LED or that a pressed button reads, which firmware writes as a number.
+            problems.append(f"pin_roles.{role_name}.active_level is {role['active_level']!r}; it must be 0 or 1")
 
     # Decisions must not leak into a facts file, at any depth.
     def forbidden(node, path=""):
