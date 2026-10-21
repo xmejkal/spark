@@ -139,8 +139,9 @@ sequenceDiagram
 - A `FirmwarePlatformContract` test loops over every board record, and `FlasherContract` covers each flasher.
 - Safety tests: an erasing Operation with no gate fails, a corrupt or zoneless grant fails closed, and no secret or
   home path reaches the output.
-- The goldens of slice 0a run each bench CLI as a process with fake `esptool` and `mpremote` processes first on
-  `PATH`. A golden changes only in a bench envelope-additions slice, never in a move.
+- The goldens of S1 run each bench CLI as a process with fake `esptool`, `mpremote` and `serial` modules first on
+  the child's `PYTHONPATH`, because both tools are `kind: python` rows. A golden changes only in an output slice,
+  never in a move.
 
 ### How a new implementation is added
 

@@ -19,11 +19,11 @@ Four decisions, one at a time, in this order. Everything else the council decide
 1. Readability first. The five goals rank readable, testable, exchangeable, reusable, consistent. Example: when a
    short function and a reusable one conflict, the short one wins. Yes, or another order?
 2. The shape. Scripts become thin CLIs over one package, one Operation per job, one rules test. Example:
-   `look.py` shrinks from 72 lines to about 15, and its flags, output and exit codes stay. Yes or no?
-3. Slices 0a and 1 before walk 2, or after it. Walk 2 is due 2026-10-27. (a) Slice 0a, about 300 lines of tests
-   with no output change, and slice 1, about 150 lines that add codes and next steps to the bench envelope, both
-   merge by 2026-10-23. Claude then reads codes on the bench, and the goldens catch any other change. (b) Walk 2
-   first, on today's envelope, and both follow. The council proposes (a) only if both merge by 2026-10-23.
+   `look.main` shrinks from 24 lines to about 15, and its help text, flags, output and exit codes stay. Yes or no?
+3. Slices S1 and S2 before walk 2, or after it. Walk 2 is due 2026-10-27. (a) S1, about 350 lines of tests with
+   no output change, and S2, about 150 lines that add codes and next steps to the bench envelope, both merge by
+   2026-10-23. Claude then reads codes on the bench, and the goldens catch any other change. (b) Walk 2 first, on
+   today's envelope, and both follow. The plan proposes (a) only if S1 merges by 2026-10-22.
 4. When the area moves start. Until v0.13 only a story pulls its area (D13). Example: walk 2 finds a `deploy` gap,
    so that story moves the bench area. Confirm, or name a date.
 
