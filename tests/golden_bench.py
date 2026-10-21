@@ -37,8 +37,8 @@ LOOK_TOKEN = "{look-token}"
 BOARD_ID = "firebeetle2-esp32s3"
 
 #: Value. One golden: its name (`<op>-<status>[-<scenario>]`, the extension says which output), the script, its
-#: arguments after --project, the canned flash id and device list, and the exit code it must end with.
-Case = namedtuple("Case", "golden script argv flash_id devs exit_code")
+#: arguments after --project, the files of the canned flash id and device list, and the exit code it must end with.
+Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code")
 CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
@@ -100,22 +100,23 @@ def run_script(case, project, store, token=None):
     """(exit code, stdout) of `case`'s script run as a child in `project`, with `store` as its SPARK_HOME. stdin is
     closed and stdout is a pipe, so the script sees no terminal. `token` replaces LOOK_TOKEN in the arguments."""
     argv = [token if arg == LOOK_TOKEN else arg for arg in case.argv]
-    env = dict(os.environ, PYTHONPATH=str(FAKE_MODULES), SPARK_HOME=str(store), TZ="UTC", PYTHONDONTWRITEBYTECODE="1",
-               FAKE_ESPTOOL_FLASH_ID_FILE=str(CANNED / case.flash_id), FAKE_MPREMOTE_DEVS_FILE=str(CANNED / case.devs))
-    env.pop(ACCEPT_VARIABLE, None)
+    env = {name: value for name, value in os.environ.items() if not name.startswith("SPARK_")}  # ACCEPT_VARIABLE too
+    env.update(PYTHONPATH=str(FAKE_MODULES), SPARK_HOME=str(store), TZ="UTC", PYTHONDONTWRITEBYTECODE="1",
+               FAKE_ESPTOOL_FLASH_ID_FILE=str(CANNED / case.flash_id_file),
+               FAKE_MPREMOTE_DEVS_FILE=str(CANNED / case.devs_file))
     done = subprocess.run([sys.executable, str(ROOT / "scripts" / case.script), "--project", str(project), *argv],
                           cwd=str(project), env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
                           timeout=RUN_TIMEOUT_S)
     return done.returncode, done.stdout
 
 
-def places_of(project, store):
+def replacements_of(project, store):
     """What scrub replaces, longest first: each path in its written and its resolved form, the Python, the image's
     hash. The token keeps its MAC half, and its image half follows the installed littlefs, so it is replaced too."""
     places = {}
-    for path, name in ((project, "<project>"), (store, "<store>"), (ROOT, "<repo>")):
-        places[str(path)] = places[str(Path(path).resolve())] = name
-    places[sys.executable] = "<python>"
+    for path, name in ((project, "<project>"), (store, "<store>"), (ROOT, "<repo>"), (sys.executable, "<python>")):
+        for form in (str(path), str(Path(path).resolve())):
+            places[form] = name
     for image in Path(project).glob("sim/*.bin"):
         sha = hashlib.sha256(image.read_bytes()).hexdigest()
         places[sha] = "<image-sha256>"
@@ -123,14 +124,22 @@ def places_of(project, store):
     return dict(sorted(places.items(), key=lambda item: -len(item[0])))
 
 
-#: reach --json's moment of the run (`reach.py`'s `at`), which no golden can hold.
-MOMENT = re.compile(r'"at": "[^"]*"')
+#: reach --json's moment of the run (`reach.py`'s `at`), which no golden can hold. Only a moment's shape matches, so a
+#: changed value in `at` still fails its golden.
+MOMENT = re.compile(r'"at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d{4}"')
+
+
+#: A word in a script's shell quotes that starts with a placeholder. A script quotes a path only when it holds a space,
+#: so the quotes go, and a golden reads the same on a machine whose paths have none.
+QUOTED_PLACE = re.compile(r"'(<(?:project|store|repo|python)>[^'\s]*(?: [^'\s]+)*)'")
 
 
 def scrub(text, places):
-    """`text` with each key of `places` replaced by its placeholder, longest first, and reach's moment by `<at>`."""
+    """`text` with each key of `places` replaced by its placeholder, longest first, the quotes around a placed path
+    dropped, and reach's moment replaced by `<at>`."""
     pattern = re.compile("|".join(re.escape(place) for place in places))
-    return MOMENT.sub('"at": "<at>"', pattern.sub(lambda found: places[found.group(0)], text))
+    placed = QUOTED_PLACE.sub(r"\1", pattern.sub(lambda found: places[found.group(0)], text))
+    return MOMENT.sub('"at": "<at>"', placed)
 
 
 def check_golden(case, text):

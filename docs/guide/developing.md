@@ -47,11 +47,12 @@ A golden is a file with the expected output of one script run. `tests/test_golde
 `tests/golden/`, for `look.py`, `deploy.py`, `grant.py --check`, `live.py` and `reach.py`
 ([P380](https://github.com/xmejkal/spark/issues/487)). Each test runs one script as a child process in an S3
 project that `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first
-on the child's `PYTHONPATH`. The test replaces the run's own paths, the image hash and the time with placeholders,
+on the child's `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The test replaces the run's own paths, the image hash and the time with placeholders,
 such as `<project>`, before it compares. A golden's name is the op, the status and the scenario:
 `look-could-not-run-two-boards.json`.
 
-If you change what a bench script prints on purpose, write that op's goldens again, read the diff, and run once more:
+If you change what a bench script prints on purpose, write that op's goldens again, read the diff, and run once more.
+An accept run writes only the goldens of the op it names:
 
 ```sh
 SPARK_ACCEPT=look python3 -m unittest tests.test_golden_bench   # writes look's goldens, then fails

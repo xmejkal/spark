@@ -19,3 +19,13 @@ Sonnet and the refuter on Opus, then a PO-assistant on Sonnet and a tech lead on
 | 12 | `reach --json` prints the moment of the run | refuter | acted | `golden_bench.MOMENT` replaces it with `<at>` |
 | 13 | Ready seen, granted and ran need a faked board or clock | design reviewer, tech lead | acted | P383 #491 |
 | 14 | The card's files, names and placeholders changed in the plan | PO-assistant | acted | #487's text has a section "Changed by the plan council" |
+| 15 | A failed look-ok left the token None, and the deploy Case then failed with a TypeError | reviewer | acted | `setUpClass` asserts the token, with look's output |
+| 16 | The goldens print the token's image half as `<image>`, so nothing pinned it | reviewer | acted | `test_the_token_ends_in_the_image_hash` |
+| 17 | The home-path guard missed the temp folder and the repository path | reviewer | acted | `test_no_golden_holds_a_path_of_this_machine` |
+| 18 | The child inherited every `SPARK_*` variable of the caller's shell | reviewer | acted | `run_script` drops them all and sets `SPARK_HOME` |
+| 19 | A golden of a removed Case stayed, and nothing noticed | reviewer | acted | `test_every_golden_has_its_case` |
+| 20 | Names: `check`, `places_of`, `flash_id`, `devs` did not say their role | reviewer | acted | `run_case`, `replacements_of`, `flash_id_file`, `devs_file` |
+| 21 | `golden_bench.py` changes `sys.path` at import | reviewer | rejected | it imports `run_scenario` and `sim_project` itself, as every bench test module does |
+| 22 | A space in the repository or Python path fails three goldens, because a script quotes such a path | refuter | acted | `QUOTED_PLACE` drops the quotes around a placed path; a copy at a path with a space passes. The refuter's `shlex.quote` mapping was tried and failed on a quoted path with a suffix |
+| 23 | `MOMENT` blanked any value in reach's `at` | refuter | acted | it matches only a moment's shape |
+| 24 | The mutation run: 12 output changes planted in the five scripts, 12 caught; a scrub without the project path is noticed | mutation tester | verified | table kept out of the tree, because nothing escaped |
