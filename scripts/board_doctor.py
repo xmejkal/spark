@@ -20,7 +20,7 @@ from collections import namedtuple
 
 import boards
 import tools
-from board_console import KIND_BUSY, KIND_READ, ConsoleProbe, shows_boot
+from board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, ConsoleProbe, shows_boot
 from board_look import LookStop, PortFinder
 from download_mode import DOWNLOAD_MODE
 
@@ -34,8 +34,10 @@ MESSAGE_FOR = {
     # board_look's own stop when mpremote devs does not list the board (P218).
     NEXT_PLUG_IN: "plug the board straight into the computer with a data cable, not a hub that gives power only, "
                   "and run it again",
-    # mpremote and esptool lock the port while they run (mpremote 1.29 transport_serial.py:52).
-    NEXT_CLOSE_OTHER: "another program holds the port, for example mpremote or esptool: close it and run it again",
+    # mpremote and esptool lock the port while they run (mpremote 1.29 transport_serial.py:52). In walk 1, mpremote's
+    # console held it (P354).
+    NEXT_CLOSE_OTHER: "another program holds the port, often mpremote's console: %s, or close the other program, "
+                      "and run it again" % LEAVE_CONSOLE,
     # A board that waited in download mode booted after one press of R (the P236 bench, AT157).
     NEXT_PRESS_RESET: "press the board's %(reset)s once and run it again%(orientation)s",
     # The doctor's own open restarted the board (the P251 cure, AT187), so the first failure tells little now.

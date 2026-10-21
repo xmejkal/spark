@@ -72,6 +72,9 @@ class StepTest(unittest.TestCase):
     def test_a_port_another_program_holds_is_close_other(self):
         result, _ = examine(ConsoleReadResult("busy", "", "Could not exclusively lock port"))
         self.assertEqual(result.next_step, "close_other")
+        self.assertEqual(board_doctor.step_sentence(result.next_step),  # P354: the console that walk 1 left open
+                         "another program holds the port, often mpremote's console: leave mpremote's console with "
+                         "Ctrl-X, or close the other program, and run it again")
 
     def test_download_mode_is_press_reset_for_mpremote_and_run_again_for_esptool(self):
         rom = "ESP-ROM:esp32c6-20220919\nboot:0x4 (DOWNLOAD(USB/UART0/SDIO_FEI_FEO))\nwaiting for download\n"

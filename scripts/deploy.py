@@ -28,6 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_doctor
 import board_envelope
 import board_grant
 import board_look
@@ -37,6 +38,7 @@ import download_mode
 import ready_check
 import store
 import tools
+from board_console import LEAVE_CONSOLE
 from deploy_service import DeployService, FlashError
 from firmware_platform import FirmwarePlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
@@ -46,7 +48,8 @@ from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 #: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
 DEPLOYED_LINE = "image sha256: %s, yes: %s"
 #: The last line: how the person sees the firmware start.
-WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"
+WATCH = ("then, to see it start: %%s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`. Then %s: an open "
+         "console holds the port, and the next deploy cannot open it" % LEAVE_CONSOLE)
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
 (--ignore-older-runs flashes anyway).
@@ -217,7 +220,12 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
             reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind,
                            who=who_said_yes(consent))
         reached["refusal"] = str(cannot)
-        print("deploy.py: %s" % cannot, file=sys.stderr)
+        lines = ["deploy.py: %s" % cannot]
+        if isinstance(cannot, board_look.LookStop):  # P354: a failed read gets the doctor, a busy port its step
+            lines, doctor = board_doctor.stop_answer("deploy.py", cannot, args.project, run)
+            if doctor is not None:
+                reached["doctor"] = doctor
+        print("\n".join(lines), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
         reached.update(refusal=str(shut), next_op=shut.next_op)
