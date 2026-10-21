@@ -19,9 +19,9 @@ Four decisions, one at a time, in this order. Everything else the council decide
 1. Readability first. The five goals rank readable, testable, exchangeable, reusable, consistent. Example: when a
    short function and a reusable one conflict, the short one wins. Yes, or another order?
 2. The shape. Scripts become thin CLIs over one package, one Operation per job, one rules test. Example:
-   `look.main` shrinks from 24 lines to about 15, and its help text, flags, output and exit codes stay. Yes or no?
+   `look.main` shrinks from 29 lines to about 15, and its help text, flags, output and exit codes stay. Yes or no?
 3. Slices S1 and S2 before walk 2, or after it. Walk 2 is due 2026-10-27. (a) S1, about 350 lines of tests with
-   no output change, and S2, about 150 lines that add codes and next steps to the bench envelope, both merge by
+   no output change, and S2, about 200 lines that add codes and next steps to the bench envelope, both merge by
    2026-10-23. Claude then reads codes on the bench, and the goldens catch any other change. (b) Walk 2 first, on
    today's envelope, and both follow. The plan proposes (a) only if S1 merges by 2026-10-22.
 4. When the area moves start. Until v0.13 only a story pulls its area (D13). Example: walk 2 finds a `deploy` gap,
@@ -167,6 +167,6 @@ sequenceDiagram
 - Level 2 and 3, one page per area: [core](areas/core.md), [records](areas/records.md),
   [sourcing](areas/sourcing.md), [design](areas/design.md), [firmware](areas/firmware.md),
   [breadboard](areas/breadboard.md), [checks](areas/checks.md), [bench](areas/bench.md), [build](areas/build.md).
-- [refactor-plan.md](refactor-plan.md): the slices in order, slice 0 first.
+- [refactor-plan.md](refactor-plan.md): five stages and their slices in order, the bench net first.
 - [notes.md](notes.md): decisions, conflicts between the papers, the rule reference, what was cut.
 - [glossary.md](glossary.md): the words.
