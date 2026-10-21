@@ -30,7 +30,7 @@ collaborator Value, one place for backend choices, readability as goal one, and 
 | N14 | `SparkError.status` is a class attribute, `could-not-run` by default. | An argument invites a wrong status, and only `Impossible` needs `problems`. |
 | N15 | Pin map text and image building stay out of `FirmwarePlatform`. | They would add upward edges from design and firmware to bench. |
 | N16 | The envelope gains `code`, `needs_person` and `backends`, and loses nothing. | Claude branches on codes and sees which backend ran. |
-| N17 | Area pages run about 150 to 200 lines, above the 130 asked. | Each holds four diagrams. The prose stays within the budget. |
+| N17 | Area pages run about 150 to 200 lines, above the 130 asked. | Each holds three diagrams. The prose stays within the budget. |
 
 ## Conflicts between the papers, and how they were settled
 

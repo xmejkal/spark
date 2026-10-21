@@ -19,7 +19,8 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 | `core/outcomes.py` | the status words, `EXIT_FOR`, `status_of`, `envelope`, `step`, `page`, moved from `scripts/outcomes.py` |
 | `core/result.py` | `OperationResult`, `Finding`, `NextStep` |
 | `core/operation.py` | `Operation`, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`, `--dry-run`, `--out`, `--timeout`, `--describe`, `--debug`) |
-| `core/errors.py` | `SparkError` and the core codes |
+| `core/errors.py` | `SparkError` |
+| `core/codes.py` | the codes two or more areas emit, such as `tool_missing`, `crash`, `bad_argument` |
 | `core/outside.py` | `OutsideWorld`, `Privacy`, `pick` |
 | `core/cli.py` | `run_operation`, `run_cli`, `TextReport`, `JsonEnvelope` |
 
@@ -179,7 +180,7 @@ traceback of a crash goes to stderr only with `--debug`.
   `run_operation` and renders the `OperationResult`. `isError` is true exactly for `could-not-run`. At that point,
   with two frontends, a `Frontend` base class enters (rule T3: a base needs two subclasses or a Fake).
 - A new shared flag is one `Argument` in `COMMON_ARGUMENTS`. An old spelling stays as a hidden alias.
-- A new code is one constant with a one-line meaning in `core/errors.py` when two areas emit it.
+- A new code is one constant with a one-line meaning in `core/codes.py` when two areas emit it.
 
 ### What moves into core
 

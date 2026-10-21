@@ -6,7 +6,7 @@ in the code yet.
 ## Level 2: what checks does
 
 Checks grades a built design against facts in records: the rules, the physics, the footprints, the vendor's pin
-header and the order list. Each check says what it found and what it could not look at, and `check_all` runs them all.
+header and the order list. Each check says what it found and what it did not look at, and `check_all` runs them all.
 
 ### Its operations
 

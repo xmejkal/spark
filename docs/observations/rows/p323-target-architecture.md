@@ -114,3 +114,96 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 108 | The bench move's 17 modules, 34 importers, 188 rows could not be reproduced: another file list gives 15, 19, 236 | fact check (script) | acted | a range, marked as an estimate |
 | 109 | 110 plugin paths, 39 importers of outcomes, 11 OPTIONS rows, 6 item sites, design.py:377 and every other file:line reference | fact check (script) | verified | reproduced by grep and the script |
 | 110 | Every name that exists nowhere in the repository is a proposed new name | fact check (by hand) | verified | 25 names, each introduced as new in the design |
+| 111 | Six result shapes cross boundaries (`outcomes.py:49`, `check_all.py:72`, `check_spine.py:100`) | round 4 architect | acted | architecture/README.md contract, core.md: one `OperationResult` (named by the naming paper) |
+| 112 | Five problem shapes, two with `code` (`parts.py:238`, `breadboard_keep.py:63`, `check_physics.py:93`) | round 4 architect | acted | core.md, checks.md: one `Finding` with severity |
+| 113 | Collaborators are growing keyword lists (design 2.6, `deploy_service.py:78`) | round 4 architect | acted | core.md: one `OutsideWorld` with only declared effects (N4) |
+| 114 | The rejected `Clock` exists as `DeployService(clock=)` and two Fakes | round 4 architect | acted | clock is an `OutsideWorld` field filled by `SystemClock` (`board_console.py:80`), no `Clock` class, one `FakeClock` (slice 5) |
+| 115 | `Layers` duplicates `store.layers` (`store.py:73`) | round 4 architect | acted | records.md: `Records(kind)` over `store.records`. `RecordFolders` kept as the Value tests pass (N9) |
+| 116 | Two validators and `REQUIRED_KEYS` (`boards.py:62`, `:340`) | round 4 architect | acted | records.md: `RecordSchema.findings(record)` |
+| 117 | Three registry forms and a lambda Platform (`matching.py:222`, `check_all.py:285`, `firmware_platform.py:53`) | round 4 architect | acted | rule X3, N7: a dict keyed by the class attribute `name`. bench.md: `MicroPythonPlatform` |
+| 118 | `description` and `epilog` are CLI text, not Operation fields | round 4 architect | acted | notes.md cut list. README.md help row: the CLI keeps its long text |
+| 119 | No text-mode output in the design (`look.py:63`) | round 4 architect | acted | `OperationResult.lines`, rendered by `TextReport` |
+| 120 | `SparkError.outcome` as an argument invites a wrong status (`assign_pins.py:46`) | round 4 architect | acted | N14: `status` is a class attribute |
+| 121 | `pin_map_text` and `make_image` on a bench class add upward edges | round 4 architect | acted | N15, bench.md, design.md |
+| 122 | Frontends are implied, not designed | round 4 architect | acted | README.md context diagram and sequence: CLI text, CLI `--json`, MCP later, all over `run_operation` |
+| 123 | Backend choices live in four places (`tools.py:277`, `deploy.py:171`, `flash_image.py:89`, `store.py:46`) | round 4 architect | acted | records.md: one `Backends` (N5) |
+| 124 | The write-up needs three levels with a class diagram per area | round 4 architect | acted | README.md and nine area pages |
+| 125 | `Check.answer(design)` differs from the code's `run` (`check_all.py:72`) | round 4 architect | acted | checks.md: `Check.run(inputs) -> OperationResult` |
+| 126 | `Backends` builds the platform and engine objects | round 4 architect | rejected | records cannot import bench or firmware. `Backends` holds choices (testability F3) |
+| 127 | "door" clashes with CLI and interface | round 4 naming | acted | glossary.md: CLI, `run_cli` |
+| 128 | "outcome" beside `status`, three values listed where the code prints four | round 4 naming | acted | glossary.md: status, four words (`outcomes.py:21-26`) |
+| 129 | Bare `code` means an exit code and board source | round 4 naming | acted | glossary.md: `code` is a problem code only in new code |
+| 130 | `verdict` has four meanings | round 4 naming | acted | glossary.md clashes: private functions renamed in moves, JSON keys stay |
+| 131 | Five keys hold the person's text | round 4 naming | acted | glossary.md: new JSON uses only `sentence` and `why`. Rule C2 |
+| 132 | `tool` and `check` both name the CLI in JSON | round 4 naming | acted | glossary.md: `tool` is the CLI that printed the envelope |
+| 133 | Doctor and ready "checks" clash with `Check` | round 4 naming | acted | bench.md: `DoctorStep`, `ReadyProbe` in slice 5 |
+| 134 | `stage`, `Step`, "record" and "facts" carry other meanings | round 4 naming | acted | `DeployPhase`, `WiringStep`, `WiringLog`, `RunLog`, `ReadingFile` |
+| 135 | `Layers`, "catalog" and `parts.Answer` clash | round 4 naming | acted | `RecordFolders`, "operation registry", `OperationResult` |
+| 136 | Coined check classes and ten exceptions without `Error` | round 4 naming | acted | checks.md renames, rule C1, in each area move |
+| 137 | AGENTS.md:27 says "library module" and the docs cite `EsptoolBoardReader` (the class is `EsptoolReader`, `board_look.py:117`) | round 4 naming | raised | fix both docs in the PR that merges this design |
+| 138 | Four exit aliases (`assign_pins.py:46`, `check_vendor_pins.py:44`) | round 4 naming | acted | rule C3, dropped in each area move |
+| 139 | Public flags and keys keep their spelling, with a glossary | round 4 naming | acted | glossary.md section 3. Copy to developing.md in slice 2 |
+| 140 | The paper cites `BoardCheckStrategy` and `CheckResult` at `board_doctor.py:54,74` in swapped order | synthesis fact check | verified | `CheckResult` is line 54, `BoardCheckStrategy` line 74. Cited correctly in bench.md |
+| 141 | No rule limits nesting or parameters (`matching.py:68` takes 9) | round 4 human readability | acted | rules R2 and R3 |
+| 142 | 60 lines is lax for new code | round 4 human readability | acted | rule R1: 40 in `spark/`, 60 for old scripts |
+| 143 | Modules do not read top-down | round 4 human readability | acted | rule R4 |
+| 144 | Comments tell incident history (`check_spine.py:371`, `:453`) | round 4 human readability | acted | rule R5, build.md moves the stories to their cards |
+| 145 | `**collaborators` hides what an Operation uses | round 4 human readability | acted | one `OutsideWorld` instead of one Value per area (smaller) |
+| 146 | `run(values)` reads arguments by string key | round 4 human readability | acted | N6: keyword parameters named for each `Argument.dest`, checked by one test |
+| 147 | Three hops from CLI to logic | round 4 human readability | acted | README.md: each `Operation(...)` sits under its function, the CLI docstring names both |
+| 148 | `parts.py`'s Operations make a 300-line table | round 4 human readability | acted | one-line `summary`, long text in the CLI. sourcing.md splits the Operations by area |
+| 149 | Long sentences in control flow, two format styles | round 4 human readability | acted | rule R7 |
+| 150 | "outcome" and "status" name one value | round 4 human readability | acted | status everywhere (glossary.md) |
+| 151 | `parts`, `boards`, `build`, `design` and bench CLI names mean two or three things | round 4 AI readability | acted | N10, N11: the area is `sourcing`, modules keep prefixes, `design/loader.py` |
+| 152 | `describe` and `render` overlap (`board_doctor.py:188`, `parts.py:1546`) | round 4 AI readability | acted | glossary.md: `render` is person text, `describe` the machine description, renamed per story |
+| 153 | `drawer.py:187`, `:226` read `parts._parse` and `parts._problem` | round 4 AI readability | acted | rule U2 catches attribute access too |
+| 154 | Import style unstated | round 4 AI readability | acted | rule U2: import modules, not names |
+| 155 | No code map | round 4 AI readability | acted | slice 6: generated `docs/guide/map.md` |
+| 156 | Test mode keyed on `sys.modules` (`store.py:40`, `:339`) | round 4 AI readability | acted | rule T4, removed in the records move |
+| 157 | Codes and shared flags have no home | round 4 AI readability | acted | rule U3: `codes.py` per area, `COMMON_ARGUMENTS` in core |
+| 158 | No one-entry `--describe` | round 4 AI readability | acted | slice 6: `--describe OP` |
+| 159 | The chosen backend is invisible | round 4 AI readability | acted | envelope gains `backends` with `chosen_by` (records.md, N16) |
+| 160 | 179 `sys.path` inserts in 78 test files | round 4 AI readability | raised | not checked here. A `tests/paths.py` helper is a card for slice 3a |
+| 161 | A frontend is only a CLI over `run_operation` | round 4 AI readability | acted | README.md, rule X2, the parity test |
+| 162 | Platform seam leaks through 8 tool lookups (`live.py:84`, `reach.py:79`, `grant.py:88`, `:95`, `board_look.py:296-297`, `board_doctor.py:160`, `:162`) | round 4 testability | acted | bench.md, slice 4: `make_port_finder`, `make_board_reader`, `FakePlatform` seam test |
+| 163 | `tools.find` is patched about 39 times and `shutil.which` 29 (paper said 37) | round 4 testability | acted | slice 4: `ToolFinder`, `FakeToolFinder`. Counted by grep 2026-10-21 |
+| 164 | Backends chosen in four places | round 4 testability | acted | records.md `Backends` holds choices, registries per area |
+| 165 | MCP tool versions have no core adapter | round 4 testability | acted | N13: an MCP result enters as an input file |
+| 166 | No proof that a CLI holds no logic | round 4 testability | acted | parity test in core.md, slice 3b |
+| 167 | CLI code duplicated: `GrantService` built in 4 places, `--json` and `--project` declared in 14 files | round 4 testability | acted | bench.md, `COMMON_ARGUMENTS` |
+| 168 | Fakes outside `fakes.py` and two clocks (`fakes.py:59`, `:88`) | round 4 testability | acted | slice 5 |
+| 169 | Seven scripts call `subprocess` with no `run` to inject | round 4 testability | acted | each Adapter takes `run` in its area move (firmware.md, build.md, checks.md, breadboard.md) |
+| 170 | `store.py:40` branches on unittest | round 4 testability | acted | rule T4. Slice 0 gives each child process its own `SPARK_HOME`, since the branch does not fire there |
+| 171 | Suite 122 s with 44 s in three spots | round 4 testability | acted | slice 7: fast and slow lanes |
+| 172 | Only 17% of tests test from the outside, slice 1a covers 3 of 24 CLIs | round 4 testability | acted | slice 0a, 0b, 0c: a golden per Operation and status, fake tools as processes |
+| 173 | Areas can reach concrete Adapters and each other's internals | round 4 testability | acted | rules X1 and U1 |
+| 174 | Cut seams that serve nothing yet | round 4 testability | acted | refactor-plan.md, what we will not do |
+| 175 | 11 output shapes across CLIs | round 4 UX | acted | one envelope (rule C2), each CLI converted when its story or move comes |
+| 176 | The message sits under 5 keys | round 4 UX | acted | `Finding.sentence`, rule C2 |
+| 177 | `--json` prints plain text on could-not-run (`check_footprints.py:547`, `assign_pins.py:465`) | round 4 UX | acted | `run_cli` prints an envelope for every failure, slice 3b and each conversion |
+| 178 | `look.py --bogus --json` prints usage text | round 4 UX | acted | core.md: a bad flag is an envelope, code `bad_argument` |
+| 179 | A missing input exits 1 (`boards.py --get`, `parts.py --show`) | round 4 UX | raised | a card for the PO: a public exit code change, outside the refactor |
+| 180 | `status` carries mismatch and per-module words | round 4 UX | raised | checks.md: unchanged in the move, a card per CLI's envelope conversion |
+| 181 | `--keep` means two things | round 4 UX | raised | a card for the PO to rename one (glossary.md section 3) |
+| 182 | The project, circuit, output and timeout are given in several ways | round 4 UX | acted | `COMMON_ARGUMENTS`, old spellings as hidden aliases |
+| 183 | 12 `--json` and 11 `--project` help wordings, flags with no help | round 4 UX | acted | help lines live once in core, rule U3 |
+| 184 | Exit codes in 8 of 23 helps, effects in prose | round 4 UX | acted | README.md: the generated three-line footer |
+| 185 | The last line differs per CLI | round 4 UX | acted | README.md contract: one text order in `TextReport` |
+| 186 | `tools.py --status` exits 2 for an unneeded tool and has no `--json` | round 4 UX | raised | convert with P92, outside this refactor |
+| 187 | `boards.py` prints a home path | round 4 UX | acted | rule C4 marker test, `Privacy` in slice 3c |
+| 188 | A `Frontend` Strategy with three subclasses | round 4 UX | rejected | a function plus two Renderers until MCP is the second frontend (rule T3) |
+| 189 | Readability not ranked first | round 4 PO | acted | README.md: five goals in his order, Your call 1 |
+| 190 | No reader index per area | round 4 PO | acted | each `operations.py` docstring is the index, `look` the worked example, the generated map |
+| 191 | The design is too long to decide on | round 4 PO | acted | README.md at 170 lines, history to notes.md and design.md |
+| 192 | Section 8 and the TL;DR say walk 1, which is done | round 4 PO | acted | Your call 3 asks against walk 2, due 2026-10-27 |
+| 193 | The product bar is not stated | round 4 PO | acted | refactor-plan.md: codes and next steps for the bench come first (slice 1), for walk 2 |
+| 194 | Slice 2 holds several things | round 4 PO | acted | slices 3a, 3b, 3c |
+| 195 | 18 rules shown at once | round 4 PO | acted | rules grouped under five goals, the full table in notes.md |
+| 196 | `Layers` does not say its role, and "door" is coined | round 4 PO | acted | `RecordFolders`, CLI |
+| 197 | The PO's decisions are unordered | round 4 PO | acted | README.md Your call: four, in the paper's order |
+| 198 | Goldens that spawn a CLI are not protected by the `store.py:40` test branch, which needs `unittest` imported | synthesis | acted | refactor-plan.md slice 0: each child gets its own `SPARK_HOME` |
+| 199 | `check_spine.py` does not import any check module, so build has no edge to checks | synthesis | acted | README.md area map |
+| 200 | `parts.py` holds 29 Operations by an `ast` count, not 30 | synthesis | acted | sourcing.md |
+| 201 | The goal Operations of `parts.py` live in design, since `needs.py` imports `design`, `emit_board` and `emit_footprint` | synthesis | acted | design.md and sourcing.md. `parts.py` imports both areas' `OPERATIONS` |
+| 202 | The tools role for the board engine already exists as `board-engine` (`data/tools.json:6`) | synthesis | acted | build.md uses it, no new role |
+| 203 | Area pages run over the 130-line budget | synthesis | acted | notes.md N17: three diagrams each, prose within budget |

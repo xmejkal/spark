@@ -124,7 +124,7 @@ sequenceDiagram
   EN->>OW: run(wokwi-cli argv)
   OW-->>EN: exit, serial, stderr
   EN-->>SR: RunLog with status
-  SR->>OW: write(sim/runs/<date>.log)
+  SR->>OW: write a log under sim/runs/
   SR-->>OP: RunLog
   OP-->>OP: OperationResult, next step deploy look
 ```
