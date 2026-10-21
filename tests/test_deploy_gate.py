@@ -324,7 +324,7 @@ class TheBusyPortTest(GateCase):
 
         def held(probe):  # the console script exits as it does when another program holds the port's lock
             def run(command, **kw):
-                raise subprocess.CalledProcessError(board_console.EXIT_PORT_BUSY, command, "",
+                raise subprocess.CalledProcessError(3, command, "",  # READ_CONSOLE's exit on EAGAIN
                                                     "serial.SerialException: Could not exclusively lock port")
             probe.run = run
             return real_console(probe)
