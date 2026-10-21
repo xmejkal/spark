@@ -253,6 +253,30 @@ buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does 
 PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
 `firmware_platform.FirmwarePlatform`. `deploy.py` only parses, prints and maps the exit code.
 
+### One responsibility, one name
+
+The PO agreed these rules on 2026-10-21 ([P381](https://github.com/xmejkal/spark/issues/488)): "let's try to stick
+to the rules we set". New code follows them now. Today's names change in the names pass
+([P382](https://github.com/xmejkal/spark/issues/489)) and the v0.13 area moves, so an old name is no example.
+
+1. One word has one meaning in the code, the docs, the JSON and Miro. The P323 glossary holds the words.
+2. A name says what the thing is for, not which tool does it. Only the adapter that wraps a tool carries the tool's
+   name: `ChipReader` is the role, and `EsptoolChipReader` fills it with esptool.
+3. Each level has one responsibility. You can say it in one sentence without "and".
+
+   | Level | Its one responsibility | Its name | Example |
+   |---|---|---|---|
+   | Script | one topic for a person and Claude, with one subcommand per job | a noun | `board.py`, with `board.py identify` |
+   | Operation | one job, with one public method, `run()` | a verb, then its object | `IdentifyBoard` |
+   | Helper | one thing, with several methods about it | an `-er` noun or a plain noun | `ChipReader`, `GrantStore` |
+
+4. An Operation's module, class, op name and subcommand use the same words: the module `identify_board`, `IdentifyBoard`,
+   `"identify-board"`, `board.py identify`.
+5. A class that only reads says so in its name: `Reader`, `Finder` or `Probe`. A class or a method that changes a
+   board, a file or a port has a verb that names the change: `write`, `erase`, `cure`, `save`.
+
+The role table above still applies. Its role words end a name, and `Fake` starts one.
+
 These rules name a class, a function or a constant:
 
 - Name a thing for what it is to someone who has never seen spark.
