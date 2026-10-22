@@ -283,8 +283,8 @@ def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
     [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
-    from every need's picks — one piece per pick, one board however many needs pick it — on the entries that hold them, never past what is owned or what another
-    project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
+    from every need's picks — one piece per pick, one board however many needs pick it — on the entries that hold them,
+    never past what is owned or what another project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
     longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
     a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
     own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
@@ -310,7 +310,7 @@ def plan_pick(project, given, passed_over=()):
             notes += [renamed] if named != pick_id and renamed not in notes else []
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
     wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
-    # P387: a project has one board, however many needs its own LED or button serves
+    # --- MVP --- P387: a project has one board, however many needs its own LED or button serves
     wanted = collections.Counter({asked: 1 if asked[0] == "board" else pieces for asked, pieces in wanted.items()})
     pointing, mine = _pointing(entries), collections.Counter()
     # a pick of one drawer entry has nowhere else to go: it takes its piece before a pick of a record, which may take another entry

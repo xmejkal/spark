@@ -671,6 +671,12 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual((said["status"], code), ("ok", 0))
         self.assertEqual((self.picks()["input"], self.entry("xiao")["used_in"]), ([{"board": "xiao-esp32-c6"}], {"plant-alarm": 1}))
 
+    def test_a_board_an_older_pick_held_twice_is_held_once_after_a_re_pick(self):
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 2, "is": {"board": "xiao-esp32-c6"},
+                                                                    "used_in": {"plant-alarm": 2}}))
+        run(["--pick", str(self.project), "board=xiao-esp32-c6", "input=xiao-esp32-c6"])
+        self.assertEqual(self.entry("xiao")["used_in"], {"plant-alarm": 1})
+
     def test_a_pick_reserves_one_piece_and_the_history_says_it_was_reused(self):
         _, code = run(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"])
         self.assertEqual(code, 0)
