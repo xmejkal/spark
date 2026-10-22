@@ -46,7 +46,7 @@ somewhere quiet. An optional `"signals":
 written with it as code`.
 
 A project that runs on the board alone, such as a blink of the board's own LED, says `"board_only": true` with an empty
-`parts` list. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
+`parts` list. `parts.py --requirements` writes it when the board serves every need, and removes it when a part comes. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
 the board alone. `firmware/pins.py` names `ONBOARD_LED` when the board record names one on-board LED, and `ONBOARD_BUTTON` for one
 on-board button. `ONBOARD_LED_ON` gives the level that lights the LED, and `ONBOARD_BUTTON_ON` the level a pressed button reads,
 when the record holds it (`active_level`). An empty `parts`

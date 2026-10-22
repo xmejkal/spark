@@ -64,6 +64,7 @@ import breadboard_drawing  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
+import needs  # noqa: E402
 import netlist  # noqa: E402
 import parts  # noqa: E402
 import sim_project  # noqa: E402
@@ -369,7 +370,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # Nothing to build is not a pass. An empty parts list came out `ok` end to end — two traces
     # (the processor's own ground and 3.3 V) and two wires — which proves nothing about the chain
     # and reads as though it did. Intake row M3 had it as `problems` on 09-25; both were wrong.
-    if requirements.get("board_only") is True:
+    if requirements.get(needs.BOARD_ONLY) is True:
         if requirements.get("parts"):
             return stages + [Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one")]
         return stages + board_alone(board, workdir, firmware)
@@ -377,7 +378,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         return stages + [Stage("parts", COULD_NOT_RUN,
                                "the requirements name no parts, so there is nothing to build; a "
                                "board holding only the microcontroller proves nothing. A project that runs "
-                               'on the board alone says "board_only": true')]
+                               'on the board alone says "%s": true' % needs.BOARD_ONLY)]
 
     # The design's own part records, so the build stage below can ask whether the circuit
     # honoured what they state. `emit_board` reads the same records in its subprocess; if that

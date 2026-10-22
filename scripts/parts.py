@@ -1633,7 +1633,7 @@ OPERATIONS = (
      "what it notes is under `notes`",
      ("writes",), ("project", "picks", "reserved", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},
-     "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays",
+     "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; board_only when the board itself serves every need",
      ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "no_supply",
                    "no_driver", "no_receiver", "written")),
     ("step", {"nargs": 2, "metavar": ("PROJECT", "STEP")},
@@ -2233,7 +2233,8 @@ def _op_requirements(args, project):
         args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
     # F16: the drawer keys the file names before this write — needs.requirements has read it as JSON already
-    named = needs.unserved_keys(json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {})
+    held = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    named = needs.unserved_keys(held)
     if not problems and not args.dry_run:
         for record, source in shelving:
             shelve(record, source)
@@ -2242,6 +2243,10 @@ def _op_requirements(args, project):
         "would write" if args.dry_run else "wrote" if changed else "unchanged", path, content["board"],
         ", ".join(needs.entry_label(entry) for entry in content["parts"]) or "none")]
     said += ["  board: %s → %s" % (json.dumps(board_was), json.dumps(content["board"]))] if board_was not in (None, content["board"]) and not problems else []
+    # --- MVP --- P387: board_only is said both ways, never silently written or dropped
+    said += ["  board only: nothing to build but the board; the build skips the parts, schematic and footprint"
+             ] if content.get(needs.BOARD_ONLY) is True and not problems else []
+    said += ["  board_only removed: the file lists parts"] if isinstance(held, dict) and needs.BOARD_ONLY in held and content["parts"] and not problems else []
     stop = "" if problems else boards.footprint_stop(content["board"], Path(args.requirements))  # F12 (C-7): said, never refused
     said += ["  board %s %s" % (content["board"], stop)] if stop else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []

@@ -664,6 +664,19 @@ class ThePicksTest(unittest.TestCase):
         self.assertIn('[{"entry": "board", "used_in": …}]', said["problems"][0]["fix"])
         self.assertEqual((self.picks()["board"], self.entry("board")["used_in"]), (None, {"smartbin-local": 1}))
 
+    def test_the_board_picked_for_two_needs_takes_one_piece(self):
+        # P387: the board's own LED or button serves a need, so the one board a person owns is picked for it as well
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}}))
+        said, code = run(["--pick", str(self.project), "board=xiao-esp32-c6", "input=xiao-esp32-c6"])
+        self.assertEqual((said["status"], code), ("ok", 0))
+        self.assertEqual((self.picks()["input"], self.entry("xiao")["used_in"]), ([{"board": "xiao-esp32-c6"}], {"plant-alarm": 1}))
+
+    def test_a_board_an_older_pick_held_twice_is_held_once_after_a_re_pick(self):
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 2, "is": {"board": "xiao-esp32-c6"},
+                                                                    "used_in": {"plant-alarm": 2}}))
+        run(["--pick", str(self.project), "board=xiao-esp32-c6", "input=xiao-esp32-c6"])
+        self.assertEqual(self.entry("xiao")["used_in"], {"plant-alarm": 1})
+
     def test_a_pick_reserves_one_piece_and_the_history_says_it_was_reused(self):
         _, code = run(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"])
         self.assertEqual(code, 0)
@@ -965,13 +978,14 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual([event["entry"] for event in self.history()], ["speaker", "mp3"])
 
     def test_the_refusal_names_only_the_others_and_counts_what_this_project_picked(self):
-        (self.home / "drawer" / "board.json").write_text(json.dumps({"schema": 1, "label": "FireBeetle", "count": 2, "is": {"board": "firebeetle2-esp32s3"},
-                                                                    "used_in": {"smartbin-local": 1, "plant-alarm": 1}}))
-        run(["--needs-set", str(self.project), a_file([{"id": "spare", "does": "compute", "what": "microcontroller"}])])
-        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3", "spare=firebeetle2-esp32s3"])
+        # a part, not the board: a project has one board however many needs pick it (P387)
+        (self.home / "drawer" / "silent.json").write_text(json.dumps({"schema": 1, "label": "a mystery sensor", "count": 2, "is": {"part": "x-silent"},
+                                                                     "used_in": {"smartbin-local": 1, "plant-alarm": 1}}))
+        run(["--needs-set", str(self.project), a_file([{"id": "spare", "does": "sense", "what": "x"}])])
+        said, code = run(["--pick", str(self.project), "soil=x-silent", "spare=x-silent"])
         self.assertEqual((code, said["problems"][0]["sentence"], said["problems"][0]["fix"]), (
             1, "2 owned, held by smartbin-local — 2 picked here",
-            'free it — a file holding [{"entry": "board", "used_in": …}] without smartbin-local, given to --drawer-set <file> after '
+            'free it — a file holding [{"entry": "silent", "used_in": …}] without smartbin-local, given to --drawer-set <file> after '
             "a dry run — or pick another"))
 
     def test_more_picked_than_is_owned_is_refused_though_nobody_else_holds_any(self):
@@ -1083,13 +1097,13 @@ class ThePicksTest(unittest.TestCase):
         self.assertEqual((self.picks()["soil"], self.entry("solo")["used_in"], self.history()), (None, {"smartbin-local": 1}, []))
 
     def test_a_record_owned_over_two_entries_serves_a_pick_of_the_first_by_key_and_a_pick_of_the_record(self):
-        (self.home / "drawer" / "board.json").unlink()
-        for key in ("a-board", "b-board"):
-            (self.home / "drawer" / (key + ".json")).write_text(json.dumps({"schema": 1, "label": key, "count": 1, "is": {"board": "firebeetle2-esp32s3"}}))
-        run(["--needs-set", str(self.project), a_file([{"id": "spare", "does": "compute", "what": "microcontroller"}])])
-        said, code = run(["--pick", str(self.project), "board=firebeetle2-esp32s3", "spare=a-board"])
+        (self.home / "drawer" / "silent.json").unlink()  # a part, not the board: one board serves however many needs (P387)
+        for key in ("a-silent", "b-silent"):
+            (self.home / "drawer" / (key + ".json")).write_text(json.dumps({"schema": 1, "label": key, "count": 1, "is": {"part": "x-silent"}}))
+        run(["--needs-set", str(self.project), a_file([{"id": "spare", "does": "sense", "what": "x"}])])
+        said, code = run(["--pick", str(self.project), "soil=x-silent", "spare=a-silent"])
         self.assertEqual((code, said["problems"]), (0, []))
-        self.assertEqual((self.entry("a-board")["used_in"], self.entry("b-board")["used_in"]), ({"plant-alarm": 1}, {"plant-alarm": 1}))
+        self.assertEqual((self.entry("a-silent")["used_in"], self.entry("b-silent")["used_in"]), ({"plant-alarm": 1}, {"plant-alarm": 1}))
 
     def test_a_retried_pick_of_the_only_one_is_not_held_against_its_own_project(self):
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
@@ -1343,6 +1357,29 @@ class TheRequirementsFileTest(unittest.TestCase):
         said, code = run(["--requirements", str(project)])
         self.assertEqual((code, self.written(project)), (0, self.BY_HAND))
         self.assertEqual(said["data"]["kept"], [{"part": "jst-ph-2-power-inlet", "name": None}])
+
+    def test_when_the_board_serves_every_need_the_file_says_board_only(self):
+        _, project = self.project([self.BOARD, ("light", [{"board": "firebeetle2-esp32s3"}])])
+        said = self.text(["--requirements", str(project)])
+        self.assertEqual(self.written(project), {"board": "firebeetle2-esp32s3", "parts": [], "board_only": True})
+        self.assertIn("  board only: nothing to build but the board", said)
+        self.assertNotIn("board_only removed", self.text(["--requirements", str(project)]))
+
+    def test_a_part_picked_later_takes_board_only_away_and_says_so(self):
+        _, project = self.project([self.BOARD, ("light", [{"board": "firebeetle2-esp32s3"}])])
+        run(["--requirements", str(project)])
+        self.picking(project, [self.BOARD, ("light", [{"part": "led-red-5mm"}])])
+        said = self.text(["--requirements", str(project)])
+        self.assertEqual(self.written(project), {"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"]})
+        self.assertIn("  board_only removed: the file lists parts", said)
+
+    def test_a_need_off_the_board_leaves_board_only_to_the_person(self):
+        for held, after in (({}, None), ({"board_only": True}, True)):
+            with self.subTest(held=held):
+                _, project = self.project([self.BOARD, ("power", [])])
+                (project / "requirements.json").write_text(json.dumps(dict({"board": "firebeetle2-esp32s3", "parts": []}, **held)))
+                run(["--requirements", str(project)])
+                self.assertEqual(self.written(project).get("board_only"), after)
 
     def test_a_dry_run_writes_nothing(self):
         home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])

@@ -1178,7 +1178,9 @@ The PO ran that line in his own terminal window, answered `no` at the question, 
 ### The first flash: a blink on the board alone
 
 On 2026-10-14 the PO flashed a project with no parts on the same XIAO
-([P236](https://github.com/xmejkal/spark/issues/233)). Its `requirements.json` says `"board_only": true`, so the build
+([P236](https://github.com/xmejkal/spark/issues/233)). Its `requirements.json` says `"board_only": true`, written by
+hand then. Since [P387](https://github.com/xmejkal/spark/issues/497), `parts.py --requirements` writes it when no part is
+listed and no need is left unserved, for example when every need picks the board. With the key, the build
 skips the parts, schematic, footprint and build stages and simulates the board alone. `firmware/pins.py` names the
 board's own LED, `ONBOARD_LED = 15`, from the board record. The firmware, written in the conversation, blinks that LED.
 Since [P353](https://github.com/xmejkal/spark/issues/451), the XIAO's `pins.py` also names `ONBOARD_LED_ON = 0`, the
