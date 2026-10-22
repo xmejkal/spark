@@ -1363,6 +1363,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         said = self.text(["--requirements", str(project)])
         self.assertEqual(self.written(project), {"board": "firebeetle2-esp32s3", "parts": [], "board_only": True})
         self.assertIn("  board only: nothing to build but the board", said)
+        self.assertNotIn("board_only removed", self.text(["--requirements", str(project)]))
 
     def test_a_part_picked_later_takes_board_only_away_and_says_so(self):
         _, project = self.project([self.BOARD, ("light", [{"board": "firebeetle2-esp32s3"}])])
