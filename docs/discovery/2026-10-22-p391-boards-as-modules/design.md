@@ -36,7 +36,7 @@ The gaps, each with its place:
 - **No shelf or catalog layer for boards** (`store.py:80,82`). `tests/test_store.py:108-109` pins it: "boards have no shelf and
   no catalog". The T-Display record is found only by its project and by the other-projects glob in `drawer.py:135-137`.
 - **Two places name the board.** `boards/active.json` (`boards.py:203`, written by `scripts/init_project.py:487-488`), and
-  `requirements.json`'s `board` (`needs.py:643` writes it, the nine sites above read it).
+  `requirements.json`'s `board` (`needs.py:645` writes it, the seven sites above read it).
 - **Two meanings of the store's "boards".** The record kind (`boards.py:218`), and the per-MAC place of deployed boards
   (`store.py:61,65,98`, written by `scripts/board_facts.py:65-74`).
 - **Duplicated board-vs-part branches.** The part-then-board walk, three times: `parts.py:140-141`, `drawer.py:132-137`,
@@ -80,26 +80,55 @@ the unit.
 
 ```mermaid
 classDiagram
-  class RecordKind { <<Strategy>> +name +folder +library +skip +validate(record,path) +stops_at(record) +shelf_copy(record,from_project) +digest(record) }
-  class PartRecordKind { folder "parts"; validate = parts.validate; digest BUILD_FACTS }
-  class BoardRecordKind { folder "boards"; skip active.json; validate = boards.validate; stops_at footprint; digest BOARD_FACTS }
+  class RecordKind {
+    <<Strategy>>
+    +folder
+    +library
+    +skip
+    +validate(record, path)
+    +stops_at(record)
+    +shelf_copy(record, from_project)
+    +digest(record)
+  }
+  class PartRecordKind {
+    folder = parts
+    digest of BUILD_FACTS
+  }
+  class BoardRecordKind {
+    folder = boards
+    skip active.json
+    stops_at the footprint
+    digest of BOARD_FACTS
+  }
   RecordKind <|-- PartRecordKind
   RecordKind <|-- BoardRecordKind
-  class Record { <<Value>> kind id layer path }
-  class RecordFinder { reads; +records(kind, project, drafts) +all(project) +linkable(project) }
-    class ShelveRecord { <<Operation>> +run(record, from_project) }
-    RecordFinder --> RecordKind : layers(kind)
+  class Record {
+    <<Value>>
+    kind
+    id
+    layer
+    path
+  }
+  class RecordFinder {
+    +records(kind, project, drafts)
+    +all(project)
+    +linkable(project)
+  }
+  class ShelveRecord {
+    <<Operation>>
+    +run(record, from_project)
+  }
+  RecordFinder --> RecordKind : layers
   RecordFinder --> Record : returns
   ShelveRecord --> RecordKind : shelf_copy, validate
-  ShelveRecord --> RecordKind : shelf folder
-  class needs_requirements { shelves every pick not in project, shelf or library }
-  class drawer_settle { shelves a linked record of any kind }
-  class parts_audit { one walk over all(project) }
-  class boards_load { finds the chosen board through RecordFinder }
-  needs_requirements ..> ShelveRecord
-  drawer_settle ..> ShelveRecord
-  parts_audit ..> RecordFinder
-  boards_load ..> RecordFinder
+  class needs_requirements
+  class drawer_settle
+  class parts_audit
+  class boards_load
+  needs_requirements ..> ShelveRecord : shelves a pick
+  drawer_settle ..> ShelveRecord : shelves a link
+  parts_audit ..> RecordFinder : one walk
+  boards_load ..> RecordFinder : finds the board
 ```
 
 `store.layers(kind, project, drafts)` returns `project/<folder>`, `shelf/<folder>`, `library` and `catalog/<folder>` for every
@@ -141,7 +170,7 @@ What that later step changes, and what stage 1 does about each:
 
 | today | later | stage 1 only |
 | --- | --- | --- |
-| `requirements["board"]`, a string, read at nine sites | `"boards": [{"id", "as"}]`, with `board` kept as the one-entry shorthand | one accessor `boards.chosen(project)` returns the id (stage 2) |
+| `requirements["board"]`, a string, read at seven sites | `"boards": [{"id", "as"}]`, with `board` kept as the one-entry shorthand | one accessor `boards.chosen(project)` returns the id (stage 3) |
 | `Design.board`, one field (`design.py:45`) | `Design.boards`, with `.board` for the one-board case | nothing, the field stays |
 | `assign_pins.assign(board, signals)` and `pin_module(board, ...)` (`assign_pins.py:199,392`): one namespace, one `pins.py` | a signal names its board (`"on": "main"`, default the first). One module per board, or one class per board. The adapter picks the file form | nothing, labels stay as they are |
 | `emit_board` has one `Mcu` instance (`emit_board.py:374,498,630,867,898`) | an instance per board, `Mcu_<as>`, with traces between boards as nets. The hardest change | nothing |
@@ -149,7 +178,7 @@ What that later step changes, and what stage 1 does about each:
 | `deploy.py` builds one `FirmwarePlatform` (`deploy.py:191`), `board_of` reads the string (`firmware_platform.py:20-22`) | `--board <as>` picks the board, one platform and port per board. `deployed/<mac>.json` already fits many units (`board_facts.py:57-75`) | the accessor, and the `deployed` name |
 | the history's `built` event has one `board` key (`store.py:275-276`) | a list | nothing, the event keys change with the list |
 
-Stage 1 must not build any of this. It only reads the board id through the accessor. It keeps `RecordKind` open for a third
+Stages 1 to 3 must not build any of this. They only read the board id through the accessor. It keeps `RecordKind` open for a third
 kind. It keeps `platform` a fact in the record, not a branch in the code.
 
 ## 5. The staged refactor
