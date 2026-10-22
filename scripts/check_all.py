@@ -403,7 +403,7 @@ def discover(checked):
             notes.append("%-12s %d definition(s): %s"
                          % ("boards", len(definitions),
                             ", ".join(sorted(boards.available(project)))))
-        active = boards.definition_path(project)
+        boards.definition_path(project)
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 

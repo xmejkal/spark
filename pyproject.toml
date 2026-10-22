@@ -27,5 +27,4 @@ ignore = [
     "E702",  # ruff format removes this, after walk 2: several statements on one line
     "E731",  # P386 R2 removes this: a lambda assigned to a name
     "E741",  # P386 R2 removes this: a variable named l, O or I
-    "F841",  # P386 R2 removes this: an unused local variable
 ]

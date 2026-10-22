@@ -937,7 +937,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual((written["documents"], "attachments" in written), (kept, False))
 
     def test_a_document_already_kept_is_not_fetched_again(self):
-        home = self._home(); catalog, store = home / "catalog", home / "sources"
+        home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
         with in_store(home):
             parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
