@@ -310,6 +310,8 @@ def plan_pick(project, given, passed_over=()):
             notes += [renamed] if named != pick_id and renamed not in notes else []
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
     wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
+    # P387: a project has one board, however many needs its own LED or button serves
+    wanted = collections.Counter({asked: 1 if asked[0] == "board" else pieces for asked, pieces in wanted.items()})
     pointing, mine = _pointing(entries), collections.Counter()
     # a pick of one drawer entry has nowhere else to go: it takes its piece before a pick of a record, which may take another entry
     for (kind, key), pieces in sorted(wanted.items(), key=lambda asked: (asked[0][0] != "entry", asked[0])):
@@ -403,6 +405,8 @@ Requirements = collections.namedtuple("Requirements", "content shelving unplaced
 
 #: The note a requirements file keeps of the needs it leaves off the board (C-2): `check_spine` reads it into its verdict.
 UNSERVED = "unserved"
+#: The key a requirements file says the board alone with (P236): `--requirements` writes it, `check_spine` reads it.
+BOARD_ONLY = "board_only"
 #: The `why` of an unserved note: the codes `--requirements` writes and reads (C-2, F16). The values stay, because
 #: requirements.json keeps them.
 WHY_NO_PICK, WHY_GAP, WHY_NO_RECORD = "no pick", "a gap", "no record"
@@ -606,7 +610,8 @@ def requirements(project):
     nothing the circuit needs — one owing only its outline (`LAYOUT_FACTS`) is placed and said — and one in the catalog or in
     another project goes onto the shelf, so the build finds it; a pick with no record is reserved, not placed. A pick of a drawer
     entry is read as the record that entry is, when spark knows it (`_as_record`). The file's own `parts` stay as they are and
-    gain an entry for each pick they lack (`_merge_parts`); the keys the person added to the file (signals) stay.
+    gain an entry for each pick they lack (`_merge_parts`); the keys the person added to the file (signals) stay. The file
+    says `board_only` when it lists no part and every need is served (P387), and loses it when it lists a part.
     """
     known, entries, needs = {row[:2]: row for row in drawer.linkable(project)}, drawer.entries(), read(project)
     picks = [(need["id"], next(iter(_as_record(pick, known, entries).items()))) for need in needs for pick in need.get("pick") or []]
@@ -643,6 +648,11 @@ def requirements(project):
         content[UNSERVED] = unserved
     else:
         content.pop(UNSERVED, None)  # an old note goes once every need is on the board
+    # --- MVP ---
+    if not after and not unserved:
+        content[BOARD_ONLY] = True  # P387: the board itself serves every need
+    elif after:
+        content.pop(BOARD_ONLY, None)  # the build refuses board_only beside parts; else the person's own word stays
     problems += naming
     problems = [problem for number, problem in enumerate(problems) if problem not in problems[:number]]  # a part picked twice is refused once
     return Requirements(content, list(dict.fromkeys(shelve)), list(dict.fromkeys(key for _, (kind, key) in picks if kind == "entry")),
