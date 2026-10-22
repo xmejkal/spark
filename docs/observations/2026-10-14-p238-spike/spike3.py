@@ -1,4 +1,7 @@
-import serial, subprocess, sys, time
+import serial
+import subprocess
+import sys
+import time
 PORT = "/dev/cu.usbmodem101"
 def opened():
     for _ in range(50):

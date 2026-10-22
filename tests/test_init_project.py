@@ -47,7 +47,8 @@ def a_project(nets=("V33", "GND", "MOTOR6V", "SDA", "SCL")):
 class WhatItWritesTest(unittest.TestCase):
     def test_a_project_s_own_pin_reaches_the_package_file(self):
         # The spec's "change a version": one line in the project's tools file, and the next init uses it.
-        import json, tempfile
+        import json
+        import tempfile
         root = Path(tempfile.mkdtemp())
         (root / ".spark").mkdir()
         (root / ".spark" / "tools.json").write_text(json.dumps({"tscircuit": {"version": "0.1.2200", "core": "0.0.2700"}}))
@@ -375,7 +376,8 @@ class TwoBuiltDesignsTest(unittest.TestCase):
                          [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
 
     def test_and_it_says_which_designs_it_could_not_choose_between(self):
-        import contextlib, io
+        import contextlib
+        import io
         root = self._with("dist/car/circuit.json", "dist/remote/circuit.json")
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):

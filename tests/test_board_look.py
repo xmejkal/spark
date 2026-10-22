@@ -166,7 +166,9 @@ class EsptoolReaderTest(unittest.TestCase):
     def test_a_failed_read_keeps_the_port_and_esptool_s_own_line_not_its_url(self):
         stderr = ("ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data received.\n"
                   "For troubleshooting steps visit: https://docs.espressif.com/projects/esptool/en/latest/troubleshooting.html\n")
-        failed = lambda argv, **kw: subprocess.CompletedProcess([], 2, "Connecting......\n", stderr)
+        def failed(argv, **kw):
+            return subprocess.CompletedProcess([], 2, "Connecting......\n", stderr)
+
         with self.assertRaises(board_look.LookStop) as stop:
             board_look.EsptoolReader(FOUND["flasher"], failed).read(C6_PORT)
         self.assertEqual((stop.exception.port, stop.exception.tool_said), (C6_PORT, (

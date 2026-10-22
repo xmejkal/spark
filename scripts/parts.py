@@ -1496,7 +1496,9 @@ def conflicts_of(part):
     `upgrade` says how to settle (the PO's rule, 2026-10-05 on #43).
     """
     facts = part.get("facts") or {}
-    value = lambda name: (facts.get(name) or {}).get("value")
+    def value(name):
+        return (facts.get(name) or {}).get("value")
+
     pull_up, high, supply = value("onboard_input_pullups_ohms"), value("input_high_threshold_v"), value("supply_range_v")
     if not isinstance(pull_up, (int, float)):
         return []

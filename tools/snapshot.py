@@ -251,11 +251,11 @@ def report(old, new):
             if _said(was) != _said(command):
                 changed.append("  exit %s → %s" % (_said(was), _said(command)))
             for stream in ("stdout", "stderr"):
-                diff = [l for l in difflib.unified_diff(was.get(stream, "").splitlines(),
-                                                        command.get(stream, "").splitlines(), lineterm="", n=0)
-                        if not l.startswith(("---", "+++", "@@"))]
+                diff = [diff_line for diff_line in difflib.unified_diff(was.get(stream, "").splitlines(),
+                                                                      command.get(stream, "").splitlines(), lineterm="", n=0)
+                        if not diff_line.startswith(("---", "+++", "@@"))]
                 if diff:
-                    changed += ["  %s:" % stream] + ["    %s %s" % (l[0], l[1:]) for l in diff]
+                    changed += ["  %s:" % stream] + ["    %s %s" % (diff_line[0], diff_line[1:]) for diff_line in diff]
             if changed:
                 lines.append("%s: %s — differs from the snapshot of %s"
                              % (name, command["label"], old.get("taken", "an older run")))

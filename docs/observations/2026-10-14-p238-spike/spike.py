@@ -1,5 +1,8 @@
 """P238 spike rows: each resets the XIAO, sends bytes, and logs what came back. Nothing is erased or written."""
-import serial, subprocess, sys, time
+import serial
+import subprocess
+import sys
+import time
 PORT = "/dev/cu.usbmodem101"
 def log(*a): print(*a, flush=True)
 def pulse(s): s.dtr = False; s.rts = True; time.sleep(0.1); s.rts = False

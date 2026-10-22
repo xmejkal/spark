@@ -468,7 +468,9 @@ class ABusIsSpentLastTest(unittest.TestCase):
         """
         pins = assign_pins.candidates(self.board)
         plain, bus, scarce = pins["D3"], pins["SCK"], pins["A1"]
-        cost = lambda pin: assign_pins._cost(pin, frozenset())
+        def cost(pin):
+            return assign_pins._cost(pin, frozenset())
+
         self.assertLess(cost(plain), cost(bus))
         self.assertLess(cost(bus), cost(scarce))
 
@@ -1566,7 +1568,8 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
         self.assertEqual(len(found["tried"]), len(set(found["tried"])), "each word tried once")
 
     def test_the_command_reads_a_real_pdf_and_exits_by_what_it_found(self):
-        import shutil, tempfile
+        import shutil
+        import tempfile
         if not shutil.which("pdftotext"):
             self.skipTest("pdftotext is not installed")
         pdf = Path(tempfile.mkdtemp()) / "ds.pdf"

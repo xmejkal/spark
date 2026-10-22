@@ -336,7 +336,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
     def test_report_actually_calls_it_and_still_clears_the_temp_directory(self):
         # The helper was tested and its one caller was not — R2.2's shape, and a mutation putting
         # `report` back to printing a /var/folders path escaped a green suite because of it.
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         work = self.workdir()
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into)
@@ -349,7 +351,10 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_keeping_a_project_s_build_writes_its_breadboard_sheet_beside_it(self):
         # P191 (#143): the parts and how to wire them, where /spark:build leaves the board.
-        import argparse, contextlib, io, shutil
+        import argparse
+        import contextlib
+        import io
+        import shutil
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
         work = self.workdir()
         shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
@@ -362,7 +367,10 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def keep_a_build_of(self, fixture_name):
         """`report` keeping one breadboard fixture's built circuit into a new project folder: the folder, and stderr."""
-        import argparse, contextlib, io, shutil
+        import argparse
+        import contextlib
+        import io
+        import shutil
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / fixture_name
         work = self.workdir()
         shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
@@ -388,7 +396,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
                       (into / "breadboard.md").read_text())
 
     def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
         into = Path(tempfile.mkdtemp()) / "project"
         into.mkdir(); (into / "breadboard.json").write_text("{}")
@@ -400,7 +410,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_a_breadboard_json_that_holds_parts_is_left_when_a_build_does_not_finish(self):
         # P273: it may hold the person's moves, and a typo in requirements.json must not wipe them.
-        import argparse, shutil
+        import argparse
+        import shutil
         import breadboard
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light-xiao"
         into = Path(tempfile.mkdtemp()) / "project"
@@ -417,7 +428,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_a_build_that_did_not_finish_writes_no_sheet_and_says_why(self):
         # P191's council: a failed build wrote a sheet from the earlier dist/, wiring parts the requirements had dropped.
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
@@ -428,7 +441,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_a_sheet_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
         # The refuter: it described another board, and sat beside the new requirements.
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
         into = Path(tempfile.mkdtemp()) / "project"
         into.mkdir(); (into / "breadboard.md").write_text("# an earlier build's sheet")
@@ -440,7 +455,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def keep_with_pins(self, into, requirements=None, stages=None):
         """`report` keeping into `into` with --json: what --json printed under `kept`, and what stderr said."""
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
         args = argparse.Namespace(json=True, keep=into, requirements=str(requirements or fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
@@ -449,7 +466,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def emitted_pins(self, requirements):
         """What `assign_pins.py requirements.json --emit-pins FILE` writes: the card's measure of the kept pin map."""
-        import assign_pins, contextlib, io
+        import assign_pins
+        import contextlib
+        import io
         target = Path(tempfile.mkdtemp()) / "pins.py"
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(assign_pins.main([str(requirements), "--emit-pins", str(target)]), 0)
@@ -507,7 +526,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_the_one_command_keeps_the_simulation_project_too(self):
         # JB1: `--keep .` kept the board, dist/ and the sheet, but the Wokwi diagram only with `--sim-dir sim`.
-        import contextlib, io
+        import contextlib
+        import io
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
 
         def a_run_that_simulated(requirements, workdir, *rest, **named):
@@ -528,7 +548,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def keep_through_main(self, *argv, requirements=None):
         """`main` with a run that simulated, --json: the verdict it printed, and the firmware the run was handed."""
-        import contextlib, io
+        import contextlib
+        import io
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
         handed = {}
 
@@ -600,7 +621,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
     def test_kept_files_reach_the_envelope_as_they_reach_the_text(self):
         # P124 (#58), CH-16: with --json the lines of --keep went to stderr only, so an agent never read which files it
         # wrote and which it left alone.
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         into = Path(tempfile.mkdtemp()) / "project"
         into.mkdir(); (into / "board.tsx").write_text("// MINE")
         args = argparse.Namespace(json=True, keep=into)
@@ -612,7 +635,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("left alone: %s" % (into / "board.tsx"), err.getvalue())
 
     def test_a_keep_that_cannot_write_still_prints_the_verdict_and_says_so(self):
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         blocked = Path(tempfile.mkdtemp()) / "a-file"; blocked.write_text("not a folder")
         args = argparse.Namespace(json=True, keep=blocked)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
@@ -622,7 +647,9 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("not kept", err.getvalue())
 
     def test_without_it_the_temp_directory_is_still_removed(self):
-        import argparse, contextlib, io
+        import argparse
+        import contextlib
+        import io
         work = self.workdir()
         args = argparse.Namespace(json=False, keep=None)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
@@ -642,7 +669,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_it_is_a_directory_now_not_a_flag(self):
         # W16: the old `--keep` printed a /var/folders path. One behaviour replaced the other.
-        import contextlib, io
+        import contextlib
+        import io
         out = io.StringIO()
         with contextlib.redirect_stderr(out), self.assertRaises(SystemExit):
             check_spine.main(["--keep"])
@@ -1365,7 +1393,8 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
                          "the converter changed and the bundle was not rebuilt: sh tools/circuit-to-wokwi/bundle.sh")
 
     def test_the_bundle_runs_on_node_with_no_node_modules(self):
-        import shutil, subprocess
+        import shutil
+        import subprocess
         if not shutil.which("node"):
             self.skipTest("node is not installed")
         alone = Path(tempfile.mkdtemp()) / "converter.mjs"
