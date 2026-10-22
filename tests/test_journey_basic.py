@@ -2,7 +2,7 @@
 The basic journey, end to end (P195, #154): the button-and-LED project through every stage that works today, so a stage
 that breaks is named here and not found on the bench.
 
-The stages are the replan's table (docs/2026-10-11-replan.md): the requirements, the build with its board, the Wokwi
+The stages are the replan's table (docs/archive/2026-10-11-replan.md): the requirements, the build with its board, the Wokwi
 diagram, the breadboard sheet and the pin map, the firmware imported with the `machine` stand-in (P59), then the PCB and 3D
 exports, every deterministic check on the fresh project (P197), and the scenario run by the Wokwi harness (P130), with
 a fake wokwi-cli so the suite spends no Wokwi minute, then deploy.py's dry run on the image that passed (P192). Each later item of the v1 slice adds its stage to STAGES. The build runs for real where `tsci` is found: the project's node_modules, then the PATH. Where it is not, the

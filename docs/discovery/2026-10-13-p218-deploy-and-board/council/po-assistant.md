@@ -79,7 +79,7 @@ Format: PO-n · claim · tag · pointer · supports only.
 - Whether MicroPython v1.29.0 ESP32_GENERIC_S3 supports OTA partitions or an `ota` module out of the box: not read; the search found only third-party libraries.
 - The PlatformIO and arduino-cli upload paths to a FireBeetle 2 ESP32-S3 (variant name, upload port behaviour): not read; arduino-esp32's variant header is cited by the board file but not opened.
 - The Miro journey board and the P100 discovery's other council files were not read beyond one grep; scrum/WORKING_AGREEMENTS.md and docs/guide/agents.md were not read.
-- The merged P192 deploy plan (docs/2026-10-12-p192-deploy-plan.md) was grepped, not read whole; the tests of `deploy.py` were not read.
+- The merged P192 deploy plan (docs/archive/2026-10-12-p192-deploy-plan.md) was grepped, not read whole; the tests of `deploy.py` were not read.
 - Nothing was run (no dry run), by the lens's read-only rule.
 
 ## 3. Questions for the decider

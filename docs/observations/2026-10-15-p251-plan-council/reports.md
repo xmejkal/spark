@@ -1,6 +1,6 @@
 # P251's plan council, 2026-10-15
 
-Three rounds read the plan in [docs/2026-10-15-p251-reach-plan.md](../../2026-10-15-p251-reach-plan.md) before any
+Three rounds read the plan in [docs/archive/2026-10-15-p251-reach-plan.md](../../archive/2026-10-15-p251-reach-plan.md) before any
 code. Each line is one finding in short. The plan's text says how each one was acted on.
 
 ## Round 1, on the first version

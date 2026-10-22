@@ -18,3 +18,4 @@ same name.
 | `2026-10-01-firmware-and-tests.md`, `2026-10-01-firmware-skill.md`, `2026-10-01-keeping-sources.md` | decisions now held by VISION.md's not-goals and by the store's code | read with v1's items 3 and 5 (the stand-in and the harness) |
 | `audit-2026-09-24/` | three cold reads and an agent-readiness test; every finding filed or fixed | — |
 | `observations/2026-09-29-sprint-audit.md`, `…-sprint-4-audit.md`, `…-sprint-4-close-audit.md` | sprint audits, every row resolved | — |
+| `2026-10-11-replan.md`, `2026-10-12-p192-deploy-plan.md`, `2026-10-12-p211-matching-plan.md`, `2026-10-13-p219-board-check-design.md`, `2026-10-15-p235-slice0-plan.md`, `2026-10-15-p251-reach-plan.md`, `2026-10-16-p268-svg-plan.md`, `2026-10-16-p270-common-base-plan.md` | finished plans and one finished design, moved here on 2026-10-22 (P386, R1). The living designs stay in `docs/` | — |

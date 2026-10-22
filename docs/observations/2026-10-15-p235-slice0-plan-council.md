@@ -2,7 +2,7 @@
 
 The first plan council under P257. It read the slice plan in plan mode, before the PO's OK. One lens on Sonnet
 (architecture, the user's journey, the PO assistant) and one refuter on Opus, both read-only. The plan:
-[docs/2026-10-15-p235-slice0-plan.md](../2026-10-15-p235-slice0-plan.md). Rows AT193 to AT203 in [INDEX.md](INDEX.md).
+[docs/archive/2026-10-15-p235-slice0-plan.md](../archive/2026-10-15-p235-slice0-plan.md). Rows AT193 to AT203 in [INDEX.md](INDEX.md).
 
 | row | finding | by | outcome |
 | --- | --- | --- | --- |
