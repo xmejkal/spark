@@ -90,6 +90,7 @@ Scored by someone who did not write the predictions.
 - No pick for the board's own button. P355 covers only the LED. Fix: widen P355 to both, from `pin_roles`.
 - The record holds no pressed level for B. Fix: add `active_level` to `onboard_button`, with a bench check and a
   source, as P353 did for the LED. Way round: the firmware reads the level once at start with the button released.
+  Fixed by P388 (#498): the record holds `active_level` 0, from the Seeed schematic.
 - A board-only build gives the PO no page to read at the wiring step. Fix: one line in the build output and the
   journey page, "nothing to wire, use the board's own B and LED".
 - `check_all` reads "nothing found" next to four "not asked for". Fix: for a board-only project, say in one line

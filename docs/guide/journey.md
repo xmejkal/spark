@@ -1182,7 +1182,9 @@ On 2026-10-14 the PO flashed a project with no parts on the same XIAO
 skips the parts, schematic, footprint and build stages and simulates the board alone. `firmware/pins.py` names the
 board's own LED, `ONBOARD_LED = 15`, from the board record. The firmware, written in the conversation, blinks that LED.
 Since [P353](https://github.com/xmejkal/spark/issues/451), the XIAO's `pins.py` also names `ONBOARD_LED_ON = 0`, the
-level that lights the LED, and `ONBOARD_BUTTON = 9`, the BOOT button. Each comes from the board record with its source.
+level that lights the LED, and `ONBOARD_BUTTON = 9`, the BOOT button. Since [P388](https://github.com/xmejkal/spark/issues/498),
+it also names `ONBOARD_BUTTON_ON = 0`, the level the pressed button reads (the Seeed schematic, sheet 04). Each comes from
+the board record with its source.
 A number typed in the board's console sets the period in milliseconds, and `steady`, `heartbeat` or `random` picks the
 pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut
 here.
