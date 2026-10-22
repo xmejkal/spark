@@ -60,7 +60,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
+from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK  # noqa: E402
 
 CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
 #: Which run caught a mutation (P98): the tests near the mutated file, or the whole suite.

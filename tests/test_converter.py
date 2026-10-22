@@ -135,7 +135,7 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
     """
 
     def convert(self, *extra):
-        import os, tempfile
+        import os
         env = dict(os.environ, SPARK_BOARD_JSON=str(ROOT / "boards" / "firebeetle2-esp32s3.json"))
         return subprocess.run(node() + [str(BUNDLE), "--circuit", str(self.circuit), "--out", str(self.out),
                                         "--chips", str(self.chips), *extra],

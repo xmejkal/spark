@@ -893,8 +893,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         return record
 
     def test_the_catalog_is_searched_like_the_library_and_a_broken_record_is_named(self):
-        import tempfile
-        from unittest import mock
         home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "sen0193-soil-moisture", name="Gravity capacitive soil moisture sensor")
         self._catalog_record(catalog, "dfr0831-buck-5v", name="Buck converter", kind="power")
@@ -918,8 +916,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         """P62a: a published plugin cannot carry vendor files, so nothing lands beside the record."""
         import datetime
         import hashlib
-        import tempfile
-        from unittest import mock
         home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf?v=2", "https://v.example/page.html"],
                              facts={"w": {"value": 1, "verified": True, "source": "https://v.example/photo.jpg"}})
@@ -941,8 +937,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual((written["documents"], "attachments" in written), (kept, False))
 
     def test_a_document_already_kept_is_not_fetched_again(self):
-        import tempfile
-        from unittest import mock
         home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
         with in_store(home):
@@ -952,7 +946,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual(again, [])
 
     def test_a_catalog_draft_answers_sources_show_and_unverified_like_any_record(self):
-        import tempfile
         from unittest import mock
         home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"],
@@ -966,8 +959,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual((code, "ok" in out.getvalue()), (0, True), out.getvalue())
 
     def test_fetch_keeps_the_text_as_written_and_decodes_the_saved_name(self):
-        import tempfile
-        from unittest import mock
         home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/DFR%20(1).pdf"],
                              **{"//": "98 Kč — 帝江"})
@@ -1052,8 +1043,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertFalse((home / "sources").exists())
 
     def test_two_sources_with_one_basename_are_both_kept(self):
-        import tempfile
-        from unittest import mock
         home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
         with in_store(home):
@@ -1066,7 +1055,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
     def test_promote_moves_a_record_with_its_documents_and_its_folder_and_never_overwrites(self):
         import tempfile
-        from unittest import mock
         home = self._home(); catalog = home / "catalog"; project, library = (Path(tempfile.mkdtemp()) for _ in range(2))
         (project / ".spark").mkdir()
         documents = {"x": {"url": "https://v.example/x.pdf", "sha256": "a" * 64, "file": "x.pdf",
@@ -1105,7 +1093,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         import datetime
         import hashlib
         import tempfile
-        from unittest import mock
         home = self._home(); store = home / "sources"
         local = Path(tempfile.mkdtemp()) / "ds_v1.1.pdf"
         local.write_bytes(b"the v1.1 pdf")
@@ -1201,7 +1188,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_kept_finds_a_stored_file_no_record_here_cites(self):
         """P80: the L-7113ID kept by the quickstart was invisible to every other project, so the next
         one would have fetched it again."""
-        from unittest import mock
         home, project, store = self._kept_world()
         (store / ("d" * 64)).mkdir(parents=True)
         (store / ("d" * 64) / "L-7113ID(Ver.29A).pdf").write_bytes(b"pdf")
@@ -1237,7 +1223,6 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
     def _keep_photo(self, payload, name="module.jpg"):
         import tempfile
-        from unittest import mock
         home = self._home(); store, local = home / "sources", Path(tempfile.mkdtemp()) / name
         local.write_bytes(payload)
         with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out, \
@@ -1636,7 +1621,6 @@ class TheCatalogIsThePersonSTest(unittest.TestCase):
 
     def test_a_catalog_record_with_seller_listings_is_refused_by_name(self):
         import tempfile
-        from unittest import mock
         home = Path(tempfile.mkdtemp()); catalog = home / "catalog"; catalog.mkdir()
         record = {"schema": 1, "id": "rtc-a", "name": "An RTC", "kind": "rtc",
                   "pin_order": ["VCC", "GND", "SCL", "SDA"],

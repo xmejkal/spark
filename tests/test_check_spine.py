@@ -642,7 +642,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_it_is_a_directory_now_not_a_flag(self):
         # W16: the old `--keep` printed a /var/folders path. One behaviour replaced the other.
-        import argparse, contextlib, io
+        import contextlib, io
         out = io.StringIO()
         with contextlib.redirect_stderr(out), self.assertRaises(SystemExit):
             check_spine.main(["--keep"])

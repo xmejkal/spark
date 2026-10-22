@@ -49,7 +49,7 @@ import fab  # noqa: E402
 import boards  # noqa: E402
 import parts  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, STATUS_FOR  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, STATUS_FOR  # noqa: E402
 
 #: From `data/fabrication.json` through `fab`, so a project that states a coarser process in its
 #: rules file gets pads drawn for it — and so the ring this DRAWS can never drift from the ring

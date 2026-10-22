@@ -18,7 +18,7 @@ import project_image  # noqa: E402
 import outcomes  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from test_deploy import FOUND, PORT, ProjectCase, found  # noqa: E402
+from test_deploy import FOUND, ProjectCase, found  # noqa: E402
 
 #: The C6 and the mpremote lines are P228's bench outputs, trimmed. The S3, classic ESP32, KB and CH340 files are
 #: written by hand, as tests/data/board_look/README.md says: no such board was on the bench.
