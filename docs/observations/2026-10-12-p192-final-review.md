@@ -1,6 +1,6 @@
 # P192 final review, 2026-10-12
 
-One reviewer (Opus) read the whole branch `p192-deploy` against the cards [P192 (#144)](https://github.com/xmejkal/spark/issues/144) and [P193 (#145)](https://github.com/xmejkal/spark/issues/145) and the plan (`docs/2026-10-12-p192-deploy-plan.md`). It changed nothing. A Sonnet implementer made the fixes on the same branch.
+One reviewer (Opus) read the whole branch `p192-deploy` against the cards [P192 (#144)](https://github.com/xmejkal/spark/issues/144) and [P193 (#145)](https://github.com/xmejkal/spark/issues/145) and the plan (`docs/archive/2026-10-12-p192-deploy-plan.md`). It changed nothing. A Sonnet implementer made the fixes on the same branch.
 
 Verdict before the fixes: not ready, because of one bug (DE1). The fix commits call the findings R1 to R9. The cards were met. `tools.py --status` lists `flasher` and `board-shell`, a test pins the dry run's flash lines, P193's dry run always prints a line, and the journey test reaches the deploy stage. The journey ran in full, with the build.
 

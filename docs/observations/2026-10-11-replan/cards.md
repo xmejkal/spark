@@ -1,6 +1,6 @@
 # Card drafts: the top of the backlog matches the v1 scope (2026-10-11)
 
-Drafts only; nothing is posted. Basis: `docs/2026-10-11-replan.md` and `after-v1.md` (branch `replan-basic-journey`), the cards as
+Drafts only; nothing is posted. Basis: `docs/archive/2026-10-11-replan.md` and `after-v1.md` (branch `replan-basic-journey`), the cards as
 read with `gh issue view` on 2026-10-11, and the PO's addition of the same day (only the top is refined; the rest is closed into
 a few version epics). **Full text only for items 1-7; one line for the second slice; nothing below is refined.**
 
@@ -61,7 +61,7 @@ After `/spark:build`, `firmware/pins.py` exists and equals the output of `assign
 **Append to the body**
 ```
 ### Scope for v1 (2026-10-11 replan)
-Item 3 of the first slice (docs/2026-10-11-replan.md). Part a only: spark ships the `machine` stand-in and one command that imports a project's firmware on the Mac. Part b (the chain reports a signal never driven or never read) is P74 (#8), second slice.
+Item 3 of the first slice (docs/archive/2026-10-11-replan.md). Part a only: spark ships the `machine` stand-in and one command that imports a project's firmware on the Mac. Part b (the chain reports a signal never driven or never read) is P74 (#8), second slice.
 - Evidence: the comment of 2026-10-11 on this card. A 15-line stand-in on the Mac's MicroPython read the LED 0 released and 1 pressed.
 - Needs a button-and-LED firmware file under tests/data. The one written on the walk is not in the repository; this item commits it.
 - Irrigation's unimportable main() (this card's first case) is not fixed by a stand-in; irrigation is not in v1.
@@ -188,7 +188,7 @@ The PO, 2026-10-11, verbatim: *"Like I really want t make sure we just shrink an
 ### C1. The close comment, one template for all 55
 
 ```
-Closed into <epic, #n> for a later version, per the replan of 2026-10-11 (docs/2026-10-11-replan.md). Reason: <reason>. Nothing is lost: this card's text and comments stay here and the epic links it. Reopened the moment the walk (P100 round A) or a second project needs it.
+Closed into <epic, #n> for a later version, per the replan of 2026-10-11 (docs/archive/2026-10-11-replan.md). Reason: <reason>. Nothing is lost: this card's text and comments stay here and the epic links it. Reopened the moment the walk (P100 round A) or a second project needs it.
 ```
 `<reason>` by epic:
 - the store: one person with one local store is enough for v1

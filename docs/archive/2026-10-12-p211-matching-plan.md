@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.10, standard library only, `unittest`.
 
-**Spec:** [`docs/2026-10-12-p211-matching-design.md`](2026-10-12-p211-matching-design.md), merged with PR #182. Card: [P211 (#181)](https://github.com/xmejkal/spark/issues/181).
+**Spec:** [`docs/2026-10-12-p211-matching-design.md`](../2026-10-12-p211-matching-design.md), merged with PR #182. Card: [P211 (#181)](https://github.com/xmejkal/spark/issues/181).
 
 ## Global Constraints
 

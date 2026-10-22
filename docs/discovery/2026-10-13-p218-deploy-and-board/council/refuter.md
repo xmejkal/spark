@@ -161,7 +161,7 @@ a yes matches what it read. The places:
   PHYS-5, which quotes both statements. I read the kept Standard image's strings: "Found %luMB PSRAM device", "PSRAM chip
   is not connected, or wrong PSRAM line mode" and "quad_psram". Verdict: **could not open**. The strings suggest a
   third reading that reconciles the two statements (part 3). They are not a source for either statement.
-- **★C7.** Opened: `docs/2026-10-12-p192-deploy-plan.md`, `scripts/deploy.py`, `council/tech-lead.md` PHYS-1.
+- **★C7.** Opened: `docs/archive/2026-10-12-p192-deploy-plan.md`, `scripts/deploy.py`, `council/tech-lead.md` PHYS-1.
   - Read decision 6: "6. `deploy.py` does not watch the serial port. It prints the mpremote line that shows the board
     start. Whether the S3's USB keeps a boot-time `ready` is a bench question, item (c)."
   - Read `deploy.py:41`: `WATCH = "then, to see it start: %s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`"`.

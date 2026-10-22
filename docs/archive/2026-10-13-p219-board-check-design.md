@@ -1,7 +1,7 @@
 # P219: the board check and the gate, the plan
 
 Card: [P219 (#201)](https://github.com/xmejkal/spark/issues/201), under the epic [P218 (#200)](https://github.com/xmejkal/spark/issues/200).
-Status: the plan after its six lenses and the refuter (rows in [the council file](observations/2026-10-13-p219-council.md)),
+Status: the plan after its six lenses and the refuter (rows in [the council file](../observations/2026-10-13-p219-council.md)),
 for the PO's yes. His answers to its two questions are at the end. Nothing is built.
 
 ## The short version
@@ -57,14 +57,14 @@ documented iteration by iteration."*
 
 ## Where it sits
 
-v1.0 is the basic journey ([the story map](../scrum/STORY_MAP.md)). Its order: P219, this card. P215, the first real
+v1.0 is the basic journey ([the story map](../../scrum/STORY_MAP.md)). Its order: P219, this card. P215, the first real
 flash, where the board prints `ready`. P213, `/spark:deploy` and `--json`. P100, the PO's walk to a lit LED. This card is the first story of deploy slice 0
-([the deploy map](discovery/2026-10-13-p218-deploy-and-board/story-map.md)). Its second story, another board with the
+([the deploy map](../discovery/2026-10-13-p218-deploy-and-board/story-map.md)). Its second story, another board with the
 same chip, is v1.2.
 
 ## The decisions it rests on
 
-All are the PO's, from P218's discovery ([brief.md](discovery/2026-10-13-p218-deploy-and-board/brief.md)).
+All are the PO's, from P218's discovery ([brief.md](../discovery/2026-10-13-p218-deploy-and-board/brief.md)).
 
 | | decision |
 | --- | --- |
@@ -140,7 +140,7 @@ classDiagram
 
 ### What each outcome prints, and its exit code
 
-spark's three outcomes stay: 0 ok, 1 problems, 2 could not run ([agents.md](guide/agents.md)). The look builds its
+spark's three outcomes stay: 0 ok, 1 problems, 2 could not run ([agents.md](../guide/agents.md)). The look builds its
 exit with `outcomes.status_of`: a field that differs is a problem, and a field that is `unknown` was not checked.
 
 | case | exit | first line, then the next step |
