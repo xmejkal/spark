@@ -22,7 +22,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
-import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -564,6 +564,15 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         # The XIAO's BOOT warning is the second sentence of its note, and the firmware writer needs it.
         pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button. Held at reset it boots."}})
         self.assertIn("Held at reset it boots", assign_pins.pin_module(pressed, [], "r.json"))
+
+    def test_the_xiao_s_pins_file_names_the_level_a_pressed_button_reads(self):
+        # P388: walk 2 predicted the firmware must guess it. The record holds it, from the Seeed schematic.
+        import json
+        xiao = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
+        names = {}
+        exec(assign_pins.pin_module(xiao, [], "r.json"), names)
+        self.assertEqual((names["ONBOARD_BUTTON"], names["ONBOARD_BUTTON_ON"]), (9, 0))
+        self.assertEqual((names["ONBOARD_LED"], names["ONBOARD_LED_ON"]), (15, 0))
 
     def test_a_board_with_no_led_of_its_own_names_none(self):
         names = {}

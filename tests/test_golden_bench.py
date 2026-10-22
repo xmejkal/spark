@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
-import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 import golden_bench  # noqa: E402
 

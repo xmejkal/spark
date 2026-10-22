@@ -76,6 +76,10 @@ Re-anchor it or fix its `replace`, or delete it and give the reason.
 caught. A mutation the suite does not notice is a missing test. A fixture too weak to see one is fixed, rather than the
 mutation dropped. The [glossary](../../GLOSSARY.md#mutation-and-the-mutation-table) has the words.
 
+**The lint rule: the repository passes Ruff.** The settings are in `pyproject.toml`, and `tests/test_lint.py` runs
+Ruff in the suite. Install Ruff with `uv tool install ruff==0.17.1`, the version the settings pin. The test skips
+when Ruff is not on PATH. A local run also lints untracked files, but the push hook lints only the commit.
+
 ## The commit gate, before every push
 
 [`tools/pre-push`](../../tools/pre-push) runs [`tools/check_commit.py`](../../tools/check_commit.py) on the tree as

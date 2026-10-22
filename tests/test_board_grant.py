@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
-import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
 #: The whole path a person runs grant.py by (P283).
