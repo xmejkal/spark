@@ -283,7 +283,7 @@ def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
     [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
-    from every need's picks — one piece per pick — on the entries that hold them, never past what is owned or what another
+    from every need's picks — one piece per pick, one board however many needs pick it — on the entries that hold them, never past what is owned or what another
     project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
     longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
     a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its

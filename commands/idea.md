@@ -94,14 +94,15 @@ person's projects is written in that project, and its shelf copy follows. spark'
 
 Pick with the person, need by need, from what `--match` offered: a record's id, or the drawer entry's key of an owned
 thing with no record (a speaker, a battery). The key of an entry that has a record is picked as that record, and the
-pick says so. Then:
+pick says so. If the board's own LED or button serves a need, pick the board for that need too (`light=xiao-esp32-c6`).
+Then:
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick <project> alarm=max98357a-dfr0954 alarm=speaker-terminal board=firebeetle2-esp32s3 --dry-run
 ```
 
 and without `--dry-run`. Each need it names gets exactly those picks, and what the person owns of each is reserved for
-the project, one piece per pick. A pick another project holds is **refused, naming the holder** ("1 owned, held by
+the project, one piece per pick, and one board however many needs pick it. A pick another project holds is **refused, naming the holder** ("1 owned, held by
 …"): say so; the person frees it — `--drawer-set` with a file setting that entry's `used_in` without the holder, after a
 dry run — or picks another. Refused with no holder, more were picked than are owned: pick fewer, or correct the count.
 Say "to get" (known, not owned), "maybe owned — check the drawer first", "count unknown", "a board needs a board
@@ -156,6 +157,8 @@ file is written:
 - `placeholder outline — …`: a pick whose record owes only its outline;
 - `reserved, not placed — no record: …`: a pick with no record;
 - `kept, not from a pick: …`: an entry no pick explains;
+- `board only: nothing to build but the board; …`: the board serves every need, so the file says `"board_only": true`
+  and the build makes the board alone (P387). `board_only removed: the file lists parts`: a part came, so the key went;
 - `rail … has no supply — …`: a part draws from a rail nothing listed supplies; pick a power inlet or a supply;
 - `net … is driven by … and nothing listed receives it — …`: an output with no receiver; pick what it drives;
 - `net … is one side of a driven pair and nothing listed drives it — …`: a speaker terminal with nothing driving it;
