@@ -1,0 +1,32 @@
+# Tool settings only. There is no [project] table on purpose: plugin users never pip-install spark,
+# and the commands call the scripts by path.
+
+[tool.ruff]
+# The pinned version keeps the gate stable. tests/test_lint.py runs this Ruff.
+required-version = "==0.17.1"
+target-version = "py39"  # README.md: Python 3.9 or newer
+line-length = 120
+extend-exclude = [
+    "tests/fake_modules",
+    "tests/fake_wokwi_cli.py",
+    "tests/data",
+    "tests/golden",
+    "tests/mutations",
+    "scripts/stand_in",
+    ".superpowers",
+    ".worktrees",
+    ".claude",
+    "docs",
+]
+
+[tool.ruff.lint]
+# Only the rules that find real mistakes. Ruff's own default holds about 400 rules.
+select = ["E4", "E7", "E9", "F"]
+ignore = [
+    "E401",  # P386 R2 removes this: several imports on one line
+    "E702",  # ruff format removes this, after walk 2: several statements on one line
+    "E731",  # P386 R2 removes this: a lambda assigned to a name
+    "E741",  # P386 R2 removes this: a variable named l, O or I
+    "F401",  # P386 R2 removes this: an unused import
+    "F841",  # P386 R2 removes this: an unused local variable
+]
