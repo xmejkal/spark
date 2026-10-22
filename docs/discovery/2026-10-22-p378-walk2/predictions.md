@@ -6,8 +6,8 @@ Card: https://github.com/xmejkal/spark/issues/484. Parent walk: P100 (https://gi
 Miro frame: "P378 Walk 2: button and LED on the XIAO (map, 2026-10-22)" on the hub board. Walk 1 is
 `docs/observations/2026-10-19-p326-walk1.md`. The walk-1 fixes P352, P353 and P354 are closed. P355 (#453) is open.
 
-Marks: **(M)** I measured it on 2026-10-22 in a scratch folder (nothing in the PO's store changed, nothing
-deployed). **(E)** I expect it, and I did not measure it.
+Marks: (M) I measured it on 2026-10-22 in a scratch folder (nothing in the PO's store changed, nothing
+deployed). (E) I expect it, and I did not measure it.
 
 ## 1. The walk in steps
 
@@ -85,14 +85,14 @@ Scored by someone who did not write the predictions.
 
 ## 4. Gaps and smallest fixes (proposals, not filed)
 
-- **The idea step has no way to write a board-only project.** Fix: when every need is the board's own part, `parts.py
+- The idea step has no way to write a board-only project. Fix: when every need is the board's own part, `parts.py
   --requirements` writes `board_only: true`. Way round: write the file by hand (the build page shows it).
-- **No pick for the board's own button.** P355 covers only the LED. Fix: widen P355 to both, from `pin_roles`.
-- **The record holds no pressed level for B.** Fix: add `active_level` to `onboard_button`, with a bench check and a
+- No pick for the board's own button. P355 covers only the LED. Fix: widen P355 to both, from `pin_roles`.
+- The record holds no pressed level for B. Fix: add `active_level` to `onboard_button`, with a bench check and a
   source, as P353 did for the LED. Way round: the firmware reads the level once at start with the button released.
-- **A board-only build gives the PO no page to read at the wiring step.** Fix: one line in the build output and the
+- A board-only build gives the PO no page to read at the wiring step. Fix: one line in the build output and the
   journey page, "nothing to wire, use the board's own B and LED".
-- **`check_all` reads "nothing found" next to four "not asked for".** Fix: for a board-only project, say in one line
+- `check_all` reads "nothing found" next to four "not asked for". Fix: for a board-only project, say in one line
   why the four are not asked. Not a pass of five.
-- **The second LED needs a part the PO can lack.** Fix: the idea step asks "do you own a resistor" before it picks
+- The second LED needs a part the PO can lack. Fix: the idea step asks "do you own a resistor" before it picks
   an outside LED. Way round: use PWM on the same LED for "a second effect".
