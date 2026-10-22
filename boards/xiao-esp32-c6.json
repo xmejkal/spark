@@ -153,13 +153,14 @@
         15
       ],
       "active_level": 0,
-      "note": "the on-board user LED (not on the header), lit by a 0, measured on the PO's bench on 2026-10-19 (walk 1, P326 #418) with the schematic not read. The Seeed wiki names GPIO15 \"User Light\" (documents.xiao-c6-wiki)."
+      "note": "the on-board user LED (not on the header), lit by a 0, measured on the PO's bench on 2026-10-19 (walk 1, P326 #418). The Seeed schematic agrees (documents.xiao-c6-schematic-v1-0, sheet 04 ESP32 C6, file page 5): D4 has its anode on 3V3 through R25 and its cathode on GPIO15. The Seeed wiki names GPIO15 \"User Light\" (documents.xiao-c6-wiki)."
     },
     "onboard_button": {
       "gpio": [
         9
       ],
-      "note": "the BOOT button, silkscreened B, per the Seeed wiki (\"Boot GPIO9 Enter Boot Mode\", documents.xiao-c6-wiki) and the PO's bench on 2026-10-19 (walk 1, P326 #418). Held down at reset it enters the bootloader, so press it only after the board started."
+      "active_level": 0,
+      "note": "the BOOT button, silkscreened B, reads 0 when pressed: on the Seeed schematic (documents.xiao-c6-schematic-v1-0, sheet 04 ESP32 C6, file page 5) the net BOOT on pin 15, GPIO9, has a 10K pull-up R17 to 3V3 and the switch K2 to GND. The Seeed wiki names it \"Boot GPIO9 Enter Boot Mode\" (documents.xiao-c6-wiki), and the PO's bench on 2026-10-19 (walk 1, P326 #418) found the button. Held down at reset it enters the bootloader, so press it only after the board started."
     },
     "spi": {
       "gpio": [
