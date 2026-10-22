@@ -212,7 +212,8 @@ def problems(root=ROOT):
                  + failed_examples(text, root)]
         said += broken_links(path, text) + personal_paths(path, text)
     commands = root / "docs" / "guide" / "commands.md"
-    said += stale_doc_paths(root) + unlisted(root) + unknown_in_tables(commands.read_text() if commands.is_file() else "", root)
+    said += stale_doc_paths(root)
+    said += unlisted(root) + unknown_in_tables(commands.read_text() if commands.is_file() else "", root)
     readme = root / "README.md"
     return said + version_mismatch(readme.read_text() if readme.is_file() else "", root)
 

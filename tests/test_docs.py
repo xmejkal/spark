@@ -117,6 +117,22 @@ class TheChecksTest(unittest.TestCase):
             self.assertEqual(check_docs.stale_doc_paths(Path(root)),
                              ["scripts/a.py names %s, which is not there" % stale])
 
+    def test_every_citing_folder_is_read_deep_and_each_stale_path_is_named_once(self):
+        # P386 R1's mutation run: each line below catches one defect the test above let through.
+        stale = "/".join(["docs", "guide", "gone.v2"]) + ".md"
+        folders = ("agents", "commands", "data", "scripts", "skills")
+        with tempfile.TemporaryDirectory() as root:
+            for folder in folders:
+                (Path(root) / folder / "sub").mkdir(parents=True)
+                (Path(root) / folder / "sub" / "a.txt").write_text("%s, %s, docs/*.md and docs/{x}.md" % (stale, stale))
+            (Path(root) / "scripts" / "b.bin").write_bytes(b"\x80")
+            (Path(root) / ".claude-plugin").mkdir()
+            (Path(root) / ".claude-plugin" / "plugin.json").write_text('{"version": "0"}')
+            self.assertEqual(check_docs.stale_doc_paths(Path(root)),
+                             ["%s/sub/a.txt names %s, which is not there" % (folder, stale)
+                              for folder in ("scripts", "data", "commands", "skills", "agents")])
+            self.assertIn("scripts/sub/a.txt names %s, which is not there" % stale, check_docs.problems(Path(root)))
+
     def test_the_code_names_no_docs_page_that_is_gone(self):
         self.assertEqual(check_docs.stale_doc_paths(), [])
 
