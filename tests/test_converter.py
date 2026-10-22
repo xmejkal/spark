@@ -21,7 +21,10 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
-import suite_temp  # noqa: E402,F401  P172: this process's temp folder, removed at exit
+import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
 
 
 def code_of(path):
@@ -35,9 +38,7 @@ def code_of(path):
     text = re.sub(r"/\*.*?\*/", "", path.read_text(), flags=re.S)
     return "\n".join(line for line in text.splitlines() if not line.strip().startswith("//"))
 
-import sys
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
+
 CONVERTER = ROOT / "tools" / "circuit-to-wokwi"
 BUNDLE = CONVERTER / "dist" / "converter.mjs"
 
