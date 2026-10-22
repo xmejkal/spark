@@ -106,6 +106,19 @@ class TheChecksTest(unittest.TestCase):
         self.assertEqual(check_docs.personal_paths(Path("README.md"), "fine\nsee /private/var/folders/x\n"),
                          ["README.md line 2 names a personal path or checkout: /private/"])
 
+    def test_a_docs_path_that_is_not_a_file_is_named(self):
+        # The stale path is joined from parts, so that no check reads this line as a real citation.
+        stale = "/".join(["docs", "gone"]) + ".md"
+        with tempfile.TemporaryDirectory() as root:
+            (Path(root) / "docs").mkdir()
+            (Path(root) / "docs" / "here.md").write_text("x")
+            (Path(root) / "scripts").mkdir()
+            (Path(root) / "scripts" / "a.py").write_text("# docs/here.md#top, docs/<name>.md and %s." % stale)
+            self.assertEqual(check_docs.stale_doc_paths(Path(root)),
+                             ["scripts/a.py names %s, which is not there" % stale])
+
+    def test_the_code_names_no_docs_page_that_is_gone(self):
+        self.assertEqual(check_docs.stale_doc_paths(), [])
 
 
 class TheDocsTest(unittest.TestCase):

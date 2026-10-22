@@ -3,6 +3,7 @@
 The docs name only what is there (P104; docs/2026-10-05-readme-design.md §5).
 
     check_docs.py        # every problem in README.md, AGENTS.md and docs/guide/*.md; exit 1 if any
+                         # and every docs page that scripts/, data/, commands/, skills/ or agents/ cite and is gone
 
 Each check takes text (and the repository root) and returns the sentences it fails on, so the tests feed it literal
 Markdown and the suite feeds it the real docs.
@@ -21,6 +22,9 @@ OUTPUT_NOTE = re.compile(r"<!-- output: run \d{4}-\d{2}-\d{2}, spark \d+\.\d+\.\
 RUNS_NOTE = re.compile(r"<!-- runs: exit (\d+) -->$")
 PERSONAL = re.compile(r"/Users/|/home/|/private/|smartbin-local")
 FENCE = re.compile(r"^```[a-z]*\n(.*?)^```", re.S | re.M)
+DOC_PATH = re.compile(r"docs/[\w./<>*{}-]+\.md")
+#: The folders whose files cite a docs page; an anchor after `.md` is not part of the match.
+CITING_FOLDERS = ("scripts", "data", "commands", "skills", "agents")
 #: Files spark writes into a person's project rather than ships; the guides may name them.
 PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it into the project",
                  "main.py": "the project's own boot file, which import_firmware.py leaves unrun",
@@ -54,6 +58,22 @@ def unlisted(root=ROOT):
     for page in ("README.md", "docs/guide/commands.md"):
         text = (root / page).read_text() if (root / page).is_file() else ""
         said += ["%s does not name %s" % (page, name) for name in names if name not in text]
+    return said
+
+
+# --- MVP ---
+def stale_doc_paths(root=ROOT):
+    """Every `docs/....md` path the code and the commands name that is not a file. A placeholder is not a path."""
+    said = []
+    for folder in CITING_FOLDERS:
+        for path in sorted((root / folder).rglob("*")):
+            try:
+                text = path.read_text() if path.is_file() else ""
+            except UnicodeDecodeError:
+                continue
+            said += ["%s names %s, which is not there" % (path.relative_to(root), cited)
+                     for cited in sorted(set(DOC_PATH.findall(text)))
+                     if not set("<*{") & set(cited) and not (root / cited).is_file()]
     return said
 
 
@@ -181,6 +201,7 @@ def personal_paths(path, text):
             for number, line in enumerate(text.splitlines()) for found in [PERSONAL.search(line)] if found]
 
 
+# --- MVP ---
 def problems(root=ROOT):
     """Every sentence the docs fail on."""
     said, helps = [], {}
@@ -191,7 +212,7 @@ def problems(root=ROOT):
                  + failed_examples(text, root)]
         said += broken_links(path, text) + personal_paths(path, text)
     commands = root / "docs" / "guide" / "commands.md"
-    said += unlisted(root) + unknown_in_tables(commands.read_text() if commands.is_file() else "", root)
+    said += stale_doc_paths(root) + unlisted(root) + unknown_in_tables(commands.read_text() if commands.is_file() else "", root)
     readme = root / "README.md"
     return said + version_mismatch(readme.read_text() if readme.is_file() else "", root)
 

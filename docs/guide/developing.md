@@ -357,6 +357,7 @@ as `tests/test_docs.py`. It fails when the docs:
 - link a relative file or heading that is not there;
 - paste an output without the date and version it ran on;
 - carry a personal path;
+- are cited by a file in `scripts/`, `data/`, `commands/`, `skills/` or `agents/` under a `docs/….md` path that is not a file;
 - leave out of README.md the version that `.claude-plugin/plugin.json` ships.
 
 A ` ```sh ` block marked `<!-- runs: exit N -->` is run in an empty project, with a store of its own, and must exit
