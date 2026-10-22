@@ -125,9 +125,9 @@ class TwoSnapshotsCompare(unittest.TestCase):
 
     def test_a_changed_line_is_reported_once_with_its_command_and_stream(self):
         lines = snapshot.report(self.f.take("old"), self.f.take("new", env={"FAKE_LINES": "note: changed"}))
-        self.assertEqual([l for l in lines if l.startswith("    - ")], ["    - note: same"])
-        self.assertEqual([l for l in lines if l.startswith("    + ")], ["    + note: changed"])
-        self.assertEqual(sum(1 for l in lines if l.startswith("proj: fake.py one")), 1)
+        self.assertEqual([text_line for text_line in lines if text_line.startswith("    - ")], ["    - note: same"])
+        self.assertEqual([text_line for text_line in lines if text_line.startswith("    + ")], ["    + note: changed"])
+        self.assertEqual(sum(1 for text_line in lines if text_line.startswith("proj: fake.py one")), 1)
         self.assertIn("  stdout:", lines)
 
     def test_a_repeated_or_moved_line_is_a_difference(self):

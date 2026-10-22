@@ -20,7 +20,6 @@ import json
 import re
 import subprocess
 from collections import namedtuple
-from pathlib import Path
 
 import boards
 import flasher

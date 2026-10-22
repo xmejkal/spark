@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from outcomes import EXIT_FOR, EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
+from outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
 NAMES_SHOWN = 3

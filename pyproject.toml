@@ -23,10 +23,5 @@ extend-exclude = [
 # Only the rules that find real mistakes. Ruff's own default holds about 400 rules.
 select = ["E4", "E7", "E9", "F"]
 ignore = [
-    "E401",  # P386 R2 removes this: several imports on one line
-    "E702",  # ruff format removes this, after walk 2: several statements on one line
-    "E731",  # P386 R2 removes this: a lambda assigned to a name
-    "E741",  # P386 R2 removes this: a variable named l, O or I
-    "F401",  # P386 R2 removes this: an unused import
-    "F841",  # P386 R2 removes this: an unused local variable
+    "E702",  # ruff format, after the walk: several statements on one line
 ]

@@ -55,9 +55,9 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import design  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN  # noqa: E402
 
-from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, answer, status_of  # noqa: E402
+from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, answer  # noqa: E402
 
 
 class Check:
@@ -403,7 +403,7 @@ def discover(checked):
             notes.append("%-12s %d definition(s): %s"
                          % ("boards", len(definitions),
                             ", ".join(sorted(boards.available(project)))))
-        active = boards.definition_path(project)
+        boards.definition_path(project)
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 

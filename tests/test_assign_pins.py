@@ -488,7 +488,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
     def test_each_line_says_its_pad_and_why(self):
         assignments, text = self._module()
         sense = next(e for e in assignments if e["signal"] == "SENSE")
-        line = next(l for l in text.splitlines() if l.startswith("SENSE = "))
+        line = next(text_line for text_line in text.splitlines() if text_line.startswith("SENSE = "))
         self.assertIn("pad %s" % sense["pin"], line)
         self.assertIn(sense["why"], line)
 
@@ -519,7 +519,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         names = {}
         exec(text, names)
         self.assertEqual(names["ONBOARD_LED_ON"], 0)
-        self.assertIn("the bench", next(l for l in text.splitlines() if l.startswith("ONBOARD_LED = ")))
+        self.assertIn("the bench", next(text_line for text_line in text.splitlines() if text_line.startswith("ONBOARD_LED = ")))
         self.assertNotIn("polarity is not in the board record", text)
 
     def test_a_led_with_no_level_in_the_record_keeps_today_s_note(self):
@@ -534,7 +534,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         names = {}
         exec(text, names)
         self.assertEqual(names["ONBOARD_BUTTON"], 9)
-        self.assertIn("wiki", next(l for l in text.splitlines() if l.startswith("ONBOARD_BUTTON = ")))
+        self.assertIn("wiki", next(text_line for text_line in text.splitlines() if text_line.startswith("ONBOARD_BUTTON = ")))
 
     def test_a_signal_named_like_the_board_s_button_is_refused_not_shadowed(self):
         pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the button"}})
@@ -546,7 +546,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button"}})
         lines = assign_pins.pin_module(pressed, [], "r.json").splitlines()
         self.assertIn("ONBOARD_BUTTON = 9  # onboard_button: the BOOT button", lines)
-        self.assertFalse(any(l.startswith("ONBOARD_BUTTON_ON") for l in lines))
+        self.assertFalse(any(text_line.startswith("ONBOARD_BUTTON_ON") for text_line in lines))
 
     def test_a_role_on_two_gpios_names_no_single_pin(self):
         two = board(pin_roles={"onboard_led": {"gpio": [2, 3], "note": "two LEDs", "active_level": 0},
@@ -586,7 +586,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         with_role = [e for e in assignments if e["roles"]]
         self.assertTrue(with_role, "the fixture must spend a pin that carries a role")
         role = with_role[0]["roles"][0]
-        line = next(l for l in text.splitlines() if l.startswith(with_role[0]["signal"] + " = "))
+        line = next(text_line for text_line in text.splitlines() if text_line.startswith(with_role[0]["signal"] + " = "))
         self.assertIn("%s: %s" % (role, board()["pin_roles"][role]["note"]), line)
 
     def test_the_file_names_its_source_and_says_not_to_edit_it(self):

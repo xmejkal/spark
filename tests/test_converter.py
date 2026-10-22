@@ -135,7 +135,7 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
     """
 
     def convert(self, *extra):
-        import os, tempfile
+        import os
         env = dict(os.environ, SPARK_BOARD_JSON=str(ROOT / "boards" / "firebeetle2-esp32s3.json"))
         return subprocess.run(node() + [str(BUNDLE), "--circuit", str(self.circuit), "--out", str(self.out),
                                         "--chips", str(self.chips), *extra],
@@ -162,7 +162,8 @@ class TheBundleConvertsOnNodeTest(unittest.TestCase):
         # in it, cli.ts loaded the records into one and the emitter read the other — the quickstart's
         # resistors came out as RGB LEDs (2026-10-03). The same circuit as the converter's own
         # mapping-file.test.ts, through the shipped file.
-        import json, tempfile
+        import json
+        import tempfile
         here = Path(tempfile.mkdtemp())
         self.circuit, self.out, self.chips = here / "circuit.json", here / "diagram.json", here / "chips"
         self.chips.mkdir()
