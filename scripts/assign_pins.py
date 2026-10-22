@@ -183,7 +183,7 @@ def bus_line(signal):
     if line is None:
         raise Impossible("%s is on the %s bus but %r is not one of its lines: %s"
                          % (signal["name"], signal["bus"].upper(), signal.get("line") or signal["name"],
-                            ", ".join("%s (%s)" % (bus_line, "/".join(names)) for bus_line, names in lines.items())))
+                            ", ".join("%s (%s)" % (line_name, "/".join(names)) for line_name, names in lines.items())))
     return line
 
 

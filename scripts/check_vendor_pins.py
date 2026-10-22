@@ -41,7 +41,7 @@ from pathlib import Path
 
 import boards  # the one project walk the scripts share (boards.project_root), and spark's root
 
-from outcomes import EXIT_OK as EXIT_OK, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, EXIT_PROBLEMS as EXIT_MISMATCH, status_of  # noqa: E402, F401
+from outcomes import EXIT_OK as EXIT_OK, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, EXIT_PROBLEMS as EXIT_MISMATCH, status_of  # noqa: F401
 
 #: Where the vendor's own header lives. Only Espressif's Arduino core is understood today; a
 #: board from another vendor would need its own fetcher, which is why this is a named constant
