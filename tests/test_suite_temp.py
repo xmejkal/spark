@@ -22,7 +22,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
-import suite_temp  # noqa: E402  P172: this process's temp folder, removed at exit
+import suite_temp  # noqa: E402  (P172) this process's temp folder, removed at exit
 
 TESTS = Path(__file__).resolve().parent
 
