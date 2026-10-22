@@ -16,7 +16,7 @@ outside spark.
 
 | # | step | what the PO does | what spark has today | where it can stall |
 | --- | --- | --- | --- | --- |
-| 1 | Init | `/spark:init` in a new folder, with the XIAO | `init_project.py --board` writes every file (M, scratch run) | The board comes from a flag. The questions might skip it. `check_all` lists two board definitions |
+| 1 | Init | `/spark:init` in a new folder, with the XIAO | `init_project.py --board` writes every file (M, scratch run) | The board comes from a flag. The questions can skip it. `check_all` lists two board definitions |
 | 2 | Idea | Says "a button that lights an LED", through `/spark:idea` | Needs, drawer match, picks. The board record names `onboard_button` and `onboard_led` (M) | P355 is open: no pick offers the board's own LED. No pick offers the own button at all. The need stays unserved |
 | 3 | Requirements | Gets `requirements.json` | `parts.py --requirements` writes it. `board_only: true` is read only by the build (M: `grep`) | The idea step does not write `board_only`. Without it the build ends `????` (M) |
 | 4 | Build | `/spark:build --keep` | The board-only chain runs end to end, exit 0 (M). `pins.py` names `ONBOARD_LED = 15`, `ONBOARD_LED_ON = 0`, `ONBOARD_BUTTON = 9` (M) | No `ONBOARD_BUTTON_ON` line and no pull-up line (M). The firmware must guess the pressed level |
