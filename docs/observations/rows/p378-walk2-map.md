@@ -11,3 +11,4 @@ https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764688085642382. Walk 
 | 3 | The XIAO record has no `active_level` for `onboard_button`, so `pins.py` has no `ONBOARD_BUTTON_ON` | spike, record | verified | `boards/xiao-esp32-c6.json` `onboard_button`, prediction 8 |
 | 4 | A board-only build gives the PO no page to read at the wiring step | spike | raised | the map's step 8 |
 | 5 | The sweep before the PR checked claims 1 and 3 in the code and removed bold lead-ins from the predictions | sweep | acted | this PR |
+| 6 | The review (Sonnet 5.5) made 7 findings: prediction 17 was marked (M) for an outcome, 11, 12 and 18 needed a clear score, two lines copied walk 1 and the record, one unmeasured claim. All 7 fixed | review | acted | this PR |

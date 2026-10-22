@@ -16,7 +16,7 @@ outside spark.
 
 | # | step | what the PO does | what spark has today | where it can stall |
 | --- | --- | --- | --- | --- |
-| 1 | Init | `/spark:init` in a new folder, with the XIAO | `init_project.py --board` writes every file (M, scratch run) | The board comes from a flag. The questions can skip it. `check_all` lists two board definitions |
+| 1 | Init | `/spark:init` in a new folder, with the XIAO | `init_project.py --board` writes every file (M, scratch run) | The board comes from a flag. The questions can skip it. `check_all` can list two board definitions (E) |
 | 2 | Idea | Says "a button that lights an LED", through `/spark:idea` | Needs, drawer match, picks. The board record names `onboard_button` and `onboard_led` (M) | P355 is open: no pick offers the board's own LED. No pick offers the own button at all. The need stays unserved |
 | 3 | Requirements | Gets `requirements.json` | `parts.py --requirements` writes it. `board_only: true` is read only by the build (M: `grep`) | The idea step does not write `board_only`. Without it the build ends `????` (M) |
 | 4 | Build | `/spark:build --keep` | The board-only chain runs end to end, exit 0 (M). `pins.py` names `ONBOARD_LED = 15`, `ONBOARD_LED_ON = 0`, `ONBOARD_BUTTON = 9` (M) | No `ONBOARD_BUTTON_ON` line and no pull-up line (M). The firmware must guess the pressed level |
@@ -24,9 +24,9 @@ outside spark.
 | 6 | Checks | `check_all.py --project .` | Runs and finds nothing (M: "nothing found by the 1 check(s) that completed, of 5") | Four checks say "not asked for". The PO can read that as a pass of five |
 | 7 | Scenario | Claude writes one scenario, the PO agrees to the minutes | `run_scenario.py`, the board alone in Wokwi, 0 wires (M) | No serial monitor is wired (M). No scenario reads GPIO15. The PO runs Wokwi only rarely |
 | 8 | Wiring | Reads the sheet | None. No sheet, no picture, no page for a board-only build (M) | The PO has nothing to read here |
-| 9 | Look | `look.py --no-simulation` | Reads the board on USB, compares with the record, prints a token. The flag exists (M: `deploy.py --help`) | The board can sit in a held console (P354 names the way out). Download mode needs R |
+| 9 | Look | `look.py --no-simulation` | Reads the board on USB, compares with the record, prints a token. The flag exists (M: `deploy.py --help`) | The board can sit in a held console (P354 names the way out). Download mode: see walk 1's page, `p326-reaction-game.md` |
 | 10 | Deploy | `flash_image.py`, then `deploy.py --no-simulation --token` | Erases after a typed yes, writes, reads back. Needs a real terminal for the yes (M: help) | The PO types the yes in his own terminal. The flow can lead him to a tool outside spark |
-| 11 | Lit LED | Presses B, sees the LED | Level 0 lights it, from the walk-1 bench (M: record note) | Pressed level of B is not in the record. Holding B at reset enters the bootloader (M: record note) |
+| 11 | Lit LED | Presses B, sees the LED | Level 0 lights it, from the walk-1 bench (M: record note) | Pressed level of B is not in the record. Holding B at reset: see the record's `onboard_button` note |
 | 12 | Change | "Add a second LED" | A rebuild lists bench changes, a `changed` line each (M: `check_spine.py --help`) | The board has one user LED. A second one is an outside part: a resistor, jumpers, a breadboard. The PO can have no resistor |
 | 13 | Rebuild | `/spark:build --keep` again | With `led-red-5mm` the sheet lists LED, 330 ohm resistor, breadboard and jumpers, 6 steps (M) | `board_only` must go and the part must come. The records can disagree on one edit |
 | 14 | Second deploy | look, then deploy again | Same path as step 10 | A deploy with no simulation names a caveat. The yes is typed again |
@@ -43,14 +43,14 @@ outside spark.
 8. The firmware has to hold the pressed level of B by itself. (M) Look: the record's `onboard_button`, no `active_level`.
 9. `import_firmware.py` passes on the first try. (E) Look: its exit code. PWM is in the stand-in (M).
 10. `check_all.py --project .` ends with "nothing found by the 1 check(s) that completed, of 5". (M) Look: its last line.
-11. The Wokwi run does not happen in the walk, because the PO runs it only rarely. (E) Look: `sim/runs/`.
-12. If a scenario runs, it can show `ready` and nothing about GPIO15. (E) Look: the log's verdict line.
+11. The Wokwi run does not happen in the walk, because the PO runs it only rarely. (E) Look: `sim/runs/`. If it is skipped, score 12 as not run.
+12. If a scenario runs, its log has a `ready` line and no GPIO15 line. (E) Look: the log.
 13. `look.py --no-simulation` matches the XIAO record (chip esp32c6, 4 MB flash) and prints a token. (E) Look: its output.
 14. `deploy.py --no-simulation` finishes with `ready seen`, after at most one retry. (E) Look: its envelope, `simulation: none`.
 15. The LED lights at the first press, with no inversion. (E) Look: the bench. Level 0 is measured (M) in walk 1.
 16. A press of B while the board restarts enters the bootloader once. (E) Look: the bench, the `look.py` output.
-17. "Add a second LED" ends with an outside part: a resistor and jumpers. (M) Look: `breadboard.md` of `led-red-5mm` on the XIAO.
-18. The PO has no resistor at hand, so the second LED waits. (E) Look: the walk's diary.
+17. "Add a second LED" ends with an outside part: a resistor and jumpers. (E) Look: the rebuild's `breadboard.md`. Its sheet for `led-red-5mm` on the XIAO lists them today (M).
+18. If 17 holds, the PO has no resistor at hand, and the second LED waits. (E) Look: the walk's diary. If 17 does not hold, score 18 as not run.
 19. The rebuild names its bench changes, and at least one is "put R1 in a free row". (E) Look: the rebuild's `changed` lines.
 20. The walk has 1 or more steps outside spark (the 0 target is missed). (E) Look: the diary.
 21. The walk takes 45 to 90 minutes. (E) Look: the diary's times.
