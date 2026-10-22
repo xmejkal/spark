@@ -35,7 +35,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import fab  # noqa: E402
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS, COULD_NOT_RUN, status_of  # noqa: E402
+from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS, COULD_NOT_RUN, status_of  # noqa: E402
 
 #: Every number below comes from `data/fabrication.json` through `fab`, so the generator that
 #: draws a footprint and the check that judges it cannot hold different values. See that file's
