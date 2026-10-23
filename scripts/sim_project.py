@@ -109,7 +109,8 @@ def limits_note(limits):
     """The same, as the file a person finds beside the diagram rather than in a terminal they closed."""
     lines = ["# What this simulation cannot show", "",
              "Generated beside the diagram by spark. Every line comes from a part record's own words, or from",
-             "the board's Wokwi definition: the JSON file of the Wokwi part type that spark keeps in its store.",
+             "the board's Wokwi definition: the JSON file of the Wokwi part type that spark keeps in its store,",
+             "or says what spark did not check.",
              "A scenario passing over any of these proves what the FIRMWARE did, and nothing about",
              "the hardware the stand-in replaced or the board's part that Wokwi lacks.", ""]
     for component, sentence in limits:
@@ -123,7 +124,8 @@ ONBOARD_VERBS = {boards.ONBOARD_LED: "read", boards.ONBOARD_BUTTON: "press"}
 #: The component of a limit about the board's own GPIOs as a whole, and the two reasons they were not compared.
 ONBOARD_GPIOS = "onboard GPIOs"
 NO_DEFINITION_NAMED = "not checked: the board record names no Wokwi definition"
-DEFINITION_NOT_KEPT = "not checked: spark's store lacks the Wokwi definition that the board record names, or its sha256 differs"
+DEFINITION_NOT_KEPT = ("not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 "
+                       "differs, or it does not parse")
 
 
 def onboard_limits(board):
@@ -133,8 +135,8 @@ def onboard_limits(board):
     there. A record that cannot be compared says "not checked", in the list and never as a failure: it is what the
     build did not look at, as a stand-in's sentence is what the simulation cannot show (P37).
     """
-    roles = [(role, board["pin_roles"][role]) for role in boards.ONBOARD_NAMES
-             if isinstance((board.get("pin_roles") or {}).get(role), dict)]
+    pin_roles = board.get("pin_roles") if isinstance(board.get("pin_roles"), dict) else {}
+    roles = [(role, pin_roles[role]) for role in boards.ONBOARD_NAMES if isinstance(pin_roles.get(role), dict)]
     if not roles:
         return []
     if boards.WOKWI_DEFINITION not in (board.get("documents") or {}):
@@ -145,7 +147,7 @@ def onboard_limits(board):
     said = []
     for role, entry in roles:
         gpios = entry.get("gpio") if isinstance(entry.get("gpio"), list) else []
-        for gpio in gpios:
+        for gpio in (gpio for gpio in gpios if isinstance(gpio, int) and not isinstance(gpio, bool)):
             why = part.why_not_simulated(gpio)
             if why:
                 said.append(("%s (GPIO%d)" % (boards.ONBOARD_NAMES[role], gpio),
@@ -155,12 +157,13 @@ def onboard_limits(board):
 # --- end MVP ---
 
 
-def write_limits(sim_dir, design, board=None):
+def write_limits(sim_dir, design, board):
     """
-    Put the note beside the diagram and hand back what it said, or () when there is nothing. The design's records and the
-    board's own GPIOs both count (P396), and a board-only build passes no design.
+    Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
+    board's own GPIOs both count (P396), and a board-only build passes no design. `board` has no default: no test reaches
+    the full build's simulation stage (`check_spine.simulation_detail`), so a call that drops it fails at once.
     """
-    limits = (limits_of(design) if design is not None else []) + (onboard_limits(board) if board is not None else [])
+    limits = (limits_of(design) if design is not None else []) + onboard_limits(board)
     if limits:
         (Path(sim_dir) / "WHAT-THIS-CANNOT-SHOW.md").write_text(limits_note(limits))
     return limits

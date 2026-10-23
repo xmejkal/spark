@@ -415,12 +415,10 @@ def pin_module(board, assignments, source, pulled_up=()):
         if entry["signal"] in pulled_up:
             lines.append('%s_PULL = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
                          % (entry["signal"], entry["signal"]))
-    for role, name in ONBOARD_NAMES.items():
+    for role, name in boards.ONBOARD_NAMES.items():
         lines += onboard_lines(board, assignments, role, name)
     return "\n".join(lines) + "\n"
 
-
-ONBOARD_NAMES = boards.ONBOARD_NAMES  # P396: the record's vocabulary lives in boards.py
 
 
 def onboard_lines(board, assignments, role, name):

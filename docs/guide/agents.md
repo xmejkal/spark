@@ -228,6 +228,7 @@ These write:
   history. The simulation stage's `detail` and `sim/WHAT-THIS-CANNOT-SHOW.md` list what the simulation cannot show,
   also each on-board LED or button whose GPIO has no pin in the board's Wokwi definition (P396), such as
   `ONBOARD_BUTTON (GPIO9)` on the XIAO ESP32-C6. Such a line names a test for the bench: a passed run never covers it.
+  `onboard GPIOs: not checked` means that spark did not compare at all: say it to the person, and never read it as a pass.
   Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
 - `check_vendor_pins.py` without `--offline`: the fetched vendor header, into `.spark/cache/` of the project that owns

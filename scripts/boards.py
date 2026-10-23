@@ -330,7 +330,7 @@ ONBOARD_NAMES = {ONBOARD_LED: "ONBOARD_LED", ONBOARD_BUTTON: "ONBOARD_BUTTON"}
 WOKWI_DEFINITION = "wokwi-board"
 
 _COMMENT = re.compile(r"/\*.*?\*/", re.S)
-_GPIO = re.compile(r"GPIO(\d+)")
+_GPIO = re.compile(r"GPIO([0-9]+)")
 
 
 @dataclass(frozen=True)
@@ -350,27 +350,32 @@ class SimulatedPart:
 def read_simulated_part(board):
     """
     The board's Wokwi definition, kept in the store under the sha256 its record names, as a SimulatedPart. None when the
-    file is missing, its bytes changed, or it does not parse. The caller asks first whether the record names one.
+    file is missing, its bytes changed, or it does not parse as a definition with `pins`: never a guess that it has no
+    pin. The caller asks first whether the record names one.
     Wokwi's own files hold `/* */` comments, so they are cut only when strict JSON fails: a string may hold a `/*`.
     """
-    entry = (board.get("documents") or {}).get(WOKWI_DEFINITION) or {}
+    documents = board.get("documents")
+    entry = documents.get(WOKWI_DEFINITION) if isinstance(documents, dict) else None
     try:
         payload = (store.place("sources") / entry["sha256"] / entry["file"]).read_bytes()
-    except (KeyError, TypeError, OSError):
+    except (KeyError, TypeError, OSError):  # no entry, a field missing or of the wrong type, no file
         return None
     if hashlib.sha256(payload).hexdigest() != entry["sha256"]:
         return None
     text = payload.decode("utf-8", "replace")
     try:
         definition = json.loads(text)
-    except ValueError:
+    except (ValueError, RecursionError):
         try:
             definition = json.loads(_COMMENT.sub("", text))
-        except ValueError:
+        except (ValueError, RecursionError):
             return None
     pins = definition.get("pins") if isinstance(definition, dict) else None
-    targets = [pin.get("target") for pin in pins.values() if isinstance(pin, dict)] if isinstance(pins, dict) else []
-    gpios = frozenset(int(match.group(1)) for match in (_GPIO.fullmatch(str(target)) for target in targets) if match)
+    if not isinstance(pins, dict):
+        return None
+    targets = [pin.get("target") for pin in pins.values() if isinstance(pin, dict)]
+    gpios = frozenset(int(match.group(1)) for match in (_GPIO.fullmatch(target) for target in targets
+                                                        if isinstance(target, str)) if match)
     return SimulatedPart(board.get("id") or "", gpios)
 # --- end MVP ---
 

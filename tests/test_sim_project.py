@@ -22,7 +22,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
 import sim_project  # noqa: E402
-from test_boards import kept_definition_board  # noqa: E402
+from test_boards import DEFINITION, kept_definition_board  # noqa: E402
+
+DEFINITION_CHANGED = DEFINITION + "\n"
 
 FakeDesign = namedtuple("FakeDesign", "parts project board", defaults=(None,))
 
@@ -208,7 +210,7 @@ class WhatTheSimulationCannotShowTest(unittest.TestCase):
         import tempfile
         work = Path(tempfile.mkdtemp())
         design = self.FakeDesign([self.part("Valve", wokwi={"part": "wokwi-led", "stand_in": "an LED"})])
-        said = sim_project.write_limits(work, design)
+        said = sim_project.write_limits(work, design, {})
         self.assertEqual(said, [("Valve", "an LED")])
         self.assertIn("an LED", (work / "WHAT-THIS-CANNOT-SHOW.md").read_text())
 
@@ -216,7 +218,7 @@ class WhatTheSimulationCannotShowTest(unittest.TestCase):
         import tempfile
         work = Path(tempfile.mkdtemp())
         design = self.FakeDesign([self.part("Btn", wokwi={"part": "wokwi-pushbutton"})])
-        self.assertEqual(sim_project.write_limits(work, design), [])
+        self.assertEqual(sim_project.write_limits(work, design, {}), [])
         self.assertFalse((work / "WHAT-THIS-CANNOT-SHOW.md").exists())
 
     def test_the_stage_says_it_too_for_the_person_watching_the_run(self):
@@ -288,7 +290,18 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
         self.assertEqual(sim_project.onboard_limits(board),
                          [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
-                                            "record names, or its sha256 differs")])
+                                            "record names, its sha256 differs, or it does not parse")])
+
+    def test_a_definition_whose_bytes_changed_says_not_checked(self):
+        from test_boards import kept_path
+        board = kept_definition_board(DEFINITION_CHANGED)
+        kept_path(board).write_text(DEFINITION_CHANGED + " ")
+        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)], ["onboard GPIOs"])
+
+    def test_a_gpio_that_is_not_a_number_is_skipped_never_raised(self):
+        board = kept_definition_board()
+        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = ["9", None, True]
+        self.assertEqual(sim_project.onboard_limits(board), [])
 
     def test_a_board_with_no_onboard_role_says_nothing(self):
         board = kept_definition_board()

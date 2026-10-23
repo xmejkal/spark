@@ -587,9 +587,20 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
     def test_a_definition_that_does_not_parse_is_none(self):
         self.assertIsNone(boards.read_simulated_part(kept_definition_board('{"pins": ')))
 
-    def test_the_pin_map_reads_the_same_onboard_names(self):
-        import assign_pins
-        self.assertIs(assign_pins.ONBOARD_NAMES, boards.ONBOARD_NAMES)
+    def test_a_definition_whose_pins_are_not_a_table_is_none_never_no_pins(self):
+        for text in ('{"pins": [1]}', '[1]', '{"name": "no pins"}'):
+            with self.subTest(text=text):
+                self.assertIsNone(boards.read_simulated_part(kept_definition_board(text)))
+
+    def test_a_target_that_is_not_ascii_digits_is_no_gpio(self):
+        text = '{"pins": {"D1": {"target": "GPIO\uff19"}, "D2": {"target": 9}, "D3": {"target": "GPIO3"}}}'
+        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({3}))
+
+    def test_a_definition_nested_too_deep_is_none(self):
+        self.assertIsNone(boards.read_simulated_part(kept_definition_board("[" * 100000 + "]" * 100000)))
+
+    def test_documents_that_are_not_a_table_are_none(self):
+        self.assertIsNone(boards.read_simulated_part({"id": "x", "documents": ["wokwi-board"]}))
 # --- end MVP ---
 
 
