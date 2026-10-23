@@ -20,6 +20,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import boards  # noqa: E402
 import sim_project  # noqa: E402
 from test_boards import kept_definition_board  # noqa: E402
 
@@ -271,34 +272,34 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
 
     def test_an_led_with_no_pin_is_one_no_scenario_can_read(self):
         board = kept_definition_board()
-        board["pin_roles"]["onboard_led"]["gpio"] = [3]
+        board["pin_roles"][boards.ONBOARD_LED]["gpio"] = [3]
         self.assertIn(("ONBOARD_LED (GPIO3)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark "
                                               "knows no way for a scenario to read it. Test it on the board."),
                       sim_project.onboard_limits(board))
 
     def test_a_record_that_names_no_definition_says_not_checked(self):
         board = kept_definition_board()
-        del board["documents"]["wokwi-board"]
+        del board["documents"][boards.WOKWI_DEFINITION]
         self.assertEqual(sim_project.onboard_limits(board),
                          [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
 
     def test_a_definition_the_store_lacks_says_not_checked(self):
         board = kept_definition_board()
-        board["documents"]["wokwi-board"]["file"] = "absent.board.json"
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
         self.assertEqual(sim_project.onboard_limits(board),
                          [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
                                             "record names, or its sha256 differs")])
 
     def test_a_board_with_no_onboard_role_says_nothing(self):
         board = kept_definition_board()
-        for role in ("onboard_led", "onboard_button"):
+        for role in (boards.ONBOARD_LED, boards.ONBOARD_BUTTON):
             del board["pin_roles"][role]
-        del board["documents"]["wokwi-board"]
+        del board["documents"][boards.WOKWI_DEFINITION]
         self.assertEqual(sim_project.onboard_limits(board), [])
 
     def test_a_role_with_no_gpio_list_says_nothing(self):
         board = kept_definition_board()
-        board["pin_roles"]["onboard_button"] = {"note": "somewhere"}
+        board["pin_roles"][boards.ONBOARD_BUTTON] = {"note": "somewhere"}
         self.assertEqual(sim_project.onboard_limits(board), [])
 
     def test_the_note_holds_the_records_lines_and_the_boards(self):

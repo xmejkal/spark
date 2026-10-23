@@ -113,6 +113,9 @@ PIN_ROLES = {
 
 #: Named, so the one role a check singles out is spelled in exactly one place.
 CONSOLE_UART = "console_uart"
+#: The board's own LED and button, which pins.py names and the build compares with the Wokwi definition (P396).
+ONBOARD_LED = "onboard_led"
+ONBOARD_BUTTON = "onboard_button"
 
 #: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
@@ -321,7 +324,7 @@ ButtonPlaces.EMPTY = ButtonPlaces()
 # --- MVP ---
 #: The board's own parts that pins.py names, so a project with no parts can use them (P236, P353). Here, beside the
 #: record, because the build reads them too (P396) and the pick will (P397), and neither imports the pin map.
-ONBOARD_NAMES = {"onboard_led": "ONBOARD_LED", "onboard_button": "ONBOARD_BUTTON"}
+ONBOARD_NAMES = {ONBOARD_LED: "ONBOARD_LED", ONBOARD_BUTTON: "ONBOARD_BUTTON"}
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
 WOKWI_DEFINITION = "wokwi-board"

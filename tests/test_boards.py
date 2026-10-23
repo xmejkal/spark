@@ -548,13 +548,13 @@ def kept_definition_board(text=DEFINITION):
     """The XIAO record, with its Wokwi definition kept in this process's scratch store (`store.py:40-42`)."""
     digest = store.keep(text.encode(), "wokwi-test.board.json")
     board = boards.load(ROOT, "xiao-esp32-c6")
-    board["documents"]["wokwi-board"] = dict(board["documents"]["wokwi-board"],
+    board["documents"][boards.WOKWI_DEFINITION] = dict(board["documents"][boards.WOKWI_DEFINITION],
                                                         sha256=digest, file="wokwi-test.board.json")
     return board
 
 
 def kept_path(board):
-    entry = board["documents"]["wokwi-board"]
+    entry = board["documents"][boards.WOKWI_DEFINITION]
     return store.place("sources") / entry["sha256"] / entry["file"]
 
 
@@ -572,7 +572,7 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
 
     def test_a_file_the_store_lacks_is_none(self):
         board = kept_definition_board()
-        board["documents"]["wokwi-board"]["file"] = "absent.board.json"
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
         self.assertIsNone(boards.read_simulated_part(board))
 
     def test_a_file_whose_bytes_changed_is_none(self):

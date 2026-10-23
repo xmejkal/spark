@@ -119,7 +119,11 @@ def limits_note(limits):
 
 # --- MVP ---
 #: What a scenario does to each onboard part that it cannot reach (P396).
-ONBOARD_VERBS = {"onboard_led": "read", "onboard_button": "press"}
+ONBOARD_VERBS = {boards.ONBOARD_LED: "read", boards.ONBOARD_BUTTON: "press"}
+#: The component of a limit about the board's own GPIOs as a whole, and the two reasons they were not compared.
+ONBOARD_GPIOS = "onboard GPIOs"
+NO_DEFINITION_NAMED = "not checked: the board record names no Wokwi definition"
+DEFINITION_NOT_KEPT = "not checked: spark's store lacks the Wokwi definition that the board record names, or its sha256 differs"
 
 
 def onboard_limits(board):
@@ -134,11 +138,10 @@ def onboard_limits(board):
     if not roles:
         return []
     if boards.WOKWI_DEFINITION not in (board.get("documents") or {}):
-        return [("onboard GPIOs", "not checked: the board record names no Wokwi definition")]
+        return [(ONBOARD_GPIOS, NO_DEFINITION_NAMED)]
     part = boards.read_simulated_part(board)
     if part is None:
-        return [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board record names, "
-                                  "or its sha256 differs")]
+        return [(ONBOARD_GPIOS, DEFINITION_NOT_KEPT)]
     said = []
     for role, entry in roles:
         gpios = entry.get("gpio") if isinstance(entry.get("gpio"), list) else []
