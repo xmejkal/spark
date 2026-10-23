@@ -24,9 +24,11 @@ nobody has verified, and it is better to say so than to either block that work o
 unverified footprint reach a gerber.
 """
 
+import hashlib
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import store
@@ -111,6 +113,9 @@ PIN_ROLES = {
 
 #: Named, so the one role a check singles out is spelled in exactly one place.
 CONSOLE_UART = "console_uart"
+#: The board's own LED and button, which pins.py names and the build compares with the Wokwi definition (P396).
+ONBOARD_LED = "onboard_led"
+ONBOARD_BUTTON = "onboard_button"
 
 #: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
@@ -314,6 +319,65 @@ class ButtonPlaces:
 
 
 ButtonPlaces.EMPTY = ButtonPlaces()
+
+
+# --- MVP ---
+#: The board's own parts that pins.py names, so a project with no parts can use them (P236, P353). Here, beside the
+#: record, because the build reads them too (P396) and the pick will (P397), and neither imports the pin map.
+ONBOARD_NAMES = {ONBOARD_LED: "ONBOARD_LED", ONBOARD_BUTTON: "ONBOARD_BUTTON"}
+
+#: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
+WOKWI_DEFINITION = "wokwi-board"
+
+_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+_GPIO = re.compile(r"GPIO([0-9]+)")
+
+
+@dataclass(frozen=True)
+class SimulatedPart:
+    """Value: what a simulator models of one part type, a board included: the GPIOs that its pins target (P396)."""
+
+    board_id: str
+    gpios: frozenset
+
+    def why_not_simulated(self, gpio):
+        """Why a scenario cannot reach this GPIO, or None when a pin of the definition targets it."""
+        if gpio in self.gpios:
+            return None
+        return "the Wokwi definition of %s has no pin on GPIO%d" % (self.board_id, gpio)
+
+
+def read_simulated_part(board):
+    """
+    The board's Wokwi definition, kept in the store under the sha256 its record names, as a SimulatedPart. None when the
+    file is missing, its bytes changed, or it does not parse as a definition with `pins`: never a guess that it has no
+    pin. The caller asks first whether the record names one.
+    Wokwi's own files hold `/* */` comments, so they are cut only when strict JSON fails: a string may hold a `/*`.
+    """
+    documents = board.get("documents")
+    entry = documents.get(WOKWI_DEFINITION) if isinstance(documents, dict) else None
+    try:
+        payload = (store.place("sources") / entry["sha256"] / entry["file"]).read_bytes()
+    except (KeyError, TypeError, OSError):  # no entry, a field missing or of the wrong type, no file
+        return None
+    if hashlib.sha256(payload).hexdigest() != entry["sha256"]:
+        return None
+    text = payload.decode("utf-8", "replace")
+    try:
+        definition = json.loads(text)
+    except (ValueError, RecursionError):
+        try:
+            definition = json.loads(_COMMENT.sub("", text))
+        except (ValueError, RecursionError):
+            return None
+    pins = definition.get("pins") if isinstance(definition, dict) else None
+    if not isinstance(pins, dict):
+        return None
+    targets = [pin.get("target") for pin in pins.values() if isinstance(pin, dict)]
+    gpios = frozenset(int(match.group(1)) for match in (_GPIO.fullmatch(target) for target in targets
+                                                        if isinstance(target, str)) if match)
+    return SimulatedPart(board.get("id") or "", gpios)
+# --- end MVP ---
 
 
 def resolve(project: Path) -> Path:

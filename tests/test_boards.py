@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
+import store  # noqa: E402
 
 LIBRARY_BOARD = "firebeetle2-esp32s3"
 
@@ -528,6 +529,84 @@ class ABoardPointsAtItsDatasheetsLikeAPartTest(unittest.TestCase):
         board = self.board()
         board["documents"]["wroom1-v1-1"]["sha256"] = "bc430d66"
         self.assertTrue(any("documents.wroom1-v1-1" in p for p in self.problems(board)))
+
+
+# --- MVP ---
+#: A hand-made Wokwi definition (P396), not Wokwi's file: a comment, as Wokwi's own files have, and one virtual pin.
+DEFINITION = """{
+  "pins": {
+    "D0": { "x": 1, "y": 1, "target": "GPIO0" },
+    "GND": { "x": 2, "y": 1, "target": "GND" },
+    /* Virtual pins */
+    "$gpio15": { "target": "GPIO15" }
+  }
+}
+"""
+
+
+def kept_definition_board(text=DEFINITION):
+    """The XIAO record, with its Wokwi definition kept in this process's scratch store (`store.py:40-42`)."""
+    digest = store.keep(text.encode(), "wokwi-test.board.json")
+    board = boards.load(ROOT, "xiao-esp32-c6")
+    board["documents"][boards.WOKWI_DEFINITION] = dict(board["documents"][boards.WOKWI_DEFINITION],
+                                                        sha256=digest, file="wokwi-test.board.json")
+    return board
+
+
+def kept_path(board):
+    entry = board["documents"][boards.WOKWI_DEFINITION]
+    return store.place("sources") / entry["sha256"] / entry["file"]
+
+
+class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
+    """P396: the Wokwi definition that spark keeps names the GPIOs a scenario can reach, so the build says which it cannot."""
+
+    def test_the_targets_of_its_pins_are_its_gpios_with_the_comment_cut(self):
+        part = boards.read_simulated_part(kept_definition_board())
+        self.assertEqual((part.board_id, part.gpios), ("xiao-esp32-c6", frozenset({0, 15})))
+
+    def test_a_gpio_with_no_pin_has_a_reason_and_one_with_a_pin_has_none(self):
+        part = boards.read_simulated_part(kept_definition_board())
+        self.assertEqual(part.why_not_simulated(9), "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9")
+        self.assertIsNone(part.why_not_simulated(15))
+
+    def test_a_file_the_store_lacks_is_none(self):
+        board = kept_definition_board()
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        self.assertIsNone(boards.read_simulated_part(board))
+
+    def test_a_file_whose_bytes_changed_is_none(self):
+        board = kept_definition_board(DEFINITION + "\n")
+        kept_path(board).write_text(DEFINITION + "  ")
+        self.assertIsNone(boards.read_simulated_part(board))
+
+    def test_strict_json_with_a_comment_mark_inside_a_string_parses(self):
+        text = '{"pins": {"D1": {"target": "GPIO1", "note": "a /* b"}, "D2": {"target": "GPIO2", "note": "*/"}}}'
+        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({1, 2}))
+
+    def test_a_definition_that_does_not_parse_is_none(self):
+        self.assertIsNone(boards.read_simulated_part(kept_definition_board('{"pins": ')))
+
+    def test_a_definition_whose_pins_are_not_a_table_is_none_never_no_pins(self):
+        for text in ('{"pins": [1]}', '[1]', '{"name": "no pins"}'):
+            with self.subTest(text=text):
+                self.assertIsNone(boards.read_simulated_part(kept_definition_board(text)))
+
+    def test_a_target_that_is_not_ascii_digits_is_no_gpio(self):
+        text = '{"pins": {"D1": {"target": "GPIO\uff19"}, "D2": {"target": 9}, "D3": {"target": "GPIO3"}}}'
+        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({3}))
+
+    def test_only_a_whole_gpio_name_is_a_gpio(self):
+        text = '{"pins": {"A": {"target": "GPIO9x"}, "B": {"target": "XGPIO9"}, "C": {"target": "GPIO9/ADC"}, ' \
+               '"D": {"target": "GPIO5"}}}'
+        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({5}))
+
+    def test_a_definition_nested_too_deep_is_none(self):
+        self.assertIsNone(boards.read_simulated_part(kept_definition_board("[" * 100000 + "]" * 100000)))
+
+    def test_documents_that_are_not_a_table_are_none(self):
+        self.assertIsNone(boards.read_simulated_part({"id": "x", "documents": ["wokwi-board"]}))
+# --- end MVP ---
 
 
 if __name__ == "__main__":

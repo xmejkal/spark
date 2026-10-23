@@ -40,6 +40,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import boards  # noqa: E402
 import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
 
@@ -95,7 +96,7 @@ DEFAULT_ROLE_PENALTY = 5
 #: person needs to be told about. The rest are caveats that may not apply: a pin being on ADC2
 #: matters only if you wanted to read a voltage with it, and calling that "another job" when the
 #: signal is an LED is noise dressed as a warning.
-CONFLICTING_ROLES = ("console_uart", "onboard_button", "onboard_led")
+CONFLICTING_ROLES = (boards.CONSOLE_UART, boards.ONBOARD_BUTTON, boards.ONBOARD_LED)
 
 #: What one unused capability costs, in the same units as a role penalty.
 #:
@@ -414,13 +415,10 @@ def pin_module(board, assignments, source, pulled_up=()):
         if entry["signal"] in pulled_up:
             lines.append('%s_PULL = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
                          % (entry["signal"], entry["signal"]))
-    for role, name in ONBOARD_NAMES.items():
+    for role, name in boards.ONBOARD_NAMES.items():
         lines += onboard_lines(board, assignments, role, name)
     return "\n".join(lines) + "\n"
 
-
-#: The board's own parts that pins.py names, so a project with no parts can use them (P236, P353).
-ONBOARD_NAMES = {"onboard_led": "ONBOARD_LED", "onboard_button": "ONBOARD_BUTTON"}
 
 
 def onboard_lines(board, assignments, role, name):
@@ -443,7 +441,7 @@ def onboard_lines(board, assignments, role, name):
     if level is not None:
         return ["%s = %d  # %s" % (name, gpio[0], note),
                 "%s_ON = %d  # the active level in the board record, the source is on the line above" % (name, level)]
-    if role == "onboard_led":
+    if role == boards.ONBOARD_LED:
         return ["%s = %d  # %s. Its polarity is not in the board record" % (name, gpio[0], note)]
     return ["%s = %d  # %s" % (name, gpio[0], note)]
 

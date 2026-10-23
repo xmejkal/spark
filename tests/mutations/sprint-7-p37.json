@@ -26,7 +26,7 @@
  {
   "file": "scripts/check_spine.py",
   "name": "the stage stops printing what the simulation cannot show",
-  "find": "        detail += \"\\n           what it cannot show, from the records (%d):\" % len(limits)",
+  "find": "        detail += \"\\n           what it cannot show (%d):\" % len(limits)",
   "replace": "        detail += \"\""
  },
  {
