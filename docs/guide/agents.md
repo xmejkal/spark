@@ -225,7 +225,10 @@ These write:
   and each kept entry gives the refusal as its `why` (P280). A missing requirements file removes nothing.
   `check_spine.py` also writes `firmware/pins.py` (with `ONBOARD_LED` and `ONBOARD_BUTTON` when the board record names the on-board LED and button, and `ONBOARD_LED_ON` or `ONBOARD_BUTTON_ON` when it holds their `active_level`), but leaves alone one that it did not write, and merges the simulation project into `sim/`. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
-  history. Its input, the requirements file, is described on
+  history. The simulation stage's `detail` and `sim/WHAT-THIS-CANNOT-SHOW.md` list what the simulation cannot show,
+  also each on-board LED or button whose GPIO has no pin in the board's Wokwi definition (P396), such as
+  `ONBOARD_BUTTON (GPIO9)` on the XIAO ESP32-C6. Such a line names a test for the bench: a passed run never covers it.
+  Its input, the requirements file, is described on
   [`/spark:build`'s page](../../commands/build.md#the-requirements-file).
 - `check_vendor_pins.py` without `--offline`: the fetched vendor header, into `.spark/cache/` of the project that owns
   the board file (the nearest folder up holding `boards/active.json` or `.spark/`). A board file in no project is

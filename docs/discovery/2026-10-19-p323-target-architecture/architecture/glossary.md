@@ -60,6 +60,8 @@ Back to [the architecture](README.md).
 | baseline | The list of today's rule breaches. It only shrinks. |
 | golden | A file with the expected `--json` and exit code of one Operation on one fixture project. Proposed. |
 | Fake | A stand-in for a real part in tests, in `tests/fakes.py`. `Fake`, then the whole name: `FakeOutsideWorld`, `FakeFirmwarePlatform`. |
+| Wokwi definition | The kept JSON file of one Wokwi part type, a board included, a `documents` entry of its record (`wokwi-board`). Never "part", which is a part record (P396). |
+| limit | One thing that a simulation cannot show, as a component and a sentence, in the simulation stage and `sim/WHAT-THIS-CANNOT-SHOW.md` (P37, P396). |
 
 ## 2. Clashes and how they are settled
 

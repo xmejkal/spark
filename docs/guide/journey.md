@@ -361,9 +361,10 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
   [ok  ] build            9 trace(s), 0 errors, tsci 0.0.2621; the documents were measured on core 0.0.2600
   [ok  ] simulation       9 wire(s) in the diagram
-           what it cannot show, from the records (2):
+           what it cannot show, (3):
              LedRed5mm: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's
              TactileButton: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled
+             onboard GPIOs: not checked: the board record names no Wokwi definition
 
   the chain runs end to end
 ```
@@ -848,10 +849,11 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
   [ok  ] footprint        FireBeetle2Esp32S3.tsx
   [ok  ] build            19 trace(s), 0 errors, tsci 0.0.2621; the documents were measured on core 0.0.2600
   [ok  ] simulation       17 wire(s) in the diagram, 1 chip(s): 0 compiled, 1 reused
-           what it cannot show, from the records (3):
+           what it cannot show (4):
              BtnMode, BtnOpen: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled
              JstPh2PowerInlet: not simulated at all: a connector is wiring, not a part to simulate; the simulator powers the board itself
              L9110sModule: one channel: reads IA/IB and prints MOTOR: opening/closing/stopped; models no current, so a stall cannot be simulated
+             onboard GPIOs: not checked: the board record names no Wokwi definition
 
   the chain runs end to end
 ```

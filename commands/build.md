@@ -52,6 +52,13 @@ on-board button. `ONBOARD_LED_ON` gives the level that lights the LED, and `ONBO
 when the record holds it (`active_level`). An empty `parts`
 list without `board_only` still stops at the parts stage.
 
+The simulation stage also reads the board's Wokwi definition: the JSON file of the Wokwi part type, which spark keeps in
+its store under the sha256 that the board record names (P396). Each on-board LED or button whose GPIO has no pin in it is
+one more line of what the simulation cannot show, in the stage and in `sim/WHAT-THIS-CANNOT-SHOW.md`. On the XIAO
+ESP32-C6 this is `ONBOARD_BUTTON (GPIO9): the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9, so spark knows no
+way for a scenario to press it. Test it on the board.` A record that names no definition, or one the store lacks, says
+`onboard GPIOs: not checked`. Each line is said, and the stage stays `ok`.
+
 `parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, the
 parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack, and keeps every other
 key you added by hand (`signals`).
