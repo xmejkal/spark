@@ -130,10 +130,10 @@ DEFINITION_NOT_KEPT = ("not checked: spark's store lacks the Wokwi definition th
 
 def onboard_limits(board):
     """
-    The board's own LED and button that the board's Wokwi definition gives no pin, as limits (P396). Walk 2 picked the
-    XIAO's BOOT button on GPIO9, and the simulation passed with the must line untested, because Wokwi's XIAO has no pin
-    there. A record that cannot be compared says "not checked", in the list and never as a failure: it is what the
-    build did not look at, as a stand-in's sentence is what the simulation cannot show (P37).
+    The board's own LED and button that its Wokwi definition gives no pin, as (component, sentence) limits (P396).
+    Spark knows no way for a scenario to reach them, so a passed run does not test them. A board with no onboard LED
+    or button gives []. A record that cannot be compared says "not checked", in the list and never as a failure: it is
+    what the build did not look at, as a stand-in's sentence is what the simulation cannot show (P37).
     """
     pin_roles = board.get("pin_roles") if isinstance(board.get("pin_roles"), dict) else {}
     roles = [(role, pin_roles[role]) for role in boards.ONBOARD_NAMES if isinstance(pin_roles.get(role), dict)]
