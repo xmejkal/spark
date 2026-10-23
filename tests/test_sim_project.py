@@ -298,6 +298,12 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         kept_path(board).write_text(DEFINITION_CHANGED + " ")
         self.assertEqual([component for component, _ in sim_project.onboard_limits(board)], ["onboard GPIOs"])
 
+    def test_each_gpio_of_a_role_with_no_pin_is_its_own_limit(self):
+        board = kept_definition_board()
+        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = [9, 3]
+        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)],
+                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_BUTTON (GPIO3)"])
+
     def test_a_gpio_that_is_not_a_number_is_skipped_never_raised(self):
         board = kept_definition_board()
         board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = ["9", None, True]

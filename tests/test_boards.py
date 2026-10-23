@@ -596,6 +596,11 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
         text = '{"pins": {"D1": {"target": "GPIO\uff19"}, "D2": {"target": 9}, "D3": {"target": "GPIO3"}}}'
         self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({3}))
 
+    def test_only_a_whole_gpio_name_is_a_gpio(self):
+        text = '{"pins": {"A": {"target": "GPIO9x"}, "B": {"target": "XGPIO9"}, "C": {"target": "GPIO9/ADC"}, ' \
+               '"D": {"target": "GPIO5"}}}'
+        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({5}))
+
     def test_a_definition_nested_too_deep_is_none(self):
         self.assertIsNone(boards.read_simulated_part(kept_definition_board("[" * 100000 + "]" * 100000)))
 
