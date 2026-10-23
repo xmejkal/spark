@@ -83,7 +83,7 @@ Only `--json` said "simulation: passed" (refuter K20), and the card's title cove
 > Idea I5 from the walk: each scenario names the must line that it tests. The verdict then names each must line that no scenario tested. For walk 2, that line is "Pressing the button lights the LED". The PO on 2026-10-23, verbatim: "yes please, go on, note it and we can create the cards after the run". This comment puts I5 on this card, so the board holds no second card for it. The title covers I5, and the body does not yet. Related: P396 (#512), which names each onboard GPIO that the Wokwi definition has no pin for.
 >
 > The P400 council proposes two PRs (`docs/observations/2026-10-23-p400-walk2-council/plan.md`). PR 1: the run log header counts the steps by kind, copies `sim/WHAT-THIS-CANNOT-SHOW.md` and writes its time with the zone (G25). A passed run that set no control sets `PassedRunEvidence.caveat`: "the passed run set no control: it tested that the firmware starts". The text look prints the simulation line too. `agents.md` gets an eighth "never assume" item: a passed run tested what its scenario asserts, and nothing more. PR 2 (I5): a `Brief` Value reads the must lines. A must line that no scenario names becomes a note in the look and a line in the question, never an `unchecked` item. PR 2 plans how a scenario names its must line, because nobody checked whether wokwi-cli takes an unknown key.
-## N1 (bug, parent P100 #6): P? — the yes before an erase does not name what the erase replaces → the look and the deploy question name the last deploy from the board's store record
+## N1 (bug, parent P100 #6): P401 (#518) — the yes before an erase does not name what the erase replaces → the look and the deploy question name the last deploy from the board's store record
 From: AI 1, UX 8, product 16. Today a `DeployEntry` Value sits beside the store record code of `scripts/board_facts.py`, and it moves into P391's `DeployedStore`.
 ### Needed by
 Walk 2, step 12, 06:52 to 06:55 on 2026-10-23 (G29). The question names what it writes, not what it replaces (`scripts/deploy_gate.py:100`). Claude said three times that the erase replaces reaction-game's firmware (O14, refuter A4). The store record lists 17 deploys to this board: 12 blink-c6, 4 button-light and 1 walk2, none from reaction-game (refuter A3). The last one before walk 2 was blink-c6, at 2026-10-19 09:24 +02:00 (refuter U4). So a yes to an erase that cannot be undone came after a wrong claim, and spark held the fact.
@@ -91,14 +91,14 @@ Walk 2, step 12, 06:52 to 06:55 on 2026-10-23 (G29). The question names what it 
 - `look.py` prints `last deploy here: blink-c6, 2026-10-19 09:24 +02:00 (spark's store record, not read from the board)`, and `--json` adds `data.last_deploy`. The question before the erase says "spark last put blink-c6 on it".
 - A board with no store record prints `no spark deploy recorded`. A stored time with no zone prints as stored, with `zone not stored`.
 - The bench goldens are accepted with the reason (P323 invariant 1). The deploy page and `docs/guide/agents.md` show the line, and G27's two sentences on `--port` ride in this PR.
-## N2 (story, parent P100 #6): P? — the goal in the brief never reaches idea → idea starts from the brief's goal and must lines, and asks only for a null one
+## N2 (story, parent P100 #6): P402 (#519) — the goal in the brief never reaches idea → idea starts from the brief's goal and must lines, and asks only for a null one
 From: product 1 and 10, AI 14. G4, G5 and G21 stay rows.
 ### Needed by
 Walk 2, stall S1, 21:05 to 21:13 on 2026-10-22 (G6). The goal went into `.spark/project.json`, and the person expected idea to run from it. No script reads the goal, and the idea page does not name the brief. P100's body files each stall as a card (refuter P1), and the next walk meets S1 at its second step.
 ### Done when
 - The idea page's first step reads `goal` and `must` from `.spark/project.json`, and asks only for a null one. The docs check passes.
 - The next walk's idea step asks for no answer that the brief holds. Docs only: it can ride in P389's PR, which edits the same page.
-## N3 (story, parent P100 #6): P? — `--match` shows a held board as "free 0" and names no holder → `--match` names the holder, and the `--pick` dry run says that one refusal stops every pick
+## N3 (story, parent P100 #6): P403 (#520) — `--match` shows a held board as "free 0" and names no holder → `--match` names the holder, and the `--pick` dry run says that one refusal stops every pick
 From: product 11, UX 9. Today the change sits in the `--match` and `--pick` output of `parts.py`, which P323's stage 5 moves behind `DrawerService`.
 ### Needed by
 Walk 2, stall S2, from 21:16 on 2026-10-22 (G10, G11). `--match` showed the XIAO as "free 0" and named no holder. Only the `--pick` dry run named reaction-game, and it marked the button's line "refused, not written", though only the XIAO was held. reaction-game holds the XIAO again since 21:30, and P325 (#417) plans more walks with the XIAO.
@@ -111,14 +111,16 @@ Walk 2, stall S2, from 21:16 on 2026-10-22 (G10, G11). `--match` showed the XIAO
 |---|---|---|---|---|
 | 1 | P396 | the limit at the build | the PO's ask, with no new data and no paid run | S |
 | 2 | P345, PR 1 | steps, limits and a zone in the run log, a caveat in the look and the question, `agents.md` item 8 | the harm of S3: a passed run reads as a tested press | S |
-| 3 | N1 | the last deploy before an erase | a step that cannot be undone. It edits the same look and question, so it follows 2 | S |
-| 4 | N2 | idea starts from the brief | the next walk meets S1 first. Docs only | XS |
-| 5 | N3 | the holder at `--match` | the next walk with the XIAO meets S2 at the pick | S |
+| 3 | N1, P401 (#518) | the last deploy before an erase | a step that cannot be undone. It edits the same look and question, so it follows 2 | S |
+| 4 | N2, P402 (#519) | idea starts from the brief | the next walk meets S1 first. Docs only | XS |
+| 5 | N3, P403 (#520) | the holder at `--match` | the next walk with the XIAO meets S2 at the pick | S |
 | 6 | P399 | the id check, then the dry run | free, and Claude writes the scenarios | S, two PRs |
 | 7 | P397 | the note at the pick | waits on P389, in Ready, and on P396 | S |
 | 8 | P345, PR 2 | I5: must lines that no scenario names | needs `Brief` and a way for a scenario to name its must line | M |
 
 The first slice is P396 alone. On walk 2's project it prints the line and writes the file, with no paid run, no board and no new data. Ready holds 4 of 5 (refuter P6), so P396 takes the fifth place.
+
+The PO's order of Ready on 2026-10-23, as the session spark-51 relayed it: P396 (#512), P345 (#440) PR 1, P401 (#518), P389 (#504) with P402 (#519) in its PR, and P374 (#479). P403 (#520) waits in Idea, and P384 (#493) and P390 (#505) went back to Idea.
 ## The refactor plans
 ### P323, `docs/discovery/2026-10-19-p323-target-architecture/architecture/refactor-plan.md`
 - The firmware port has `prepare` and `run` only (`docs/discovery/2026-10-19-p323-target-architecture/architecture/areas/firmware.md:39`, R1). It models how to run a simulator, not what the simulator models of a board. Change: the records area's new names add `SimulatedPart` and `read_simulated_part`, and the firmware page says that the engine takes them from records. No new port method until a second engine exists (refuter D3).
@@ -159,4 +161,4 @@ classDiagram
 ```
 ## Waits on the PO
 - The new bodies of P396, P397 and P399, the merge of P398 into P399 and the new comment on P345 (#440) went live on 2026-10-23. He confirms them, or GitHub's history brings the old text back.
-- His OK for N1, N2 and N3, and for P396 as Ready's fifth card.
+- Done on 2026-10-23: the PO said yes to N1, N2 and N3 and put P396 first in Ready, as the session spark-51 relayed it.

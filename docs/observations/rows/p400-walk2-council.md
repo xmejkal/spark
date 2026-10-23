@@ -2,6 +2,8 @@
 
 Findings of the P400 council on walk 2's cards (2026-10-23, Prague). Six agents on Sonnet 5.5: technology, product, architecture, AI, UX and the predictions scorer. The refuter and the synthesis on Opus 5.5. The plan is `docs/observations/2026-10-23-p400-walk2-council/plan.md`.
 
+The council's new cards: N1 is P401 (#518), N2 is P402 (#519) and N3 is P403 (#520), filed on 2026-10-23 by the session spark-51. A lens's own number, such as "architecture N1", names a proposal in that lens's report.
+
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
 | 1 | G1: `check_all.py` labels the 4 skipped checks "not asked for", though nothing is built yet | diary G1, product 13, UX 12 | raised | `scripts/check_spine.py:547` gives another reason for the same word. Rides in P118 (#52)'s PR |
