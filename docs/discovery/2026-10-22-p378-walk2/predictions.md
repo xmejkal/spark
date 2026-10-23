@@ -57,31 +57,34 @@ outside spark.
 
 ## 3. Score after the walk
 
-Scored by someone who did not write the predictions.
+Scored by someone who did not write the predictions. A Sonnet 5.5 agent scored them for P400 (#516) on 2026-10-23,
+from walk 2's diary and files. The full evidence is in
+`docs/observations/2026-10-23-p400-walk2-council/predictions-score.md`. Of 21: 9 held, 3 did not hold, 4 partly held
+and 5 were not tested.
 
 | # | held / did not hold | evidence |
 | --- | --- | --- |
-| 1 | | |
-| 2 | | |
-| 3 | | |
-| 4 | | |
-| 5 | | |
-| 6 | | |
-| 7 | | |
-| 8 | | |
-| 9 | | |
-| 10 | | |
-| 11 | | |
-| 12 | | |
-| 13 | | |
-| 14 | | |
-| 15 | | |
-| 16 | | |
-| 17 | | |
-| 18 | | |
-| 19 | | |
-| 20 | | |
-| 21 | | |
+| 1 | held | Diary 20:54: init wrote every file, and nothing stalled. |
+| 2 | partly | `--match` offered no board LED (G7), but the pick gave "light" to the board. |
+| 3 | held | G7: `--match` offered neither the board's LED nor its BOOT button. |
+| 4 | did not hold | `--requirements` wrote `"board_only": true` (O6). P387 (PR #503) merged after the map. |
+| 5 | not tested | The walk's file held `board_only` from the start. |
+| 6 | held | Diary 21:28: the build wrote no sheet, no page and no `dist/`. |
+| 7 | partly | `pins.py` holds the three names, and also `ONBOARD_BUTTON_ON = 0` (P388). |
+| 8 | did not hold | `firmware/light.py` reads `pins.ONBOARD_BUTTON_ON` (O10). P388 (PR #500) merged after the map. |
+| 9 | held | Diary 01:15: `import_firmware.py` printed "ok" at the first run. |
+| 10 | held | Diary 20:55 and 21:30: vendor-truth passed, and four checks were "not asked for". |
+| 11 | did not hold | The Wokwi run happened and passed (diary 01:15), but it pressed no button. |
+| 12 | held | The scenario waits only for "ready", and no step reads GPIO15. |
+| 13 | held | Diary 06:52: the chip and the flash were "same", with no warnings. |
+| 14 | partly | "ready seen" after one refused try (S4), but the log says `simulation: passed`, not `none`. |
+| 15 | held | Diary 06:55: the person pressed B and said "Done, it works". |
+| 16 | not tested | No diary row has a press of B during a restart. |
+| 17 | not tested | Nobody asked for a second LED. |
+| 18 | not tested | It depends on 17. |
+| 19 | not tested | No rebuild ran. |
+| 20 | held | At least three steps ran outside spark (G4, G23, and the GitHub look at 06:44). |
+| 21 | partly | Three sittings of 36, 4 and 11 minutes, but the wall clock ran 601 minutes. |
 
 ## 4. Gaps and smallest fixes (proposals, not filed)
 
