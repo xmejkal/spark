@@ -40,6 +40,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import boards  # noqa: E402
 import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
 
@@ -419,8 +420,7 @@ def pin_module(board, assignments, source, pulled_up=()):
     return "\n".join(lines) + "\n"
 
 
-#: The board's own parts that pins.py names, so a project with no parts can use them (P236, P353).
-ONBOARD_NAMES = {"onboard_led": "ONBOARD_LED", "onboard_button": "ONBOARD_BUTTON"}
+ONBOARD_NAMES = boards.ONBOARD_NAMES  # P396: the record's vocabulary lives in boards.py
 
 
 def onboard_lines(board, assignments, role, name):

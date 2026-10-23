@@ -24,9 +24,11 @@ nobody has verified, and it is better to say so than to either block that work o
 unverified footprint reach a gerber.
 """
 
+import hashlib
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import store
@@ -314,6 +316,60 @@ class ButtonPlaces:
 
 
 ButtonPlaces.EMPTY = ButtonPlaces()
+
+
+# --- MVP ---
+#: The board's own parts that pins.py names, so a project with no parts can use them (P236, P353). Here, beside the
+#: record, because the build reads them too (P396) and the pick will (P397), and neither imports the pin map.
+ONBOARD_NAMES = {"onboard_led": "ONBOARD_LED", "onboard_button": "ONBOARD_BUTTON"}
+
+#: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
+WOKWI_DEFINITION = "wokwi-board"
+
+_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+_GPIO = re.compile(r"GPIO(\d+)")
+
+
+@dataclass(frozen=True)
+class SimulatedPart:
+    """Value: what a simulator models of one part type, a board included: the GPIOs that its pins target (P396)."""
+
+    board_id: str
+    gpios: frozenset
+
+    def why_not_simulated(self, gpio):
+        """Why a scenario cannot reach this GPIO, or None when a pin of the definition targets it."""
+        if gpio in self.gpios:
+            return None
+        return "the Wokwi definition of %s has no pin on GPIO%d" % (self.board_id, gpio)
+
+
+def read_simulated_part(board):
+    """
+    The board's Wokwi definition, kept in the store under the sha256 its record names, as a SimulatedPart. None when the
+    file is missing, its bytes changed, or it does not parse. The caller asks first whether the record names one.
+    Wokwi's own files hold `/* */` comments, so they are cut only when strict JSON fails: a string may hold a `/*`.
+    """
+    entry = (board.get("documents") or {}).get(WOKWI_DEFINITION) or {}
+    try:
+        payload = (store.place("sources") / entry["sha256"] / entry["file"]).read_bytes()
+    except (KeyError, TypeError, OSError):
+        return None
+    if hashlib.sha256(payload).hexdigest() != entry["sha256"]:
+        return None
+    text = payload.decode("utf-8", "replace")
+    try:
+        definition = json.loads(text)
+    except ValueError:
+        try:
+            definition = json.loads(_COMMENT.sub("", text))
+        except ValueError:
+            return None
+    pins = definition.get("pins") if isinstance(definition, dict) else None
+    targets = [pin.get("target") for pin in pins.values() if isinstance(pin, dict)] if isinstance(pins, dict) else []
+    gpios = frozenset(int(match.group(1)) for match in (_GPIO.fullmatch(str(target)) for target in targets) if match)
+    return SimulatedPart(board.get("id") or "", gpios)
+# --- end MVP ---
 
 
 def resolve(project: Path) -> Path:

@@ -535,7 +535,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # required to carry this sentence and no command printed one, so a green scenario read exactly
     # like a bench result (backlog P37). It goes beside the diagram as well, because the terminal
     # gets closed and the sim directory is what somebody opens a week later.
-    limits = sim_project.write_limits(sim_dir, loaded)
+    limits = sim_project.write_limits(sim_dir, loaded, board)
     return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)))]
 
 
@@ -555,7 +555,10 @@ def board_alone(board, workdir, firmware=None):
                "parts": [{"type": board["wokwi_part_type"], "id": "mcu", "top": 0, "left": 0, "attrs": {}}],
                "connections": []}
     (sim_dir / "diagram.json").write_text(json.dumps(diagram, indent=2) + "\n")
-    return skipped + [Stage("simulation", OK, "the board alone, " + simulation_detail(0, {}, 0, (), serial_wired(diagram)))]
+    # P396: the board's own LED and button that its Wokwi definition gives no pin. A "not checked" among them stays a
+    # limit in an ok stage, as every limit does (P37), and never a could-not-run: the board alone did simulate.
+    limits = sim_project.write_limits(sim_dir, None, board)
+    return skipped + [Stage("simulation", OK, "the board alone, " + simulation_detail(0, {}, 0, limits, serial_wired(diagram)))]
 
 
 def simulation_detail(wires, staged, compiled, limits, serial=True):
@@ -574,7 +577,7 @@ def simulation_detail(wires, staged, compiled, limits, serial=True):
         detail += ("\n           no serial monitor is wired in the diagram (a board part with no pins named TX and RX, or "
                    "a project's own converter older than P190), so a scenario's wait-serial may hear nothing")
     if limits:
-        detail += "\n           what it cannot show, from the records (%d):" % len(limits)
+        detail += "\n           what it cannot show (%d):" % len(limits)
         for component, sentence in limits:
             detail += "\n             %s: %s" % (component, sentence)
     return detail

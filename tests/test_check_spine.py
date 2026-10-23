@@ -19,6 +19,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import threading
@@ -1171,6 +1172,28 @@ class TheBoardAloneTest(unittest.TestCase):
         self.assertEqual([part["type"] for part in diagram["parts"]], ["board-xiao-esp32-c6"])
         self.assertTrue((workdir / "sim" / "wokwi.toml").is_file())
         self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_OK)
+
+    # --- MVP ---
+    def test_the_board_alone_names_the_button_no_scenario_can_press(self):
+        from test_boards import kept_definition_board
+        workdir = Path(tempfile.mkdtemp())
+        stages = check_spine.board_alone(kept_definition_board(), workdir)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.OK))
+        self.assertIn("ONBOARD_BUTTON (GPIO9): the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9", stages[-1].detail)
+        self.assertIn("ONBOARD_BUTTON (GPIO9)", (workdir / "sim" / "WHAT-THIS-CANNOT-SHOW.md").read_text())
+        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_OK)
+
+    def test_a_definition_not_checked_is_said_in_json_and_still_exits_0(self):
+        # The suite's scratch store holds no Wokwi definition, so the library XIAO's line is "not checked".
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "board_only": True}))
+        done = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_spine.py"), str(workdir / "requirements.json"),
+                               "--json"], capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        simulation = json.loads(done.stdout)["stages"][-1]
+        self.assertEqual(simulation["status"], "ok")
+        self.assertIn("onboard GPIOs: not checked: spark's store lacks the Wokwi definition", simulation["detail"])
+    # --- end MVP ---
 
     def test_the_verdict_says_the_board_alone_ran(self):
         _, stages = self.run_alone()

@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import sim_project  # noqa: E402
+from test_boards import kept_definition_board  # noqa: E402
 
 FakeDesign = namedtuple("FakeDesign", "parts project board", defaults=(None,))
 
@@ -257,6 +258,65 @@ class WokwiCliComesFromTheToolsListTest(unittest.TestCase):
             staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim")
         self.assertIn("SENTENCE FROM THE LIST", problems[0])
         self.assertIn("needs no account", problems[0])
+
+# --- MVP ---
+class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
+    """P396: an onboard GPIO with no pin in the board's Wokwi definition is a limit, in the build and in the note."""
+
+    BUTTON = ("ONBOARD_BUTTON (GPIO9)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9, so spark knows no "
+                                        "way for a scenario to press it. Test it on the board.")
+
+    def test_the_button_with_no_pin_is_a_limit_and_the_led_with_one_is_not(self):
+        self.assertEqual(sim_project.onboard_limits(kept_definition_board()), [self.BUTTON])
+
+    def test_an_led_with_no_pin_is_one_no_scenario_can_read(self):
+        board = kept_definition_board()
+        board["pin_roles"]["onboard_led"]["gpio"] = [3]
+        self.assertIn(("ONBOARD_LED (GPIO3)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark "
+                                              "knows no way for a scenario to read it. Test it on the board."),
+                      sim_project.onboard_limits(board))
+
+    def test_a_record_that_names_no_definition_says_not_checked(self):
+        board = kept_definition_board()
+        del board["documents"]["wokwi-board"]
+        self.assertEqual(sim_project.onboard_limits(board),
+                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
+
+    def test_a_definition_the_store_lacks_says_not_checked(self):
+        board = kept_definition_board()
+        board["documents"]["wokwi-board"]["file"] = "absent.board.json"
+        self.assertEqual(sim_project.onboard_limits(board),
+                         [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
+                                            "record names, or its sha256 differs")])
+
+    def test_a_board_with_no_onboard_role_says_nothing(self):
+        board = kept_definition_board()
+        for role in ("onboard_led", "onboard_button"):
+            del board["pin_roles"][role]
+        del board["documents"]["wokwi-board"]
+        self.assertEqual(sim_project.onboard_limits(board), [])
+
+    def test_a_role_with_no_gpio_list_says_nothing(self):
+        board = kept_definition_board()
+        board["pin_roles"]["onboard_button"] = {"note": "somewhere"}
+        self.assertEqual(sim_project.onboard_limits(board), [])
+
+    def test_the_note_holds_the_records_lines_and_the_boards(self):
+        work = Path(tempfile.mkdtemp())
+        design = FakeDesign([{"id": "valve", "name": "Valve",
+                              "simulation": {"wokwi": {"part": "wokwi-led", "stand_in": "an LED"}}}], None)
+        said = sim_project.write_limits(work, design, kept_definition_board())
+        self.assertEqual(said, [("Valve", "an LED"), self.BUTTON])
+        note = (work / "WHAT-THIS-CANNOT-SHOW.md").read_text()
+        self.assertIn("an LED", note)
+        self.assertIn("no pin on GPIO9", note)
+
+    def test_with_no_design_the_note_holds_the_boards_lines(self):
+        work = Path(tempfile.mkdtemp())
+        self.assertEqual(sim_project.write_limits(work, None, kept_definition_board()), [self.BUTTON])
+        self.assertIn("ONBOARD_BUTTON (GPIO9)", (work / "WHAT-THIS-CANNOT-SHOW.md").read_text())
+# --- end MVP ---
+
 
 if __name__ == "__main__":
     unittest.main()
