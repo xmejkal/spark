@@ -38,20 +38,20 @@ Findings of the P400 council on walk 2's cards (2026-10-23, Prague). Six agents 
 | 32 | AI N3: a spark command checks the LED after press and release | ai.md | rejected | refuter D1: `scrum/VISION.md:70`, spark writes no behaviour (P56). A version with steps that Claude writes fits `scrum/VISION.md:31`: row 74 |
 | 33 | P396: "So no scenario can press the button" | card #512 | acted | refuter K4: it rests on the JSON alone. P396's line says "spark knows no way for a scenario to press it" |
 | 34 | P396: a test reads the definition that the store keeps | card #512 | acted | refuter K6: tests set a scratch store (`scripts/store.py:40-42`). The test keeps a hand-made fixture there |
-| 35 | P396 to P399: the PO's words at "06:44 CEST" | cards #512 to #515 | raised | refuter K7: verbatim, typed at 06:41:52. The cards keep 06:44 word for word. Waits on the PO |
+| 35 | P396 to P399: the PO's words at "06:44 CEST" | cards #512 to #515 | acted | refuter K7: verbatim, typed at 06:41:52. P396, P397, P399 and the walk 2 diary now say 06:41. P398 is closed and keeps its text |
 | 36 | P397: `--match` says it | card #513 | acted | refuter K11: `--match` does not offer the XIAO for press before P389. P397 waits on P389 |
 | 37 | P397: a tactile button on a header pad is the other choice | card #513 | acted | refuter K12: the PO's XIAO has no soldered pins (#506). The bench comes first |
 | 38 | P398: a scenario's names exist "but no file lists them" | card #514 | acted | refuter K14: `sim/diagram.json` lists ids and wired pins, and only controls are missing. P398 merges into P399 |
 | 39 | I5: "The look then said simulation: passed" | #440 comment | acted | refuter K20: only `--json` says it. The new comment says so, and P345 PR 1 adds the text line |
 | 40 | I5: P345 "covers it" | #440 comment, diary 07:44 | acted | refuter K22: the title does, and the body does not. The new comment says so |
-| 41 | a grep of `boards/*.json` finds one `wokwi-board` | technology 6 | acted | refuter T6: two files, and the FireBeetle hit is prose. P396 prints "not checked" for a board with no kept definition |
+| 41 | a grep of `boards/*.json` finds one `wokwi-board` | technology 2 | acted | refuter T6: two files, and the FireBeetle hit is prose. P396 prints "not checked" for a board with no kept definition |
 | 42 | Claude said "replaces reaction-game's firmware" twice | AI 1 | acted | refuter A4: three times, the first at 21:33 on 2026-10-22. N1 says three |
 | 43 | G18's cause is the CLI version | AI 7 | raised | refuter A5: `commands/build.md:276` dates the change to CLI 0.28.0, and the log shows API `1.0.0-20261022`. Row 18 |
 | 44 | the cards extend `SimulationEngine`, `SimulationStage`, `NeedsService` and `FakeSimulationEngine` | architecture 1 to 4 | acted | refuter R3: none exists. plan.md names today's module and the later class for each card |
 | 45 | P391 puts P389 in stage 4 | architecture 3 | acted | refuter R5: stage 4 waits for P389 (`docs/discovery/2026-10-22-p391-boards-as-modules/design.md:243`). P389 is in Ready |
 | 46 | "usable" at `assign_pins.py:57` | architecture, names | acted | refuter R8: the word is "unusable". plan.md uses neither |
-| 47 | G25 rides on P345 | product 5 | acted | refuter P5: #440 said nothing on zones. P345 PR 1 names it now |
-| 48 | the PO's pin words, "comment on #6, 2026-10-22 16:17" | product 7 | raised | refuter P7: 16:17:07Z is 18:17 CEST. A cited time carries its zone |
+| 47 | G25 rides on P345 | product 14 | acted | refuter P5: #440 said nothing on zones. P345 PR 1 names it now |
+| 48 | the PO's pin words, "comment on #6, 2026-10-22 16:17" | product 5 | raised | refuter P7: 16:17:07Z is 18:17 CEST. A cited time carries its zone |
 | 49 | P137 is parked | product 12 | raised | refuter P10: `scrum/STORY_MAP.md:38` names P137, and "parked" is not checked |
 | 50 | UX N3, a bench result, is a new card | UX | acted | refuter U7: P374 (#479) in Ready is related. Row 75 |
 | 51 | `SparkBenchEngine` gives its own table | architecture | acted | refuter D3: no card needs a second engine now (`scrum/VISION.md:75`). plan.md adds no port method |
@@ -98,3 +98,4 @@ Findings of the P400 council on walk 2's cards (2026-10-23, Prague). Six agents 
 | 92 | P323's invariant 1 names `tests/golden.py`, and the repo has `tests/golden_bench.py` | synthesis | raised | my `ls` of `tests/`. plan.md, the refactor plans |
 | 93 | no refactor plan names a `FakeSimulationEngine` | synthesis | verified | my grep of `docs/discovery`, `scripts` and `tests`: 0 hits |
 | 94 | the push hook printed "009f0db as committed" while it pushed 3580c4e, because commits landed during the push | process, P400 | raised | the push hook's own output |
+| 95 | The docs review (Sonnet 5.5): plan.md lagged the live cards, a wrong line for `ProjectCase.setUp`, three lens numbers, `limits_for`, the P323 glossary's "tested", and P398's close comment | review | acted | each fixed on 2026-10-23. `ProjectCase.setUp` is at `tests/test_run_scenario.py:100-104`. The review sent the diagram's text to mermaid.ink to parse it. Its doubt on row 94 is rejected: the hook printed 009f0db while it pushed 3580c4e |

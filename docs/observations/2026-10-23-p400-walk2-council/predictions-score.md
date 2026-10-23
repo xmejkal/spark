@@ -5,7 +5,7 @@
 > The map named 1 of the walk's 4 stalls. The Wokwi run it ruled out did happen, and that run pressed no button.
 
 Scored by a scorer who did not write them (Sonnet 5.5, 2026-10-23). The predictions are in
-`docs/discovery/2026-10-22-p378-walk2/predictions.md`. Its section 3 holds an empty score table, and this page does not fill it.
+`docs/discovery/2026-10-22-p378-walk2/predictions.md`. Its section 3 now holds the short form of this score.
 The evidence is walk 2's diary and the files in `/Users/petr/Development/spark-walks/walk2`. All times are Prague time.
 Verdicts: hit, miss, partly, not tested. The mark is the page's own: M means measured, E means expected.
 
