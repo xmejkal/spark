@@ -23,3 +23,6 @@ tests, architecture and naming and UX), then one Opus 5.5 refuter.
 | 16 | Tests compare the printed English sentences | PR review | rejected | the printed words are the output under test, and `tests/test_self_confirmation.py` requires literals there. The code decides by constants |
 | 17 | The FireBeetle example at `commands/build.md:141` shows no limits, though a chip and the onboard roles give some | PR review | raised | older than this PR (the chip's stand-in line was missing before). A docs card |
 | 18 | The glossary has no entry for the new words | PR review | rejected | `glossary.md:63-64` holds "Wokwi definition" and "limit" |
+| 19 | Mutation run 1, on a tree before d78718b: 12 planted, 10 caught. `GPIO9x` counted as GPIO9, and only the first GPIO of a role was read | mutation run | acted | `test_only_a_whole_gpio_name_is_a_gpio`, `test_each_gpio_of_a_role_with_no_pin_is_its_own_limit`, each checked by planting the defect by hand |
+| 20 | Mutation run 2, on 642ea03: 18 planted, 17 caught. A default for `board` in `write_limits` escaped | mutation run | acted | `test_the_board_cannot_be_left_out` |
+| 21 | `onboard_limits` read `documents` as a table where the reader guards it, so a list said "store lacks" | prune sweep | acted | the same guard, and `test_documents_that_are_not_a_table_name_no_definition` |

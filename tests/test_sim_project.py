@@ -331,6 +331,17 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         self.assertIn("an LED", note)
         self.assertIn("no pin on GPIO9", note)
 
+    def test_the_board_cannot_be_left_out(self):
+        # No test reaches the full build's simulation stage, so a call that drops the board must fail at once (P396).
+        with self.assertRaises(TypeError):
+            sim_project.write_limits(Path(tempfile.mkdtemp()), None)
+
+    def test_documents_that_are_not_a_table_name_no_definition(self):
+        board = kept_definition_board()
+        board["documents"] = ["wokwi-board"]
+        self.assertEqual(sim_project.onboard_limits(board),
+                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
+
     def test_with_no_design_the_note_holds_the_boards_lines(self):
         work = Path(tempfile.mkdtemp())
         self.assertEqual(sim_project.write_limits(work, None, kept_definition_board()), [self.BUTTON])

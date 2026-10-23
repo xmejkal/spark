@@ -139,7 +139,8 @@ def onboard_limits(board):
     roles = [(role, pin_roles[role]) for role in boards.ONBOARD_NAMES if isinstance(pin_roles.get(role), dict)]
     if not roles:
         return []
-    if boards.WOKWI_DEFINITION not in (board.get("documents") or {}):
+    documents = board.get("documents") if isinstance(board.get("documents"), dict) else {}
+    if boards.WOKWI_DEFINITION not in documents:
         return [(ONBOARD_GPIOS, NO_DEFINITION_NAMED)]
     part = boards.read_simulated_part(board)
     if part is None:
