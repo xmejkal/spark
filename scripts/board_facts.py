@@ -7,11 +7,13 @@ image's sha256, each file's sha256 and what tested the image (`simulation`). In 
 its MAC, with each deploy, its verdict, its simulation and whose yes it was.
 """
 
+import datetime
 import hashlib
 import json
 import tempfile
 from pathlib import Path
 
+import board_grant
 import store
 from board_connection import BoardUnreachableError, BoardCodeError
 
@@ -73,3 +75,73 @@ def record_deploy(facts, verdict, who):
         record["deploys"].append(deploy)
         store.write_json("boards", key, record)
     return path
+
+
+# --- MVP ---
+#: What the store says of the board on USB (LastDeploy.state): a deploy is recorded, none is, or spark did not check.
+RECORDED, NONE_RECORDED, NOT_CHECKED = "recorded", "none-recorded", "not-checked"
+WHY_NO_MAC = "the board's MAC was not read"
+WHY_UNREADABLE = "spark's record of it cannot be read"
+ZONE_NOT_STORED = "(zone not stored)"
+
+
+class LastDeploy:
+    """Value. What spark's store says of the board on USB. `project`, `verdict` and `deployed` are as `record_deploy` stored
+    them, with RECORDED. `why` is the reason, with NOT_CHECKED. The rest are None."""
+
+    def __init__(self, state, project=None, verdict=None, deployed=None, why=None):
+        self.state, self.project, self.verdict, self.deployed, self.why = state, project, verdict, deployed, why
+
+    def time_said(self):
+        """The stored time. With a zone it is said in the machine's zone. With none it is as stored, and says so,
+        because a zone is never given to a time that has none. A time that does not parse is as stored."""
+        try:
+            moment = datetime.datetime.fromisoformat(self.deployed)
+        except ValueError:
+            return self.deployed
+        if moment.tzinfo is None:
+            return "%s %s" % (self.deployed, ZONE_NOT_STORED)
+        return board_grant.say_in_local_zone(self.deployed)
+
+    def line(self):
+        """The look's line."""
+        if self.state == RECORDED:
+            said = "%s, %s, %s (its store record, not read from the board)" % (self.project, self.verdict, self.time_said())
+        elif self.state == NONE_RECORDED:
+            said = "none in its store record (it keeps only its own deploys)"
+        else:
+            said = "not checked: %s" % self.why
+        return "spark's last deploy here: " + said
+
+    def in_question(self):
+        """The words the deploy question puts in its erase sentence."""
+        if self.state == RECORDED:
+            return "spark's store record names %s as its last deploy here, %s, %s" % (self.project, self.time_said(), self.verdict)
+        if self.state == NONE_RECORDED:
+            return "spark's store record names no deploy here"
+        return "spark did not read its record of this board: %s" % self.why
+
+    def to_dict(self):
+        return {"state": self.state, "why": self.why, "project": self.project, "verdict": self.verdict,
+                "deployed": self.deployed}
+
+
+def read_last_deploy(mac):
+    """The LastDeploy of the board with this `mac`, from the record `record_deploy` writes. It never raises: what it cannot
+    read is NOT_CHECKED with the reason, and never a missing deploy."""
+    if not mac:
+        return LastDeploy(NOT_CHECKED, why=WHY_NO_MAC)
+    path = store.place("boards") / (store.slug(mac) + ".json")
+    try:
+        if not path.is_file():
+            return LastDeploy(NONE_RECORDED)
+        record = json.loads(path.read_text())
+    except (OSError, ValueError, RecursionError):
+        return LastDeploy(NOT_CHECKED, why=WHY_UNREADABLE)
+    deploys = record.get("deploys") if isinstance(record, dict) else None
+    newest = deploys[-1] if isinstance(deploys, list) and deploys else None  # record_deploy appends
+    kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
+    if not kept or not all(isinstance(each, str) for each in kept):
+        return LastDeploy(NOT_CHECKED, why=WHY_UNREADABLE)
+    return LastDeploy(RECORDED, *kept)
+# --- end MVP ---
