@@ -82,7 +82,7 @@ class TerminalConsentStrategy(ConsentStrategy):
         return self.stdin.readline().strip() == "yes"
 
 
-def require_open_gate(report, token, consent, image, caveats=()):
+def require_open_gate(report, token, consent, image, caveats):
     """Returns None when the person said yes to erasing this board for `image`. Raises GateClosedError, which says why
     not. It never erases or writes. The `caveats` (LookReport.caveats) come first in the question."""
     if report.stops:

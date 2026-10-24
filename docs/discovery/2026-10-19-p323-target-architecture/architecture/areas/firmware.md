@@ -5,6 +5,8 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 
 New names (proposed): `SimulationEngine`, `WokwiCliEngine`, `ENGINES`, `RunLog`, `FlashImageBuilder`, `status_of_run`, `SimulationEngineContract`, the modules `image_builder`, `import_probe`, `scenario_run`, `simulation_engine`, `operations`, and the Operation names below.
 
+P345 added `ScenarioSteps` (the counts of a scenario's step kinds, in `run_scenario`) and `ImageEvidence.caveats(image)`, a list of sentences. `RunLog` will own the counts line.
+
 ## Level 2: what firmware does
 
 Firmware turns a project's code into a flash image and runs that image in a simulator against a scenario. It keeps

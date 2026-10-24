@@ -244,7 +244,7 @@ list holds the ESP32-S3 and ESP32-C6 builds and Seeed's XIAO ESP32-C6 build. A b
 names no build, stops with its name. With no board
 in `requirements.json`, the interpreter is the tools list's `firmware-image`, the S3 build. To use another build, add
 `--micropython <its .bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the sha256 of the image it tested,
-the sha256 of each file in that image, the scenario as run, and what wokwi-cli printed. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
+the sha256 of each file in that image, the scenario as run, and what wokwi-cli printed. The header also counts the scenario's steps by kind (`step counts: expect-pin 0, set-control 0, wait-serial 1`, P345), and the date carries its time zone. When `sim/WHAT-THIS-CANNOT-SHOW.md` exists, the log holds its text after the header. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
 CI minutes. Ask the person before each run and say that it spends minutes, even when your permissions would let it
 run: this command's allowed-tools leave it out, but an allow rule of theirs or auto mode would not stop it. Every check
 that costs nothing runs first, and a run that cannot pass stops there.
