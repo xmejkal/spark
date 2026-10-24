@@ -474,15 +474,18 @@ the flash tool's own output, on **stderr**, so stdout holds the envelope alone. 
 A raise after the flash (a traceback) prints no envelope either; read the exit code and stderr.
 
 - `look.py` `data`: `port`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
-  `status`, `token`, `no_token_reason`, `simulation`, `caveats`. `simulation` is `passed`, or `none` with `--no-simulation`, or
-  null when the evidence refuses the image. `caveats` is a list of sentences (P345). `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
+  `status`, `token`, `no_token_reason`, `simulation`, `caveats`, `last_deploy`. `simulation` is `passed`, or `none` with `--no-simulation`, or
+  null when the evidence refuses the image. `caveats` is a list of sentences (P345). `last_deploy` ([P401](https://github.com/xmejkal/spark/issues/518)) is what spark's store says of this board, read by its MAC: `state`, `why`, `project`, `verdict` and `deployed`, null where absent.
+  The state `recorded` holds the newest deploy as stored, so `verdict` is `ready seen` and not `passed`. The state `none-recorded` means the store holds no deploy of this MAC,
+  and spark records only its own. The state `not-checked` has a `why`: the MAC was not read, or the record cannot be read. `not-checked` is never "no deploy".
+  A stored time with no zone is printed as stored, with "(zone not stored)". The look reads it also when the image is refused. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
   `unchecked` are the unknown fields and a missing token. A look that could not run has `data: null` (or `data.doctor` after a failed read). When there is a
   token, `next` holds a `deploy` step, whatever the status. A warning or an unknown field is not a pass: relay it.
 - `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
   `facts_line`, `image_sha256` (the image on the board, null before a flash, P213), `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
   `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`, and `simulation` (`passed`, or `none` with `--no-simulation`: no simulation tested the image, P337). Keys not reached are null,
-  and so is `simulation` before a look or when the look refused the image. The caveats of the look are in `data.look.caveats`.
+  and so is `simulation` before a look or when the look refused the image. The caveats of the look are in `data.look.caveats`, and its last deploy in `data.look.last_deploy`. The erase question names that last deploy.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,

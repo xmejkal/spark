@@ -123,6 +123,15 @@ class TheNoSimulationServiceTest(ServiceCase):
         self.assertTrue(consent.asked[0].startswith("no simulation tested this image. erase ALL"))
         self.assertEqual((planned.notes, len(self.commands)), ([], 2))
 
+    def test_the_gate_question_names_the_last_deploy_the_store_holds(self):
+        self.build()
+        self.record_a_deploy()
+        report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
+        consent = FakeConsent(True)
+        self.service().deploy(report, report.token(), consent, self.lines.append)
+        self.assertIn("erase ALL of this board's flash (spark's store record names blink-c6 as its last deploy here, "
+                      "2026-10-19T09:24:50+02:00, ready seen) and write ", consent.asked[0])
+
     def test_a_refusal_is_a_deploy_error_before_any_command(self):
         self.build()
         (self.project / "firmware" / "main.py").write_text("print('changed')\n")

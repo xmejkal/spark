@@ -21,6 +21,7 @@ import re
 import subprocess
 from collections import namedtuple
 
+import board_facts
 import boards
 import flasher
 import outcomes
@@ -179,12 +180,14 @@ VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 
 class LookReport:
     """Value. What the look found. `stops` and `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
-    warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image."""
+    warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image.
+    `last_deploy` is the board_facts.LastDeploy of the board's MAC, whatever the evidence said."""
 
-    def __init__(self, port, reading, record, image, image_why, simulation, caveats):
+    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy):
         self.port, self.reading, self.record = port, reading, record
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.simulation, self.caveats = simulation, list(caveats)
+        self.last_deploy = last_deploy
         self.fields = compare(reading, record)
         self.stops, self.warnings = [], []
         if self.fields["chip"] == "differs":
@@ -229,14 +232,15 @@ class LookReport:
                 "board": self.record["id"], "fields": dict(self.fields), "stops": list(self.stops),
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
                 "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason(),
-                "simulation": self.simulation, "caveats": list(self.caveats)}
+                "simulation": self.simulation, "caveats": list(self.caveats), "last_deploy": self.last_deploy.to_dict()}
 
 
 def report_lines(report, token=True):
     """The lines a person reads, for a LookReport. deploy.py prints them without the token line."""
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
-    out = [RESTART_NOTICE, "port   %s" % report.port, "mac    %s" % (reading.mac or "not read")]
+    out = [RESTART_NOTICE, "port   %s" % report.port, "mac    %s" % (reading.mac or "not read"),
+           report.last_deploy.line()]
     out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
     out += ["%s: deploy.py will refuse." % stop for stop in report.stops]
     out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings]
@@ -276,7 +280,8 @@ class LookService:
                 simulation, caveats = evidence.simulation, evidence.caveats(found)
         except project_image.DeployError as cannot:
             why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
-        return LookReport(port, reading, record, image, why, simulation, caveats)
+        # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
+        return LookReport(port, reading, record, image, why, simulation, caveats, board_facts.read_last_deploy(reading.mac))
 
     @staticmethod
     def record_of(project):

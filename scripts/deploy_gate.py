@@ -97,7 +97,7 @@ def require_open_gate(report, token, consent, image, caveats):
     if changed:
         raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed), next_op=NEXT_LOOK)
     accepted = report.warnings + ["%s unknown (%s)" % each for each in report.unknown.items()]
-    question = "erase ALL of this board's flash and write %s?" % image
+    question = "erase ALL of this board's flash (%s) and write %s?" % (report.last_deploy.in_question(), image)
     if accepted:
         question = "you accept: %s. %s" % ("; ".join(accepted), question)
     for caveat in reversed(caveats):

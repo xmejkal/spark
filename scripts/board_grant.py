@@ -27,6 +27,7 @@ from pathlib import Path
 
 import board_look
 import store
+from zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
 from deploy_gate import ConsentStrategy, GateClosedError, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 
@@ -121,15 +122,6 @@ def read_local_time():
     """Now, in the machine's zone, with the zone (P291): the zone a person reads, and a stored time carries it."""
     return datetime.datetime.now().astimezone()
 
-
-def stamp(moment):
-    """A time as the store keeps it: ISO 8601 to the second, in the machine's zone, with the zone."""
-    return moment.astimezone().isoformat(timespec="seconds")
-
-
-def say_in_local_zone(iso):
-    """A stored time with its zone, said in the machine's zone (P315): a grant kept in UTC before P291 too."""
-    return stamp(datetime.datetime.fromisoformat(iso))
 
 
 class GrantRefusedError(GateClosedError):

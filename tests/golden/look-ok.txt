@@ -1,6 +1,7 @@
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    dc:da:0c:xx:xx:xx
+  spark's last deploy here: none in its store record (it keeps only its own deploys)
   chip   same      esp32s3
   flash  same      16 MB
   simulation: passed
