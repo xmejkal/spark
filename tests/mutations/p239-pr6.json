@@ -8,8 +8,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "to_dict leaves out why there is no token",
-  "find": "\"no_token_reason\": self.no_token_reason()}",
-  "replace": "\"no_token_reason\": None}"
+  "find": "\"no_token_reason\": self.no_token_reason(),",
+  "replace": "\"no_token_reason\": None,"
  },
  {
   "file": "scripts/board_look.py",

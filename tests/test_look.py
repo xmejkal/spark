@@ -22,6 +22,10 @@ from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 RESTART = "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
 MAC = "8c:bf:ea:xx:xx:xx"
+#: LookCase's scenario only waits for text, so its passed run presses nothing and reads no pin (P345): the look says so.
+SIMULATION = "  simulation: passed"
+CAVEAT = ("  the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) and no "
+          "expect-pin step (the step that reads a pin)")
 NO_BOARD = "no board found. Plug it straight into the computer with a data cable, not a hub that gives power only."
 
 
@@ -60,6 +64,7 @@ class WhatThePersonSeesTest(LookScriptCase):
             "  mac    " + MAC,
             "  chip   same      esp32c6",
             "  flash  same      4 MB",
+            SIMULATION, CAVEAT,
             "  all fields match the board record xiao-esp32-c6.",
             "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token()])
 
@@ -70,7 +75,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 1)
         self.assertEqual(said[3:6], ["  chip   same      esp32s3", "  flash  differs   8 MB",
                                      "  the flash differs: 8 MB, the record says 16 or 4. deploy.py will ask you to accept it."])
-        self.assertTrue(said[6].startswith("  token  "))
+        self.assertEqual(said[6:8], [SIMULATION, CAVEAT])
+        self.assertTrue(said[8].startswith("  token  "))
 
     def test_a_field_the_board_did_not_say_is_unknown_and_the_look_could_not_check_it(self):
         self.run_the_scenario()
@@ -86,8 +92,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go()
         self.assertEqual(code, 1)
         self.assertEqual(said[3], "  chip   differs   esp32c6")
-        self.assertEqual(said[-2:], ["  this board is an esp32c6, the project is for an esp32s3: deploy.py will refuse.",
-                                     "  no token: the look found a stop"])
+        self.assertEqual(said[-4:], ["  this board is an esp32c6, the project is for an esp32s3: deploy.py will refuse.",
+                                     SIMULATION, CAVEAT, "  no token: the look found a stop"])
 
     def test_a_flash_too_small_for_the_image_is_a_stop_even_when_the_record_lists_it(self):
         self.run_the_scenario()
@@ -147,6 +153,22 @@ class WhatThePersonSeesTest(LookScriptCase):
         envelope = json.loads(said[-1])
         self.assertEqual((code, envelope["data"]["simulation"]), (0, "none"))
         self.assertIn("--no-simulation", envelope["next"][0]["argv"])
+
+    def test_the_json_look_carries_the_simulation_and_the_caveats_of_the_passed_run(self):
+        self.run_the_scenario()
+        data_ = json.loads(self.go("--json")[1][-1])["data"]
+        self.assertEqual((data_["simulation"], len(data_["caveats"])), ("passed", 1))
+        self.assertTrue(data_["caveats"][0].startswith("the passed run's scenario has no set-control step"))
+
+    def test_the_json_look_of_an_image_no_run_tested_says_null_and_no_caveat(self):
+        self.build_from_firmware()
+        data_ = json.loads(self.go("--json")[1][-1])["data"]
+        self.assertEqual((data_["simulation"], data_["caveats"]), (None, []))
+
+    def test_the_text_look_says_none_and_its_caveat_with_the_flag(self):
+        self.build_from_firmware()
+        said = self.go("--no-simulation")[1]
+        self.assertEqual(said[said.index("  simulation: none"):][:2], ["  simulation: none", "  no simulation tested this image"])
 
     def test_the_next_step_names_a_deploy_grant_only_where_a_grant_may_answer(self):
         self.build_from_firmware()

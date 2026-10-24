@@ -24,6 +24,12 @@ from test_deploy import FOUND, ProjectCase, found  # noqa: E402
 #: written by hand, as tests/data/board_look/README.md says: no such board was on the bench.
 DATA = Path(__file__).resolve().parent / "data" / "board_look"
 C6_PORT = "/dev/cu.usbmodem101"
+#: What the passed run of test_deploy's scenario (one wait-serial step, no input, no pin) says before the gate question (P345).
+NO_CONTROL_NO_PIN = ("the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) "
+                     "and no expect-pin step (the step that reads a pin)")
+#: A scenario that presses a button and reads a pin: its passed run has no caveat.
+CONTROLLED_SCENARIO = ("name: s\nversion: 1\nsteps:\n  - set-control: { part-id: b, name: pressed, value: 1 }\n"
+                       "  - expect-pin: { part-id: led, pin: A, value: 1 }\n")
 
 
 def data(name):
@@ -391,7 +397,9 @@ class LookReportToDictTest(LookCase):
         self.assertEqual(as_dict, {
             "port": C6_PORT, "chip": "esp32c6", "flash_mb": 4, "mac": "8c:bf:ea:xx:xx:xx", "board": "xiao-esp32-c6",
             "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
-            "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None})
+            "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None,
+            # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
+            "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN]})
         self.assertIsNotNone(as_dict["token"])
         json.dumps(as_dict)
 
@@ -420,6 +428,74 @@ class LookReportToDictTest(LookCase):
                          (None, "unknown", {"flash": "the board did not say"}, outcomes.COULD_NOT_RUN))
         self.assertIn("run a scenario first", as_dict["no_token_reason"])
         json.dumps(as_dict)
+
+
+class TheLookStatesTheSimulationTest(LookCase):
+    """P345: the look says what tested the image and what that test did not do, only when the evidence passes the image."""
+
+    def test_a_passed_run_that_pressed_and_read_nothing_is_simulation_passed_with_its_caveat(self):
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual((report.simulation, report.caveats), ("passed", [NO_CONTROL_NO_PIN]))
+
+    def test_a_passed_run_with_a_control_and_a_pin_has_no_caveat(self):
+        self.scenario.write_text(CONTROLLED_SCENARIO)
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual((report.simulation, report.caveats), ("passed", []))
+        lines = board_look.report_lines(report)
+        self.assertIn("  simulation: passed", lines)
+        self.assertEqual(lines.index("  simulation: passed") + 1, lines.index("  all fields match the board record xiao-esp32-c6."))
+
+    def test_the_caveats_are_printed_in_order_after_the_fields_stops_and_warnings_and_before_the_match_and_the_token(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        lines = board_look.report_lines(self.look(esptool="s3-flash-id-8mb.txt"))
+        warning = "  the flash differs: 8 MB, the record says 16 or 4. deploy.py will ask you to accept it."
+        self.assertEqual(lines[lines.index(warning):lines.index(warning) + 3],
+                         [warning, "  simulation: passed", "  " + NO_CONTROL_NO_PIN])
+        self.assertTrue(lines[-1].startswith("  token  "))
+
+    def test_two_caveats_are_two_lines_in_the_evidence_s_order(self):
+        self.run_the_scenario()
+        evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value=None))
+        evidence.caveats.return_value = ["first", "second"]
+        lines = board_look.report_lines(self.look(evidence=evidence), token=False)
+        self.assertEqual(lines[-4:-1], ["  simulation: passed", "  first", "  second"])
+
+    def test_an_image_the_evidence_refuses_has_no_simulation_and_no_caveat(self):
+        report = self.look()  # no scenario has run: no image
+        self.assertEqual((report.simulation, report.caveats), (None, []))
+        self.assertFalse([line for line in board_look.report_lines(report) if "simulation" in line])
+
+    def test_a_refused_image_is_not_asked_for_its_caveats(self):
+        evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value="no"))
+        report = self.look(evidence=evidence)
+        evidence.caveats.assert_not_called()
+        self.assertEqual((report.simulation, report.caveats), (None, []))
+
+    def test_a_log_that_cannot_be_read_gives_no_simulation_and_no_caveat(self):
+        self.run_the_scenario()
+        with mock.patch.object(project_image.ProjectImage, "read_run_logs", side_effect=project_image.DeployError("cannot read")):
+            report = self.look()
+        self.assertEqual((report.simulation, report.caveats), (None, []))
+
+    def test_no_simulation_says_none_with_its_caveat(self):
+        report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
+        self.assertEqual((report.simulation, report.caveats), (None, []))  # no image yet: refused
+        self.run_the_scenario()
+        with mock.patch.object(image_evidence.NoSimulationEvidence, "why_not_ready", return_value=None):
+            report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
+        self.assertEqual((report.simulation, report.caveats), ("none", ["no simulation tested this image"]))
+        self.assertEqual(board_look.report_lines(report, token=False)[-3:-1],
+                         ["  simulation: none", "  no simulation tested this image"])
+
+    def test_the_json_carries_both(self):
+        self.run_the_scenario()
+        as_dict = self.look().to_dict()
+        self.assertEqual((as_dict["simulation"], as_dict["caveats"]), ("passed", [NO_CONTROL_NO_PIN]))
+        as_dict["caveats"].clear()
+        self.assertEqual(len(self.look().caveats), 1)
 
 
 class ReportLinesTest(LookCase):

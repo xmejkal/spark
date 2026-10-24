@@ -148,7 +148,8 @@ class TheNoSimulationDryRunTest(ProjectCase):
     def test_the_dry_run_json_names_the_look_step_with_the_flag(self):
         code, said, _, _ = self.deploy("--dry-run", "--no-simulation", "--json")
         envelope = json.loads(said)
-        self.assertEqual((code, envelope["data"]["simulation"]), (deploy.EXIT_OK, "none"))
+        # a dry run reads no board, so no look states what tested the image (P345)
+        self.assertEqual((code, envelope["data"]["simulation"]), (deploy.EXIT_OK, None))
         self.assertIn("--no-simulation", envelope["next"][0]["argv"])
 
     def test_both_flags_are_an_argument_error(self):

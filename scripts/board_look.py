@@ -179,11 +179,12 @@ VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 
 class LookReport:
     """Value. What the look found. `stops` and `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
-    warning or stop."""
+    warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image."""
 
-    def __init__(self, port, reading, record, image, image_why):
+    def __init__(self, port, reading, record, image, image_why, simulation, caveats):
         self.port, self.reading, self.record = port, reading, record
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
+        self.simulation, self.caveats = simulation, list(caveats)
         self.fields = compare(reading, record)
         self.stops, self.warnings = [], []
         if self.fields["chip"] == "differs":
@@ -227,7 +228,8 @@ class LookReport:
         return {"port": self.port, "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
                 "board": self.record["id"], "fields": dict(self.fields), "stops": list(self.stops),
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
-                "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason()}
+                "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason(),
+                "simulation": self.simulation, "caveats": list(self.caveats)}
 
 
 def report_lines(report, token=True):
@@ -242,6 +244,9 @@ def report_lines(report, token=True):
         out.append("%d field%s unknown (%s): deploy.py will ask you to accept it."
                    % (len(report.unknown), "" if len(report.unknown) == 1 else "s",
                       ", ".join("%s: %s" % each for each in report.unknown.items())))
+    if report.simulation:
+        out.append("simulation: %s" % report.simulation)
+    out += report.caveats
     if report.verdict == VERDICT_MATCH:
         out.append("all fields match the board record %s." % name)
     if token:
@@ -261,14 +266,17 @@ class LookService:
         record = self.record_of(project)
         port = port or self.only_port()
         reading = self.reader.read(port)
-        image, why = None, None
+        image, why, simulation, caveats = None, None, None, []
         try:
             found = project_image.ProjectImage(project)
             image = found.path
             why = evidence.why_not_ready(found)
+            # --- MVP ---
+            if why is None:  # what tested an image is stated only for one the evidence passes
+                simulation, caveats = evidence.simulation, evidence.caveats(found)
         except project_image.DeployError as cannot:
             why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
-        return LookReport(port, reading, record, image, why)
+        return LookReport(port, reading, record, image, why, simulation, caveats)
 
     @staticmethod
     def record_of(project):
