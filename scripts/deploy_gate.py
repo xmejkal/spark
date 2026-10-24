@@ -82,9 +82,9 @@ class TerminalConsentStrategy(ConsentStrategy):
         return self.stdin.readline().strip() == "yes"
 
 
-def require_open_gate(report, token, consent, image, caveat=None):
+def require_open_gate(report, token, consent, image, caveats=()):
     """Returns None when the person said yes to erasing this board for `image`. Raises GateClosedError, which says why
-    not. It never erases or writes. A `caveat` (ImageEvidence.caveat) comes first in the question."""
+    not. It never erases or writes. The `caveats` (LookReport.caveats) come first in the question."""
     if report.stops:
         raise GateClosedError("%s. not flashed." % "; ".join(report.stops), EXIT_PROBLEMS)
     if not token:
@@ -100,7 +100,7 @@ def require_open_gate(report, token, consent, image, caveat=None):
     question = "erase ALL of this board's flash and write %s?" % image
     if accepted:
         question = "you accept: %s. %s" % ("; ".join(accepted), question)
-    if caveat:
+    for caveat in reversed(caveats):
         question = "%s. %s" % (caveat, question)
     if not consent.ask(question):
         raise GateClosedError("not flashed: you answered no.")

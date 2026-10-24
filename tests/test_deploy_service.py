@@ -70,6 +70,12 @@ class TheFlashTest(ServiceCase):
         self.assertEqual(self.lines, ["  running: %s" % shlex.join(command) for command in self.commands])
         self.assertEqual(len(self.commands), 2)
 
+    def test_the_gate_question_starts_with_the_caveats_of_the_passed_run(self):
+        report = self.look()
+        consent = FakeConsent(True)
+        self.service().deploy(report, report.token(), consent, self.lines.append)
+        self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"), consent.asked[0])
+
     def test_a_failed_flash_is_a_deploy_error_with_the_sentence_and_the_hint(self):
         report = self.look()
         self.fails = True

@@ -38,8 +38,8 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "no-caveat",
-  "find": "caveat = NO_SIMULATION_CAVEAT",
-  "replace": "caveat = None"
+  "find": "return [NO_SIMULATION_CAVEAT]",
+  "replace": "return []"
  },
  {
   "file": "scripts/deploy_gate.py",

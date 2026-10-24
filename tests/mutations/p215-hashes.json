@@ -8,8 +8,8 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "no blank line ends the header",
-  "find": "%s%s\\n%s\\n--- the scenario as run",
-  "replace": "%s%s\\n%s--- the scenario as run"
+  "find": "%s%s\\n%s\\n%s--- the scenario as run",
+  "replace": "%s%s\\n%s%s--- the scenario as run"
  },
  {
   "file": "scripts/run_scenario.py",
