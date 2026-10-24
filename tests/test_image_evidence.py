@@ -141,7 +141,7 @@ class PassedRunEvidenceTest(unittest.TestCase):
             self.counted(line)
             with self.subTest(line=line):
                 self.assertEqual(PassedRunEvidence().caveats(self.image), [
-                    "the passed run's log does not count its steps (a run from before P345, or a step with no key): "
+                    "the passed run's log does not count its steps: "
                     "run its scenario again to count them"])
 
     def test_only_the_log_that_passed_on_this_image_is_counted(self):

@@ -15,8 +15,9 @@ run puts MicroPython and the project's firmware/ into a new flash image, so a ru
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
-The log goes to sim/runs/<name>.log: the date, the verdict, the sha256 of the image it tested and of each file in that
-image, the scenario as run, and what wokwi-cli printed, which is the board's serial output among the scenario's
+The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the step counts by kind (P345), the sha256 of
+the image it tested and of each file in that image, what the simulation cannot show, the scenario as run, and what
+wokwi-cli printed, which is the board's serial output among the scenario's
 progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
 """
 
@@ -103,10 +104,11 @@ class ScenarioSteps:
     with no key. Nothing is derived from an unread count.
     """
 
-    #: A step's key in the block form (`- kind: ...`), the flow form (`- { kind: ... }`) or quoted. A line-anchored
-    #: pattern, so a kind named inside a value is no key.
-    KEY = re.compile(r"""^\s*-\s*(?:\{\s*)?(?:"([\w-]+)"|'([\w-]+)'|([\w-]+))\s*:""")
+    #: A key at the start of a step's text, plain or quoted. Anchored, so a kind named inside a value is no key.
+    KEY = re.compile(r"""^\s*(?:"([\w-]+)"|'([\w-]+)'|([\w-]+))\s*:""")
     ITEM = re.compile(r"^(\s*)-(?:\s|$)")
+    #: The one key a step carries beside its kind: wokwi-cli prints it as the step's name (TestScenario.ts, validStepKeys).
+    NAME_KEY = "name"
 
     def __init__(self, counts, unread=False):
         self.counts, self.unread = dict(counts), unread
@@ -116,21 +118,37 @@ class ScenarioSteps:
         """The ScenarioSteps of a scenario's text, comments cut as with_ready_wait cuts them. Only the items at the indent of the first step count."""
         lines = [line.split("#")[0].rstrip() for line in steps.splitlines()]
         start = next((i for i, line in enumerate(lines) if line == "steps:"), None)
-        items = [] if start is None else [(cls.ITEM.match(line), line) for line in lines[start + 1:]]
-        items = [(match.group(1), line) for match, line in items if match]
-        if not items:
+        body = [] if start is None else [line for line in lines[start + 1:] if line.strip()]
+        first = next((cls.ITEM.match(line) for line in body if cls.ITEM.match(line)), None)
+        if first is None:
             return cls({}, unread=True)
+        width, steps = len(first.group(1)), []
+        for line in body:
+            item = cls.ITEM.match(line)
+            if item and len(item.group(1)) == width:
+                steps.append([line[item.end():].lstrip().lstrip("{")])
+            elif len(line) - len(line.lstrip()) <= width:
+                break  # the steps list ended: a key of the scenario at its own indent
+            elif steps:
+                steps[-1].append(line)
         counts, unread = {}, False
-        for indent, line in items:
-            if len(indent) != len(items[0][0]):
-                continue
-            key = cls.KEY.match(line)
-            if key:
-                kind = key.group(1) or key.group(2) or key.group(3)
+        for step in steps:
+            kind = cls._kind(step)
+            if kind:
                 counts[kind] = counts.get(kind, 0) + 1
             else:
                 unread = True
         return cls(counts, unread)
+
+    @classmethod
+    def _kind(cls, step):
+        """A step's kind: the first key of its lines that is not `name`, or None. The flow form keeps its keys on one line."""
+        for text in step[0].split(",") + step[1:]:
+            key = cls.KEY.match(text)
+            kind = key and (key.group(1) or key.group(2) or key.group(3))
+            if kind and kind != cls.NAME_KEY:
+                return kind
+        return None
 
     @classmethod
     def from_log(cls, log):
@@ -261,14 +279,18 @@ class ScenarioRun:
 
     def write_log(self, sentence, said):
         """
-        The log of a run that reached wokwi-cli: its date, verdict, the sha256 of the image it tested and of each file in
-        it, the scenario as run and what wokwi-cli printed. All but the last two are the header, which run_record and
-        file_hashes read.
+        The log of a run that reached wokwi-cli. Its header, which run_record, file_hashes and ScenarioSteps.from_log read,
+        holds the date with its zone, the verdict, the step counts and the sha256 of the image and of each file in it. After
+        the header come what the simulation cannot show (when sim/ holds that note), the scenario as run and what
+        wokwi-cli printed. A note that cannot be read is left out, so the paid run's verdict is still written.
         """
         self.log.parent.mkdir(exist_ok=True)
         files = "".join("%s%s %s\n" % (FILE_LINE, hashlib.sha256(data).hexdigest(), name) for name, data in self.files)
         limits = self.sim / "WHAT-THIS-CANNOT-SHOW.md"
-        shown = "%s\n%s\n\n" % (LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
+        try:
+            shown = "%s\n%s\n\n" % (LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
+        except OSError:
+            shown = ""
         self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s--- the scenario as run ---\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
                             % (self.scenario.name, datetime.datetime.now().astimezone().isoformat(timespec="seconds"),

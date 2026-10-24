@@ -20,7 +20,7 @@ SIMULATION_PASSED, SIMULATION_NONE = "passed", "none"
 NO_SIMULATION_CAVEAT = "no simulation tested this image"
 # --- MVP ---
 #: What the person reads when a passed run's log cannot say what its scenario did, or its scenario did less than a person expects.
-UNREAD_STEPS_CAVEAT = ("the passed run's log does not count its steps (a run from before P345, or a step with no key): "
+UNREAD_STEPS_CAVEAT = ("the passed run's log does not count its steps: "
                        "run its scenario again to count them")
 NO_CONTROL_CAVEAT = "the passed run's scenario has no set-control step (the step that presses a button or sets a sensor)"
 NO_CONTROL_NO_PIN_CAVEAT = ("the passed run's scenario has no set-control step (the step that presses a button or sets a "

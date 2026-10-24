@@ -101,6 +101,22 @@ class TheStepCountsTest(unittest.TestCase):
         scenario = self.steps("- set-control:", "    part-id: b", "    values:", "      - 1", "      - 2", "- wait-serial: x")
         self.assertEqual(run_scenario.ScenarioSteps.from_text(scenario).counts, {"set-control": 1, "wait-serial": 1})
 
+    def test_a_step_name_is_its_label_and_the_next_key_is_its_kind(self):
+        # wokwi-cli lets a step carry `name:`, which it prints (TestScenario.ts, validStepKeys = ['name']).
+        block = self.steps("- name: press the button", "  set-control:", "    part-id: b", '- wait-serial: "on"')
+        self.assertEqual(run_scenario.ScenarioSteps.from_text(block).counts, {"set-control": 1, "wait-serial": 1})
+        for item in ("- { name: press, set-control: { part-id: b } }", "- {name: press, expect-pin: {part-id: led}}"):
+            with self.subTest(item=item):
+                self.assertEqual(self.counted(item).count("name"), 0)
+                self.assertFalse(self.counted(item).unread)
+
+    def test_a_step_with_only_a_name_is_unread(self):
+        self.assertTrue(self.counted("- name: nothing else").unread)
+
+    def test_the_steps_end_at_a_key_of_the_scenario_at_their_own_indent(self):
+        scenario = "name: x\nsteps:\n  - wait-serial: a\n  - set-control: {part-id: b}\nafter: 1\n  - expect-pin: c\n"
+        self.assertEqual(run_scenario.ScenarioSteps.from_text(scenario).counts, {"wait-serial": 1, "set-control": 1})
+
     def test_an_item_with_no_key_makes_the_counts_unread(self):
         for item in ("- just-a-word", "- [a, b]", '- "two words": x', "- : x", "-"):
             with self.subTest(item=item):
@@ -351,6 +367,13 @@ class TheLogCountsTheStepsTest(ProjectCase):
         _, _, log = self.run_with("ready\n")
         steps = run_scenario.ScenarioSteps.from_log(log)
         self.assertEqual((steps.counts, steps.unread), ({"expect-pin": 0, "set-control": 1, "wait-serial": 2}, False))
+
+    def test_a_limits_note_that_cannot_be_read_leaves_the_verdict_written(self):
+        note = self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md"
+        note.mkdir()  # a folder in its place: read_text raises OSError
+        _, _, log = self.run_with("ready\n")
+        self.assertEqual(run_scenario.run_record(log)[0], "passed")
+        self.assertNotIn("--- what this simulation cannot show ---", log.read_text())
 
     def test_the_time_has_its_zone(self):
         _, _, log = self.run_with("ready\n")

@@ -22,3 +22,11 @@ lenses (technology and tests, architecture and naming and UX), then one Opus 5.5
 | 15 | The plan said item 8 goes at `agents.md:576` | build check | acted | `:576` is the heading of the section. Item 8 follows item 7 at the end of the list |
 | 16 | Six goldens changed: the caveat, the `caveats` key and a null `simulation` where the evidence refused the image | build | acted | accepted with `SPARK_ACCEPT=look` and `deploy`, and the diff read line by line |
 | 17 | An aborted mutation run left a mutant in `scripts/image_evidence.py` | build | acted | the run was stopped with a signal while a mutant was planted. Found by reading `git diff`, and restored. A mutation run is never stopped before it ends |
+| 18 | A step's `name:` key was counted as its kind, so a scenario that pressed a button got a false "no set-control" caveat (wokwi-cli `TestScenario.ts` validStepKeys) | PR refuter | verified, acted | `ScenarioSteps` reads each step as a block, and its kind is its first key that is not `name`. Three tests, and the planted defect fails one |
+| 19 | The `write_log` and module docstrings did not name the counts line or the limits section | PR review, PR refuter | acted | both docstrings say what the header and the rest hold |
+| 20 | The unread caveat named "P345" and two causes that the code cannot tell apart | PR review | acted | "the passed run's log does not count its steps: run its scenario again to count them" |
+| 21 | agents.md item 8 implied a caveat for a missing `expect-pin` on its own | PR review | acted | it names a missing `expect-pin` only when `set-control` is missing too |
+| 22 | agents.md said deploy's `simulation` is null only before a look | PR refuter | acted | also when the look refused the image |
+| 23 | A limits note that cannot be read raised after the paid run, so no log was written | PR review | acted | the section is left out, and a test writes the verdict with a folder in the note's place |
+| 24 | Only a deeper item had a test for the indent filter | PR review | acted | a test where the steps end at a key of the scenario at their own indent |
+| 25 | Two passed logs on one image: only the first is counted | PR refuter | raised | row 9 stays for a later card |

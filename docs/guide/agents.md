@@ -482,7 +482,7 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
   `facts_line`, `image_sha256` (the image on the board, null before a flash, P213), `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
   `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`, and `simulation` (`passed`, or `none` with `--no-simulation`: no simulation tested the image, P337). Keys not reached are null,
-  and so is `simulation` before a look. The caveats of the look are in `data.look.caveats`.
+  and so is `simulation` before a look or when the look refused the image. The caveats of the look are in `data.look.caveats`.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
@@ -738,10 +738,10 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
 8. **A passed run did only what its scenario's steps say.** The log's header counts the steps by kind, for example
    `step counts: expect-pin 0, set-control 0, wait-serial 1`, and the look turns the counts into `data.caveats`, a list of
    sentences ([P345](https://github.com/xmejkal/spark/issues/440)). A scenario with no `set-control` step presses no button and sets no sensor.
-   A scenario with no `expect-pin` step reads no pin. A `status: ok` and `data.simulation: "passed"` do not clear
+   A caveat names a missing `expect-pin` step (no pin read) only when `set-control` is missing too. A `status: ok` and `data.simulation: "passed"` do not clear
    `data.caveats`. Relay each caveat to the person, also under a deploy grant, because deploy.py prints them in the look
    and starts its question with them. `run_scenario.py` adds one `wait-serial` step itself, for the ready contract. A
-   log from before P345 has no counts, and its caveat says to run the scenario again. A caveat is a fact about the
+   log from before P345 has no counts, and its caveat says to run the scenario again. A step's `name:` key is its label, never its kind. A caveat is a fact about the
    run, never a verdict on the firmware. The log also holds `sim/WHAT-THIS-CANNOT-SHOW.md` after its header, and the
    time of the run carries its zone.
 
