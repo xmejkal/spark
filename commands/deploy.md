@@ -18,7 +18,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/look.py --json
 
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
-`same`, `differs` or `unknown`, with the board's MAC, the last deploy spark made to it (P401) and a token. With two boards on USB, it lists them and needs
+`same`, `differs` or `unknown`, with the board's MAC, the last deploy that spark's store record names for it, and a token. With two boards on USB, it lists them and needs
 `--port <the board's serial port>`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents.md`, "look.py and deploy.py's envelope") and relay it in words. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
 `allowed-tools`, and so is `deploy.py` (P242): Claude Code does not ask before it runs deploy.py. The gate is inside
@@ -46,9 +46,10 @@ order: the look, its token, then the person's yes.
    board restarts), names every warning in its question and erases only after they type `yes`.
    The question starts with the look's caveats (P345), such as a passed run whose scenario has no `set-control` step. Relay them. They are facts about the run, not a stop.
    The erase sentence then names the last deploy in spark's store record, for example `spark's store record names blink-c6 as its last deploy here,
-   2026-10-19T09:24:50+02:00, ready seen`. Relay it. It says what spark last put on this board. It does not say what is on the board now.
+   2026-10-19T09:24:50+02:00, ready seen`. Relay it. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
    A flash made outside spark leaves no trace, and a flash that failed after the erase writes no record. `none in its store record` is not an empty board.
-   `not checked` means spark cannot read its record. It never means that no deploy happened.
+   `not checked` means spark did not read its record: the MAC was not read, or the record cannot be read. It never
+   means that no deploy happened.
 3. If the person wants you to deploy without a yes each time, offer the deploy grant line that deploy.py printed:
    `grant.py --scope deploy --minutes N`. Say first that it lets you erase ALL of the board's flash and write any passed
    image of any project for N minutes (1 to 1440). Never run it yourself, and never write a grant file: it is the person's yes in their own terminal.

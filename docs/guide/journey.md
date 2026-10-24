@@ -1132,8 +1132,8 @@ sheet ([v0.10](../../scrum/VISION.md#versions)).
 
 `look.py` reads the board on USB without changing it and compares it with the board in `requirements.json`
 ([P219](https://github.com/xmejkal/spark/issues/201)). The board restarts while it is read, and nothing is erased or
-written. It prints each field as `same`, `differs` or `unknown`, the board's MAC, and a token when a passed run names the
-image. This run was on a XIAO ESP32-C6 on USB, in a project that had no build yet, so it has no token. The MAC is
+written. It prints each field as `same`, `differs` or `unknown`, the board's MAC, the last deploy that spark's store record names
+for it (P401, after this run), and a token when a passed run names the image. This run was on a XIAO ESP32-C6 on USB, in a project that had no build yet, so it has no token. The MAC is
 masked here.
 
 <!-- output: run 2026-10-13, spark 0.9.0 -->

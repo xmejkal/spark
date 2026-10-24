@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_facts  # noqa: E402
+from fakes import pin_time_zone  # noqa: E402
 import board_look  # noqa: E402
 import project_image  # noqa: E402
 import outcomes  # noqa: E402
@@ -57,6 +58,7 @@ class LookCase(ProjectCase):
         env.start()
         self.addCleanup(env.stop)
         self.addCleanup(shutil.rmtree, home, True)
+        pin_time_zone(self)  # a stored time is said in the machine's zone: one zone on every machine
         self.board("xiao-esp32-c6")
         self.ran = []
 

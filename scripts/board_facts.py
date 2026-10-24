@@ -13,8 +13,8 @@ import json
 import tempfile
 from pathlib import Path
 
-import board_grant
 import store
+import zone_time
 from board_connection import BoardUnreachableError, BoardCodeError
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
@@ -95,18 +95,19 @@ class LastDeploy:
     def time_said(self):
         """The stored time. With a zone it is said in the machine's zone. With none it is as stored, and says so,
         because a zone is never given to a time that has none. A time that does not parse is as stored."""
+        iso = self.deployed[:-1] + "+00:00" if self.deployed.endswith("Z") else self.deployed  # 3.10 reads no Z
         try:
-            moment = datetime.datetime.fromisoformat(self.deployed)
-        except ValueError:
+            if datetime.datetime.fromisoformat(iso).tzinfo is None:
+                return "%s %s" % (self.deployed, ZONE_NOT_STORED)
+            return zone_time.say_in_local_zone(iso)
+        except (ValueError, OverflowError):  # a time that does not parse, or one the machine's zone cannot hold
             return self.deployed
-        if moment.tzinfo is None:
-            return "%s %s" % (self.deployed, ZONE_NOT_STORED)
-        return board_grant.say_in_local_zone(self.deployed)
 
     def line(self):
         """The look's line."""
         if self.state == RECORDED:
-            said = "%s, %s, %s (its store record, not read from the board)" % (self.project, self.verdict, self.time_said())
+            said = "%s, %s, %s (its store record, not read from the board)" % (printable(self.project), self.verdict,
+                                                                                  self.time_said())
         elif self.state == NONE_RECORDED:
             said = "none in its store record (it keeps only its own deploys)"
         else:
@@ -116,7 +117,8 @@ class LastDeploy:
     def in_question(self):
         """The words the deploy question puts in its erase sentence."""
         if self.state == RECORDED:
-            return "spark's store record names %s as its last deploy here, %s, %s" % (self.project, self.time_said(), self.verdict)
+            return "spark's store record names %s as its last deploy here, %s, %s" % (printable(self.project), self.time_said(),
+                                                                                     self.verdict)
         if self.state == NONE_RECORDED:
             return "spark's store record names no deploy here"
         return "spark did not read its record of this board: %s" % self.why
@@ -126,6 +128,11 @@ class LastDeploy:
                 "deployed": self.deployed}
 
 
+def printable(text):
+    """The text with each character that a terminal does not print as itself, such as a newline, shown as `?`."""
+    return "".join(each if each.isprintable() else "?" for each in text)
+
+
 def read_last_deploy(mac):
     """The LastDeploy of the board with this `mac`, from the record `record_deploy` writes. It never raises: what it cannot
     read is NOT_CHECKED with the reason, and never a missing deploy."""
@@ -133,7 +140,7 @@ def read_last_deploy(mac):
         return LastDeploy(NOT_CHECKED, why=WHY_NO_MAC)
     path = store.place("boards") / (store.slug(mac) + ".json")
     try:
-        if not path.is_file():
+        if not path.exists() and not path.is_symlink():  # a folder or a broken link in its place is no "none"
             return LastDeploy(NONE_RECORDED)
         record = json.loads(path.read_text())
     except (OSError, ValueError, RecursionError):
@@ -141,7 +148,7 @@ def read_last_deploy(mac):
     deploys = record.get("deploys") if isinstance(record, dict) else None
     newest = deploys[-1] if isinstance(deploys, list) and deploys else None  # record_deploy appends
     kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
-    if not kept or not all(isinstance(each, str) for each in kept):
+    if not kept or not all(isinstance(each, str) and each.strip() for each in kept):
         return LastDeploy(NOT_CHECKED, why=WHY_UNREADABLE)
     return LastDeploy(RECORDED, *kept)
 # --- end MVP ---

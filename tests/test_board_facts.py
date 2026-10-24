@@ -47,6 +47,36 @@ class LastDeployCase(unittest.TestCase):
     def write_deploys(self, deploys):
         self.write(json.dumps({"mac": MAC, "deploys": deploys}))
 
+    def test_a_time_the_machine_zone_cannot_hold_is_said_as_stored(self):
+        for stored in ("0001-01-01T00:30:00+14:00", "9999-12-31T23:59:59-14:00"):
+            with self.subTest(stored=stored):
+                last = board_facts.LastDeploy("recorded", "p", "ready seen", stored)
+                self.assertIn(stored, last.line())
+                self.assertIn(stored, last.in_question())
+
+    def test_a_utc_z_time_is_said_in_the_machine_zone(self):
+        last = board_facts.LastDeploy("recorded", "p", "ready seen", "2026-10-23T04:55:29Z")
+        self.assertIn("2026-10-23T06:55:29+02:00", last.line())
+
+    def test_a_folder_or_a_broken_link_in_the_record_place_is_not_checked_never_none(self):
+        target = store.place("boards") / (store.slug(MAC) + ".json")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.mkdir()
+        self.assertEqual(board_facts.read_last_deploy(MAC).state, "not-checked")
+        target.rmdir()
+        target.symlink_to(target.parent / "gone.json")
+        self.assertEqual(board_facts.read_last_deploy(MAC).state, "not-checked")
+
+    def test_an_empty_time_is_not_checked(self):
+        self.write_deploys([{"project": "p", "verdict": "ready seen", "deployed": " "}])
+        self.assertEqual(board_facts.read_last_deploy(MAC).state, "not-checked")
+
+    def test_a_project_name_cannot_add_a_line(self):
+        last = board_facts.LastDeploy("recorded", "a\nmac    ff", "ready seen", "2026-10-19T09:24:50+02:00")
+        self.assertNotIn("\n", last.line())
+        self.assertNotIn("\n", last.in_question())
+
+
 
 class ReadLastDeployTest(LastDeployCase):
     def test_a_round_trip_gives_the_project_verdict_and_time_that_record_deploy_wrote(self):

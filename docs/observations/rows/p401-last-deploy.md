@@ -20,3 +20,12 @@ code, tests, names and the views of a person and of Claude, then one Opus 5.5 re
 | 13 | The plan lists three states and the cases of a bad record | build check | acted | also a newest entry with a missing or non-string field, a file that cannot be opened, and a file nested 100000 deep. All are `not-checked` with one why |
 | 14 | `board_facts` imports `board_grant`, which imports `board_look`, which now imports `board_facts` | build check | verified | the import works at the top of the module. No cycle fails |
 | 15 | G27: the look's next step and the terminal line name `--port` even with one board on USB | Claude | acted | two sentences on `commands/deploy.md`. The golden `deploy-could-not-run-no-terminal.json` shows the `--port` in both |
+| 16 | A stored time that the machine's zone cannot hold raised `OverflowError` in `line()` and `in_question()`, so it crashed the look and the question | PR review, PR refuter | verified, acted | caught with `ValueError`, said as stored. Two tests |
+| 17 | A folder or a dangling link in the record's place read as "none in its store record" | PR refuter | verified, acted | only a path that is not there at all is `none-recorded`. A test for each |
+| 18 | An empty stored time printed as a blank | PR refuter | acted | a blank field is `not-checked` |
+| 19 | A `Z` time was printed raw on Python 3.10 | PR refuter | acted | read as `+00:00`, then said in the machine's zone |
+| 20 | A project name with a newline added a fake line to the look | PR refuter | acted | characters that do not print as themselves show as `?` |
+| 21 | `board_facts` imported `board_grant` for a time helper, which closed a cycle `board_facts -> board_grant -> board_look -> board_facts` | PR review | acted | `stamp` and `say_in_local_zone` moved to `scripts/zone_time.py`, which imports no spark module. Row 14's "no cycle fails" is now "no cycle" |
+| 22 | Three look tests asserted a `+02:00` time, so they passed only in a zone at +02:00 on that date | PR review | acted | `LookCase.setUp` pins the zone with `fakes.pin_time_zone` |
+| 23 | The deploy page said the line "says what spark last put on this board" and named the card id to the person | PR review | acted | it says what spark's store record names, and `not checked` names both causes |
+| 24 | The journey guide listed the look's output without the last deploy | PR refuter | acted | one clause, marked as after its dated run |
