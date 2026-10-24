@@ -99,7 +99,8 @@ class TheStepCountsTest(unittest.TestCase):
 
     def test_a_nested_list_item_is_no_step(self):
         scenario = self.steps("- set-control:", "    part-id: b", "    values:", "      - 1", "      - 2", "- wait-serial: x")
-        self.assertEqual(run_scenario.ScenarioSteps.from_text(scenario).counts, {"set-control": 1, "wait-serial": 1})
+        steps = run_scenario.ScenarioSteps.from_text(scenario)
+        self.assertEqual((steps.counts, steps.unread), ({"set-control": 1, "wait-serial": 1}, False))
 
     def test_a_step_name_is_its_label_and_the_next_key_is_its_kind(self):
         # wokwi-cli lets a step carry `name:`, which it prints (TestScenario.ts, validStepKeys = ['name']).
@@ -141,7 +142,8 @@ class TheStepCountsTest(unittest.TestCase):
         log = Path(tempfile.mkdtemp()) / "a.log"
         header = "# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n"
         for text in (header + "\nbody\n", header + "step counts: \n\n", header + "step counts: wait-serial\n\n",
-                     header + "step counts: wait-serial x\n\n", header + "step counts: wait-serial 1; delay 2\n\n"):
+                     header + "step counts: wait-serial x\n\n", header + "step counts: wait-serial 1; delay 2\n\n",
+                     header + "step counts: set-control 1, set-control 2\n\n"):
             log.write_text(text)
             with self.subTest(text=text):
                 self.assertTrue(run_scenario.ScenarioSteps.from_log(log).unread)
@@ -370,8 +372,16 @@ class TheLogCountsTheStepsTest(ProjectCase):
 
     def test_a_limits_note_that_cannot_be_read_leaves_the_verdict_written(self):
         note = self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md"
-        note.mkdir()  # a folder in its place: read_text raises OSError
-        _, _, log = self.run_with("ready\n")
+        note.write_text("- a limit\n")
+        read = Path.read_text
+
+        def unreadable(self, *args, **kwargs):
+            if self.name == note.name:
+                raise PermissionError("denied")
+            return read(self, *args, **kwargs)
+
+        with mock.patch.object(Path, "read_text", unreadable):
+            _, _, log = self.run_with("ready\n")
         self.assertEqual(run_scenario.run_record(log)[0], "passed")
         self.assertNotIn("--- what this simulation cannot show ---", log.read_text())
 

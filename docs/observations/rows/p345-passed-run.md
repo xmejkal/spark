@@ -30,3 +30,5 @@ lenses (technology and tests, architecture and naming and UX), then one Opus 5.5
 | 23 | A limits note that cannot be read raised after the paid run, so no log was written | PR review | acted | the section is left out, and a test writes the verdict with a folder in the note's place |
 | 24 | Only a deeper item had a test for the indent filter | PR review | acted | a test where the steps end at a key of the scenario at their own indent |
 | 25 | Two passed logs on one image: only the first is counted | PR refuter | raised | row 9 stays for a later card |
+| 26 | Mutation run on 695aa5f: 12 planted, 9 caught. The indent width, a duplicate count and the OSError guard escaped. The OSError test put a folder in the note's place, so `is_file()` skipped the read and the guard was never reached | mutation run | acted | three tests, each checked by planting its defect |
+| 27 | Nine changes had no row in the run (its 12-row cap): the envelope simulation, `to_dict`, `report_lines`, the no-simulation caveat, the flow split, the always-shown kinds, `isdigit` | Claude | acted | each planted by hand, and each fails a named test |
