@@ -130,6 +130,11 @@ class GateCase(LookCase):
         return [command[-1] for command in self.ran if "erase_flash" in command or "write_flash" in command]
 
 
+#: GateCase's scenario only waits for text, so its passed run pressed nothing and read no pin (P345).
+CAVEAT_OF_A_RUN_THAT_PRESSED_NOTHING = ("the passed run's scenario has no set-control step (the step that presses a "
+                                        "button or sets a sensor) and no expect-pin step (the step that reads a pin)")
+
+
 class TheGateTest(GateCase):
     def test_no_token_says_to_run_the_look_first_and_erases_nothing(self):
         self.run_the_scenario()
@@ -960,6 +965,21 @@ class TheNoSimulationDeployTest(GateCase):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(said)["data"]["simulation"], "none")
 
+    def test_the_json_envelope_of_a_passed_run_says_passed_and_carries_the_look_s_caveats(self):
+        self.run_the_scenario()
+        code, said, _ = self.deploy("--token", self.token(), "--json", consent=FakeConsent(True))
+        data_ = json.loads(said)["data"]
+        self.assertEqual((code, data_["simulation"]), (0, "passed"))
+        self.assertEqual(data_["look"]["caveats"], [CAVEAT_OF_A_RUN_THAT_PRESSED_NOTHING])
+
+    def test_a_passed_run_deploy_prints_the_caveat_in_the_look_and_starts_the_question_with_it(self):
+        self.run_the_scenario()
+        consent = FakeConsent(True)
+        code, said, _ = self.deploy("--token", self.token(), consent=consent)
+        self.assertEqual(code, 0)
+        self.assertIn("  simulation: passed\n  %s\n" % CAVEAT_OF_A_RUN_THAT_PRESSED_NOTHING, said)
+        self.assertEqual(consent.asked[0].split(". erase ALL")[0], CAVEAT_OF_A_RUN_THAT_PRESSED_NOTHING)
+
     def test_a_passed_run_deploy_says_passed_in_its_records(self):
         self.run_the_scenario()
         code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True))
@@ -1014,15 +1034,35 @@ class TheRerunLineTest(unittest.TestCase):
 
 
 class TheCaveatTest(GateCase):
-    def test_the_caveat_comes_first_in_the_question(self):
+    def test_the_caveats_come_first_in_the_question_in_order(self):
         self.run_the_scenario()
         report = self.look()
         consent = FakeConsent(True)
-        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", "no simulation tested this image")
-        self.assertEqual(consent.asked, ["no simulation tested this image. erase ALL of this board's flash and write x.bin?"])
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", ["first caveat", "second caveat"])
+        self.assertEqual(consent.asked, ["first caveat. second caveat. erase ALL of this board's flash and write x.bin?"])
         consent = FakeConsent(True)
-        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin")
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", ["only caveat"])
+        self.assertEqual(consent.asked, ["only caveat. erase ALL of this board's flash and write x.bin?"])
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", [])
         self.assertEqual(consent.asked, ["erase ALL of this board's flash and write x.bin?"])
+
+    def test_the_caveats_come_after_what_the_person_accepts(self):
+        self.run_the_scenario()
+        report = self.look(esptool="c6-flash-id-garbled.txt")
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", ["a caveat"])
+        self.assertEqual(consent.asked, ["a caveat. you accept: flash unknown (the board did not say). erase ALL of this "
+                                         "board's flash and write x.bin?"])
+
+    def test_the_gate_asks_the_question_the_look_carries(self):
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual(report.caveats, ["the passed run's scenario has no set-control step (the step that presses a "
+                                          "button or sets a sensor) and no expect-pin step (the step that reads a pin)"])
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", report.caveats)
+        self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"))
 
 
 class TerminalConsentTest(unittest.TestCase):

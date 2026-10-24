@@ -12,12 +12,19 @@ from pathlib import Path
 import board_grant
 import flash_image
 import tools
-from run_scenario import NO_MAIN, READY, file_hashes
+from run_scenario import EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, ScenarioSteps, file_hashes
 
 #: What `ImageEvidence.simulation` says: a passed run tested the image, or no simulation did (the records keep it).
 SIMULATION_PASSED, SIMULATION_NONE = "passed", "none"
 #: What the person reads before the gate question when no simulation tested the image (deploy.py's docs quote it).
 NO_SIMULATION_CAVEAT = "no simulation tested this image"
+# --- MVP ---
+#: What the person reads when a passed run's log cannot say what its scenario did, or its scenario did less than a person expects.
+UNREAD_STEPS_CAVEAT = ("the passed run's log does not count its steps: "
+                       "run its scenario again to count them")
+NO_CONTROL_CAVEAT = "the passed run's scenario has no set-control step (the step that presses a button or sets a sensor)"
+NO_CONTROL_NO_PIN_CAVEAT = ("the passed run's scenario has no set-control step (the step that presses a button or sets a "
+                            "sensor) and no expect-pin step (the step that reads a pin)")
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
@@ -37,12 +44,13 @@ class ImageEvidence(abc.ABC):
     #: SIMULATION_PASSED or SIMULATION_NONE
     simulation = SIMULATION_PASSED
 
-    #: What the person reads before the gate question, or None when a passed run tested the image.
-    caveat = None
-
     @abc.abstractmethod
     def why_not_ready(self, image):
         """None when the evidence says `image` may go on a board, else why not. DeployError when a log cannot be read."""
+
+    def caveats(self, image):
+        """Sentences the person reads before the gate question about what tested `image`, or [] when there are none."""
+        return []
 
     def way_out(self, image):
         """What to do instead of a refusal, as words that end its sentence, or "" when there is nothing to add."""
@@ -77,6 +85,19 @@ class PassedRunEvidence(ImageEvidence):
             return why
         return image.why_other_runs()
 
+    # --- MVP ---
+    def caveats(self, image):
+        """What the passed run's scenario did not do, from the step counts in its log's header. Call it only for an image `why_not_ready` passed."""
+        passed = image.find_passed_log()
+        if passed is None:
+            return []
+        steps = ScenarioSteps.from_log(passed)
+        if steps.unread:
+            return [UNREAD_STEPS_CAVEAT]
+        if steps.count(SET_CONTROL):
+            return []
+        return [NO_CONTROL_CAVEAT if steps.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT]
+
     def way_out(self, image):
         refused_for_other_runs = not self.ignore_older_runs and not image.why_untested() and image.why_other_runs()
         return OLDER_RUNS_WAY_OUT if refused_for_other_runs else ""
@@ -104,7 +125,6 @@ class NoSimulationEvidence(ImageEvidence):
     """
 
     simulation = SIMULATION_NONE
-    caveat = NO_SIMULATION_CAVEAT
     grant_refusal = board_grant.WHY_NO_SIMULATION
 
     def __init__(self, project):
@@ -114,6 +134,9 @@ class NoSimulationEvidence(ImageEvidence):
         """None, or one sentence. It never raises for firmware/ or the image: a broken file is a sentence."""
         return (self._why_no_main() or self._why_not_compiling() or self._why_run_failed(image)
                 or self._why_image_differs(image))
+
+    def caveats(self, image):
+        return [NO_SIMULATION_CAVEAT]
 
     def _why_no_main(self):
         if not (self.project / "firmware" / "main.py").is_file():

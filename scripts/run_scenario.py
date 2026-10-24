@@ -15,8 +15,9 @@ run puts MicroPython and the project's firmware/ into a new flash image, so a ru
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
-The log goes to sim/runs/<name>.log: the date, the verdict, the sha256 of the image it tested and of each file in that
-image, the scenario as run, and what wokwi-cli printed, which is the board's serial output among the scenario's
+The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the step counts by kind (P345), the sha256 of
+the image it tested and of each file in that image, what the simulation cannot show, the scenario as run, and what
+wokwi-cli printed, which is the board's serial output among the scenario's
 progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
 """
 
@@ -25,6 +26,7 @@ import datetime
 import hashlib
 import itertools
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -35,8 +37,12 @@ import sim_project
 import tools
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS
 
+# --- MVP ---
+#: The kinds of wokwi-cli scenario step that this reads by name: the one that sets a control, the one that reads a pin
+#: and the one that waits for serial text.
+SET_CONTROL, EXPECT_PIN, WAIT_SERIAL = "set-control", "expect-pin", "wait-serial"
 READY = "ready"
-READY_STEP = '- wait-serial: "%s"' % READY
+READY_STEP = '- %s: "%s"' % (WAIT_SERIAL, READY)
 #: wokwi-cli's line when a wait-serial step matched (0.27.1): the proof that the ready text arrived.
 MATCHED = "Expected text matched:"
 #: wokwi-cli's stderr: a line with ERROR_WORD is its reason, and API_ERROR in it means the simulator was lost (0.27.1).
@@ -55,6 +61,12 @@ IMAGE_LINE = "image sha256: "
 #: The log's line for each file in the image, its sha256 then its path inside the image (P215, D20): the board's files
 #: are checked against these after a flash.
 FILE_LINE = "file sha256: "
+#: The log's line that counts the scenario's steps by kind (P345): what a passed run did, read by the look and the deploy question.
+STEP_COUNTS_LINE = "step counts: "
+#: What the line says when the steps could not be counted: a step has no key, so a kind would be a guess.
+STEPS_NOT_READ = "not read"
+#: The log's section that holds the simulation's limits note, when the project has one (P396).
+LIMITS_SECTION = "--- what this simulation cannot show ---"
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
 EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whatever your permissions allow.
 It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WOKWI_CLI_TOKEN=...
@@ -76,12 +88,95 @@ def with_ready_wait(scenario):
     if first is None or not lines[first].lstrip().startswith(STEP_ITEM):
         raise ValueError("it has no steps: list with a '- ' item under it")
     steps = [line.split("#")[0] for line in lines[first:] if line.lstrip().startswith("-")]
-    if any("wait-serial" in step and READY in step
-           for step in itertools.takewhile(lambda step: "set-control" not in step, steps)):
+    if any(WAIT_SERIAL in step and READY in step
+           for step in itertools.takewhile(lambda step: SET_CONTROL not in step, steps)):
         return scenario
     step = lines[first].lstrip()
     lines.insert(first, lines[first][:len(lines[first]) - len(step)] + READY_STEP)
     return "\n".join(lines) + "\n"
+
+
+# --- MVP ---
+class ScenarioSteps:
+    """
+    Value: the steps of a scenario counted by kind. `counts` maps a step kind (the key of a step, such as `set-control`) to
+    how many steps have it. `unread` is True when the steps could not be counted: a log with no counts line, or a step
+    with no key. Nothing is derived from an unread count.
+    """
+
+    #: A key at the start of a step's text, plain or quoted. Anchored, so a kind named inside a value is no key.
+    KEY = re.compile(r"""^\s*(?:"([\w-]+)"|'([\w-]+)'|([\w-]+))\s*:""")
+    ITEM = re.compile(r"^(\s*)-(?:\s|$)")
+    #: The one key a step carries beside its kind: wokwi-cli prints it as the step's name (TestScenario.ts, validStepKeys).
+    NAME_KEY = "name"
+
+    def __init__(self, counts, unread=False):
+        self.counts, self.unread = dict(counts), unread
+
+    @classmethod
+    def from_text(cls, steps):
+        """The ScenarioSteps of a scenario's text, comments cut as with_ready_wait cuts them. Only the items at the indent of the first step count."""
+        lines = [line.split("#")[0].rstrip() for line in steps.splitlines()]
+        start = next((i for i, line in enumerate(lines) if line == "steps:"), None)
+        body = [] if start is None else [line for line in lines[start + 1:] if line.strip()]
+        first = next((cls.ITEM.match(line) for line in body if cls.ITEM.match(line)), None)
+        if first is None:
+            return cls({}, unread=True)
+        width, steps = len(first.group(1)), []
+        for line in body:
+            item = cls.ITEM.match(line)
+            if item and len(item.group(1)) == width:
+                steps.append([line[item.end():].lstrip().lstrip("{")])
+            elif len(line) - len(line.lstrip()) <= width:
+                break  # the steps list ended: a key of the scenario at its own indent
+            elif steps:
+                steps[-1].append(line)
+        counts, unread = {}, False
+        for step in steps:
+            kind = cls._kind(step)
+            if kind:
+                counts[kind] = counts.get(kind, 0) + 1
+            else:
+                unread = True
+        return cls(counts, unread)
+
+    @classmethod
+    def _kind(cls, step):
+        """A step's kind: the first key of its lines that is not `name`, or None. The flow form keeps its keys on one line."""
+        for text in step[0].split(",") + step[1:]:
+            key = cls.KEY.match(text)
+            kind = key and (key.group(1) or key.group(2) or key.group(3))
+            if kind and kind != cls.NAME_KEY:
+                return kind
+        return None
+
+    @classmethod
+    def from_log(cls, log):
+        """The ScenarioSteps a log's header counts. A log with no counts line (older), a malformed one or a file that cannot be read is unread."""
+        try:
+            said = next((line[len(STEP_COUNTS_LINE):] for line in _header(log) if line.startswith(STEP_COUNTS_LINE)), None)
+        except OSError:
+            said = None
+        if said is None or said == STEPS_NOT_READ:
+            return cls({}, unread=True)
+        counts = {}
+        for each in said.split(", "):
+            kind, _, number = each.partition(" ")
+            if not re.fullmatch(r"[\w-]+", kind) or not number.isascii() or not number.isdigit() or kind in counts:
+                return cls({}, unread=True)
+            counts[kind] = int(number)
+        return cls(counts)
+
+    def count(self, kind):
+        """How many steps have this kind."""
+        return self.counts.get(kind, 0)
+
+    def line(self):
+        """The log's counts line: every kind, sorted, with the two kinds that matter always shown, or `not read`."""
+        if self.unread:
+            return STEP_COUNTS_LINE + STEPS_NOT_READ
+        kinds = sorted(set(self.counts) | {SET_CONTROL, EXPECT_PIN})
+        return STEP_COUNTS_LINE + ", ".join("%s %d" % (kind, self.count(kind)) for kind in kinds)
 
 
 def image_in(toml):
@@ -184,17 +279,23 @@ class ScenarioRun:
 
     def write_log(self, sentence, said):
         """
-        The log of a run that reached wokwi-cli: its date, verdict, the sha256 of the image it tested and of each file in
-        it, the scenario as run and what wokwi-cli printed. All but the last two are the header, which run_record and
-        file_hashes read.
+        The log of a run that reached wokwi-cli. Its header, which run_record, file_hashes and ScenarioSteps.from_log read,
+        holds the date with its zone, the verdict, the step counts and the sha256 of the image and of each file in it. After
+        the header come what the simulation cannot show (when sim/ holds that note), the scenario as run and what
+        wokwi-cli printed. A note that cannot be read is left out, so the paid run's verdict is still written.
         """
         self.log.parent.mkdir(exist_ok=True)
         files = "".join("%s%s %s\n" % (FILE_LINE, hashlib.sha256(data).hexdigest(), name) for name, data in self.files)
-        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s%s\n%s\n--- the scenario as run ---\n%s\n"
+        limits = self.sim / "WHAT-THIS-CANNOT-SHOW.md"
+        try:
+            shown = "%s\n%s\n\n" % (LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
+        except OSError:
+            shown = ""
+        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s--- the scenario as run ---\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
-                            % (self.scenario.name, datetime.datetime.now().isoformat(timespec="seconds"),
-                               self.timeout_ms, sentence, IMAGE_LINE, hashlib.sha256(self.flash).hexdigest(), files,
-                               self.steps, said.strip()))
+                            % (self.scenario.name, datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+                               self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).line(), IMAGE_LINE,
+                               hashlib.sha256(self.flash).hexdigest(), files, shown, self.steps, said.strip()))
         return self.log
 
 

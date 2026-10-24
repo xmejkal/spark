@@ -43,6 +43,7 @@ order: the look, its token, then the person's yes.
    `standing yes: not used: <why>`), it erased nothing. Give the person the line
    it printed to run in their own terminal window, word for word, and wait. deploy.py looks at the board again (the
    board restarts), names every warning in its question and erases only after they type `yes`.
+   The question starts with the look's caveats (P345), such as a passed run whose scenario has no `set-control` step. Relay them. They are facts about the run, not a stop.
 3. If the person wants you to deploy without a yes each time, offer the deploy grant line that deploy.py printed:
    `grant.py --scope deploy --minutes N`. Say first that it lets you erase ALL of the board's flash and write any passed
    image of any project for N minutes (1 to 1440). Never run it yourself, and never write a grant file: it is the person's yes in their own terminal.

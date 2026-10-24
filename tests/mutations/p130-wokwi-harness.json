@@ -14,13 +14,13 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a scenario that already waits for ready text gets a second wait that never matches",
-  "find": "    if any(\"wait-serial\" in step and READY in step\n",
-  "replace": "    if False and any(\"wait-serial\" in step and READY in step\n"
+  "find": "    if any(WAIT_SERIAL in step and READY in step\n",
+  "replace": "    if False and any(WAIT_SERIAL in step and READY in step\n"
  },
  {
   "file": "scripts/run_scenario.py",
   "name": "a ready wait after the first input stops the wait before it",
-  "find": "itertools.takewhile(lambda step: \"set-control\" not in step, steps)",
+  "find": "itertools.takewhile(lambda step: SET_CONTROL not in step, steps)",
   "replace": "steps"
  },
  {

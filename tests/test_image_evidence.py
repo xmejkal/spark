@@ -105,8 +105,57 @@ class PassedRunEvidenceTest(unittest.TestCase):
                 self.assertRaises(DeployError):
             PassedRunEvidence().why_not_ready(self.image)
 
-    def test_a_passed_run_is_simulation_passed_with_no_caveat(self):
-        self.assertEqual((PassedRunEvidence().simulation, PassedRunEvidence().caveat), ("passed", None))
+    def test_a_passed_run_is_simulation_passed(self):
+        self.assertEqual(PassedRunEvidence().simulation, "passed")
+
+    def counted(self, line, name="a.log"):
+        """A passed run whose header holds this step-counts line, or none when the line is None."""
+        write_log(self.project, name, "passed")
+        if line is not None:
+            log = self.project / "sim" / "runs" / name
+            log.write_text(log.read_text().replace("\n\n", "\n%s\n\n" % line, 1))
+
+    def test_a_scenario_with_a_control_and_a_pin_has_no_caveat(self):
+        self.counted("step counts: expect-pin 1, set-control 1, wait-serial 2")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
+
+    def test_a_scenario_with_a_control_and_no_pin_has_no_caveat(self):
+        self.counted("step counts: expect-pin 0, set-control 2, wait-serial 1")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
+
+    def test_a_scenario_with_a_pin_and_no_control_says_so(self):
+        self.counted("step counts: expect-pin 1, set-control 0, wait-serial 1")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "the passed run's scenario has no set-control step (the step that presses a button or sets a sensor)"])
+
+    def test_a_scenario_with_no_control_and_no_pin_says_both(self):
+        for line in ("step counts: expect-pin 0, set-control 0, wait-serial 1", "step counts: delay 3, wait-serial 1"):
+            self.counted(line)
+            with self.subTest(line=line):
+                self.assertEqual(PassedRunEvidence().caveats(self.image), [
+                    "the passed run's scenario has no set-control step (the step that presses a button or sets a "
+                    "sensor) and no expect-pin step (the step that reads a pin)"])
+
+    def test_a_log_that_does_not_count_its_steps_is_said_to_be_unread_and_never_to_lack_a_step(self):
+        for line in (None, "step counts: not read", "step counts: nonsense"):
+            self.counted(line)
+            with self.subTest(line=line):
+                self.assertEqual(PassedRunEvidence().caveats(self.image), [
+                    "the passed run's log does not count its steps: "
+                    "run its scenario again to count them"])
+
+    def test_only_the_log_that_passed_on_this_image_is_counted(self):
+        write_log(self.project, "a.log", "passed", "0")  # another image: not this run
+        self.counted("step counts: expect-pin 1, set-control 1, wait-serial 1", "b.log")
+        self.assertEqual(PassedRunEvidence(ignore_older_runs=True).caveats(self.image), [])
+
+    def test_a_log_that_cannot_be_read_counts_as_unread(self):
+        self.counted("step counts: expect-pin 1, set-control 1, wait-serial 1")
+        with mock.patch.object(ProjectImage, "find_passed_log", return_value=self.project / "gone.log"):
+            self.assertEqual(len(PassedRunEvidence().caveats(self.image)), 1)
+
+    def test_no_passed_run_gives_no_caveat(self):
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
 
 
 class NoSimulationEvidenceTest(unittest.TestCase):
@@ -203,8 +252,8 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_it_says_none_with_its_caveat_flag_and_no_notes_and_never_answers_for_a_grant(self):
         evidence = NoSimulationEvidence(self.project)
-        self.assertEqual((evidence.simulation, evidence.caveat, evidence.argv(), evidence.notes(self.image)),
-                         ("none", "no simulation tested this image", ["--no-simulation"], []))
+        self.assertEqual((evidence.simulation, evidence.caveats(self.image), evidence.argv(), evidence.notes(self.image)),
+                         ("none", ["no simulation tested this image"], ["--no-simulation"], []))
         self.assertEqual(evidence.grant_refusal, "no simulation")
         self.assertEqual(evidence.way_out(self.image), "")
 

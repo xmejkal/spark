@@ -62,6 +62,99 @@ class TheReadyWaitTest(unittest.TestCase):
                 run_scenario.with_ready_wait(text)
 
 
+class TheStepCountsTest(unittest.TestCase):
+    """P345: the counts of a scenario's steps by kind, read from the text as run and from a log's header only."""
+
+    @staticmethod
+    def steps(*items):
+        return "name: x\nversion: 1\nsteps:\n" + "".join("  %s\n" % item for item in items)
+
+    def counted(self, *items):
+        return run_scenario.ScenarioSteps.from_text(self.steps(*items))
+
+    def test_each_kind_is_counted_and_two_of_one_kind_are_two(self):
+        steps = self.counted('- wait-serial: "ready"', "- set-control: { part-id: b, name: pressed, value: 1 }",
+                             '- wait-serial: "on"', "- expect-pin: { part-id: led, pin: A, value: 1 }",
+                             "- set-control: { part-id: b, name: pressed, value: 0 }")
+        self.assertEqual(steps.counts, {"wait-serial": 2, "set-control": 2, "expect-pin": 1})
+        self.assertFalse(steps.unread)
+        self.assertEqual(steps.line(), "step counts: expect-pin 1, set-control 2, wait-serial 2")
+
+    def test_a_kind_this_does_not_name_is_counted_and_a_log_with_only_a_delay_is_not_unread(self):
+        steps = self.counted("- delay: 500ms", '- wait-serial: "ready"')
+        self.assertEqual((steps.count("delay"), steps.unread), (1, False))
+        self.assertEqual(steps.line(), "step counts: delay 1, expect-pin 0, set-control 0, wait-serial 1")
+
+    def test_the_flow_form_and_a_quoted_key_are_counted(self):
+        for item in ("- { set-control: { part-id: b, name: pressed, value: 1 } }", "- {set-control: {part-id: b}}",
+                     '- "set-control":  {part-id: b}', "- 'set-control' : {part-id: b}"):
+            with self.subTest(item=item):
+                self.assertEqual(self.counted(item).counts, {"set-control": 1})
+
+    def test_a_kind_in_a_comment_or_in_a_value_is_not_counted(self):
+        steps = self.counted("# - set-control: { part-id: b }", '- wait-serial: "set-control: x"  # - expect-pin: y',
+                             "- wait-serial: 'expect-pin: z'")
+        self.assertEqual(steps.counts, {"wait-serial": 2})
+        self.assertEqual(steps.count("set-control"), 0)
+
+    def test_a_nested_list_item_is_no_step(self):
+        scenario = self.steps("- set-control:", "    part-id: b", "    values:", "      - 1", "      - 2", "- wait-serial: x")
+        steps = run_scenario.ScenarioSteps.from_text(scenario)
+        self.assertEqual((steps.counts, steps.unread), ({"set-control": 1, "wait-serial": 1}, False))
+
+    def test_a_step_name_is_its_label_and_the_next_key_is_its_kind(self):
+        # wokwi-cli lets a step carry `name:`, which it prints (TestScenario.ts, validStepKeys = ['name']).
+        block = self.steps("- name: press the button", "  set-control:", "    part-id: b", '- wait-serial: "on"')
+        self.assertEqual(run_scenario.ScenarioSteps.from_text(block).counts, {"set-control": 1, "wait-serial": 1})
+        for item in ("- { name: press, set-control: { part-id: b } }", "- {name: press, expect-pin: {part-id: led}}"):
+            with self.subTest(item=item):
+                self.assertEqual(self.counted(item).count("name"), 0)
+                self.assertFalse(self.counted(item).unread)
+
+    def test_a_step_with_only_a_name_is_unread(self):
+        self.assertTrue(self.counted("- name: nothing else").unread)
+
+    def test_the_steps_end_at_a_key_of_the_scenario_at_their_own_indent(self):
+        scenario = "name: x\nsteps:\n  - wait-serial: a\n  - set-control: {part-id: b}\nafter: 1\n  - expect-pin: c\n"
+        self.assertEqual(run_scenario.ScenarioSteps.from_text(scenario).counts, {"wait-serial": 1, "set-control": 1})
+
+    def test_an_item_with_no_key_makes_the_counts_unread(self):
+        for item in ("- just-a-word", "- [a, b]", '- "two words": x', "- : x", "-"):
+            with self.subTest(item=item):
+                steps = self.counted('- wait-serial: "ready"', item)
+                self.assertTrue(steps.unread)
+                self.assertEqual(steps.line(), "step counts: not read")
+
+    def test_a_text_with_no_steps_is_unread(self):
+        for text in ("", "name: x\n", "steps:\n"):
+            with self.subTest(text=text):
+                self.assertTrue(run_scenario.ScenarioSteps.from_text(text).unread)
+
+    def test_the_line_round_trips_through_a_log_header(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        for steps in (self.counted("- delay: 1s", '- wait-serial: "ready"'), self.counted("- just-a-word")):
+            log.write_text("# a, run 2026-10-24T10:00:00+02:00, timeout 1 ms\nverdict: passed\n%s\n\nbody\n" % steps.line())
+            with self.subTest(line=steps.line()):
+                read = run_scenario.ScenarioSteps.from_log(log)
+                self.assertEqual((read.line(), read.unread), (steps.line(), steps.unread))
+
+    def test_a_log_with_no_counts_line_a_malformed_one_or_no_file_is_unread(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        header = "# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n"
+        for text in (header + "\nbody\n", header + "step counts: \n\n", header + "step counts: wait-serial\n\n",
+                     header + "step counts: wait-serial x\n\n", header + "step counts: wait-serial 1; delay 2\n\n",
+                     header + "step counts: set-control 1, set-control 2\n\n"):
+            log.write_text(text)
+            with self.subTest(text=text):
+                self.assertTrue(run_scenario.ScenarioSteps.from_log(log).unread)
+        self.assertTrue(run_scenario.ScenarioSteps.from_log(log.with_name("none.log")).unread)
+
+    def test_a_counts_line_after_the_header_is_not_read(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\nstep counts: set-control 3\n")
+        self.assertTrue(run_scenario.ScenarioSteps.from_log(log).unread)
+
+
 class TheVerdictTest(unittest.TestCase):
     def test_the_reason_is_wokwi_cli_s_own_error_not_a_firmware_line_that_says_error(self):
         status, said = run_scenario.verdict(1, "ready\nError: I2C not found\n", "ready\nError: I2C not found\n" + READY_MATCHED,
@@ -262,6 +355,57 @@ class TheLogNamesTheImageTest(ProjectCase):
         self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n\n"
                             "--- the scenario as run ---\n")
         self.assertEqual(run_scenario.run_record(self.log), ("passed", None))
+
+
+class TheLogCountsTheStepsTest(ProjectCase):
+    """P345: a log's header counts the steps that ran, and the time carries its zone."""
+
+    def test_the_header_counts_the_steps_as_run_after_the_verdict(self):
+        _, _, log = self.run_with("ready\nLED on\n")
+        lines = log.read_text().split("\n\n", 1)[0].splitlines()
+        self.assertEqual(lines[1:3], ["verdict: passed", "step counts: expect-pin 0, set-control 1, wait-serial 2"])
+
+    def test_the_log_reads_back_as_the_counts_it_wrote(self):
+        _, _, log = self.run_with("ready\n")
+        steps = run_scenario.ScenarioSteps.from_log(log)
+        self.assertEqual((steps.counts, steps.unread), ({"expect-pin": 0, "set-control": 1, "wait-serial": 2}, False))
+
+    def test_a_limits_note_that_cannot_be_read_leaves_the_verdict_written(self):
+        note = self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md"
+        note.write_text("- a limit\n")
+        read = Path.read_text
+
+        def unreadable(self, *args, **kwargs):
+            if self.name == note.name:
+                raise PermissionError("denied")
+            return read(self, *args, **kwargs)
+
+        with mock.patch.object(Path, "read_text", unreadable):
+            _, _, log = self.run_with("ready\n")
+        self.assertEqual(run_scenario.run_record(log)[0], "passed")
+        self.assertNotIn("--- what this simulation cannot show ---", log.read_text())
+
+    def test_the_time_has_its_zone(self):
+        _, _, log = self.run_with("ready\n")
+        self.assertRegex(log.read_text().splitlines()[0], r", run \d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d, timeout 60000 ms$")
+
+    def test_what_the_board_printed_cannot_set_the_counts(self):
+        _, _, log = self.run_with("ready\n", out=READY_MATCHED + "step counts: set-control 9\n")
+        self.assertEqual(run_scenario.ScenarioSteps.from_log(log).count("set-control"), 1)
+
+    def test_the_limits_note_goes_after_the_header_and_leaves_the_records_as_they_read(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("# Limits\n\nthe XIAO has no button\n\nsecond\n")
+        _, _, log = self.run_with("ready\n")
+        text = log.read_text()
+        self.assertIn("\n\n--- what this simulation cannot show ---\n# Limits\n\nthe XIAO has no button\n\nsecond\n"
+                      "\n--- the scenario as run ---\n", text)
+        self.assertLess(text.index("what this simulation cannot show"), text.index("the scenario as run"))
+        self.assertEqual(run_scenario.run_record(log)[0], "passed")
+        self.assertEqual(list(run_scenario.file_hashes(log)), ["/main.py"])
+
+    def test_with_no_limits_note_the_log_has_no_such_section(self):
+        _, _, log = self.run_with("ready\n")
+        self.assertNotIn("cannot show", log.read_text())
 
 
 class TheLogNamesEachFileTest(ProjectCase):
