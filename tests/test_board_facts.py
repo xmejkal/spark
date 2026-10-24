@@ -1,8 +1,8 @@
 """P401 (#518): board_facts.read_last_deploy reads what spark's store says of the board on USB, and says what it cannot read."""
 
-import datetime
 import json
 import os
+import shutil
 import sys
 import time
 import unittest
@@ -37,7 +37,7 @@ class LastDeployCase(unittest.TestCase):
         self.addCleanup(env.stop)
         time.tzset()
         self.addCleanup(time.tzset)
-        self.addCleanup(lambda: __import__("shutil").rmtree(home, ignore_errors=True))
+        self.addCleanup(shutil.rmtree, home, True)
 
     def write(self, text, mac=MAC):
         folder = store.place("boards")
