@@ -37,6 +37,9 @@ import tools  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, pin_time_zone  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
+#: The words the erase sentence has for a board the store holds no deploy of (P401).
+NONE_RECORDED = "spark's store record names no deploy here"
+
 #: A fixed zone for a deploy moment, so a test reads the same on every machine (P291).
 PRAGUE_SUMMER = datetime.timezone(datetime.timedelta(hours=2))
 
@@ -1039,13 +1042,13 @@ class TheCaveatTest(GateCase):
         report = self.look()
         consent = FakeConsent(True)
         deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", ["first caveat", "second caveat"])
-        self.assertEqual(consent.asked, ["first caveat. second caveat. erase ALL of this board's flash and write x.bin?"])
+        self.assertEqual(consent.asked, ["first caveat. second caveat. erase ALL of this board's flash (%s) and write x.bin?" % NONE_RECORDED])
         consent = FakeConsent(True)
         deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", ["only caveat"])
-        self.assertEqual(consent.asked, ["only caveat. erase ALL of this board's flash and write x.bin?"])
+        self.assertEqual(consent.asked, ["only caveat. erase ALL of this board's flash (%s) and write x.bin?" % NONE_RECORDED])
         consent = FakeConsent(True)
         deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", [])
-        self.assertEqual(consent.asked, ["erase ALL of this board's flash and write x.bin?"])
+        self.assertEqual(consent.asked, ["erase ALL of this board's flash (%s) and write x.bin?" % NONE_RECORDED])
 
     def test_the_caveats_come_after_what_the_person_accepts(self):
         self.run_the_scenario()
@@ -1053,7 +1056,25 @@ class TheCaveatTest(GateCase):
         consent = FakeConsent(True)
         deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", ["a caveat"])
         self.assertEqual(consent.asked, ["a caveat. you accept: flash unknown (the board did not say). erase ALL of this "
-                                         "board's flash and write x.bin?"])
+                                         "board's flash (%s) and write x.bin?" % NONE_RECORDED])
+
+    def test_the_erase_sentence_names_the_last_deploy_after_the_caveats_and_what_the_person_accepts(self):
+        self.run_the_scenario()
+        self.record_a_deploy()
+        report = self.look(esptool="c6-flash-id-garbled.txt")
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", ["first caveat", "second caveat"])
+        self.assertEqual(consent.asked, [
+            "first caveat. second caveat. you accept: flash unknown (the board did not say). erase ALL of this board's flash "
+            "(spark's store record names blink-c6 as its last deploy here, 2026-10-19T09:24:50+02:00, ready seen) and write x.bin?"])
+
+    def test_a_board_whose_mac_was_not_read_gets_no_token_and_no_question(self):
+        self.run_the_scenario()
+        report = self.look(esptool="c6-flash-id-no-mac.txt")
+        consent = FakeConsent(True)
+        with self.assertRaises(deploy_gate.GateClosedError):
+            deploy_gate.require_open_gate(report, "aaaa-bbbb", consent, "x.bin", [])
+        self.assertEqual(consent.asked, [])
 
     def test_the_gate_asks_the_question_the_look_carries(self):
         self.run_the_scenario()

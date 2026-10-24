@@ -62,6 +62,7 @@ class WhatThePersonSeesTest(LookScriptCase):
             RESTART,
             "  port   /dev/cu.usbmodem101",
             "  mac    " + MAC,
+            "  spark's last deploy here: none in its store record (it keeps only its own deploys)",
             "  chip   same      esp32c6",
             "  flash  same      4 MB",
             SIMULATION, CAVEAT,
@@ -73,10 +74,10 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.board("firebeetle2-esp32s3")
         code, said, _ = self.go(esptool="s3-flash-id-8mb.txt")
         self.assertEqual(code, 1)
-        self.assertEqual(said[3:6], ["  chip   same      esp32s3", "  flash  differs   8 MB",
+        self.assertEqual(said[4:7], ["  chip   same      esp32s3", "  flash  differs   8 MB",
                                      "  the flash differs: 8 MB, the record says 16 or 4. deploy.py will ask you to accept it."])
-        self.assertEqual(said[6:8], [SIMULATION, CAVEAT])
-        self.assertTrue(said[8].startswith("  token  "))
+        self.assertEqual(said[7:9], [SIMULATION, CAVEAT])
+        self.assertTrue(said[9].startswith("  token  "))
 
     def test_a_field_the_board_did_not_say_is_unknown_and_the_look_could_not_check_it(self):
         self.run_the_scenario()
@@ -91,7 +92,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.board("firebeetle2-esp32s3")
         code, said, _ = self.go()
         self.assertEqual(code, 1)
-        self.assertEqual(said[3], "  chip   differs   esp32c6")
+        self.assertEqual(said[4], "  chip   differs   esp32c6")
         self.assertEqual(said[-4:], ["  this board is an esp32c6, the project is for an esp32s3: deploy.py will refuse.",
                                      SIMULATION, CAVEAT, "  no token: the look found a stop"])
 
@@ -114,7 +115,7 @@ class WhatThePersonSeesTest(LookScriptCase):
     def test_no_image_prints_the_fields_and_says_why_there_is_no_token(self):
         code, said, _ = self.go()
         self.assertEqual(code, 2)
-        self.assertEqual(said[3:5], ["  chip   same      esp32c6", "  flash  same      4 MB"])
+        self.assertEqual(said[4:6], ["  chip   same      esp32c6", "  flash  same      4 MB"])
         self.assertEqual(said[-2], "  all fields match the board record xiao-esp32-c6.")
         self.assertRegex(said[-1], r"^  no token: .*run a scenario first")
 
@@ -159,6 +160,12 @@ class WhatThePersonSeesTest(LookScriptCase):
         data_ = json.loads(self.go("--json")[1][-1])["data"]
         self.assertEqual((data_["simulation"], len(data_["caveats"])), ("passed", 1))
         self.assertTrue(data_["caveats"][0].startswith("the passed run's scenario has no set-control step"))
+
+    def test_the_json_look_carries_the_last_deploy_flat(self):
+        self.run_the_scenario()
+        data_ = json.loads(self.go("--json")[1][-1])["data"]
+        self.assertEqual(data_["last_deploy"], {"state": "none-recorded", "why": None, "project": None, "verdict": None,
+                                                "deployed": None})
 
     def test_the_json_look_of_an_image_no_run_tested_says_null_and_no_caveat(self):
         self.build_from_firmware()

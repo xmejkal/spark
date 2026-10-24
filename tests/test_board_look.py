@@ -1,8 +1,11 @@
 """P219 step 2 (#201): board_look.py reads a board on USB and compares it with its record, and changes nothing on it."""
 
 import json
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -13,6 +16,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_facts  # noqa: E402
 import board_look  # noqa: E402
 import project_image  # noqa: E402
 import outcomes  # noqa: E402
@@ -24,6 +28,9 @@ from test_deploy import FOUND, ProjectCase, found  # noqa: E402
 #: written by hand, as tests/data/board_look/README.md says: no such board was on the bench.
 DATA = Path(__file__).resolve().parent / "data" / "board_look"
 C6_PORT = "/dev/cu.usbmodem101"
+C6_MAC = "8c:bf:ea:xx:xx:xx"
+#: What the look says when the store holds no deploy of the board (P401).
+NONE_RECORDED_LINE = "spark's last deploy here: none in its store record (it keeps only its own deploys)"
 #: What the passed run of test_deploy's scenario (one wait-serial step, no input, no pin) says before the gate question (P345).
 NO_CONTROL_NO_PIN = ("the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) "
                      "and no expect-pin step (the step that reads a pin)")
@@ -45,8 +52,18 @@ class LookCase(ProjectCase):
 
     def setUp(self):
         super().setUp()
+        home = Path(tempfile.mkdtemp())  # a store of its own: the suite's one scratch store holds what other tests recorded (P401)
+        env = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
+        env.start()
+        self.addCleanup(env.stop)
+        self.addCleanup(shutil.rmtree, home, True)
         self.board("xiao-esp32-c6")
         self.ran = []
+
+    def record_a_deploy(self, project="blink-c6", verdict="ready seen"):
+        """A deploy of this look's board in the store, as record_deploy writes it."""
+        board_facts.record_deploy({"mac": C6_MAC, "project": project, "board": "xiao-esp32-c6", "image_sha256": "0",
+                                   "simulation": "passed", "deployed": "2026-10-19T09:24:50+02:00"}, verdict, "a test")
 
     def board(self, name):
         (self.project / "requirements.json").write_text(json.dumps({"board": name, "parts": []}))
@@ -395,11 +412,12 @@ class LookReportToDictTest(LookCase):
         report = self.look()
         as_dict = report.to_dict()
         self.assertEqual(as_dict, {
-            "port": C6_PORT, "chip": "esp32c6", "flash_mb": 4, "mac": "8c:bf:ea:xx:xx:xx", "board": "xiao-esp32-c6",
+            "port": C6_PORT, "chip": "esp32c6", "flash_mb": 4, "mac": C6_MAC, "board": "xiao-esp32-c6",
             "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
             "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None,
             # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
-            "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN]})
+            "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN],
+            "last_deploy": {"state": "none-recorded", "why": None, "project": None, "verdict": None, "deployed": None}})
         self.assertIsNotNone(as_dict["token"])
         json.dumps(as_dict)
 
@@ -490,6 +508,19 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(board_look.report_lines(report, token=False)[-3:-1],
                          ["  simulation: none", "  no simulation tested this image"])
 
+    def test_the_last_deploy_is_there_also_when_the_evidence_refuses_the_image(self):
+        self.record_a_deploy()
+        report = self.look()  # no scenario has run: no image
+        self.assertIsNotNone(report.image_why)
+        self.assertEqual((report.last_deploy.state, report.last_deploy.project), ("recorded", "blink-c6"))
+        evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value="no"))
+        self.assertEqual(self.look(evidence=evidence).last_deploy.project, "blink-c6")
+
+    def test_the_json_carries_the_last_deploy(self):
+        self.record_a_deploy()
+        self.assertEqual(self.look().to_dict()["last_deploy"], {"state": "recorded", "why": None, "project": "blink-c6",
+                         "verdict": "ready seen", "deployed": "2026-10-19T09:24:50+02:00"})
+
     def test_the_json_carries_both(self):
         self.run_the_scenario()
         as_dict = self.look().to_dict()
@@ -500,6 +531,29 @@ class TheLookStatesTheSimulationTest(LookCase):
 
 class ReportLinesTest(LookCase):
     """P239 PR 6: the lines a person reads live in board_look, so deploy.py need not import look.py."""
+
+    def test_the_last_deploy_is_the_line_right_after_the_mac(self):
+        self.run_the_scenario()
+        lines = board_look.report_lines(self.look(), token=False)
+        self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 1], "  " + NONE_RECORDED_LINE)
+        self.record_a_deploy()
+        lines = board_look.report_lines(self.look(), token=False)
+        self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 1], "  spark's last deploy here: blink-c6, ready seen, "
+                         "2026-10-19T09:24:50+02:00 (its store record, not read from the board)")
+
+    def test_a_board_whose_mac_was_not_read_is_not_checked_and_never_no_deploy(self):
+        self.run_the_scenario()
+        self.record_a_deploy()
+        lines = board_look.report_lines(self.look(esptool="c6-flash-id-no-mac.txt"), token=False)
+        self.assertEqual(lines[lines.index("  mac    not read") + 1], "  spark's last deploy here: not checked: the board's MAC was not read")
+
+    def test_the_last_deploy_is_read_for_the_mac_of_this_board_only(self):
+        self.run_the_scenario()
+        self.record_a_deploy()
+        other = "aa:bb:cc:dd:ee:ff"
+        board_facts.record_deploy({"mac": other, "project": "other", "board": "b", "image_sha256": "0", "simulation": "passed",
+                                   "deployed": "2026-10-20T09:24:50+02:00"}, "ready seen", "a test")
+        self.assertEqual(self.look().last_deploy.project, "blink-c6")
 
     def test_the_token_line_is_there_unless_asked_not_to(self):
         self.run_the_scenario()
