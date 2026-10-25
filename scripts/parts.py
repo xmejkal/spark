@@ -50,8 +50,6 @@ SUPPORTED_SCHEMA = 1
 
 REQUIRED_KEYS = ("schema", "id", "name", "kind", "needs")
 
-#: Each entry in `facts` must answer all three, or it is an opinion with a number attached.
-REQUIRED_FACT_KEYS = ("value", "verified", "source")
 #: Fields a record no longer holds, each with where that fact lives now (P95, W16). Owning one is the person's
 #: fact, not the part's: it is a drawer entry, and a photo of the one they own goes on that entry.
 RETIRED = {"owned": "what you own is a drawer entry — /spark:drawer, `parts.py --drawer-set`",
@@ -217,6 +215,7 @@ def one_line(text):
 CAPABILITIES = ("wake", "adc", "pwm")
 
 from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
+import provenance  # noqa: E402
 import store  # noqa: E402
 from screen_text import printable  # noqa: E402
 
@@ -838,17 +837,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
                 "are not separate outputs" % (", ".join(map(str, pins)), rail, polarity))
 
     for name, fact in (part.get("facts") or {}).items():
-        for key in REQUIRED_FACT_KEYS:
-            if key not in fact:
-                problems.append("facts.%s has no %r — a number with no provenance is an opinion"
-                                % (name, key))
-        if fact.get("verified") and fact.get("value") is None:
-            problems.append("facts.%s is marked verified but has no value" % name)
-        if fact.get("verified") is False and fact.get("value") is not None \
-                and not fact.get("why_it_matters"):
-            # An unverified guess that nobody explains is how an assumption becomes a fact.
-            problems.append("facts.%s is an unverified value with no why_it_matters; say what "
-                            "depends on it or do not carry the number" % name)
+        problems.extend(provenance.fact_problems("facts.%s" % name, fact))
 
     problems.extend(host_part_problems(part))
     problems.extend(i2c_pullup_problems(part))

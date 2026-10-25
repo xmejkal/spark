@@ -264,6 +264,9 @@ class TheContractTest(unittest.TestCase):
         problems = self._problems(facts={"current_ma": {"value": 20, "verified": True}})
         self.assertTrue(any("source" in p for p in problems))
 
+    def test_a_fact_that_is_no_object_is_caught(self):
+        self.assertEqual(self._problems(facts={"x": "s"}), ["facts.x is 's', but it is an object"])
+
     def test_a_fact_claiming_to_be_verified_with_no_value_is_caught(self):
         problems = self._problems(
             facts={"x": {"value": None, "verified": True, "source": "somewhere"}})
