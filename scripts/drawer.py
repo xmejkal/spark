@@ -310,14 +310,20 @@ def apply(changes):
             store.write_json("drawer", change["entry"], change["after"])
 
 
+# --- MVP --- P403
+def holders_of(entries, mine):
+    """The other projects that hold any of these drawer entries, sorted. `mine` is the asking project's name, or None for every holder."""
+    return sorted({who for entry in entries for who in entry.get("used_in") or {} if who != mine})
+
+
 def listing():
-    """Every entry as the drawer shows it (§8 D4): its key, label, count, what it is and where that lives, unsure, skip."""
+    """Every entry as the drawer shows it (§8 D4): its key, label, count, what it is and where that lives, unsure, skip, holders."""
     known, shown = linkable(), []
     for entry_id, entry in sorted(entries().items(), key=lambda pair: (str(pair[1].get("label", "")).lower(), pair[0])):
         target = entry.get("is") if isinstance(entry.get("is"), dict) and entry.get("is") else None
         shown.append({"entry": entry_id, "label": entry.get("label"), "count": entry.get("count"), "is": target,
                       "in": resolve(target, known)[0] if target else None, "unsure": bool(entry.get("unsure")),
-                      "skip": entry.get("skip")})
+                      "skip": entry.get("skip"), "held_by": holders_of([entry], None)})
     return shown
 
 

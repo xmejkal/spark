@@ -20,6 +20,7 @@ import emit_footprint
 import matching
 import parts
 import store
+from screen_text import printable
 
 #: How a need stands against the store (§3).
 MARKS = ("have", "have-unknown", "know", "gap")
@@ -193,7 +194,8 @@ def _candidate(need, fit, context, mine=None):
             said["stops_at"] = "footprint" if stops_at_footprint(record) else None
     return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": []}, **said,
                 what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
-                what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about, owned=owned, free=free, unsure=unsure)
+                what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about,
+                held_by=drawer.holders_of(context["holding"], mine), owned=owned, free=free, unsure=unsure)
 
 
 def candidates(need, known, entries, mine=None, matcher=None):
@@ -267,7 +269,7 @@ def _how_to_free(entry_keys, holders):
     shortage is the person's own count: fewer are picked, or a count that was low is set. `--drawer-set` takes a file."""
     if holders:
         return ("free it — a file holding [%s] without %s, given to --drawer-set <file> after a dry run — or pick another"
-                % (", ".join('{"entry": "%s", "used_in": …}' % key for key in entry_keys), ", ".join(holders)))
+                % (", ".join('{"entry": "%s", "used_in": …}' % key for key in entry_keys), ", ".join(printable(who) for who in holders)))
     return ("pick fewer, or another — or, if you own more, a file holding [%s], given to --drawer-set <file> after a dry run"
             % ", ".join('{"entry": "%s", "count": …}' % key for key in entry_keys))
 
@@ -327,9 +329,9 @@ def plan_pick(project, given, passed_over=()):
             taken = max(min(room, pieces), 0)
             mine[entry_id] += taken
             pieces -= taken
-        holders = sorted({who for _, entry in held for who in entry.get("used_in") or {} if who != name})
+        holders = drawer.holders_of([entry for _, entry in held], name)
         if pieces:
-            problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(holders) if holders else "",
+            problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(printable(who) for who in holders) if holders else "",
                                                                                  pieces + sum(mine[entry_id] for entry_id, _ in held)),
                                            _how_to_free([entry_id for entry_id, _ in held], holders)))
         notes += ["%s: maybe owned — check the drawer first" % key] if unsure else []
