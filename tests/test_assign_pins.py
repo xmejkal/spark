@@ -117,6 +117,29 @@ class PinsWithAnotherJobTest(unittest.TestCase):
         shared = [a for a in assignments if a["pin"] in ("U0", "B0")]
         self.assertTrue(all("already wired here" in a["why"] for a in shared))
 
+    # --- MVP --- P389
+    def with_a_screen(self):
+        """The test board with one more pin, D0 on GPIO 8, that the board's own display uses."""
+        return board(pins=dict(board()["pins"], D0=8), pin_roles=dict(
+            board()["pin_roles"], onboard_display={"gpio": [8], "labels": {"CS": 8}, "note": "the screen's chip select"}))
+
+    def test_a_pin_of_the_boards_own_display_is_kept_free_for_longer_than_a_plain_one(self):
+        signals = [{"name": "S%d" % n, "needs": []} for n in range(2)]
+        assignments, _ = assign_pins.assign(self.with_a_screen(), signals)
+        self.assertNotIn("D0", placed(assignments).values())
+
+    def test_a_pin_of_the_display_is_used_when_nothing_else_is_left_and_the_answer_says_why(self):
+        signals = [{"name": "S%d" % n, "needs": []} for n in range(7)]
+        assignments, _ = assign_pins.assign(self.with_a_screen(), signals)
+        shared = [entry for entry in assignments if entry["pin"] == "D0"]
+        self.assertEqual(len(shared), 1, placed(assignments))
+        self.assertEqual(shared[0]["roles"], ["onboard_display"])
+        self.assertIn("something else is already wired here (onboard_display)", shared[0]["why"])
+
+    def test_a_pin_of_the_display_costs_more_than_one_of_the_board_s_button(self):
+        self.assertGreater(assign_pins.ROLE_PENALTY["onboard_display"], assign_pins.ROLE_PENALTY["onboard_button"])
+    # --- end MVP ---
+
     def test_every_assignment_explains_itself(self):
         assignments, _ = assign_pins.assign(
             board(), [{"name": "A", "needs": ["adc"]}, {"name": "B", "needs": []}])
