@@ -498,7 +498,7 @@ def main(argv=None):
     parser.add_argument("--project", help="the project to resolve the board from")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--emit-pins", metavar="FILE",
-                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED, ONBOARD_BUTTON, ONBOARD_DISPLAY_* (one name per label and per fact) and the _ON levels when the board record names them")
+                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED and ONBOARD_BUTTON for a part on one pin, ONBOARD_<PART>_<LABEL> per label (ONBOARD_BUTTON_S1), ONBOARD_<PART>_<FACT> per fact (ONBOARD_DISPLAY_WIDTH) and the _ON levels, when the board record names them")
     args = parser.parse_args(argv)
 
     # One loader for the whole chain (`design.py`): the project is the requirements FILE's, the

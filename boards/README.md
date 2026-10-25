@@ -131,7 +131,8 @@ An entry may also hold these keys:
 - `facts`: `{"width": {"value": 135, "verified": false, "source": "…", "why_it_matters": "…"}}`. A name is lower-case
   letters and underscores, and not `on`. Each fact follows the part records' rule: a value, `verified` and a `source`,
   and a `why_it_matters` when the value is not verified. `pins.py` gets `ONBOARD_DISPLAY_WIDTH = 135`, with the source
-  and "not verified" in the comment. Only a number or a word becomes a line.
+  and "not verified" in the comment. Only a finite number or a word becomes a line, and `--validate` refuses a value that
+  is a list, an object, or not finite.
 
 ```json
 "onboard_display": {
