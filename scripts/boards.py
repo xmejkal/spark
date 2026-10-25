@@ -31,6 +31,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import provenance
 import store
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
@@ -418,6 +419,57 @@ def resolve(project: Path) -> Path:
     return destination
 
 
+# --- MVP ---
+#: What a label of a role entry may be, and what a fact name may be: each becomes a part of a pins.py name, as
+#: `ONBOARD_DISPLAY_MOSI` and `ONBOARD_DISPLAY_WIDTH`. `ON` is no label and `on` no fact, because `ONBOARD_BUTTON_ON`
+#: holds the active level.
+LABEL = re.compile(r"[A-Z0-9]+")
+FACT_NAME = re.compile(r"[a-z_]+")
+LEVEL_LABEL = "ON"
+
+
+def _is_gpio(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def role_entry_problems(where, role):
+    """
+    Every way the `gpio`, `labels` and `facts` of one `pin_roles` entry break the contract (P389, P396 row 11), named
+    from `where`, which the caller quotes. The entry is a dict that holds `gpio`. A name is quoted with `%r`, because
+    `load` prints these with no screen guard. A `gpio` that is no list of GPIO numbers in range is one problem, and
+    `labels` and `facts` are then checked against what is there.
+    """
+    problems = []
+    gpio = role["gpio"]
+    if not isinstance(gpio, list) or not all(_is_gpio(each) for each in gpio):
+        problems.append("%s.gpio is %r; it must be a list of GPIO numbers" % (where, gpio))
+        gpio = []
+    problems += ["%s.gpio has GPIO%d, outside %d-%d" % (where, each, GPIO_MIN, GPIO_MAX)
+                 for each in gpio if not GPIO_MIN <= each <= GPIO_MAX]
+    labels = role.get("labels", {})
+    if not isinstance(labels, dict):
+        problems.append("%s.labels is %r; it must be an object of label -> GPIO number" % (where, labels))
+        labels = {}
+    for label, number in labels.items():
+        if not isinstance(label, str) or not LABEL.fullmatch(label) or label == LEVEL_LABEL:
+            problems.append("%s.labels has the label %r; a label is capital letters and digits, and not ON" % (where, label))
+        if not _is_gpio(number) or number not in gpio:
+            problems.append("%s.labels[%r] is %r, which is not a GPIO in %s.gpio" % (where, label, number, where))
+    facts = role.get("facts", {})
+    if not isinstance(facts, dict):
+        problems.append("%s.facts is %r; it must be an object of name -> {value, verified, source}" % (where, facts))
+        facts = {}
+    for name, fact in facts.items():
+        if not isinstance(name, str) or not FACT_NAME.fullmatch(name) or name == LEVEL_LABEL.lower():
+            problems.append("%s.facts has the name %r; a name is lower-case letters and underscores, and not on" % (where, name))
+        elif name.upper() in labels:
+            problems.append("%s.facts[%r] has the name of the label %r, so pins.py would write one constant twice"
+                            % (where, name, name.upper()))
+        problems += provenance.fact_problems("%s.facts[%r]" % (where, name), fact)
+    return problems
+# --- end MVP ---
+
+
 def validate(board: dict, path: Path, for_fab: bool = False) -> list:
     """
     Every way this board definition breaks the contract. Empty means it holds.
@@ -508,10 +560,11 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
         if not isinstance(role, dict) or "gpio" not in role or "note" not in role:
             problems.append(f"pin_roles.{role_name} needs both a 'gpio' list and a 'note'")
             continue
-        if not role["note"].strip():
+        if not isinstance(role["note"], str) or not role["note"].strip():
             # The note is the whole value of a role: "GPIO0 is special" helps nobody, whereas
             # "held low at reset it enters the bootloader" decides whether a button can go there.
             problems.append(f"pin_roles.{role_name} has an empty note; say what the caveat is")
+        problems.extend(role_entry_problems("pin_roles[%r]" % role_name, role))
         if "active_level" in role and (type(role["active_level"]) is not int or role["active_level"] not in (0, 1)):
             # P353: the level that lights an LED or that a pressed button reads, which firmware writes as a number.
             problems.append(f"pin_roles.{role_name}.active_level is {role['active_level']!r}; it must be 0 or 1")

@@ -348,6 +348,87 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
                 problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "active_level": level}})
                 self.assertTrue(any("active_level" in p for p in problems), problems)
 
+    def test_a_gpio_that_is_no_list_of_numbers_in_range_is_one_problem(self):
+        for gpio in (["9"], 9, [True], [99], None, [1.5], [3, "x"]):
+            with self.subTest(gpio=gpio):
+                problems = self._problems({"onboard_led": {"gpio": gpio, "note": "x"}})
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn("pin_roles['onboard_led'].gpio", problems[0])
+
+    def test_an_empty_gpio_list_and_two_numbers_in_range_hold(self):
+        for gpio in ([], [0, 35]):
+            with self.subTest(gpio=gpio):
+                self.assertEqual(self._problems({"onboard_button": {"gpio": gpio, "note": "x"}}), [])
+
+    def test_two_numbers_out_of_range_are_two_problems(self):
+        problems = self._problems({"onboard_led": {"gpio": [64, 99, 3], "note": "x"}})
+        self.assertEqual(problems, ["pin_roles['onboard_led'].gpio has GPIO64, outside 0-63",
+                                    "pin_roles['onboard_led'].gpio has GPIO99, outside 0-63"])
+
+    def test_a_note_that_is_no_string_is_a_problem_not_a_crash(self):
+        problems = self._problems({"onboard_led": {"gpio": [15], "note": 5}})
+        self.assertEqual(problems, ["pin_roles.onboard_led has an empty note; say what the caveat is"])
+
+    def test_labels_that_name_gpios_of_the_entry_hold(self):
+        self.assertEqual(self._problems({"onboard_button": {"gpio": [0, 35], "note": "x", "labels": {"S1": 0, "S2": 35}}}), [])
+
+    def test_a_label_must_be_capitals_and_digits_not_on_and_name_a_gpio_of_the_entry(self):
+        for labels, said in (({"S1": 4}, "pin_roles['onboard_button'].labels['S1'] is 4, which is not a GPIO in "),
+                             ({"s1": 0}, "has the label 's1'"), ({"S-1": 0}, "has the label 'S-1'"),
+                             ({"ON": 0}, "has the label 'ON'"), ({"S1": True}, "labels['S1'] is True"),
+                             ({"S1": "0"}, "labels['S1'] is '0'"), (["S1"], "labels is ['S1']")):
+            with self.subTest(labels=labels):
+                problems = self._problems({"onboard_button": {"gpio": [0, 35], "note": "x", "labels": labels}})
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn(said, problems[0])
+
+    def test_two_bad_labels_are_two_problems(self):
+        problems = self._problems({"onboard_button": {"gpio": [0, 35], "note": "x", "labels": {"a": 0, "ON": 35}}})
+        self.assertEqual(len(problems), 2, problems)
+
+    FACT = {"value": 135, "verified": False, "source": "s", "why_it_matters": "sizes the sprite"}
+
+    def test_a_fact_with_its_provenance_holds(self):
+        self.assertEqual(self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {"width": self.FACT}}}), [])
+
+    def test_a_fact_that_breaks_the_rule_is_one_problem_that_names_it(self):
+        for fact, said in (({"value": 1, "verified": True}, "has no 'source'"), ("135", "is '135', but it is an object"),
+                           ({"value": 1, "verified": False, "source": "s"}, "unverified value with no why_it_matters")):
+            with self.subTest(fact=fact):
+                problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {"width": fact}}})
+                self.assertEqual(len(problems), 1, problems)
+                self.assertTrue(problems[0].startswith("pin_roles['onboard_led'].facts['width'] "), problems)
+                self.assertIn(said, problems[0])
+
+    def test_every_fact_of_every_role_is_checked(self):
+        bad = {"value": 1, "verified": True}
+        problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {"width": bad, "height": bad}},
+                                   "onboard_button": {"gpio": [0], "note": "x", "facts": {"a": bad, "b": bad}}})
+        self.assertEqual(len(problems), 4, problems)
+
+    def test_a_fact_name_must_be_lower_case_letters_and_underscores_and_not_on(self):
+        for name in ("width-px", "Width", "on", "w2"):
+            with self.subTest(name=name):
+                problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {name: self.FACT}}})
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn("has the name %r" % name, problems[0])
+
+    def test_a_fact_may_not_take_the_name_of_a_label(self):
+        problems = self._problems({"onboard_button": {"gpio": [0], "note": "x", "labels": {"MOSI": 0}, "facts": {"mosi": self.FACT}}})
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("pin_roles['onboard_button'].facts['mosi'] has the name of the label 'MOSI'", problems[0])
+
+    def test_facts_that_are_no_object_are_one_problem(self):
+        problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": ["width"]}})
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("facts is ['width']", problems[0])
+
+    def test_a_name_with_a_line_break_reaches_the_screen_quoted(self):
+        problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {"a\nb": self.FACT}}})
+        self.assertEqual(len(problems), 1, problems)
+        self.assertNotIn("\n", problems[0])
+        self.assertIn("'a\\nb'", problems[0])
+
     def test_every_role_the_assigner_prices_is_one_a_board_may_use(self):
         # The other half of the same drift: a penalty keyed on a name no board file may carry is
         # a penalty that never fires, and it looks identical to one that does.
