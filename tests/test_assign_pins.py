@@ -750,7 +750,19 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
                 assignments, _ = assign_pins.assign(board(), [{"name": taken, "needs": []}])
                 with self.assertRaises(assign_pins.Impossible) as caught:
                     assign_pins.pin_module(self.record(), assignments, "r.json")
-                self.assertIn("a signal is named %s" % taken, str(caught.exception))
+                self.assertEqual(str(caught.exception), "%s is a name pins.py gives a signal and the board's own %s: rename the signal"
+                                 % (taken, "display" if "DISPLAY" in taken else "button"))
+
+    def test_a_fact_may_not_take_the_name_of_the_pull_up_line_of_a_signal(self):
+        # the refuter's repro: a signal ONBOARD_DISPLAY with a pull-up writes ONBOARD_DISPLAY_PULL, and so does a fact `pull`
+        record = self.record()
+        record["pin_roles"]["onboard_display"]["facts"]["pull"] = {"value": "down", "verified": True, "source": "s"}
+        assignments = [{"signal": "ONBOARD_DISPLAY", "gpio": 25, "pin": "IO25", "why": "w", "roles": []}]
+        with self.assertRaises(assign_pins.Impossible) as caught:
+            assign_pins.pin_module(record, assignments, "r.json", pulled_up=("ONBOARD_DISPLAY",))
+        self.assertIn("ONBOARD_DISPLAY_PULL is a name pins.py gives a signal", str(caught.exception))
+        self.assertIn("ONBOARD_DISPLAY_PULL = 'down'", "\n".join(assign_pins.pin_module(record, assignments, "r.json").splitlines()),
+                      "with no pull-up on the signal the name is free")
 
     def test_a_signal_with_a_name_the_record_does_not_make_is_kept(self):
         assignments, _ = assign_pins.assign(board(), [{"name": "ONBOARD_DISPLAY_MISO", "needs": []}])

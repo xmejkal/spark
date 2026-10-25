@@ -414,23 +414,25 @@ def pin_module(board, assignments, source, pulled_up=()):
                                                           for role in entry["roles"]]
         lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], parts_library.one_line("; ".join(said))))
         if entry["signal"] in pulled_up:
-            lines.append('%s_PULL = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
-                         % (entry["signal"], entry["signal"]))
+            lines.append('%s%s = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
+                         % (entry["signal"], PULL_SUFFIX, entry["signal"]))
+    written = {entry["signal"] for entry in assignments}
+    written |= {entry["signal"] + PULL_SUFFIX for entry in assignments if entry["signal"] in pulled_up}
     for role, spec, record in boards.onboard_entries(board):
-        lines += onboard_lines(assignments, role, spec.constant, record)
+        lines += onboard_lines(written, role, spec.constant, record)
     return "\n".join(lines) + "\n"
 
 
-def onboard_lines(assignments, role, name, record):
+def onboard_lines(written, role, name, record):
     """
     The lines for one on-board part a board record names, each a name that pins.py gives it (P389):
     - one GPIO and no `labels`: `<NAME>` with the record's whole note;
     - `labels`: `<NAME>_<LABEL>` per label whose GPIO is a number, in the record's order, the note on the first;
-    (`boards.names_pins` says whether the part has a name for its pins at all.)
     - `active_level`, with one GPIO or labels: `<NAME>_ON`, the level that lights the LED or that the pressed button reads;
     - each fact whose value is a number or a word: `<NAME>_<FACT>`, with its source and "not verified" when it is not.
-    An LED with no level says so. A signal that has one of these names is refused, since the later line would win.
-    A `gpio` that is no list gives no lines.
+    `boards.names_pins` says whether the part has a name for its pins at all. An LED with no level says so. `written` is
+    every name pins.py writes for a signal, its `_PULL` line too: a part that would write one of them is refused, since
+    the later line would win. A `gpio` that is no list gives no lines.
     """
     gpio = record.get("gpio")
     if not isinstance(gpio, list):
@@ -457,13 +459,15 @@ def onboard_lines(assignments, role, name, record):
             source = parts_library.one_line(str(said.get("source")))
             named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))
-    names = {each for each, _ in named}
-    taken = [entry["signal"] for entry in assignments if entry["signal"] in names]
+    taken = sorted(written & {each for each, _ in named})
     if taken:
-        raise Impossible("a signal is named %s, a name pins.py gives the board's own %s: rename it"
+        raise Impossible("%s is a name pins.py gives a signal and the board's own %s: rename the signal"
                          % (taken[0], role.replace("onboard_", "")))
     return ["%s = %s" % each for each in named]
 
+
+#: What follows a signal's name in the line that sets its internal pull-up (P204).
+PULL_SUFFIX = "_PULL"
 
 #: How every pin module begins, so a build can tell one spark wrote from a person's own `pins.py` (P196).
 PIN_MODULE_HEADER = "# The pin map: written by spark's assign_pins.py"

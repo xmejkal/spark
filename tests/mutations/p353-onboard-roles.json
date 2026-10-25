@@ -1,7 +1,7 @@
 [
-{"file":"scripts/assign_pins.py","name":"gpio-count-loose","find":"    elif len(gpio) == 1:\n","replace":"    elif len(gpio) >= 1:\n"},
+{"file":"scripts/boards.py","name":"gpio-count-loose","find":"or len(entry[\"gpio\"]) == 1)","replace":"or len(entry[\"gpio\"]) >= 1)"},
 {"file":"scripts/assign_pins.py","name":"collision-check-dropped","find":"    if taken:\n","replace":"    if False:\n"},
-{"file":"scripts/assign_pins.py","name":"level-name-not-guarded","find":"    names = {each for each, _ in named}\n","replace":"    names = {each for each, _ in named if not each.endswith(\"_ON\")}\n"},
+{"file":"scripts/assign_pins.py","name":"level-name-not-guarded","find":"    taken = sorted(written & {each for each, _ in named})\n","replace":"    taken = sorted(written & {each for each, _ in named if not each.endswith(\"_ON\")})\n"},
 {"file":"scripts/assign_pins.py","name":"active-level-ignored","find":"    if level is not None and named:\n","replace":"    if False and named:\n"},
 {"file":"scripts/assign_pins.py","name":"level-value-constant","find":"the source is on the line above\" % level))","replace":"the source is on the line above\" % 1))"},
 {"file":"scripts/assign_pins.py","name":"note-first-sentence-only","find":"str(record.get(\"note\", \"\")).rstrip(\".\")","replace":"str(record.get(\"note\", \"\")).split(\". \")[0].rstrip(\".\")"},
