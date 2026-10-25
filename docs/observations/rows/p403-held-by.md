@@ -24,3 +24,5 @@ code, tests, names and the views of a person and of Claude, then one Opus 5.5 re
 | 17 | The first edge guard turned the newlines that a line holds on purpose into `?` (a module's description) | the suite | acted | the guard splits at the line's own newlines first |
 | 18 | `commands/idea.md` said `free 0, held by`, though a partly held stock reads `free 1, held by x` | PR refuter | acted | `free N, held by <project>` |
 | 19 | The other scripts (`look.py`, `deploy.py`, `check_spine.py`) print without an edge guard | Claude | raised | for the refactor (P385): one output edge for every command-line script |
+| 32 | Mutation run on dbb0a66: 16 planted, 14 caught. The guard on the error output of an answer with no lines had no test | mutation run | acted | `test_an_answer_with_no_lines_says_its_problems_on_stderr_through_the_guard`, checked by planting the defect |
+| 33 | The second escape: the guard on a "set" change line did nothing after the edge guard, because its values are JSON, which escapes a newline | mutation run | acted | the guard is removed, and the "new" line keeps its own |

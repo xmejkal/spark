@@ -1862,15 +1862,16 @@ def _change_line(change, dry_run):
     """
     One set-only write's change (§5.2), the drawer's and the needs file's alike: '  new soil-probe: soil probe × 8 — is
     part sen0193-soil-moisture' for a new drawer entry (× ? when its count was left out), else '  set soil: mark null →
-    "have"', every value from what it was. Shown through `printable`, because a `used_in` key is a person's word.
+    "have"', every value from what it was. A new entry's key and label pass `printable` here, because a newline in them
+    would start a line. A set line's values are JSON, which escapes a newline, and `_say` guards the rest.
     """
     if change["new"] and "entry" in change:
         now, linked = change["now"], change["now"].get("is")
         return printable("  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count", "?"),
                                                 " — is %s %s" % next(iter(linked.items())) if linked else ""))
-    return printable("  %s %s: %s" % ("would set" if dry_run else "set", change.get("entry") or change.get("need"), "; ".join(
+    return "  %s %s: %s" % ("would set" if dry_run else "set", change.get("entry") or change.get("need"), "; ".join(
         "%s %s → %s" % (key, json.dumps(change["was"].get(key), ensure_ascii=False), json.dumps(value, ensure_ascii=False))
-        for key, value in change["now"].items())))
+        for key, value in change["now"].items()))
 
 
 def _write_lines(changes, problems, dry_run, said=()):

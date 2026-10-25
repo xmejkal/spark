@@ -802,6 +802,13 @@ class TheHoldersTest(unittest.TestCase):
         self.keep("xiao", "XIAO", {"a\nb": 1})
         self.assertIn("held by a?b", self.text(["--drawer"]))
 
+    def test_an_answer_with_no_lines_says_its_problems_on_stderr_through_the_guard(self):
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            parts._say("drawer", parts.Answer(unchecked=[parts._cannot("a\u202eb\x1bc", "fix\u202e")]), False)
+        self.assertNotIn("\u202e", err.getvalue())
+        self.assertIn("a?b?c", err.getvalue())
+
     def test_every_field_of_the_drawer_text_passes_the_guard_at_the_edge(self):
         # a hand-edited entry skips the scrub that --drawer-set does on the way in (P403 refuter)
         self.keep("xiao", "XI\u202eAO", {"reaction-game": 1})
