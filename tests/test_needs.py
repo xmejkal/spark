@@ -348,6 +348,7 @@ class TheMatcherTest(unittest.TestCase):
 
     # --- MVP --- P403: --match names who holds the stock that is not free
     def hold_the_xiao(self, *holders):
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
         (self.home / "drawer" / "xiao.json").write_text(json.dumps({
             "schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}, "used_in": {who: 1 for who in holders}}))
 

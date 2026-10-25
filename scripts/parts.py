@@ -218,6 +218,7 @@ CAPABILITIES = ("wake", "adc", "pwm")
 
 from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
 import store  # noqa: E402
+from screen_text import printable  # noqa: E402
 
 
 class PartError(Exception):
@@ -1861,24 +1862,24 @@ def _change_line(change, dry_run):
     """
     One set-only write's change (§5.2), the drawer's and the needs file's alike: '  new soil-probe: soil probe × 8 — is
     part sen0193-soil-moisture' for a new drawer entry (× ? when its count was left out), else '  set soil: mark null →
-    "have"', every value from what it was.
+    "have"', every value from what it was. Shown through `printable`, because a `used_in` key is a person's word.
     """
     if change["new"] and "entry" in change:
         now, linked = change["now"], change["now"].get("is")
-        return "  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count", "?"),
-                                         " — is %s %s" % next(iter(linked.items())) if linked else "")
-    return "  %s %s: %s" % ("would set" if dry_run else "set", change.get("entry") or change.get("need"), "; ".join(
+        return printable("  %s %s: %s × %s%s" % ("would add" if dry_run else "new", change["entry"], now.get("label"), now.get("count", "?"),
+                                                " — is %s %s" % next(iter(linked.items())) if linked else ""))
+    return printable("  %s %s: %s" % ("would set" if dry_run else "set", change.get("entry") or change.get("need"), "; ".join(
         "%s %s → %s" % (key, json.dumps(change["was"].get(key), ensure_ascii=False), json.dumps(value, ensure_ascii=False))
-        for key, value in change["now"].items()))
+        for key, value in change["now"].items())))
 
 
 def _write_lines(changes, problems, dry_run, said=()):
     """
     What a set-only write did or would do (§5.2), said one way for the drawer and the needs file: each change — marked
-    when anything was refused, because then nothing is written — what else the write has to say, then each refusal; or
+    `not written:` when anything was refused, because then nothing is written — what else the write has to say, then each refusal; or
     that nothing changes.
     """
-    lines = [("  refused, not written: " + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run)
+    lines = [("  not written: " + _change_line(change, False).strip()) if problems else _change_line(change, dry_run)
              for change in changes] + list(said)
     lines += ["  refused, so nothing was written: %s — %s" % (p["subject"], p["sentence"]) for p in problems]
     return lines or ["  nothing to change"]
@@ -1911,7 +1912,8 @@ def _op_drawer(args, project):
     shown, truncated = page(entries, args.start, "drawer", ["--drawer"])
     lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], "?" if e["count"] is None else e["count"],
                                          "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
-                                         "maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""))
+                                         "  ".join(filter(None, ["maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""),
+                                                               "held by " + ", ".join(map(printable, e["held_by"])) if e["held_by"] else ""])))
              for e in entries]
     lines.append("  %d entr%s" % (len(entries), "y" if len(entries) == 1 else "ies"))
     return Answer({"entries": shown}, lines, truncated=truncated)
@@ -2113,7 +2115,7 @@ def _op_match(args, project):
         for c in need["candidates"]:
             lines.append("      %-10s %-46s %s" % ("owned %s" % c["owned"] if c["owned"] else "", "%s (%s)" % (c["id"] or c["entry"], c["in"]),
                                                   "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
-                                                                          "free %s" % c["free"] if c["owned"] else "",
+                                                                          ("free %s%s" % (c["free"], ", held by " + ", ".join(map(printable, c["held_by"])) if c["held_by"] else "")) if c["owned"] else "",
                                                                           "owes " + ", ".join(c["owes"]) if c["owes"] else "",
                                                                           "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
                          + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
