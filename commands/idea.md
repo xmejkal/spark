@@ -104,7 +104,7 @@ Pick with the person, need by need, from what `--match` offered: a record's id, 
 thing with no record (a speaker, a battery). The key of an entry that has a record is picked as that record, and the
 pick says so. If the board's own LED, button or display serves a need, pick the board for that need too
 (`light=xiao-esp32-c6`). `--match` offers it for such a need and shows `onboard LED light`, `onboard button` or `onboard
-display screen` in its `what` column. `--offer <board>` prints the same words in the board's `does:` line (P389).
+display screen` in its `what` column. `--offer <board> --project <project>` prints the same words in the board's `does:` line (P389).
 Then:
 
 ```
