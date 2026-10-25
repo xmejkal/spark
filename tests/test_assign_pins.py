@@ -728,6 +728,20 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
         one = board(pin_roles={"onboard_button": {"gpio": [9], "note": "x", "labels": {"BOOT": 9}}})
         self.assertEqual(self.named(one), ["ONBOARD_BUTTON_BOOT = 9"])
 
+    def test_a_control_character_or_a_lone_surrogate_in_a_comment_never_breaks_the_module(self):
+        # the refuter's repro: a NUL stopped pins.py from compiling, and a lone surrogate stopped it from being written
+        record = self.record()
+        record["name"] = "T\x00Display"
+        entry = record["pin_roles"]["onboard_display"]
+        entry["note"] = "the screen\x00\x0b\x0c\ud800 on SPI"
+        entry["facts"]["driver"]["source"] = "page\x00 4\ud800\x1b"
+        text = assign_pins.pin_module(record, [], "r\x00.json")
+        compile(text, "pins.py", "exec")
+        text.encode("utf-8")
+        self.assertIn("ONBOARD_DISPLAY_DRIVER = 'ST7789'  # onboard_display: driver, source: page  4  ", text)
+        self.assertIn("the screen     on SPI", text)
+        self.assertIn("# The pin map: written by spark's assign_pins.py from r .json\n# for the T Display. Regenerate it", text)
+
     def test_a_label_whose_gpio_is_no_number_is_skipped_and_the_note_goes_on_the_next(self):
         entry = {"gpio": [1, 2], "note": "the pads", "labels": {"A": "1", "B": 2, "C": True, "D": None, "E": 1}}
         lines = [line for line in self.lines(board(pin_roles={"onboard_display": entry})) if line.startswith("ONBOARD_")]
