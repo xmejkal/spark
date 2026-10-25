@@ -425,7 +425,8 @@ def onboard_lines(assignments, role, name, record):
     """
     The lines for one on-board part a board record names, each a name that pins.py gives it (P389):
     - one GPIO and no `labels`: `<NAME>` with the record's whole note;
-    - `labels`: `<NAME>_<LABEL>` per label in the record's order, the note on the first;
+    - `labels`: `<NAME>_<LABEL>` per label whose GPIO is a number, in the record's order, the note on the first;
+    (`boards.names_pins` says whether the part has a name for its pins at all.)
     - `active_level`, with one GPIO or labels: `<NAME>_ON`, the level that lights the LED or that the pressed button reads;
     - each fact whose value is a number or a word: `<NAME>_<FACT>`, with its source and "not verified" when it is not.
     An LED with no level says so. A signal that has one of these names is refused, since the later line would win.
@@ -434,18 +435,20 @@ def onboard_lines(assignments, role, name, record):
     gpio = record.get("gpio")
     if not isinstance(gpio, list):
         return []
-    labels = record["labels"] if isinstance(record.get("labels"), dict) else {}
+    labels = boards.pin_labels(record)
     facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
     level = record.get("active_level")
     note = parts_library.one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
     named = []
-    if labels:
-        for index, (label, number) in enumerate(labels.items()):
-            said = note if index == 0 else "%s: the note is on the first line of this part" % role
-            named.append(("%s_%s" % (name, label), "%d  # %s" % (number, said)))
-    elif len(gpio) == 1:
-        polarity = ". Its polarity is not in the board record" if role == boards.ONBOARD_LED and level is None else ""
-        named.append((name, "%d  # %s%s" % (gpio[0], note, polarity)))
+    if boards.names_pins(record):
+        if labels:
+            for label, number in labels.items():
+                if boards.is_gpio(number):
+                    said = note if not named else "%s: the note is on the first line of this part" % role
+                    named.append(("%s_%s" % (name, label), "%d  # %s" % (number, said)))
+        else:
+            polarity = ". Its polarity is not in the board record" if role == boards.ONBOARD_LED and level is None else ""
+            named.append((name, "%d  # %s%s" % (gpio[0], note, polarity)))
     if level is not None and named:
         named.append((name + "_ON", "%d  # the active level in the board record, the source is on the line above" % level))
     for fact, said in facts.items():

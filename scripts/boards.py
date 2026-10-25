@@ -360,9 +360,22 @@ def onboard_entries(board):
     return [(role, spec, pin_roles[role]) for role, spec in ONBOARD_ROLES.items() if isinstance(pin_roles.get(role), dict)]
 
 
+def pin_labels(entry):
+    """The entry's `labels` when it is an object, else {}."""
+    return entry["labels"] if isinstance(entry.get("labels"), dict) else {}
+
+
+def names_pins(entry):
+    """
+    True when pins.py gives the entry's pins names: `gpio` is a list, and the entry has `labels` or exactly one GPIO.
+    A part with no name for its pins is not offered for a need either, so the offer and the pin map cannot drift.
+    """
+    return isinstance(entry.get("gpio"), list) and (bool(pin_labels(entry)) or len(entry["gpio"]) == 1)
+
+
 def onboard_functions(board):
-    """What the board offers a need through its own parts: one {"does", "what"} per entry of `onboard_entries`."""
-    return [{"does": spec.does, "what": spec.what} for _, spec, _ in onboard_entries(board)]
+    """What the board offers a need through its own parts: one {"does", "what"} per entry of `onboard_entries` that names its pins."""
+    return [{"does": spec.does, "what": spec.what} for _, spec, entry in onboard_entries(board) if names_pins(entry)]
 
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
@@ -449,7 +462,7 @@ FACT_NAME = re.compile(r"[a-z_]+")
 LEVEL_LABEL = "ON"
 
 
-def _is_gpio(value):
+def is_gpio(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
@@ -462,7 +475,7 @@ def role_entry_problems(where, role):
     """
     problems = []
     gpio = role["gpio"]
-    if not isinstance(gpio, list) or not all(_is_gpio(each) for each in gpio):
+    if not isinstance(gpio, list) or not all(is_gpio(each) for each in gpio):
         problems.append("%s.gpio is %r; it must be a list of GPIO numbers" % (where, gpio))
         gpio = []
     problems += ["%s.gpio has GPIO%d, outside %d-%d" % (where, each, GPIO_MIN, GPIO_MAX)
@@ -474,7 +487,7 @@ def role_entry_problems(where, role):
     for label, number in labels.items():
         if not isinstance(label, str) or not LABEL.fullmatch(label) or label == LEVEL_LABEL:
             problems.append("%s.labels has the label %r; a label is capital letters and digits, and not ON" % (where, label))
-        if not _is_gpio(number) or number not in gpio:
+        if not is_gpio(number) or number not in gpio:
             problems.append("%s.labels[%r] is %r, which is not a GPIO in %s.gpio" % (where, label, number, where))
     facts = role.get("facts", {})
     if not isinstance(facts, dict):

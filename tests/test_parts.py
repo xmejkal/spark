@@ -2000,7 +2000,7 @@ class WhatAPartDoesTest(unittest.TestCase):
     COMPUTE = {"does": "compute", "what": "microcontroller"}
 
     def test_a_board_also_does_what_its_own_parts_do_in_table_order(self):
-        roles = {"onboard_display": {"gpio": [], "note": "x"}, "onboard_button": {"gpio": [0], "note": "x"},
+        roles = {"onboard_display": {"gpio": [4, 5], "labels": {"BL": 4}, "note": "x"}, "onboard_button": {"gpio": [0], "note": "x"},
                  "onboard_led": {"gpio": [2], "note": "x"}, "strapping": {"gpio": [0], "note": "x"}}
         self.assertEqual(parts.function_of({"pin_roles": roles}, board=True), [self.COMPUTE, self.LED, self.BUTTON, self.SCREEN])
 
@@ -2023,8 +2023,15 @@ class WhatAPartDoesTest(unittest.TestCase):
             with self.subTest(pin_roles=pin_roles):
                 self.assertEqual(parts.function_of({"pin_roles": pin_roles}, board=True), [self.COMPUTE])
 
-    def test_an_entry_with_an_empty_gpio_list_still_names_its_part(self):
-        self.assertEqual(parts.function_of({"pin_roles": {"onboard_led": {"gpio": [], "note": "x"}}}, board=True), [self.COMPUTE, self.LED])
+    def test_a_part_is_offered_only_when_pins_py_has_a_name_for_its_pins(self):
+        # the walk record's buttons: two GPIOs and no labels get no name in pins.py, so they are not offered
+        for entry, offered in (({"gpio": [], "note": "x"}, False), ({"gpio": [0, 35], "note": "x"}, False),
+                               ({"gpio": [0, 35], "labels": {}, "note": "x"}, False), ({"gpio": 7, "note": "x"}, False),
+                               ({"gpio": [7], "note": "x"}, True), ({"gpio": [0, 35], "labels": {"S1": 0}, "note": "x"}, True),
+                               ({"gpio": [], "labels": {"S1": 0}, "note": "x"}, True), ({"labels": {"S1": 0}, "note": "x"}, False)):
+            with self.subTest(entry=entry):
+                said = parts.function_of({"pin_roles": {"onboard_led": entry}}, board=True)
+                self.assertEqual(said, [self.COMPUTE, self.LED] if offered else [self.COMPUTE])
 
     def test_a_function_outside_the_thirteen_verbs_is_refused(self):
         definition = part(function=[{"does": "measure", "what": "soil-moisture"}])

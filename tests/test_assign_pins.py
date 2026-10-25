@@ -728,6 +728,12 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
         one = board(pin_roles={"onboard_button": {"gpio": [9], "note": "x", "labels": {"BOOT": 9}}})
         self.assertEqual(self.named(one), ["ONBOARD_BUTTON_BOOT = 9"])
 
+    def test_a_label_whose_gpio_is_no_number_is_skipped_and_the_note_goes_on_the_next(self):
+        entry = {"gpio": [1, 2], "note": "the pads", "labels": {"A": "1", "B": 2, "C": True, "D": None, "E": 1}}
+        lines = [line for line in self.lines(board(pin_roles={"onboard_display": entry})) if line.startswith("ONBOARD_")]
+        self.assertEqual([line.split("  #")[0] for line in lines], ["ONBOARD_DISPLAY_B = 2", "ONBOARD_DISPLAY_E = 1"])
+        self.assertIn("the pads", lines[0])
+
     def test_a_gpio_that_is_no_list_names_nothing(self):
         for gpio in (9, "9", None, {"x": 9}):
             with self.subTest(gpio=gpio):

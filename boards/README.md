@@ -115,10 +115,12 @@ record without it, or with a part missing, gives the plain hint: "the BOOT butto
 
 A board that carries its own LED, buttons or display names them in `pin_roles`, under `onboard_led`,
 `onboard_button` or `onboard_display`. Each entry holds a `gpio` list and a `note` that says where the facts come from.
-An entry with an empty `gpio` list is legal. Three things follow from such an entry:
+Three things follow from such an entry:
 
-- `/spark:idea` offers the board for a need that the part serves, such as "indicate light" for the LED.
-- `firmware/pins.py` names the part: `ONBOARD_LED = 15`, or one line per label for a part on many pins.
+- `firmware/pins.py` names the part when the entry has exactly one GPIO (`ONBOARD_LED = 15`) or has `labels` (one line per
+  label). An entry with an empty `gpio` list, or with several GPIOs and no `labels`, is legal, but `pins.py` names no pin of it.
+- `/spark:idea` offers the board for a need that the part serves, such as "indicate light" for the LED. It offers the
+  part only when `pins.py` names its pins, so an entry with no name for its pins is not offered.
 - The build says that a passed run does not test the part.
 
 An entry may also hold these keys:

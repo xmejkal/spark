@@ -377,6 +377,16 @@ class TheMatcherTest(unittest.TestCase):
                 found = {c["id"]: c for c in self.alone({"id": "show", "does": "indicate", "what": what})["candidates"] if c["id"]}
                 self.assertEqual((found["lilygo-t-display"]["in"], found["lilygo-t-display"]["what_matches"]), ("project", True))
 
+    def test_buttons_on_two_gpios_with_no_labels_get_no_name_in_pins_py_and_are_not_offered(self):
+        board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
+        offered = lambda: [c["id"] for c in self.alone({"id": "press", "does": "input", "what": "button"})["candidates"]]  # noqa: E731
+        (self.project / "boards").mkdir(parents=True)
+        (self.project / "boards" / "lilygo-t-display.json").write_text(json.dumps(board))
+        self.assertIn("lilygo-t-display", offered())
+        del board["pin_roles"]["onboard_button"]["labels"]
+        (self.project / "boards" / "lilygo-t-display.json").write_text(json.dumps(board))
+        self.assertNotIn("lilygo-t-display", offered())
+
     def test_a_board_picked_for_the_mcu_need_and_offered_for_light_is_free_and_held_by_nobody(self):
         (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
         (self.home / "drawer" / "xiao.json").write_text(json.dumps({
