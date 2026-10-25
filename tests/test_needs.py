@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -345,6 +346,54 @@ class TheMatcherTest(unittest.TestCase):
         lines = out.getvalue().splitlines()
         self.assertIn("soil-moisture", next(line for line in lines if "x-soil (catalog)" in line))
         self.assertIn("gas [other words]", next(line for line in lines if "x-other (catalog)" in line))
+
+    # --- MVP --- P389: a board is offered for a need its own LED, buttons or display serve
+    def light(self):
+        """The candidates for a need of light, matched alone: the XIAO's own LED serves it."""
+        return {c["id"]: c for c in self.alone({"id": "blink", "does": "indicate", "what": "light"})["candidates"] if c["id"]}
+
+    def test_a_board_with_an_onboard_led_is_offered_for_a_need_of_light(self):
+        xiao = self.light()["xiao-esp32-c6"]
+        self.assertTrue(xiao["what_matches"])
+        said, _ = run(["--offer", "xiao-esp32-c6"])
+        self.assertIn({"does": "indicate", "what": "onboard LED light"}, said["data"]["offer"]["functions"])
+
+    def test_the_word_led_finds_the_same_board(self):
+        found = {c["id"]: c for c in self.alone({"id": "blink", "does": "indicate", "what": "led"})["candidates"] if c["id"]}
+        self.assertTrue(found["xiao-esp32-c6"]["what_matches"])
+
+    def test_a_board_with_an_onboard_button_but_no_onboard_led_is_not_offered_for_light(self):
+        board = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
+        del board["pin_roles"]["onboard_led"]
+        (self.project / "boards").mkdir(parents=True)
+        (self.project / "boards" / "no-led.json").write_text(json.dumps(dict(board, id="no-led")))
+        self.assertNotIn("no-led", self.light())
+
+    def test_a_board_with_its_own_display_is_offered_for_a_need_of_a_display_or_a_screen(self):
+        (self.project / "boards").mkdir(parents=True)
+        shutil.copy(ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json", self.project / "boards")
+        for what in ("display", "screen"):
+            with self.subTest(what=what):
+                found = {c["id"]: c for c in self.alone({"id": "show", "does": "indicate", "what": what})["candidates"] if c["id"]}
+                self.assertEqual((found["lilygo-t-display"]["in"], found["lilygo-t-display"]["what_matches"]), ("project", True))
+
+    def test_buttons_on_two_gpios_with_no_labels_get_no_name_in_pins_py_and_are_not_offered(self):
+        board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
+        offered = lambda: [c["id"] for c in self.alone({"id": "press", "does": "input", "what": "button"})["candidates"]]  # noqa: E731
+        (self.project / "boards").mkdir(parents=True)
+        (self.project / "boards" / "lilygo-t-display.json").write_text(json.dumps(board))
+        self.assertIn("lilygo-t-display", offered())
+        del board["pin_roles"]["onboard_button"]["labels"]
+        (self.project / "boards" / "lilygo-t-display.json").write_text(json.dumps(board))
+        self.assertNotIn("lilygo-t-display", offered())
+
+    def test_a_board_picked_for_the_mcu_need_and_offered_for_light_is_free_and_held_by_nobody(self):
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({
+            "schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}, "used_in": {"plant-alarm": 1}}))
+        xiao = self.light()["xiao-esp32-c6"]
+        self.assertEqual((xiao["owned"], xiao["free"], xiao["held_by"]), (1, 1, []))
+    # --- end MVP ---
 
     # --- MVP --- P403: --match names who holds the stock that is not free
     def hold_the_xiao(self, *holders):
@@ -716,6 +765,14 @@ class ThePicksTest(unittest.TestCase):
         said, code = run(["--pick", str(self.project), "board=xiao-esp32-c6", "input=xiao-esp32-c6"])
         self.assertEqual((said["status"], code), ("ok", 0))
         self.assertEqual((self.picks()["input"], self.entry("xiao")["used_in"]), ([{"board": "xiao-esp32-c6"}], {"plant-alarm": 1}))
+
+    def test_a_board_picked_for_a_need_of_light_leaves_that_need_served_in_the_requirements(self):
+        # P389: the board's own LED serves the need, so the build is not told the need has nothing on the board
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}}))
+        run(["--needs-set", str(self.project), a_file([{"id": "blink", "does": "indicate", "what": "light"}])])
+        run(["--pick", str(self.project), "board=xiao-esp32-c6", "blink=xiao-esp32-c6"])
+        said, code = run(["--requirements", str(self.project)])
+        self.assertEqual((code, [each["need"] for each in said["data"]["unserved"]]), (0, ["soil", "alarm", "input"]))
 
     def test_a_board_an_older_pick_held_twice_is_held_once_after_a_re_pick(self):
         (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 2, "is": {"board": "xiao-esp32-c6"},

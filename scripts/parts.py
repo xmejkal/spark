@@ -50,8 +50,6 @@ SUPPORTED_SCHEMA = 1
 
 REQUIRED_KEYS = ("schema", "id", "name", "kind", "needs")
 
-#: Each entry in `facts` must answer all three, or it is an opinion with a number attached.
-REQUIRED_FACT_KEYS = ("value", "verified", "source")
 #: Fields a record no longer holds, each with where that fact lives now (P95, W16). Owning one is the person's
 #: fact, not the part's: it is a drawer entry, and a photo of the one they own goes on that entry.
 RETIRED = {"owned": "what you own is a drawer entry — /spark:drawer, `parts.py --drawer-set`",
@@ -74,12 +72,20 @@ NEED_MATCHER = "name-contains"
 
 
 def function_of(record, board=False):
-    """What a record does (§5.6): its own `function`, else what its kind says, else nothing."""
+    """
+    What a record does (§5.6): its own `function`, else what its kind says, else nothing. A board also does what its
+    own parts do (`boards.onboard_functions`), each one added once and never to the record's own list.
+    """
     if record.get("function") and not function_problems(record):
-        return record["function"]
-    kind = "board" if board else record.get("kind")
-    said = KIND_FUNCTION.get(kind) if isinstance(kind, str) else None
-    return [{"does": said[0], "what": said[1]}] if said else []
+        said = record["function"]
+    else:
+        kind = "board" if board else record.get("kind")
+        kind_function = KIND_FUNCTION.get(kind) if isinstance(kind, str) else None
+        said = [{"does": kind_function[0], "what": kind_function[1]}] if kind_function else []
+    if not board:
+        return said
+    import boards
+    return said + [function for function in boards.onboard_functions(record) if function not in said]
 
 
 def function_problems(record):
@@ -192,18 +198,20 @@ ENDS_THE_COMMENT = ("*/", '"')
 NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by it, "
                   "and the board names the part after it in code")
 
-#: What ends a line comment in a generated file: a line break — `\n` and `\r` end Python's `#`, and JavaScript's `//` ends
-#: at U+2028 and U+2029 too — and U+0085, which editors read as one.
-LINE_BREAKS = re.compile(r"[\r\n\u0085\u2028\u2029]")
+#: What a line comment in a generated file cannot hold. A line break ends it: `\n` and `\r` end Python's `#`, and JavaScript's
+#: `//` ends at U+2028 and U+2029 too, and U+0085 is one to editors. Any other control character, such as NUL, stops the file
+#: from compiling. A lone surrogate stops it from being written as UTF-8.
+COMMENT_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029\ud800-\udfff]")
 
 
 def one_line(text):
     """
     Words a generated file keeps in a `#` or `//` line comment, on that one line (concern 1, P87's line-comment half): every
-    line break a space. The pin map the firmware imports and the footprint the board imports carry a board's name, a role's
-    note, a pad's alias, a board's id; a line break in one ended the comment, and what followed was code.
+    line break, other control character and lone surrogate a space. The pin map the firmware imports and the footprint the
+    board imports carry a board's name, a role's note, a pad's alias, a board's id; a line break in one ended the comment,
+    and what followed was code.
     """
-    return LINE_BREAKS.sub(" ", str(text))
+    return COMMENT_UNSAFE.sub(" ", str(text))
 
 
 #: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
@@ -217,6 +225,7 @@ def one_line(text):
 CAPABILITIES = ("wake", "adc", "pwm")
 
 from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
+import provenance  # noqa: E402
 import store  # noqa: E402
 from screen_text import printable  # noqa: E402
 
@@ -838,17 +847,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
                 "are not separate outputs" % (", ".join(map(str, pins)), rail, polarity))
 
     for name, fact in (part.get("facts") or {}).items():
-        for key in REQUIRED_FACT_KEYS:
-            if key not in fact:
-                problems.append("facts.%s has no %r — a number with no provenance is an opinion"
-                                % (name, key))
-        if fact.get("verified") and fact.get("value") is None:
-            problems.append("facts.%s is marked verified but has no value" % name)
-        if fact.get("verified") is False and fact.get("value") is not None \
-                and not fact.get("why_it_matters"):
-            # An unverified guess that nobody explains is how an assumption becomes a fact.
-            problems.append("facts.%s is an unverified value with no why_it_matters; say what "
-                            "depends on it or do not carry the number" % name)
+        problems.extend(provenance.fact_problems("facts.%s" % name, fact))
 
     problems.extend(host_part_problems(part))
     problems.extend(i2c_pullup_problems(part))

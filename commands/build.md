@@ -49,7 +49,9 @@ A project that runs on the board alone, such as a blink of the board's own LED, 
 `parts` list. `parts.py --requirements` writes it when the board serves every need, and removes it when a part comes. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
 the board alone. `firmware/pins.py` names `ONBOARD_LED` when the board record names one on-board LED, and `ONBOARD_BUTTON` for one
 on-board button. `ONBOARD_LED_ON` gives the level that lights the LED, and `ONBOARD_BUTTON_ON` the level a pressed button reads,
-when the record holds it (`active_level`). An empty `parts`
+when the record holds it (`active_level`). A part on many pins has one name per label: `ONBOARD_BUTTON_S1`, and
+`ONBOARD_DISPLAY_MOSI` for a display. A fact such as the display's size is `ONBOARD_DISPLAY_WIDTH`, with its source in
+the comment and "not verified" when nobody verified it (P389). An empty `parts`
 list without `board_only` still stops at the parts stage.
 
 The simulation stage also reads the board's Wokwi definition: the JSON file of the Wokwi part type, which spark keeps in
@@ -57,7 +59,9 @@ its store under the sha256 that the board record names (P396). Each on-board LED
 one more line of what the simulation cannot show, in the stage and in `sim/WHAT-THIS-CANNOT-SHOW.md`. On the XIAO
 ESP32-C6 this is `ONBOARD_BUTTON (GPIO9): the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9, so spark knows no
 way for a scenario to press it. Test it on the board.` A record that names no definition, or one the store lacks, says
-`onboard GPIOs: not checked`. Each line is said, and the stage stays `ok`.
+`onboard GPIOs: not checked`. A board that names its own display adds `ONBOARD_DISPLAY: spark adds no part to the
+diagram for the board's own display, so a passed run does not test what it shows. Test it on the board.` Each line is
+said, and the stage stays `ok`.
 
 `parts.py --requirements` writes this file's board and parts from the parts you picked for your needs; run again, the
 parts you wrote stay and the board follows the pick: it adds only the parts your picks still lack, and keeps every other

@@ -35,6 +35,21 @@ class TheOfferTest(unittest.TestCase):
         offer = matching.Offer.from_record("fb", "board", {"name": "FireBeetle"})
         self.assertEqual(offer.functions, [{"does": "compute", "what": "microcontroller"}])
 
+    def test_a_board_offers_what_its_own_parts_do(self):
+        record = {"name": "XIAO", "pin_roles": {"onboard_led": {"gpio": [15], "note": "x"}, "onboard_button": {"gpio": [9], "note": "x"}}}
+        offer = matching.Offer.from_record("xiao", "board", record)
+        self.assertEqual(offer.functions, [{"does": "compute", "what": "microcontroller"},
+                                           {"does": "indicate", "what": "onboard LED light"},
+                                           {"does": "input", "what": "onboard button"}])
+        for what in ("light", "led", "onboard LED light"):
+            with self.subTest(what=what):
+                self.assertTrue(matching.same_words({"does": "indicate", "what": what}, offer))
+        self.assertFalse(matching.same_words({"does": "sense", "what": "light"}, offer), "the verb must be the need's")
+
+    def test_a_part_record_with_pin_roles_offers_nothing_of_a_board(self):
+        offer = matching.Offer.from_record("x", "part", {"kind": "rtc", "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}})
+        self.assertEqual(offer.functions, [{"does": "keep-time", "what": "rtc"}])
+
     def test_entries_pointing_at_a_record_join_it_and_the_record_s_own_text_wins(self):
         record = {"name": "VL6180X", "kind": "rangefinder", "about": "Ranges.", "power": {"v": 3.3}}
         holding = [{"function": [{"does": "sense", "what": "range"}], "about": "Mine.", "tags": ["tof"]}]
