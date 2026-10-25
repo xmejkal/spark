@@ -163,6 +163,19 @@
       },
       "note": "The TFT on SPI with no MISO, from the pinout table of documents.lilygo-t-display-readme, Pinout table (rows TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL). The table's column is headed V18, while this board's silkscreen reads V1.1. None of these pins is on the header."
     },
+    "onboard_battery_sense": {
+      "gpio": [
+        34
+      ],
+      "note": "GPIO34 reads the battery through a divider: schematic net BAT_ADC, on pin 10 VDET_1/IO34 of U3, between R6 and R7 (documents.lilygo-t-display-schematic-2019-06-26). The kept README (documents.lilygo-t-display-readme, Pinout table) lists it as ADC_IN 34. It is not on the header.",
+      "facts": {
+        "divider": {
+          "value": 2,
+          "verified": true,
+          "source": "documents.lilygo-t-display-schematic-2019-06-26, R6 and R7, 100K each (printed 100K%1), in series from BAT to GND with the net BAT_ADC between them"
+        }
+      }
+    },
     "adc2_unusable_with_wifi": {
       "gpio": [
         0,
@@ -211,6 +224,24 @@
       "rail": "5v",
       "direction": "in",
       "//": "Silkscreen '5V'. UNVERIFIED: the schematic's +5V net is fed from VBUS or the battery through Q4/Q6; whether the pin also feeds out was not read."
+    }
+  },
+  "//power": "Written for P389 from the kept schematic. GPIO14 is no battery pin: the schematic calls the net on MTMS/IO14 PWR_EN, and the kept README lists it as ADC Power 14. What PWR_EN switches was not read.",
+  "power": {
+    "charger": {
+      "value": "TP4054",
+      "verified": true,
+      "source": "documents.lilygo-t-display-schematic-2019-06-26, U6 TP4054, VCC from VBUS, BAT to VBAT, under the title 锂电池充电电路"
+    },
+    "regulator": {
+      "value": "AP2112K-3.3V(RT9013)",
+      "verified": true,
+      "source": "documents.lilygo-t-display-schematic-2019-06-26, U7 AP2112K-3.3V(RT9013), IN +5V, OUT VDD3V3"
+    },
+    "battery_input": {
+      "value": "P2, two pins, marked 锂电池 (lithium battery)",
+      "verified": true,
+      "source": "documents.lilygo-t-display-schematic-2019-06-26, P2, pin 1 on the battery net and pin 2 on GND. The schematic names no connector type and no pitch"
     }
   },
   "vendor": {

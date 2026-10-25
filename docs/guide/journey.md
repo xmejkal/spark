@@ -1188,6 +1188,9 @@ level that lights the LED, and `ONBOARD_BUTTON = 9`, the BOOT button. Since [P38
 it also names `ONBOARD_BUTTON_ON = 0`, the level the pressed button reads (the Seeed schematic, sheet 04). Each comes from
 the board record with its source. Since [P389](https://github.com/xmejkal/spark/issues/504), `--match` also offers a board
 for a need that its own LED, buttons or display serve, and `pins.py` names a display's pins and size when the record holds them.
+The board's `power` block can also name its charger, its voltage regulator and its battery input, and `--match` offers the
+board for a need of `power` / `charger`, `power` / `voltage regulator` or `connect` / `battery input`. A pin that reads the
+battery is `ONBOARD_BATTERY_SENSE` in `pins.py`, with its divider, and `--match` offers it for `sense` / `battery level`.
 A number typed in the board's console sets the period in milliseconds, and `steady`, `heartbeat` or `random` picks the
 pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut
 here.

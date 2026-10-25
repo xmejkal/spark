@@ -387,6 +387,25 @@ class TheMatcherTest(unittest.TestCase):
         (self.project / "boards" / "lilygo-t-display.json").write_text(json.dumps(board))
         self.assertNotIn("lilygo-t-display", offered())
 
+    def power_candidates(self, does, what):
+        (self.project / "boards").mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json", self.project / "boards")
+        found = {c["id"]: c for c in self.alone({"id": "p", "does": does, "what": what})["candidates"] if c["id"]}
+        return found.get("lilygo-t-display")
+
+    def test_a_board_with_its_own_charger_regulator_battery_input_or_battery_level_is_offered_for_that_need(self):
+        for does, what in (("power", "charger"), ("power", "voltage regulator"), ("connect", "battery input"),
+                           ("sense", "battery level")):
+            with self.subTest(need=(does, what)):
+                found = self.power_candidates(does, what)
+                self.assertEqual((found["in"], found["what_matches"]), ("project", True))
+
+    def test_a_need_for_the_battery_itself_or_for_a_voltage_is_not_met_by_the_boards_own_power_parts(self):
+        for does, what in (("power", "battery"), ("power", "battery charger"), ("sense", "voltage")):
+            with self.subTest(need=(does, what)):
+                found = self.power_candidates(does, what)
+                self.assertFalse(found and found["what_matches"], found)
+
     def test_a_board_picked_for_the_mcu_need_and_offered_for_light_is_free_and_held_by_nobody(self):
         (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
         (self.home / "drawer" / "xiao.json").write_text(json.dumps({

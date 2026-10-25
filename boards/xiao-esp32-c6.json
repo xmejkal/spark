@@ -263,6 +263,33 @@
         "document": "xiao-c6-schematic-v1-0",
         "at": "sheet 03 Power"
       }
+    },
+    "charger": {
+      "value": "SGM40567-4.2XG/TR",
+      "verified": true,
+      "source": "Schematic sheet 03: U3 SGM40567-4.2XG/TR, VIN from VBUS, BAT to VBAT.",
+      "cites": {
+        "document": "xiao-c6-schematic-v1-0",
+        "at": "sheet 03 Power"
+      }
+    },
+    "regulator": {
+      "value": "SGM6029CYG/TR",
+      "verified": true,
+      "source": "Schematic sheet 03: U1 SGM6029CYG/TR, VIN from +5V, drives +3V3.",
+      "cites": {
+        "document": "xiao-c6-schematic-v1-0",
+        "at": "sheet 03 Power"
+      }
+    },
+    "battery_input": {
+      "value": "two pads: the positive electrode pad near the silk screen marking D5, the negative electrode pad near D8",
+      "verified": true,
+      "source": "Seeed wiki, Battery Usage: 'The negative electrode pad should be located on the left side near the silk screen marking \"D8,\" while the positive electrode pad should be located on the right side near the silk screen marking \"D5.\"'",
+      "cites": {
+        "document": "xiao-c6-wiki",
+        "at": "Battery Usage"
+      }
     }
   },
   "power_pads": {

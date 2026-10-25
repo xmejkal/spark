@@ -383,6 +383,25 @@
         }
       }
     },
+    "charger": {
+      "value": "ETA6003",
+      "verified": true,
+      "source": "DFRobot schematic V1.3.0: U5 ETA6003, BAT to VBAT+.",
+      "cites": {
+        "document": "firebeetle2-s3-schematic-v1-3",
+        "at": "U5 ETA6003"
+      }
+    },
+    "regulator": {
+      "value": "TPS62A02DRLR",
+      "verified": true,
+      "source": "DFRobot schematic V1.3.0: U1 TPS62A02DRLR.",
+      "note": "V1.1 and earlier have another chip, which hardware_revisions names (the AXP313A) with no kept source.",
+      "cites": {
+        "document": "firebeetle2-s3-schematic-v1-3",
+        "at": "U1"
+      }
+    },
     "feeding_vcc_charges_the_battery": {
       "value": false,
       "verified": true,

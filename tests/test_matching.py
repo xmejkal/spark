@@ -46,6 +46,19 @@ class TheOfferTest(unittest.TestCase):
                 self.assertTrue(matching.same_words({"does": "indicate", "what": what}, offer))
         self.assertFalse(matching.same_words({"does": "sense", "what": "light"}, offer), "the verb must be the need's")
 
+    def test_a_board_offers_its_power_parts_for_the_words_of_each_and_for_no_others(self):
+        fact = {"value": "x", "verified": True, "source": "s"}
+        record = {"name": "T-Display", "power": {"charger": fact, "regulator": fact, "battery_input": fact},
+                  "pin_roles": {"onboard_battery_sense": {"gpio": [34], "note": "x"}}}
+        offer = matching.Offer.from_record("t", "board", record)
+        for does, what in (("power", "charger"), ("power", "voltage regulator"), ("connect", "battery input"),
+                           ("sense", "battery level"), ("sense", "battery"), ("power", "onboard charger")):
+            with self.subTest(need=(does, what)):
+                self.assertTrue(matching.same_words({"does": does, "what": what}, offer))
+        for does, what in (("power", "battery"), ("power", "battery charger"), ("sense", "voltage"), ("connect", "charger")):
+            with self.subTest(need=(does, what)):
+                self.assertFalse(matching.same_words({"does": does, "what": what}, offer))
+
     def test_a_part_record_with_pin_roles_offers_nothing_of_a_board(self):
         offer = matching.Offer.from_record("x", "part", {"kind": "rtc", "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}})
         self.assertEqual(offer.functions, [{"does": "keep-time", "what": "rtc"}])

@@ -64,6 +64,7 @@ MAY_READ = {
     "boards.ONBOARD_LED": "a role's NAME, used to build a fixture — vocabulary, not a value",
     "boards.ONBOARD_BUTTON": "a role's NAME, used to build a fixture — vocabulary, not a value",
     "boards.ONBOARD_DISPLAY": "a role's NAME, used to build a fixture — vocabulary, not a value",
+    "boards.ONBOARD_BATTERY_SENSE": "a role's NAME, used to build a fixture — vocabulary, not a value",
     "boards.ONBOARD_ROLES": "the table of onboard roles, checked against the vocabulary of roles a board may declare",
     "boards.WOKWI_DEFINITION": "a documents key's NAME, used to build a fixture — vocabulary, not a value",
     "check_all.CHECKS": STRUCTURE, "boards.LIBRARY": STRUCTURE, "parts.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,

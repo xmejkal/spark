@@ -126,13 +126,6 @@ DEFINITION_NOT_KEPT = ("not checked: spark's store lacks the Wokwi definition th
                        "differs, or it does not parse")
 
 
-#: What a run cannot show of an onboard part that no scenario reaches, by role. A role without a sentence here fails at
-#: once with a KeyError, so a new such role cannot pass in silence.
-NO_PART_IN_DIAGRAM = {
-    boards.ONBOARD_DISPLAY: "spark adds no part to the diagram for the board's own display, so a passed run does not "
-                            "test what it shows. Test it on the board."}
-
-
 def gpio_limits(board, checked):
     """
     The GPIOs of the `checked` entries, (OnboardRole, entry) pairs, that the board's Wokwi definition gives no pin, as
@@ -163,12 +156,13 @@ def onboard_limits(board):
     What a passed run does not test of the board's own parts, as (component, sentence) limits (P396, P389). An LED or
     button that its Wokwi definition gives no pin: spark knows no way for a scenario to reach it. A record that cannot be
     compared says "not checked", in the list and never as a failure: it is what the build did not look at, as a
-    stand-in's sentence is what the simulation cannot show (P37). A part no scenario reaches, the display, gives its one
-    sentence whatever the definition holds, after the GPIO lines. A board with no such part gives [].
+    stand-in's sentence is what the simulation cannot show (P37). A part no scenario reaches (the display, the
+    battery-level pin) gives its `not_in_diagram` sentence whatever the definition holds, after the GPIO lines. A board with
+    no such part gives [].
     """
     entries = boards.onboard_entries(board)
     said = gpio_limits(board, [(spec, entry) for _, spec, entry in entries if spec.scenario_verb])
-    return said + [(spec.constant, NO_PART_IN_DIAGRAM[role]) for role, spec, _ in entries if not spec.scenario_verb]
+    return said + [(spec.constant, spec.not_in_diagram) for _, spec, _ in entries if spec.not_in_diagram]
 # --- end MVP ---
 
 

@@ -2033,6 +2033,13 @@ class WhatAPartDoesTest(unittest.TestCase):
                 said = parts.function_of({"pin_roles": {"onboard_led": entry}}, board=True)
                 self.assertEqual(said, [self.COMPUTE, self.LED] if offered else [self.COMPUTE])
 
+    def test_a_board_does_what_its_power_facts_say_after_what_its_pin_roles_say(self):
+        fact = {"value": "TP4054", "verified": True, "source": "s"}
+        record = {"power": {"battery_input": fact, "charger": fact}, "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}}
+        self.assertEqual(parts.function_of(record, board=True), [self.COMPUTE, self.LED, {"does": "power", "what": "onboard charger"},
+                                                                  {"does": "connect", "what": "onboard battery input"}])
+        self.assertEqual(parts.function_of(record), [], "a part that is no board does not gain the board's power parts")
+
     def test_a_function_outside_the_thirteen_verbs_is_refused(self):
         definition = part(function=[{"does": "measure", "what": "soil-moisture"}])
         self.assertTrue(any("function" in p and "keep-time" in p for p in parts.validate(definition, written(definition))))
