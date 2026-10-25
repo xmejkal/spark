@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "id": "lilygo-t-display",
+  "name": "LILYGO TTGO T-Display (ESP32, V1.1)",
+  "//": "Test fixture of P389, copied from the P330 walk record and given the display and the buttons' labels. Written on the P330 walk (2026-10-19) from the PO's photos of his own board (top and bottom, not committed: GPS), LILYGO's schematic and README, and Espressif's Arduino variant. The board's silkscreen reads '19-6-28 V1.1 XY-CP'. A fact no source states is marked UNVERIFIED.",
+  "chip": "esp32",
+  "flash_mb": 4,
+  "//flash_mb": "Schematic U2 is a W25Q32 (32 Mbit = 4 MB); LILYGO's README says to select 4MB flash. The look's esptool read confirms it on the board.",
+  "micropython_port": "ESP32_GENERIC",
+  "//micropython_port": "UNVERIFIED: the original ESP32 with no PSRAM runs MicroPython's generic ESP32 build. MicroPython's download page was not read on this walk.",
+  "wokwi_part_type": "board-esp32-devkit-c-v4",
+  "wokwi_is_stand_in": true,
+  "wokwi_pin_naming": "gpio",
+  "//wokwi_part_type": "Wokwi has no T-Display. The same-silicon devkit stands in, with no display and no buttons. UNVERIFIED: its power pin names below were not read from Wokwi's page.",
+  "wokwi_power_pins": {
+    "3V3": "3V3",
+    "GND": "GND.1",
+    "5V": "5V"
+  },
+  "physical": {
+    "//physical": "No header geometry yet: the board stops at the footprint stage (P121). LILYGO's repository holds eagle and kicad files that could give it.",
+    "//buttons": "From the PO's top photo: S1 is the upper button beside the USB-C, and the schematic puts S1 on IO0. The reset (S3 on CHIP_PU) is the small button on the lower edge: on the P330 walk (2026-10-19) the PO pressed it, S1 and S2 in turn, and the console showed exactly one restart (rst:0x1).",
+    "buttons": {
+      "seen_from": "the screen facing you, USB-C on the left",
+      "boot": {
+        "silkscreen": "S1",
+        "place": "upper left, above the USB-C"
+      },
+      "reset": {
+        "silkscreen": "S3",
+        "place": "the small button on the lower edge, left of the 5V pin"
+      }
+    }
+  },
+  "//pins": "The silkscreen prints the bare GPIO number ('12'); a pins key must be a name, so each is written IO<n>. GPIO 36-39 are input-only on the ESP32, and the record has no role to say so (P330 row 5). The display's pins (19, 18, 5, 16, 23, backlight 4) are not on the header.",
+  "pins": {
+    "IO12": 12,
+    "IO13": 13,
+    "IO15": 15,
+    "IO2": 2,
+    "IO17": 17,
+    "IO22": 22,
+    "IO21": 21,
+    "IO27": 27,
+    "IO26": 26,
+    "IO25": 25,
+    "IO33": 33,
+    "IO32": 32,
+    "IO39": 39,
+    "IO38": 38,
+    "IO37": 37,
+    "IO36": 36,
+    "SDA": 21,
+    "SCL": 22
+  },
+  "//wake_capable_gpio": "UNVERIFIED from memory: the ESP32's RTC GPIOs. The ESP32 datasheet's RTC IO table was not read on this walk.",
+  "wake_capable_gpio": [
+    0,
+    2,
+    4,
+    12,
+    13,
+    14,
+    15,
+    25,
+    26,
+    27,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+  ],
+  "//adc_gpio": "From the variant's A0-A19 (pins_arduino.h): ADC1 is 32-39, ADC2 is 0, 2, 4, 12-15, 25-27.",
+  "adc_gpio": [
+    0,
+    2,
+    4,
+    12,
+    13,
+    14,
+    15,
+    25,
+    26,
+    27,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+  ],
+  "pin_roles": {
+    "strapping": {
+      "gpio": [
+        0,
+        2,
+        5,
+        12,
+        15
+      ],
+      "note": "UNVERIFIED from memory, ESP32 datasheet strapping table not read: sampled at reset. GPIO12 sets the flash voltage, so a part that pulls it high at reset can stop the board booting."
+    },
+    "console_uart": {
+      "gpio": [
+        1,
+        3
+      ],
+      "note": "TX 1 and RX 3 (variant), wired to the CP2104: the boot log and the serial console."
+    },
+    "onboard_button": {
+      "gpio": [
+        0,
+        35
+      ],
+      "note": "S1 on GPIO0 and S2 on GPIO35 (documents.lilygo-t-display-schematic-2019-06-26), each pressing to GND, so a press reads 0. GPIO35 has the board's 100 kOhm pull-up (R1) because it has none inside. The kept README (documents.lilygo-t-display-readme, Pinout table) calls them BUTTON1 on 35 and BUTTON2 on 0, the other way round, and the labels here are the schematic's.",
+      "labels": {
+        "S1": 0,
+        "S2": 35
+      },
+      "active_level": 0
+    },
+    "onboard_display": {
+      "gpio": [
+        19,
+        18,
+        5,
+        16,
+        23,
+        4
+      ],
+      "labels": {
+        "MOSI": 19,
+        "SCLK": 18,
+        "CS": 5,
+        "DC": 16,
+        "RST": 23,
+        "BL": 4
+      },
+      "facts": {
+        "driver": {
+          "value": "ST7789",
+          "verified": true,
+          "source": "documents.lilygo-t-display-readme, Pinout table, row TFT Driver"
+        },
+        "width": {
+          "value": 135,
+          "verified": false,
+          "source": "no kept source states it",
+          "why_it_matters": "the firmware sizes the screen and its drawing to it, and only the walk's firmware draws at this size"
+        },
+        "height": {
+          "value": 240,
+          "verified": false,
+          "source": "no kept source states it",
+          "why_it_matters": "the firmware sizes the screen and its drawing to it, and only the walk's firmware draws at this size"
+        }
+      },
+      "note": "The TFT on SPI with no MISO, from the pinout table of documents.lilygo-t-display-readme, Pinout table (rows TFT_MOSI, TFT_SCLK, TFT_CS, TFT_DC, TFT_RST, TFT_BL). The table's column is headed V18, while this board's silkscreen reads V1.1. None of these pins is on the header."
+    },
+    "adc2_unusable_with_wifi": {
+      "gpio": [
+        0,
+        2,
+        4,
+        12,
+        13,
+        14,
+        15,
+        25,
+        26,
+        27
+      ],
+      "note": "ADC2, which cannot be read while Wi-Fi is on."
+    },
+    "i2c": {
+      "gpio": [
+        21,
+        22
+      ],
+      "note": "SDA 21 and SCL 22, from the variant and LILYGO's README."
+    },
+    "flash": {
+      "gpio": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "note": "UNVERIFIED from memory: the ESP32's SPI flash pins, wired to the W25Q32 (schematic SCS/SDO/SWP/SHD/SCK/SDI)."
+    }
+  },
+  "power_pads": {
+    "GND": {
+      "rail": "ground",
+      "direction": "out"
+    },
+    "3V3": {
+      "rail": "logic",
+      "direction": "out",
+      "//": "Silkscreen '3V'. Schematic U7 AP2112K-3.3 drives VDD3V3."
+    },
+    "5V": {
+      "rail": "5v",
+      "direction": "in",
+      "//": "Silkscreen '5V'. UNVERIFIED: the schematic's +5V net is fed from VBUS or the battery through Q4/Q6; whether the pin also feeds out was not read."
+    }
+  },
+  "vendor": {
+    "arduino_variant": "lilygo_t_display",
+    "//arduino_variant": "Its USB ID 0x1A86:0x55D4 is a WCH chip; this V1.1 board has a CP2104 (P330 row 10)."
+  },
+  "documents": {
+    "lilygo-t-display-schematic-2019-06-26": {
+      "url": "https://raw.githubusercontent.com/Xinyuan-LilyGO/TTGO-T-Display/6f89cddcde7152b84f7afc1831b6a1dee1fc3206/schematic/ESP32-TFT(6-26).pdf",
+      "sha256": "aea09366b9e23c498d127363b73dc8211cd1cff9031b7482dbe521cb8b807121",
+      "file": "ESP32-TFT(6-26).pdf",
+      "retrieved": "2026-10-19",
+      "title": "ESP32-TFT schematic",
+      "version": "2019-06-26 (repository commit 6f89cdd)"
+    },
+    "lilygo-t-display-readme": {
+      "url": "https://raw.githubusercontent.com/Xinyuan-LilyGO/TTGO-T-Display/6f89cddcde7152b84f7afc1831b6a1dee1fc3206/README.MD",
+      "sha256": "29fd27a03fa4e9f8fd80900552a41d8238d670e6b34cc53ac5f78a5deb01e491",
+      "file": "README.MD",
+      "retrieved": "2026-10-19",
+      "title": "TTGO T-Display README (pinout table)",
+      "version": "repository commit 6f89cdd"
+    },
+    "arduino-variant-lilygo-t-display-3-3-12": {
+      "url": "https://raw.githubusercontent.com/espressif/arduino-esp32/3.3.12/variants/lilygo_t_display/pins_arduino.h",
+      "sha256": "917ec83176800e89e609ff43f8a89c0df41a4c41ca2bd0cb725d3e32af696889",
+      "file": "pins_arduino.h",
+      "retrieved": "2026-10-19",
+      "title": "pins_arduino.h, lilygo_t_display",
+      "version": "arduino-esp32 3.3.12"
+    }
+  }
+}

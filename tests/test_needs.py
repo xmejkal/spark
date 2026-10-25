@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -367,6 +368,14 @@ class TheMatcherTest(unittest.TestCase):
         (self.project / "boards").mkdir(parents=True)
         (self.project / "boards" / "no-led.json").write_text(json.dumps(dict(board, id="no-led")))
         self.assertNotIn("no-led", self.light())
+
+    def test_a_board_with_its_own_display_is_offered_for_a_need_of_a_display_or_a_screen(self):
+        (self.project / "boards").mkdir(parents=True)
+        shutil.copy(ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json", self.project / "boards")
+        for what in ("display", "screen"):
+            with self.subTest(what=what):
+                found = {c["id"]: c for c in self.alone({"id": "show", "does": "indicate", "what": what})["candidates"] if c["id"]}
+                self.assertEqual((found["lilygo-t-display"]["in"], found["lilygo-t-display"]["what_matches"]), ("project", True))
 
     def test_a_board_picked_for_the_mcu_need_and_offered_for_light_is_free_and_held_by_nobody(self):
         (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))

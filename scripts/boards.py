@@ -348,16 +348,22 @@ ONBOARD_ROLES = {
 }
 
 
-def onboard_functions(board):
+def onboard_entries(board):
     """
-    What the board offers a need through its own parts: one {"does", "what"} per role in ONBOARD_ROLES that its
-    `pin_roles` names, in table order (P389). A `pin_roles` that is no object, or an entry that is none, names nothing.
+    (role, OnboardRole, entry) for each role in ONBOARD_ROLES that the board's `pin_roles` names with an object, in table
+    order (P389). A `pin_roles` that is no object, or an entry that is none, names nothing. Every reader of the table
+    goes through here, so each guards a malformed record the same way.
     """
     pin_roles = board.get("pin_roles")
     if not isinstance(pin_roles, dict):
         return []
-    return [{"does": spec.does, "what": spec.what} for role, spec in ONBOARD_ROLES.items()
-            if isinstance(pin_roles.get(role), dict)]
+    return [(role, spec, pin_roles[role]) for role, spec in ONBOARD_ROLES.items() if isinstance(pin_roles.get(role), dict)]
+
+
+def onboard_functions(board):
+    """What the board offers a need through its own parts: one {"does", "what"} per entry of `onboard_entries`."""
+    return [{"does": spec.does, "what": spec.what} for _, spec, _ in onboard_entries(board)]
+
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
 WOKWI_DEFINITION = "wokwi-board"

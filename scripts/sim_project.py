@@ -133,9 +133,7 @@ def onboard_limits(board):
     or button gives []. A record that cannot be compared says "not checked", in the list and never as a failure: it is
     what the build did not look at, as a stand-in's sentence is what the simulation cannot show (P37).
     """
-    pin_roles = board.get("pin_roles") if isinstance(board.get("pin_roles"), dict) else {}
-    roles = [(role, pin_roles[role]) for role, spec in boards.ONBOARD_ROLES.items()
-             if spec.scenario_verb and isinstance(pin_roles.get(role), dict)]
+    roles = [(spec, entry) for _, spec, entry in boards.onboard_entries(board) if spec.scenario_verb]
     if not roles:
         return []
     documents = board.get("documents") if isinstance(board.get("documents"), dict) else {}
@@ -145,14 +143,14 @@ def onboard_limits(board):
     if part is None:
         return [(ONBOARD_GPIOS, DEFINITION_NOT_KEPT)]
     said = []
-    for role, entry in roles:
+    for spec, entry in roles:
         gpios = entry.get("gpio") if isinstance(entry.get("gpio"), list) else []
         for gpio in (gpio for gpio in gpios if isinstance(gpio, int) and not isinstance(gpio, bool)):
             why = part.why_not_simulated(gpio)
             if why:
-                said.append(("%s (GPIO%d)" % (boards.ONBOARD_ROLES[role].constant, gpio),
+                said.append(("%s (GPIO%d)" % (spec.constant, gpio),
                              "%s, so spark knows no way for a scenario to %s it. Test it on the board."
-                             % (why, boards.ONBOARD_ROLES[role].scenario_verb)))
+                             % (why, spec.scenario_verb)))
     return said
 # --- end MVP ---
 

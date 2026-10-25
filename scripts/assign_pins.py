@@ -399,8 +399,8 @@ def pin_module(board, assignments, source, pulled_up=()):
     (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
     refused, not mangled: a renamed constant is a pin the firmware silently stops finding. A signal in `pulled_up`
     gets a `<SIGNAL>_PULL = "up"` line: the board's internal pull-up holds it, set by the firmware (P204). A board
-    record that names one on-board LED or button adds `ONBOARD_LED` or `ONBOARD_BUTTON`, and `ONBOARD_LED_ON` or
-    `ONBOARD_BUTTON_ON` when it holds their active level, so a project with no parts can use them (P236, P353).
+    record that names an on-board LED, button or display adds its lines (`onboard_lines`), so a project with no parts
+    can use them (P236, P353, P389).
     """
     lines = ["%s from %s" % (PIN_MODULE_HEADER, parts_library.one_line(source)),
              "# for the %s. Regenerate it; do not edit it." % parts_library.one_line(board["name"]), ""]
@@ -415,35 +415,50 @@ def pin_module(board, assignments, source, pulled_up=()):
         if entry["signal"] in pulled_up:
             lines.append('%s_PULL = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
                          % (entry["signal"], entry["signal"]))
-    for role, spec in boards.ONBOARD_ROLES.items():
-        lines += onboard_lines(board, assignments, role, spec.constant)
+    for role, spec, record in boards.onboard_entries(board):
+        lines += onboard_lines(assignments, role, spec.constant, record)
     return "\n".join(lines) + "\n"
 
 
-
-def onboard_lines(board, assignments, role, name):
+def onboard_lines(assignments, role, name, record):
     """
-    The lines for one on-board part the record names on one GPIO: its number with the record's whole note, and
-    `<NAME>_ON` when the record holds `active_level` (the level that lights the LED or that the pressed button reads).
-    An LED with no level says so. A signal that has either name is refused, since the later line would win.
+    The lines for one on-board part a board record names, each a name that pins.py gives it (P389):
+    - one GPIO and no `labels`: `<NAME>` with the record's whole note;
+    - `labels`: `<NAME>_<LABEL>` per label in the record's order, the note on the first;
+    - `active_level`, with one GPIO or labels: `<NAME>_ON`, the level that lights the LED or that the pressed button reads;
+    - each fact whose value is a number or a word: `<NAME>_<FACT>`, with its source and "not verified" when it is not.
+    An LED with no level says so. A signal that has one of these names is refused, since the later line would win.
+    A `gpio` that is no list gives no lines.
     """
-    record = (board.get("pin_roles") or {}).get(role) or {}
-    gpio = record.get("gpio") or []
-    if len(gpio) != 1:
+    gpio = record.get("gpio")
+    if not isinstance(gpio, list):
         return []
+    labels = record["labels"] if isinstance(record.get("labels"), dict) else {}
+    facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
     level = record.get("active_level")
-    names = [name] if level is None else [name, name + "_ON"]
+    note = parts_library.one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
+    named = []
+    if labels:
+        for index, (label, number) in enumerate(labels.items()):
+            said = note if index == 0 else "%s: the note is on the first line of this part" % role
+            named.append(("%s_%s" % (name, label), "%d  # %s" % (number, said)))
+    elif len(gpio) == 1:
+        polarity = ". Its polarity is not in the board record" if role == boards.ONBOARD_LED and level is None else ""
+        named.append((name, "%d  # %s%s" % (gpio[0], note, polarity)))
+    if level is not None and named:
+        named.append((name + "_ON", "%d  # the active level in the board record, the source is on the line above" % level))
+    for fact, said in facts.items():
+        value = said.get("value") if isinstance(said, dict) else None
+        if isinstance(value, (int, str)) and not isinstance(value, bool):
+            source = parts_library.one_line(str(said.get("source")))
+            named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, from %s%s" % (
+                value, role, fact, source, "" if said.get("verified") is True else "; not verified")))
+    names = {each for each, _ in named}
     taken = [entry["signal"] for entry in assignments if entry["signal"] in names]
     if taken:
         raise Impossible("a signal is named %s, a name pins.py gives the board's own %s: rename it"
                          % (taken[0], role.replace("onboard_", "")))
-    note = parts_library.one_line("%s: %s" % (role, record.get("note", "").rstrip(".")))
-    if level is not None:
-        return ["%s = %d  # %s" % (name, gpio[0], note),
-                "%s_ON = %d  # the active level in the board record, the source is on the line above" % (name, level)]
-    if role == boards.ONBOARD_LED:
-        return ["%s = %d  # %s. Its polarity is not in the board record" % (name, gpio[0], note)]
-    return ["%s = %d  # %s" % (name, gpio[0], note)]
+    return ["%s = %s" % each for each in named]
 
 
 #: How every pin module begins, so a build can tell one spark wrote from a person's own `pins.py` (P196).

@@ -636,5 +636,113 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         self.assertIn("MOTOR_IA", names)
 
 
+# --- MVP ---
+class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
+    """P389: labels, facts and a display, named in pins.py from the record alone."""
+
+    FIXTURE = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
+
+    def record(self):
+        import json
+        return json.loads(self.FIXTURE.read_text())
+
+    def lines(self, record, assignments=()):
+        return assign_pins.pin_module(record, list(assignments), "r.json").splitlines()
+
+    def named(self, record):
+        """Each ONBOARD_ line cut before its comment."""
+        return [line.split("  #")[0] for line in self.lines(record) if line.startswith("ONBOARD_")]
+
+    def test_the_t_display_s_screen_buttons_and_driver_are_named(self):
+        names = {}
+        exec("\n".join(self.lines(self.record())), names)
+        onboard = {key: value for key, value in names.items() if key.startswith("ONBOARD_")}
+        self.assertEqual(onboard, {
+            "ONBOARD_BUTTON_S1": 0, "ONBOARD_BUTTON_S2": 35, "ONBOARD_BUTTON_ON": 0,
+            "ONBOARD_DISPLAY_MOSI": 19, "ONBOARD_DISPLAY_SCLK": 18, "ONBOARD_DISPLAY_CS": 5, "ONBOARD_DISPLAY_DC": 16,
+            "ONBOARD_DISPLAY_RST": 23, "ONBOARD_DISPLAY_BL": 4, "ONBOARD_DISPLAY_DRIVER": "ST7789",
+            "ONBOARD_DISPLAY_WIDTH": 135, "ONBOARD_DISPLAY_HEIGHT": 240})
+
+    def test_the_labels_come_in_the_records_order_and_the_note_is_on_the_first(self):
+        lines = [line for line in self.lines(self.record()) if line.startswith("ONBOARD_DISPLAY_")]
+        self.assertEqual([line.split(" = ")[0] for line in lines],
+                         ["ONBOARD_DISPLAY_MOSI", "ONBOARD_DISPLAY_SCLK", "ONBOARD_DISPLAY_CS", "ONBOARD_DISPLAY_DC",
+                          "ONBOARD_DISPLAY_RST", "ONBOARD_DISPLAY_BL", "ONBOARD_DISPLAY_DRIVER", "ONBOARD_DISPLAY_WIDTH",
+                          "ONBOARD_DISPLAY_HEIGHT"])
+        self.assertIn("The TFT on SPI with no MISO", lines[0])
+        self.assertIn("the note is on the first line of this part", lines[1])
+        self.assertNotIn("The TFT on SPI", lines[1])
+
+    def test_a_fact_nobody_verified_says_so_and_a_verified_one_says_where_from(self):
+        lines = {line.split(" = ")[0]: line for line in self.lines(self.record())}
+        self.assertTrue(lines["ONBOARD_DISPLAY_WIDTH"].endswith("; not verified"), lines["ONBOARD_DISPLAY_WIDTH"])
+        self.assertIn("from no kept source states it", lines["ONBOARD_DISPLAY_WIDTH"])
+        self.assertEqual(lines["ONBOARD_DISPLAY_DRIVER"],
+                         "ONBOARD_DISPLAY_DRIVER = 'ST7789'  # onboard_display: driver, from documents.lilygo-t-display-readme, "
+                         "Pinout table, row TFT Driver")
+
+    def test_each_button_label_is_a_line_and_the_level_is_one_line(self):
+        lines = [line.split("  #")[0] for line in self.lines(self.record()) if line.startswith("ONBOARD_BUTTON")]
+        self.assertEqual(lines, ["ONBOARD_BUTTON_S1 = 0", "ONBOARD_BUTTON_S2 = 35", "ONBOARD_BUTTON_ON = 0"])
+
+    def test_a_fact_is_a_line_only_when_its_value_is_a_number_or_a_word(self):
+        facts = {"a_int": 3, "b_word": "it's", "c_bool": True, "d_none": None, "e_float": 1.5, "f_list": [1], "g_object": {"x": 1}}
+        entry = {"gpio": [], "note": "x", "facts": {name: {"value": value, "verified": True, "source": "s"}
+                                                     for name, value in facts.items()}}
+        self.assertEqual(self.named(board(pin_roles={"onboard_display": entry})),
+                         ["ONBOARD_DISPLAY_A_INT = 3", 'ONBOARD_DISPLAY_B_WORD = "it\'s"'])
+
+    def test_a_fact_that_is_no_object_names_nothing(self):
+        lit = board(pin_roles={"onboard_display": {"gpio": [], "note": "x", "facts": {"width": 135, "height": ["x"]}}})
+        self.assertEqual(self.named(lit), [])
+
+    def test_a_role_on_two_gpios_with_no_labels_names_no_pin_but_still_names_its_facts(self):
+        two = board(pin_roles={"onboard_display": {"gpio": [2, 3], "note": "x", "active_level": 1, "facts": {
+            "driver": {"value": "ST7789", "verified": True, "source": "s"}}}})
+        self.assertEqual(self.named(two), ["ONBOARD_DISPLAY_DRIVER = 'ST7789'"])
+
+    def test_a_role_with_one_gpio_and_a_label_names_the_label_not_the_bare_role(self):
+        one = board(pin_roles={"onboard_button": {"gpio": [9], "note": "x", "labels": {"BOOT": 9}}})
+        self.assertEqual(self.named(one), ["ONBOARD_BUTTON_BOOT = 9"])
+
+    def test_a_gpio_that_is_no_list_names_nothing(self):
+        for gpio in (9, "9", None, {"x": 9}):
+            with self.subTest(gpio=gpio):
+                self.assertEqual(self.named(board(pin_roles={"onboard_led": {"gpio": gpio, "note": "x", "labels": {"A": 9}}})), [])
+
+    def test_pin_roles_of_the_wrong_shape_name_nothing(self):
+        for pin_roles in (["onboard_led"], "x", {"onboard_led": "x"}, {"onboard_led": ["gpio"]}):
+            with self.subTest(pin_roles=pin_roles):
+                self.assertEqual(self.named(board(pin_roles=pin_roles)), [])
+
+    def test_a_signal_with_the_name_of_any_line_of_a_role_is_refused(self):
+        for taken in ("ONBOARD_DISPLAY_CS", "ONBOARD_DISPLAY_WIDTH", "ONBOARD_BUTTON_ON", "ONBOARD_BUTTON_S2"):
+            with self.subTest(taken=taken):
+                assignments, _ = assign_pins.assign(board(), [{"name": taken, "needs": []}])
+                with self.assertRaises(assign_pins.Impossible) as caught:
+                    assign_pins.pin_module(self.record(), assignments, "r.json")
+                self.assertIn("a signal is named %s" % taken, str(caught.exception))
+
+    def test_a_signal_with_a_name_the_record_does_not_make_is_kept(self):
+        assignments, _ = assign_pins.assign(board(), [{"name": "ONBOARD_DISPLAY_MISO", "needs": []}])
+        self.assertIn("ONBOARD_DISPLAY_MISO = ", "\n".join(self.lines(self.record(), assignments)))
+
+    def test_a_record_with_bad_labels_never_reaches_the_pin_map(self):
+        import json
+        import tempfile
+        import design
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "boards").mkdir()
+        record = self.record()
+        record["pin_roles"]["onboard_display"]["labels"]["mosi"] = 19
+        (root / "boards" / "lilygo-t-display.json").write_text(json.dumps(record))
+        (root / "requirements.json").write_text(json.dumps({"board": "lilygo-t-display", "parts": []}))
+        with self.assertRaises(design.DesignError) as caught:
+            assign_pins.pin_module_for(root / "requirements.json")
+        self.assertIn("has the label 'mosi'", str(caught.exception))
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()
