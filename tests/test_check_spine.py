@@ -1288,9 +1288,9 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
     """P407: a board record that cannot give a footprint stops at the footprint stage, names each gap, and says what
     the build still gives a breadboard user."""
 
-    HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, firmware/pins.py is written if "
-            "its pins can be placed, and the kept lines say which. The breadboard sheet and the simulation read the "
-            "built board, so they wait for the footprint.")
+    HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, the kept lines say whether "
+            "firmware/pins.py was written. The breadboard sheet and the simulation read the built board, so they wait "
+            "for the footprint.")
 
     def project_without(self, *fields, requirements=None):
         """A project (it holds .spark/) whose own XIAO record lacks each dotted field, with its requirements file."""
@@ -1313,9 +1313,15 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         (project / "requirements.json").write_text(json.dumps(wanted))
         return project, wanted
 
+    def run_spine(self, project, wanted):
+        """`run` as `main` calls it: the requirements file in the work folder, the project's own board."""
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps(wanted))
+        return check_spine.run(wanted, workdir, project=project)
+
     def test_no_header_stops_at_the_footprint_stage_and_says_what_still_comes(self):
         project, wanted = self.project_without("physical.header")
-        stages = check_spine.run(wanted, Path(tempfile.mkdtemp()), project=project)
+        stages = self.run_spine(project, wanted)
         self.assertEqual([(s.name, s.status) for s in stages], [("board", check_spine.OK), ("footprint", check_spine.COULD_NOT_RUN)])
         self.assertEqual(stages[-1].detail,
                          "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them "
@@ -1324,10 +1330,25 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
 
     def test_a_header_with_no_order_and_no_width_names_each_gap(self):
         project, wanted = self.project_without("physical.header_order", "physical.width_mm")
-        stages = check_spine.run(wanted, Path(tempfile.mkdtemp()), project=project)
+        stages = self.run_spine(project, wanted)
         self.assertEqual((stages[-1].name, stages[-1].status), ("footprint", check_spine.COULD_NOT_RUN))
         self.assertIn(":\n  physical.width_mm\n  physical.header_order (which label is on which pad — not derivable)\n",
                       stages[-1].detail)
+
+    def test_the_board_alone_needs_no_footprint(self):
+        # the stop comes after the board-only branch: a board with no header still simulates on its own
+        project, wanted = self.project_without("physical.header", requirements={"board": "xiao-esp32-c6", "parts": [],
+                                                                                "board_only": True})
+        stages = self.run_spine(project, wanted)
+        self.assertEqual([(s.name, s.status) for s in stages],
+                         [("board", "ok"), ("parts", "skipped"), ("schematic", "skipped"), ("footprint", "skipped"),
+                          ("build", "skipped"), ("simulation", "ok")])
+
+    def test_a_part_that_is_not_in_the_library_is_said_before_the_footprint(self):
+        project, wanted = self.project_without("physical.header", requirements={"board": "xiao-esp32-c6",
+                                                                                "parts": ["no-such-part"]})
+        stages = self.run_spine(project, wanted)
+        self.assertEqual([(s.name, s.status) for s in stages], [("board", "ok"), ("parts", "could-not-run")])
 
     def keep_through_main(self, project):
         """`main` with --json --keep into the project, unmocked: the stop comes before any toolchain is needed."""
@@ -1346,14 +1367,27 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         self.assertTrue((project / "firmware" / "pins.py").is_file())
         self.assertFalse((project / "breadboard.md").exists())
 
-    def test_pins_that_cannot_be_placed_are_said_in_the_kept_lines(self):
+    def test_a_fault_in_the_requirements_is_said_before_the_footprint(self):
+        # the refuter: the footprint stop hid what emit_board says first, so a person fixed the board and met the typo.
+        # Reading the input and placing the pins come first, as in emit_board, then the footprint, then the rest.
+        for extra, fields, said in (
+                ({"signals": [{"name": "X", "needs": ["teleport"]}]}, (), "X asks for teleport"),
+                ({"parts": [{"part": "led-red-5mm", "name": "A"}, {"part": "led-red-5mm", "name": "A"}]}, (),
+                 "parts[0] is called A and parts[1] A")):
+            with self.subTest(said=said):
+                project, wanted = self.project_without("physical.header", *fields, requirements=dict(
+                    {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}, **extra))
+                stages = self.run_spine(project, wanted)
+                self.assertEqual([(s.name, s.status) for s in stages], [("board", "ok"), ("schematic", "could-not-run")])
+                self.assertTrue(stages[-1].detail.startswith("cannot emit a board: "), stages[-1].detail)
+                self.assertIn(said, stages[-1].detail)
+
+    def test_pins_that_cannot_be_placed_write_no_pin_map(self):
         project, _ = self.project_without("physical.header", requirements={
             "board": "xiao-esp32-c6", "parts": ["led-red-5mm"], "signals": [{"name": "X", "needs": ["teleport"]}]})
         said = self.keep_through_main(project)
-        self.assertEqual(said["stages"][-1]["name"], "footprint")
-        pin_map = [entry for entry in said["kept"] if entry["file"].endswith("pins.py")]
-        self.assertEqual([entry["did"] for entry in pin_map], ["not written"])
-        self.assertIn("teleport", pin_map[0]["why"])
+        self.assertEqual(said["stages"][-1]["name"], "schematic")
+        self.assertEqual([entry["did"] for entry in said["kept"] if entry["file"].endswith("pins.py")], ["not written"])
         self.assertFalse((project / "firmware" / "pins.py").exists())
 
 

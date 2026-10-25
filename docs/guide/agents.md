@@ -578,9 +578,10 @@ count.
    could-not-run too: the `schematic` stage's detail is `emit_board.py crashed: ` and the traceback's last line. A stage
    detail that starts `Traceback (most recent call last):` is a crash, not a defect in the design. A board whose file
    cannot give a footprint stops at `[????] footprint`, before the schematic. The detail names each missing fact (the
-   gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, `firmware/pins.py` if its pins
-   can be placed, and the kept lines say which. `emit_board.py` alone refuses that board with the same sentence, exit 2
-   ([P407](https://github.com/xmejkal/spark/issues/532)).
+   gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, the kept lines say whether
+   `firmware/pins.py` was written. A fault in the requirements file (an unknown need, two parts of one name, pins that
+   cannot be placed) is said first, under `schematic`. `emit_board.py` alone refuses that board with the same sentence,
+   in the same order, exit 2 ([P407](https://github.com/xmejkal/spark/issues/532)).
 3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout, except that
    `parts.py --json` answers an argument it cannot run with in its envelope (`status` is `could-not-run`). With
    `CLAUDE_PLUGIN_ROOT` unset, Python never starts the script, so even that prints nothing. A bad command line is not a

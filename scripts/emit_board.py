@@ -47,6 +47,8 @@ from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 #: The tag that opens each trace in a board file, after its indent: `check_spine` counts the traces by it, and
 #: `tests/test_routes.py` holds the count to the build guide's.
 TRACE_TAG = "<trace "
+#: What this script prints for input it refuses, before any board is emitted; `check_spine` says the same (P407).
+REFUSED_INPUT_MESSAGE = "cannot emit a board: %s"
 
 #: Layout constants. Ordinal, not designed — they exist to produce something that does not
 #: overlap, so the checks have a board to run on.
@@ -1077,7 +1079,7 @@ def main(argv=None):
         # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
         # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
         # which reads as "problems found" to anything that knows three outcomes.
-        print("cannot emit a board: %s" % broken, file=sys.stderr)
+        print(REFUSED_INPUT_MESSAGE % broken, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
     # --- MVP --- the same refusal as the spine's footprint stage, which stops before this runs. This guard serves a
@@ -1139,7 +1141,7 @@ def main(argv=None):
     except ValueError as refused:
         # `series_ohms`: a number the resistor needs is missing, or the pin cannot light the part. The input's, so
         # could-not-run like every refusal above — it was a traceback and exit 1, which the chain read as a defect (F9).
-        print("cannot emit a board: %s" % refused, file=sys.stderr)
+        print(REFUSED_INPUT_MESSAGE % refused, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     sys.stdout.write(text)
 
