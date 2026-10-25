@@ -34,11 +34,11 @@ Each CLI keeps its flags and positionals.
 | `checks/vendor_pins_check.py` | `VendorPinsCheck`, `check_vendor_pins`'s logic, the Adapter `GhVendorHeaders` |
 | `checks/order_check.py` | `OrderCheck` and `check_bom`'s logic |
 | `checks/codes.py` | every code a check emits, with a one-line meaning |
-| `checks/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `checks/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake | Registry |
+| Seam | Real adapter | Fake | Registry |
 |---|---|---|---|
 | `Check` Strategy: `run(inputs) -> OperationResult` | the five checks | a toy `Check` in the test | `CHECKS` |
 | vendor headers: `header(variant) -> str` | `GhVendorHeaders` over `gh api` (`check_vendor_pins.py:67`) | a dict from variant to header text | none |

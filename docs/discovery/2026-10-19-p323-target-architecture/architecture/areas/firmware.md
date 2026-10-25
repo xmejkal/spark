@@ -33,11 +33,12 @@ The build calls the simulation project step (`sim_project.py`) as one of its sta
 | `firmware/scenario_run.py` | `ScenarioRun` and `RunLog`, moved from `run_scenario.py` |
 | `firmware/scenario_steps.py` | `ScenarioSteps`, the step constants, and `component_ids` after P399, moved from `run_scenario.py` |
 | `firmware/simulation_engine.py` | `SimulationEngine`, `WokwiCliEngine`, `ENGINES` |
-| `firmware/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `firmware/stand_in/machine.py` | MicroPython's `machine` stand-in for the import check, moved as is: not spark code |
+| `firmware/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake | Chosen by |
+| Seam | Real adapter | Fake | Chosen by |
 |---|---|---|---|
 | `SimulationEngine`: `prepare(design)`, `run(scenario) -> RunLog` | `WokwiCliEngine` over `wokwi-cli` | `tests/fake_wokwi_cli.py`, a fake process that exists today | `Backends.simulator`, the `simulator` role in the tools layers (`data/tools.json:5`) |
 | command runner | `OutsideWorld.run` | a recording `run` | the CLI |

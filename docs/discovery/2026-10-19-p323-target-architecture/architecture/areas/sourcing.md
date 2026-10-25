@@ -38,15 +38,15 @@ design, because `needs.py` imports `design`, `emit_board` and `emit_footprint`. 
 | `sourcing/datasheets.py` | fetching, keeping and reading a datasheet, moved out of `parts.py` |
 | `sourcing/part_facts.py` | setting facts on a part record, moved out of `parts.py` |
 | `sourcing/run_cost.py` | the transcript tally, moved from `cost.py`, which stays the CLI |
-| `sourcing/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `sourcing/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake |
+| Seam | Real adapter | Fake |
 |---|---|---|
 | `Matcher` Strategy, chosen by `--matcher` | `SameWords`, `NameContains`, `WordOverlap` (`matching.py:166-195`) | a Matcher subclass in the test |
 | part records | `RecordFinder("part")` from records | `RecordFolders(tmp)` over `tests/data/` |
-| `Retriever`: `search(words, project)`, proposed with the sourcing move | today's `parts.need` with the `Matcher` registry, and `parts.scan_datasheet`. A vector store would be a third | a Retriever subclass in the test |
+| `Retriever` Strategy: `search(words, project)`, proposed with the sourcing move | today's `parts.need` with the `Matcher` registry. The datasheet reader and a vector store come with the learning spike, where a second real adapter exists | a Retriever subclass in the test |
 | the project's brief | `Brief` from records (`prefer`, `sellers`), which replaces `parts.vendor_order` and `parts.sellers` | a `Brief` built in the test |
 | network | `OutsideWorld.fetch` | a dict from URL to bytes |
 | transcripts | a reader of the harness's files, the session from `OutsideWorld.environ` | transcript files in `tests/data/` |

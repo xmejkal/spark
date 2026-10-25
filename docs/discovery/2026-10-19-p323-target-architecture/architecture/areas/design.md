@@ -38,9 +38,9 @@ into records and sourcing would be a parameter with one value.
 | `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `RefusedInputError` and `REFUSED_INPUT_MESSAGE` |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
-| `design/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `design/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-### Its ports
+### Its seams
 
 Design runs no outside program, so it has no Adapter. Its only effect is `OutsideWorld.write`. It reads part and
 board records through records, and offers through sourcing's `Matcher`.

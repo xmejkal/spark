@@ -4,7 +4,7 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `BuildService`, `BuildInputs`, `BuildStage` and its six subclasses, `BUILD_STAGES`,
-`goes_on`, `TscircuitEngine`, `DiagramConverter`, `ProjectSetupService`, `build/operations.py`, and the
+`goes_on`, `TscircuitEngine`, `DiagramConverter`, `ProjectSetupService`, `build/__init__.py` with `OPERATIONS`, and the
 Operation names `build` and `init`.
 
 ## Level 2: what build does
@@ -29,11 +29,11 @@ a new project with the files every check and reviewer needs.
 | `build/board_engine.py` | the Adapters `TscircuitEngine` and `DiagramConverter` |
 | `build/project_setup.py` | `ProjectSetupService`, from `init_project.py` |
 | `build/ai_files.py` | `AiFiles`, moved as is (`ai_files.py:31`) |
-| `build/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `build/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake | Chosen by |
+| Seam | Real adapter | Fake | Chosen by |
 |---|---|---|---|
 | `BuildStage` Strategy: `applies(inputs)`, `run(inputs) -> OperationResult`, `goes_on(result)` | six stages | a fake stage per area below | `BUILD_STAGES`, an ordered tuple, because order is the point |
 | board engine: `build(board_file) -> Circuit`, `version()` | `TscircuitEngine` over `tsci build` (the build stage of `check_spine.run`, `toolchain_can_build`, `tsci_version`) | a recording `run` with a canned `circuit.json` | the `board-engine` role (`data/tools.json:6`) |

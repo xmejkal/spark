@@ -39,9 +39,9 @@ areas' `OPERATIONS`, as `parts.py` does.
 | `records/tool_finder.py` | `ToolFinder` over the three `tools.json` layers, install lines |
 | `records/backends.py` | `Backends` and `build_outside` |
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake | Configured in |
+| Seam | Real adapter | Fake | Configured in |
 |---|---|---|---|
 | record folders | `RecordFolders.from_environ()` | `RecordFolders(tmp)` | `SPARK_HOME`, then `XDG_DATA_HOME`, then `~/.local/share/spark` (`store.py:46-52`) |
 | tool finder: `find(role) -> Tool` | `ToolFinder` over `data/tools.json`, the store's and the project's `tools.json` | `FakeToolFinder({role: argv})` | the three layers, the project wins (`tools.py:79-85`) |
@@ -107,7 +107,7 @@ classDiagram
 ```
 
 `Backends` holds choices, not built objects, and it names no backend of its own. `platform` is a `Choice` with the
-name that `requirements.json` gives, or none and `chosen_by: default`. Each area's `operations.py` turns a choice into
+name that `requirements.json` gives, or none and `chosen_by: default`. Each area's Operation modules turn a choice into
 a Strategy with its own registry and its own default, such as bench's `DEFAULT_PLATFORM`. So records never imports
 bench or firmware. The envelope gains a `backends` key with each choice and its `chosen_by`, so a person and Claude
 see which backend ran and why.

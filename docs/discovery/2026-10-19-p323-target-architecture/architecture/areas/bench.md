@@ -5,7 +5,7 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 
 New names (proposed): `MicroPythonPlatform`, `PLATFORMS`, `DEFAULT_PLATFORM`, `make_port_finder`,
 `make_board_reader`, `make_ready_probe`, `ReadyProbe`, `DoctorProbe`, `DoctorProbeResult`, `LookStopError`,
-`bench/operations.py`, `FakeFirmwarePlatform`, `FakeBoardReader`, `FakePortFinder`, `FirmwarePlatformContract`,
+`ReadingFile`, `DeferringConsentStrategy`, the six Operation classes, `FakeFirmwarePlatform`, `FakeBoardReader`, `FakePortFinder`, `FirmwarePlatformContract`,
 `FlasherContract`. Three names are renamed in S11: `ready_probe` is `ready_check.py` today, `ReadyProbe` is
 `ReadyCheck`, and `make_ready_probe` is `make_ready_check`.
 
@@ -19,37 +19,59 @@ it. It never writes or erases without a gate that the person opened, and it says
 | Operation | CLI | Effects |
 |---|---|---|
 | `look` | `look.py` | reads, runs, board (the board restarts while esptool reads it) |
-| `deploy` | `deploy.py` with `--token`, `--dry-run` (`deploy.main`) | reads, runs, board, erases, writes the board log |
+| `deploy` | `deploy.py` with `--token`, `--dry-run` (`deploy.main`) | reads, runs, board, deletes, writes the board log |
 | `grant`, `grant-check` | `grant.py --minutes`, `--check` (`grant.py:72-73`) | reads, runs, board, writes a grant |
 | `live` | `live.py --code` (`live.py:76`) | reads, runs, board |
 | `reach` | `reach.py`, `--cure-first` (`reach.py:75`) | reads, runs, board |
 
 ### Its components
 
-`bench/operations.py` holds the five Operations and the area's index. The modules keep today's `board_` and
-`deploy_` prefixes, so no name repeats a CLI's name (rule C1). The diagram shows each module with its roles.
+One module per Operation, named after it: `look_at_board.py` (`LookAtBoard`, op `look`), `deploy_image.py`,
+`issue_grant.py`, `check_grant.py`, `run_live_code.py`, `reach_board.py`. `bench/__init__.py` holds `OPERATIONS` and the
+area's index. The modules keep today's `board_` and `deploy_` prefixes, so no name repeats a CLI's name (rule C1). An
+arrow in the diagram is an import at `d064a65`, read with `ast`.
 
 ```mermaid
 flowchart TB
-  OPS["operations.py<br/>five Operations, the area's index"]
+  OPS["the six Operation modules<br/>OPERATIONS in __init__.py"]
   OPS --> LOOK["board_look.py<br/>LookService (Service), PortFinder, EsptoolReader (Adapters)"]
   OPS --> DEP["deploy_service.py<br/>DeployService (Service)"]
   OPS --> GRANT["board_grant.py<br/>GrantService (Service), GrantStore (Store)"]
   OPS --> LIVE["board_live.py, board_reach.py<br/>the live try and the reach (Services)"]
-  DEP --> GATE["deploy_gate.py<br/>require_open_gate, ConsentStrategy (Strategy)"]
-  DEP --> PLAT["firmware_platform.py<br/>FirmwarePlatform (Strategy), MicroPythonPlatform"]
-  PLAT --> FL["flasher.py<br/>Flasher (Strategy), EsptoolFlasher (Adapter)"]
-  PLAT --> CONN["board_connection.py, board_console.py<br/>BoardConnection, ConsoleProbe (Adapters)"]
-  PLAT --> READY["ready_probe.py<br/>ReadyProbe (probe)"]
-  LOOK --> DOC["board_doctor.py<br/>DoctorProbe (probe)"]
-  LOOK --> EV["image_evidence.py<br/>ImageEvidence (Strategy)"]
+  OPS --> PLAT["firmware_platform.py<br/>FirmwarePlatform (Strategy), MicroPythonPlatform"]
+  OPS --> EV["image_evidence.py<br/>ImageEvidence (Strategy)"]
   OPS --> ENV["board_envelope.py, board_codes.py<br/>the look and deploy envelope (Renderer), the codes"]
-  LOOK --> FACTS["board_facts.py<br/>FactsFile (Adapter), the look's line of a LastDeploy"]
+  DEP --> LOOK
+  DEP --> GRANT
+  DEP --> GATE["deploy_gate.py<br/>require_open_gate, ConsentStrategy (Strategy)"]
+  DEP --> FACTS["board_facts.py<br/>ReadingFile (Adapter), the look's line of a LastDeploy"]
+  DEP --> READY["ready_probe.py<br/>ReadyProbe (probe)"]
+  DEP --> DM["download_mode.py<br/>the board after a flash (functions)"]
+  GRANT --> LOOK
+  GRANT --> GATE
+  LIVE --> DOC["board_doctor.py<br/>DoctorProbe (probe)"]
+  LIVE --> GRANT
+  LIVE --> CONN["board_connection.py, board_console.py<br/>BoardConnection, ConsoleProbe, SystemClock (Adapters)"]
+  DOC --> LOOK
+  DOC --> CONN
+  DOC --> DM
+  ENV --> DOC
+  ENV --> GATE
+  ENV --> READY
+  LOOK --> FACTS
+  LOOK --> FL["flasher.py<br/>Flasher (Strategy), EsptoolFlasher (Adapter)"]
+  PLAT --> CONN
+  PLAT --> FL
+  PLAT --> READY
+  EV --> GRANT
+  READY --> CONN
+  FACTS --> CONN
+  CONN --> DM
 ```
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake |
+| Seam | Real adapter | Fake |
 |---|---|---|
 | `FirmwarePlatform`: makes every board tool below | `MicroPythonPlatform` | `FakeFirmwarePlatform` built from the Fakes below |
 | `Flasher`: `build_commands` | `EsptoolFlasher` (`flasher.py:35`) | the contract test with a recording `run` |
@@ -57,11 +79,11 @@ flowchart TB
 | port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py:67`) | `FakePortFinder`, from `test_board_doctor.py:28` |
 | board connection | `BoardConnection`, `RetryingBoardConnection` (`board_connection.py:50`, `:106`) | `FakeBoardConnection` (`tests/fakes.py:8`) |
 | console probe | `ConsoleProbe` (`board_console.py`) | `FakeConsoleProbe` (`tests/fakes.py:102`) |
-| `ConsentStrategy`: `ask` | `TerminalConsentStrategy`, `StandingConsentStrategy` | `FakeConsent` (`tests/fakes.py:41`) |
-| clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py`) | one `FakeClock`, merged from `tests/fakes.py:59` and `:88` |
+| `ConsentStrategy`: `ask`, `who` | `TerminalConsentStrategy`, `StandingConsentStrategy`, `DeferringConsentStrategy` (proposed, for a graph: never asks) | `FakeConsent` (`tests/fakes.py:41`) |
+| clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py`), the one clock. `board_grant.read_local_time` becomes `clock.now()` | one `FakeClock`, merged from `tests/fakes.py:59` and `:88` |
 
-`bench/operations.py` picks the platform from `PLATFORMS` by `backends.platform.name`, or `DEFAULT_PLATFORM`
-(`micropython`) when the requirements name none. It is the only place that names an Adapter (rule X1). Bench
+The Operation modules pick the platform from `PLATFORMS` by `backends.platform.name`, or `DEFAULT_PLATFORM`
+(`micropython`) when the requirements name none. They are the only place that names an Adapter (rule X1). Bench
 imports firmware (`ProjectImage`, and `scenario_steps` for `image_evidence`: the edge `image_evidence ->
 scenario_steps`), design (`restricted_pins`, at `board_live.py:24` and `live.py:19`), records and core. Each is
 reachable along the area map's arrows (rule U1). The look's line of a `LastDeploy` sits on the bench side
@@ -92,17 +114,20 @@ classDiagram
   }
   class LookService {
     <<Service>>
-    run(project, port, ignore_older_runs) LookReport
+    run(project, port, evidence) LookReport
   }
   class DeployService {
     <<Service>>
-    plan(port)
-    deploy(report, token, consent, show_line)
-    verify(report, planned, show_line)
+    plan(port) DeployPlan
+    look(port) LookReport
+    deploy(report, token, consent, show_line) DeployPlan
+    verify(report, planned, show_line) DeployResult
+    record(result, consent)
   }
   class ConsentStrategy {
     <<Strategy>>
-    ask(question)
+    ask(question) bool
+    who
   }
   FirmwarePlatform <|-- MicroPythonPlatform
   MicroPythonPlatform ..> EsptoolFlasher
@@ -128,7 +153,7 @@ text and image building stay out of the platform until a second one exists.
 ```mermaid
 sequenceDiagram
   actor P as Person
-  participant OP as deploy Operation
+  participant OP as DeployImage (Operation)
   participant DS as DeployService
   participant PL as MicroPythonPlatform
   participant G as require_open_gate
@@ -137,30 +162,38 @@ sequenceDiagram
   participant OW as OutsideWorld.run
   OP->>DS: plan(port)
   DS->>PL: make_flasher(), make_board_reader()
-  DS-->>OP: plan, or DeployError code image_stale
+  DS-->>OP: DeployPlan, or DeployError code image_stale
   OP->>DS: look(port)
   DS->>ST: last_deploy(mac)
   DS-->>OP: LookReport with LastDeploy
-  OP->>G: require_open_gate(report, token, consent, image, caveats)
+  OP->>DS: deploy(report, token, consent, show_line)
+  DS->>G: require_open_gate(report, token, consent, image, caveats)
   G->>C: ask the deploy question
   C->>P: the question in the terminal
   P-->>C: yes
-  G-->>OP: open, or GateClosedError
-  OP->>DS: deploy(report, token, consent, show_line)
+  G-->>DS: open, or GateClosedError
+  DS->>DS: plan(report.port) again
   DS->>OW: esptool erase and write
-  DS->>ST: record(facts, verdict, who)
+  DS-->>OP: the DeployPlan it ran
   OP->>DS: verify(report, planned, show_line)
-  DS-->>OP: ready seen, files match
+  DS-->>OP: DeployResult, ready seen, files match
+  OP->>DS: record(result, consent)
+  DS->>ST: record(facts, verdict, who)
   OP-->>OP: OperationResult, next step live
 ```
+
+The gate stays inside `DeployService.deploy`, as today: that method is the only path to the erase (D8), so a node
+that composes the service cannot skip it. `record` needs `verify`'s result, so it comes last. A graph pauses between
+Operations: with `DeferringConsentStrategy` the gate closes, and the step `needs_yes` names the command for the
+person's own terminal.
 
 ### How bench is tested alone
 
 - `FakeFirmwarePlatform`, `FakeConsent` and one `FakeClock`. No USB, no esptool, no patch.
 - A seam test: `FakeFirmwarePlatform` drives `look`, `grant`, `live`, `reach` and `deploy` with no caller edit.
 - A `FirmwarePlatformContract` test loops over every board record, and `FlasherContract` covers each flasher.
-- Safety tests: an erasing Operation with no gate fails, a corrupt or zoneless grant fails closed, and no secret or
-  home path reaches the output.
+- Safety tests: a deploy with no open gate raises `GateClosedError` before any erase, a corrupt or zoneless grant
+  fails closed, and no secret or home path reaches the output.
 - The goldens of S1 run each bench CLI as a process with fake `esptool`, `mpremote` and `serial` modules first on
   the child's `PYTHONPATH`, because both tools are `kind: python` rows. A golden changes only in an output slice,
   never in a move.
@@ -172,5 +205,6 @@ sequenceDiagram
   the image builder (firmware) and the `pins.py` text (design) stay MicroPython's, so that swap also adds an
   image builder in firmware and a pin map Renderer in design.
 - A new flasher is one `Flasher` subclass that the platform makes.
-- A new way to say yes, such as an MCP prompt, is one `ConsentStrategy` subclass. It fails closed.
+- A new way to say yes is one `ConsentStrategy` subclass. It fails closed. A graph or an MCP client gets
+  `DeferringConsentStrategy`, which never asks: the person gives the yes in their own terminal.
 

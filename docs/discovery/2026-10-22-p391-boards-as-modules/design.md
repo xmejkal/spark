@@ -4,26 +4,26 @@ Written 2026-10-22 (Prague) by the architect (Fable 5.1) from three code maps (S
 refuter then checked it. Its round changed the stage order, the names and the cost of each stage (section 7).
 
 > **TL;DR.** Keep two record contracts under one `Record` envelope and one `RecordKind` strategy. A part consumes pins and a
-> board provides them. Every layer (project, shelf, library, catalog) and every walk then reads both kinds through one finder.
+> board provides them. Every folder (project, shelf, library, catalog) and every walk then reads both kinds through one finder.
 > Stage 1 ships P390 first: boards get the shelf and the catalog, and a board pick is shelved as a part pick. The refactor
 > to one finder follows. One accessor reads the project's board id, so a later `boards: [...]` list changes one function.
 
 **Summary.** Today a board is a second type. It has its own walk, its own shelf gap and its own validator, and the per-MAC
 store place is also called "boards". The recommended design is a `RecordKind` strategy (`PartRecordKind`, `BoardRecordKind`) over shared
-store layers. `RecordFinder` reads them, and one `ShelveRecord` operation serves the requirements step and the drawer.
+store folders. `RecordFinder` reads them, and one `ShelveRecord` operation serves the requirements step and the drawer.
 Six stages follow, each shippable alone. Stages 1 to 3 are MVP: boards onto the shelf first, then the refactor, then one
 place for the board id. Stages 4 to 6 are later, and stage 6 is the many-boards step that stage 1 only keeps open.
 
 ## 1. Today: how boards and parts are kept, found and copied
 
-Parts. The layers are project `parts/`, the shelf, the library, and the catalog for drafts (`scripts/store.py:73-83`). One
+Parts. The folders are project `parts/`, the shelf, the library, and the catalog for drafts (`scripts/store.py:73-83`). One
 walk, nearest wins (`store.py:86-93`). `--requirements` shelves a part pick from the catalog or another project
 (`scripts/needs.py:636`, `scripts/parts.py:2240-2242`). A drawer link shelves too (`scripts/drawer.py:213-215, 304-309`). The
 shelf copy drops `SHELF_DROPS` and records `based_on` with a digest (`parts.py:978-1021`). `--promote` copies the catalog or
 the shelf to `<project>/parts`, with the folder name hard-coded (`parts.py:1377`). The real shelf holds 7 part records flat
 under `shelf/`, and the catalog holds 18 files (`~/.local/share/spark`, listed 2026-10-22).
 
-Boards. The layers are project `boards/` and the library only. `store.layers` adds the shelf and the catalog for
+Boards. The folders are project `boards/` and the library only. `store.layers` adds the shelf and the catalog for
 `kind == "parts"` alone (`store.py:80,82`). `boards.records` calls `store.records("boards", LIBRARY, project, skip=NOT_A_BOARD)`
 (`scripts/boards.py:227-229`). The project names its board in `boards/active.json` (`boards.py:198-224`). It names it again
 in `requirements.json`, and the chain reads that one. The readers are `scripts/design.py:268,377`, `scripts/check_spine.py:368`,
@@ -33,7 +33,7 @@ record was written by hand on the P330 walk (`spark-walks/t-display/boards/lilyg
 
 The gaps, each with its place:
 
-- **No shelf or catalog layer for boards** (`store.py:80,82`). `tests/test_store.py:108-109` pins it: "boards have no shelf and
+- **No shelf or catalog folder for boards** (`store.py:80,82`). `tests/test_store.py:108-109` pins it: "boards have no shelf and
   no catalog". The T-Display record is found only by its project and by the other-projects glob in `drawer.py:135-137`.
 - **Two places name the board.** `boards/active.json` (`boards.py:214`, written by `scripts/init_project.py:487-488`), and
   `requirements.json`'s `board` (`needs.py:649` writes it, the seven sites above read it).
@@ -54,7 +54,7 @@ Also `documents` (`boards.py:739` calls `parts.document_problems`), `vendor`, `s
 
 ## 2. Options for "a board is a module in the store"
 
-**A. One `Record` envelope, one `RecordKind` strategy, shared layers (recommended).** `RecordKind` holds what differs per
+**A. One `Record` envelope, one `RecordKind` strategy, shared folders (recommended).** `RecordKind` holds what differs per
 kind: folder, library, validator, owes, shelf copy, digest, stop. `store.layers(kind)` gives every kind the same four rows. One
 `RecordFinder` replaces the three walks. Cost: one new module of about 150 lines and five call sites. Also a one-shot move of
 the flat shelf and catalog files into `shelf/parts/` and `catalog/parts/`. Risk: the move touches the person's store. It is
@@ -106,7 +106,7 @@ classDiagram
     <<Value>>
     kind
     id
-    layer
+    folder
     path
   }
   class RecordFinder {
@@ -118,7 +118,7 @@ classDiagram
     <<Operation>>
     +run(record, from_project)
   }
-  RecordFinder --> RecordKind : layers
+  RecordFinder --> RecordKind : folders
   RecordFinder --> Record : returns
   ShelveRecord --> RecordKind : shelf_copy, validate
   class needs_requirements
@@ -145,17 +145,17 @@ sequenceDiagram
   participant B as /spark:build (design.load)
   C->>P: --pick games board=lilygo-t-display
   P->>F: linkable(project)
-  F-->>P: Record(board, lilygo-t-display, layer "t-display", path)
+  F-->>P: Record(board, lilygo-t-display, folder "t-display", path)
   P->>N: plan_pick writes needs.json
   C->>P: --requirements games
   P->>N: requirements(project)
-  N->>S: run(Record, from_project "t-display") (layer not project, shelf or library)
+  N->>S: run(Record, from_project "t-display") (folder not project, shelf or library)
   S->>S: BoardRecordKind.shelf_copy + validate, based_on {project, digest}
   S-->>N: shelf/boards/lilygo-t-display.json written
   N-->>P: requirements.json with board, "onto the shelf: lilygo-t-display"
   C->>B: build games/requirements.json
   B->>F: records(board, project).get(chosen id)
-  F-->>B: Record(board, id, layer "shelf", path)
+  F-->>B: Record(board, id, folder "shelf", path)
   B-->>C: pins.py, board that builds, Wokwi diagram
 ```
 
@@ -222,11 +222,11 @@ board contract here, as facts with sources. The Wokwi definition is a `documents
 (`WOKWI_DEFINITION`, P396). Done when:
 `--skeleton` plus `--fact-set` lines rebuild the T-Display record, except its comments.
 
-**Stage 5 (later): one layout for every layer, boards in `--need`.** The flat `shelf/*.json` and `catalog/*.json` move into
+**Stage 5 (later): one layout for every folder, boards in `--need`.** The flat `shelf/*.json` and `catalog/*.json` move into
 `shelf/parts/` and `catalog/parts/`, each `<id>/` sim-chip folder with its record (the real shelf holds
 `sen0217-flow-meter/`), by an idempotent move with a dry run. The research prompts follow. About 124 test lines that spell
-`home / "shelf"` or `"catalog"` change. The catalog's boards join `--need`'s offers, and P178's shared layer enters
-`store.layers` as one more row. Done when: `--need "esp32 display"` lists the T-Display with its layer.
+`home / "shelf"` or `"catalog"` change. The catalog's boards join `--need`'s offers, and P178's shared folder enters
+`store.layers` as one more row. Done when: `--need "esp32 display"` lists the T-Display with its folder.
 
 **Stage 6 (later, the vision): many boards.** The table in section 4, in this order: the requirements list (the accessor
 returns a list), `Design.boards`, a pin namespace per board with the platform adapter picking the file form, a Wokwi part

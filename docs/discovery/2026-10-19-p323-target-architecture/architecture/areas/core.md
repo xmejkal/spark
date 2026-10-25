@@ -17,15 +17,15 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 |---|---|
 | `core/outcomes.py` | the status words, `EXIT_FOR`, `status_of`, `envelope`, `step`, `page`, moved from `scripts/outcomes.py` |
 | `core/result.py` | `OperationResult`, `Finding`, `NextStep` |
-| `core/operation.py` | `Operation` with `schema()`, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`, `--dry-run`, `--out`, `--timeout`) |
+| `core/operation.py` | the `Operation` base class with `schema()`, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`, `--dry-run`, `--out`, `--timeout`) |
 | `core/errors.py` | `SparkError` |
 | `core/codes.py` | the codes two or more areas emit, such as `tool_missing`, `crash`, `bad_argument` |
 | `core/outside.py` | `OutsideWorld`, `Privacy`, `pick` |
-| `core/cli.py` | `run_operation(..., trace=None)`, `run_cli`, `TextReport`, `JsonEnvelope` |
+| `core/cli.py` | `run_operation(..., trace=None)`, which masks with `Privacy` and then calls `trace`, `run_cli`, `TextReport`, `JsonEnvelope` |
 | `core/zone_time.py` | the leaf `zone_time`: times with their zone |
 | `core/text_guards.py` | the leaf `text_guards` (today `screen_text`): the guards where text leaves spark |
 
-| Port | Kind | Who fills it |
+| Seam | Kind | Who fills it |
 |---|---|---|
 | `OutsideWorld` | Value of callables and one mapping: `run`, `write`, `fetch`, `clock`, `consent`, `environ` | `records.build_outside` in production, `FakeOutsideWorld` in tests |
 | `Privacy` | Value: path replacements and secret values to mask | records, from the record folders and `account_env` rows (`tools.py:339`) |
@@ -38,12 +38,13 @@ Core depends on nothing in spark.
 ```mermaid
 classDiagram
   class Operation {
-    <<Value>>
-    name
-    arguments
-    effects
-    codes
-    run
+    <<base>>
+    name$
+    arguments$
+    effects$
+    codes$
+    schema()
+    run()
   }
   class OperationResult {
     <<Result>>
@@ -83,7 +84,7 @@ classDiagram
     <<Error>>
     code
     fix
-    status$
+    status
   }
   Operation o-- Argument
   Operation ..> OperationResult
@@ -94,18 +95,20 @@ classDiagram
   Operation ..> SparkError
 ```
 
-`Operation.run` is a plain function. Its keyword parameters are its arguments' `dest` names, plus `outside` and
-`backends`: `def look(project, port, ignore_older_runs, *, outside, backends)`. One test checks that every
-`Argument.dest` names a parameter. `SparkError.status` is a class attribute, `could-not-run` by default. Only a
-subclass for "the design cannot be done", such as `assign_pins.Impossible`, sets `problems`.
+An Operation is a class with one public method, `run`. Its keyword parameters are its arguments' `dest` names, plus
+`outside` and `backends`: `LookAtBoard.run(self, project, port, no_simulation, ignore_older_runs, *, outside,
+backends)`. Its module is named after it, and the area's `OPERATIONS` in `__init__.py` maps each printed `op` to its
+class. One test checks that every `Argument.dest` names a parameter. `SparkError.status` is an instance field with
+the class default `could-not-run`: `ImpossibleError` (today `assign_pins.Impossible`) defaults to `problems`, and
+`GateClosedError` sets it per instance, as its `code` is today.
 
 `fix` stays a string, as today (`board_envelope.look_envelope`), so the envelope only gains keys. `fix_step` is a new key
 that holds the same advice as a NextStep, or null. `TextReport` and `JsonEnvelope` are the two Renderers of a result.
 
-The effects are `reads`, `writes`, `runs`, `network`, `board` and `erases`. `build_outside` fills only the fields
+The effects are `reads`, `writes`, `runs`, `network`, `board` and `deletes`. `build_outside` fills only the fields
 the declared effects need and puts a refusing stub in the others. A call to a stub raises `SparkError` with code
 `undeclared_effect`. `run` needs `runs`, `write` needs `writes`, `fetch` needs `network`, `consent` needs `board` or
-`erases`. `environ` is a read-only copy of the variables the Operation names, such as `CLAUDE_CODE_SESSION_ID`
+`deletes`. `environ` is a read-only copy of the variables the Operation names, such as `CLAUDE_CODE_SESSION_ID`
 (`cost.py:69`) or the Wokwi token (read in `run_scenario.main`). With `--dry-run`, `run` and `write` record instead of act.
 
 ### The main flow
@@ -127,7 +130,7 @@ sequenceDiagram
   end
   RC->>B: build_outside(project, effects), unless a test gave outside
   B-->>RC: OutsideWorld, Backends, Privacy
-  RC->>RO: run_operation(operation, values, outside, backends)
+  RC->>RO: run_operation(operation, values, outside, backends, trace)
   RO->>OP: run(values as keywords, outside, backends)
   alt a SparkError
     RO-->>RC: OperationResult with one Finding from the error
@@ -135,18 +138,23 @@ sequenceDiagram
     RO-->>RC: OperationResult, code crash, could-not-run
   end
   OP-->>RO: OperationResult
-  RO-->>RC: OperationResult
-  RC->>RC: Privacy shortens paths and masks secrets
+  RO->>RO: Privacy shortens paths and masks secrets
+  RO->>RO: trace(name, values, result, seconds), a raise is said on stderr
+  RO-->>RC: OperationResult, masked
   RC-->>CLI: TextReport or JsonEnvelope printed, EXIT_FOR[status]
 ```
 
-A bad flag with `--json` prints an envelope, as `parts.py` does today with `_Parser`. The
-traceback of a crash always goes to stderr.
+A bad flag with `--json` prints an envelope, as `parts.py` does today with `_Parser`. The traceback of a crash always
+goes to stderr, and the envelope with code `crash` is an output change per CLI (plan, S6). Privacy runs inside
+`run_operation`, so a frontend that calls it directly, and the tracer, see only masked values.
 
 ### How core is tested alone
 
 - A toy Operation in the test file, a `FakeOutsideWorld`, no spark area imported.
-- One test per path in the flow: ok, problems, could-not-run, bad flag, SparkError, crash, undeclared effect.
+- One test per path in the flow: ok, problems, could-not-run, bad flag, SparkError, crash, undeclared effect. An
+  unchecked Finding never gives ok. A result with a store path reaches `trace` shortened.
+- Rule X2's test finds no `print`, `input`, `sys.stdin`, `sys.stdout` or `readline` in `spark/` outside the Renderers
+  and `TerminalConsentStrategy`. An Operation asks only through `outside.consent`.
 - The parity test: for each golden, the text and the `--json` render carry the same codes and the same first step.
 - `tests/test_json_contracts.py` lists the allowed envelope keys and fails on a new one that is not added there.
 
