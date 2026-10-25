@@ -293,7 +293,7 @@ class TheDrawerTest(unittest.TestCase):
         said, code = run(["--drawer"])
         self.assertEqual(code, 0)
         self.assertEqual(said["data"]["entries"][0], {"entry": "a4988-hw-134", "label": "A4988 HW-134", "count": 1, "is": None,
-                                                      "in": None, "unsure": False, "skip": "I think it's dead"})
+                                                      "in": None, "unsure": False, "skip": "I think it's dead", "held_by": []})
         self.assertTrue(said["data"]["entries"][1]["unsure"])
 
     def test_ninety_nine_entries_answer_in_at_most_4_kb_20_at_a_time(self):
@@ -744,7 +744,8 @@ class TheSmallFixesTest(unittest.TestCase):
     def test_a_refused_write_marks_each_change_line(self):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             parts.main(["--drawer-set", a_file([{"label": "x", "count": 1}, {"label": "y", "count": -1}])])
-        self.assertIn("refused, not written: new x", out.getvalue())
+        self.assertIn("not written: new x", out.getvalue())
+        self.assertNotIn("refused, not written", out.getvalue())
 
     def test_the_plain_key_sentence_says_lower_case(self):
         said, _ = run(["--drawer-set", a_file([{"entry": "Bad Key", "count": 1}])])
@@ -756,6 +757,65 @@ class TheSmallFixesTest(unittest.TestCase):
         env = dict(os.environ, SPARK_HOME=str(self.home), LC_ALL="C", PYTHONUTF8="0", PYTHONCOERCECLOCALE="0", PYTHONIOENCODING="utf-8")
         done = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(done.stdout.strip(), "žluťoučký kůň", done.stderr)
+
+
+# --- MVP --- P403: who holds a drawer entry, and the print guard on what a write says
+class TheHoldersTest(unittest.TestCase):
+    def setUp(self):
+        self.home, _ = a_store()
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def keep(self, key, label, used_in=None):
+        (self.home / "drawer").mkdir(exist_ok=True)
+        entry = {"schema": 1, "label": label, "count": 2}
+        (self.home / "drawer" / (key + ".json")).write_text(json.dumps(dict(entry, used_in=used_in) if used_in else entry))
+
+    def text(self, argv):
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            parts.main(argv)
+        return out.getvalue()
+
+    def test_two_holders_come_sorted(self):
+        held = [{"used_in": {"reaction-game": 1, "alarm": 1}}, {"used_in": {"alarm": 1, "zebra": 1}}]
+        self.assertEqual(drawer.holders_of(held, None), ["alarm", "reaction-game", "zebra"])
+
+    def test_the_asking_project_is_left_out_and_a_near_miss_is_kept(self):
+        held = [{"used_in": {"alarm": 1, "alarm-2": 1, "Alarm": 1}}, {"count": 1}, {"used_in": None}]
+        self.assertEqual(drawer.holders_of(held, "alarm"), ["Alarm", "alarm-2"])
+
+    def test_the_listing_gives_each_entry_its_holders(self):
+        self.keep("xiao", "XIAO", {"reaction-game": 1, "alarm": 1})
+        self.keep("wire", "a wire")
+        by_entry = {each["entry"]: each["held_by"] for each in drawer.listing()}
+        self.assertEqual((by_entry["xiao"], by_entry["wire"]), (["alarm", "reaction-game"], []))
+
+    def test_the_drawer_text_says_who_holds_an_entry_and_says_nothing_for_a_free_one(self):
+        self.keep("xiao", "XIAO", {"reaction-game": 1, "alarm": 1})
+        self.keep("wire", "a wire")
+        lines = self.text(["--drawer"]).splitlines()
+        self.assertTrue(next(line for line in lines if "XIAO" in line).endswith("held by alarm, reaction-game"))
+        self.assertNotIn("held by", next(line for line in lines if "a wire" in line))
+
+    def test_a_holder_name_with_a_newline_shows_a_question_mark_in_the_drawer_text(self):
+        self.keep("xiao", "XIAO", {"a\nb": 1})
+        self.assertIn("held by a?b", self.text(["--drawer"]))
+
+    def test_a_used_in_key_that_the_terminal_does_not_print_shows_a_question_mark_in_a_change_line(self):
+        for hidden in ("a\u202eb", "a\u2028b"):
+            with self.subTest(hidden=repr(hidden)):
+                self.keep("xiao", "XIAO")
+                said = self.text(["--drawer-set", a_file([{"entry": "xiao", "used_in": {hidden: 1}}]), "--dry-run"])
+                self.assertIn("a?b", said)
+                self.assertNotIn(hidden, said)
+                self.assertIn("would set xiao", said)
+
+    def test_a_refused_dry_run_reads_not_written_set(self):
+        self.keep("xiao", "XIAO")
+        said = self.text(["--drawer-set", a_file([{"entry": "xiao", "count": 3}, {"label": "y", "count": -1}]), "--dry-run"])
+        self.assertIn("  not written: set xiao: count", said)
+        self.assertNotIn("would", said.split("refused, so nothing")[0])
 
 
 if __name__ == "__main__":
