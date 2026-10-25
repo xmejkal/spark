@@ -344,7 +344,7 @@ class OnboardRole:
     not_in_diagram: str | None = None
 
     def __post_init__(self):
-        if (self.scenario_verb is None) == (self.not_in_diagram is None):
+        if bool(self.scenario_verb) == bool(self.not_in_diagram):
             raise ValueError("%s needs a scenario verb or a sentence for what the diagram leaves out, and not both" % self.constant)
 
 
@@ -507,8 +507,8 @@ def is_fact_value(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and (not isinstance(value, float) or math.isfinite(value))
 
 
-def board_fact_problems(where, fact):
-    """Every way one fact of a board record breaks the contract: `provenance.fact_problems`, and a value that is none of a finite number, a word or null."""
+def fact_value_problems(where, fact):
+    """`provenance.fact_problems` of one fact of a board record, and one more problem for a value that is none of a finite number, a word or null."""
     problems = provenance.fact_problems(where, fact)
     value = fact.get("value") if isinstance(fact, dict) else None
     if value is not None and not is_fact_value(value):  # one rule with pins.py, so no fact is dropped in silence
@@ -551,7 +551,7 @@ def role_entry_problems(where, role):
         elif name.upper() in labels:
             problems.append("%s.facts[%r] has the name of the label %r, so pins.py would write one constant twice"
                             % (where, name, name.upper()))
-        problems += board_fact_problems("%s.facts[%r]" % (where, name), fact)
+        problems += fact_value_problems("%s.facts[%r]" % (where, name), fact)
     return problems
 
 
@@ -562,7 +562,7 @@ def power_problems(board):
         return []
     if not isinstance(power, dict):
         return ["power is %r; it must be an object of name -> {value, verified, source}" % (power,)]
-    return [problem for fact in POWER_FUNCTIONS if fact in power for problem in board_fact_problems("power[%r]" % fact, power[fact])]
+    return [problem for fact in POWER_FUNCTIONS if fact in power for problem in fact_value_problems("power[%r]" % fact, power[fact])]
 # --- end MVP ---
 
 

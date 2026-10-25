@@ -542,18 +542,23 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
                 self.assertIn(self.CHARGER, boards.onboard_functions(record))
                 self.assertIn(self.REGULATOR, boards.onboard_functions(record))
 
-    def test_the_xiao_names_its_battery_pads_and_the_firebeetle_names_none(self):
-        xiao = json.loads((boards.LIBRARY / "xiao-esp32-c6.json").read_text())
+    def test_the_firebeetle_names_its_regulator_as_its_v1_3_schematic_prints_it(self):
         firebeetle = json.loads((boards.LIBRARY / "firebeetle2-esp32s3.json").read_text())
+        fact = firebeetle["power"]["regulator"]
+        self.assertEqual((fact["value"], fact["verified"], fact["cites"]), ("TPS62A02DRLR", True, {
+            "document": "firebeetle2-s3-schematic-v1-3", "at": "U1"}))
+
+    def test_the_xiao_offers_its_battery_pads(self):
+        xiao = json.loads((boards.LIBRARY / "xiao-esp32-c6.json").read_text())
         self.assertIn(self.BATTERY_INPUT, boards.onboard_functions(xiao))
-        self.assertNotIn(self.BATTERY_INPUT, boards.onboard_functions(firebeetle))
 
 
 class TheOnboardRoleTableTest(unittest.TestCase):
     def test_a_row_has_a_scenario_verb_or_a_sentence_and_not_both_nor_neither(self):
         self.assertEqual(boards.OnboardRole("X", "read", "indicate", "x").not_in_diagram, None)
         self.assertEqual(boards.OnboardRole("X", None, "indicate", "x", "s").scenario_verb, None)
-        for args in (("X", None, "indicate", "x", None), ("X", "read", "indicate", "x", "s")):
+        for args in (("X", None, "indicate", "x", None), ("X", "read", "indicate", "x", "s"), ("X", "", "indicate", "x"),
+                     ("X", None, "indicate", "x", "")):
             with self.subTest(args=args):
                 with self.assertRaises(ValueError) as caught:
                     boards.OnboardRole(*args)
@@ -605,6 +610,10 @@ class TheBoardsPowerFactsAreCheckedTest(unittest.TestCase):
     def test_every_power_fact_of_the_table_is_checked(self):
         problems = self.problems({"charger": "a", "regulator": "b", "battery_input": "c"})
         self.assertEqual(len(problems), 3, problems)
+
+    def test_a_board_with_no_power_has_no_power_problem(self):
+        self.assertEqual(self.problems(None), [])
+        self.assertEqual(boards.validate(definition("b"), boards.LIBRARY / "b.json"), [])
 
     def test_a_power_fact_the_table_does_not_name_is_left_to_its_reader(self):
         self.assertEqual(self.problems({"charge_current_a": {"value": 0.12}}), [])
