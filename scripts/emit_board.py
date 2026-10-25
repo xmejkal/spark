@@ -39,6 +39,7 @@ import assign_pins  # noqa: E402
 import fab  # noqa: E402
 import copper  # noqa: E402
 import design as design_library  # noqa: E402
+import emit_footprint  # noqa: E402
 import parts as parts_library  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
@@ -1079,9 +1080,11 @@ def main(argv=None):
         print("cannot emit a board: %s" % broken, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
-    if not (board.get("physical") or {}).get("footprint_export"):
-        print("this board has no verified footprint, so a board file would reference nothing",
-              file=sys.stderr)
+    # --- MVP --- the same refusal as the spine's footprint stage, which stops before this runs. This guard serves a
+    # direct run: a partial header would emit a file that imports a footprint nobody can generate (P407).
+    no_footprint = emit_footprint.why_no_footprint(board)
+    if no_footprint:
+        print(no_footprint, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
 
     repeated = duplicate_component_names(part_list)
