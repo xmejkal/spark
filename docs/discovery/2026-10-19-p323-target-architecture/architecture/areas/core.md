@@ -1,7 +1,7 @@
 # Area: core
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-core).
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): every class and function on this page except `outcomes` and its functions, and the Fakes
 `FakeOutsideWorld`.
@@ -17,11 +17,13 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 |---|---|
 | `core/outcomes.py` | the status words, `EXIT_FOR`, `status_of`, `envelope`, `step`, `page`, moved from `scripts/outcomes.py` |
 | `core/result.py` | `OperationResult`, `Finding`, `NextStep` |
-| `core/operation.py` | `Operation`, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`, `--dry-run`, `--out`, `--timeout`, `--describe`, `--debug`) |
+| `core/operation.py` | `Operation` with `schema()`, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`, `--dry-run`, `--out`, `--timeout`) |
 | `core/errors.py` | `SparkError` |
 | `core/codes.py` | the codes two or more areas emit, such as `tool_missing`, `crash`, `bad_argument` |
 | `core/outside.py` | `OutsideWorld`, `Privacy`, `pick` |
-| `core/cli.py` | `run_operation`, `run_cli`, `TextReport`, `JsonEnvelope` |
+| `core/cli.py` | `run_operation(..., trace=None)`, `run_cli`, `TextReport`, `JsonEnvelope` |
+| `core/zone_time.py` | the leaf `zone_time`: times with their zone |
+| `core/text_guards.py` | the leaf `text_guards` (today `screen_text`): the guards where text leaves spark |
 
 | Port | Kind | Who fills it |
 |---|---|---|
@@ -95,16 +97,16 @@ classDiagram
 `Operation.run` is a plain function. Its keyword parameters are its arguments' `dest` names, plus `outside` and
 `backends`: `def look(project, port, ignore_older_runs, *, outside, backends)`. One test checks that every
 `Argument.dest` names a parameter. `SparkError.status` is a class attribute, `could-not-run` by default. Only a
-subclass for "the design cannot be done", such as `assign_pins.Impossible` (`assign_pins.py:113`), sets `problems`.
+subclass for "the design cannot be done", such as `assign_pins.Impossible`, sets `problems`.
 
-`fix` stays a string, as today (`board_envelope.py:58`), so the envelope only gains keys. `fix_step` is a new key
+`fix` stays a string, as today (`board_envelope.look_envelope`), so the envelope only gains keys. `fix_step` is a new key
 that holds the same advice as a NextStep, or null. `TextReport` and `JsonEnvelope` are the two Renderers of a result.
 
 The effects are `reads`, `writes`, `runs`, `network`, `board` and `erases`. `build_outside` fills only the fields
 the declared effects need and puts a refusing stub in the others. A call to a stub raises `SparkError` with code
 `undeclared_effect`. `run` needs `runs`, `write` needs `writes`, `fetch` needs `network`, `consent` needs `board` or
 `erases`. `environ` is a read-only copy of the variables the Operation names, such as `CLAUDE_CODE_SESSION_ID`
-(`cost.py:69`) or the Wokwi token (`run_scenario.py:249`). With `--dry-run`, `run` and `write` record instead of act.
+(`cost.py:69`) or the Wokwi token (read in `run_scenario.main`). With `--dry-run`, `run` and `write` record instead of act.
 
 ### The main flow
 
@@ -138,8 +140,8 @@ sequenceDiagram
   RC-->>CLI: TextReport or JsonEnvelope printed, EXIT_FOR[status]
 ```
 
-A bad flag with `--json` prints an envelope, as `parts.py` does today with `_Parser` (`parts.py:1672`). The
-traceback of a crash goes to stderr only with `--debug`.
+A bad flag with `--json` prints an envelope, as `parts.py` does today with `_Parser`. The
+traceback of a crash always goes to stderr.
 
 ### How core is tested alone
 

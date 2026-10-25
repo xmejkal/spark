@@ -9,9 +9,9 @@ function name. A cite then moves only with a name.
 > TL;DR. Stage 1's net is in (S1, P380). Stage 2 is new: eight small slices make today's scripts say one thing in one
 > place, the fixes six councils asked for, and they wait on no decision. Stage 3 builds the core and puts `look` on
 > it. Stage 4 puts the other four bench CLIs on it. Stage 5 moves the bench into one folder. Stage 6 does the other
-> areas. The
-> core is a contract other interfaces can call: a JSON Schema per Operation, no asking or printing inside, one hook for
-> a tracer. The PO decides three things, one per lesson: readability first (1), the shape (2), the start of the moves (4).
+> areas. The core is a contract other interfaces can call: a JSON Schema per Operation, no asking or printing inside,
+> one hook for a tracer. The PO decides three things, one per lesson: readability first (1), the shape (2), the start
+> of the moves (4).
 
 ## What changed from version 1
 
@@ -93,7 +93,8 @@ flowchart LR
   SVC --> CORE["core: OutsideWorld (Value), OperationResult (Result)"]
 ```
 
-The bench imports firmware, records and core, each along an arrow of the overview. Nothing imports the bench.
+The bench imports firmware, records and core, and one design module (`restricted_pins`), each along an arrow of the
+overview. Nothing outside the bench imports a bench module.
 
 ### Level 2, the modules of bench
 
@@ -108,7 +109,7 @@ flowchart TB
   DEP --> PLAT["firmware_platform.py<br/>FirmwarePlatform (Strategy), MicroPythonPlatform"]
   PLAT --> FL["flasher.py<br/>Flasher (Strategy), EsptoolFlasher (Adapter)"]
   PLAT --> CONN["board_connection.py, board_console.py<br/>BoardConnection, ConsoleProbe (Adapters)"]
-  PLAT --> READY["ready_check.py<br/>ReadyProbe (probe)"]
+  PLAT --> READY["ready_probe.py<br/>ReadyProbe (probe)"]
   LOOK --> DOC["board_doctor.py<br/>DoctorProbe (probe)"]
   LOOK --> EV["image_evidence.py<br/>ImageEvidence (Strategy)"]
   OPS --> ENV["board_envelope.py, board_codes.py<br/>the look and deploy envelope (Renderer), the codes"]
@@ -166,8 +167,9 @@ classDiagram
 ```
 
 `DeployService`, `FirmwarePlatform`, `ConsentStrategy` and `GateClosedError` exist (`deploy_service.py`,
-`firmware_platform.py`, `deploy_gate.py`). `DeployedStore` and the Operation are proposed. `LastDeploy` exists in
-`board_facts.py` with its text methods, which section 6 moves to the look side (OC5).
+`firmware_platform.py`, `deploy_gate.py`). `DeployedStore` and the Operation are proposed. So are `make_board_reader`
+(S8) and `make_ready_probe`, which is `make_ready_check` today (S11). `LastDeploy` exists in `board_facts.py` with its
+text methods, which section 6 moves to the look side (OC5).
 
 ### Level 4, the methods of one class: `DeployService`
 
@@ -185,7 +187,7 @@ sequenceDiagram
   OP->>DS: look(port)
   DS->>ST: last_deploy(mac)
   DS-->>OP: LookReport with LastDeploy
-  OP->>GT: require_open_gate(report, token, consent, image)
+  OP->>GT: require_open_gate(report, token, consent, image, caveats)
   GT-->>OP: open, or GateClosedError
   OP->>DS: deploy(report, token, consent, show_line)
   DS->>OW: esptool erase, esptool write
@@ -196,7 +198,9 @@ sequenceDiagram
 ```
 
 Each method does one step of the flow and returns a Result or raises an Error. None prints. `show_line` is the one
-callable a method gets for text while esptool runs, and it is `OutsideWorld.show_line` after S7b.
+callable a method gets for text while esptool runs, and it is `OutsideWorld.show_line` after S7b. `image_stale` is a code
+that S2 adds. Today `DeployService.deploy` calls `require_open_gate` itself, and the diagram moves that call to the
+Operation.
 
 ## 3. Names: the clashes and their role names
 
@@ -230,7 +234,7 @@ four rules are added to it, each checked by one test in `tests/test_core.py`:
    `OPERATIONS`, never written by hand. The test: every `Argument.dest` is a property of the schema.
 2. No Operation asks or prints. Consent reaches it as `OutsideWorld.consent`, a `ConsentStrategy`: the terminal one
    asks, `StandingConsentStrategy` reads a stored grant, and a graph's one pauses the graph and resumes with the
-   person's yes. `--token` is already an argument. The test: rule X2 of S3 finds no `print` or `input` in `spark/`.
+   person's yes. `--token` is already an argument. The test: rule X2 of S3 finds no `print` in `spark/`, and the same test adds `input`.
 3. `run_operation(operation, values, outside, backends, trace=None)` has one hook. `trace` is a callable that gets the
    Operation's name, the values, the result and the seconds, once per run. Langfuse plugs in there. The core imports
    no tracer. The test: a recording `trace` sees one call with the result's status.
@@ -260,8 +264,8 @@ has no test, and `provenance` has no import test). S3 folds it into `Architectur
 |---|---|---|
 | `boards -> parts` | lazy, in `footprint_stop` (for `STOPS_AT_FOOTPRINT`) and `validate` (for `document_problems` and the rail rule) | removed. P411 [#537](https://github.com/xmejkal/spark/issues/537) builds the one footprint wording from `emit_footprint.footprint_gaps`, so `footprint_stop` needs no `parts` constant. The two shape rules move to `RecordKind` (P391 stage 2). |
 | `parts -> boards` | lazy, in `function_of`, `audit`, `records_with_documents`, `_op_requirements` | kept, and made a top-level import once `boards -> parts` is gone. Row 18: the two lazy edges are a cycle today, and only one side needs to go. |
-| `assign_pins -> parts` | for `one_line` | removed by OC8: `assign_pins` imports `text_guards`. |
-| `matching -> drawer` | for `clean` and `TEXT_MAX` | removed by OC8: `matching` imports `text_guards`. |
+| `assign_pins -> parts` | `one_line` (`CAPABILITIES`, `BUSES`, `bus_line_of` and `unverified` also come from `parts`) | the `one_line` use is removed by OC8: `assign_pins` imports `text_guards`. The import stays until the record contract moves (stage 6). |
+| `matching -> drawer` | for `clean`, `TEXT_MAX` and `TAGS_MAX` (`matching` also imports `parts`, for `function_of` and `aliases`) | the `drawer` import is removed by OC8: `matching` imports `text_guards`. The `parts` import stays until the record contract moves (stage 6). |
 | `image_evidence -> run_scenario` | for `ScenarioSteps`, `file_hashes`, `NO_MAIN`, `READY`, the step constants | kept: bench reaches firmware along an arrow. After the firmware move it imports `firmware/scenario_steps.py`. |
 | `boards.footprint_stop -> emit_footprint` | lazy | removed. `footprint_stop` moves to design with the `board-list` Operation (N19). |
 
@@ -281,9 +285,9 @@ it. These are stage 2. Sizes are estimates.
 | OC3, one print edge | `text_guards.say(text, file)` prints `text` with each of its lines guarded, the body of `parts._say`'s print. `parts._say`, `look.main`, `deploy.main`, `check_spine.main` and `run_scenario.main` call it. The hand guards in `LastDeploy.line` and `needs._how_to_free` go, except on a name that can start a line (a holder, an entry key). | a planted newline and a bidi character in a record field show as `?` in every CLI's text. The leaf test passes | 90 |
 | OC4, one "not checked" shape | the words `RECORDED`, `NONE_RECORDED`, `NOT_CHECKED` move from `board_facts` to `outcomes`. A reader never raises and returns a Value with `state` and `why`. `ScenarioSteps.unread` becomes `state` and `why`. P397's `SimulatedPart` reader takes the same shape. | one test per reader: a missing, a malformed and a good input give the three states. `ImageEvidence.caveats` and `onboard_limits` print the same "not checked" words | 70 |
 | OC5, the store side and the look side | `DeployedStore` (Store) in `store.py`'s neighbourhood holds `last_deploy(mac)` and `record(facts, verdict, who)`, today `board_facts.read_last_deploy` and `record_deploy`. `LastDeploy` keeps `state`, `why`, `to_dict` and the stored fields. `line()` and `in_question()` become `board_look.last_deploy_line(last)` and `deploy_gate.last_deploy_in_question(last)`. | the look and deploy goldens do not change. `tests/test_board_facts.py` moves its reader tests to `tests/test_deployed_store.py` | 100 |
-| OC6, two meanings of the project name | `store.listed_name(folder)` is the name on the person's list or None (today `project_name`). `store.name_when_listed(folder)` is the name the folder holds or will hold (today `add_project(dry_run=True)`). `add_project` loses `dry_run`. Call sites that need the listed name: `drawer.linkable`, `breadboard` (the sheet's title), `parts.note_built`, `parts._record_path`, `parts._op_pick` (its "listed" check), `parts._op_step`, `parts._op_tally`. Call sites that need the name it will hold: `needs._candidate`, `needs.plan_pick`, `parts._op_pick` (the name it writes), `parts._op_step` with `--dry-run`. | `--match` and `--pick` on an unlisted folder name the same project (P403's bug). Every old call site is gone by grep | 60 |
+| OC6, two meanings of the project name | `store.listed_name(folder)` is the name on the person's list or None (today `project_name`). `store.name_when_listed(folder)` is the name the folder holds or will hold (today `add_project(dry_run=True)`). `add_project` loses `dry_run`. Call sites that need the listed name: `drawer.plan_set`, `breadboard._have`, `parts.note_built`, `parts._record_path`, `parts._op_pick` (its "listed" check), `parts._op_step` (its "listed" check), `parts._op_tally`. Call sites that need the name it will hold: `needs.match` (it hands the name to `_candidate`), `needs.plan_pick`, `parts._op_pick` (the name it writes), `parts._op_step` with `--dry-run`. The calls that write the name stay `add_project(folder)`: `init_project`, and `_op_pick` and `_op_step` when they write. | `--match` and `--pick` on an unlisted folder name the same project (P403's bug). Every old call site is gone by grep | 60 |
 | OC7, one reader of a fact's value | `provenance.read_value(record, *path)` reads a value along a key path through the fact's `value`. `emit_board.fact_value` and the hand-read chain in `design.firmware_pulls` call it. | a board whose `internal_pull_up_ohms` is a bare number and one whose fact has no `value` give the same answer from both callers | 30 |
-| OC8, one home for the text guards | `screen_text.py` becomes `text_guards.py` with `printable`, `clean` and its caps, `one_line` and `COMMENT_UNSAFE`. `drawer`, `parts`, `matching`, `assign_pins`, `needs` and `board_facts` import it. `tests/test_leaves.py` covers the three leaves. | `matching` and `assign_pins` import no high module (grep). The leaf test passes on all three | 80 |
+| OC8, one home for the text guards | `screen_text.py` becomes `text_guards.py` with `printable`, `clean` and its caps, `one_line` and `COMMENT_UNSAFE`. `drawer`, `parts`, `matching`, `assign_pins`, `needs` and `board_facts` import it. `tests/test_leaves.py` covers the three leaves. | `matching.py` has no `import drawer`, and `assign_pins.py` has no call of `parts_library.one_line` (grep). The leaf test passes on all three | 80 |
 
 Three more findings are rules, not slices. `drawer.holders_of` is the one reader of "who holds this stock", and
 `needs.plan_pick` and `needs._candidate` stay its only callers (a U3 entry of S3). `provenance.fact_problems` is the
@@ -306,7 +310,7 @@ the code at `d064a65` under this name.
 | `is_fact_value`, `fact_value_problems`, `role_entry_problems`, `power_problems` | P389 | `records/board_records.py`, inside `RecordKind.validate` | rules of the board record | exists, renamed in section 3 |
 | `sim_project.onboard_limits`, `write_limits` | P396, P389 | `firmware/sim_project.py` | functions | exists |
 | `ScenarioSteps`, `SET_CONTROL`, `EXPECT_PIN`, `WAIT_SERIAL` | P345 PR 1 | `firmware/scenario_steps.py`, a module beside `scenario_run.py` | Value and its constants | exists in `run_scenario`. The module is not built yet |
-| `ImageEvidence.caveats` and its three `_CAVEAT` constants | P345 PR 1 | `bench/image_evidence.py` | a Strategy method | exists |
+| `ImageEvidence.caveats` and its four `_CAVEAT` constants | P345 PR 1 | `bench/image_evidence.py` | a Strategy method | exists |
 | `LastDeploy` | P401 | `records/deployed_store.py` (the Value), `bench/board_look.py` (its line) | Value | exists in `board_facts`, split in OC5 |
 | `read_last_deploy`, `record_deploy` | P401 | `records/deployed_store.py` | Store methods `last_deploy`, `record` | exists as two functions |
 | `DeployedStore` | P391, comment 4 | `records/deployed_store.py` | Store | not built yet |
@@ -321,7 +325,7 @@ the code at `d064a65` under this name.
 | the "not checked" note in `needs.plan_pick`, the `SimulatedPart` reader's state | P397 [#513](https://github.com/xmejkal/spark/issues/513) | `design/needs.py`, `records/board_records.py` | a sentence, a Value state | not built yet |
 | `ScenarioSteps.component_ids`, the id check in `ScenarioRun.problem`, `--dry-run` | P399 [#515](https://github.com/xmejkal/spark/issues/515) | `firmware/scenario_steps.py`, `firmware/scenario_run.py` | a method, a check, an argument | not built yet |
 | the must lines a scenario names, and the look's list of unnamed ones | P345 PR 2 [#440](https://github.com/xmejkal/spark/issues/440) | `firmware/scenario_steps.py`, `bench/board_look.py` | a Value field, a line | not built yet |
-| `--fact-set` on `facts.*` | P374 | `sourcing/part_facts.py` (`_set_in_home`) | an Operation's path | not built yet |
+| `facts.*` entries in `--fact-set` | P374 | `sourcing/part_facts.py` (`_op_fact_set` and `_set_in_home`) | an Operation's path and the shared writer | not built yet. `--fact-set` exists and writes whole top-level keys (`CHAIN_FACTS`, `drawer.DESCRIBING`). `_set_in_home` also writes `--function-set` and replaces each key whole, so a `facts.*` entry needs a merge into the record's `facts` |
 | `ROLE_PENALTY` as a field of `OnboardRole` | P405 | `records/board_records.py` | a Value field | waits for the finding |
 
 ## 8. The MVP marks
@@ -406,7 +410,7 @@ tests/golden/deploy-*.json` prints nothing.
 
 The eight slices of section 6, in the order OC8, OC3, OC7, OC4, OC6, OC5, OC1, OC2. The leaf home comes first because
 OC3 prints through it. OC1 waits for P411's one wording. Done when: `tests/test_leaves.py` passes on three leaves,
-`matching.py` and `assign_pins.py` import no module above them, `grep -c "import boards" scripts/parts.py` is 1 and at
+`matching.py` does not import `drawer`, `assign_pins.py` uses no `parts_library.one_line`, `grep -c "import boards" scripts/parts.py` is 1 and at
 the top, and no golden changed.
 
 ### Stage 3: one CLI on the core
@@ -415,8 +419,8 @@ S3, the rules test: `tests/test_architecture.py` (`ArchitectureRules`) and a gen
 `measure.py` of P322 moves to `tools/measure.py`. `tools/mutate.py` gains `--retarget OLD NEW`. The leaf test
 becomes a rule. When each planted breach is caught with its rule, the slice is done.
 
-S4, `outcomes` into the package: `scripts/spark/core/outcomes.py`, the first module of the package, with the 32
-import lines of `scripts/` and `tools/` and the test imports changed. When no golden changes, the slice is done.
+S4, `outcomes` into the package: `scripts/spark/core/outcomes.py`, the first module of the package, with the 36
+import lines in 32 files of `scripts/` and `tools/` and the test imports changed. When no golden changes, the slice is done.
 
 S5, the core contract. It creates `OperationResult`, `Finding`, `NextStep`, `Operation` with `schema()`, `Argument`
 and `SparkError`. It creates `OutsideWorld`, `run_operation` with `trace`, `run_cli` and the three Renderers
@@ -441,8 +445,8 @@ line remains in `tests/test_deploy_gate.py`.
 ### Stage 5: the bench in one folder
 
 S10, bench privacy (an output slice): `Privacy` shortens paths under the project and the store and masks each
-`account_env` value. S11, the bench area move. It moves 15 modules and S2's `board_codes` into `scripts/spark/bench/`,
-today 2,266 lines that 34 files import. It retargets the 217 mutation rows. It applies the renames of section 3:
+`account_env` value. S11, the bench area move. It moves 16 modules and S2's `board_codes` into `scripts/spark/bench/`,
+today 2,266 lines that 35 files import. It retargets the 217 mutation rows. It applies the renames of section 3:
 `LookStopError`, `ReadyProbe`, `DoctorProbe`, `DeployPhase`. It moves the Fakes into `tests/fakes.py`.
 `board_facts.py` splits: `FactsFile` and the look's line stay in bench, and `DeployedStore` goes to records (OC5
 prepared it). S12, the map: `tools/map.py` writes `docs/guide/map.md`. When the page is stale, a test fails. S13,
@@ -469,13 +473,17 @@ of this file are its anchors, so `drift.md`'s comment map points at a heading's 
 
 ## 12. P391's design and P322's facts
 
-P391's `design.md` gets only two kinds of edit: its stale line cites (37 of 77, drift section 2) are fixed, and stage 4
-gains the one note comment 4 asks: the Wokwi definition is a `documents` source under its sha256. Its names follow
-section 3. Its stage 4 no longer "waits for P389", because P389 merged. P322's `facts.md` is a measurement dated 2026-10-19 and stays as it was printed (learned rule
-3.2). Three things in it are out of date. The score: classes 16 % and roles 56/103 are 17 % and 63/110 today. The
-counts: 59 modules, 14,313 lines, 103 classes and 647 functions are 63, 15,014, 110 and 668. The five function lengths
-it names: `deploy.main` 28 is 33, `check_spine.run` 192 is 204, `parts.validate` 240 is 230, `boards.validate` 161 is
-172, `emit_board.main` 115 is 117.
+P391's `design.md` gets only these edits. Its stale line cites are fixed: 50 of 95, with each number of a list counted
+once (P385 re-measured them, and drift section 2 counted 37 of 77 by whole cite). Stage 4 gains the one note comment 4
+asks: the Wokwi definition is a `documents` source under its sha256. Its names follow section 3, so `scripts/records.py`
+becomes `records/record_kind.py` and `records/record_finder.py` in the records move. Its stage 4 no longer "waits for
+P389", because P389 merged.
+
+P322's `facts.md` is a measurement dated 2026-10-19 and stays as it was printed (learned rule 3.2). Three things in it
+are out of date. The score: classes 16 % and roles 56/103 are 17 % and 63/110 today. The counts: 59 modules, 14,313
+lines, 103 classes and 647 functions are 63, 15,014, 110 and 668. The five function lengths it names: `deploy.main` 28
+is 33, `check_spine.run` 192 is 204, `parts.validate` 240 is 230, `boards.validate` 161 is 172, `emit_board.main` 115 is
+117.
 
 ## Proposed cards
 
@@ -496,41 +504,45 @@ Six at most, in the card style, one sentence each. The council decides which to 
 
 ## Changes for the area pages
 
-A later step applies these edits so the pages agree with this version. Line cites that moved are listed in
-`drift.md`, section 2, and are replaced by function names.
+The P385 PR applies these edits, so the pages agree with this version. The list stays as the record. Line cites that
+moved are listed in `drift.md`, section 2, and are replaced by names. A cite that was wrong when written is named too.
 
 - `README.md`: "Your call" 3 is answered, cut it. The TL;DR's "the bench first for walk 2" becomes "the bench first,
   because its net exists". The area map gains the three leaves. The pages list says "six stages, twenty-two slices".
+  The sentence "Four upward edges exist today" becomes a link to section 5.
 - `areas/bench.md`: line 4 "This area moves first, because walk 2 of P100 runs on the bench" becomes "Its net landed
   first (S1, P380)". `ready_probe` is today `ready_check.py`, `ReadyProbe` is `ReadyCheck`, `make_ready_probe` is
   `make_ready_check`, all renamed in S11. The cites `board_console.py:80` and `:86`, `board_doctor.py:160` and `:162`,
-  `board_look.py:296` become `SystemClock`, `ConsoleProbe`, the two lookups in `board_doctor`, `looker`. Add the edge
-  `image_evidence -> scenario_steps`, the `LastDeploy` line on the look side, and `DeployedStore` in the deploy
-  sequence. The modules diagram of section 2 replaces its components paragraph.
+  `board_look.py:296` become `SystemClock`, `ConsoleProbe`, the two lookups in `board_doctor`, `looker`. The cite
+  `deploy.py:136-145` was wrong when written: the flags sit in `deploy.main`. Add the edge `image_evidence ->
+  scenario_steps`, the `LastDeploy` line on the look side, and `DeployedStore` in the deploy sequence. The modules
+  diagram of section 2 replaces its components paragraph.
 - `areas/core.md`: drop `--describe` and `--debug` from `COMMON_ARGUMENTS` and the "only with `--debug`" sentence (S5
   prints the traceback to stderr always). Add `Operation.schema()`, `run_operation(..., trace=None)` and the two
   leaves `zone_time` and `text_guards` to the module table. Cites `run_scenario.py:249`, `assign_pins.py:113`,
-  `parts.py:1672` become `ScenarioRun`, `Impossible`, `_Parser`.
+  `parts.py:1672` become `run_scenario.main` (the token read), `Impossible`, `_Parser`. The cite `board_envelope.py:58`
+  was wrong when written: the `fix` strings sit in `look_envelope`.
 - `areas/records.md`: `Records` becomes `RecordFinder`, `RecordSchema` becomes `RecordKind` with `version`,
   `required`, `validate`, `stops_at`, `shelf_copy`, `digest`. The "Records role" goes. Add `records/brief.py`
   (`Brief`), `records/deployed_store.py` (`DeployedStore`, `LastDeploy`), `records/provenance.py` (leaf). The board
   record row adds `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`,
-  `WOKWI_DEFINITION` and the readers. Cites `boards.py:553-561`, `:592`, `:553`, `tools.py:572-578` become `main`,
-  `footprint_stop`, `main`.
+  `WOKWI_DEFINITION` and the readers. Cites `boards.py:553-561`, `boards.py:592` and `tools.py:572-578` become `main`.
+  The cite `run_scenario.py:249` becomes `run_scenario.main`.
 - `areas/firmware.md`: add the row `firmware/scenario_steps.py` (`ScenarioSteps`, the step constants,
   `component_ids` after P399). The `sim_project` row adds `onboard_limits` and `write_limits`. Cites
-  `run_scenario.py:124`, `:171`, `:212`, `:252`, `sim_project.py:157` become `ScenarioRun`, its `wokwi-cli` run,
-  `run_record`, the token read, `stage_chips`.
+  `run_scenario.py:124`, `:171`, `:212`, `sim_project.py:157` become `ScenarioRun`, its `wokwi-cli` run, `run_record`,
+  `stage_chips`.
 - `areas/design.md`: cites `boards.py:236`, `emit_footprint.py:208`, `assign_pins.py:392`, `:113`, `check_all.py:406`
   become `footprint_stop`, `main`, `pin_module`, `Impossible`, and the fifth is cut (its text is gone). The
   `board_emitter` row adds `read_inputs`, `RefusedInputError` and `REFUSED_INPUT_MESSAGE`. The `footprint_emitter`
   row adds `why_no_footprint`. A note: `ROLE_PENALTY` waits on P405.
-- `areas/build.md`: cites `tests/test_needs.py:1416`, `check_spine.py:767`, `:635`, `:509`, `:432` become the test's
-  name and `run`'s stages. `build/stages.py` gains `NO_FOOTPRINT_HINT`. The footprint stage calls `render`, not
-  `main`.
-- `areas/sourcing.md`: "The goldens of S15" becomes "the goldens of stage 6". Cites `parts.py:130`, `:1581` become
-  `audit`, `OPERATIONS`. Add the `Retriever` port row with its two adapters. Add the note that `matching` imports
-  `text_guards` and no longer `drawer`. Add `Brief` as the records Value that sourcing reads.
+- `areas/build.md`: cites `tests/test_needs.py:1416`, `check_spine.py:767`, `:635`, `:509`, `:432`, `:391`, `:347`,
+  `:100`, `:407-408`, `:162` and `:170` become the test's name, `keep_breadboard`, `main` and `run`'s stages. The size of
+  `check_spine.run` is 204 lines and it returns from 23 places. `build/stages.py` gains `NO_FOOTPRINT_HINT`. The
+  footprint stage calls `render`, not `main`.
+- `areas/sourcing.md`: "The goldens of S15" becomes "the goldens of stage 6". Cites `parts.py:130`, `:165`, `:1581`
+  become `audit`, `OPERATIONS`. Add the `Retriever` port row with its two adapters. Add the note that `matching`
+  imports `text_guards` and no longer `drawer`. Add `Brief` as the records Value that sourcing reads.
 - `areas/checks.md`: mark `OrderCheck`, `BuildCheck` and `PhysicsCheck` as later, not MVP, behind the `CHECKS`
   registry (the pruning list's verdict).
 - `areas/breadboard.md`: its cites hold. Only the link below changes.
@@ -538,12 +550,13 @@ A later step applies these edits so the pages agree with this version. Line cite
   because the appendix is one table now.
 - `glossary.md`: cites `board_envelope.py:23`, `parts.py:230`, `:238`, `emit_footprint.py:236`, `board_facts.py:35`,
   `board_doctor.py:74`, `:188` become `STAGE_*`, `Answer`, `_problem`, `_report`, `FactsFile`, `BoardCheckStrategy`,
-  `describe`. The consent row adds "or given by a stored grant, so a graph can pause and resume". New words: leaf,
-  text guard, Brief, DeployedStore, RecordKind, RecordFinder, Record, kanban, trace. `RecordFolders` keeps its row.
-  New clash rows: fact value, power, board (the Kanban one), brief, not checked, each settled as in section 3.
+  `describe`. Two cites were wrong when written: `board_envelope.py:58` becomes `look_envelope`, and `deploy.py:171`
+  becomes `deploy.main`. The consent row adds "or given by a stored grant, so a graph can pause and resume". New words:
+  leaf, text guard, Brief, DeployedStore, RecordKind, RecordFinder, Record, kanban, trace. `RecordFolders` keeps its
+  row. New clash rows: fact value, power, board (the Kanban one), brief, not checked, each settled as in section 3.
 - `notes.md`: the conflicts row "0a only if it merges by 2026-10-23" gets the text "answered on #413". Add decisions N24 to
   N28: one refusal order, the three leaves and their one test, `RecordKind` over `RecordSchema`, `Brief` in records,
-  the `trace` hook.
+  the `trace` hook. Cites `run_scenario.py:249`, `parts.py:230` and `board_envelope.py:58` become names.
 - P391 `design.md`: section 12 above.
 
 ## What we will not do

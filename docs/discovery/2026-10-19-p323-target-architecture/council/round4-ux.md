@@ -28,7 +28,7 @@ A person trips on flags with no help words and exit codes named in only 8 of 23 
 10. Eight doors have no `--json` at all: boards, breadboard, check_bom, emit_board, flash_image, init_project, run_scenario, tools.
 11. A fix is free text when it exists: `"fix": "build it first: \`make\`, or \`tsci build\`"` (compare_design). check_physics
     gives no fix for the same missing file. `boards.py` gives none.
-12. `boards.py --get nope.x` prints the whole home path `/Users/petr/Development/spark/...` (S18 would catch it).
+12. `boards.py --get nope.x` prints the whole home path of the machine (S18 would catch it).
 13. The project is `--project` in 15 doors, a positional `requirements` file in 4 (assign_pins, breadboard, check_spine,
     emit_board), a positional `project` in import_firmware, and a value of a selector in parts (`--needs PROJECT`)
     beside parts' own `--project`. The default is "here", "found upwards" (grant) or not said.

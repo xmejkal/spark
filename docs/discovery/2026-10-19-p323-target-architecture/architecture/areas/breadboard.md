@@ -1,7 +1,7 @@
 # Area: breadboard
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-breadboard).
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `WiringStep`, `WiringLog`, `NotBuiltError`, `NotDrawnError`, `Layout`, the modules `wiring_steps`, `drawing`, `kept_moves`, `bench_changes`, `drawing_match`, `sheet`, `operations`, and the Operation name `breadboard`.
 

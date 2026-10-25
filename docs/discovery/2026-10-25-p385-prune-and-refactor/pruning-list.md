@@ -29,7 +29,7 @@ Fable 5.1 wrote these on 2026-10-25 from the facts below and the code at `d064a6
 "keep" means the module stays, whole or split later by its area's move. "split" means the refactor cuts it into modules
 of one job each, named in plan v2. "move behind a module" means the code leaves the MVP path and stays reachable through
 one plug-in point, and the tag `pre-refactor-2026-10-25` keeps it. "prune" means the code goes, and the tag keeps it. A
-walk column alone decides nothing: `design.py` is named in neither walk record, and eight build modules import it.
+walk column alone decides nothing: `design.py` is named in neither walk record, and eight modules import it.
 
 Counts over the 76 rows: keep 68, split 4, move behind a module 3, prune 1.
 
@@ -37,7 +37,7 @@ Counts over the 76 rows: keep 68, split 4, move behind a module 3, prune 1.
 
 (a) Reached by nothing. `tools/journey.py`: keep. `AGENTS.md` names it and `tests/test_journey.py` runs it, so the
 inventory's column is the gap (row 4), not the module. `tools/match_eval.py`: prune. No page names it, nothing imports
-it, and two docstrings and the P211 papers only mention it. Its test `tests/test_match_eval.py` goes with it. The tag
+it, and a docstring (`matching.py`), a comment (`needs.py`) and the P211 papers only mention it. Its test `tests/test_match_eval.py` goes with it. The tag
 keeps both. When a second matcher is tuned, they return. `scripts/stand_in/machine.py`: keep. `import_firmware.py`
 runs a firmware on the Mac with it, and walk 1 named `import_firmware.py` four times.
 
@@ -46,8 +46,8 @@ rule. A flag that a test or a script passes gets its line on the script's page. 
 `PRUNED.md` lists it. The five flags of `tools/match_eval.py` go with the module.
 
 (c) The PCB and fab checks off the breadboard journey. `check_bom.py`, `check_footprints.py` and `check_physics.py`
-(1,417 lines, tests 1,488): move behind a module. The plug-in point exists: `check_all.CHECKS`, a list of `Check`
-subclasses (`TheOrder`, `Buildability`, `Physics`). The first step is the marker `# --- Later, not MVP: the PCB order,
+(1,417 lines, tests 1,488): move behind a module. The plug-in point exists: `check_all.CHECKS`, a list of instances of
+`Check` subclasses (`TheOrder`, `Buildability`, `Physics`). The first step is the marker `# --- Later, not MVP: the PCB order,
 P136 ---` over the three rows and the three modules. The second step, a card, moves the three subclasses into one module
 that `CHECKS` reads. `copper.py`, `fab.py`, `netlist.py`, `tabbed_page.py` and `emit_footprint.py` stay with the build
 (row 7: the build imports each).
@@ -58,15 +58,16 @@ generated file: their own job, and the leaf's in plan v2's OC8. `audit` walks ev
 `audit` Operation that moves to design. `without_location`, `keep_in_store` and `keep_local` keep a photo or a datasheet
 in the store without its GPS data: one job, "keep a document", not shelving. `vendor_order` and `sellers` read the
 project's brief: one job, the `Brief` Value. `describe` and `_row` describe the CLI for Claude (`--describe`): a
-command-line job. That makes 18 jobs. The verdict is split, in the sourcing move of plan v2's stage 6. The record
+command-line job, so it stays in a command group. That makes 18 jobs: the 15 groups, plus the text guard, `audit` and
+the brief as new jobs. "Keep a document" replaces the GPS group. The verdict is split, in the sourcing move of plan v2's stage 6. The record
 contract goes to `RecordKind`, documents to `sourcing/datasheets.py` and shelving to `ShelveRecord`. The brief goes
 to `records/brief.py`, the text guard to `text_guards.py`, the needs commands to design's Operations and the parser
 to `run_cli`. `parts.py` stays the CLI.
 
-(e) `tools/circuit-to-wokwi`: keep. The build runs `cli.ts` through the bundle `dist/converter.mjs` (21,898 of 24,159
-lines), so a user installs no bun: free, few and local. The bundle is spark's own build product, not a vendor file, and
+(e) `tools/circuit-to-wokwi`: keep. The build runs the bundle `dist/converter.mjs` (21,898 of 24,159 lines with its
+hash file), built from `cli.ts`, under Node, so a user installs no bun: free, few and local. The bundle is spark's own build product, not a vendor file, and
 `bundle.sh` with `tests/test_check_spine.py` pins it to its sources' sha256. The lock file stays, because the bundle is
-rebuilt from it. One finding for the prune PR: `tests/.mapping-under-test.json` is tracked and a test writes it (row 9).
+rebuilt from it. One finding for the prune PR: `tools/circuit-to-wokwi/tests/.mapping-under-test.json` is tracked and a test writes it (row 9).
 
 (f) `scripts/boards.py`, the first split candidate: 843 lines, 60 names, 25 importers, `validate` alone 172 lines. The
 cut follows the roles. `load`, `records`, `active_id`, `resolve`, `ButtonPlaces`, the onboard role table with its
@@ -111,7 +112,7 @@ readers, `SimulatedPart` and `read_simulated_part` go to `records/board_records.
 | scripts/deploy.py | keep | all | none | the deploy, walk 2 named it 16 times |
 | scripts/deploy_gate.py | keep | all | none | the only way to the erase, 5 importers |
 | scripts/deploy_service.py | keep | all | none | the deploy flow |
-| scripts/design.py | keep | all | none | 8 build modules import it |
+| scripts/design.py | keep | all | none | 8 modules import it: the build, the pin map, the needs and the checks |
 | scripts/download_mode.py | keep | all | none | 4 bench importers |
 | scripts/drawer.py | keep | all | none | the drawer. `clean` leaves for `text_guards` (OC8) |
 | scripts/emit_board.py | split | all | none | 1,176 lines, over R1's 600. the design move cuts `BoardEmitter` under 600 a module |

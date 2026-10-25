@@ -1,7 +1,7 @@
 # Area: checks
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-checks).
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `RulesCheck`, `PhysicsCheck`, `BuildCheck`, `VendorPinsCheck`, `OrderCheck`, `CheckService`, `CheckContract`, `GhVendorHeaders`, `CircuitBoard`, `CouldNotKeepError`, the `checks/` modules, and the Operation names below.
 
@@ -44,6 +44,11 @@ Each CLI keeps its flags and positionals.
 | vendor headers: `header(variant) -> str` | `GhVendorHeaders` over `gh api` (`check_vendor_pins.py:67`) | a dict from variant to header text | none |
 
 Checks imports design (the `Design` Value and `Netlist`), records and core.
+
+Three checks are later, not MVP: `OrderCheck`, `BuildCheck` and `PhysicsCheck` (today `TheOrder`, `Buildability` and
+`Physics` in `check_all.py`, with `check_bom`, `check_footprints` and `check_physics`). They ask PCB and fab questions, which
+the breadboard journey does not. They sit behind the `CHECKS` registry, and the [pruning list](../../../2026-10-25-p385-prune-and-refactor/pruning-list.md#the-verdicts)
+holds the verdict.
 
 ## Level 3: how checks is built
 

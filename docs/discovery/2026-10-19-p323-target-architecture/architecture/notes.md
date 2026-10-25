@@ -10,7 +10,7 @@ readability, AI readability, testability, UX and the PO's voice. The chief archi
 and checked every kept claim against `scripts/` and `tests/`. Round 4 changed most: one result shape, one
 collaborator Value, one place for backend choices, readability as goal one, and a test net before any move.
 The refactor plan was reviewed on Fable 5.1 on 2026-10-21, claim by claim against main at `17708e6`, and split into
-five stages (rows 232 to 255).
+five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six stages and 22 slices.
 
 ## Decisions
 
@@ -18,7 +18,7 @@ five stages (rows 232 to 255).
 |---|---|---|
 | N1 | The five goals rank readable, testable, exchangeable, reusable, consistent. | The PO named readability "most of all". |
 | N2 | One result shape, `OperationResult(data, findings, next, lines)`. | Six shapes cross boundaries today, and a reader learns one. |
-| N3 | One `Finding(severity, subject, code, sentence, fix, fix_step)`. `fix` stays a string. | Five problem shapes today, and `fix_step` adds the step without changing a key's type (`board_envelope.py:58`). |
+| N3 | One `Finding(severity, subject, code, sentence, fix, fix_step)`. `fix` stays a string. | Five problem shapes today, and `fix_step` adds the step without changing a key's type (`board_envelope.look_envelope`). |
 | N4 | One `OutsideWorld(run, write, fetch, clock, consent, environ)`, with only the declared effects filled. `runs` gates `run`. | Dry run, consent and the test seams become one mechanism, and every effect is gated. |
 | N5 | `Backends` holds choices, and each area's registry turns a choice into a Strategy, with the area's own default (`DEFAULT_PLATFORM` in bench). | records sits at the bottom and names no backend, so it cannot build a bench or firmware object. |
 | N6 | An Operation is a plain function with keyword parameters, not a `values` bag. | A typo in a flag name fails at load, and a reader sees the inputs. |
@@ -35,16 +35,21 @@ five stages (rows 232 to 255).
 | N17 | After the refuter's trims, area pages run about 130 to 160 lines, and the file moves sit in the plan. | Each page keeps a class and a sequence diagram. The prose stays within the budget. |
 | N18 | A golden changes only in an output slice, never in a move. Each area has an output slice before its move. | One exact rule, and the moves stay provably silent. |
 | N19 | `audit` and `board-list` move to design. | Both ask a design fact (`footprint_gaps`, `footprint_stop`), and a callback passed down is a parameter with one value. |
-| N20 | `OutsideWorld.environ` holds the variables an Operation reads, such as the session id and the Wokwi token. | One field is smaller than a new Backends entry per variable (`cost.py:69`, `run_scenario.py:249`). |
+| N20 | `OutsideWorld.environ` holds the variables an Operation reads, such as the session id and the Wokwi token. | One field is smaller than a new Backends entry per variable (`cost.py:69`, the token read in `run_scenario.main`). |
 | N21 | Rule U1 means reachability along the area map's arrows, and each page names its direct imports. | The map stays readable, and today's direct imports (bench to design, `board_live.py:24`) all follow arrows. |
 | N22 | `run_cli` takes one `outside=` override, and a CLI's `main` is `main(argv=None, outside=None)`. | Tests inject one Fake, the CLI holds no wiring (X2), and `main` keeps two parameters (R3). |
 | N23 | `DoctorProbe`, not `DoctorStep`. | "Step" already means a next step and a wiring step, and the doctor's two looks change nothing, like `ReadyProbe`. |
+| N24 | One refusal order for `emit_board` and `check_spine`: design, pins, footprint (`read_inputs`). | The order was written twice, and the spine hid a fault in the requirements behind the footprint stop (P407, row 10). |
+| N25 | Three leaves, `zone_time`, `text_guards` and `provenance`, and one test over every leaf. | No module imports upward, and a leaf that imports nothing of spark cannot make a cycle. |
+| N26 | `RecordKind` over `RecordSchema`, and `RecordFinder` over `Records`. | A reader says Finder, and what differs per kind (version, required keys, rules) is a Strategy. |
+| N27 | `Brief` is a Value in records, not in a setup area. | `sourcing` would import upward from setup, and `init_project` only writes the file. |
+| N28 | `run_operation` takes one `trace` callable. | A tracer such as Langfuse plugs in at one hook, and the core imports none. |
 
 ## Conflicts between the papers, and how they were settled
 
 | Conflict | Settled | Why, in one line |
 |---|---|---|
-| Result name: `Answer` (architect), `OperationResult` (naming), "the answer" with 9 keys (UX) | `OperationResult` with four fields | "Result" is the role word, and `parts.Answer` (`parts.py:230`) already holds "Answer". |
+| Result name: `Answer` (architect), `OperationResult` (naming), "the answer" with 9 keys (UX) | `OperationResult` with four fields | "Result" is the role word, and `parts.Answer` already holds "Answer". |
 | Problem name: `Finding` (architect), `Problem` (naming), `Item` (UX) | `Finding` | An unchecked item is not a problem, and "finding" covers all three lists. |
 | Collaborators: `Outside` (architect), one `<Area>Dependencies` per area (readability), separate seams (testability) | one `OutsideWorld` in core | One Value is smaller than eight, and "Outside" alone did not say its role. |
 | `Backends` builds objects (architect) or holds choices (testability) | holds choices | records cannot import bench without a cycle. |
@@ -53,7 +58,7 @@ five stages (rows 232 to 255).
 | Function limit: 60 (design.md D7) or 40 (readability) | 40 in `spark/`, 60 for scripts not yet moved | New code fits 40, and old code pays down by ratchet. |
 | Keep the `parts` area name (architect) or rename it (AI readability) | rename to `sourcing` | Three meanings for one word is the clash rule C1 forbids. |
 | Exit 1 for a missing input (`boards.py --get`, `parts.py --show`) fixed now (UX) or later | a card outside the refactor | It changes a public exit code, so it is a behaviour change, not a move. |
-| Slice 1a before walk 2 (design.md) or after (PO paper) | 0a only if it merges by 2026-10-23 | It is the PO's call, and this is the PO paper's own condition. |
+| Slice 1a before walk 2 (design.md) or after (PO paper) | answered on #413: S1 before walk 2, S2 and every later stage after it | It was the PO's call. His words are in the [plan](refactor-plan.md#the-decisions). |
 | Slice 2 as one PR (design.md) or three (PO paper) | three: 3a, 3b, 3c | Each adds one thing, and 3a is purely mechanical. |
 | Starter codes in core (design.md) or in `codes.py` per area (AI readability) | per area, and in core when two areas use one | One home per code, and the area that emits it owns it. |
 

@@ -1,12 +1,13 @@
 # Area: bench
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-bench). This area moves first, because walk 2 of P100 runs on the bench.
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name). Its net landed first (S1, P380).
 
 New names (proposed): `MicroPythonPlatform`, `PLATFORMS`, `DEFAULT_PLATFORM`, `make_port_finder`,
 `make_board_reader`, `make_ready_probe`, `ReadyProbe`, `DoctorProbe`, `DoctorProbeResult`, `LookStopError`,
 `bench/operations.py`, `FakeFirmwarePlatform`, `FakeBoardReader`, `FakePortFinder`, `FirmwarePlatformContract`,
-`FlasherContract`.
+`FlasherContract`. Three names are renamed in S11: `ready_probe` is `ready_check.py` today, `ReadyProbe` is
+`ReadyCheck`, and `make_ready_probe` is `make_ready_check`.
 
 ## Level 2: what bench does
 
@@ -18,17 +19,33 @@ it. It never writes or erases without a gate that the person opened, and it says
 | Operation | CLI | Effects |
 |---|---|---|
 | `look` | `look.py` | reads, runs, board (the board restarts while esptool reads it) |
-| `deploy` | `deploy.py` with `--token`, `--dry-run` (`deploy.py:136-145`) | reads, runs, board, erases, writes the board log |
+| `deploy` | `deploy.py` with `--token`, `--dry-run` (`deploy.main`) | reads, runs, board, erases, writes the board log |
 | `grant`, `grant-check` | `grant.py --minutes`, `--check` (`grant.py:72-73`) | reads, runs, board, writes a grant |
 | `live` | `live.py --code` (`live.py:76`) | reads, runs, board |
 | `reach` | `reach.py`, `--cure-first` (`reach.py:75`) | reads, runs, board |
 
 ### Its components
 
-`bench/operations.py` holds the five Operations and the area's index. The Services stay in `board_look`,
-`board_doctor`, `board_grant`, `deploy_gate` and `deploy_service`, the platform in `firmware_platform`, and the
-Adapters in `flasher`, `board_connection`, `board_console` and `ready_probe`. The modules keep today's `board_` and
-`deploy_` prefixes, so no name repeats a CLI's name (rule C1).
+`bench/operations.py` holds the five Operations and the area's index. The modules keep today's `board_` and
+`deploy_` prefixes, so no name repeats a CLI's name (rule C1). The diagram shows each module with its roles.
+
+```mermaid
+flowchart TB
+  OPS["operations.py<br/>five Operations, the area's index"]
+  OPS --> LOOK["board_look.py<br/>LookService (Service), PortFinder, EsptoolReader (Adapters)"]
+  OPS --> DEP["deploy_service.py<br/>DeployService (Service)"]
+  OPS --> GRANT["board_grant.py<br/>GrantService (Service), GrantStore (Store)"]
+  OPS --> LIVE["board_live.py, board_reach.py<br/>the live try and the reach (Services)"]
+  DEP --> GATE["deploy_gate.py<br/>require_open_gate, ConsentStrategy (Strategy)"]
+  DEP --> PLAT["firmware_platform.py<br/>FirmwarePlatform (Strategy), MicroPythonPlatform"]
+  PLAT --> FL["flasher.py<br/>Flasher (Strategy), EsptoolFlasher (Adapter)"]
+  PLAT --> CONN["board_connection.py, board_console.py<br/>BoardConnection, ConsoleProbe (Adapters)"]
+  PLAT --> READY["ready_probe.py<br/>ReadyProbe (probe)"]
+  LOOK --> DOC["board_doctor.py<br/>DoctorProbe (probe)"]
+  LOOK --> EV["image_evidence.py<br/>ImageEvidence (Strategy)"]
+  OPS --> ENV["board_envelope.py, board_codes.py<br/>the look and deploy envelope (Renderer), the codes"]
+  LOOK --> FACTS["board_facts.py<br/>FactsFile (Adapter), the look's line of a LastDeploy"]
+```
 
 ### Its ports and adapters
 
@@ -39,14 +56,16 @@ Adapters in `flasher`, `board_connection`, `board_console` and `ready_probe`. Th
 | `BoardReader`: `read(port)` | `EsptoolReader` (`board_look.py:117`) | `FakeBoardReader` |
 | port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py:67`) | `FakePortFinder`, from `test_board_doctor.py:28` |
 | board connection | `BoardConnection`, `RetryingBoardConnection` (`board_connection.py:50`, `:106`) | `FakeBoardConnection` (`tests/fakes.py:8`) |
-| console probe | `ConsoleProbe` (`board_console.py:86`) | `FakeConsoleProbe` (`tests/fakes.py:102`) |
+| console probe | `ConsoleProbe` (`board_console.py`) | `FakeConsoleProbe` (`tests/fakes.py:102`) |
 | `ConsentStrategy`: `ask` | `TerminalConsentStrategy`, `StandingConsentStrategy` | `FakeConsent` (`tests/fakes.py:41`) |
-| clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py:80`) | one `FakeClock`, merged from `tests/fakes.py:59` and `:88` |
+| clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py`) | one `FakeClock`, merged from `tests/fakes.py:59` and `:88` |
 
 `bench/operations.py` picks the platform from `PLATFORMS` by `backends.platform.name`, or `DEFAULT_PLATFORM`
 (`micropython`) when the requirements name none. It is the only place that names an Adapter (rule X1). Bench
-imports firmware (`ProjectImage`), design (`restricted_pins`, at `board_live.py:24` and `live.py:19`), records and
-core. Each is reachable along the area map's arrows (rule U1).
+imports firmware (`ProjectImage`, and `scenario_steps` for `image_evidence`: the edge `image_evidence ->
+scenario_steps`), design (`restricted_pins`, at `board_live.py:24` and `live.py:19`), records and core. Each is
+reachable along the area map's arrows (rule U1). The look's line of a `LastDeploy` sits on the bench side
+(`board_look`), and the `DeployedStore` that reads and records it sits in records.
 
 ## Level 3: how bench is built
 
@@ -101,7 +120,7 @@ Today `FirmwarePlatform` (`firmware_platform.py:41`) is one class that a classme
 two classes (`firmware_platform.py:55-60`). In the target it is a base class, and `MicroPythonPlatform` (proposed) fills it. The
 Platform role word folds into Strategy. `make_port_finder` and `make_board_reader` are proposed: today 8 lookups
 of `board-shell` or `flasher` sit outside the platform (`live.py:84`, `reach.py:79`, `grant.py:88`, `grant.py:95`,
-`board_look.py:296-297`, `board_doctor.py:160`, `:162`). `make_ready_check` becomes `make_ready_probe`. Pin map
+two in `looker`, two in `board_doctor`). `make_ready_check` becomes `make_ready_probe`. Pin map
 text and image building stay out of the platform until a second one exists.
 
 ### The main flow: deploy
@@ -113,20 +132,23 @@ sequenceDiagram
   participant DS as DeployService
   participant PL as MicroPythonPlatform
   participant G as require_open_gate
+  participant ST as DeployedStore
   participant C as ConsentStrategy
   participant OW as OutsideWorld.run
   OP->>DS: plan(port)
   DS->>PL: make_flasher(), make_board_reader()
   DS-->>OP: plan, or DeployError code image_stale
   OP->>DS: look(port)
-  DS-->>OP: LookReport
-  OP->>G: require_open_gate(report, token, consent, image)
+  DS->>ST: last_deploy(mac)
+  DS-->>OP: LookReport with LastDeploy
+  OP->>G: require_open_gate(report, token, consent, image, caveats)
   G->>C: ask the deploy question
   C->>P: the question in the terminal
   P-->>C: yes
   G-->>OP: open, or GateClosedError
   OP->>DS: deploy(report, token, consent, show_line)
   DS->>OW: esptool erase and write
+  DS->>ST: record(facts, verdict, who)
   OP->>DS: verify(report, planned, show_line)
   DS-->>OP: ready seen, files match
   OP-->>OP: OperationResult, next step live

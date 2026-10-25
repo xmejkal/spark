@@ -40,7 +40,7 @@ Fix: `run_door` masks the value of every variable named in an `account_env` row 
 Fix: `core` gets one `Clock` collaborator whose `now()` returns an aware time. A schema date is ISO 8601 with offset. A naive time is a problem with code `no_zone`.
 
 ## G10. Errors that leak paths
-`SparkError.fix` and problems can hold `/Users/name/...`. Envelopes get pasted into public issues.
+`SparkError.fix` and problems can hold a home path. Envelopes get pasted into public issues.
 Fix: `run_door` prints paths under the project as relative and under the store as `$SPARK_HOME/...`. A `crash` envelope holds the exception class and a short message. The traceback goes to stderr only with `--debug`.
 
 ## Order

@@ -18,16 +18,16 @@ place for the board id. Stages 4 to 6 are later, and stage 6 is the many-boards 
 
 Parts. The layers are project `parts/`, the shelf, the library, and the catalog for drafts (`scripts/store.py:73-83`). One
 walk, nearest wins (`store.py:86-93`). `--requirements` shelves a part pick from the catalog or another project
-(`scripts/needs.py:632`, `scripts/parts.py:2238-2240`). A drawer link shelves too (`scripts/drawer.py:213-215, 304-309`). The
+(`scripts/needs.py:636`, `scripts/parts.py:2240-2242`). A drawer link shelves too (`scripts/drawer.py:213-215, 304-309`). The
 shelf copy drops `SHELF_DROPS` and records `based_on` with a digest (`parts.py:978-1021`). `--promote` copies the catalog or
 the shelf to `<project>/parts`, with the folder name hard-coded (`parts.py:1377`). The real shelf holds 7 part records flat
 under `shelf/`, and the catalog holds 18 files (`~/.local/share/spark`, listed 2026-10-22).
 
 Boards. The layers are project `boards/` and the library only. `store.layers` adds the shelf and the catalog for
 `kind == "parts"` alone (`store.py:80,82`). `boards.records` calls `store.records("boards", LIBRARY, project, skip=NOT_A_BOARD)`
-(`scripts/boards.py:216-218`). The project names its board in `boards/active.json` (`boards.py:187-213`). It names it again
-in `requirements.json`, and the chain reads that one. The readers are `scripts/design.py:268,377`, `scripts/check_spine.py:363`,
-`scripts/firmware_platform.py:20-22`, `scripts/flash_image.py:83`, `boards.py:297` and `scripts/board_look.py:277` (grep hit).
+(`scripts/boards.py:227-229`). The project names its board in `boards/active.json` (`boards.py:198-224`). It names it again
+in `requirements.json`, and the chain reads that one. The readers are `scripts/design.py:268,377`, `scripts/check_spine.py:368`,
+`scripts/firmware_platform.py:20-22`, `scripts/flash_image.py:83`, `boards.py:308` and `scripts/board_look.py:290` (grep hit).
 No command writes a board record. `commands/research.md` has no board step (grep: "board" there is the PCB). The T-Display
 record was written by hand on the P330 walk (`spark-walks/t-display/boards/lilygo-t-display.json`, its header comment).
 
@@ -35,22 +35,22 @@ The gaps, each with its place:
 
 - **No shelf or catalog layer for boards** (`store.py:80,82`). `tests/test_store.py:108-109` pins it: "boards have no shelf and
   no catalog". The T-Display record is found only by its project and by the other-projects glob in `drawer.py:135-137`.
-- **Two places name the board.** `boards/active.json` (`boards.py:203`, written by `scripts/init_project.py:487-488`), and
-  `requirements.json`'s `board` (`needs.py:645` writes it, the seven sites above read it).
-- **Two meanings of the store's "boards".** The record kind (`boards.py:218`), and the per-MAC place of deployed boards
-  (`store.py:61,65,98`, written by `scripts/board_facts.py:65-74`).
-- **Duplicated board-vs-part branches.** The part-then-board walk, three times: `parts.py:140-141`, `drawer.py:132-137`,
-  `parts.py:1228-1229`. The footprint-stop test, three times: `needs.py:142-145`, `boards.py:236-250`, `parts.py:165`. The
-  `kind == "board"` validator switch, twice: `parts.py:158-159`, `needs.py:190-192`. The shelving loop skips every non-part
-  pick (`needs.py:622-623`).
+- **Two places name the board.** `boards/active.json` (`boards.py:214`, written by `scripts/init_project.py:487-488`), and
+  `requirements.json`'s `board` (`needs.py:649` writes it, the seven sites above read it).
+- **Two meanings of the store's "boards".** The record kind (`boards.py:229`), and the per-MAC place of deployed boards
+  (`store.py:61,65,98`, written by `scripts/board_facts.py:68-77`).
+- **Duplicated board-vs-part branches.** The part-then-board walk, three times: `parts.py:146-147`, `drawer.py:132-137`,
+  `parts.py:1228-1229`. The footprint-stop test, three times: `needs.py:143-146`, `boards.py:247-261`, `parts.py:171`. The
+  `kind == "board"` validator switch, twice: `parts.py:164-165`, `needs.py:191-193`. The shelving loop skips every non-part
+  pick (`needs.py:626-627`).
 - **No tool creates a board record.** No `--skeleton` kind, no catalog write, no research agent step. `boards/README.md:53-74`
   still gives the smart bin's steps (`config.py`, `board.tsx`, `make`).
 
-What the two contracts share today: `schema`, `id`, `name` and `function` (`parts.py:66-82`, `KIND_FUNCTION["board"]`).
-Also `documents` (`boards.py:502` calls `parts.document_problems`), `vendor`, `sku` and `also_known_as` (`drawer.py:125-130`,
+What the two contracts share today: `schema`, `id`, `name` and `function` (`parts.py:64-88`, `KIND_FUNCTION["board"]`).
+Also `documents` (`boards.py:739` calls `parts.document_problems`), `vendor`, `sku` and `also_known_as` (`drawer.py:125-130`,
 `scripts/matching.py:77-84`). What differs: a part has `kind` and `needs` (`parts.py:51`). A board has `chip`, `pins`,
-`wokwi_part_type` and `physical` (`boards.py:62-63`). A part owes facts. A board owes nothing and can stop at the footprint
-(`parts.py:111`, `needs.py:142-145`).
+`wokwi_part_type` and `physical` (`boards.py:66-67`). A part owes facts. A board owes nothing and can stop at the footprint
+(`parts.py:117`, `needs.py:143-146`).
 
 ## 2. Options for "a board is a module in the store"
 
@@ -61,9 +61,9 @@ the flat shelf and catalog files into `shelf/parts/` and `catalog/parts/`. Risk:
 idempotent and has a dry run. Both contracts stay as they are, so no record changes.
 
 **B. A board record is a part record with an MCU role.** One contract, `role: "mcu"`, one validator. Cost: fold
-`boards.validate` (`boards.py:340-503`, 160 lines of board-only rules) into `parts.validate`. Then teach every part reader that
-`pins` means "provides" and `needs` means "consumes". Risk: the chain reads `board["pins"]` in `assign_pins.py:199,392` and
-`emit_board.py:374-898`. Every one of those sites changes, for no MVP gain. Option A keeps the door open. A module that is both
+`boards.validate` (`boards.py:569-740`, 172 lines of board-only rules) into `parts.validate`. Then teach every part reader that
+`pins` means "provides" and `needs` means "consumes". Risk: the chain reads `board["pins"]` in `assign_pins.py:203,396` and
+`emit_board.py:377-901`. Every one of those sites changes, for no MVP gain. Option A keeps the door open. A module that is both
 (an MCU and pins it needs from a host) becomes a third `RecordKind`.
 
 **C. Keep two types, add only a `shelf/boards/` branch in `store.layers`.** The smallest patch for P390. Cost: a day. Risk: it
@@ -132,7 +132,7 @@ classDiagram
 ```
 
 `store.layers(kind, project, drafts)` returns `project/<folder>`, `shelf/<folder>`, `library` and `catalog/<folder>` for every
-kind. `RecordKind.folder` is the same word under all four. It already is under a project and the library (`boards.py:38,41`,
+kind. `RecordKind.folder` is the same word under all four. It already is under a project and the library (`boards.py:42,45`,
 `parts.py:46`). `boards.py` and `parts.py` stay the CLIs and import these classes. No agent prompt repeats the logic.
 
 ```mermaid
@@ -172,10 +172,10 @@ What that later step changes, and what stage 1 does about each:
 | --- | --- | --- |
 | `requirements["board"]`, a string, read at seven sites | `"boards": [{"id", "as"}]`, with `board` kept as the one-entry shorthand | one accessor `boards.chosen(project)` returns the id (stage 3) |
 | `Design.board`, one field (`design.py:45`) | `Design.boards`, with `.board` for the one-board case | nothing, the field stays |
-| `assign_pins.assign(board, signals)` and `pin_module(board, ...)` (`assign_pins.py:199,392`): one namespace, one `pins.py` | a signal names its board (`"on": "main"`, default the first). One module per board, or one class per board. The adapter picks the file form | nothing, labels stay as they are |
-| `emit_board` has one `Mcu` instance (`emit_board.py:374,498,630,867,898`) | an instance per board, `Mcu_<as>`, with traces between boards as nets. The hardest change | nothing |
-| the Wokwi diagram holds one part `"id": "mcu"` (`check_spine.py:555`) | one part per board, inter-board wires as connections. Two MCUs in one Wokwi diagram: (not checked) | nothing |
-| `deploy.py` builds one `FirmwarePlatform` (`deploy.py:191`), `board_of` reads the string (`firmware_platform.py:20-22`) | `--board <as>` picks the board, one platform and port per board. `deployed/<mac>.json` already fits many units (`board_facts.py:57-75`) | the accessor, and the `deployed` name |
+| `assign_pins.assign(board, signals)` and `pin_module(board, ...)` (`assign_pins.py:203,396`): one namespace, one `pins.py` | a signal names its board (`"on": "main"`, default the first). One module per board, or one class per board. The adapter picks the file form | nothing, labels stay as they are |
+| `emit_board` has one `Mcu` instance (`emit_board.py:377,501,633,870,901`) | an instance per board, `Mcu_<as>`, with traces between boards as nets. The hardest change | nothing |
+| the Wokwi diagram holds one part `"id": "mcu"` (`check_spine.py:572`) | one part per board, inter-board wires as connections. Two MCUs in one Wokwi diagram: (not checked) | nothing |
+| `deploy.py` builds one `FirmwarePlatform` (`deploy.py:191`), `board_of` reads the string (`firmware_platform.py:20-22`) | `--board <as>` picks the board, one platform and port per board. `deployed/<mac>.json` already fits many units (`board_facts.record_deploy`) | the accessor, and the `deployed` name |
 | the history's `built` event has one `board` key (`store.py:275-276`) | a list | nothing, the event keys change with the list |
 
 Stages 1 to 3 must not build any of this. They only read the board id through the accessor. It keeps `RecordKind` open for a third
@@ -188,36 +188,38 @@ Each stage is one PR, and the three demo projects still build after it. MVP stag
 
 **Stage 1 (MVP, P390): boards onto the shelf and into the catalog.** `store.layers` gives boards a `shelf/boards/` and a
 `catalog/boards/` row (`store.py:80,82`). The flat part files stay where they are, so nothing in the person's store moves.
-`needs.py:622-623` loses its `kind != "part"` skip, and the shelf copy of a board keeps `pins`, `physical` and
+`needs.py:626-627` loses its `kind != "part"` skip, and the shelf copy of a board keeps `pins`, `physical` and
 `documents`, with `based_on` from `BOARD_FACTS` (`parts.py:985`). `drawer.py:213-215` loses its `"part" in target`.
 `store.place()` takes a kind folder, because `_target` refuses a key with "/" (`store.py:206`). Done when: a fixture
 project holds the T-Display record and runs `--requirements`, a second project then finds it through `boards.load`, and
 the text says "onto the shelf". Tests: `tests/test_store.py:108-109` changes from "boards have no shelf" to the new order,
-and a board twin of `tests/test_needs.py:1406`. Cost: about four functions, one test edit, two new tests.
+and a board twin of `tests/test_needs.py:1528`. Cost: about four functions, one test edit, two new tests.
 
-**Stage 2 (MVP): one finder, one shelving operation, behavior unchanged.** New `scripts/records.py` with `RecordKind` (a
+**Stage 2 (MVP): one finder, one shelving operation, behavior unchanged.** New `scripts/records.py` (it becomes `records/record_kind.py` and `records/record_finder.py` in the records move, plan version 2, section 3) with `RecordKind` (a
 Strategy, by its docstring), `PartRecordKind`, `BoardRecordKind`, `Record` (a Value) and `RecordFinder`. One walk replaces
-three (`parts.py:140-141,1228-1229`, `drawer.py:132-137`). `BoardRecordKind.stops_at` replaces three footprint-stop tests
-(`needs.py:142-145`, `boards.py:236-250`, `parts.py:165`). `kind.validate` replaces two switches (`parts.py:158-159`,
-`needs.py:190-192`). `ShelveRecord` (`scripts/shelve_record.py`) replaces `parts.shelve` and `drawer._shelve_from`.
+three (`parts.py:146-147,1228-1229`, `drawer.py:132-137`). `BoardRecordKind.stops_at` replaces three footprint-stop tests
+(`needs.py:143-146`, `boards.py:247-261`, `parts.py:171`). `kind.validate` replaces two switches (`parts.py:164-165`,
+`needs.py:191-193`). `ShelveRecord` (`scripts/shelve_record.py`) replaces `parts.shelve` and `drawer._shelve_from`.
 `store.layers` keeps its string signature, so `tests/test_store.py:104-109` stays as stage 1 left it. The sites that
-compare a path with the shelf or catalog folder go through the kind (`parts.py:1039-1041,1054,1959,1965,1975,1988-1990`).
+compare a path with the shelf or catalog folder go through the kind (`parts.py:1039-1041,1054,1961,1967,1977,1990-1992`).
 Done when: every test passes, and a new test proves `RecordFinder.all(project)` returns today's rows on a fixture with a
 part, a board and `active.json`.
 
 **Stage 3 (MVP): one place names the board.** `boards.chosen(project)` reads `requirements.json`'s `board`, then falls back
-to `active.json`. The readers call it: `design.py:268,377`, `check_spine.py:363`, `firmware_platform.py:20-22`,
-`flash_image.py:83`, `boards.py:297`, `board_look.py:277`, and the `active_id` callers `boards.py:223,538,580,589` and
-`live.py:34,78`. `project_root` and its copies (`boards.py:146`, `check_vendor_pins.py:119,170`, `flash_image.py:95`) find
+to `active.json`. The readers call it: `design.py:268,377`, `check_spine.py:368`, `firmware_platform.py:20-22`,
+`flash_image.py:83`, `boards.py:308`, `board_look.py:290`, and the `active_id` callers `boards.py:234,775,817,826` and
+`live.py:34,78`. `project_root` and its copies (`boards.py:157`, `check_vendor_pins.py:119,170`, `flash_image.py:95`) find
 a project by `.spark/`. `init_project --board X` writes `{"board": X, "parts": []}` for a project that has none. The docs
-that say "wrote active.json" change (`commands/init.md:33,44`, `commands/idea.md:136`). Done when: `boards.py --id` and the
-chain agree on a project with only `requirements.json`, and `tests/test_boards.py:88-115` runs against the accessor.
+that say "wrote active.json" change (`commands/init.md:33,44`, `commands/idea.md:153`). Done when: `boards.py --id` and the
+chain agree on a project with only `requirements.json`, and `tests/test_boards.py:89-116` runs against the accessor.
 
 **Stage 4 (later): a board record is made as a part record is.** `parts.py --skeleton --kind board` writes a board draft
-into `catalog/boards/`. `--fact-set`, `--promote`, `--validate` and `--audit` go by kind (`parts.py:1377,1949-2003`).
+into `catalog/boards/`. `--fact-set`, `--promote`, `--validate` and `--audit` go by kind (`parts.py:1377,1951-2005`).
 `/spark:identify` and `/spark:research` get a board sentence, and the research prompts write the catalog through a
-`parts.py` write, not by path (`agents/parts-researcher.md:58`, `commands/research.md:105`). P389's onboard parts (display
-with resolution, buttons, LED, charger, chips) enter the board contract here, as facts with sources. Done when:
+`parts.py` write, not by path (`agents/parts-researcher.md:58`, `commands/research.md:105`). P389 has merged, so its onboard parts (display
+with resolution, buttons, LED, charger, chips) already sit in `boards.py` as `OnboardRole` and `ONBOARD_ROLES`. They enter the
+board contract here, as facts with sources. The Wokwi definition is a `documents` source under its sha256
+(`WOKWI_DEFINITION`, P396). Done when:
 `--skeleton` plus `--fact-set` lines rebuild the T-Display record, except its comments.
 
 **Stage 5 (later): one layout for every layer, boards in `--need`.** The flat `shelf/*.json` and `catalog/*.json` move into
@@ -240,7 +242,7 @@ fixture (a XIAO and a FireBeetle, both in the library). Done when: one project b
 3. **Drop `boards/active.json`?** Recommended: yes, in stage 3, with the fallback until v0.13, so an old project still builds.
 4. **Is a board a part with an MCU role?** Recommended: not now (option B). The first module-with-MCU record becomes a third
    `RecordKind`, and that is the moment to look again.
-5. **Which stages are MVP?** Recommended: 1, 2 and 3. Stage 4 waits for P389. Stages 5 and 6 wait for P178 and a two-board
+5. **Which stages are MVP?** Recommended: 1, 2 and 3. Stage 4 no longer waits for P389, which has merged. Stages 5 and 6 wait for P178 and a two-board
    walk.
 
 ## 7. The refuter's round (Opus 5.5) and what changed
@@ -256,6 +258,6 @@ fixture (a XIAO and a FireBeetle, both in the library). Done when: one project b
   per-MAC store is `DeployedStore`. `owes` and `function_of` left `RecordKind`, because no second kind needs them yet, and
   `ShelfStore` left too, because `ShelveRecord` writes through `store`.
 
-Not checked: `breadboard.py`'s `THE_BOARD`, `emit_footprint --board`, `sim_project.py:49`, `check_all.py:218` and
-`assign_pins.py:461-519` (map 3 only). Also the body of `docs/guide/how-it-works.md:171-209`, and Wokwi's support for two MCUs
+Not checked: `breadboard.py`'s `THE_BOARD`, `emit_footprint --board`, `sim_project.py:50`, `check_all.py:218` and
+`assign_pins.py:484-542` (map 3 only). Also the body of `docs/guide/how-it-works.md:171-209`, and Wokwi's support for two MCUs
 in one diagram. Also the P336 driver-record card: the brief names it, and grep finds it in no guide.

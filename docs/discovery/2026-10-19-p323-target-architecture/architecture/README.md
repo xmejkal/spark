@@ -5,7 +5,7 @@ Round 4 synthesis, 2026-10-21. It replaces [design.md](../design.md), which keep
 
 > TL;DR. spark becomes one small system that every script only calls. A person and Claude get the same answer,
 > as text or as JSON. Each outside tool sits behind one swappable part, chosen in one place. We first record today's
-> outputs as tests that never change, then move the code area by area, the bench first for walk 2.
+> outputs as tests that never change, then move the code area by area, the bench first, because its net exists.
 
 Summary. Each script in `scripts/` becomes a thin CLI that parses, calls one Operation in a package under
 `scripts/spark/`, and prints. Every Operation returns one result shape, so the text, the `--json` envelope and a
@@ -14,17 +14,14 @@ only shrinks.
 
 ## Your call
 
-Four decisions, one at a time, in this order. Everything else the council decided ([notes](notes.md)).
+Three decisions are open, one at a time, in this order. Decision 3 is answered, so the numbers skip it (see
+[the plan](refactor-plan.md#the-decisions)). Everything else the council decided ([notes](notes.md)).
 
 1. Readability first. The five goals rank readable, testable, exchangeable, reusable, consistent. Example: when a
    short function and a reusable one conflict, the short one wins. Yes, or another order?
 2. The shape. Scripts become thin CLIs over one package, one Operation per job, one rules test. Example:
    `look.main` shrinks from 29 lines to about 15, and its help text, flags, output and exit codes stay. Yes or no?
-3. Slices S1 and S2 before walk 2, or after it. Walk 2 is due 2026-10-27. (a) S1, about 350 lines of tests with
-   no output change, and S2, about 200 lines that add codes and next steps to the bench envelope, both merge by
-   2026-10-23. Claude then reads codes on the bench, and the goldens catch any other change. (b) Walk 2 first, on
-   today's envelope, and both follow. The plan proposes (a) only if S1 merges by 2026-10-22.
-4. When the area moves start. Until v0.13 only a story pulls its area (D13). Example: walk 2 finds a `deploy` gap,
+4. When the area moves start. Until v0.13 only a story pulls its area (D13). Example: a story finds a `deploy` gap,
    so that story moves the bench area. Confirm, or name a date.
 
 ## The system and its context
@@ -61,7 +58,8 @@ no Operation.
 
 ## The area map
 
-Nine areas. An area imports only the areas it reaches along the arrows (rule U1), so bench imports design through
+Nine areas and three leaves. A leaf is a module that imports nothing of spark. It sits at the bottom of its area, so
+any module reaches it without a cycle. An area imports only the areas it reaches along the arrows (rule U1), so bench imports design through
 firmware. Nothing imports upward, and every area imports `core`. Each area page names its direct imports.
 
 ```mermaid
@@ -73,9 +71,9 @@ flowchart TB
   CHK["checks"] --> DES
   FW --> DES
   DES --> SRC["sourcing"]
-  SRC --> REC["records"]
+  SRC --> REC["records<br/>+ provenance (leaf)"]
   BENCH --> REC
-  REC --> CORE["core"]
+  REC --> CORE["core<br/>+ zone_time, text_guards (leaves)"]
 ```
 
 | Area | Its job in one line | Page |
@@ -90,7 +88,8 @@ flowchart TB
 | bench | the board on USB: look, grant, deploy, live, reach | [bench](areas/bench.md) |
 | build | runs the build chain stage by stage, sets up a project | [build](areas/build.md) |
 
-Four upward edges exist today, and the move of the lower area removes each ([plan](refactor-plan.md)).
+The import edges that cross the map today, each kept or removed, are named in
+[section 5 of the plan](refactor-plan.md#5-the-leaves-and-the-named-edges).
 
 ## The one interface contract
 
@@ -167,6 +166,6 @@ sequenceDiagram
 - Level 2 and 3, one page per area: [core](areas/core.md), [records](areas/records.md),
   [sourcing](areas/sourcing.md), [design](areas/design.md), [firmware](areas/firmware.md),
   [breadboard](areas/breadboard.md), [checks](areas/checks.md), [bench](areas/bench.md), [build](areas/build.md).
-- [refactor-plan.md](refactor-plan.md): five stages and their slices in order, the bench net first.
+- [refactor-plan.md](refactor-plan.md): six stages, twenty-two slices, in order. The bench net came first (done).
 - [notes.md](notes.md): decisions, conflicts between the papers, the rule reference, what was cut.
 - [glossary.md](glossary.md): the words.

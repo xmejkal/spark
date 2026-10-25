@@ -1,10 +1,12 @@
 # Area: records
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-records).
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
-New names (proposed): `RecordFolders`, `Records`, `RecordSchema`, `ToolFinder`, `ToolMissingError`, `Backends`,
-`Choice`, `build_outside`, `FakeToolFinder`, the Operation names below, and the role word Records.
+New names (proposed): `RecordFolders`, `RecordFinder`, `RecordKind`, `Record`, `ShelveRecord`, `Brief`, `DeployedStore`,
+`ToolFinder`, `ToolMissingError`, `Backends`, `Choice`, `build_outside`, `FakeToolFinder` and the Operation names below.
+`Records` and `RecordSchema` are the names of plan version 1. They are now `RecordFinder` and `RecordKind`, and the
+role word Records is gone.
 
 ## Level 2: what records does
 
@@ -15,11 +17,11 @@ the store and the project. It also builds `Backends` once per run, so every back
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `board-get`, `board-validate`, `board-resolve`, and `--path`, `--id`, `--paths` | `boards.py` (`boards.py:553-561`) | reads |
-| `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`tools.py:572-578`) | reads, writes, network and runs for install |
+| `board-get`, `board-validate`, `board-resolve`, and `--path`, `--id`, `--paths` | `boards.py` (`main`) | reads |
+| `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`main`) | reads, writes, network and runs for install |
 
 The flags stay as they are. `boards.py --list` is design's `board-list` Operation, because it says which board
-stops at the footprint (`footprint_stop`, called at `boards.py:592`), a design fact. `boards.py` imports both
+stops at the footprint (`footprint_stop`, called in `main`), a design fact. `boards.py` imports both
 areas' `OPERATIONS`, as `parts.py` does.
 
 ### Its components
@@ -28,9 +30,12 @@ areas' `OPERATIONS`, as `parts.py` does.
 |---|---|
 | `records/store.py` | the store's folder, `write_file`, `fetch`, events, `keep`, moved from `scripts/store.py` |
 | `records/record_folders.py` | `RecordFolders`: the library, store and project folders, built once |
-| `records/reader.py` | `Records`: one record kind read across the three folders, the nearest wins |
-| `records/schema.py` | `RecordSchema`: a record kind's version, required keys and rules, `findings(record)` |
-| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, moved from `boards.py` |
+| `records/record_finder.py` | `RecordFinder`: one record kind read across the three folders, the nearest wins |
+| `records/record_kind.py` | `RecordKind`: a record kind's `version`, `required` keys and rules, `validate`, `stops_at`, `shelf_copy`, `digest` |
+| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION` and the readers of the role table, moved from `boards.py` |
+| `records/brief.py` | `Brief`: the project's `prefer` and `sellers`, from `.spark/project.json` |
+| `records/deployed_store.py` | `DeployedStore` and `LastDeploy`: what the store says of the board on USB |
+| `records/provenance.py` | the leaf `provenance`: what a fact must carry |
 | `records/tool_finder.py` | `ToolFinder` over the three `tools.json` layers, install lines |
 | `records/backends.py` | `Backends` and `build_outside` |
 
@@ -45,7 +50,7 @@ areas' `OPERATIONS`, as `parts.py` does.
 
 Records imports only core. It is the only area that reads `os.environ`. Another area gets the variables it needs
 from `OutsideWorld.environ`, such as `CLAUDE_CODE_SESSION_ID` (`cost.py:69`, `:77`) and the Wokwi token
-(`run_scenario.py:249`).
+(read in `run_scenario.main`).
 
 ## Level 3: how records is built
 
@@ -58,19 +63,22 @@ classDiagram
     project
     from_environ(project)$
   }
-  class Records {
-    <<Records role, proposed>>
+  class RecordFinder {
+    <<Service>>
     kind
     load(record_id)
     all()
     path_of(record_id)
   }
-  class RecordSchema {
-    <<Value>>
+  class RecordKind {
+    <<Strategy>>
     kind
     version
     required
-    findings(record) list
+    validate(record) list
+    stops_at(record)
+    shelf_copy(record)
+    digest(record)
   }
   class ToolFinder {
     <<Service>>
@@ -91,8 +99,8 @@ classDiagram
     name
     chosen_by
   }
-  Records --> RecordFolders
-  Records --> RecordSchema
+  RecordFinder --> RecordFolders
+  RecordFinder --> RecordKind
   Backends --> RecordFolders
   Backends --> ToolFinder
   Backends --> Choice : platform, simulator
@@ -130,12 +138,12 @@ sequenceDiagram
 - `RecordFolders(tmp)` over records copied from `tests/data/`. No test sets `os.environ` for the store.
 - `FakeToolFinder` replaces about 39 `mock.patch.object(tools, "find")` lines and 29 patches of `shutil.which`
   (grep, 2026-10-21). The suite's patch count then falls.
-- A `RecordSchema` contract test runs every record in `boards/` and `parts/` through `findings` and expects none.
+- A `RecordKind` contract test runs every record in `boards/` and `parts/` through `validate` and expects none.
 - When every test passes a `RecordFolders`, the test branches at `store.py:40` and `store.py:339` go (rule T4).
 
 ### How a new implementation is added
 
-- A new record kind, such as chips, is one `RecordSchema` and one `Records("chips")`. No new class.
+- A new record kind, such as chips, is one `RecordKind` and one `RecordFinder("chips")`. No new class.
 - A new tool is one row in `data/tools.json` for its role. A person switches it with `tools.py --use ROLE=TOOL`.
 - A tool's MCP version is a `kind: mcp` row (`tools.py:162`). Claude runs that tool and passes its result to the
   Operation as an input file. spark has no MCP client, so no core Adapter exists for it.
