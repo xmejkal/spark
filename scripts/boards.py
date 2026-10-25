@@ -322,9 +322,26 @@ ButtonPlaces.EMPTY = ButtonPlaces()
 
 
 # --- MVP ---
-#: The board's own parts that pins.py names, so a project with no parts can use them (P236, P353). Here, beside the
-#: record, because the build reads them too (P396) and the pick will (P397), and neither imports the pin map.
-ONBOARD_NAMES = {ONBOARD_LED: "ONBOARD_LED", ONBOARD_BUTTON: "ONBOARD_BUTTON"}
+@dataclass(frozen=True)
+class OnboardRole:
+    """
+    Value: what spark knows of one part that a board carries itself. `constant` is the name pins.py gives it.
+    `scenario_verb` is what a scenario does to it (`read`, `press`), or None when no scenario reaches it. `does` and
+    `what` are the function the board offers a need, in the words of `parts.VERBS`.
+    """
+
+    constant: str
+    scenario_verb: object
+    does: str
+    what: str
+
+
+#: The board's own parts, one row each, read by pins.py (P236, P353), the build (P396) and the pick (P397). Here, beside
+#: the record, because none of them imports the pin map. Each key is a role in PIN_ROLES.
+ONBOARD_ROLES = {
+    ONBOARD_LED: OnboardRole("ONBOARD_LED", "read", "indicate", "onboard LED light"),
+    ONBOARD_BUTTON: OnboardRole("ONBOARD_BUTTON", "press", "input", "onboard button"),
+}
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
 WOKWI_DEFINITION = "wokwi-board"

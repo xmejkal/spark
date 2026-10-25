@@ -119,8 +119,6 @@ def limits_note(limits):
 
 
 # --- MVP ---
-#: What a scenario does to each onboard part that it cannot reach (P396).
-ONBOARD_VERBS = {boards.ONBOARD_LED: "read", boards.ONBOARD_BUTTON: "press"}
 #: The component of a limit about the board's own GPIOs as a whole, and the two reasons they were not compared.
 ONBOARD_GPIOS = "onboard GPIOs"
 NO_DEFINITION_NAMED = "not checked: the board record names no Wokwi definition"
@@ -136,7 +134,7 @@ def onboard_limits(board):
     what the build did not look at, as a stand-in's sentence is what the simulation cannot show (P37).
     """
     pin_roles = board.get("pin_roles") if isinstance(board.get("pin_roles"), dict) else {}
-    roles = [(role, pin_roles[role]) for role in boards.ONBOARD_NAMES if isinstance(pin_roles.get(role), dict)]
+    roles = [(role, pin_roles[role]) for role in boards.ONBOARD_ROLES if isinstance(pin_roles.get(role), dict)]
     if not roles:
         return []
     documents = board.get("documents") if isinstance(board.get("documents"), dict) else {}
@@ -151,9 +149,9 @@ def onboard_limits(board):
         for gpio in (gpio for gpio in gpios if isinstance(gpio, int) and not isinstance(gpio, bool)):
             why = part.why_not_simulated(gpio)
             if why:
-                said.append(("%s (GPIO%d)" % (boards.ONBOARD_NAMES[role], gpio),
+                said.append(("%s (GPIO%d)" % (boards.ONBOARD_ROLES[role].constant, gpio),
                              "%s, so spark knows no way for a scenario to %s it. Test it on the board."
-                             % (why, ONBOARD_VERBS[role])))
+                             % (why, boards.ONBOARD_ROLES[role].scenario_verb)))
     return said
 # --- end MVP ---
 

@@ -356,6 +356,9 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
         priced = set(assign_pins.ROLE_PENALTY) | set(assign_pins.CONFLICTING_ROLES)
         self.assertEqual(priced - set(boards.PIN_ROLES), set())
 
+    def test_every_onboard_role_is_one_a_board_may_use(self):
+        self.assertEqual(set(boards.ONBOARD_ROLES) - set(boards.PIN_ROLES), set())
+
 
 class TheShippedLibraryTest(unittest.TestCase):
     def test_every_board_in_the_library_satisfies_its_own_contract(self):
