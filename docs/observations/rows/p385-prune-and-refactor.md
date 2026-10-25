@@ -43,3 +43,9 @@ step adds its rows here.
 | 36 | `tests/.mapping-under-test.json` belongs in git | Fable, plan v2 | raised | a test writes it, and it is tracked (row 9). Reported, not acted |
 | 37 | Plan v2's numbers are measured | Fable, plan v2 | raised | some (`check_spine.run` 204 lines, and others) come from `drift.md`, not a new count. Step 4 re-measures |
 | 38 | `--fact-set` maps to `_set_in_home` | Fable, plan v2 | raised | read from names, not from the body. Step 4 reads it |
+| 39 | Plan v2 gives an order for the verdict groups | lessons writer, Opus | raised | it does not. Lesson 1 takes the order that proposed card 2 and the pruning list imply, so the plan must state the pick |
+| 40 | The learning spike can run after stage 3 (proposed card 1) | lessons writer, Opus | raised | a contradiction: it runs "the build Operation", and the build becomes an Operation only in stage 6. After stage 3 only `look` is on the core |
+| 41 | Plan v2 says what each test lane runs | lessons writer, Opus | raised | it gives only the 90 s check at stage 5, and not what the fast and slow lanes run |
+| 42 | Every Claude Code form in lesson 5 has a tracked file | lessons writer, Opus | raised | the session-start hook is not in the repo, and the plugin ships no `hooks/` folder |
+| 43 | Plan v2 counts the `mock.patch` lines | lessons writer, Opus | raised | `tests/test_deploy_gate.py` has 14, and 49 test files hold 361. The plan gives neither number |
+| 44 | Plan v2 says how the five role tables bear on decision 1 | lessons writer, Opus | raised | section 6 names them as lesson 3's input and gives no link to decision 1. The lesson links them through "a reader finds the role in one row" |
