@@ -34,7 +34,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    **No part numbers** — a need says what is wanted, not which part.
    A board carries some parts itself, and a need in the words of one of them is served by the board. For power, write
    `power` / `charger`, `power` / `voltage regulator`, `connect` / `battery input` or `sense` / `battery level`.
-   `power` / `battery` means the cell, so a board's charger does not match it.
+   `power` / `battery` means the cell, so a board's charger does not match it. A need for a rail other than the
+   board's 3.3 V names it, for example `power` / `5V regulator`, because `power` / `regulator` and `power` / `voltage
+   regulator` match a board's own regulator.
 2. Ask **at most three questions, one at a time**, each naming the need it could change ("How should it tell you? —
    that decides the alarm need"). The board is a need too (compute / microcontroller).
 3. Pick the project's folder with the person (a new one is made), write the needs as a JSON list to a file outside any

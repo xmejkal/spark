@@ -145,7 +145,8 @@ An entry may also hold these keys:
 
 A battery-level pin is one GPIO that a divider from the battery is wired to, with the divider as a fact:
 `"onboard_battery_sense": {"gpio": [34], "facts": {"divider": {"value": 2, "verified": true, "source": "…"}}, "note": "…"}`.
-`pins.py` gets `ONBOARD_BATTERY_SENSE = 34` and `ONBOARD_BATTERY_SENSE_DIVIDER = 2`. The assigner keeps the pin free for
+`pins.py` gets `ONBOARD_BATTERY_SENSE = 34` and `ONBOARD_BATTERY_SENSE_DIVIDER = 2`. The `divider` is the ratio: the battery
+voltage divided by the pin voltage. The assigner keeps the pin free for
 longer than a plain one, and says so when it must use it. `/spark:idea` offers the board for a `sense` need of `battery level`.
 The build says that a passed run does not test the battery reading, because spark adds no battery to the diagram.
 
