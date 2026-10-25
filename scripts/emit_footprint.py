@@ -109,6 +109,17 @@ def footprint_gaps(board):
     return _missing(physical, header if isinstance(header, dict) else None)
 
 
+# --- MVP ---
+def why_no_footprint(board):
+    """Why no footprint can be generated for `board`, naming each gap of `footprint_gaps`, or None when one can. The one
+    sentence of this refusal, for this script, `emit_board` and the spine's footprint stage."""
+    gaps = footprint_gaps(board)
+    if not gaps:
+        return None
+    return ("%s cannot have a footprint generated — these are not recorded, and none of them can be derived from the "
+            "rest:\n  %s" % (board.get("id"), "\n  ".join(gaps)))
+
+
 def pads(board):
     """
     Every header pad, as (label, x, y), in the order the board file lists them.
@@ -209,12 +220,9 @@ def main(argv=None):
     except Exception as exc:  # noqa: BLE001 — the message is the product
         return _report(args, EXIT_COULD_NOT_RUN, "no board to generate from: %s" % exc)
 
-    gaps = footprint_gaps(board)
-    if gaps:
-        return _report(
-            args, EXIT_COULD_NOT_RUN,
-            "%s cannot have a footprint generated — these are not recorded, and none of them "
-            "can be derived from the rest:\n  %s" % (args.board, "\n  ".join(gaps)))
+    refusal = why_no_footprint(board)
+    if refusal:
+        return _report(args, EXIT_COULD_NOT_RUN, refusal)
 
     rules = design.rules_in(project)
     try:

@@ -939,6 +939,19 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertIn("cannot emit a board: led-red-5mm asks for 5 mA through a series resistor, but the board states no "
                       "power.io_volts — nothing to compute it from", err)
 
+    def test_a_board_that_cannot_give_a_footprint_is_could_not_run_naming_the_gap(self):
+        # P407: the guard asked only for footprint_export, so a header with no header_order passed it
+        root = self._project()
+        (root / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}))
+        from board_library import board_missing
+        for field, gap in (("physical.footprint_export", "physical.footprint_export (what the module should be called)"),
+                           ("physical.header_order", "physical.header_order (which label is on which pad — not derivable)")):
+            with self.subTest(field=field), board_missing(field):
+                code, tsx, err = self._main(["requirements.json"], root)
+                self.assertEqual((code, tsx), (emit_board.EXIT_COULD_NOT_RUN, ""))
+                self.assertEqual(err, "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and "
+                                      "none of them can be derived from the rest:\n  %s\n" % gap)
+
     def test_an_led_the_pin_cannot_light_is_could_not_run_too(self):
         # F9: the input asks the impossible, which is could-not-run like every refusal of the input here — not "problems"
         root = self._project()
