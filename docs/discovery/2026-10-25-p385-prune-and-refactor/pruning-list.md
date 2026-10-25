@@ -155,7 +155,7 @@ never half of one. A name that no span lists is MVP.
 | scripts/store.py | keep | all | none | 13 importers, the person's store |
 | scripts/tabbed_page.py | keep | all | none | `check_spine` writes `page.html` with it. The PCB tab sits inside `TabbedHtmlPage`, so it has no span |
 | scripts/tools.py | keep | all | none | 15 importers, `/spark:setup` |
-| scripts/zone_time.py | keep | all | none | a leaf. its test comes in `tests/test_leaves.py` (row 6) |
+| scripts/zone_time.py | keep | all | none | a leaf. its test comes in `tests/test_imports.py` (row 6) |
 | tools/board.py | keep | all | none | the session start and the day close. renamed `kanban.py` (plan v2, section 3) |
 | tools/check_backlog.py | keep | all | none | the WIP limits, `check_commit` runs it |
 | tools/check_commit.py | keep | all | none | the push hook's gate |

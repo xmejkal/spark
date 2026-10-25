@@ -79,7 +79,7 @@ flowchart TB
 | port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py:67`) | `FakePortFinder`, from `test_board_doctor.py:28` |
 | board connection | `BoardConnection`, `RetryingBoardConnection` (`board_connection.py:50`, `:106`) | `FakeBoardConnection` (`tests/fakes.py:8`) |
 | console probe | `ConsoleProbe` (`board_console.py`) | `FakeConsoleProbe` (`tests/fakes.py:102`) |
-| `ConsentStrategy`: `ask`, `who` | `TerminalConsentStrategy`, `StandingConsentStrategy`, `DeferringConsentStrategy` (proposed, for a graph: never asks) | `FakeConsent` (`tests/fakes.py:41`) |
+| `ConsentStrategy`: `ask`, `who` | `TerminalConsentStrategy`, `StandingConsentStrategy`, `DeferringConsentStrategy` (proposed, for a graph: its `require_ready` raises `GateClosedError` with the next step, so `ask` is never reached) | `FakeConsent` (`tests/fakes.py:41`) |
 | clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py`), the one clock. `board_grant.read_local_time` becomes `clock.now()` | one `FakeClock`, merged from `tests/fakes.py:59` and `:88` |
 
 The Operation modules pick the platform from `PLATFORMS` by `backends.platform.name`, or `DEFAULT_PLATFORM`
@@ -184,8 +184,8 @@ sequenceDiagram
 
 The gate stays inside `DeployService.deploy`, as today: that method is the only path to the erase (D8), so a node
 that composes the service cannot skip it. `record` needs `verify`'s result, so it comes last. A graph pauses between
-Operations: with `DeferringConsentStrategy` the gate closes, and the step `needs_yes` names the command for the
-person's own terminal.
+Operations: with `DeferringConsentStrategy`, `require_ready` raises before the question, so nothing records "answered
+no", and the step `needs_yes` names the command for the person's own terminal.
 
 ### How bench is tested alone
 
@@ -206,5 +206,6 @@ person's own terminal.
   image builder in firmware and a pin map Renderer in design.
 - A new flasher is one `Flasher` subclass that the platform makes.
 - A new way to say yes is one `ConsentStrategy` subclass. It fails closed. A graph or an MCP client gets
-  `DeferringConsentStrategy`, which never asks: the person gives the yes in their own terminal.
+  `DeferringConsentStrategy`, which never asks: its `require_ready` raises with the next step, as the terminal one does
+  with no tty, and the person gives the yes in their own terminal.
 

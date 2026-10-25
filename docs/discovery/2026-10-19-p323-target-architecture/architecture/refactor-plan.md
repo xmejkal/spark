@@ -16,18 +16,15 @@ function name. A cite then moves only with a name.
 
 ## What changed from version 1
 
-- Wave 1 is written as built (S1 = P380, PR #492), and decision 3 is answered in the PO's words. The dates "walk 2 on
-  2026-10-27" are gone, because walk 2 ran on 2026-10-23.
+- Wave 1 is written as built (S1 = P380, PR #492), and decision 3 is answered in the PO's words. Walk 2 ran on
+  2026-10-23, so the old dates are gone.
 - The plan's units are waves, because "stage" means a build stage (glossary). Version 1 and the cards say "stage"
   for them. A new wave 2, "one core in today's scripts", holds eight slices OC1 to OC8. Version 1's waves 2 to 5 are
-  now waves 3 to 6. Every slice id S1 to S13 keeps its name, so a comment that says "S5" still points right.
-- The slice count is 22, not "sixteen". They are S1, S2, OC1 to OC8, S3 to S6, S7a, S7b and S8 to S13.
-- The plan has the PO's bar and the four levels, a names section (P381), the core contract for other interfaces, the
-  leaves and their edges, a home for every class walk 2 added, the MVP marks, the lessons, and the edits the area
-  pages need. The "what moves where" tables are cut to the rows that still hold, cited by name. Line cites are gone
-  except where a line matters: `tools/factcheck.py` sees only a missing file or a line past the end (rows 13 and 14
-  of the [rows file](../../../observations/rows/p385-prune-and-refactor.md)).
-- The council's round (rows 52 to 68 and 71 of the rows file) changed nine things. The gate stays inside
+  now waves 3 to 6.
+- The slice count is 22, not "sixteen". Every slice id S1 to S13 keeps its name: S1, S2, OC1 to OC8, S3 to S6, S7a,
+  S7b and S8 to S13.
+- The council's round (rows 52 to 68 and 71 of the
+  [rows file](../../../observations/rows/p385-prune-and-refactor.md)) changed nine things. The gate stays inside
   `DeployService.deploy`. An Operation is a class with `run()`, one module each. The import edges come from `ast`. The
   text guard is pure. Privacy runs before the trace. A crash is an output change. Consent pauses a graph between
   Operations. One clock. The words wave, seam, `deletes` and `ReadingFile`.
@@ -104,46 +101,9 @@ overview. Nothing outside the bench imports a bench module.
 
 ### Level 2, the modules of bench
 
-An arrow is an import at `d064a65`, read with `ast`. The five Operation modules replace the bodies of today's CLIs,
-which import the same modules.
-
-```mermaid
-flowchart TB
-  OPS["look_at_board.py, deploy_image.py, issue_grant.py, run_live_code.py, reach_board.py<br/>one Operation each; OPERATIONS in __init__.py"]
-  OPS --> LOOK["board_look.py<br/>LookService (Service), PortFinder, EsptoolReader (Adapters)"]
-  OPS --> DEP["deploy_service.py<br/>DeployService (Service)"]
-  OPS --> GRANT["board_grant.py<br/>GrantService (Service), GrantStore (Store)"]
-  OPS --> LIVE["board_live.py, board_reach.py<br/>the live try and the reach (Services)"]
-  OPS --> PLAT["firmware_platform.py<br/>FirmwarePlatform (Strategy), MicroPythonPlatform"]
-  OPS --> EV["image_evidence.py<br/>ImageEvidence (Strategy)"]
-  OPS --> ENV["board_envelope.py, board_codes.py<br/>the look and deploy envelope (Renderer), the codes"]
-  DEP --> LOOK
-  DEP --> GRANT
-  DEP --> GATE["deploy_gate.py<br/>require_open_gate, ConsentStrategy (Strategy)"]
-  DEP --> FACTS["board_facts.py<br/>ReadingFile (Adapter), the look's line of a LastDeploy"]
-  DEP --> READY["ready_probe.py<br/>ReadyProbe (probe)"]
-  DEP --> DM["download_mode.py<br/>the board after a flash (functions)"]
-  GRANT --> LOOK
-  GRANT --> GATE
-  LIVE --> DOC["board_doctor.py<br/>DoctorProbe (probe)"]
-  LIVE --> GRANT
-  LIVE --> CONN["board_connection.py, board_console.py<br/>BoardConnection, ConsoleProbe, SystemClock (Adapters)"]
-  DOC --> LOOK
-  DOC --> CONN
-  DOC --> DM
-  ENV --> DOC
-  ENV --> GATE
-  ENV --> READY
-  LOOK --> FACTS
-  LOOK --> FL["flasher.py<br/>Flasher (Strategy), EsptoolFlasher (Adapter)"]
-  PLAT --> CONN
-  PLAT --> FL
-  PLAT --> READY
-  EV --> GRANT
-  READY --> CONN
-  FACTS --> CONN
-  CONN --> DM
-```
+The import-edge diagram of the bench modules (an arrow is an import at `d064a65`, read with `ast`) is in
+[areas/bench.md](areas/bench.md#its-components). The five Operation modules replace the bodies of today's CLIs, which
+import the same modules.
 
 Each module keeps its `board_` or `deploy_` prefix (decision N11), so a grep lands in one file. `board_live` and
 `board_reach` stay two modules, one flow each. The edges that leave the bench point down the area map. They go to
@@ -260,10 +220,10 @@ section 3).
 | not checked | `LastDeploy.state` with `why`. `ScenarioSteps.unread`, a flag. `None` from a reader | one shape, section 6, OC4 | `ScenarioSteps.unread` becomes `state` and `why`. |
 | deploy entry | `DeployEntry` in comments 4 and 5 | none. `LastDeploy` is the Value, and `record_deploy` writes a dict | the name is out of the plan (comment 5). |
 | look stop | `LookStop` (`board_look.py`) | `LookStopError` | renamed in S11, with `ReadyCheck` to `ReadyProbe`, `make_ready_check` to `make_ready_probe`, `FactsFile` to `ReadingFile` (glossary) and `assign_pins.Impossible` to `ImpossibleError` (wave 6). |
-| Operation | the glossary and the standard say a class named verb + object with `run()`. `core.md` said a Value holding a function. The plan drew `class deploy` | one model: an Operation is a class with one public method `run()`, whose keyword parameters are its arguments' `dest` names (N6 keeps that half). Its module is named after it. The area's `OPERATIONS` sits in its `__init__.py`, so no file is named `operations.py` twice (rule C1) | bench: `LookAtBoard` (`look_at_board.py`), `DeployImage`, `IssueGrant`, `CheckGrant`, `RunLiveCode`, `ReachBoard`. The printed `op` stays `look`, `deploy`, `grant`, `grant-check`, `live`, `reach` until decision 5. |
+| Operation | the glossary and the standard say a class named verb + object with `run()`. `core.md` said a Value holding a function. The plan drew `class deploy` | one model: an Operation is a class with one public method `run()`, whose keyword parameters are its arguments' `dest` names (N6 keeps that half). Its module is named after it. The area's `OPERATIONS` sits in its `__init__.py`, so no file is named `operations.py` twice (rule C1) | bench: `LookAtBoard` (`look_at_board.py`), `DeployImage`, `IssueGrant`, `CheckGrant`, `RunLiveCode`, `ReachBoard`. 31 ops print today: the 29 of `parts.py`'s `OPERATIONS`, `look` and `deploy`. `grant`, `live` and `reach` print flat JSON with no `op`, and `grant-check` is in no script. Decision 5 settles the spellings. |
 | clock | `board_console.SystemClock` (monotonic, sleep, an Adapter), `board_grant.read_local_time` (the wall time with its zone), and in tests `FakeClock` and `FakeLocalClock` | `SystemClock` is the one clock: `now`, `monotonic`, `sleep`. `OutsideWorld.clock` holds it | `read_local_time` becomes `clock.now()`. The two Fakes merge into one `FakeClock` (S7a). |
 | port, seam | the board's serial device (`--port`, `Port`), and the "port" of ports and adapters | port is the serial device. The architecture's port is a seam: a Strategy base or a Value that a backend fills | the pages' "ports and adapters" become "seams and adapters". The `Retriever` is a Strategy. |
-| stage, wave | a build stage (`check_spine.Stage`, JSON `stages`), deploy's `STAGE_*`, the plan's units, P391's units | stage is a build stage only. The plan's units are waves. `RefusedInputError(stage, why)` names a build stage | the plan says wave. P391's units are waves too (its design says stage). `STAGE_*` becomes `DeployPhase` (S11). |
+| stage, wave | a build stage (`check_spine.Stage`, JSON `stages`), deploy's `STAGE_*`, the plan's units, P391's units | stage is a build stage only. The plan's units are waves. `RefusedInputError(stage, why)` names a build stage | the plan says wave. P391's units keep its own word, stage. `STAGE_*` becomes `DeployPhase` (S11). |
 
 ## 4. The core contract for other interfaces
 
@@ -290,11 +250,14 @@ rules are added to it, each checked by one test in `tests/test_core.py`:
 Consent in a graph. A graph pauses between Operations, never inside one. `OutsideWorld.consent` is one of three
 strategies. `TerminalConsentStrategy` asks in the person's terminal. `StandingConsentStrategy` reads a grant the
 person made in their terminal. `DeferringConsentStrategy` (proposed, for a graph or an MCP client) never asks. Its
-`ask` returns no, and the gate closes with today's `next_op`. The Operation then returns `problems` with a NextStep
-`needs_yes` that carries the question and the command the person runs in their own terminal: `grant.py --minutes N`
-for live, `deploy.py --token T` for the erase (today's NEXT_DEPLOY path of `GateClosedError`). The graph resumes with
-the next Operation (`look`, or `live`), not with the same one, so no node restarts the board twice. A yes stays `typed`
-or `grant`, as `data.yes.kind` says today. A yes that another program collected, `relayed`, is decision 6.
+`require_ready` raises `GateClosedError` with `next_op` set to the command the person runs in their own terminal
+(`line`), as `TerminalConsentStrategy.require_ready` does with no tty. `DeployService.deploy` and `GrantService.issue`
+call `require_ready` before they ask, so `ask` is never reached and nothing records "answered no"
+(`WHY_ANSWERED_NO`). The Operation then returns `problems` with a NextStep `needs_yes` that carries the question and
+that command: `grant.py --minutes N` for live, `deploy.py --token T` for the erase (today's NEXT_DEPLOY path of
+`GateClosedError`). The graph resumes with the next Operation (`look`, or `live`), not with the same one, so no node
+restarts the board twice. A yes stays `typed` or `grant`, as `data.yes.kind` says today. A yes that another program
+collected, `relayed`, is decision 6.
 
 The `Retriever` Strategy (comment 2's fourth rule) enters in wave 6 with the sourcing move, not in S5. Its
 `search(words, project)` fits `parts.need` today. `scan_datasheet` reads pages, so the datasheet adapter and a vector
@@ -328,7 +291,7 @@ the area map. So removing the eight ends every cycle. Wave 2 removes none of the
 | `parts -> drawer`, `parts -> matching`, `parts -> needs` | the `_op_*` handlers. Each of the three imports `parts` at the top for the record contract | the sourcing move (wave 6): the contract goes to `records/record_kind.py`, and `parts.py` imports its Operation modules at the top |
 | `parts -> emit_footprint` | `audit` | the `audit` Operation moves to design (N19, wave 6) |
 | `parts -> tools` | the handlers that find a tool | `tools` becomes `ToolFinder` in records (wave 6) |
-| `boards -> parts` | `footprint_stop` (`STOPS_AT_FOOTPRINT`), `validate` (`document_problems`, `SELECTOR_SAFE`, the rail rule) | P411 [#537](https://github.com/xmejkal/spark/issues/537) removes the constant. `RecordKind.validate` (P391's wave 2, in the records move) takes the shape rules |
+| `boards -> parts` | `footprint_stop` (`STOPS_AT_FOOTPRINT`), `validate` (`document_problems`, `SELECTOR_SAFE`, the rail rule) | P411 [#537](https://github.com/xmejkal/spark/issues/537) removes the constant. `RecordKind.validate` (P391's stage 2, in the records move) takes the shape rules |
 | `boards -> emit_footprint` | `footprint_stop` | `footprint_stop` moves to design with the `board-list` Operation (N19) |
 
 Two top-level edges are upward in the area map and go earlier. `matching -> drawer` (for `clean`, `TEXT_MAX`,
@@ -349,8 +312,8 @@ it. These are wave 2. Sizes are estimates.
 
 | Slice | What it changes | What proves it | Size |
 |---|---|---|---|
-| OC1, one refusal order | `emit_board.read_inputs(path, project)` returns `BoardInputs(design, assignments)` or raises `RefusedInputError(stage, why)` in the order design, pins, footprint. `emit_board.main` and `check_spine.run` both call it. The repeated `design.load` and `assign_pins.assign` before the spine's footprint stop go. | one record with an unknown need and a footprint gap. `emit_board.py` and the spine give the same first sentence (row 10 of `p407-no-footprint.md`). The P407 tests stay | 80 |
-| OC2, the spine calls the renderer | `check_spine.run`'s footprint stage calls `emit_footprint.render(board, rules)` and writes the file. `emit_footprint.main` is a CLI only. | a board whose definition disagrees with itself gives a `footprint` stage whose detail says why, not the old "no footprint" line. No stderr is read | 40 |
+| OC1, one refusal order | `emit_board.read_inputs(path, project)` returns `BoardInputs(design, assignments)` or raises `RefusedInputError(stage, why)` in the order design, pins, footprint. `emit_board.main` and `check_spine.run` both call it. The repeated `design.load` and `assign_pins.assign` before the spine's footprint stop go. | one record with an unknown need and a footprint gap. `emit_board.py` and the spine give the same first sentence (row 10 of `p407-no-footprint.md`). The P407 tests stay. The spine's footprint-stop case is the first build golden, taken before OC1 changes `stages[].detail` | 80 |
+| OC2, the spine calls the renderer | `check_spine.run`'s footprint stage calls `emit_footprint.render(board, rules)` and writes the file. `emit_footprint.main` is a CLI only. | a board whose definition disagrees with itself gives a `footprint` stage whose detail says why, not the old "no footprint" line. No stderr is read. The OC1 golden changes with it | 40 |
 | OC3, one guard before every print | `text_guards.guard_lines(text)` returns `text` with each of its lines passed through `printable`, newlines kept: the body of `parts._say`'s print, without the print. `parts._say`, `look.main`, `deploy.main`, `check_spine.main` and `run_scenario.main` print what it returns. The leaf stays pure (rule X2). The hand guards in `LastDeploy.line` and `needs._how_to_free` go, except on a name that can start a line (a holder, an entry key). | a planted newline and a bidi character in a record field show as `?` in every CLI's text. The leaf test passes | 90 |
 | OC4, one "not checked" shape | the words `RECORDED`, `NONE_RECORDED`, `NOT_CHECKED` move from `board_facts` to `outcomes`. A reader never raises and returns a Value with `state` and `why`. `ScenarioSteps.unread` becomes `state` and `why`. P397's `SimulatedPart` reader takes the same shape. | one test per reader: a missing, a malformed and a good input give the three states. `ImageEvidence.caveats` and `onboard_limits` print the same "not checked" words | 70 |
 | OC5, the store side and the look side | `DeployedStore` (Store) in a new `scripts/deployed_store.py` holds `last_deploy(mac)` and `record(facts, verdict, who)`, today `board_facts.read_last_deploy` and `record_deploy`. `LastDeploy` keeps `state`, `why`, `to_dict` and the stored fields. `line()` and `in_question()` become `board_look.last_deploy_line(last)` and `deploy_gate.last_deploy_in_question(last)`. | the look and deploy goldens do not change. `tests/test_board_facts.py` moves its reader tests to `tests/test_deployed_store.py` | 100 |
@@ -359,7 +322,7 @@ it. These are wave 2. Sizes are estimates.
 | OC8, one home for the text guards | `screen_text.py` becomes `text_guards.py` with `printable`, `clean` and its caps, `one_line` and `COMMENT_UNSAFE`. `drawer`, `parts`, `matching`, `assign_pins`, `needs` and `board_facts` import it. `tests/test_imports.py` reads imports with `ast`: each leaf imports nothing of spark, `matching` imports no `drawer`, and `assign_pins` calls no `parts.one_line`. S3 folds it into the rules test later, and until then it keeps OC8 from regressing. | `tests/test_imports.py` fails on the old code and passes on the new | 80 |
 
 Three more findings are rules, not slices. `drawer.holders_of` is the one reader of "who holds this stock", and
-`needs.plan_pick` and `needs._candidate` stay its only callers (a U3 entry of S3). `provenance.fact_problems` is the
+`drawer.listing`, `needs.plan_pick` and `needs._candidate` stay its only callers (a U3 entry of S3). `provenance.fact_problems` is the
 shape of a fact for part and board, and `boards.is_pin_map_constant` is the rule of one outlet, `pins.py`. They stay
 apart, so P374 [#479](https://github.com/xmejkal/spark/issues/479) does not pull the second into part records. One role
 is spelled in five tables (`PIN_ROLES`, the `ONBOARD_*` constants, `ONBOARD_ROLES`, `assign_pins.ROLE_PENALTY`,
@@ -411,16 +374,15 @@ what is MVP and what is later in each module, live in the
 
 ## 9. The lessons
 
-One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of the P385 folder. It splits lessons 2, 3
-and 5 in two, so the PO answers eight questions, one per lesson. The decisions table names each question.
+One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of the P385 folder. It splits lesson 2 in two and lesson 3 in three, so the PO answers eight questions, one per lesson. The decisions table names each question.
 
-| # | Lesson | The slices it opens | The decision it asks |
+| # | Lesson | The slices it opens | The questions it asks |
 |---|---|---|---|
-| 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | which of the verdict groups to take, in which order |
-| 2 | Package layout: `scripts/spark/`, areas, leaves, the move recipe | S4, S11, waves 5 and 6 | decisions 2 (the shape) and 4 (when the moves start) |
-| 3 | The core contract: Operation, result, Finding, the four rules of section 4, the five role tables as its worked input | S3, S5, S6, OC4 | decisions 1 (readability first) and 5 (the printed names) |
-| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | the fast lane's budget on a push (S13) |
-| 5 | Claude Code forms: command, skill, agent, MCP, and what each gets from one Operation | the frontends, the learning spike | decision 6 (a relayed yes), and whether the spike runs before wave 6 |
+| 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | question 1: which of the verdict groups to take, in which order |
+| 2 | Package layout: `scripts/spark/`, areas, leaves, the move recipe | S4, S11, waves 5 and 6 | question 2 (decision 2, the shape) and question 3 (decision 4, when the moves start) |
+| 3 | The core contract: Operation, result, Finding, the four rules of section 4, consent, the five role tables as its worked input | S3, S5, S6, OC4 | question 4 (decision 6, a relayed yes), question 5 (decision 1, readability first) and question 6 (decision 5, the printed names) |
+| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | question 7: the fast lane's budget on a push (S13) |
+| 5 | Claude Code forms: command, skill, agent, MCP, and what each gets from one Operation | the frontends, the learning spike | question 8: whether the spike runs before wave 6 |
 
 ## 10. The waves and their slices
 
@@ -454,11 +416,11 @@ at a time, "I don't want to break the system before MVP." Five stay open.
 
 | # | Decision | Options | Recommendation | Asked by |
 |---|---|---|---|---|
-| 1 | Readability first | (a) v1's rank (N1): readable, testable, exchangeable, reusable, consistent. (b) the order of the PO's 10-23 words: "We do reuse code. It's good: defined interfaces, a good, solid object-oriented programming style, and good, clear naming and understandable code." (c) no rank, each slice names its goal. | (a). A function nobody reads is not reused, and R1's 40 lines apply only to new code in `spark/`, old code pays down by ratchet. The 10-23 words name reuse, interfaces, OO style, names and understandable code. They name neither "testable" nor "exchangeable": those two are v1's, from the council. | question 4 |
+| 1 | Readability first | (a) v1's rank (N1): readable, testable, exchangeable, reusable, consistent. (b) the order of the PO's 10-23 words: "We do reuse code. It's good: defined interfaces, a good, solid object-oriented programming style, and good, clear naming and understandable code." (c) no rank, each slice names its goal. | (a). A function nobody reads is not reused, and R1's 40 lines apply only to new code in `spark/`, old code pays down by ratchet. The 10-23 words name reuse, interfaces, OO style, names and understandable code. They name neither "testable" nor "exchangeable": those two are v1's, from the council. | question 5 |
 | 2 | The shape | (a) thin CLIs over `scripts/spark/`, one Operation per job, one rules test (v1). (b) Operations inside today's flat `scripts/`, no package. (c) a `src/spark` package with `pyproject`. | (a). The package is what a LangGraph node or an MCP tool imports (section 4), and (b) cannot give one `OPERATIONS` per area without a folder. (c) is on the "not do" list: it installs something, and spark installs nothing heavy. | question 2 |
-| 4 | When the area moves start | (a) a story pulls its area (v1 D13). (b) now, the bench first, one PR at a time. (c) all areas in one pass. | (b). The PO pulled the refactor on 10-25, the bench's net exists (S1), and walk 2 ran on the bench. (c) breaks the "one PR at a time" rule of decision 3. | question 3 |
-| 5 | The printed names of the Operations | The standard (P381, rule 4) prints an Operation's words as its `op`: `show-part`. Today's ops are `look`, `deploy`, `board-get`, `emit-board`, `audit` and 30 more, in three orders, and the goldens and command pages pin them. (a) keep every op in a golden or a command page as a named exception, and only a new Operation follows rule 4. (b) rename each op to its class's words (`look-at-board`) in its area's output slice, a public change. | (a). The class names pass the rule now, and a public rename costs every page and habit (glossary, section 3). (b) can follow in a card of its own when the PO wants one spelling everywhere. | question 5 |
-| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | question 7 |
+| 4 | When the area moves start | (a) a story pulls its area (v1's decision 4). (b) now, the bench first, one PR at a time. (c) all areas in one pass. | (b). The PO pulled the refactor on 10-25, the bench's net exists (S1), and walk 2 ran on the bench. (c) breaks the "one PR at a time" rule of decision 3. | question 3 |
+| 5 | The printed names of the Operations | The standard (P381, rule 4) prints an Operation's words as its `op`: `show-part`. Today 31 ops print: the 29 in `parts.py`'s `OPERATIONS` (`audit` and `need` among them), `look` and `deploy`. A script that prints no envelope (`grant`, `live`, `reach`) prints no `op`. The goldens and command pages pin the spellings. (a) keep every op in a golden or a command page as a named exception, and only a new Operation follows rule 4. (b) rename each op to its class's words (`look-at-board`) in its area's output slice, a public change. | (a). The class names pass the rule now, and a public rename costs every page and habit (glossary, section 3). (b) can follow in a card of its own when the PO wants one spelling everywhere. | question 6 |
+| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | question 4 |
 
 ### Wave 1: the bench net
 
@@ -481,7 +443,8 @@ tests/golden/deploy-*.json` prints nothing.
 
 The eight slices of section 6, in the order OC8, OC3, OC7, OC4, OC6, OC5, OC1, OC2. The leaf home comes first because
 OC3 guards through it. OC1 waits for P411, a card, not a decision. Wave 2 removes no cycle (section 5). It is done
-when `tests/test_imports.py` passes, each OC proof holds, and no golden changed.
+when `tests/test_imports.py` passes, each OC proof holds, and no golden changed. The Ready cards behind P385 (P397,
+P399, P345 PR 2 and P374, section 7) land in today's scripts during waves 1 and 2, and each marks its span (section 8).
 
 ### Wave 3: one CLI on the core
 
@@ -505,7 +468,8 @@ flag, `SparkError`, crash, undeclared effect) and an unchecked Finding never giv
 S6, `look` on the core: `spark/bench/look_at_board.py` with `LookAtBoard`, `OPERATIONS` in `spark/bench/__init__.py`,
 `Backends` with `ToolFinder`, and `look.main` at most 15 lines by `ast`. It is an output slice for one path. A crash
 exits 1 with a traceback and no envelope today (`docs/guide/agents.md`). On the core it prints an envelope with
-code `crash` and exits 2. The slice adds a crash golden and changes `agents.md`'s crash lines. S7b and S9 do the same
+code `crash` and exits 2. The crash Finding's sentence is the exception class and a fixed message, because an exception
+message can carry a home path. The traceback goes to stderr. The slice adds a crash golden and changes `agents.md`'s crash lines. S7b and S9 do the same
 for the other four bench CLIs, and each area's output slice in wave 6 for the rest. When the look goldens change only
 on the crash path and `look.py` imports no area module but `spark.bench`, the slice is done.
 
@@ -540,31 +504,29 @@ When an area is pulled, it gets three PRs. The order of the areas is firmware, b
 records with sourcing. The first PR is its net: goldens, with a fake tool process where one is needed. The second is
 its output slice: codes, `fix_step`, `backends`. The third is its move, with the names of its page and no module shim.
 The `firmware` move adds `scenario_steps.py` and takes `stand_in/machine.py` as is. The `records` move adds P391's
-wave 2 (`RecordKind`, `RecordFinder`,
-`Record`, `ShelveRecord`). It also adds `DeployedStore`, `Brief`, and the renames of section 3 in `board_records.py`. The `sourcing` move splits `parts.py` by
+stage 2 (its own word: `RecordKind`, `RecordFinder`, `Record`, `ShelveRecord`). It also adds `DeployedStore`, `Brief`, and the renames of section 3 in `board_records.py`. The `sourcing` move splits `parts.py` by
 the job groups of the pruning list and adds the `Retriever` Strategy. The `design` move takes `footprint_stop` and the
 `board-list` Operation, `BoardEmitter` with `read_inputs`, and `PinAssigner`. The `build` move replaces
-`check_spine.run` with `BuildService` and six `BuildStage`s, and the spine calls `BoardEmitter` in process.
+`check_spine.run` with `BuildService` and the `BuildStage`s (the spine names seven stages in a run: `parts`, `board`,
+`schematic`, `schematic-notes`, `footprint`, `build`, `simulation`, and `areas/build.md` maps them to six classes). The
+spine then calls `BoardEmitter` in process.
 
 ## 11. The cites
 
-Every claim about today's code names a module and a function, and each was read at `d064a65`. A line number appears
-only in "Changes for the area pages", where it names a stale cite to replace. `tools/factcheck.py` exits 0 on this
+Every claim about today's code names a module and a function, and each was read at `d064a65`. This plan holds no line numbers.
+`tools/factcheck.py` exits 0 on this
 file, and that proves only that each cited file and line exists. The names were checked by reading them. The headings
 of this file are its anchors, so `drift.md`'s comment map points at a heading's slug.
 
 ## 12. P391's design and P322's facts
 
 P391's `design.md` gets only these edits. Its stale line cites are fixed: 50 of 95, with each number of a list counted
-once (P385 re-measured them, and drift section 2 counted 37 of 77 by whole cite). Wave 4 gains the one note comment 4
+once (P385 re-measured them, and drift section 2 counted 37 of 77 by whole cite). Its stage 4 (its own word) gains the one note comment 4
 asks: the Wokwi definition is a `documents` source under its sha256. Its names follow section 3, so `scripts/records.py`
-becomes `records/record_kind.py` and `records/record_finder.py` in the records move. Its wave 4 no longer "waits for
+becomes `records/record_kind.py` and `records/record_finder.py` in the records move. Its stage 4 no longer "waits for
 P389", because P389 merged.
 
-P322's `facts.md` is a measurement dated 2026-10-19 and stays as it was printed (learned rule 3.2). Out of date in it:
-the score (classes 16 % and roles 56/103 are 17 % and 63/110), the counts (59 modules, 14,313 lines, 103 classes, 647
-functions are 63, 15,014, 110, 668) and five function lengths (`deploy.main` 28 is 33, `check_spine.run` 192 is 204,
-`parts.validate` 240 is 230, `boards.validate` 161 is 172, `emit_board.main` 115 is 117).
+P322's `facts.md` is a measurement dated 2026-10-19 and stays as printed (learned rule 3.2). [`drift.md`](../../2026-10-25-p385-prune-and-refactor/drift.md) lists what moved since.
 
 ## Proposed cards
 
@@ -572,38 +534,13 @@ functions are 63, 15,014, 110, 668) and five function lengths (`deploy.main` 28 
    an MCP tool from the same `OPERATIONS`, with a Langfuse trace, and the core does not change (after wave 3).
 2. Chore: `PRUNED.md` does not exist → the prune PR lands it at the root with the verdicts of the pruning list, the
    tag `pre-refactor-2026-10-25`, and one restore command per entry.
-3. Chore: `tools/board.py` shares a word with `scripts/boards.py` → `tools/kanban.py`, with `scrum/README.md` and the
-   session hook following.
-4. Story: the project's brief is read by two functions in `parts.py` → one `Brief` Value in records, which the
-   callers of `vendor_order` and `sellers` read.
-5. Story: `ScenarioSteps.unread` and `read_last_deploy` spell "not checked" two ways → one shape with `state` and
-   `why` (OC4), ready for P397's reader.
-6. Story: a fact's value is read by hand in `design.firmware_pulls` and by `emit_board.fact_value` → one
-   `provenance.read_value` (OC7).
 
-## Changes for the area pages
+The other cards repeat a section and are cut: `tools/kanban.py` (section 3), `Brief` (sections 3 and 7), and OC4 and OC7 (section 6).
 
-The P385 PR applied these edits, so the pages agree with this version. The list is the record. Line cites that moved
-are in `drift.md`, section 2, and names replaced them.
+## Still to do for the area pages
 
-- `README.md`: "Your call" 3 cut, the three leaves on the area map, the pages list. Still to do in the doc pass:
-  "ports and adapters" to "seams and adapters", "stages" to "waves", `operations.py` to the Operation modules, `erases`
-  to `deletes`.
-- `areas/bench.md`: S1 as the net that landed first, the S11 renames, the import-edge diagram, the deploy order of
-  level 4, `LookService.run(project, port, evidence)`, `DeployedStore`, seams.
-- `areas/core.md`: the `Operation` base class with `schema()`, `Privacy` before `trace` inside `run_operation`, the two
-  leaves, `SparkError.status` as an instance field, `deletes`, the X2 test's words, no `--describe` or `--debug`.
-- `areas/records.md`, `firmware.md`, `design.md`, `build.md`, `sourcing.md`, `checks.md`, `breadboard.md`: the names of
-  sections 3 and 7, `stand_in/machine.py` in firmware, the `Retriever` Strategy row, the PCB checks marked later, and
-  on every page `<area>/__init__.py` holds `OPERATIONS` (one module per Operation), "seams and adapters", and the link
-  `#appendix-what-moves-where-by-name`.
-- `glossary.md`: the words leaf, text guard, Brief, DeployedStore, RecordKind, RecordFinder, Record, kanban, trace,
-  wave, seam, `DeferringConsentStrategy`, the clash rows of section 3, `deletes`, the Operation row's named exception.
-- `notes.md`: the conflicts row answered on #413, decisions N24 to N31, X1 and C4 reworded.
-- P391 `design.md`: section 12, and "layer" to "folder" in its prose and in `Record` (the code name `store.layers`
-  stays until the records move).
-- `docs/guide/developing.md` (not edited here): the standard's rule 4 gains "an `op` in a golden or a command page
-  keeps its spelling until decision 5".
+The P385 PR applied every other edit to the pages. One is left: `docs/guide/developing.md` (not edited here) gains in
+the standard's rule 4 "an `op` in a golden or a command page keeps its spelling until decision 5".
 
 ## What we will not do
 
@@ -616,31 +553,18 @@ one callable.
 
 ## Appendix: what moves where, by name
 
-The rows of version 1 that still hold, cited by function name. The area pages hold the full target, the breadboard
-and checks areas only there.
+Each area page holds its own rows of the target: [core](areas/core.md), [records](areas/records.md),
+[sourcing](areas/sourcing.md), [design](areas/design.md), [build](areas/build.md), [checks](areas/checks.md),
+[breadboard](areas/breadboard.md), [firmware](areas/firmware.md) and [bench](areas/bench.md). These rows of version 1
+still hold and sit on no page.
 
 | Today | Becomes |
 |---|---|
-| `scripts/outcomes.py`, whole, and the leaves `zone_time`, `text_guards` | `core/outcomes.py`, `core/zone_time.py`, `core/text_guards.py` (S4), with the three "not checked" words of OC4 |
 | `parts.Answer`, `outcomes.answer` | `OperationResult` |
 | `parts._problem`, the item dicts of `board_envelope` | `Finding` |
 | `outcomes.step`, `board_envelope.look_step`, `deploy_step` | `NextStep` |
-| `parts.OPERATIONS`, `OPTIONS`, `_Parser`, `look.main`'s body | `Operation`, `Argument`, `run_cli` |
 | `board_envelope.dumps`, `board_look.report_lines`, `deploy.show_line` | `JsonEnvelope`, `TextReport`, `OutsideWorld.show_line` |
 | `store.py`, `store.layers`, `store.records` | `records/store.py`, `RecordFinder` over `RecordFolders` |
 | `boards.validate`, `parts.validate`, `REQUIRED_KEYS` of both | `RecordKind.validate`, one named rule per function |
-| `boards.load`, `ButtonPlaces`, `BoardError`, `OnboardRole` and its readers, `SimulatedPart` | `records/board_records.py` |
-| `board_facts.read_last_deploy`, `record_deploy` | `DeployedStore` in `scripts/deployed_store.py` (OC5), then `records/deployed_store.py` (wave 6) |
-| `tools.find`, `merged`, `ToolProblem`, `tools.main` | `ToolFinder`, `ToolMissingError`, seven Operations |
-| `drawer.py`, `matching.py`, `cost.py`'s logic | `sourcing/drawer.py`, `sourcing/matching.py`, `sourcing/run_cost.py` |
 | `parts.keep_in_store`, `keep_local`, `scan_datasheet`, `read_datasheet`, `fetch_documents` | `sourcing/datasheets.py`, the `Retriever`'s datasheet adapter |
-| `parts.vendor_order`, `sellers` | `Brief` in records |
 | `parts.audit`, `boards.footprint_stop` | design's `audit` and `board-list` Operations |
-| `design.py`, `needs.py`, `assign_pins.assign`, `render`, `pin_module` | `design/loader.py`, `design/needs.py`, `design/pin_assigner.py` |
-| `emit_board.py`'s logic, `read_inputs` | `design/board_emitter.py`, `BoardEmitter`, split under 600 lines a module |
-| `emit_footprint.py` | `design/footprint_emitter.py` |
-| `flash_image.py`, `import_firmware.py`, `project_image.py`, `sim_project.py` | `firmware/image_builder.py`, `import_probe.py`, `project_image.py`, `sim_project.py` |
-| `run_scenario.ScenarioRun`, `verdict`, `run_record`, `ScenarioSteps` | `firmware/scenario_run.py` (`RunLog`, `status_of_run`), `firmware/scenario_steps.py` |
-| the bench modules of S11, `image_evidence.py`, `download_mode.py` | `bench/`, moved with the renames of section 3, one module per Operation and `OPERATIONS` in `bench/__init__.py` |
-| `scripts/stand_in/machine.py` | `firmware/stand_in/machine.py`, moved as is: MicroPython's stand-in, not spark code |
-| `check_spine.run`, `init_project.py`, `ai_files.py` | `build/build_service.py`, `build/stages.py`, `build/project_setup.py`, `build/ai_files.py` |

@@ -56,7 +56,7 @@ Back to [the architecture](README.md).
 | design | The netlist and pin map derived from the requirements. |
 | build | The chain from requirements to design, breadboard sheet, Wokwi diagram and checks. |
 | stage | One link of the build chain, JSON `stages`. The refactor plan's units are waves. |
-| wave | One of the six units of the refactor plan, a set of slices. Version 1 and the cards before 2026-10-26 say "stage" for it. |
+| wave | One of the six units of the refactor plan, a set of slices. Version 1 and the cards before 2026-10-26 say "stage" for it. P391's design keeps its own word, stage. |
 | step | An action that comes next (NextStep). A wiring line is a WiringStep. A journey has "journey steps". |
 | platform | The firmware's language family, such as MicroPython (`FirmwarePlatform`). |
 | board | The dev board, as a record or on USB. The circuit file is a "circuit". |
@@ -66,7 +66,7 @@ Back to [the architecture](README.md).
 | check | One `Check` subclass that grades a design, run by `check_all`. |
 | tool | An outside program, one row in `data/tools.json`. In the envelope, `tool` names the CLI that printed it. |
 | gate | The rule that opens or refuses an erase or a board write, with consent. |
-| consent | The person's yes, asked by a `ConsentStrategy`, or given by a stored grant. In a graph, `DeferringConsentStrategy` (proposed) never asks, and the Operation returns a `needs_yes` step with the command for the person's own terminal. Never an argument. |
+| consent | The person's yes, asked by a `ConsentStrategy`, or given by a stored grant. In a graph, `DeferringConsentStrategy` (proposed) never asks: its `require_ready` raises with the next step, and the Operation returns a `needs_yes` step with the command for the person's own terminal. Never a CLI flag: a Strategy in `OutsideWorld`, or the token. |
 | rule | One line of the code standard, checked by `ArchitectureRules`. Proposed. |
 | baseline | The list of today's rule breaches. It only shrinks. |
 | golden | A file with the expected `--json` and exit code of one Operation on one fixture project. Proposed. |
