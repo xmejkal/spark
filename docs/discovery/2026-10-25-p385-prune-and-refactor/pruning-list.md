@@ -23,6 +23,141 @@ How to read the columns:
 - `named in <record>`: whole-name mentions in the walk record. `board.py` does not match `emit_board.py`.
   A mention inside a folder path counts only for the module's own folder.
 
+## The verdicts
+
+Fable 5.1 wrote these on 2026-10-25 from the facts below and the code at `d064a65`. A verdict is one of four words.
+"keep" means the module stays, whole or split later by its area's move. "split" means the refactor cuts it into modules
+of one job each, named in plan v2. "move behind a module" means the code leaves the MVP path and stays reachable through
+one plug-in point, and the tag `pre-refactor-2026-10-25` keeps it. "prune" means the code goes, and the tag keeps it. A
+walk column alone decides nothing: `design.py` is named in neither walk record, and eight build modules import it.
+
+Counts over the 76 rows: keep 68, split 4, move behind a module 3, prune 1.
+
+### The groups
+
+(a) Reached by nothing. `tools/journey.py`: keep. `AGENTS.md` names it and `tests/test_journey.py` runs it, so the
+inventory's column is the gap (row 4), not the module. `tools/match_eval.py`: prune. No page names it, nothing imports
+it, and two docstrings and the P211 papers only mention it. Its test `tests/test_match_eval.py` goes with it. The tag
+keeps both. When a second matcher is tuned, they return. `scripts/stand_in/machine.py`: keep. `import_firmware.py`
+runs a firmware on the Mac with it, and walk 1 named `import_firmware.py` four times.
+
+(b) Flags no page names. The table measures modules, not flags, so the 19 flags get their verdict in the prune PR by one
+rule. A flag that a test or a script passes gets its line on the script's page. A flag that nothing passes goes, and
+`PRUNED.md` lists it. The five flags of `tools/match_eval.py` go with the module.
+
+(c) The PCB and fab checks off the breadboard journey. `check_bom.py`, `check_footprints.py` and `check_physics.py`
+(1,417 lines, tests 1,488): move behind a module. The plug-in point exists: `check_all.CHECKS`, a list of `Check`
+subclasses (`TheOrder`, `Buildability`, `Physics`). The first step is the marker `# --- Later, not MVP: the PCB order,
+P136 ---` over the three rows and the three modules. The second step, a card, moves the three subclasses into one module
+that `CHECKS` reads. `copper.py`, `fab.py`, `netlist.py`, `tabbed_page.py` and `emit_footprint.py` stay with the build
+(row 7: the build imports each).
+
+(d) `scripts/parts.py`. The measurer's 15 job groups hold, with five corrections after a read of the bodies. `one_line`
+and `COMMENT_UNSAFE`, with `SELECTOR_SAFE`, `FOOTPRINT_NAME`, `ENDS_THE_COMMENT` and `NOT_A_PLAIN_ID`, guard a word for a
+generated file: their own job, and the leaf's in plan v2's OC8. `audit` walks every record of a project: its own job, the
+`audit` Operation that moves to design. `without_location`, `keep_in_store` and `keep_local` keep a photo or a datasheet
+in the store without its GPS data: one job, "keep a document", not shelving. `vendor_order` and `sellers` read the
+project's brief: one job, the `Brief` Value. `describe` and `_row` describe the CLI for Claude (`--describe`): a
+command-line job. That makes 18 jobs. The verdict is split, in the sourcing move of plan v2's stage 6. The record
+contract goes to `RecordKind`, documents to `sourcing/datasheets.py` and shelving to `ShelveRecord`. The brief goes
+to `records/brief.py`, the text guard to `text_guards.py`, the needs commands to design's Operations and the parser
+to `run_cli`. `parts.py` stays the CLI.
+
+(e) `tools/circuit-to-wokwi`: keep. The build runs `cli.ts` through the bundle `dist/converter.mjs` (21,898 of 24,159
+lines), so a user installs no bun: free, few and local. The bundle is spark's own build product, not a vendor file, and
+`bundle.sh` with `tests/test_check_spine.py` pins it to its sources' sha256. The lock file stays, because the bundle is
+rebuilt from it. One finding for the prune PR: `tests/.mapping-under-test.json` is tracked and a test writes it (row 9).
+
+(f) `scripts/boards.py`, the first split candidate: 843 lines, 60 names, 25 importers, `validate` alone 172 lines. The
+cut follows the roles. `load`, `records`, `active_id`, `resolve`, `ButtonPlaces`, the onboard role table with its
+readers, `SimulatedPart` and `read_simulated_part` go to `records/board_records.py`. The rules `role_entry_problems`,
+`power_problems` and `fact_value_problems` become named rules of `RecordKind.validate`. `footprint_stop` goes to design.
+`boards.py` keeps `main`, `get` and `_validate_all` as the CLI. Next in line: `emit_board.py` (1,176 lines),
+`check_spine.py` (1,004) and `parts.py` (2,414), which is largest and goes last because its split is the sourcing move.
+
+### The table
+
+"all" means every top-level name of the module. "none" means no name.
+
+| module | verdict | MVP span | later span | reason |
+| --- | --- | --- | --- | --- |
+| scripts/ai_files.py | keep | all | none | `init_project` imports it, `/spark:init` writes the AI files |
+| scripts/assign_pins.py | keep | all | none | the build: `check_spine`, `emit_board`, `breadboard` import it |
+| scripts/board_connection.py | keep | all | none | 7 bench modules import it |
+| scripts/board_console.py | keep | all | none | 6 bench modules import it |
+| scripts/board_doctor.py | keep | all | none | 7 importers. the look, deploy, live and reach run it on a failed read |
+| scripts/board_envelope.py | keep | all | none | the `--json` of look and deploy |
+| scripts/board_facts.py | keep | all | none | OC5 splits it into `DeployedStore` (records) and the look's line (bench) |
+| scripts/board_grant.py | keep | all | none | the grant gates live and deploy, 6 importers |
+| scripts/board_live.py | keep | all | none | `live.py`'s flow |
+| scripts/board_look.py | keep | all | none | 8 importers, the look |
+| scripts/board_reach.py | keep | all | none | `reach.py`, the PO's bench tool |
+| scripts/boards.py | split | `load`, `records`, `active_id`, `resolve`, `ButtonPlaces`, `OnboardRole` to `read_simulated_part`, `is_gpio` to `power_problems`, `validate`, `get`, `main` | `REQUIRED_FOR_FAB` and the `for_fab` branch of `validate` (kept: the PCB checks read the fab keys) | group (f) |
+| scripts/breadboard.py | keep | all | none | the sheet, which `check_spine --keep` writes |
+| scripts/breadboard_changes.py | keep | all | none | `breadboard` imports it on every rebuild |
+| scripts/breadboard_drawing.py | keep | all | none | 4 importers, the drawn breadboard |
+| scripts/breadboard_keep.py | keep | all | none | the person's moves across a rebuild, a Strategy already |
+| scripts/breadboard_match.py | keep | all | none | the drawing check, `breadboard` imports it |
+| scripts/breadboard_steps.py | keep | all | none | 3 importers |
+| scripts/check_all.py | keep | `Check`, `CHECKS`, `CheckedFolder`, `render`, `RulesVsNetlist`, `VendorTruth`, `main` | `TheOrder`, `Buildability`, `Physics` (kept: group (c)) | 11 pages name it, AGENTS.md's "checks the board" |
+| scripts/check_bom.py | move behind a module | none | all (kept: the order check of a fab package, P136) | only `check_all` imports it, and no fab package exists |
+| scripts/check_footprints.py | move behind a module | none | all (kept: "will this board be buildable", a PCB question) | `check_all` and `check_physics` import it, not the build |
+| scripts/check_physics.py | move behind a module | none | all (kept: the PCB physics, P136) | only `check_all` imports it |
+| scripts/check_spine.py | split | `run`, `main`, `board_alone`, `find_toolchain`, `toolchain_can_build`, `converter_command`, `simulation_detail`, `Stage` | none | 1,004 lines, `run` is 204. the build move splits it into `BuildService` and stages |
+| scripts/check_vendor_pins.py | keep | all | `fetch_variant_header` and its `gh` run (kept: the network path of `VendorTruth`) | `check_all` imports it, 5 pages name it |
+| scripts/compare_design.py | keep | all | none | `check_all` and `parts` import it |
+| scripts/copper.py | keep | all | none | `emit_board` sizes a trace with it (row 7) |
+| scripts/cost.py | keep | all | none | `parts.py --tally` and `--step`, the idea step's cost line |
+| scripts/deploy.py | keep | all | none | the deploy, walk 2 named it 16 times |
+| scripts/deploy_gate.py | keep | all | none | the only way to the erase, 5 importers |
+| scripts/deploy_service.py | keep | all | none | the deploy flow |
+| scripts/design.py | keep | all | none | 8 build modules import it |
+| scripts/download_mode.py | keep | all | none | 4 bench importers |
+| scripts/drawer.py | keep | all | none | the drawer. `clean` leaves for `text_guards` (OC8) |
+| scripts/emit_board.py | split | all | none | 1,176 lines, over R1's 600. the design move cuts `BoardEmitter` under 600 a module |
+| scripts/emit_footprint.py | keep | all | none | the build's footprint stage, 5 importers |
+| scripts/fab.py | keep | all | none | `emit_board` reads via and board numbers from it (row 7) |
+| scripts/firmware_platform.py | keep | all | none | `deploy` builds the platform |
+| scripts/flash_image.py | keep | all | none | the image, 6 pages, walk 1 named it |
+| scripts/flasher.py | keep | all | none | esptool behind one seam |
+| scripts/grant.py | keep | all | none | the grant CLI, 6 pages |
+| scripts/image_evidence.py | keep | all | none | look and deploy ask it |
+| scripts/import_firmware.py | keep | all | none | walk 1 named it 4 times |
+| scripts/init_project.py | keep | all | none | `/spark:init`, 7 pages |
+| scripts/live.py | keep | all | none | the live try CLI, 6 pages |
+| scripts/look.py | keep | all | none | the look, walk 2 named it 12 times |
+| scripts/matching.py | keep | all | none | the matcher registry of `--need` and `--match`. its `drawer` import leaves in OC8 |
+| scripts/needs.py | keep | all | none | needs, match, pick and requirements. 669 lines pay down R1 in the design move |
+| scripts/netlist.py | keep | all | none | `check_spine` builds the `Netlist` (row 7) |
+| scripts/outcomes.py | keep | all | none | 32 importers, the first module of core (S4) |
+| scripts/part_pictures.py | keep | all | none | the drawing's pictograms |
+| scripts/parts.py | split | all | none | 2,414 lines, 18 jobs (group (d)). `parts.py` stays the CLI |
+| scripts/project_image.py | keep | all | none | the image's run logs, for look and deploy |
+| scripts/provenance.py | keep | all | none | a leaf, called by both `validate` functions |
+| scripts/reach.py | keep | all | none | the PO's bench tool, walk 2 named it 9 times |
+| scripts/ready_check.py | keep | all | none | after a flash, 4 importers |
+| scripts/restricted_pins.py | keep | all | none | the pins a live try must not touch |
+| scripts/run_scenario.py | keep | all | none | the simulation, walk 2 named it 40 times |
+| scripts/screen_text.py | keep | all | none | a leaf, renamed `text_guards.py` in OC8 |
+| scripts/sim_project.py | keep | all | none | the simulation project, walk 2 named it 7 times |
+| scripts/stand_in/machine.py | keep | all | none | `import_firmware` runs a firmware on the Mac with it, `pyproject.toml` lists it |
+| scripts/store.py | keep | all | none | 13 importers, the person's store |
+| scripts/tabbed_page.py | keep | `TabbedHtmlPage`, `TscircuitExport` | the PCB tab's lines (kept: P271's page has three tabs) | `check_spine` writes `page.html` with it |
+| scripts/tools.py | keep | all | none | 15 importers, `/spark:setup` |
+| scripts/zone_time.py | keep | all | none | a leaf. its test comes in `tests/test_leaves.py` (row 6) |
+| tools/board.py | keep | all | none | the session start and the day close. renamed `kanban.py` (plan v2, section 3) |
+| tools/check_backlog.py | keep | all | none | the WIP limits, `check_commit` runs it |
+| tools/check_commit.py | keep | all | none | the push hook's gate |
+| tools/check_docs.py | keep | all | none | the docs name only what is there, the gate runs it |
+| tools/circuit-to-wokwi | keep | `cli.ts`, `lib/`, `dist/` | none | group (e) |
+| tools/factcheck.py | keep | all | none | each slice's PR runs it on the plan |
+| tools/inventory.py | keep | all | none | `pruning_facts.py` imports `Inventory` |
+| tools/journey.py | keep | all | none | group (a) |
+| tools/match_eval.py | prune | none | none | group (a). the tag keeps it with `tests/test_match_eval.py` |
+| tools/mutate.py | keep | all | none | the mutation run before each PR, 7 pages |
+| tools/pre-push | keep | all | none | the gate |
+| tools/snapshot.py | keep | all | none | developing.md "Recording what spark answers" |
+
 ## The fact table
 
 <!-- facts:start -->

@@ -27,3 +27,19 @@ step adds its rows here.
 | 20 | The footprint stop is worded in three places (comment 9) | drift reader | raised | P411 #537 counts four spellings. Plan v2 item 5 takes P411's count |
 | 21 | Item 7 names every deploy class change | drift reader | raised | it leaves out the removal of `DeployEntry` (comment 5) and does not name `DeployedStore` or `OutsideWorld`. Plan v2 item 7 |
 | 22 | Each leaf has an import test | drift reader | raised | only `screen_text` has one. `zone_time` and `provenance` have none. Plan v2 item 5 |
+| 23 | `Brief` belongs in the setup area (comment 4) | Fable, plan v2 | raised | plan v2 puts it in `records`, because `sourcing` would import upward from setup. The council checks |
+| 24 | Stage 2 edits each file once | Fable, plan v2 | raised | stage 2 edits flat scripts (`board_facts`, `screen_text`) that stages 5 and 6 move again: a double touch |
+| 25 | `text_guards` is a text-only leaf | Fable, plan v2 | raised | it takes `drawer`'s field caps (`LABEL_MAX`, `TEXT_MAX`, `TAGS_MAX`), which are record limits |
+| 26 | Every helper name follows the verb rule | Fable, plan v2 | raised | `printable` and `one_line` bend it. Left to P382 #489 |
+| 27 | The power renames can land now | Fable, plan v2 | raised | `POWER_FACT_FUNCTIONS` and its siblings rename before P405 #529 gives its finding. It can be premature |
+| 28 | `RecordKind` follows P391's design | Fable, plan v2 | raised | it takes `version` and `required`, which P391's design lacks. Its author checks |
+| 29 | The area pages' links still work | Fable, plan v2 | raised | nine area pages link `#into-<area>`, which v2 removed. Step 4 fixes them. `check_docs` does not gate discovery pages |
+| 30 | `outcomes` is the home of `RECORDED`, `NONE_RECORDED` and `NOT_CHECKED` (slice OC4) | Fable, plan v2 | raised | it can be the wrong home. The council checks |
+| 31 | S2's goldens are easy | Fable, plan v2 | raised | the closed-gate and ready-seen goldens need the fake esptool to reach an erase. V1 called it the hardest fixture |
+| 32 | `Operation.schema()` types each result | Fable, plan v2 | raised | the shape of each Operation's data is untyped today, so the result schema is loose |
+| 33 | One trace callable after each call serves Langfuse | Fable, plan v2 | raised | it gives no spans, and Langfuse can need a start and an end |
+| 34 | `tools/match_eval.py` is reached by nothing | Fable, plan v2 | raised | it has a test, and `matching.py`'s docstring names it. The prune verdict rests on `Inventory`'s pages only (row 4) |
+| 35 | Each verdict is one PR | Fable, plan v2 | raised | the PCB checks' move is two steps: the marker now, the module later |
+| 36 | `tests/.mapping-under-test.json` belongs in git | Fable, plan v2 | raised | a test writes it, and it is tracked (row 9). Reported, not acted |
+| 37 | Plan v2's numbers are measured | Fable, plan v2 | raised | some (`check_spine.run` 204 lines, and others) come from `drift.md`, not a new count. Step 4 re-measures |
+| 38 | `--fact-set` maps to `_set_in_home` | Fable, plan v2 | raised | read from names, not from the body. Step 4 reads it |
