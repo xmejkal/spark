@@ -367,7 +367,31 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
 
     def test_a_note_that_is_no_string_is_a_problem_not_a_crash(self):
         problems = self._problems({"onboard_led": {"gpio": [15], "note": 5}})
-        self.assertEqual(problems, ["pin_roles.onboard_led has an empty note; say what the caveat is"])
+        self.assertEqual(problems, ["pin_roles['onboard_led'] has an empty note; say what the caveat is"])
+
+    def test_pin_roles_that_is_no_object_is_one_problem_not_a_crash(self):
+        for roles in ([1], ["onboard_led"], "x", 5, [], True):
+            with self.subTest(roles=roles):
+                problems = boards.validate(dict(definition("b"), pin_roles=roles), boards.LIBRARY / "b.json")
+                self.assertEqual(problems, ["pin_roles is %r; it must be an object of role -> {gpio, note}" % (roles,)])
+
+    def test_a_role_name_with_a_line_break_reaches_the_screen_quoted_in_every_problem(self):
+        for entry in ({"gpio": [0], "note": "x"}, {"gpio": [0]}, {"gpio": [0], "note": " ", "active_level": 2}):
+            with self.subTest(entry=entry):
+                problems = self._problems({"a\nb": entry})
+                self.assertTrue(problems)
+                for problem in problems:
+                    self.assertNotIn("\n", problem.split("Known:")[0])
+                    self.assertTrue(problem.startswith("pin_roles['a\\nb']"), problem)
+
+    def test_a_gpio_listed_twice_is_one_problem(self):
+        problems = self._problems({"onboard_led": {"gpio": [1, 1, 2], "note": "x"}})
+        self.assertEqual(problems, ["pin_roles['onboard_led'].gpio has GPIO1 twice"])
+
+    def test_a_gpio_that_is_refused_gives_one_problem_even_with_labels(self):
+        problems = self._problems({"onboard_button": {"gpio": ["0", 35], "note": "x", "labels": {"S1": 0, "S2": 35}}})
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("gpio is ['0', 35]", problems[0])
 
     def test_labels_that_name_gpios_of_the_entry_hold(self):
         self.assertEqual(self._problems({"onboard_button": {"gpio": [0, 35], "note": "x", "labels": {"S1": 0, "S2": 35}}}), [])

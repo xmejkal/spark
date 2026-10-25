@@ -335,7 +335,7 @@ class OnboardRole:
     """
 
     constant: str
-    scenario_verb: object
+    scenario_verb: str | None
     does: str
     what: str
 
@@ -461,6 +461,7 @@ def resolve(project: Path) -> Path:
 LABEL = re.compile(r"[A-Z0-9]+")
 FACT_NAME = re.compile(r"[a-z_]+")
 LEVEL_LABEL = "ON"
+LEVEL_FACT = "on"
 
 
 def is_gpio(value):
@@ -481,11 +482,13 @@ def role_entry_problems(where, role):
     """
     problems = []
     gpio = role["gpio"]
-    if not isinstance(gpio, list) or not all(is_gpio(each) for each in gpio):
+    listed = isinstance(gpio, list) and all(is_gpio(each) for each in gpio)
+    if not listed:
         problems.append("%s.gpio is %r; it must be a list of GPIO numbers" % (where, gpio))
         gpio = []
     problems += ["%s.gpio has GPIO%d, outside %d-%d" % (where, each, GPIO_MIN, GPIO_MAX)
                  for each in gpio if not GPIO_MIN <= each <= GPIO_MAX]
+    problems += ["%s.gpio has GPIO%d twice" % (where, each) for each in sorted(set(gpio)) if gpio.count(each) > 1]
     labels = role.get("labels", {})
     if not isinstance(labels, dict):
         problems.append("%s.labels is %r; it must be an object of label -> GPIO number" % (where, labels))
@@ -493,14 +496,14 @@ def role_entry_problems(where, role):
     for label, number in labels.items():
         if not isinstance(label, str) or not LABEL.fullmatch(label) or label == LEVEL_LABEL:
             problems.append("%s.labels has the label %r; a label is capital letters and digits, and not ON" % (where, label))
-        if not is_gpio(number) or number not in gpio:
+        if not is_gpio(number) or (listed and number not in gpio):
             problems.append("%s.labels[%r] is %r, which is not a GPIO in %s.gpio" % (where, label, number, where))
     facts = role.get("facts", {})
     if not isinstance(facts, dict):
         problems.append("%s.facts is %r; it must be an object of name -> {value, verified, source}" % (where, facts))
         facts = {}
     for name, fact in facts.items():
-        if not isinstance(name, str) or not FACT_NAME.fullmatch(name) or name == LEVEL_LABEL.lower():
+        if not isinstance(name, str) or not FACT_NAME.fullmatch(name) or name == LEVEL_FACT:
             problems.append("%s.facts has the name %r; a name is lower-case letters and underscores, and not on" % (where, name))
         elif name.upper() in labels:
             problems.append("%s.facts[%r] has the name of the label %r, so pins.py would write one constant twice"
@@ -595,22 +598,27 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
                     "physical.pad_aliases maps %s to %r, which is not a pad in header_order"
                     % (name, pad))
 
-    for role_name, role in (board.get("pin_roles") or {}).items():
+    pin_roles = board.get("pin_roles")
+    if pin_roles is not None and not isinstance(pin_roles, dict):
+        problems.append("pin_roles is %r; it must be an object of role -> {gpio, note}" % (pin_roles,))
+        pin_roles = {}
+    for role_name, role in (pin_roles or {}).items():
+        where = "pin_roles[%r]" % role_name  # quoted: these problems reach the screen with no guard
         if role_name not in PIN_ROLES:
             problems.append(
-                f"pin_roles.{role_name} is not a role any script reads, so it would be carried "
+                f"{where} is not a role any script reads, so it would be carried "
                 f"and ignored. Known: {', '.join(sorted(PIN_ROLES))}")
         if not isinstance(role, dict) or "gpio" not in role or "note" not in role:
-            problems.append(f"pin_roles.{role_name} needs both a 'gpio' list and a 'note'")
+            problems.append(f"{where} needs both a 'gpio' list and a 'note'")
             continue
         if not isinstance(role["note"], str) or not role["note"].strip():
             # The note is the whole value of a role: "GPIO0 is special" helps nobody, whereas
             # "held low at reset it enters the bootloader" decides whether a button can go there.
-            problems.append(f"pin_roles.{role_name} has an empty note; say what the caveat is")
-        problems.extend(role_entry_problems("pin_roles[%r]" % role_name, role))
+            problems.append(f"{where} has an empty note; say what the caveat is")
+        problems.extend(role_entry_problems(where, role))
         if "active_level" in role and (type(role["active_level"]) is not int or role["active_level"] not in (0, 1)):
             # P353: the level that lights an LED or that a pressed button reads, which firmware writes as a number.
-            problems.append(f"pin_roles.{role_name}.active_level is {role['active_level']!r}; it must be 0 or 1")
+            problems.append(f"{where}.active_level is {role['active_level']!r}; it must be 0 or 1")
 
     # Decisions must not leak into a facts file, at any depth.
     def forbidden(node, path=""):
