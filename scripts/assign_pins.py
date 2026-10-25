@@ -429,7 +429,7 @@ def onboard_lines(written, role, name, record):
     - one GPIO and no `labels`: `<NAME>` with the record's whole note;
     - `labels`: `<NAME>_<LABEL>` per label whose GPIO is a number, in the record's order, the note on the first;
     - `active_level`, with one GPIO or labels: `<NAME>_ON`, the level that lights the LED or that the pressed button reads;
-    - each fact whose value is a number or a word: `<NAME>_<FACT>`, with its source and "not verified" when it is not.
+    - each fact whose value is a finite number or a word: `<NAME>_<FACT>`, with its source and "not verified" when it is not.
     `boards.names_pins` says whether the part has a name for its pins at all. An LED with no level says so. `written` is
     every name pins.py writes for a signal, its `_PULL` line too: a part that would write one of them is refused, since
     the later line would win. A `gpio` that is no list gives no lines.
@@ -455,7 +455,7 @@ def onboard_lines(written, role, name, record):
         named.append((name + "_ON", "%d  # the active level in the board record, the source is on the line above" % level))
     for fact, said in facts.items():
         value = said.get("value") if isinstance(said, dict) else None
-        if isinstance(value, (int, str)) and not isinstance(value, bool):
+        if boards.is_fact_value(value):
             source = parts_library.one_line(str(said.get("source")))
             named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))

@@ -400,6 +400,15 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
                 self.assertTrue(problems[0].startswith("pin_roles['onboard_led'].facts['width'] "), problems)
                 self.assertIn(said, problems[0])
 
+    def test_a_fact_value_that_is_a_list_a_dict_or_not_finite_is_one_problem_and_a_number_or_word_holds(self):
+        for value, holds in ((135, True), (1.14, True), ("ST7789", True), (None, True), (True, True), ([1], False),
+                             ({"x": 1}, False), (float("nan"), False), (float("inf"), False), ([], False)):
+            with self.subTest(value=value):
+                fact = dict(self.FACT, value=value)
+                problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {"width": fact}}})
+                self.assertEqual(problems == [], holds, problems)
+                self.assertEqual(len(problems), 0 if holds else 1)
+
     def test_every_fact_of_every_role_is_checked(self):
         bad = {"value": 1, "verified": True}
         problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {"width": bad, "height": bad}},

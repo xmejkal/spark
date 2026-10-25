@@ -26,6 +26,7 @@ unverified footprint reach a gerber.
 
 import hashlib
 import json
+import math
 import re
 import sys
 from dataclasses import dataclass
@@ -466,6 +467,11 @@ def is_gpio(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def is_fact_value(value):
+    """True for a value that pins.py writes as a constant: a finite number or a word, never a bool."""
+    return isinstance(value, (int, float, str)) and not isinstance(value, bool) and (not isinstance(value, float) or math.isfinite(value))
+
+
 def role_entry_problems(where, role):
     """
     Every way the `gpio`, `labels` and `facts` of one `pin_roles` entry break the contract (P389, P396 row 11), named
@@ -500,6 +506,9 @@ def role_entry_problems(where, role):
             problems.append("%s.facts[%r] has the name of the label %r, so pins.py would write one constant twice"
                             % (where, name, name.upper()))
         problems += provenance.fact_problems("%s.facts[%r]" % (where, name), fact)
+        value = fact.get("value") if isinstance(fact, dict) else None
+        if isinstance(value, (list, dict)) or (isinstance(value, float) and not math.isfinite(value)):
+            problems.append("%s.facts[%r].value is %r; it must be a finite number, a word or null" % (where, name, value))
     return problems
 # --- end MVP ---
 

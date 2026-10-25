@@ -708,12 +708,13 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
         lines = [line.split("  #")[0] for line in self.lines(self.record()) if line.startswith("ONBOARD_BUTTON")]
         self.assertEqual(lines, ["ONBOARD_BUTTON_S1 = 0", "ONBOARD_BUTTON_S2 = 35", "ONBOARD_BUTTON_ON = 0"])
 
-    def test_a_fact_is_a_line_only_when_its_value_is_a_number_or_a_word(self):
-        facts = {"a_int": 3, "b_word": "it's", "c_bool": True, "d_none": None, "e_float": 1.5, "f_list": [1], "g_object": {"x": 1}}
+    def test_a_fact_is_a_line_only_when_its_value_is_a_finite_number_or_a_word(self):
+        facts = {"a_int": 3, "b_word": "it's", "c_bool": True, "d_none": None, "e_float": 1.14, "f_list": [1], "g_object": {"x": 1},
+                 "h_nan": float("nan"), "i_inf": float("inf")}
         entry = {"gpio": [], "note": "x", "facts": {name: {"value": value, "verified": True, "source": "s"}
                                                      for name, value in facts.items()}}
         self.assertEqual(self.named(board(pin_roles={"onboard_display": entry})),
-                         ["ONBOARD_DISPLAY_A_INT = 3", 'ONBOARD_DISPLAY_B_WORD = "it\'s"'])
+                         ["ONBOARD_DISPLAY_A_INT = 3", 'ONBOARD_DISPLAY_B_WORD = "it\'s"', "ONBOARD_DISPLAY_E_FLOAT = 1.14"])
 
     def test_a_fact_that_is_no_object_names_nothing(self):
         lit = board(pin_roles={"onboard_display": {"gpio": [], "note": "x", "facts": {"width": 135, "height": ["x"]}}})
