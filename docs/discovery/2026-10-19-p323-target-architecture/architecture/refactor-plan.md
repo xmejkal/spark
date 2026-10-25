@@ -303,8 +303,8 @@ calls the Strategy. Nothing is added for a caller that does not exist (learned r
 
 LangGraph, LangChain and Langfuse live only in `scripts/spark/frontends/`, one module each, installed by nobody who
 uses spark (free, few and local). When two frontends share code, a `Frontend` base class enters (rule T3). The learning
-spike in "Proposed cards" proves the contract after the refactor. One real Operation, the build, runs as a LangGraph
-node and as an MCP tool from the same `OPERATIONS`, traced by Langfuse. The core does not change.
+spike in "Proposed cards" proves the contract after wave 3. One real Operation, `LookAtBoard`, the first on the core, runs
+as a LangGraph node and as an MCP tool from the same `OPERATIONS`, traced by Langfuse. The core does not change.
 
 ## 5. The leaves and the named edges
 
@@ -411,14 +411,15 @@ what is MVP and what is later in each module, live in the
 
 ## 9. The lessons
 
-One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of the P385 folder. Each asks one question.
+One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of the P385 folder. It splits lessons 2, 3
+and 5 in two, so the PO answers eight questions, one per lesson. The decisions table names each question.
 
 | # | Lesson | The slices it opens | The decision it asks |
 |---|---|---|---|
 | 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | which of the verdict groups to take, in which order |
 | 2 | Package layout: `scripts/spark/`, areas, leaves, the move recipe | S4, S11, waves 5 and 6 | decisions 2 (the shape) and 4 (when the moves start) |
 | 3 | The core contract: Operation, result, Finding, the four rules of section 4, the five role tables as its worked input | S3, S5, S6, OC4 | decisions 1 (readability first) and 5 (the printed names) |
-| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_leaves.py` | the fast lane's budget on a push (S13) |
+| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | the fast lane's budget on a push (S13) |
 | 5 | Claude Code forms: command, skill, agent, MCP, and what each gets from one Operation | the frontends, the learning spike | decision 6 (a relayed yes), and whether the spike runs before wave 6 |
 
 ## 10. The waves and their slices
@@ -453,11 +454,11 @@ at a time, "I don't want to break the system before MVP." Five stay open.
 
 | # | Decision | Options | Recommendation | Asked by |
 |---|---|---|---|---|
-| 1 | Readability first | (a) v1's rank (N1): readable, testable, exchangeable, reusable, consistent. (b) the order of the PO's 10-23 words: "We do reuse code. It's good: defined interfaces, a good, solid object-oriented programming style, and good, clear naming and understandable code." (c) no rank, each slice names its goal. | (a). A function nobody reads is not reused, and R1's 40 lines apply only to new code in `spark/`, old code pays down by ratchet. The 10-23 words name reuse, interfaces, OO style, names and understandable code. They name neither "testable" nor "exchangeable": those two are v1's, from the council. | lesson 3 |
-| 2 | The shape | (a) thin CLIs over `scripts/spark/`, one Operation per job, one rules test (v1). (b) Operations inside today's flat `scripts/`, no package. (c) a `src/spark` package with `pyproject`. | (a). The package is what a LangGraph node or an MCP tool imports (section 4), and (b) cannot give one `OPERATIONS` per area without a folder. (c) is on the "not do" list: it installs something, and spark installs nothing heavy. | lesson 2 |
-| 4 | When the area moves start | (a) a story pulls its area (v1 D13). (b) now, the bench first, one PR at a time. (c) all areas in one pass. | (b). The PO pulled the refactor on 10-25, the bench's net exists (S1), and walk 2 ran on the bench. (c) breaks the "one PR at a time" rule of decision 3. | lesson 2 |
-| 5 | The printed names of the Operations | The standard (P381, rule 4) prints an Operation's words as its `op`: `show-part`. Today's ops are `look`, `deploy`, `board-get`, `emit-board`, `audit` and 30 more, in three orders, and the goldens and command pages pin them. (a) keep every op in a golden or a command page as a named exception, and only a new Operation follows rule 4. (b) rename each op to its class's words (`look-at-board`) in its area's output slice, a public change. | (a). The class names pass the rule now, and a public rename costs every page and habit (glossary, section 3). (b) can follow in a card of its own when the PO wants one spelling everywhere. | lesson 3 |
-| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | lesson 5 |
+| 1 | Readability first | (a) v1's rank (N1): readable, testable, exchangeable, reusable, consistent. (b) the order of the PO's 10-23 words: "We do reuse code. It's good: defined interfaces, a good, solid object-oriented programming style, and good, clear naming and understandable code." (c) no rank, each slice names its goal. | (a). A function nobody reads is not reused, and R1's 40 lines apply only to new code in `spark/`, old code pays down by ratchet. The 10-23 words name reuse, interfaces, OO style, names and understandable code. They name neither "testable" nor "exchangeable": those two are v1's, from the council. | question 4 |
+| 2 | The shape | (a) thin CLIs over `scripts/spark/`, one Operation per job, one rules test (v1). (b) Operations inside today's flat `scripts/`, no package. (c) a `src/spark` package with `pyproject`. | (a). The package is what a LangGraph node or an MCP tool imports (section 4), and (b) cannot give one `OPERATIONS` per area without a folder. (c) is on the "not do" list: it installs something, and spark installs nothing heavy. | question 2 |
+| 4 | When the area moves start | (a) a story pulls its area (v1 D13). (b) now, the bench first, one PR at a time. (c) all areas in one pass. | (b). The PO pulled the refactor on 10-25, the bench's net exists (S1), and walk 2 ran on the bench. (c) breaks the "one PR at a time" rule of decision 3. | question 3 |
+| 5 | The printed names of the Operations | The standard (P381, rule 4) prints an Operation's words as its `op`: `show-part`. Today's ops are `look`, `deploy`, `board-get`, `emit-board`, `audit` and 30 more, in three orders, and the goldens and command pages pin them. (a) keep every op in a golden or a command page as a named exception, and only a new Operation follows rule 4. (b) rename each op to its class's words (`look-at-board`) in its area's output slice, a public change. | (a). The class names pass the rule now, and a public rename costs every page and habit (glossary, section 3). (b) can follow in a card of its own when the PO wants one spelling everywhere. | question 5 |
+| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | question 7 |
 
 ### Wave 1: the bench net
 
@@ -567,7 +568,7 @@ functions are 63, 15,014, 110, 668) and five function lengths (`deploy.main` 28 
 
 ## Proposed cards
 
-1. Spike: the core contract is not proven for another interface → the build Operation runs as a LangGraph node and
+1. Spike: the core contract is not proven for another interface → `LookAtBoard` runs as a LangGraph node and
    an MCP tool from the same `OPERATIONS`, with a Langfuse trace, and the core does not change (after wave 3).
 2. Chore: `PRUNED.md` does not exist → the prune PR lands it at the root with the verdicts of the pruning list, the
    tag `pre-refactor-2026-10-25`, and one restore command per entry.
