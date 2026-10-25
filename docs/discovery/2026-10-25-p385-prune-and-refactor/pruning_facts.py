@@ -6,6 +6,7 @@ The fact table of card P385 (#494): one row per tracked file under scripts/ and 
 
 Run it from the repository root. A walk record is a file or a folder. `--walk` adds one column for each record, and
 names the column after the record's file name. A record outside the repository prints only its name and sha256.
+A `--walk` path that does not exist exits 2 with one line on stderr.
 """
 
 import argparse
@@ -94,6 +95,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--walk", action="append", default=[], metavar="RECORD", help="one more walk record, a file or folder")
     args = parser.parse_args(argv)
+    missing = [p for p in args.walk if not Path(p).expanduser().exists()]
+    if missing:
+        print("pruning_facts: no such walk record: %s" % missing[0], file=sys.stderr)
+        return 2
     lines = table(args.walk) + ["", "Walk records:"]
     for label, paths in WALKS.items():
         lines.append("- %s: %s" % (label, " and ".join("`%s`" % p for p in paths)))
