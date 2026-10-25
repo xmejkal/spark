@@ -510,7 +510,7 @@ def role_entry_problems(where, role):
                             % (where, name, name.upper()))
         problems += provenance.fact_problems("%s.facts[%r]" % (where, name), fact)
         value = fact.get("value") if isinstance(fact, dict) else None
-        if isinstance(value, (list, dict)) or (isinstance(value, float) and not math.isfinite(value)):
+        if value is not None and not is_fact_value(value):  # one rule with pins.py, so no fact is dropped in silence
             problems.append("%s.facts[%r].value is %r; it must be a finite number, a word or null" % (where, name, value))
     return problems
 # --- end MVP ---

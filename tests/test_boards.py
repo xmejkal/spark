@@ -424,8 +424,8 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
                 self.assertTrue(problems[0].startswith("pin_roles['onboard_led'].facts['width'] "), problems)
                 self.assertIn(said, problems[0])
 
-    def test_a_fact_value_that_is_a_list_a_dict_or_not_finite_is_one_problem_and_a_number_or_word_holds(self):
-        for value, holds in ((135, True), (1.14, True), ("ST7789", True), (None, True), (True, True), ([1], False),
+    def test_a_fact_value_that_is_a_list_a_dict_a_bool_or_not_finite_is_one_problem_and_a_number_or_word_holds(self):
+        for value, holds in ((135, True), (1.14, True), ("ST7789", True), (None, True), (True, False), ([1], False),
                              ({"x": 1}, False), (float("nan"), False), (float("inf"), False), ([], False)):
             with self.subTest(value=value):
                 fact = dict(self.FACT, value=value)
