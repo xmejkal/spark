@@ -4,23 +4,23 @@ Card P385 [#494](https://github.com/xmejkal/spark/issues/494). Read one lesson a
 one line. Each lesson has the idea, an example from spark, the options, the plan's pick and one question.
 
 [Plan v2](../2026-10-19-p323-target-architecture/architecture/refactor-plan.md#9-the-lessons) lists five lessons.
-Three of them (2, 3 and 5) ask two decisions each. Each is split here, so every lesson asks one question and the
-numbers shift.
+Here its lesson 2 splits into two and its lesson 3 into three, so every lesson asks one question. Decision 6 moves from
+plan lesson 5 to the core contract, because the pause for a yes is part of the contract.
 
 | Question | Lesson | Plan v2 lesson | What the answer settles |
 |---|---|---|---|
 | Question 1 | pruning | 1 | the scope and order of the prune PR (no numbered decision) |
 | Question 2 | package shape | 2 | decision 2, the shape |
 | Question 3 | when the moves start | 2 | decision 4, the start of the area moves |
-| Question 4 | readability first | 3 | decision 1, the goal that ranks first |
-| Question 5 | printed names | 3 | decision 5, the printed names of the Operations |
-| Question 6 | tests | 4 | the fast lane's budget on a push (S13, no numbered decision) |
-| Question 7 | a relayed yes | 5 | decision 6, a yes relayed by another program |
-| Question 8 | the learning spike | 5 | when the spike runs (proposed card 1, no numbered decision) |
+| Question 4 | the core contract | 3 | decision 6, a yes relayed by another program |
+| Question 5 | readability first | 3 | decision 1, the goal that ranks first |
+| Question 6 | printed names | 3 | decision 5, the printed names of the Operations |
+| Question 7 | tests | 4 | the fast lane's budget on a push (S13, no numbered decision) |
+| Question 8 | Claude Code forms | 5 | when the learning spike runs (proposed card 1, no numbered decision) |
 
 A wave is one unit of the plan. There are six. An Operation is a class with one job and one `run()` method. The
-options (a), (b) and (c) are the plan's own decision options. Lesson 1 names its options with words, so no letter
-names two things.
+letters (a), (b) and (c) name options inside one lesson. In lessons 2 to 6 they are the plan's own decision letters.
+Lesson 1 names its options with words.
 
 ## Lesson 1: pruning
 
@@ -95,15 +95,47 @@ The pick. (b). You pulled the refactor on 2026-10-25, the bench net exists, and 
 
 Question 3: decision 4, the start of the area moves: (a), (b) or (c)?
 
-## Lesson 4: readability first
+## Lesson 4: the core contract
+
+The idea. The core contract is what every Operation keeps, for any caller. Each Operation has one `run()` and
+a `schema()`, a JSON description of its arguments and its result.
+
+The example. Wave 3 makes `look` the Operation `LookAtBoard`. Four rules hold for it, one test each:
+
+1. `schema()` makes the MCP tool and the LangGraph node.
+2. No Operation asks or prints. It asks only through `outside.consent`.
+3. `run_operation` has one hook, `trace`, where Langfuse plugs in.
+4. `Privacy` masks the result before `trace` and the printer see it.
+
+A graph (a program that runs Operations in turn) pauses between Operations, never inside one. Its consent never
+asks, so the deploy stops before the board and returns the next step for your terminal.
+
+```
+graph: DeployImage (no yes, board untouched) -> you: deploy.py --token T -> graph: LookAtBoard
+```
+
+Today a yes is `typed` or `grant`, both made in your terminal.
+
+Decision 6, the options.
+
+- (a) No third kind. A graph pauses, and you give the yes in your own terminal. Safe, but each erase waits for you.
+- (b) A third kind, `relayed`, which names the program that collected it. The gate refuses it for the erase and
+  allows it for a grant. A graph runs on, but the safety rules change.
+
+The pick. (a). It keeps the erase in your terminal. Only you can make the safety change of (b).
+
+Question 4: decision 6, a yes relayed by another program: (a) or (b)?
+
+## Lesson 5: readability first
 
 The idea. Five goals guide the code: readable, testable, exchangeable, reusable, consistent. Sometimes two pull apart.
 
 The example. One onboard role, `onboard_battery_sense`, is spelled in five tables. In `boards.py` it is a key of
 `PIN_ROLES`, the constant `ONBOARD_BATTERY_SENSE` and a row of `ONBOARD_ROLES`. In `assign_pins.py` it is a key of
 `ROLE_PENALTY` (20) and an entry of `CONFLICTING_ROLES`. Reuse says: put the penalty in the `OnboardRole` row, so one
-edit adds a role. Readability says: a board record then holds a scoring weight that only the pin assigner reads, and a
-reader of the record cannot tell what 20 means. The plan waits for P405 before it moves the penalty.
+edit adds a role. Readability says: the role table in `boards.py` then holds a weight that only the pin assigner
+reads. A reader of the table cannot tell what 20 means. The plan waits for P405 before it moves the
+penalty.
 
 ```
 today:  PIN_ROLES, ONBOARD_*, ONBOARD_ROLES, ROLE_PENALTY, CONFLICTING_ROLES
@@ -112,22 +144,23 @@ target: ONBOARD_ROLES -> OnboardRole(constant, does, what, penalty)   (after P40
 
 Decision 1, the options.
 
-- (a) Version 1's rank: readable first. The role stays readable in the record, but clear names cost more lines.
+- (a) Version 1's rank: readable first. The role table stays readable, but clear names cost more lines.
 - (b) Your 2026-10-23 order, reuse first. One row, but a shared helper that nobody reads is hard to reuse.
 - (c) No rank, each slice names its goal. Free, but two slices can pull in different directions.
 
 The pick. (a). A function nobody reads is not reused.
 
-Question 4: decision 1, which goal ranks first: (a), (b) or (c)?
+Question 5: decision 1, which goal ranks first: (a), (b) or (c)?
 
-## Lesson 5: printed names
+## Lesson 6: printed names
 
-The idea. Every command prints an `op`, the name of the Operation that answered. Standard P381 says an Operation's
-`op` is its class's words, such as `look-at-board`.
+The idea. An envelope is the one JSON answer a command prints with `--json`. It carries an `op`, the name of the
+Operation that answered. Standard P381 says that name is its class's words, such as `look-at-board`.
 
-The example. `look.py` prints `op` as `look`. Its class is `LookAtBoard`. The bench has six ops, `look`, `deploy`,
-`grant`, `grant-check`, `live` and `reach`. Today's scripts have 30 more, such as `board-get` and `emit-board`. The
-golden files and the command pages pin every one of them.
+The example. `parts.py` has 29 entries in `OPERATIONS`, from `list` to `describe`, and each prints its name as `op`.
+The bench has five jobs, `look`, `deploy`, `grant`, `live` and `reach`. Only `look` and `deploy` print an envelope.
+`grant`, `live` and `reach` print a flat JSON line with no `op`. So 31 ops print today. The class of `look` is
+`LookAtBoard`. The goldens and the command pages pin the printed ops.
 
 ```
 op "look"  ->  op "look-at-board"   (every golden, every command page, every habit)
@@ -136,21 +169,23 @@ op "look"  ->  op "look-at-board"   (every golden, every command page, every hab
 Decision 5, the options.
 
 - (a) Keep every op that a golden or a command page pins, as a named exception. Only a new Operation follows the
-  rule. Nothing public changes.
+  rule. Nothing public changes, but two spellings live side by side.
 - (b) Rename each op to its class's words in its area's output slice. One spelling everywhere, but a public change.
 
 The pick. (a). The class names pass the rule already. A card can rename later.
 
-Question 5: decision 5, the printed names: (a) or (b)?
+Question 6: decision 5, the printed names: (a) or (b)?
 
-## Lesson 6: tests
+## Lesson 7: tests
 
 The idea. A golden test saves a command's whole output once and compares each new run with it. A Fake is a stand-in
 object that a test gives to the code in place of the real board or tool.
 
 The example. `tests/golden_bench.py` holds 13 cases and `tests/golden/` holds their saved outputs. The other kind of
 test is `mock.patch`, which swaps a name inside a module. A module move breaks it. `tests/test_deploy_gate.py` has 14
-such lines, and the test files have 361. A ratchet (a count that only goes down) shrinks them. The fast lane is the
+such lines, and the test files have 361. A ratchet (a count that only goes down) shrinks them. Wave 2 adds
+`tests/test_imports.py`, the leaf test. A leaf is a module that imports no spark module, and the test fails on any
+such import. The fast lane is the
 tests that run on each push. The slow lane is all the others, run before a PR.
 
 ```
@@ -165,51 +200,37 @@ S13, the fast lane's budget.
 
 The pick. (a). The plan's check for wave 5 says under 90 s.
 
-Question 6: what time budget does the fast lane get on a push: (a), (b) or (c)?
+Question 7: what time budget does the fast lane get on a push: (a), (b) or (c)?
 
-## Lesson 7: a relayed yes
+## Lesson 8: Claude Code forms
 
-The idea. Claude Code reads spark through forms, each calling the same core: a command, a skill, an agent, a hook and
-MCP. MCP lets an AI app call a server's tools, and `Operation.schema()` makes the tool.
+The idea. Claude Code reaches spark through five forms, and each calls the same Operation. A spike (research whose
+answer is a finding) proves that the core serves one more interface.
+
+The example. The forms that spark ships today, each a tracked file:
+
+- A command: 8 files in `commands/`, such as `commands/deploy.md`.
+- A skill: 3 folders in `skills/`, such as `skills/spark-review/`.
+- An agent: 4 files in `agents/`, such as `agents/part-finder.md`.
+- MCP: `.mcp.json` names two outside servers, `espressif-docs` and `jlcpcb`. No spark Operation is an MCP tool yet.
+- The plugin: `.claude-plugin/plugin.json` bundles the rest.
+
+A hook is not used yet. The plugin ships no hooks folder.
 
 ```
 one Operation -> CLI --json -> command, skill, agent
              \-> schema()   -> MCP tool, LangGraph node
 ```
 
-The example. The erase of a board needs your yes. Today `data.yes.kind` is `typed` or `grant`, both made in your
-terminal, and `agents.md` says Claude never supplies the yes. A graph's screen or an MCP client can collect a yes
-itself.
-
-Decision 6, the options.
-
-- (a) No third kind. A graph pauses, and you give the yes in your own terminal.
-- (b) A third kind, `relayed`, with `who` and the program that collected it. The gate refuses it for the erase and
-  allows it for a grant.
-
-The pick. (a). It needs no new rule and keeps the erase in your terminal. (b) is a safety change for you alone.
-
-Question 7: decision 6, a yes relayed by another program: (a) or (b)?
-
-## Lesson 8: the learning spike
-
-The idea. A spike is research whose answer is a finding. This one proves that the core serves another interface: one
-Operation runs as a LangGraph node and as an MCP tool from the same `OPERATIONS`, traced by Langfuse. The core does
-not change.
-
-The example. After wave 3 the core exists, and `look` is the one Operation on it. The build becomes an Operation only
-in wave 6. So an early spike runs `look`, and a spike with the build waits for wave 6.
-
-```
-wave 3: look on the core   wave 4: five bench Operations   wave 6: the build
-```
+The learning spike runs one Operation as a LangGraph node and as an MCP tool from the same `OPERATIONS`, traced by
+Langfuse. After wave 3 `LookAtBoard` is the one Operation on the core. The build becomes one only in wave 6.
 
 The options.
 
-- (a) After wave 3, with `look`. An early proof, and a flaw shows while the core is cheap to change.
-- (b) After wave 4, with the bench Operations. A wider proof, but a flaw shows later.
+- (a) After wave 3, with `LookAtBoard`. An early proof, but it tests one Operation only.
+- (b) After wave 4, with five bench Operations. A wider proof, but a flaw shows later.
 - (c) After wave 6, with the build. The real build, but you learn LangGraph last.
 
-The pick. (a). You learn LangGraph early, and the proof comes before the moves.
+The pick. (a). A flaw shows while the core is cheap to change.
 
 Question 8: after which wave does the learning spike run: 3, 4 or 6?

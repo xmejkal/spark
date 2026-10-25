@@ -36,11 +36,11 @@ column vetoes no verdict, because a record names scripts in prose.
 ## What waits on the PO
 
 - The merge of the PR for this card.
-- Question 1 (lesson 1): which option for the prune PR, quick now and split later, prune only, or everything now?
-- Question 2 (lesson 2): decision 2, the shape of the package: (a), (b) or (c)?
-- Question 3 (lesson 3): decision 4, when the area moves start: (a), (b) or (c)?
-- Question 4 (lesson 4): decision 1, which goal ranks first when readable and reusable pull apart: (a), (b) or (c)?
-- Question 5 (lesson 5): decision 5, the printed names of the Operations: (a) or (b)?
-- Question 6 (lesson 6): the fast lane's budget on a push: (a), (b) or (c)?
-- Question 7 (lesson 7): decision 6, a yes relayed by another program: (a) or (b)?
-- Question 8 (lesson 8): after which wave the learning spike runs: 3, 4 or 6?
+- Question 1 (lesson 1, pruning): the scope and order of the prune PR, no numbered decision.
+- Question 2 (lesson 2, package shape): decision 2, the shape of the package: (a), (b) or (c)?
+- Question 3 (lesson 3, when the moves start): decision 4, when the area moves start: (a), (b) or (c)?
+- Question 4 (lesson 4, the core contract): decision 6, a yes relayed by another program: (a) or (b)?
+- Question 5 (lesson 5, readability first): decision 1, which goal ranks first: (a), (b) or (c)?
+- Question 6 (lesson 6, printed names): decision 5, the printed names of the Operations: (a) or (b)?
+- Question 7 (lesson 7, tests): the fast lane's budget on a push (S13): (a), (b) or (c)?
+- Question 8 (lesson 8, Claude Code forms): after which wave the learning spike runs: 3, 4 or 6?
