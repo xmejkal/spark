@@ -452,7 +452,7 @@ def onboard_lines(assignments, role, name, record):
         value = said.get("value") if isinstance(said, dict) else None
         if isinstance(value, (int, str)) and not isinstance(value, bool):
             source = parts_library.one_line(str(said.get("source")))
-            named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, from %s%s" % (
+            named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))
     names = {each for each, _ in named}
     taken = [entry["signal"] for entry in assignments if entry["signal"] in names]
@@ -491,7 +491,7 @@ def main(argv=None):
     parser.add_argument("--project", help="the project to resolve the board from")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--emit-pins", metavar="FILE",
-                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED, ONBOARD_BUTTON and their _ON levels when the board record names them")
+                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED, ONBOARD_BUTTON, ONBOARD_DISPLAY_* (one name per label and per fact) and the _ON levels when the board record names them")
     args = parser.parse_args(argv)
 
     # One loader for the whole chain (`design.py`): the project is the requirements FILE's, the

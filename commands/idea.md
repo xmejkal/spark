@@ -102,7 +102,9 @@ person's projects is written in that project, and its shelf copy follows. spark'
 
 Pick with the person, need by need, from what `--match` offered: a record's id, or the drawer entry's key of an owned
 thing with no record (a speaker, a battery). The key of an entry that has a record is picked as that record, and the
-pick says so. If the board's own LED or button serves a need, pick the board for that need too (`light=xiao-esp32-c6`).
+pick says so. If the board's own LED, button or display serves a need, pick the board for that need too
+(`light=xiao-esp32-c6`). `--match` offers it for such a need, as `onboard LED light`, `onboard button` or `onboard
+display screen` in the board's `does` line (P389).
 Then:
 
 ```

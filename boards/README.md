@@ -111,6 +111,38 @@ record without it, or with a part missing, gives the plain hint: "the BOOT butto
 }
 ```
 
+## The board's own parts
+
+A board that carries its own LED, buttons or display names them in `pin_roles`, under `onboard_led`,
+`onboard_button` or `onboard_display`. Each entry holds a `gpio` list and a `note` that says where the facts come from.
+An entry with an empty `gpio` list is legal. Three things follow from such an entry:
+
+- `/spark:idea` offers the board for a need that the part serves, such as "indicate light" for the LED.
+- `firmware/pins.py` names the part: `ONBOARD_LED = 15`, or one line per label for a part on many pins.
+- The build says that a passed run does not test the part.
+
+An entry may also hold these keys:
+
+- `active_level`: 0 or 1, the level that lights the LED or that a pressed button reads.
+- `labels`: `{"S1": 0, "S2": 35}`. A label is capital letters and digits, and not `ON`. Each value is one of the entry's
+  `gpio`. `pins.py` gets a line `ONBOARD_BUTTON_S1 = 0` per label. The note and the record's `documents` cite the labels.
+- `facts`: `{"width": {"value": 135, "verified": false, "source": "…", "why_it_matters": "…"}}`. A name is lower-case
+  letters and underscores, and not `on`. Each fact follows the part records' rule: a value, `verified` and a `source`,
+  and a `why_it_matters` when the value is not verified. `pins.py` gets `ONBOARD_DISPLAY_WIDTH = 135`, with the source
+  and "not verified" in the comment. Only a number or a word becomes a line.
+
+```json
+"onboard_display": {
+  "gpio": [19, 18, 5, 16, 23, 4],
+  "labels": {"MOSI": 19, "SCLK": 18, "CS": 5, "DC": 16, "RST": 23, "BL": 4},
+  "facts": {"driver": {"value": "ST7789", "verified": true, "source": "documents.lilygo-t-display-readme, Pinout table"}},
+  "note": "The TFT on SPI, from the pinout table of documents.lilygo-t-display-readme."
+}
+```
+
+`--validate` refuses a `gpio` that is not a list of GPIO numbers, a label or a fact name that breaks these rules, and a
+fact without its source. The T-Display record in `tests/data/boards/` is the one example today.
+
 ## Simulation
 
 `wokwi_part_type` names the part the generated Wokwi diagram uses. If Wokwi has no model of the

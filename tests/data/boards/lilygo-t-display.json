@@ -151,13 +151,13 @@
         "width": {
           "value": 135,
           "verified": false,
-          "source": "no kept source states it",
+          "source": "none, no kept source states it",
           "why_it_matters": "the firmware sizes the screen and its drawing to it, and only the walk's firmware draws at this size"
         },
         "height": {
           "value": 240,
           "verified": false,
-          "source": "no kept source states it",
+          "source": "none, no kept source states it",
           "why_it_matters": "the firmware sizes the screen and its drawing to it, and only the walk's firmware draws at this size"
         }
       },

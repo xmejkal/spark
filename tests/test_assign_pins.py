@@ -699,9 +699,9 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
     def test_a_fact_nobody_verified_says_so_and_a_verified_one_says_where_from(self):
         lines = {line.split(" = ")[0]: line for line in self.lines(self.record())}
         self.assertTrue(lines["ONBOARD_DISPLAY_WIDTH"].endswith("; not verified"), lines["ONBOARD_DISPLAY_WIDTH"])
-        self.assertIn("from no kept source states it", lines["ONBOARD_DISPLAY_WIDTH"])
+        self.assertIn("source: none, no kept source states it", lines["ONBOARD_DISPLAY_WIDTH"])
         self.assertEqual(lines["ONBOARD_DISPLAY_DRIVER"],
-                         "ONBOARD_DISPLAY_DRIVER = 'ST7789'  # onboard_display: driver, from documents.lilygo-t-display-readme, "
+                         "ONBOARD_DISPLAY_DRIVER = 'ST7789'  # onboard_display: driver, source: documents.lilygo-t-display-readme, "
                          "Pinout table, row TFT Driver")
 
     def test_each_button_label_is_a_line_and_the_level_is_one_line(self):
