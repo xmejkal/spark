@@ -15,6 +15,7 @@ from pathlib import Path
 
 import store
 import zone_time
+from screen_text import printable
 from board_connection import BoardUnreachableError, BoardCodeError
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
@@ -106,8 +107,8 @@ class LastDeploy:
     def line(self):
         """The look's line."""
         if self.state == RECORDED:
-            said = "%s, %s, %s (its store record, not read from the board)" % (printable(self.project), self.verdict,
-                                                                                  self.time_said())
+            said = "%s, %s, %s (its store record, not read from the board)" % (printable(self.project), printable(self.verdict),
+                                                                                  printable(self.time_said()))
         elif self.state == NONE_RECORDED:
             said = "none in its store record (it keeps only its own deploys)"
         else:
@@ -117,8 +118,8 @@ class LastDeploy:
     def in_question(self):
         """The words the deploy question puts in its erase sentence."""
         if self.state == RECORDED:
-            return "spark's store record names %s as its last deploy here, %s, %s" % (printable(self.project), self.time_said(),
-                                                                                     self.verdict)
+            return "spark's store record names %s as its last deploy here, %s, %s" % (printable(self.project), printable(self.time_said()),
+                                                                                     printable(self.verdict))
         if self.state == NONE_RECORDED:
             return "spark's store record names no deploy here"
         return "spark did not read its record of this board: %s" % self.why
@@ -126,11 +127,6 @@ class LastDeploy:
     def to_dict(self):
         return {"state": self.state, "why": self.why, "project": self.project, "verdict": self.verdict,
                 "deployed": self.deployed}
-
-
-def printable(text):
-    """The text with each character that a terminal does not print as itself, such as a newline, shown as `?`."""
-    return "".join(each if each.isprintable() else "?" for each in text)
 
 
 def read_last_deploy(mac):

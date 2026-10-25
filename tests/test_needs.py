@@ -346,6 +346,44 @@ class TheMatcherTest(unittest.TestCase):
         self.assertIn("soil-moisture", next(line for line in lines if "x-soil (catalog)" in line))
         self.assertIn("gas [other words]", next(line for line in lines if "x-other (catalog)" in line))
 
+    # --- MVP --- P403: --match names who holds the stock that is not free
+    def hold_the_xiao(self, *holders):
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({
+            "schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}, "used_in": {who: 1 for who in holders}}))
+
+    def board_text(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        return next(line for line in out.getvalue().splitlines() if "xiao-esp32-c6 (" in line)
+
+    def xiao(self):
+        board = [c for c in self.matched_needs()[0]["board"]["candidates"] if c["id"] == "xiao-esp32-c6"]
+        return board[0]
+
+    def test_a_match_names_who_holds_a_board_and_the_asking_project_is_left_out(self):
+        self.hold_the_xiao("reaction-game", "plant-alarm", "plant-alarm-2")
+        self.assertEqual(self.xiao()["held_by"], ["plant-alarm-2", "reaction-game"])
+        self.assertIn("free 0, held by plant-alarm-2, reaction-game", self.board_text())
+
+    def test_a_candidate_nobody_holds_says_no_holder(self):
+        self.assertEqual(self.xiao()["held_by"], [])
+        self.assertNotIn("held by", self.board_text())
+
+    def test_an_unlisted_project_is_not_named_as_holding_its_own_board(self):
+        # a moved or renamed folder leaves projects.json without it, and --pick still holds under the folder's name
+        (self.home / "projects.json").write_text("{}")
+        own = store.add_project(self.project, dry_run=True)
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({
+            "schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}, "used_in": {own: 1}}))
+        self.assertEqual(self.xiao()["held_by"], [])
+        self.assertNotIn("held by", self.board_text())
+
+    def test_a_holder_name_with_a_newline_shows_a_question_mark_in_the_match_text(self):
+        self.hold_the_xiao("reaction\ngame")
+        self.assertIn("free 0, held by reaction?game", self.board_text())
+
     def test_a_board_owes_nothing_and_a_sound_one_is_not_broken(self):
         board = [c for c in self.needs["board"]["candidates"] if c["id"] == "firebeetle2-esp32s3"][0]
         self.assertEqual((board["owes"], board["broken"]), ([], False))
@@ -408,7 +446,7 @@ class TheMatcherTest(unittest.TestCase):
         found = {c["id"] or c["entry"]: c for c in self.alone({"id": "heat", "does": "sense", "what": "temperature"})["candidates"]}
         self.assertEqual(found["ntc"], {"id": None, "kind": None, "entry": "ntc", "owes": [], "broken": False, "proof": [], "in": "drawer",
                                         "label": "an NTC thermistor", "what": ["temperature"], "what_matches": True,
-                                        "score": 1.0, "why": ["same words"], "owned": 3, "free": 3, "unsure": False})
+                                        "score": 1.0, "why": ["same words"], "held_by": [], "owned": 3, "free": 3, "unsure": False})
         combo = found["y-combo"]
         self.assertEqual((combo["kind"], combo["entry"], combo["in"], combo["label"], combo["what"], combo["proof"], combo["what_matches"]),
                          ("part", None, "catalog", "A combo board", ["temperature"], [], True))
@@ -664,6 +702,14 @@ class ThePicksTest(unittest.TestCase):
         self.assertIn('[{"entry": "board", "used_in": …}]', said["problems"][0]["fix"])
         self.assertEqual((self.picks()["board"], self.entry("board")["used_in"]), (None, {"smartbin-local": 1}))
 
+    def test_a_holder_name_with_a_newline_shows_a_question_mark_in_the_refusal_and_its_fix(self):
+        (self.home / "drawer" / "board.json").write_text(json.dumps({
+            "schema": 1, "label": "FireBeetle", "count": 1, "is": {"board": "firebeetle2-esp32s3"}, "used_in": {"smart\nbin": 1}}))
+        said, _ = run(["--pick", str(self.project), "board=firebeetle2-esp32s3", "--dry-run"])
+        self.assertIn("held by smart?bin", said["problems"][0]["sentence"])
+        self.assertIn("without smart?bin", said["problems"][0]["fix"])
+        self.assertNotIn("\n", said["problems"][0]["sentence"] + said["problems"][0]["fix"])
+
     def test_the_board_picked_for_two_needs_takes_one_piece(self):
         # P387: the board's own LED or button serves a need, so the one board a person owns is picked for it as well
         (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}}))
@@ -898,7 +944,7 @@ class ThePicksTest(unittest.TestCase):
 
     def test_a_refused_pick_says_its_notes_between_what_it_would_have_changed_and_what_it_refused(self):
         self.assertEqual(self.text(["--pick", str(self.project), "alarm=mp3", "board=firebeetle2-esp32s3"]), "\n".join([
-            '  refused, not written: set mp3: used_in null → {"plant-alarm": 1}',
+            '  not written: set mp3: used_in null → {"plant-alarm": 1}',
             "  mp3: maybe owned — check the drawer first",
             "  refused, so nothing was written: firebeetle2-esp32s3 — 1 owned, held by smartbin-local — 1 picked here",
             '  fix for firebeetle2-esp32s3: free it — a file holding [{"entry": "board", "used_in": …}] without smartbin-local, given to '

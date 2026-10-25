@@ -1,5 +1,6 @@
 """P401 (#518): board_facts.read_last_deploy reads what spark's store says of the board on USB, and says what it cannot read."""
 
+import ast
 import json
 import os
 import shutil
@@ -16,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_facts  # noqa: E402
+import screen_text  # noqa: E402
 import store  # noqa: E402
 
 MAC = "8c:bf:ea:cc:97:70"
@@ -169,6 +171,32 @@ class LastDeployWordsTest(LastDeployCase):
         self.assertEqual(last.to_dict(), {"state": "not-checked", "why": "the board's MAC was not read", "project": None,
                                           "verdict": None, "deployed": None})
         json.dumps(last.to_dict())
+
+
+# --- MVP --- P403: every field of the line passes the print guard
+class PrintableFieldsTest(LastDeployCase):
+    def test_a_verdict_and_a_time_with_a_newline_show_a_question_mark_in_both_sentences(self):
+        last = board_facts.LastDeploy("recorded", "blink\nc6", "ready\nseen", "not a time\nat all")
+        for said in (last.line(), last.in_question()):
+            with self.subTest(said=said):
+                self.assertIn("blink?c6", said)
+                self.assertIn("ready?seen", said)
+                self.assertIn("not a time?at all", said)
+                self.assertNotIn("\n", said)
+
+    def test_a_time_with_a_zone_is_said_without_the_question_mark(self):
+        last = board_facts.LastDeploy("recorded", "p", "ready seen", "2026-10-23T04:55:29Z")
+        self.assertNotIn("?", last.line())
+
+    def test_screen_text_imports_no_spark_module(self):
+        tree = ast.parse((ROOT / "scripts" / "screen_text.py").read_text())
+        imported = {name.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for name in node.names}
+        imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module}
+        spark = {path.stem for path in (ROOT / "scripts").glob("*.py")}
+        self.assertEqual(imported & spark, set())
+
+    def test_printable_shows_what_a_terminal_does_not_print_as_a_question_mark(self):
+        self.assertEqual(screen_text.printable("a\nb\u202ec ok"), "a?b?c ok")
 
 
 if __name__ == "__main__":

@@ -28,5 +28,5 @@
  {"file": "scripts/parts.py", "name": "a refused write says it was written",
   "find": "\"written\": not (problems or dry_run)}", "replace": "\"written\": not dry_run}"},
  {"file": "scripts/parts.py", "name": "a refused write's change lines are not marked",
-  "find": "(\"  refused, not written: \" + _change_line(change, dry_run).strip()) if problems else _change_line(change, dry_run)", "replace": "_change_line(change, dry_run)"}
+  "find": "(\"  not written: \" + _change_line(change, False).strip()) if problems else _change_line(change, dry_run)", "replace": "_change_line(change, dry_run)"}
 ]
