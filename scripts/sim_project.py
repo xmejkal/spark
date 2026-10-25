@@ -134,7 +134,8 @@ def onboard_limits(board):
     what the build did not look at, as a stand-in's sentence is what the simulation cannot show (P37).
     """
     pin_roles = board.get("pin_roles") if isinstance(board.get("pin_roles"), dict) else {}
-    roles = [(role, pin_roles[role]) for role in boards.ONBOARD_ROLES if isinstance(pin_roles.get(role), dict)]
+    roles = [(role, pin_roles[role]) for role, spec in boards.ONBOARD_ROLES.items()
+             if spec.scenario_verb and isinstance(pin_roles.get(role), dict)]
     if not roles:
         return []
     documents = board.get("documents") if isinstance(board.get("documents"), dict) else {}

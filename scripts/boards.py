@@ -99,6 +99,7 @@ PIN_ROLES = {
     "console_uart": "carries the boot log and the serial console; it moves at every reset",
     "onboard_button": "something is already wired here and can press it",
     "onboard_led": "something is already wired here and will blink whatever you put on it",
+    "onboard_display": "a display is already wired here and shows whatever its bus carries",
     "strapping": "sampled at reset; the level here decides how the chip boots",
     "adc2_unusable_with_wifi": "on ADC2, which cannot be read while the radio is on",
     "not_wake_capable": "cannot bring the chip out of deep sleep",
@@ -114,9 +115,10 @@ PIN_ROLES = {
 
 #: Named, so the one role a check singles out is spelled in exactly one place.
 CONSOLE_UART = "console_uart"
-#: The board's own LED and button, which pins.py names and the build compares with the Wokwi definition (P396).
+#: The board's own LED, button and display, which pins.py names and the build compares with the Wokwi definition (P396).
 ONBOARD_LED = "onboard_led"
 ONBOARD_BUTTON = "onboard_button"
+ONBOARD_DISPLAY = "onboard_display"
 
 #: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
@@ -342,7 +344,20 @@ class OnboardRole:
 ONBOARD_ROLES = {
     ONBOARD_LED: OnboardRole("ONBOARD_LED", "read", "indicate", "onboard LED light"),
     ONBOARD_BUTTON: OnboardRole("ONBOARD_BUTTON", "press", "input", "onboard button"),
+    ONBOARD_DISPLAY: OnboardRole("ONBOARD_DISPLAY", None, "indicate", "onboard display screen"),
 }
+
+
+def onboard_functions(board):
+    """
+    What the board offers a need through its own parts: one {"does", "what"} per role in ONBOARD_ROLES that its
+    `pin_roles` names, in table order (P389). A `pin_roles` that is no object, or an entry that is none, names nothing.
+    """
+    pin_roles = board.get("pin_roles")
+    if not isinstance(pin_roles, dict):
+        return []
+    return [{"does": spec.does, "what": spec.what} for role, spec in ONBOARD_ROLES.items()
+            if isinstance(pin_roles.get(role), dict)]
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
 WOKWI_DEFINITION = "wokwi-board"

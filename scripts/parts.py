@@ -72,12 +72,20 @@ NEED_MATCHER = "name-contains"
 
 
 def function_of(record, board=False):
-    """What a record does (§5.6): its own `function`, else what its kind says, else nothing."""
+    """
+    What a record does (§5.6): its own `function`, else what its kind says, else nothing. A board also does what its
+    own parts do (`boards.onboard_functions`), each one added once and never to the record's own list.
+    """
     if record.get("function") and not function_problems(record):
-        return record["function"]
-    kind = "board" if board else record.get("kind")
-    said = KIND_FUNCTION.get(kind) if isinstance(kind, str) else None
-    return [{"does": said[0], "what": said[1]}] if said else []
+        said = record["function"]
+    else:
+        kind = "board" if board else record.get("kind")
+        kind_function = KIND_FUNCTION.get(kind) if isinstance(kind, str) else None
+        said = [{"does": kind_function[0], "what": kind_function[1]}] if kind_function else []
+    if not board:
+        return said
+    import boards
+    return said + [function for function in boards.onboard_functions(record) if function not in said]
 
 
 def function_problems(record):

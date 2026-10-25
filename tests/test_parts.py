@@ -1994,6 +1994,38 @@ class WhatAPartDoesTest(unittest.TestCase):
         self.assertEqual(parts.function_of({"kind": "sensor"}), [], "a sensor says nothing until it is written")
         self.assertEqual(parts.function_of({"pins": {}}, board=True), [{"does": "compute", "what": "microcontroller"}])
 
+    LED = {"does": "indicate", "what": "onboard LED light"}
+    BUTTON = {"does": "input", "what": "onboard button"}
+    SCREEN = {"does": "indicate", "what": "onboard display screen"}
+    COMPUTE = {"does": "compute", "what": "microcontroller"}
+
+    def test_a_board_also_does_what_its_own_parts_do_in_table_order(self):
+        roles = {"onboard_display": {"gpio": [], "note": "x"}, "onboard_button": {"gpio": [0], "note": "x"},
+                 "onboard_led": {"gpio": [2], "note": "x"}, "strapping": {"gpio": [0], "note": "x"}}
+        self.assertEqual(parts.function_of({"pin_roles": roles}, board=True), [self.COMPUTE, self.LED, self.BUTTON, self.SCREEN])
+
+    def test_a_board_with_a_function_of_its_own_still_does_what_its_own_parts_do(self):
+        own = [{"does": "store", "what": "eeprom"}]
+        record = {"function": own, "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}}
+        self.assertEqual(parts.function_of(record, board=True), own + [self.LED])
+        self.assertEqual(own, [{"does": "store", "what": "eeprom"}], "the record's own list is not changed")
+
+    def test_a_part_that_is_no_board_does_not_gain_the_board_s_parts(self):
+        record = {"kind": "rtc", "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}}
+        self.assertEqual(parts.function_of(record), [{"does": "keep-time", "what": "rtc"}])
+
+    def test_a_function_the_record_already_says_is_not_added_twice(self):
+        record = {"function": [self.LED], "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}}
+        self.assertEqual(parts.function_of(record, board=True), [self.LED])
+
+    def test_pin_roles_of_the_wrong_shape_name_no_part(self):
+        for pin_roles in (["onboard_led"], "onboard_led", None, {"onboard_led": "x"}, {"onboard_led": ["gpio"]}):
+            with self.subTest(pin_roles=pin_roles):
+                self.assertEqual(parts.function_of({"pin_roles": pin_roles}, board=True), [self.COMPUTE])
+
+    def test_an_entry_with_an_empty_gpio_list_still_names_its_part(self):
+        self.assertEqual(parts.function_of({"pin_roles": {"onboard_led": {"gpio": [], "note": "x"}}}, board=True), [self.COMPUTE, self.LED])
+
     def test_a_function_outside_the_thirteen_verbs_is_refused(self):
         definition = part(function=[{"does": "measure", "what": "soil-moisture"}])
         self.assertTrue(any("function" in p and "keep-time" in p for p in parts.validate(definition, written(definition))))

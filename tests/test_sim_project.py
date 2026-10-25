@@ -316,6 +316,11 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         del board["documents"][boards.WOKWI_DEFINITION]
         self.assertEqual(sim_project.onboard_limits(board), [])
 
+    def test_the_gpios_of_a_display_are_not_compared_because_no_scenario_has_a_verb_for_it(self):
+        board = kept_definition_board()
+        board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": [3], "note": "the screen"}
+        self.assertEqual(sim_project.onboard_limits(board), [self.BUTTON])
+
     def test_a_role_with_no_gpio_list_says_nothing(self):
         board = kept_definition_board()
         board["pin_roles"][boards.ONBOARD_BUTTON] = {"note": "somewhere"}
