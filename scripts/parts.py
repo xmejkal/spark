@@ -2375,10 +2375,13 @@ def _say(op, answer, as_json):
     else:
         if not answer.lines:
             for item in list(answer.problems) + list(answer.unchecked):
-                print("parts.py: %s%s" % (item["sentence"], " — " + item["fix"] if item.get("fix") else ""), file=sys.stderr)
+                said_here = "parts.py: %s%s" % (item["sentence"], " — " + item["fix"] if item.get("fix") else "")
+                print("\n".join(printable(piece) for piece in said_here.split("\n")), file=sys.stderr)
             answer = answer._replace(problems=(), unchecked=())
         for line in _text_of(answer):
-            print(line)
+            # P403: every field, once, at the edge: a control or a right-to-left character shows as `?`. A line's own
+            # newlines stay. A name that can hold a newline (a holder, a used_in key) is guarded where it is put in.
+            print("\n".join(printable(piece) for piece in line.split("\n")))  # --json stays raw, as data
     return EXIT_FOR[said["status"]]
 
 

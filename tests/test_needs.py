@@ -371,6 +371,15 @@ class TheMatcherTest(unittest.TestCase):
         self.assertEqual(self.xiao()["held_by"], [])
         self.assertNotIn("held by", self.board_text())
 
+    def test_an_unlisted_project_is_not_named_as_holding_its_own_board(self):
+        # a moved or renamed folder leaves projects.json without it, and --pick still holds under the folder's name
+        (self.home / "projects.json").write_text("{}")
+        own = store.add_project(self.project, dry_run=True)
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({
+            "schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}, "used_in": {own: 1}}))
+        self.assertEqual(self.xiao()["held_by"], [])
+        self.assertNotIn("held by", self.board_text())
+
     def test_a_holder_name_with_a_newline_shows_a_question_mark_in_the_match_text(self):
         self.hold_the_xiao("reaction\ngame")
         self.assertIn("free 0, held by reaction?game", self.board_text())

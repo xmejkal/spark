@@ -215,7 +215,9 @@ def candidates(need, known, entries, mine=None, matcher=None):
 def match(project, matcher=None):
     """Each need with its candidates (§6.2), and a problem for each need with no verb — it cannot be matched. `matcher` is
     MATCHER's unless one is given (P211)."""
-    known, entries, matched, problems, mine = drawer.linkable(project), drawer.entries(), [], [], store.project_name(project)
+    # the name a pick holds under, as plan_pick takes it: an unlisted project still holds as its folder (P403 refuter)
+    known, entries, matched, problems, mine = (drawer.linkable(project), drawer.entries(), [], [],
+                                               store.add_project(project, dry_run=True))
     for need in read(project):
         if need.get("does") not in parts.VERBS:
             problems.append(parts._problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))

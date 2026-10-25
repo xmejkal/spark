@@ -802,6 +802,13 @@ class TheHoldersTest(unittest.TestCase):
         self.keep("xiao", "XIAO", {"a\nb": 1})
         self.assertIn("held by a?b", self.text(["--drawer"]))
 
+    def test_every_field_of_the_drawer_text_passes_the_guard_at_the_edge(self):
+        # a hand-edited entry skips the scrub that --drawer-set does on the way in (P403 refuter)
+        self.keep("xiao", "XI\u202eAO", {"reaction-game": 1})
+        said = self.text(["--drawer"])
+        self.assertNotIn("\u202e", said)
+        self.assertIn("XI?AO", said)
+
     def test_a_used_in_key_that_the_terminal_does_not_print_shows_a_question_mark_in_a_change_line(self):
         for hidden in ("a\u202eb", "a\u2028b"):
             with self.subTest(hidden=repr(hidden)):

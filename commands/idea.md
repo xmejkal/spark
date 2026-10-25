@@ -51,7 +51,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match <project>
 ```
 
 Owned candidates come first, each with how many are owned and **free** (a part another project holds is not free,
-and the line says `free 0, held by <project>`, the other projects that hold any of it; `held_by` in `--json` has them raw),
+and the line says `free N, held by <project>`, the other projects that hold any of it; `held_by` in `--json` has them raw),
 "maybe owned" when the person was not sure, what it does, and what it **owes**: a pick owing a `footprint`, a
 `pin_order`, its `pin_order_proof` or a `simulation` stance (a Wokwi stand-in, or `{"skip": "why"}`) is taken, but
 `--requirements` writes nothing until that is filled (C, below); one owing only its outline (`body_mm`) is written and
