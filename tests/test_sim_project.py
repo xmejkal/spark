@@ -316,10 +316,43 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         del board["documents"][boards.WOKWI_DEFINITION]
         self.assertEqual(sim_project.onboard_limits(board), [])
 
-    def test_the_gpios_of_a_display_are_not_compared_because_no_scenario_has_a_verb_for_it(self):
+    DISPLAY = ("ONBOARD_DISPLAY", "spark adds no part to the diagram for the board's own display, so a passed run does not "
+                                  "test what it shows. Test it on the board.")
+    TDISPLAY = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
+
+    def test_the_display_is_one_limit_after_the_gpio_lines_whatever_its_gpios_are(self):
+        for gpio in ([3], [15], [], "x"):
+            with self.subTest(gpio=gpio):
+                board = kept_definition_board()
+                board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": gpio, "note": "the screen"}
+                self.assertEqual(sim_project.onboard_limits(board), [self.BUTTON, self.DISPLAY])
+
+    def test_the_t_displays_record_names_no_definition_and_a_screen(self):
+        self.assertEqual(sim_project.onboard_limits(json.loads(self.TDISPLAY.read_text())),
+                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition"), self.DISPLAY])
+
+    def test_a_board_with_only_a_display_gets_that_line_and_no_not_checked_line(self):
+        board = json.loads(self.TDISPLAY.read_text())
+        del board["pin_roles"][boards.ONBOARD_BUTTON]
+        self.assertEqual(sim_project.onboard_limits(board), [self.DISPLAY])
+
+    def test_a_definition_the_store_lacks_still_leaves_the_display_line_after_the_not_checked_one(self):
         board = kept_definition_board()
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
         board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": [3], "note": "the screen"}
-        self.assertEqual(sim_project.onboard_limits(board), [self.BUTTON])
+        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)], ["onboard GPIOs", "ONBOARD_DISPLAY"])
+
+    def test_a_board_that_names_every_onboard_part_has_a_sentence_for_each_part_no_scenario_reaches(self):
+        board = kept_definition_board()
+        for role in boards.ONBOARD_ROLES:
+            board["pin_roles"].setdefault(role, {"gpio": [3], "note": "x"})
+        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)],
+                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_DISPLAY"])
+
+    def test_the_note_says_that_it_also_holds_what_spark_leaves_out(self):
+        note = sim_project.limits_note([self.DISPLAY])
+        self.assertIn("The rest say what spark did not check or leaves out of the diagram.", note)
+        self.assertIn("- **ONBOARD_DISPLAY** — spark adds no part to the diagram", note)
 
     def test_a_role_with_no_gpio_list_says_nothing(self):
         board = kept_definition_board()
