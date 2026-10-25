@@ -1284,6 +1284,79 @@ class AnEmitBoardCrashIsNotADesignFaultTest(unittest.TestCase):
         self.assertTrue(stages[-1].detail.startswith("cannot emit a board: led-red-5mm asks for 5 mA"), stages[-1].detail)
 
 
+class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
+    """P407: a board record that cannot give a footprint stops at the footprint stage, names each gap, and says what
+    the build still gives a breadboard user."""
+
+    HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, firmware/pins.py is written if "
+            "its pins can be placed, and the kept lines say which. The breadboard sheet and the simulation read the "
+            "built board, so they wait for the footprint.")
+
+    def project_without(self, *fields, requirements=None):
+        """A project (it holds .spark/) whose own XIAO record lacks each dotted field, with its requirements file."""
+        import shutil
+        from board_library import library_without
+        project = Path(tempfile.mkdtemp()) / "project"
+        (project / ".spark").mkdir(parents=True)
+        (project / "boards").mkdir()
+        record_file = project / "boards" / "xiao-esp32-c6.json"
+        shutil.copy(library_without(fields[0]) / "xiao-esp32-c6.json", record_file)
+        record = json.loads(record_file.read_text())
+        for field in fields[1:]:
+            *parents, last = field.split(".")
+            holder = record
+            for key in parents:
+                holder = holder[key]
+            del holder[last]
+        record_file.write_text(json.dumps(record, indent=2) + "\n")
+        wanted = requirements or {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}
+        (project / "requirements.json").write_text(json.dumps(wanted))
+        return project, wanted
+
+    def test_no_header_stops_at_the_footprint_stage_and_says_what_still_comes(self):
+        project, wanted = self.project_without("physical.header")
+        stages = check_spine.run(wanted, Path(tempfile.mkdtemp()), project=project)
+        self.assertEqual([(s.name, s.status) for s in stages], [("board", check_spine.OK), ("footprint", check_spine.COULD_NOT_RUN)])
+        self.assertEqual(stages[-1].detail,
+                         "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them "
+                         "can be derived from the rest:\n  physical.header (no header geometry at all)\n" + self.HINT)
+        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+
+    def test_a_header_with_no_order_and_no_width_names_each_gap(self):
+        project, wanted = self.project_without("physical.header_order", "physical.width_mm")
+        stages = check_spine.run(wanted, Path(tempfile.mkdtemp()), project=project)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("footprint", check_spine.COULD_NOT_RUN))
+        self.assertIn(":\n  physical.width_mm\n  physical.header_order (which label is on which pad — not derivable)\n",
+                      stages[-1].detail)
+
+    def keep_through_main(self, project):
+        """`main` with --json --keep into the project, unmocked: the stop comes before any toolchain is needed."""
+        home = Path(tempfile.mkdtemp())
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}), \
+                contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(project / "requirements.json"), "--json", "--keep", str(project)])
+        return json.loads(out.getvalue())
+
+    def test_with_keep_the_pin_map_is_written_and_no_breadboard_sheet(self):
+        project, _ = self.project_without("physical.header")
+        said = self.keep_through_main(project)
+        self.assertEqual((said["status"], said["stages"][-1]["name"]), ("could-not-run", "footprint"))
+        self.assertTrue(said["stages"][-1]["detail"].endswith("\n" + self.HINT), said["stages"][-1]["detail"])
+        self.assertEqual([entry["did"] for entry in said["kept"] if entry["file"].endswith("pins.py")], ["wrote"])
+        self.assertTrue((project / "firmware" / "pins.py").is_file())
+        self.assertFalse((project / "breadboard.md").exists())
+
+    def test_pins_that_cannot_be_placed_are_said_in_the_kept_lines(self):
+        project, _ = self.project_without("physical.header", requirements={
+            "board": "xiao-esp32-c6", "parts": ["led-red-5mm"], "signals": [{"name": "X", "needs": ["teleport"]}]})
+        said = self.keep_through_main(project)
+        self.assertEqual(said["stages"][-1]["name"], "footprint")
+        pin_map = [entry for entry in said["kept"] if entry["file"].endswith("pins.py")]
+        self.assertEqual([entry["did"] for entry in pin_map], ["not written"])
+        self.assertIn("teleport", pin_map[0]["why"])
+        self.assertFalse((project / "firmware" / "pins.py").exists())
+
+
 class AConverterLimitIsNotADesignFaultTest(unittest.TestCase):
     def test_a_component_the_converter_cannot_map_is_could_not_look(self):
         # The RC car builds (13 traces) and the converter has no Wokwi part for its servo, buck

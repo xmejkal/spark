@@ -96,6 +96,11 @@ MOVE_NOT_KEPT = "move not kept"
 CHANGED = "changed"
 #: The `did` of a kept entry for one end the drawn breadboard joins differently from circuit.json's points (P279).
 DRAWING_DIFFERS = "drawing differs"
+# --- MVP ---
+#: What a build stopped at the footprint stage still gives, after the gaps `emit_footprint.why_no_footprint` names (P407).
+NO_FOOTPRINT_HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, firmware/pins.py is "
+                     "written if its pins can be placed, and the kept lines say which. The breadboard sheet and the "
+                     "simulation read the built board, so they wait for the footprint.")
 
 
 class Stage:
@@ -387,6 +392,12 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         part_list = design.parts_of(requirements, project)
     except design.DesignError as broken:
         return stages + [Stage("parts", COULD_NOT_RUN, str(broken))]
+
+    # --- MVP --- the schematic imports the board's footprint, so a record that cannot give one stops here, under the
+    # stage `parts.STOPS_AT_FOOTPRINT` names, before emit_board is asked (P407).
+    no_footprint = emit_footprint.why_no_footprint(board)
+    if no_footprint:
+        return stages + [Stage("footprint", COULD_NOT_RUN, no_footprint + "\n" + NO_FOOTPRINT_HINT)]
 
     board_file = workdir / "board.tsx"
     emitted = subprocess.run(
