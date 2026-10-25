@@ -57,8 +57,10 @@ class TheLibraryXiaoBuildsAButtonAndAnLedTest(unittest.TestCase):
 
 
 class TheCopiedFactsEqualTheCheckedRecordTest(unittest.TestCase):
-    def test_power_equals_the_fresh_record(self):
-        self.assertEqual(SHIPPED["power"], FRESH["power"])
+    def test_power_equals_the_fresh_record_but_for_the_facts_of_the_board_s_own_power_parts(self):
+        own = ("charger", "regulator", "battery_input")
+        self.assertEqual({name: fact for name, fact in SHIPPED["power"].items() if name not in own}, FRESH["power"])
+        self.assertEqual(sorted(set(SHIPPED["power"]) - set(FRESH["power"])), sorted(own))
         self.assertEqual(SHIPPED["power"]["io_volts"]["value"], 3.3)
 
     def test_power_pads_equal_the_fresh_record(self):

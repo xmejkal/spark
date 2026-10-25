@@ -402,7 +402,7 @@ def pin_module(board, assignments, source, pulled_up=()):
     (P60: a short note fixed every failing run it was tried on). A name Python cannot spell is
     refused, not mangled: a renamed constant is a pin the firmware silently stops finding. A signal in `pulled_up`
     gets a `<SIGNAL>_PULL = "up"` line: the board's internal pull-up holds it, set by the firmware (P204). A board
-    record that names an on-board LED, button or display adds its lines (`onboard_lines`), so a project with no parts
+    record that names an on-board LED, button, display or battery-level pin adds its lines (`onboard_lines`), so a project with no parts
     can use them (P236, P353, P389).
     """
     lines = ["%s from %s" % (PIN_MODULE_HEADER, parts_library.one_line(source)),
@@ -500,7 +500,7 @@ def main(argv=None):
     parser.add_argument("--project", help="the project to resolve the board from")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--emit-pins", metavar="FILE",
-                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED and ONBOARD_BUTTON for a part on one pin, ONBOARD_<PART>_<LABEL> per label (ONBOARD_BUTTON_S1), ONBOARD_<PART>_<FACT> per fact (ONBOARD_DISPLAY_WIDTH) and the _ON levels, when the board record names them")
+                        help="also write the map as a module the firmware imports (P36), with ONBOARD_LED, ONBOARD_BUTTON and ONBOARD_BATTERY_SENSE for a part on one pin, ONBOARD_<PART>_<LABEL> per label (ONBOARD_BUTTON_S1), ONBOARD_<PART>_<FACT> per fact (ONBOARD_DISPLAY_WIDTH) and the _ON levels, when the board record names them")
     args = parser.parse_args(argv)
 
     # One loader for the whole chain (`design.py`): the project is the requirements FILE's, the

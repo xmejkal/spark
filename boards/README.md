@@ -113,8 +113,8 @@ record without it, or with a part missing, gives the plain hint: "the BOOT butto
 
 ## The board's own parts
 
-A board that carries its own LED, buttons or display names them in `pin_roles`, under `onboard_led`,
-`onboard_button` or `onboard_display`. Each entry holds a `gpio` list and a `note` that says where the facts come from.
+A board that carries its own LED, buttons, display or battery-level pin names them in `pin_roles`, under `onboard_led`,
+`onboard_button`, `onboard_display` or `onboard_battery_sense`. Each entry holds a `gpio` list and a `note` that says where the facts come from.
 Three things follow from such an entry:
 
 - `firmware/pins.py` names the part when the entry has exactly one GPIO (`ONBOARD_LED = 15`) or has `labels` (one line per
@@ -143,8 +143,29 @@ An entry may also hold these keys:
 }
 ```
 
+A battery-level pin is one GPIO that a divider from the battery is wired to, with the divider as a fact:
+`"onboard_battery_sense": {"gpio": [34], "facts": {"divider": {"value": 2, "verified": true, "source": "…"}}, "note": "…"}`.
+`pins.py` gets `ONBOARD_BATTERY_SENSE = 34` and `ONBOARD_BATTERY_SENSE_DIVIDER = 2`. The assigner keeps the pin free for
+longer than a plain one, and says so when it must use it. `/spark:idea` offers the board for a `sense` need of `battery level`.
+The build says that a passed run does not test the battery reading, because spark adds no battery to the diagram.
+
 `--validate` refuses a `gpio` that is not a list of GPIO numbers, a label or a fact name that breaks these rules, and a
 fact without its source. The T-Display record in `tests/data/boards/` is the one example today.
+
+### The charger, the regulator and the battery input
+
+These parts have no pin, so they are facts in the board's `power` block, not entries of `pin_roles`. Each fact holds a
+`value`, `verified` and a `source`, as every fact does, and a `why_it_matters` when the value is not verified:
+
+- `charger`: the chip that charges the battery, such as `TP4054`.
+- `regulator`: the chip that makes the 3.3 V rail.
+- `battery_input`: where the battery plugs in, in words. Say "pads" when the board has pads and no connector.
+
+`/spark:idea` offers the board for a need of `power` / `charger`, `power` / `voltage regulator` or `connect` / `battery
+input`. The offer reads the value only, so it does not say whether the fact is verified. `pins.py` names nothing for
+these facts. `--validate` refuses a power fact with no source, a value that is a list, an object or a blank word, and a
+`power` block that is not an object. The offer words are `onboard charger`, `onboard voltage regulator` and `onboard
+battery input`. A need of `power` / `battery` means the cell, and no board part matches it.
 
 ## Simulation
 

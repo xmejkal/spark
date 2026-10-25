@@ -139,9 +139,9 @@ class PinsWithAnotherJobTest(unittest.TestCase):
     def test_a_pin_of_the_display_costs_more_than_one_of_the_board_s_button(self):
         self.assertGreater(assign_pins.ROLE_PENALTY["onboard_display"], assign_pins.ROLE_PENALTY["onboard_button"])
 
-    def test_a_pin_the_battery_divider_is_wired_to_costs_more_than_an_unnamed_role_and_less_than_the_console(self):
+    def test_a_pin_the_battery_divider_is_wired_to_costs_as_much_as_the_board_s_led_and_less_than_the_console(self):
         penalty = assign_pins.ROLE_PENALTY["onboard_battery_sense"]
-        self.assertGreater(penalty, assign_pins.DEFAULT_ROLE_PENALTY)
+        self.assertGreaterEqual(penalty, assign_pins.ROLE_PENALTY["onboard_led"])
         self.assertLess(penalty, assign_pins.ROLE_PENALTY["console_uart"])
 
     def with_a_battery_pin(self):
