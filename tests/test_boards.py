@@ -426,7 +426,8 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
 
     def test_a_fact_value_that_is_a_list_a_dict_a_bool_or_not_finite_is_one_problem_and_a_number_or_word_holds(self):
         for value, holds in ((135, True), (1.14, True), ("ST7789", True), (None, True), (True, False), ([1], False),
-                             ({"x": 1}, False), (float("nan"), False), (float("inf"), False), ([], False)):
+                             ({"x": 1}, False), (float("nan"), False), (float("inf"), False), ([], False),
+                             ("", False), ("  ", False), ("\t\n", False)):
             with self.subTest(value=value):
                 fact = dict(self.FACT, value=value)
                 problems = self._problems({"onboard_led": {"gpio": [15], "note": "x", "facts": {"width": fact}}})
@@ -472,6 +473,142 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
 
     def test_every_onboard_role_is_one_a_board_may_use(self):
         self.assertEqual(set(boards.ONBOARD_ROLES) - set(boards.PIN_ROLES), set())
+
+
+# --- MVP ---
+class TheBoardsOwnPowerPartsTest(unittest.TestCase):
+    """P389: the charger, the regulator and the battery input are facts of `power`, and the board offers them for a need."""
+
+    CHARGER = {"does": "power", "what": "onboard charger"}
+    REGULATOR = {"does": "power", "what": "onboard voltage regulator"}
+    BATTERY_INPUT = {"does": "connect", "what": "onboard battery input"}
+    BATTERY_LEVEL = {"does": "sense", "what": "onboard battery level"}
+
+    @staticmethod
+    def fact(value):
+        return {"value": value, "verified": True, "source": "s"}
+
+    def offered(self, power):
+        return boards.onboard_functions({"power": power})
+
+    def test_each_power_fact_with_a_value_is_one_function(self):
+        for fact, function in (("charger", self.CHARGER), ("regulator", self.REGULATOR), ("battery_input", self.BATTERY_INPUT)):
+            with self.subTest(fact=fact):
+                self.assertEqual(self.offered({fact: self.fact("X1")}), [function])
+
+    def test_the_functions_come_in_the_table_s_order_whatever_the_record_s_order(self):
+        power = {"battery_input": self.fact("pads"), "charger": self.fact("TP4054")}
+        self.assertEqual(self.offered(power), [self.CHARGER, self.BATTERY_INPUT])
+        power = {"battery_input": self.fact("pads"), "regulator": self.fact("U7"), "charger": self.fact("TP4054")}
+        self.assertEqual(self.offered(power), [self.CHARGER, self.REGULATOR, self.BATTERY_INPUT])
+
+    def test_a_number_is_a_value_too(self):
+        self.assertEqual(self.offered({"charger": self.fact(4054)}), [self.CHARGER])
+
+    def test_a_power_block_that_names_no_such_fact_offers_nothing(self):
+        for power in (None, [], ["charger"], "charger", 5, {}, {"charge_current_a": self.fact(0.12)},
+                      {"charger": "TP4054"}, {"charger": ["TP4054"]}, {"charger": None}, {"charger": {}},
+                      {"charger": self.fact(None)}, {"charger": self.fact(True)}, {"charger": self.fact("")},
+                      {"charger": self.fact("  ")}, {"charger": self.fact(["x"])}, {"charger": self.fact(float("nan"))}):
+            with self.subTest(power=power):
+                self.assertEqual(self.offered(power), [])
+
+    def test_the_power_functions_follow_the_pin_roles_functions(self):
+        board = {"power": {"charger": self.fact("TP4054")}, "pin_roles": {"onboard_battery_sense": {"gpio": [34], "note": "x"},
+                                                                              "onboard_led": {"gpio": [2], "note": "x"}}}
+        self.assertEqual(boards.onboard_functions(board), [
+            {"does": "indicate", "what": "onboard LED light"}, self.BATTERY_LEVEL, self.CHARGER])
+
+    def test_a_board_with_no_pin_role_still_offers_its_power_facts(self):
+        self.assertEqual(boards.onboard_functions({"pin_roles": 5, "power": {"charger": self.fact("TP4054")}}), [self.CHARGER])
+
+    def test_the_battery_level_pin_is_offered_when_pins_py_names_it(self):
+        for entry, offered in (({"gpio": [34], "note": "x"}, True), ({"gpio": [], "note": "x"}, False),
+                               ({"gpio": [34, 35], "note": "x"}, False)):
+            with self.subTest(entry=entry):
+                self.assertEqual(boards.onboard_functions({"pin_roles": {"onboard_battery_sense": entry}}),
+                                 [self.BATTERY_LEVEL] if offered else [])
+
+    def test_a_blank_word_is_no_fact_value_and_a_number_or_a_word_is(self):
+        for value, holds in (("", False), (" ", False), ("\n", False), ("a", True), (0, True), (0.0, True), (-1, True),
+                             (True, False), (None, False), ([], False)):
+            with self.subTest(value=value):
+                self.assertEqual(boards.is_fact_value(value), holds)
+
+    def test_the_shipped_boards_with_a_charger_offer_it(self):
+        for name in ("xiao-esp32-c6", "firebeetle2-esp32s3"):
+            with self.subTest(board=name):
+                record = json.loads((boards.LIBRARY / (name + ".json")).read_text())
+                self.assertIn(self.CHARGER, boards.onboard_functions(record))
+                self.assertIn(self.REGULATOR, boards.onboard_functions(record))
+
+    def test_the_xiao_names_its_battery_pads_and_the_firebeetle_names_none(self):
+        xiao = json.loads((boards.LIBRARY / "xiao-esp32-c6.json").read_text())
+        firebeetle = json.loads((boards.LIBRARY / "firebeetle2-esp32s3.json").read_text())
+        self.assertIn(self.BATTERY_INPUT, boards.onboard_functions(xiao))
+        self.assertNotIn(self.BATTERY_INPUT, boards.onboard_functions(firebeetle))
+
+
+class TheOnboardRoleTableTest(unittest.TestCase):
+    def test_a_row_has_a_scenario_verb_or_a_sentence_and_not_both_nor_neither(self):
+        self.assertEqual(boards.OnboardRole("X", "read", "indicate", "x").not_in_diagram, None)
+        self.assertEqual(boards.OnboardRole("X", None, "indicate", "x", "s").scenario_verb, None)
+        for args in (("X", None, "indicate", "x", None), ("X", "read", "indicate", "x", "s")):
+            with self.subTest(args=args):
+                with self.assertRaises(ValueError) as caught:
+                    boards.OnboardRole(*args)
+                self.assertIn("X needs a scenario verb or a sentence", str(caught.exception))
+
+    def test_the_table_holds_the_battery_level_pin_beside_the_display(self):
+        self.assertEqual(list(boards.ONBOARD_ROLES), ["onboard_led", "onboard_button", "onboard_display", "onboard_battery_sense"])
+        spec = boards.ONBOARD_ROLES["onboard_battery_sense"]
+        self.assertEqual((spec.constant, spec.scenario_verb, spec.does, spec.what),
+                         ("ONBOARD_BATTERY_SENSE", None, "sense", "onboard battery level"))
+
+
+class TheBoardsPowerFactsAreCheckedTest(unittest.TestCase):
+    FACT = {"value": "TP4054", "verified": True, "source": "s"}
+
+    def problems(self, power):
+        return boards.validate(dict(definition("b"), power=power), boards.LIBRARY / "b.json")
+
+    def test_a_power_fact_with_its_provenance_holds(self):
+        self.assertEqual(self.problems({"charger": self.FACT, "regulator": self.FACT, "battery_input": self.FACT}), [])
+
+    def test_a_fact_with_no_source_is_one_problem_that_names_it(self):
+        problems = self.problems({"charger": {"value": "TP4054", "verified": True}})
+        self.assertEqual(problems, ["power['charger'] has no 'source' \u2014 a number with no provenance is an opinion"])
+
+    def test_an_unverified_value_with_no_why_it_matters_is_a_problem(self):
+        problems = self.problems({"regulator": {"value": "AXP313A", "verified": False, "source": "s"}})
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("power['regulator'] is an unverified value with no why_it_matters", problems[0])
+
+    def test_a_value_that_pins_py_would_not_write_is_a_problem_and_not_a_silent_drop(self):
+        for value in (["x"], {"x": 1}, True, "", "  ", float("inf")):
+            with self.subTest(value=value):
+                problems = self.problems({"charger": dict(self.FACT, value=value)})
+                self.assertEqual(problems, ["power['charger'].value is %r; it must be a finite number, a word or null" % (value,)])
+
+    def test_a_fact_that_is_a_word_or_a_list_is_a_problem(self):
+        for fact in ("TP4054", ["TP4054"], 5):
+            with self.subTest(fact=fact):
+                problems = self.problems({"charger": fact})
+                self.assertEqual(problems, ["power['charger'] is %r, but it is an object" % (fact,)])
+
+    def test_a_power_that_is_no_object_is_one_problem(self):
+        for power in (["charger"], "charger", 5, True):
+            with self.subTest(power=power):
+                problems = self.problems(power)
+                self.assertEqual(problems, ["power is %r; it must be an object of name -> {value, verified, source}" % (power,)])
+
+    def test_every_power_fact_of_the_table_is_checked(self):
+        problems = self.problems({"charger": "a", "regulator": "b", "battery_input": "c"})
+        self.assertEqual(len(problems), 3, problems)
+
+    def test_a_power_fact_the_table_does_not_name_is_left_to_its_reader(self):
+        self.assertEqual(self.problems({"charge_current_a": {"value": 0.12}}), [])
+# --- end MVP ---
 
 
 class TheShippedLibraryTest(unittest.TestCase):

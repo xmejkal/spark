@@ -75,6 +75,7 @@ ROLE_PENALTY = {
     "onboard_button": 20,             # something else is already wired to it, and can press it
     "onboard_led": 10,                # it will blink whatever you put on it
     "onboard_display": 30,            # a signal here drives the screen's bus, and the screen shows the noise
+    "onboard_battery_sense": 20,      # a divider from the battery is wired to it, so a signal here corrupts the reading
     "spi": 5,                         # a bus, spent after plain pins and before scarce ones
     "i2c": 5,
     "adc2_unusable_with_wifi": 1,     # only a loss if you wanted the ADC, which `can` covers
@@ -97,7 +98,8 @@ DEFAULT_ROLE_PENALTY = 5
 #: person needs to be told about. The rest are caveats that may not apply: a pin being on ADC2
 #: matters only if you wanted to read a voltage with it, and calling that "another job" when the
 #: signal is an LED is noise dressed as a warning.
-CONFLICTING_ROLES = (boards.CONSOLE_UART, boards.ONBOARD_BUTTON, boards.ONBOARD_LED, boards.ONBOARD_DISPLAY)
+CONFLICTING_ROLES = (boards.CONSOLE_UART, boards.ONBOARD_BUTTON, boards.ONBOARD_LED, boards.ONBOARD_DISPLAY,
+                     boards.ONBOARD_BATTERY_SENSE)
 
 #: What one unused capability costs, in the same units as a role penalty.
 #:

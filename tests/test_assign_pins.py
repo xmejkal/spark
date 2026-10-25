@@ -138,6 +138,29 @@ class PinsWithAnotherJobTest(unittest.TestCase):
 
     def test_a_pin_of_the_display_costs_more_than_one_of_the_board_s_button(self):
         self.assertGreater(assign_pins.ROLE_PENALTY["onboard_display"], assign_pins.ROLE_PENALTY["onboard_button"])
+
+    def test_a_pin_the_battery_divider_is_wired_to_costs_more_than_an_unnamed_role_and_less_than_the_console(self):
+        penalty = assign_pins.ROLE_PENALTY["onboard_battery_sense"]
+        self.assertGreater(penalty, assign_pins.DEFAULT_ROLE_PENALTY)
+        self.assertLess(penalty, assign_pins.ROLE_PENALTY["console_uart"])
+
+    def with_a_battery_pin(self):
+        """The test board with one more pin, D0 on GPIO 8, that a divider from the battery is wired to."""
+        return board(pins=dict(board()["pins"], D0=8), pin_roles=dict(
+            board()["pin_roles"], onboard_battery_sense={"gpio": [8], "note": "the battery divider"}))
+
+    def test_the_battery_level_pin_is_kept_free_for_longer_than_a_plain_one(self):
+        signals = [{"name": "S%d" % n, "needs": []} for n in range(2)]
+        assignments, _ = assign_pins.assign(self.with_a_battery_pin(), signals)
+        self.assertNotIn("D0", placed(assignments).values())
+
+    def test_the_battery_level_pin_is_used_when_nothing_else_is_left_and_the_answer_says_why(self):
+        signals = [{"name": "S%d" % n, "needs": []} for n in range(7)]
+        assignments, _ = assign_pins.assign(self.with_a_battery_pin(), signals)
+        shared = [entry for entry in assignments if entry["pin"] == "D0"]
+        self.assertEqual(len(shared), 1, placed(assignments))
+        self.assertEqual(shared[0]["roles"], ["onboard_battery_sense"])
+        self.assertIn("something else is already wired here (onboard_battery_sense)", shared[0]["why"])
     # --- end MVP ---
 
     def test_every_assignment_explains_itself(self):
@@ -684,7 +707,26 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
             "ONBOARD_BUTTON_S1": 0, "ONBOARD_BUTTON_S2": 35, "ONBOARD_BUTTON_ON": 0,
             "ONBOARD_DISPLAY_MOSI": 19, "ONBOARD_DISPLAY_SCLK": 18, "ONBOARD_DISPLAY_CS": 5, "ONBOARD_DISPLAY_DC": 16,
             "ONBOARD_DISPLAY_RST": 23, "ONBOARD_DISPLAY_BL": 4, "ONBOARD_DISPLAY_DRIVER": "ST7789",
-            "ONBOARD_DISPLAY_WIDTH": 135, "ONBOARD_DISPLAY_HEIGHT": 240})
+            "ONBOARD_DISPLAY_WIDTH": 135, "ONBOARD_DISPLAY_HEIGHT": 240,
+            "ONBOARD_BATTERY_SENSE": 34, "ONBOARD_BATTERY_SENSE_DIVIDER": 2})
+
+    def test_the_battery_level_pin_and_its_divider_are_named_with_their_source(self):
+        lines = {line.split(" = ")[0]: line for line in self.lines(self.record())}
+        self.assertTrue(lines["ONBOARD_BATTERY_SENSE"].startswith("ONBOARD_BATTERY_SENSE = 34  # onboard_battery_sense: GPIO34 reads the battery "), lines)
+        self.assertIn("BAT_ADC", lines["ONBOARD_BATTERY_SENSE"])
+        self.assertIn("source: documents.lilygo-t-display-schematic-2019-06-26, R6 and R7, 100K each", lines["ONBOARD_BATTERY_SENSE_DIVIDER"])
+        self.assertFalse(lines["ONBOARD_BATTERY_SENSE_DIVIDER"].endswith("not verified"), lines["ONBOARD_BATTERY_SENSE_DIVIDER"])
+
+    def test_a_power_fact_writes_no_line_of_its_own(self):
+        lines = "\n".join(self.lines(self.record()))
+        for word in ("TP4054", "AP2112K", "CHARGER", "REGULATOR", "BATTERY_INPUT"):
+            self.assertNotIn(word, lines)
+
+    def test_a_blank_fact_value_writes_no_line_and_a_word_does(self):
+        facts = {"a_empty": "", "b_blank": "  ", "c_word": "x"}
+        entry = {"gpio": [], "note": "x", "facts": {name: {"value": value, "verified": True, "source": "s"}
+                                                     for name, value in facts.items()}}
+        self.assertEqual(self.named(board(pin_roles={"onboard_display": entry})), ["ONBOARD_DISPLAY_C_WORD = 'x'"])
 
     def test_the_labels_come_in_the_records_order_and_the_note_is_on_the_first(self):
         lines = [line for line in self.lines(self.record()) if line.startswith("ONBOARD_DISPLAY_")]

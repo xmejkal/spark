@@ -383,6 +383,21 @@
         }
       }
     },
+    "charger": {
+      "value": "ETA6003",
+      "verified": true,
+      "source": "DFRobot schematic V1.3.0: U5 ETA6003, BAT to VBAT+.",
+      "cites": {
+        "document": "firebeetle2-s3-schematic-v1-3",
+        "at": "U5 ETA6003"
+      }
+    },
+    "regulator": {
+      "value": "AXP313A (V1.1 and earlier) or TPS62A02 (V1.2 and later)",
+      "verified": false,
+      "source": "hardware_revisions: the AXP313A is V1.1 and earlier and the TPS62A02 is V1.2 and later. The V1.3 schematic names TPS62A02DRLR (documents.firebeetle2-s3-schematic-v1-3, U1). The V1.0 schematic (documents.firebeetle2-s3-schematic-v1-0) shows a chip with a DCDC1 output, and no part name in its text, so the AXP313A comes from hardware_revisions. One record covers both revisions.",
+      "why_it_matters": "The revision decides which chip makes 3V3, and the board record cannot say which one a person owns. Read the chip between the BOOT button and the USB-C (hardware_revisions.how_to_tell)."
+    },
     "feeding_vcc_charges_the_battery": {
       "value": false,
       "verified": true,

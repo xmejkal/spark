@@ -318,6 +318,8 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
 
     DISPLAY = ("ONBOARD_DISPLAY", "spark adds no part to the diagram for the board's own display, so a passed run does not "
                                   "test what it shows. Test it on the board.")
+    BATTERY = ("ONBOARD_BATTERY_SENSE", "spark adds no battery to the diagram, so a passed run does not test what the board "
+                                        "reads on this pin. Test it on the board.")
     TDISPLAY = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
 
     def test_the_display_is_one_limit_after_the_gpio_lines_whatever_its_gpios_are(self):
@@ -327,13 +329,21 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
                 board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": gpio, "note": "the screen"}
                 self.assertEqual(sim_project.onboard_limits(board), [self.BUTTON, self.DISPLAY])
 
-    def test_the_t_displays_record_names_no_definition_and_a_screen(self):
+    def test_the_t_displays_record_names_no_definition_a_screen_and_a_battery_pin(self):
         self.assertEqual(sim_project.onboard_limits(json.loads(self.TDISPLAY.read_text())),
-                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition"), self.DISPLAY])
+                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition"), self.DISPLAY, self.BATTERY])
+
+    def test_the_battery_level_pin_is_one_limit_after_the_gpio_lines_whatever_its_gpio_is(self):
+        for gpio in ([34], [], "x"):
+            with self.subTest(gpio=gpio):
+                board = kept_definition_board()
+                board["pin_roles"][boards.ONBOARD_BATTERY_SENSE] = {"gpio": gpio, "note": "the divider"}
+                self.assertEqual(sim_project.onboard_limits(board), [self.BUTTON, self.BATTERY])
 
     def test_a_board_with_only_a_display_gets_that_line_and_no_not_checked_line(self):
         board = json.loads(self.TDISPLAY.read_text())
         del board["pin_roles"][boards.ONBOARD_BUTTON]
+        del board["pin_roles"][boards.ONBOARD_BATTERY_SENSE]
         self.assertEqual(sim_project.onboard_limits(board), [self.DISPLAY])
 
     def test_a_definition_the_store_lacks_still_leaves_the_display_line_after_the_not_checked_one(self):
@@ -347,7 +357,7 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         for role in boards.ONBOARD_ROLES:
             board["pin_roles"].setdefault(role, {"gpio": [3], "note": "x"})
         self.assertEqual([component for component, _ in sim_project.onboard_limits(board)],
-                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_DISPLAY"])
+                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_DISPLAY", "ONBOARD_BATTERY_SENSE"])
 
     def test_the_note_says_that_it_also_holds_what_spark_leaves_out(self):
         note = sim_project.limits_note([self.DISPLAY])

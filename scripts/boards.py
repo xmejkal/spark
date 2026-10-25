@@ -101,6 +101,7 @@ PIN_ROLES = {
     "onboard_button": "something is already wired here and can press it",
     "onboard_led": "something is already wired here and will blink whatever you put on it",
     "onboard_display": "a display is already wired here and shows whatever its bus carries",
+    "onboard_battery_sense": "a divider from the battery is wired here, so the pin reads the battery voltage",
     "strapping": "sampled at reset; the level here decides how the chip boots",
     "adc2_unusable_with_wifi": "on ADC2, which cannot be read while the radio is on",
     "not_wake_capable": "cannot bring the chip out of deep sleep",
@@ -116,10 +117,11 @@ PIN_ROLES = {
 
 #: Named, so the one role a check singles out is spelled in exactly one place.
 CONSOLE_UART = "console_uart"
-#: The board's own LED, button and display, which pins.py names and the build compares with the Wokwi definition (P396).
+#: The board's own LED, button, display and battery-level pin, which pins.py names and the build compares with the Wokwi definition (P396).
 ONBOARD_LED = "onboard_led"
 ONBOARD_BUTTON = "onboard_button"
 ONBOARD_DISPLAY = "onboard_display"
+ONBOARD_BATTERY_SENSE = "onboard_battery_sense"
 
 #: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
@@ -331,13 +333,19 @@ class OnboardRole:
     """
     Value: what spark knows of one part that a board carries itself. `constant` is the name pins.py gives it.
     `scenario_verb` is what a scenario does to it (`read`, `press`), or None when no scenario reaches it. `does` and
-    `what` are the function the board offers a need, in the words of `parts.VERBS`.
+    `what` are the function the board offers a need, in the words of `parts.VERBS`. `not_in_diagram` is what a passed
+    run does not test of a part that no scenario reaches. A row has a verb or a sentence, never both and never neither.
     """
 
     constant: str
     scenario_verb: str | None
     does: str
     what: str
+    not_in_diagram: str | None = None
+
+    def __post_init__(self):
+        if (self.scenario_verb is None) == (self.not_in_diagram is None):
+            raise ValueError("%s needs a scenario verb or a sentence for what the diagram leaves out, and not both" % self.constant)
 
 
 #: The board's own parts, one row each, read by pins.py (P236, P353), the build (P396) and the pick (P397). Here, beside
@@ -345,7 +353,22 @@ class OnboardRole:
 ONBOARD_ROLES = {
     ONBOARD_LED: OnboardRole("ONBOARD_LED", "read", "indicate", "onboard LED light"),
     ONBOARD_BUTTON: OnboardRole("ONBOARD_BUTTON", "press", "input", "onboard button"),
-    ONBOARD_DISPLAY: OnboardRole("ONBOARD_DISPLAY", None, "indicate", "onboard display screen"),
+    ONBOARD_DISPLAY: OnboardRole(
+        "ONBOARD_DISPLAY", None, "indicate", "onboard display screen",
+        "spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. "
+        "Test it on the board."),
+    ONBOARD_BATTERY_SENSE: OnboardRole(
+        "ONBOARD_BATTERY_SENSE", None, "sense", "onboard battery level",
+        "spark adds no battery to the diagram, so a passed run does not test what the board reads on this pin. "
+        "Test it on the board."),
+}
+
+#: What a board's `power` block offers a need, by fact (P389). A power fact has no pins, no constant and no scenario, so
+#: it is no OnboardRole. `battery_input` says `input` and not `connector`, because a board may have pads.
+POWER_FUNCTIONS = {
+    "charger": {"does": "power", "what": "onboard charger"},
+    "regulator": {"does": "power", "what": "onboard voltage regulator"},
+    "battery_input": {"does": "connect", "what": "onboard battery input"},
 }
 
 
@@ -374,9 +397,18 @@ def names_pins(entry):
     return isinstance(entry.get("gpio"), list) and (bool(pin_labels(entry)) or len(entry["gpio"]) == 1)
 
 
+def _power_functions(board):
+    """The function of each fact in POWER_FUNCTIONS that the board's `power` holds with a value pins.py could write, in table order."""
+    power = board.get("power")
+    if not isinstance(power, dict):
+        return []
+    return [dict(function) for fact, function in POWER_FUNCTIONS.items()
+            if isinstance(power.get(fact), dict) and is_fact_value(power[fact].get("value"))]
+
+
 def onboard_functions(board):
-    """What the board offers a need through its own parts: one {"does", "what"} per entry of `onboard_entries` that names its pins."""
-    return [{"does": spec.does, "what": spec.what} for _, spec, entry in onboard_entries(board) if names_pins(entry)]
+    """What the board offers a need through its own parts: one {"does", "what"} per entry of `onboard_entries` that names its pins, then one per power fact."""
+    return [{"does": spec.does, "what": spec.what} for _, spec, entry in onboard_entries(board) if names_pins(entry)] + _power_functions(board)
 
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
@@ -469,8 +501,19 @@ def is_gpio(value):
 
 
 def is_fact_value(value):
-    """True for a value that pins.py writes as a constant: a finite number or a word, never a bool."""
-    return isinstance(value, (int, float, str)) and not isinstance(value, bool) and (not isinstance(value, float) or math.isfinite(value))
+    """True for a value that pins.py writes as a constant: a finite number or a word, never a bool and never a blank word."""
+    if isinstance(value, str):
+        return bool(value.strip())
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and (not isinstance(value, float) or math.isfinite(value))
+
+
+def board_fact_problems(where, fact):
+    """Every way one fact of a board record breaks the contract: `provenance.fact_problems`, and a value that is none of a finite number, a word or null."""
+    problems = provenance.fact_problems(where, fact)
+    value = fact.get("value") if isinstance(fact, dict) else None
+    if value is not None and not is_fact_value(value):  # one rule with pins.py, so no fact is dropped in silence
+        problems.append("%s.value is %r; it must be a finite number, a word or null" % (where, value))
+    return problems
 
 
 def role_entry_problems(where, role):
@@ -508,11 +551,18 @@ def role_entry_problems(where, role):
         elif name.upper() in labels:
             problems.append("%s.facts[%r] has the name of the label %r, so pins.py would write one constant twice"
                             % (where, name, name.upper()))
-        problems += provenance.fact_problems("%s.facts[%r]" % (where, name), fact)
-        value = fact.get("value") if isinstance(fact, dict) else None
-        if value is not None and not is_fact_value(value):  # one rule with pins.py, so no fact is dropped in silence
-            problems.append("%s.facts[%r].value is %r; it must be a finite number, a word or null" % (where, name, value))
+        problems += board_fact_problems("%s.facts[%r]" % (where, name), fact)
     return problems
+
+
+def power_problems(board):
+    """Every way the facts of POWER_FUNCTIONS in the board's `power` break the contract. A `power` that is no object is one problem."""
+    power = board.get("power")
+    if power is None:
+        return []
+    if not isinstance(power, dict):
+        return ["power is %r; it must be an object of name -> {value, verified, source}" % (power,)]
+    return [problem for fact in POWER_FUNCTIONS if fact in power for problem in board_fact_problems("power[%r]" % fact, power[fact])]
 # --- end MVP ---
 
 
@@ -619,6 +669,8 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
         if "active_level" in role and (type(role["active_level"]) is not int or role["active_level"] not in (0, 1)):
             # P353: the level that lights an LED or that a pressed button reads, which firmware writes as a number.
             problems.append(f"{where}.active_level is {role['active_level']!r}; it must be 0 or 1")
+
+    problems += power_problems(board)
 
     # Decisions must not leak into a facts file, at any depth.
     def forbidden(node, path=""):
