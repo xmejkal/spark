@@ -398,7 +398,7 @@ def names_pins(entry):
 
 
 def _power_functions(board):
-    """The function of each fact in POWER_FUNCTIONS that the board's `power` holds with a value pins.py could write, in table order."""
+    """The function of each fact in POWER_FUNCTIONS that the board's `power` holds with a value `is_fact_value` accepts, in table order. pins.py writes no line for it."""
     power = board.get("power")
     if not isinstance(power, dict):
         return []
