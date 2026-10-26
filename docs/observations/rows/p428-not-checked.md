@@ -21,4 +21,4 @@ Findings of P428 (2026-10-26, Prague), slice OC4 of refactor plan v2. From the p
 | 15 | The board_facts words test sat on the base class and ran four times | review | acted | it moved to `ReadLastDeployTest` and runs once |
 | 16 | The rule comment omits `sim_project.firmware_in` | review | acted | it returns whatever the JSON parses to, and None for both a missing and an unreadable file. Named in the comment as waiting. Card P429 takes the fix |
 | 17 | A keyless step now gives empty counts instead of partial ones (row 8) | review | rejected | judged invisible: `count()` and `line()` of a non-RECORDED state ignore the counts, and `caveats` returns before it reads them |
-| 18 | Claims 1 to 5 of the review hold | refuter | confirmed | the Opus refuter reproduced each of them: points 1 to 5 above (rows 12 to 16) |
+| 18 | Claims 1 to 5 of the review hold | refuter | verified | the Opus refuter reproduced each of them: points 1 to 5 above (rows 12 to 16) |
