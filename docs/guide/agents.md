@@ -500,8 +500,9 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   and so is `simulation` before a look or when the look refused the image. The caveats of the look are in `data.look.caveats`, and its last deploy in `data.look.last_deploy`. The erase question names that last deploy.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.
-  When the board refuses the raw REPL right after the reset, the facts copy makes one retry after 2 s, and `facts_line` ends
-  with `(written on a retry after: ...)` ([P420](https://github.com/xmejkal/spark/issues/550)). No other copy failure is retried.
+  When mpremote could not enter the raw REPL for the facts copy (seen right after the reset), the copy and its read-back make one
+  retry after 2 s, for each read of the board, and `facts_line` ends with `(written on a retry after: ...)`, or names the first try
+  when the retry failed too ([P420](https://github.com/xmejkal/spark/issues/550)). No other copy failure is retried.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
   `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could

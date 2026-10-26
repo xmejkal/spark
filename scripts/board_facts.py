@@ -64,11 +64,16 @@ class FactsFile:
                     break
                 except (BoardUnreachableError, BoardCodeError) as cannot:
                     why = "mpremote could not copy it: %s" % cannot
-                    if retry or isinstance(cannot, BoardCodeError) or RAW_REPL_REFUSED not in str(cannot):
+                    if retry:
+                        return "%s (the first try: %s)" % (why, self.first_failure)
+                    if RAW_REPL_REFUSED not in str(cannot):
                         return why
                     self.first_failure = why
                     self.sleep(FACTS_RETRY_WAIT_S)
-        return None if back.strip() == text.strip() else "it read back different from what was copied"
+        if back.strip() == text.strip():
+            return None
+        why = "it read back different from what was copied"
+        return "%s (the first try: %s)" % (why, self.first_failure) if self.first_failure else why
 
 
 def record_deploy(facts, verdict, who):

@@ -90,7 +90,14 @@ class WhatTheBoardSaysTest(unittest.TestCase):
         waited = []
         refused = board_connection.BoardUnreachableError("could not enter raw repl", "")
         facts = board_facts.FactsFile(FakeBoardConnection(copy_raises=[refused, refused]), sleep=waited.append)
-        self.assertEqual((facts.write({"a": 1}), waited), ("mpremote could not copy it: could not enter raw repl", [2]))
+        self.assertEqual((facts.write({"a": 1}), waited), ("mpremote could not copy it: could not enter raw repl (the first try: "
+                                                           "mpremote could not copy it: could not enter raw repl)", [2]))
+
+    def test_a_retry_that_reads_back_different_names_the_first_try_too(self):
+        refused = board_connection.BoardUnreachableError("could not enter raw repl", "")
+        facts = board_facts.FactsFile(FakeBoardConnection("garbled", copy_raises=[refused, None]), sleep=lambda seconds: None)
+        self.assertEqual(facts.write({"a": 1}), "it read back different from what was copied (the first try: mpremote "
+                                                "could not copy it: could not enter raw repl)")
 
     def test_only_a_refused_raw_repl_is_retried(self):
         for cannot in (board_connection.BoardUnreachableError("no answer in 20 s", ""),

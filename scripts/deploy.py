@@ -64,6 +64,7 @@ answers it (a deploy grant never does), and the spark.json, the board log, the s
 
 It erases the board's flash first. If the erase stops with esptool's exit 2,
 it makes one retry after 5 s and prints `retry in 5 s: ...` (P290).
+When the board refuses mpremote's raw REPL for the facts copy after the flash, that copy gets one retry after 2 s (P420).
 
 The gate: run look.py first and pass its token. deploy.py looks at the board again (the board restarts) and refuses a
 stop (another chip, a flash too small for the image) or a token that is not this board's and this image's. Then it
