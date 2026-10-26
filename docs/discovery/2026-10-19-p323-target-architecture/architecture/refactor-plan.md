@@ -336,7 +336,7 @@ Three more findings are rules, not slices. `drawer.holders_of` is the one reader
 shape of a fact for part and board, and `boards.is_pin_map_constant` is the rule of one outlet, `pins.py`. They stay
 apart, so P374 [#479](https://github.com/xmejkal/spark/issues/479) does not pull the second into part records. One role
 is spelled in five tables (`PIN_ROLES`, the `ONBOARD_*` constants, `ONBOARD_ROLES`, `assign_pins.ROLE_PENALTY`,
-`CONFLICTING_ROLES`). The PO's rule above settles the penalty: it stays a named constant in `assign_pins.py` and does not move into
+`CONFLICTING_ROLES`). The example recorded with the PO's answer settles the penalty, as the plan's reading he can change: it stays a named constant in `assign_pins.py` and does not move into
 `OnboardRole`. Lesson 3 takes the five tables as its worked input.
 
 ## 7. A home for what walk 2 added
@@ -368,7 +368,7 @@ the code at `d064a65` under this name.
 | `ScenarioSteps.component_ids`, the id check in `ScenarioRun.problem`, `--dry-run` | P399 [#515](https://github.com/xmejkal/spark/issues/515) | `firmware/scenario_steps.py`, `firmware/scenario_run.py` | a method, a check, an argument | not built yet |
 | the must lines a scenario names, and the look's list of unnamed ones | P345 PR 2 [#440](https://github.com/xmejkal/spark/issues/440) | `firmware/scenario_steps.py`, `bench/board_look.py` | a Value field, a line | not built yet |
 | `facts.*` entries in `--fact-set` | P374 | `sourcing/part_facts.py` (`_op_fact_set` and `_set_in_home`) | an Operation's path and the shared writer | not built yet. `--fact-set` exists and writes whole top-level keys (`CHAIN_FACTS`, `drawer.DESCRIBING`). `_set_in_home` also writes `--function-set` and replaces each key whole, so a `facts.*` entry needs a merge into the record's `facts` |
-| `ROLE_PENALTY` | P405 | `design/pin_assigner.py` | a named constant | stays in `assign_pins.py` and moves with it, not into `OnboardRole` (the PO, epic #94, 2026-10-26) |
+| `ROLE_PENALTY` | P405 | `design/pin_assigner.py` | a named constant | stays in `assign_pins.py` and moves with it, not into `OnboardRole` (the example recorded with the PO's answer, epic #94, 2026-10-26, a reading he can change) |
 
 ## 8. The MVP marks
 
@@ -388,7 +388,7 @@ One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of th
 
 | # | Lesson | The slices it opens | The questions it asks |
 |---|---|---|---|
-| 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | question 1: which of the verdict groups to take, in which order |
+| 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | question 1: which of the verdict groups to take, in which order (answered: *"quck now, split later"*, so the prune PR does the quick work, and the splits of `boards.py` and `parts.py` wait for wave 6) |
 | 2 | Package layout: `scripts/spark/`, areas, leaves, the move recipe | S4, S11, waves 5 and 6 | question 2 (decision 2, the shape) and question 3 (decision 4, when the moves start) |
 | 3 | The core contract: Operation, result, Finding, the four rules of section 4, consent, the five role tables as its worked input | S3, S5, S6, OC4 | question 4 (decision 6, a relayed yes), question 5 (decision 1, readability first) and question 6 (decision 5, the printed names) |
 | 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | question 7: the fast lane's budget on a push (S13) |
