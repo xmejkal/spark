@@ -827,7 +827,7 @@ class TheStandingYesTest(GateCase):
         # P423: the sentence of a refusal reaches the terminal through the guard
         self.give()
         self.clock.advance(minutes=30)
-        with mock.patch.dict(board_grant.DEPLOY_MESSAGE_FOR, {board_grant.WHY_EXPIRED: "ended\u202e\rthe grant"}):
+        with mock.patch.object(board_grant, "DEPLOY_MESSAGE_FOR", {"expired": "ended\u202e\rthe grant"}):
             _, said, _ = self.flash()
         self.assertIn("  standing yes: not used: ended??the grant", said.splitlines())
 
