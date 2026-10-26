@@ -26,8 +26,7 @@ def test_the_build_runs_the_name_as_no_code(self): ...
 ```
 
 `SPARK_SUITE=quick` makes any run a quick run. `tools/mutate.py` removes it from the environment of its runs, because a
-defect that only a slow test catches must not escape it. The first numbers, measured on 2026-10-26: the full run took
-109 to 127 s, and the quick run took about 55 s less (the measured line is in the rows,
+defect that only a slow test catches must not escape it. The first numbers, measured on 2026-10-26: the full run took 124.8 s, and the quick run took 77.0 s of tests and 94 s for the whole gate (the rows have the numbers,
 [`docs/observations/rows/p425-quick-run.md`](../observations/rows/p425-quick-run.md)).
 
 **The rule the tests follow: a test must run the thing, not read it.**

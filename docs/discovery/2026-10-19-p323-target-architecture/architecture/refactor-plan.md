@@ -408,8 +408,10 @@ One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of th
 The order of work. The between-cards council set the order after P335. The PO accepted it in chat on 2026-10-26:
 OC8, P333, OC3, S13, OC4, P397, OC7, P399, P374, OC5, P345 PR 2, S2, OC6, OC1 (after P411), OC2. The waves keep
 their slices. S13 runs early because of the PO's answer on question 7 (epic #94, 2026-10-26: *"let's try option a,
-lets see, how t works"*). It is an experiment: a fast lane under 90 s on his Mac, judged at a retro. Today the push
-hook takes 111 to 206 s. Wave 5's closing 90 s check becomes S13's own check.
+lets see, how t works"*). It is an experiment, judged at a retro. Today the push
+hook takes 111 to 206 s. **S13 is done in P425 ([#559](https://github.com/xmejkal/spark/issues/559))**: a quick run on the hook
+and a full run (`check_commit.py --full`) before a PR is ready, with no cap on the time. The hook prints the quick run's
+seconds and count, and the retro decides any cap (W15b). Wave 5's closing 90 s check is dropped with the cap.
 
 ```mermaid
 flowchart LR
@@ -521,8 +523,7 @@ today 2,266 lines that 35 files import. It retargets the 217 mutation rows. It a
 `LookStopError`, `ReadyProbe`, `DoctorProbe`, `DeployPhase`, `ReadingFile`. It moves the Fakes into `tests/fakes.py`.
 `board_facts.py` moves as the bench's `ReadingFile` and the look's line. `deployed_store.py` (OC5) stays in `scripts/`
 until the records move. S12, the map: `tools/map.py` writes `docs/guide/map.md`. When the page is stale, a test fails. S13,
-fast and slow lanes. S13 runs early (the order of work in section 10). Its own check is that the fast lane runs
-under 90 s on the PO's Mac. One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing.
+the quick run and the full run. S13 is done in P425 (the order of work in section 10). One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing.
 
 ### Wave 6: the other areas
 
