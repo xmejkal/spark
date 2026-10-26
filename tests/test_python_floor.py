@@ -1,6 +1,7 @@
 """P426 (#560): spark runs on the Python 3.9 its README and pyproject promise, so no script or tool uses newer syntax.
 
-`ast.parse` with `feature_version=(3, 9)` refuses 3.10's grammar (a `match` statement, parenthesized context managers).
+`ast.parse` with `feature_version=(3, 9)` refuses 3.10's grammar, such as a `match` statement. It is a best-effort check that the
+host Python limits, so a release still runs the suite on 3.9 once (row 4 of the rows file).
 An `X | Y` annotation parses there but fails when the module runs, unless the module has `from __future__ import
 annotations`, so that is searched apart.
 """
