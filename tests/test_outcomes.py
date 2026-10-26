@@ -20,8 +20,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools"))  # `mutate`, which test_every_script_answers_in_the_one_vocabulary imports
 
 import board_facts  # noqa: E402
+import boards  # noqa: E402
 import outcomes  # noqa: E402
 import run_scenario  # noqa: E402
+from test_boards import DEFINITION, kept_definition_board  # noqa: E402
 
 MAC = "8c:bf:ea:cc:97:70"
 GOOD_RECORD = ('{"mac": "8c:bf:ea:cc:97:70", "deploys": [{"project": "blink", "verdict": "ready seen", '
@@ -100,6 +102,22 @@ def read_text(text):
     return run_scenario.ScenarioSteps.from_text(text or "")
 
 
+def read_definition(case):
+    """
+    boards.read_simulated_part with `case` as what the board's record holds for its Wokwi definition: None (the record names
+    none), text (the kept file's bytes), or ("entry", value) (the `documents` entry itself, whatever it is).
+    """
+    if case is None:
+        board = kept_definition_board()
+        del board["documents"][boards.WOKWI_DEFINITION]
+    elif isinstance(case, tuple):
+        board = kept_definition_board()
+        board["documents"][boards.WOKWI_DEFINITION] = case[1]
+    else:
+        board = kept_definition_board(case)
+    return boards.read_simulated_part(board)
+
+
 #: Every reader that follows the rule in outcomes.py: its function from an input to a Value, and for each input the state
 #: it must give, as the literal the records and goldens hold. Each has a missing, a malformed and a good input.
 READERS = {
@@ -113,6 +131,13 @@ READERS = {
         "malformed": (LOG_HEADER + "step counts: set-control x\n\n", "not-checked"),
         "older, with no counts line": (LOG_HEADER + "\nbody\n", "none-recorded"),
         "good": (LOG_HEADER + "step counts: set-control 1, wait-serial 2\n\n", "recorded")}),
+    "boards.read_simulated_part": (read_definition, {
+        "missing": (None, "none-recorded"),
+        "malformed": ('{"pins": ', "not-checked"),
+        "wrong shape": ('{"pins": [1]}', "not-checked"),
+        "entry that is null": (("entry", None), "not-checked"),
+        "file name with a null byte": (("entry", {"sha256": "a" * 64, "file": "a\0b"}), "not-checked"),
+        "good": (DEFINITION, "recorded")}),
     "ScenarioSteps.from_text": (read_text, {
         "missing": (None, "none-recorded"),
         "malformed": ("steps:\n  - just-a-word\n", "not-checked"),

@@ -1,0 +1,11 @@
+[
+{"file":"scripts/boards.py","name":"no-documents-table-is-not-none-recorded","find":"    if not isinstance(documents, dict) or WOKWI_DEFINITION not in documents:\n        return SimulatedPart(outcomes.NONE_RECORDED, board_id)\n","replace":"    if WOKWI_DEFINITION not in (documents if isinstance(documents, dict) else {}):\n        return SimulatedPart(outcomes.NOT_CHECKED, board_id, why=WHY_NOT_KEPT)\n"},
+{"file":"scripts/boards.py","name":"null-definition-entry-is-none-recorded","find":"or WOKWI_DEFINITION not in documents:","replace":"or documents.get(WOKWI_DEFINITION) is None:"},
+{"file":"scripts/boards.py","name":"not-checked-says-no-why","find":"SimulatedPart(outcomes.NOT_CHECKED, board_id, why=WHY_NOT_KEPT)","replace":"SimulatedPart(outcomes.NOT_CHECKED, board_id)"},
+{"file":"scripts/boards.py","name":"onboard-function-drops-its-role","find":"\"what\": spec.what, \"role\": role} for role, spec","replace":"\"what\": spec.what} for role, spec"},
+{"file":"scripts/matching.py","name":"offer-json-leaks-the-role","find":"return [{\"does\": clean(f.get(\"does\")), \"what\": clean(f.get(\"what\"))} for f in self.functions]","replace":"return [dict(f, does=clean(f.get(\"does\")), what=clean(f.get(\"what\"))) for f in self.functions]"},
+{"file":"scripts/boards.py","name":"gpio-limits-one-line-dropped","find":"        return [(ONBOARD_GPIOS, part.why_not_compared())]","replace":"        return []"},
+{"file":"scripts/boards.py","name":"value-error-escapes-the-reader","find":"except (KeyError, TypeError, ValueError, RecursionError, OSError):","replace":"except (KeyError, TypeError, RecursionError, OSError):"},
+{"file":"scripts/boards.py","name":"not-looked-at-says-no-pin","find":"        return self.why_not_compared() or (None if gpio in self.gpios else","replace":"        return (None if gpio in self.gpios else"},
+{"file":"scripts/parts.py","name":"role-less-copy-shadows-the-boards-own-dict","find":"    return [own.get((function[\"does\"], function[\"what\"]), function) for function in said] + [","replace":"    return [function for function in said] + ["}
+]

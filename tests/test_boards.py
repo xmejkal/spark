@@ -482,7 +482,7 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
     CHARGER = {"does": "power", "what": "onboard charger"}
     REGULATOR = {"does": "power", "what": "onboard voltage regulator"}
     BATTERY_INPUT = {"does": "connect", "what": "onboard battery input"}
-    BATTERY_LEVEL = {"does": "sense", "what": "onboard battery level"}
+    BATTERY_LEVEL = {"does": "sense", "what": "onboard battery level", "role": "onboard_battery_sense"}
 
     @staticmethod
     def fact(value):
@@ -517,7 +517,7 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
         board = {"power": {"charger": self.fact("TP4054")}, "pin_roles": {"onboard_battery_sense": {"gpio": [34], "note": "x"},
                                                                               "onboard_led": {"gpio": [2], "note": "x"}}}
         self.assertEqual(boards.onboard_functions(board), [
-            {"does": "indicate", "what": "onboard LED light"}, self.BATTERY_LEVEL, self.CHARGER])
+            {"does": "indicate", "what": "onboard LED light", "role": "onboard_led"}, self.BATTERY_LEVEL, self.CHARGER])
 
     def test_a_board_with_no_pin_role_still_offers_its_power_facts(self):
         self.assertEqual(boards.onboard_functions({"pin_roles": 5, "power": {"charger": self.fact("TP4054")}}), [self.CHARGER])
@@ -807,6 +807,9 @@ DEFINITION = """{
 """
 
 
+DEFINITION_CHANGED = DEFINITION + "\n"
+
+
 def kept_definition_board(text=DEFINITION):
     """The XIAO record, with its Wokwi definition kept in this process's scratch store (`store.py:40-42`)."""
     digest = store.keep(text.encode(), "wokwi-test.board.json")
@@ -822,38 +825,45 @@ def kept_path(board):
 
 
 class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
-    """P396: the Wokwi definition that spark keeps names the GPIOs a scenario can reach, so the build says which it cannot."""
+    """P396, P397: the Wokwi definition that spark keeps names the GPIOs a scenario can reach, so the build says which it cannot."""
+
+    NOT_KEPT = ("not-checked", "spark's store lacks the Wokwi definition that the board record names, its sha256 differs, "
+                               "or it does not parse")
+
+    def state_of(self, board):
+        part = boards.read_simulated_part(board)
+        return part.state, part.why
 
     def test_the_targets_of_its_pins_are_its_gpios_with_the_comment_cut(self):
         part = boards.read_simulated_part(kept_definition_board())
-        self.assertEqual((part.board_id, part.gpios), ("xiao-esp32-c6", frozenset({0, 15})))
+        self.assertEqual((part.state, part.why, part.board_id, part.gpios), ("recorded", None, "xiao-esp32-c6", frozenset({0, 15})))
 
     def test_a_gpio_with_no_pin_has_a_reason_and_one_with_a_pin_has_none(self):
         part = boards.read_simulated_part(kept_definition_board())
         self.assertEqual(part.why_not_simulated(9), "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9")
         self.assertIsNone(part.why_not_simulated(15))
 
-    def test_a_file_the_store_lacks_is_none(self):
+    def test_a_file_the_store_lacks_is_not_checked(self):
         board = kept_definition_board()
         board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
-        self.assertIsNone(boards.read_simulated_part(board))
+        self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
-    def test_a_file_whose_bytes_changed_is_none(self):
+    def test_a_file_whose_bytes_changed_is_not_checked(self):
         board = kept_definition_board(DEFINITION + "\n")
         kept_path(board).write_text(DEFINITION + "  ")
-        self.assertIsNone(boards.read_simulated_part(board))
+        self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
     def test_strict_json_with_a_comment_mark_inside_a_string_parses(self):
         text = '{"pins": {"D1": {"target": "GPIO1", "note": "a /* b"}, "D2": {"target": "GPIO2", "note": "*/"}}}'
         self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({1, 2}))
 
-    def test_a_definition_that_does_not_parse_is_none(self):
-        self.assertIsNone(boards.read_simulated_part(kept_definition_board('{"pins": ')))
+    def test_a_definition_that_does_not_parse_is_not_checked(self):
+        self.assertEqual(self.state_of(kept_definition_board('{"pins": ')), self.NOT_KEPT)
 
-    def test_a_definition_whose_pins_are_not_a_table_is_none_never_no_pins(self):
+    def test_a_definition_whose_pins_are_not_a_table_is_not_checked_never_no_pins(self):
         for text in ('{"pins": [1]}', '[1]', '{"name": "no pins"}'):
             with self.subTest(text=text):
-                self.assertIsNone(boards.read_simulated_part(kept_definition_board(text)))
+                self.assertEqual(self.state_of(kept_definition_board(text)), self.NOT_KEPT)
 
     def test_a_target_that_is_not_ascii_digits_is_no_gpio(self):
         text = '{"pins": {"D1": {"target": "GPIO\uff19"}, "D2": {"target": 9}, "D3": {"target": "GPIO3"}}}'
@@ -864,11 +874,154 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
                '"D": {"target": "GPIO5"}}}'
         self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({5}))
 
-    def test_a_definition_nested_too_deep_is_none(self):
-        self.assertIsNone(boards.read_simulated_part(kept_definition_board("[" * 100000 + "]" * 100000)))
+    def test_a_definition_nested_too_deep_is_not_checked(self):
+        self.assertEqual(self.state_of(kept_definition_board("[" * 100000 + "]" * 100000)), self.NOT_KEPT)
 
-    def test_documents_that_are_not_a_table_are_none(self):
-        self.assertIsNone(boards.read_simulated_part({"id": "x", "documents": ["wokwi-board"]}))
+    def test_documents_that_are_not_a_table_name_no_definition(self):
+        self.assertEqual(self.state_of({"id": "x", "documents": ["wokwi-board"]}), ("none-recorded", None))
+
+    def test_a_record_with_no_documents_names_no_definition(self):
+        self.assertEqual(self.state_of({"id": "x"}), ("none-recorded", None))
+
+    def test_a_definition_entry_that_is_present_but_null_or_no_table_is_not_checked(self):
+        # Only a missing key is "names none": a key that is there and holds nothing usable is a record spark could not read.
+        for entry in (None, "wokwi-board", ["x"], 5, {}):
+            with self.subTest(entry=entry):
+                self.assertEqual(self.state_of({"id": "x", "documents": {boards.WOKWI_DEFINITION: entry}}), self.NOT_KEPT)
+
+    def test_a_file_name_with_a_null_byte_is_not_checked_never_raised(self):
+        board = kept_definition_board()
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "a\0b.board.json"
+        self.assertEqual(self.state_of(board), self.NOT_KEPT)
+
+    @unittest.skipUnless(hasattr(sys, "set_int_max_str_digits"), "this Python has no limit on the digits of an int")
+    def test_a_pin_target_with_a_digit_run_too_long_for_int_is_not_checked_never_raised(self):
+        text = '{"pins": {"D1": {"target": "GPIO' + "9" * 5000 + '"}}}'
+        self.assertEqual(self.state_of(kept_definition_board(text)), self.NOT_KEPT)
+
+    def test_why_not_simulated_says_what_stopped_the_reader_never_that_a_pin_is_missing(self):
+        # A definition that spark could not look at has no GPIOs, which is not the same as having no pin on GPIO9.
+        lacking = kept_definition_board()
+        lacking["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        self.assertEqual(boards.read_simulated_part(lacking).why_not_simulated(9),
+                         "not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 "
+                         "differs, or it does not parse")
+        self.assertEqual(boards.read_simulated_part({"id": "x"}).why_not_simulated(9),
+                         "not checked: the board record names no Wokwi definition")
+
+    def test_the_value_is_built_by_state_why_and_gpios(self):
+        part = boards.SimulatedPart("recorded", "x", frozenset({1}))
+        self.assertEqual((part.state, part.board_id, part.gpios, part.why), ("recorded", "x", frozenset({1}), None))
+        self.assertEqual(boards.SimulatedPart("none-recorded", "x").gpios, frozenset())
+
+
+class TheBoardsOwnLimitsTest(unittest.TestCase):
+    """P396, P397: an onboard GPIO with no pin in the board's Wokwi definition is a limit, in the build and in the note."""
+
+    BUTTON = ("ONBOARD_BUTTON (GPIO9)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9, so spark knows no "
+                                        "way for a scenario to press it. Test it on the board.")
+
+    def test_the_button_with_no_pin_is_a_limit_and_the_led_with_one_is_not(self):
+        self.assertEqual(boards.onboard_limits(kept_definition_board()), [self.BUTTON])
+
+    def test_an_led_with_no_pin_is_one_no_scenario_can_read(self):
+        board = kept_definition_board()
+        board["pin_roles"][boards.ONBOARD_LED]["gpio"] = [3]
+        self.assertIn(("ONBOARD_LED (GPIO3)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark "
+                                              "knows no way for a scenario to read it. Test it on the board."),
+                      boards.onboard_limits(board))
+
+    def test_a_record_that_names_no_definition_says_not_checked(self):
+        board = kept_definition_board()
+        del board["documents"][boards.WOKWI_DEFINITION]
+        self.assertEqual(boards.onboard_limits(board),
+                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
+
+    def test_a_definition_the_store_lacks_says_not_checked(self):
+        board = kept_definition_board()
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        self.assertEqual(boards.onboard_limits(board),
+                         [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
+                                            "record names, its sha256 differs, or it does not parse")])
+
+    def test_a_definition_whose_bytes_changed_says_not_checked(self):
+        board = kept_definition_board(DEFINITION_CHANGED)
+        kept_path(board).write_text(DEFINITION_CHANGED + " ")
+        self.assertEqual([component for component, _ in boards.onboard_limits(board)], ["onboard GPIOs"])
+
+    def test_each_gpio_of_a_role_with_no_pin_is_its_own_limit(self):
+        board = kept_definition_board()
+        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = [9, 3]
+        self.assertEqual([component for component, _ in boards.onboard_limits(board)],
+                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_BUTTON (GPIO3)"])
+
+    def test_a_gpio_that_is_not_a_number_is_skipped_never_raised(self):
+        board = kept_definition_board()
+        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = ["9", None, True]
+        self.assertEqual(boards.onboard_limits(board), [])
+
+    def test_a_board_with_no_onboard_role_says_nothing(self):
+        board = kept_definition_board()
+        for role in (boards.ONBOARD_LED, boards.ONBOARD_BUTTON):
+            del board["pin_roles"][role]
+        del board["documents"][boards.WOKWI_DEFINITION]
+        self.assertEqual(boards.onboard_limits(board), [])
+
+    DISPLAY = ("ONBOARD_DISPLAY", "spark adds no part to the diagram for the board's own display, so a passed run does not "
+                                  "test what it shows. Test it on the board.")
+    BATTERY = ("ONBOARD_BATTERY_SENSE", "spark adds no battery to the diagram, so a passed run does not test what the board "
+                                        "reads on this pin. Test it on the board.")
+    TDISPLAY = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
+
+    def test_the_display_is_one_limit_after_the_gpio_lines_whatever_its_gpios_are(self):
+        for gpio in ([3], [15], [], "x"):
+            with self.subTest(gpio=gpio):
+                board = kept_definition_board()
+                board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": gpio, "note": "the screen"}
+                self.assertEqual(boards.onboard_limits(board), [self.BUTTON, self.DISPLAY])
+
+    def test_the_t_displays_record_names_no_definition_a_screen_and_a_battery_pin(self):
+        self.assertEqual(boards.onboard_limits(json.loads(self.TDISPLAY.read_text())),
+                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition"), self.DISPLAY, self.BATTERY])
+
+    def test_the_battery_level_pin_is_one_limit_after_the_gpio_lines_whatever_its_gpio_is(self):
+        for gpio in ([34], [], "x"):
+            with self.subTest(gpio=gpio):
+                board = kept_definition_board()
+                board["pin_roles"][boards.ONBOARD_BATTERY_SENSE] = {"gpio": gpio, "note": "the divider"}
+                self.assertEqual(boards.onboard_limits(board), [self.BUTTON, self.BATTERY])
+
+    def test_a_board_with_only_a_display_gets_that_line_and_no_not_checked_line(self):
+        board = json.loads(self.TDISPLAY.read_text())
+        del board["pin_roles"][boards.ONBOARD_BUTTON]
+        del board["pin_roles"][boards.ONBOARD_BATTERY_SENSE]
+        self.assertEqual(boards.onboard_limits(board), [self.DISPLAY])
+
+    def test_a_definition_the_store_lacks_still_leaves_the_display_line_after_the_not_checked_one(self):
+        board = kept_definition_board()
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": [3], "note": "the screen"}
+        self.assertEqual([component for component, _ in boards.onboard_limits(board)], ["onboard GPIOs", "ONBOARD_DISPLAY"])
+
+    def test_a_board_that_names_every_onboard_part_has_a_sentence_for_each_part_no_scenario_reaches(self):
+        board = kept_definition_board()
+        for role in boards.ONBOARD_ROLES:
+            board["pin_roles"].setdefault(role, {"gpio": [3], "note": "x"})
+        self.assertEqual([component for component, _ in boards.onboard_limits(board)],
+                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_DISPLAY", "ONBOARD_BATTERY_SENSE"])
+
+    def test_a_role_with_no_gpio_list_says_nothing(self):
+        board = kept_definition_board()
+        board["pin_roles"][boards.ONBOARD_BUTTON] = {"note": "somewhere"}
+        self.assertEqual(boards.onboard_limits(board), [])
+
+    def test_documents_that_are_not_a_table_name_no_definition(self):
+        board = kept_definition_board()
+        board["documents"] = ["wokwi-board"]
+        self.assertEqual(boards.onboard_limits(board),
+                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
+
+
 # --- end MVP ---
 
 

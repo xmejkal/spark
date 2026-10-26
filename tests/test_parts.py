@@ -2004,9 +2004,9 @@ class WhatAPartDoesTest(unittest.TestCase):
         self.assertEqual(parts.function_of({"kind": "sensor"}), [], "a sensor says nothing until it is written")
         self.assertEqual(parts.function_of({"pins": {}}, board=True), [{"does": "compute", "what": "microcontroller"}])
 
-    LED = {"does": "indicate", "what": "onboard LED light"}
-    BUTTON = {"does": "input", "what": "onboard button"}
-    SCREEN = {"does": "indicate", "what": "onboard display screen"}
+    LED = {"does": "indicate", "what": "onboard LED light", "role": "onboard_led"}
+    BUTTON = {"does": "input", "what": "onboard button", "role": "onboard_button"}
+    SCREEN = {"does": "indicate", "what": "onboard display screen", "role": "onboard_display"}
     COMPUTE = {"does": "compute", "what": "microcontroller"}
 
     def test_a_board_also_does_what_its_own_parts_do_in_table_order(self):
@@ -2025,8 +2025,15 @@ class WhatAPartDoesTest(unittest.TestCase):
         self.assertEqual(parts.function_of(record), [{"does": "keep-time", "what": "rtc"}])
 
     def test_a_function_the_record_already_says_is_not_added_twice(self):
-        record = {"function": [self.LED], "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}}
+        record = {"function": [{"does": "indicate", "what": "onboard LED light"}], "pin_roles": {"onboard_led": {"gpio": [2], "note": "x"}}}
         self.assertEqual(parts.function_of(record, board=True), [self.LED])
+
+    def test_the_boards_own_dict_with_its_role_wins_a_function_the_record_says_without_one(self):
+        # P397: a record may name "input / onboard button" itself. The pick reads the role, so the role-less copy must not shadow it.
+        own = {"does": "input", "what": "onboard button"}
+        record = {"function": [own, {"does": "store", "what": "eeprom"}], "pin_roles": {"onboard_button": {"gpio": [9], "note": "x"}}}
+        self.assertEqual(parts.function_of(record, board=True), [self.BUTTON, {"does": "store", "what": "eeprom"}])
+        self.assertEqual(own, {"does": "input", "what": "onboard button"}, "the record's own function is not changed")
 
     def test_pin_roles_of_the_wrong_shape_name_no_part(self):
         for pin_roles in (["onboard_led"], "onboard_led", None, {"onboard_led": "x"}, {"onboard_led": ["gpio"]}):
