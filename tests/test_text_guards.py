@@ -18,5 +18,28 @@ class OneLineTest(unittest.TestCase):
                 self.assertEqual(text_guards.one_line("a%sb" % ends), "a b")
 
 
+class GuardLinesTest(unittest.TestCase):
+    """P423 (#556): the text a script prints, line by line, with each line's own newlines kept."""
+
+    def test_the_newlines_of_the_text_stay(self):
+        self.assertEqual(text_guards.guard_lines("a\nb"), "a\nb")
+        self.assertEqual(text_guards.guard_lines("a\n"), "a\n")
+        self.assertEqual(text_guards.guard_lines(""), "")
+
+    def test_a_character_a_terminal_does_not_print_shows_as_a_question_mark(self):
+        for hidden in ("\r", "\t", "\u202e", "\x1b", "\u2028", "\x00"):
+            with self.subTest(hidden=repr(hidden)):
+                self.assertEqual(text_guards.guard_lines("a%sb\nc%sd" % (hidden, hidden)), "a?b\nc?d")
+
+    def test_a_text_that_is_not_a_string_is_not_turned_into_one(self):
+        with self.assertRaises(AttributeError):
+            text_guards.guard_lines(None)
+
+
+class CleanTest(unittest.TestCase):
+    def test_a_line_or_paragraph_separator_becomes_a_space(self):
+        self.assertEqual(text_guards.clean("a\u2028b\u2029c"), "a b c")
+
+
 if __name__ == "__main__":
     unittest.main()
