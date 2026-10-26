@@ -16,6 +16,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import slow  # noqa: E402
 from board_library import board_missing  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -1568,6 +1569,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertTrue(said["problems"][0]["sentence"].startswith("power[0] rail is "), said["problems"])
         self.assertFalse((project / "requirements.json").exists() or (home / "shelf").exists())
 
+    @slow("a real tsci build of a project whose part name is hostile, 1 test, 6 to 12 s on 2026-10-26")
     def test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert(self):
         # F11 (the review's probe; P87's emitter half): a name is not refused — product names carry inch marks — so this
         # one is shelved and built, and the board keeps it in a comment it cannot end. `tsci build` printed REVIEW-INJECTED-42

@@ -30,6 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import slow  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -349,6 +350,7 @@ class TheDeployStageBitesTest(unittest.TestCase):
         self.assertIn("no run in sim/runs/ tested", _deploy(self.image_after_a_passed_run(changed=True)))
 
 
+@slow("every stage of a basic project, build to deploy, 6 tests, 12.6 s on 2026-10-26")
 class TheBasicJourneyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

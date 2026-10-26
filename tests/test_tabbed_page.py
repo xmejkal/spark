@@ -16,6 +16,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import suite_temp  # noqa: E402,F401
+from suite_runs import slow  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -63,6 +64,7 @@ class TabbedHtmlPageTest(unittest.TestCase):
         self.assertEqual(TabbedHtmlPage().text(three_tabs()), TabbedHtmlPage().text(three_tabs()))
 
 
+@slow("the tsci export of a circuit, 7 tests, 2.1 s on 2026-10-26")
 class TscircuitExportTest(unittest.TestCase):
     def run_with(self, returncode=0, writes="<svg/>", stderr="", side_effect=None):
         def fake_run(command, **kwargs):
