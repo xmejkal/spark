@@ -254,7 +254,7 @@ class LookReport:
         """What the person does about a last deploy that was not checked."""
         if self.last_deploy.why == board_facts.WHY_UNREADABLE:
             return "repair or remove %s, then run look.py again" % board_facts.record_path(self.reading.mac)
-        return "fix that, then run look.py again"
+        return "reconnect the board so that its MAC can be read, then run look.py again"
 
     def exit_code(self):
         """What the shell sees: the exit for `status`."""

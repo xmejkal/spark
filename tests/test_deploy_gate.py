@@ -837,6 +837,7 @@ class TheStandingYesTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("spark could not check its record of this board's last deploy", said)
         self.assertIn("no terminal to ask you in", problems)
+        self.assertNotIn("run this once", said + problems)
 
     def test_a_look_with_a_stop_refuses_whatever_the_grant(self):
         self.give()

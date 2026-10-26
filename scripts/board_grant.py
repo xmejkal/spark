@@ -68,7 +68,8 @@ MAX_MINUTES = 24 * 60
 
 WHY_NO_GRANT, WHY_EXPIRED, WHY_NO_ZONE, WHY_NOT_A_GRANT = "no grant", "expired", "no zone", "not a grant"
 WHY_SERIAL_NOT_MAC, WHY_NO_MAC, WHY_BAD_MINUTES, WHY_ANSWERED_NO = "serial not mac", "no mac", "bad minutes", "answered no"
-#: Why a deploy asks for a typed yes though a deploy grant may exist: the look is no match, --ignore-older-runs or --no-simulation.
+#: Why a deploy asks for a typed yes though a deploy grant may exist: the look is no match, its last deploy was not
+#: checked, --ignore-older-runs or --no-simulation.
 WHY_LOOK_NOT_MATCH, WHY_IGNORE_OLDER_RUNS = "look not a match", "ignore older runs"
 WHY_LAST_DEPLOY_NOT_CHECKED = "last deploy not checked"
 WHY_NO_SIMULATION = "no simulation"
@@ -188,6 +189,13 @@ class StandingConsentStrategy(ConsentStrategy):
     def ask(self, question):
         self.require_ready()
         return True
+
+
+def grant_may_cover(report, evidence):
+    """True when a deploy grant can answer for this deploy: the look matched, its last deploy was checked, and the
+    evidence allows a grant. consent_for_deploy refuses in the same cases, and deploy.py offers the grant line only here."""
+    return (report.verdict == board_look.VERDICT_MATCH and not report.last_deploy_not_checked()
+            and evidence.grant_refusal is None)
 
 
 class GrantService:

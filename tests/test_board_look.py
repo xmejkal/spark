@@ -600,6 +600,13 @@ class ReportLinesTest(LookCase):
         self.assertIn("  last deploy not checked: spark's record of it cannot be read: repair or remove %s, then run "
                       "look.py again." % record, lines)
 
+    def test_a_look_is_could_not_run_when_its_last_deploy_was_not_checked_and_ok_when_none_was_recorded(self):
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual(report.status, outcomes.OK)
+        report.last_deploy = board_facts.LastDeploy("not-checked", why="spark's record of it cannot be read")
+        self.assertEqual(report.status, outcomes.COULD_NOT_RUN)
+
     def test_a_board_whose_mac_was_not_read_is_not_checked_and_never_no_deploy(self):
         self.run_the_scenario()
         self.record_a_deploy()

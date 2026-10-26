@@ -37,7 +37,7 @@ and one next step for your hands, as the last line. Its look at the console can 
 unknown fields, a missing token and a last deploy it could not check as `unchecked`, and, when there is a token, the deploy step with `needs_yes`. The
 board doctor's lines still go to stderr. Exit codes do not change; the envelope's status is the exit code's.
 
-Exit codes: 0 every field matches and there is a token, 1 a field differs or the look found a stop, 2 it could not run
+Exit codes: 0 every field matches, there is a token and the last deploy was checked, 1 a field differs or the look found a stop, 2 it could not run
 or could not check something (a field unknown, no token, a last deploy it could not check), and the sentence says why."""
 
 

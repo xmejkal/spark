@@ -102,6 +102,15 @@ class LookJsonTest(JsonCase, LookScriptCase):
         self.assertTrue(said["data"]["token"])
         self.assertEqual(said["next"][0]["op"], "deploy")
 
+    def test_a_board_whose_mac_was_not_read_has_two_unchecked_items_the_token_and_the_last_deploy(self):
+        self.run_the_scenario()
+        code, said, _ = self.go("--json", esptool="c6-flash-id-no-mac.txt")
+        said = self.one(code, said, "look", "look")
+        self.assertEqual((code, said["status"]), (2, "could-not-run"))
+        self.assertEqual(said["unchecked"][-1], {"sentence": "last deploy not checked: the board's MAC was not read",
+                                                 "fix": "reconnect the board so that its MAC can be read, then run look.py again"})
+        self.assertTrue(said["unchecked"][-2]["sentence"].startswith("no token: "))
+
     def test_no_token_is_unchecked_and_has_no_deploy_step(self):
         code, said, _ = self.go("--json")
         said = self.one(code, said, "look", "look")
