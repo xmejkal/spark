@@ -102,7 +102,7 @@ Back to [the architecture](README.md).
 | power | a part's `power` list, a board's `power` block, `power_pads`, the verb `power` | `supply_pins` and `power_facts` in code. The record keys stay. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
 | board (Kanban) | `scripts/boards.py` reads dev board records, `tools/board.py` reads the team's GitHub board | `tools/kanban.py`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
 | brief | `parts._brief` (a part's three-key summary), the project's brief | `_part_summary` and `Brief`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
-| not checked | `LastDeploy.state` with `why`, `ScenarioSteps.unread`, `None` from a reader | one shape, `state` and `why` (OC4). Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
+| not checked | `LastDeploy.state` with `why`, `ScenarioSteps.unread`, `None` from a reader | one shape, `state` and `why`, with the three words and `NOT_CHECKED_MESSAGE` in `outcomes.py` (OC4, done in P428). Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
 
 ## 3. Public names that stay, each with one meaning
 

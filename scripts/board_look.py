@@ -249,7 +249,7 @@ class LookReport:
 
     def last_deploy_not_checked(self):
         """True when spark's record of this board's last deploy could not be read: a fact not checked, never a pass."""
-        return self.last_deploy.state == board_facts.NOT_CHECKED
+        return self.last_deploy.state == outcomes.NOT_CHECKED
 
     def last_deploy_fix(self):
         """What the person does about a last deploy that was not checked."""

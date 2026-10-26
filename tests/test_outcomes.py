@@ -5,17 +5,28 @@ Proof that the three outcomes are one definition, and that every script answers 
 """
 
 import importlib
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "tools"))  # `mutate`, which test_every_script_answers_in_the_one_vocabulary imports
 
+import board_facts  # noqa: E402
 import outcomes  # noqa: E402
+import run_scenario  # noqa: E402
+
+MAC = "8c:bf:ea:cc:97:70"
+GOOD_RECORD = ('{"mac": "8c:bf:ea:cc:97:70", "deploys": [{"project": "blink", "verdict": "ready seen", '
+               '"deployed": "2026-10-19T09:24:50+02:00"}]}')
+LOG_HEADER = "# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n"
 
 #: Every script that exits with the three-way answer, and the local word it uses for "no".
 SCRIPTS = {
@@ -64,6 +75,70 @@ class ThreeOutcomesTest(unittest.TestCase):
             self.assertEqual(getattr(module, no), outcomes.EXIT_PROBLEMS, name)
             if hasattr(module, "EXIT_COULD_NOT_RUN"):
                 self.assertEqual(module.EXIT_COULD_NOT_RUN, outcomes.EXIT_COULD_NOT_RUN, name)
+
+
+def read_last_deploy(text):
+    """board_facts.read_last_deploy with `text` as the store's record of the board (None: no record), in a store of its own."""
+    with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
+        if text is not None:
+            record = board_facts.record_path(MAC)
+            record.parent.mkdir(parents=True, exist_ok=True)
+            record.write_text(text)
+        return board_facts.read_last_deploy(MAC)
+
+
+def read_log(text):
+    """ScenarioSteps.from_log with `text` as the log (None: no file)."""
+    log = Path(tempfile.mkdtemp()) / "a.log"
+    if text is not None:
+        log.write_text(text)
+    return run_scenario.ScenarioSteps.from_log(log)
+
+
+def read_text(text):
+    """ScenarioSteps.from_text with `text` as the scenario (None: an empty one)."""
+    return run_scenario.ScenarioSteps.from_text(text or "")
+
+
+#: Every reader that follows the rule in outcomes.py: its function from an input to a Value, and for each input the state
+#: it must give, as the literal the records and goldens hold. Each has a missing, a malformed and a good input.
+READERS = {
+    "board_facts.read_last_deploy": (read_last_deploy, {
+        "missing": (None, "none-recorded"),
+        "malformed": ("{not json", "not-checked"),
+        "wrong shape": ('{"deploys": 3}', "not-checked"),
+        "good": (GOOD_RECORD, "recorded")}),
+    "ScenarioSteps.from_log": (read_log, {
+        "missing": (None, "not-checked"),
+        "malformed": (LOG_HEADER + "step counts: set-control x\n\n", "not-checked"),
+        "older, with no counts line": (LOG_HEADER + "\nbody\n", "none-recorded"),
+        "good": (LOG_HEADER + "step counts: set-control 1, wait-serial 2\n\n", "recorded")}),
+    "ScenarioSteps.from_text": (read_text, {
+        "missing": (None, "none-recorded"),
+        "malformed": ("steps:\n  - just-a-word\n", "not-checked"),
+        "good": ("steps:\n  - wait-serial: ready\n", "recorded")}),
+}
+
+
+class ThreeStatesTest(unittest.TestCase):
+    def test_the_three_words_and_the_sentence_that_says_one(self):
+        self.assertEqual((outcomes.RECORDED, outcomes.NONE_RECORDED, outcomes.NOT_CHECKED, outcomes.NOT_CHECKED_MESSAGE),
+                         ("recorded", "none-recorded", "not-checked", "not checked: %s"))
+
+    def test_each_reader_gives_its_state_and_never_raises(self):
+        for name, (read, inputs) in READERS.items():
+            self.assertLessEqual({"missing", "malformed", "good"}, set(inputs), name)
+            for case, (text, state) in inputs.items():
+                with self.subTest(reader=name, case=case):
+                    try:
+                        value = read(text)
+                    except Exception as error:  # the rule: a reader never raises
+                        self.fail("%s raised %r" % (name, error))
+                    self.assertEqual(value.state, state)
+                    if state == "not-checked":
+                        self.assertTrue(isinstance(value.why, str) and value.why)
+                    else:
+                        self.assertIsNone(value.why)
 
 
 class OneUpwardWalkTest(unittest.TestCase):

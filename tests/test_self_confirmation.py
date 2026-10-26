@@ -39,7 +39,10 @@ AGREEMENT = ("compared with a second source that has to say the same — the dat
 STRUCTURE = "a path, a fixture or a registry the test walks — where to look, not what to expect"
 RELATION = ("a relation between tuning numbers (this costs less than that), which is the design "
             "decision itself; the numbers' values are not the expectation")
+PINNED = "pinned to the literal in the same assertion: the literal is the expectation, the name is read to be checked"
 MAY_READ = {
+    "outcomes.RECORDED": PINNED, "outcomes.NONE_RECORDED": PINNED, "outcomes.NOT_CHECKED": PINNED,
+    "outcomes.NOT_CHECKED_MESSAGE": PINNED,
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
     "ready_check.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
     "assign_pins.BUS_LINES": SAMENESS, "parts.BUSES": SAMENESS,

@@ -33,6 +33,7 @@ import tempfile
 from pathlib import Path
 
 import flash_image
+import outcomes
 import sim_project
 import tools
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS
@@ -64,8 +65,13 @@ IMAGE_LINE = "image sha256: "
 FILE_LINE = "file sha256: "
 #: The log's line that counts the scenario's steps by kind (P345): what a passed run did, read by the look and the deploy question.
 STEP_COUNTS_LINE = "step counts: "
-#: What the line says when the steps could not be counted: a step has no key, so a kind would be a guess.
+#: What the line says when the steps are not RECORDED: a step has no key, so a kind would be a guess, or the log gave none.
 STEPS_NOT_READ = "not read"
+#: Why ScenarioSteps is outcomes.NOT_CHECKED (the reader rule is in outcomes.py), one sentence each.
+WHY_NO_KEY = "a step of the scenario has no kind"
+WHY_NOT_COUNTED = "the log says its steps were not counted"
+WHY_BAD_COUNTS = "the log's step counts line is malformed"
+WHY_LOG_UNREADABLE = "the log cannot be read"
 #: The log's section that holds the simulation's limits note, when the project has one (P396).
 LIMITS_SECTION = "--- what this simulation cannot show ---"
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
@@ -101,8 +107,9 @@ def with_ready_wait(scenario):
 class ScenarioSteps:
     """
     Value: the steps of a scenario counted by kind. `counts` maps a step kind (the key of a step, such as `set-control`) to
-    how many steps have it. `unread` is True when the steps could not be counted: a log with no counts line, or a step
-    with no key. Nothing is derived from an unread count.
+    how many steps have it. `state` is an outcomes word: RECORDED (counted), NONE_RECORDED (a log with no counts line, or a
+    text with no step) or NOT_CHECKED (they could not be counted, and `why` says why). Nothing is derived from the counts
+    of a state that is not RECORDED.
     """
 
     #: A key at the start of a step's text, plain or quoted. Anchored, so a kind named inside a value is no key.
@@ -111,8 +118,8 @@ class ScenarioSteps:
     #: The one key a step carries beside its kind: wokwi-cli prints it as the step's name (TestScenario.ts, validStepKeys).
     NAME_KEY = "name"
 
-    def __init__(self, counts, unread=False):
-        self.counts, self.unread = dict(counts), unread
+    def __init__(self, counts, state=outcomes.RECORDED, why=None):
+        self.counts, self.state, self.why = dict(counts), state, why
 
     @classmethod
     def from_text(cls, steps):
@@ -122,7 +129,7 @@ class ScenarioSteps:
         body = [] if start is None else [line for line in lines[start + 1:] if line.strip()]
         first = next((cls.ITEM.match(line) for line in body if cls.ITEM.match(line)), None)
         if first is None:
-            return cls({}, unread=True)
+            return cls({}, outcomes.NONE_RECORDED)
         width, steps = len(first.group(1)), []
         for line in body:
             item = cls.ITEM.match(line)
@@ -132,14 +139,14 @@ class ScenarioSteps:
                 break  # the steps list ended: a key of the scenario at its own indent
             elif steps:
                 steps[-1].append(line)
-        counts, unread = {}, False
+        counts, keyless = {}, False
         for step in steps:
             kind = cls._kind(step)
             if kind:
                 counts[kind] = counts.get(kind, 0) + 1
             else:
-                unread = True
-        return cls(counts, unread)
+                keyless = True
+        return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY) if keyless else cls(counts)
 
     @classmethod
     def _kind(cls, step):
@@ -153,18 +160,21 @@ class ScenarioSteps:
 
     @classmethod
     def from_log(cls, log):
-        """The ScenarioSteps a log's header counts. A log with no counts line (older), a malformed one or a file that cannot be read is unread."""
+        """The ScenarioSteps a log's header counts. A log with no counts line (older) is NONE_RECORDED. One that says the steps
+        were not read, a malformed one and a file that cannot be read are NOT_CHECKED. It never raises."""
         try:
             said = next((line[len(STEP_COUNTS_LINE):] for line in _header(log) if line.startswith(STEP_COUNTS_LINE)), None)
         except OSError:
-            said = None
-        if said is None or said == STEPS_NOT_READ:
-            return cls({}, unread=True)
+            return cls({}, outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
+        if said is None:
+            return cls({}, outcomes.NONE_RECORDED)
+        if said == STEPS_NOT_READ:
+            return cls({}, outcomes.NOT_CHECKED, WHY_NOT_COUNTED)
         counts = {}
         for each in said.split(", "):
             kind, _, number = each.partition(" ")
             if not re.fullmatch(r"[\w-]+", kind) or not number.isascii() or not number.isdigit() or kind in counts:
-                return cls({}, unread=True)
+                return cls({}, outcomes.NOT_CHECKED, WHY_BAD_COUNTS)
             counts[kind] = int(number)
         return cls(counts)
 
@@ -174,7 +184,7 @@ class ScenarioSteps:
 
     def line(self):
         """The log's counts line: every kind, sorted, with the two kinds that matter always shown, or `not read`."""
-        if self.unread:
+        if self.state != outcomes.RECORDED:
             return STEP_COUNTS_LINE + STEPS_NOT_READ
         kinds = sorted(set(self.counts) | {SET_CONTROL, EXPECT_PIN})
         return STEP_COUNTS_LINE + ", ".join("%s %d" % (kind, self.count(kind)) for kind in kinds)

@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "from_log: a malformed counts line reads as RECORDED",
+  "find": "return cls({}, outcomes.NOT_CHECKED, WHY_BAD_COUNTS)",
+  "replace": "return cls(counts)"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "caveats treats a not-checked log as none-recorded, so it gets no reason",
+  "find": "if steps.state == outcomes.NOT_CHECKED:",
+  "replace": "if steps.state == outcomes.NONE_RECORDED:"
+ },
+ {
+  "file": "scripts/board_facts.py",
+  "name": "read_last_deploy: a record that cannot be read is NONE_RECORDED",
+  "find": "except (OSError, ValueError, RecursionError):\n        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)",
+  "replace": "except (OSError, ValueError, RecursionError):\n        return LastDeploy(outcomes.NONE_RECORDED)"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "line() prints counts for a state that is not RECORDED",
+  "find": "        if self.state != outcomes.RECORDED:\n            return STEP_COUNTS_LINE + STEPS_NOT_READ",
+  "replace": "        if self.state == outcomes.NOT_CHECKED:\n            return STEP_COUNTS_LINE + STEPS_NOT_READ"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "the caveat drops ScenarioSteps.why for the one fixed reason",
+  "find": "outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE",
+  "replace": "outcomes.NOT_CHECKED_MESSAGE % \"the log cannot be read\", UNCOUNTED_ADVICE"
+ },
+ {
+  "file": "scripts/board_facts.py",
+  "name": "read_last_deploy raises on a record that is not JSON (READERS never-raises)",
+  "find": "    except (OSError, ValueError, RecursionError):\n        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)\n    deploys",
+  "replace": "    except (OSError, RecursionError):\n        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)\n    deploys"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "a none-recorded log is said to be not checked",
+  "find": "        if steps.state == outcomes.NONE_RECORDED:\n            return [OLDER_LOG_CAVEAT]",
+  "replace": "        if steps.state == outcomes.NONE_RECORDED:\n            return [\"%s; %s\" % (outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE)]"
+ }
+]

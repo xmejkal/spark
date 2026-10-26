@@ -14,6 +14,7 @@ import tempfile
 import time
 from pathlib import Path
 
+import outcomes
 import store
 import zone_time
 from text_guards import printable
@@ -99,8 +100,7 @@ def record_deploy(facts, verdict, who):
 
 
 # --- MVP ---
-#: What the store says of the board on USB (LastDeploy.state): a deploy is recorded, none is, or spark did not check.
-RECORDED, NONE_RECORDED, NOT_CHECKED = "recorded", "none-recorded", "not-checked"
+#: What the store says of the board on USB is LastDeploy.state, one of the three words of `outcomes` (the reader rule is there).
 WHY_NO_MAC = "the board's MAC was not read"
 WHY_UNREADABLE = "spark's record of it cannot be read"
 ZONE_NOT_STORED = "(zone not stored)"
@@ -108,7 +108,7 @@ ZONE_NOT_STORED = "(zone not stored)"
 
 class LastDeploy:
     """Value. What spark's store says of the board on USB. `project`, `verdict` and `deployed` are as `record_deploy` stored
-    them, with RECORDED. `why` is the reason, with NOT_CHECKED. The rest are None."""
+    them, with outcomes.RECORDED. `why` is the reason, with outcomes.NOT_CHECKED. The rest are None."""
 
     def __init__(self, state, project=None, verdict=None, deployed=None, why=None):
         self.state, self.project, self.verdict, self.deployed, self.why = state, project, verdict, deployed, why
@@ -126,19 +126,19 @@ class LastDeploy:
 
     def line(self):
         """The look's line."""
-        if self.state == RECORDED:
+        if self.state == outcomes.RECORDED:
             said = printable("%s, %s, %s (its store record, not read from the board)" % (self.project, self.verdict, self.time_said()))
-        elif self.state == NONE_RECORDED:
+        elif self.state == outcomes.NONE_RECORDED:
             said = "none in its store record (it keeps only its own deploys)"
         else:
-            said = "not checked: %s" % self.why
+            said = outcomes.NOT_CHECKED_MESSAGE % self.why
         return "spark's last deploy here: " + said
 
     def in_question(self):
         """The words the deploy question puts in its erase sentence."""
-        if self.state == RECORDED:
+        if self.state == outcomes.RECORDED:
             return printable("spark's store record names %s as its last deploy here, %s, %s" % (self.project, self.time_said(), self.verdict))
-        if self.state == NONE_RECORDED:
+        if self.state == outcomes.NONE_RECORDED:
             return "spark's store record names no deploy here"
         return "spark did not read its record of this board: %s" % self.why
 
@@ -154,20 +154,20 @@ def record_path(mac):
 
 def read_last_deploy(mac):
     """The LastDeploy of the board with this `mac`, from the record `record_deploy` writes. It never raises: what it cannot
-    read is NOT_CHECKED with the reason, and never a missing deploy."""
+    read is outcomes.NOT_CHECKED with the reason, and never a missing deploy."""
     if not mac:
-        return LastDeploy(NOT_CHECKED, why=WHY_NO_MAC)
+        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_NO_MAC)
     path = record_path(mac)
     try:
         if not path.exists() and not path.is_symlink():  # a folder or a broken link in its place is no "none"
-            return LastDeploy(NONE_RECORDED)
+            return LastDeploy(outcomes.NONE_RECORDED)
         record = json.loads(path.read_text())
     except (OSError, ValueError, RecursionError):
-        return LastDeploy(NOT_CHECKED, why=WHY_UNREADABLE)
+        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)
     deploys = record.get("deploys") if isinstance(record, dict) else None
     newest = deploys[-1] if isinstance(deploys, list) and deploys else None  # record_deploy appends
     kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
     if not kept or not all(isinstance(each, str) and each.strip() for each in kept):
-        return LastDeploy(NOT_CHECKED, why=WHY_UNREADABLE)
-    return LastDeploy(RECORDED, *kept)
+        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)
+    return LastDeploy(outcomes.RECORDED, *kept)
 # --- end MVP ---

@@ -766,7 +766,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    A caveat names a missing `expect-pin` step (no pin read) only when `set-control` is missing too. A `status: ok` and `data.simulation: "passed"` do not clear
    `data.caveats`. Relay each caveat to the person, also under a deploy grant, because deploy.py prints them in the look
    and starts its question with them. `run_scenario.py` adds one `wait-serial` step itself, for the ready contract. A
-   log from before P345 has no counts, and its caveat says to run the scenario again. A step's `name:` key is its label, never its kind. A caveat is a fact about the
+   log from before P345 has no counts, and a log that cannot be counted for any reason gets a caveat that starts with `not checked:`, names the reason and says to run the scenario again. A step's `name:` key is its label, never its kind. A caveat is a fact about the
    run, never a verdict on the firmware. The log also holds `sim/WHAT-THIS-CANNOT-SHOW.md` after its header, and the
    time of the run carries its zone.
 

@@ -25,6 +25,27 @@ OK, PROBLEMS, COULD_NOT_RUN = "ok", "problems", "could-not-run"
 #: board alone). Never ok, and never could-not-run.
 SKIPPED = "skipped"
 
+# --- MVP ---
+#: The states of a reader's Value, and the sentence that says one of them aloud (P428, OC4). The rule for a reader:
+#:
+#: A reader of one thing that may be absent (a deploy record, a log's step counts) never raises. It returns a Value whose
+#: `state` is one of these three. RECORDED: it read the thing, and the Value's own fields hold it ("recorded" for the
+#: step counts of scenario text means "read", in one clause). NONE_RECORDED: it looked and the thing is not there, and
+#: `why` is None. NOT_CHECKED: it could not look, `why` is one sentence that says what stopped it, and the Value's own
+#: fields are empty. A NOT_CHECKED goes into an envelope's `unchecked` list, never to `ok`, and its person text is
+#: NOT_CHECKED_MESSAGE % why. The state is lossy through a log: ScenarioSteps.line() prints "not read" for both
+#: NONE_RECORDED and NOT_CHECKED, and from_log reads NOT_CHECKED back. A loader of a required thing (design.load,
+#: boards.load) raises its Error: that is a refusal, not a reading, and is no reader in this rule. Three phrasings stay
+#: outside the template because each names its thing first: "last deploy not checked: %s" (board_look.py,
+#: board_envelope.py) and "spark did not read its record of this board: %s" (LastDeploy.in_question). Readers that
+#: still wait: boards.read_simulated_part (P397), breadboard_keep.EarlierDiagram.read and
+#: breadboard_changes.WiringRecord.read (wave 6); sim_project.firmware_in, which returns whatever the JSON parses to and
+#: None for both a missing and an unreadable file (P429); project_image.read_run_logs and firmware_platform.record_of refuse by
+#: design. The rule is tested by READERS in tests/test_outcomes.py, one row per reader that follows it.
+RECORDED, NONE_RECORDED, NOT_CHECKED = "recorded", "none-recorded", "not-checked"
+NOT_CHECKED_MESSAGE = "not checked: %s"
+# --- end MVP ---
+
 #: Exit code for each status word, and back again, for the scripts that translate one into the
 #: other. `EXIT_FOR` existed here with zero callers while five scripts wrote the same dictionary
 #: inline and two wrote its inverse (P42).

@@ -15,6 +15,7 @@ from pathlib import Path
 
 import boards
 import emit_board
+import outcomes
 import parts as parts_library
 import tools
 
@@ -121,9 +122,9 @@ def limits_note(limits):
 # --- MVP ---
 #: The component of a limit about the board's own GPIOs as a whole, and the two reasons they were not compared.
 ONBOARD_GPIOS = "onboard GPIOs"
-NO_DEFINITION_NAMED = "not checked: the board record names no Wokwi definition"
-DEFINITION_NOT_KEPT = ("not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 "
-                       "differs, or it does not parse")
+NO_DEFINITION_NAMED = outcomes.NOT_CHECKED_MESSAGE % "the board record names no Wokwi definition"
+DEFINITION_NOT_KEPT = outcomes.NOT_CHECKED_MESSAGE % ("spark's store lacks the Wokwi definition that the board record "
+                                                      "names, its sha256 differs, or it does not parse")
 
 
 def gpio_limits(board, checked):
