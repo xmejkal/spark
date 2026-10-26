@@ -15,7 +15,7 @@ from pathlib import Path
 
 import store
 import zone_time
-from screen_text import printable
+from text_guards import printable
 from board_connection import BoardUnreachableError, BoardCodeError
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).

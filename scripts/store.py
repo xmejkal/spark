@@ -101,7 +101,7 @@ PRIVATE = ("drawer", "drawer-import", "shelf", "projects", "history", "boards", 
 PLAIN = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 #: A character spark will not have in a file name it keeps: the C0 controls, DEL and the C1 controls (Unicode's Cc), the
-#: direction marks (U+200E/F, U+202A-E, U+2066-9) — the set `drawer.CONTROL` strips from a label — and the line and
+#: direction marks (U+200E/F, U+202A-E, U+2066-9) — the set `text_guards.CONTROL` strips from a label — and the line and
 #: paragraph separators (U+2028/9). A NUL byte is refused by the operating system itself, with an exception nothing
 #: catches; a line break, a separator or a right-to-left override in a name breaks or reorders every listing that prints it.
 CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f-\x9f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]")

@@ -1,0 +1,14 @@
+[
+ {
+  "file": "scripts/text_guards.py",
+  "name": "one_line lets JavaScript's line separators U+2028 and U+2029 through",
+  "find": "\\x7f-\\x9f\\u2028\\u2029\\ud800",
+  "replace": "\\x7f-\\x9f\\ud800"
+ },
+ {
+  "file": "scripts/matching.py",
+  "name": "an offer's tags skip clean, so a bidi or control character and a long tag stay",
+  "find": "[clean(tag).lower() for tag in tags",
+  "replace": "[tag.lower() for tag in tags"
+ }
+]

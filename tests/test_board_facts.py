@@ -1,6 +1,5 @@
 """P401 (#518): board_facts.read_last_deploy reads what spark's store says of the board on USB, and says what it cannot read."""
 
-import ast
 import json
 import os
 import shutil
@@ -17,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_facts  # noqa: E402
-import screen_text  # noqa: E402
+import text_guards  # noqa: E402
 import store  # noqa: E402
 
 MAC = "8c:bf:ea:cc:97:70"
@@ -188,15 +187,8 @@ class PrintableFieldsTest(LastDeployCase):
         last = board_facts.LastDeploy("recorded", "p", "ready seen", "2026-10-23T04:55:29Z")
         self.assertNotIn("?", last.line())
 
-    def test_screen_text_imports_no_spark_module(self):
-        tree = ast.parse((ROOT / "scripts" / "screen_text.py").read_text())
-        imported = {name.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for name in node.names}
-        imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module}
-        spark = {path.stem for path in (ROOT / "scripts").glob("*.py")}
-        self.assertEqual(imported & spark, set())
-
     def test_printable_shows_what_a_terminal_does_not_print_as_a_question_mark(self):
-        self.assertEqual(screen_text.printable("a\nb\u202ec ok"), "a?b?c ok")
+        self.assertEqual(text_guards.printable("a\nb\u202ec ok"), "a?b?c ok")
 
 
 if __name__ == "__main__":

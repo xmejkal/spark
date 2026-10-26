@@ -17,6 +17,7 @@ from collections import namedtuple
 import boards
 import parts
 import store
+from text_guards import TAGS_MAX, TEXT_MAX, clean
 
 #: What a part does (§5.6) — one list, in parts.py.
 VERBS = parts.VERBS
@@ -25,14 +26,6 @@ VERBS = parts.VERBS
 FIELDS = ("label", "count", "part_number", "revision", "is", "function", "place", "used_in", "from", "bought",
           "unsure", "skip", "photos", "about", "description", "tags")
 
-#: A label is shown and matched, never obeyed (§6.4.6): control and bidi characters go, and it stops at 160 characters.
-LABEL_MAX = 160
-CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]+")
-
-#: What an entry or a record says of itself for a chooser (P211): one sentence and a paragraph, each capped — data, never obeyed.
-TEXT_MAX = {"about": 200, "description": 1000}
-#: At most this many tags, each a lowercase word or two (P211).
-TAGS_MAX = 12
 #: The keys that describe a part rather than place it (P211): `--drawer-set` and `--fact-set` both write them.
 DESCRIBING = ("about", "description", "tags")
 
@@ -41,11 +34,6 @@ SPARKS_OWN = ("shelf", "library", "catalog")
 
 #: What a part number links to: the `is` it sets, where that record lives and its file — or the question to ask instead.
 Link = namedtuple("Link", "target where path question")
-
-
-def clean(text, cap=LABEL_MAX):
-    """Words from a shop or a person, made safe to show: control and bidi characters become a space; at most `cap` characters."""
-    return CONTROL.sub(" ", str(text)).strip()[:cap]
 
 
 def scrub(key, value):

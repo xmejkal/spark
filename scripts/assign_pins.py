@@ -43,6 +43,7 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
+from text_guards import one_line  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_IMPOSSIBLE  # noqa: E402
 
@@ -405,8 +406,8 @@ def pin_module(board, assignments, source, pulled_up=()):
     record that names an on-board LED, button, display or battery-level pin adds its lines (`onboard_lines`), so a project with no parts
     can use them (P236, P353, P389).
     """
-    lines = ["%s from %s" % (PIN_MODULE_HEADER, parts_library.one_line(source)),
-             "# for the %s. Regenerate it; do not edit it." % parts_library.one_line(board["name"]), ""]
+    lines = ["%s from %s" % (PIN_MODULE_HEADER, one_line(source)),
+             "# for the %s. Regenerate it; do not edit it." % one_line(board["name"]), ""]
     for entry in assignments:
         if not entry["signal"].isidentifier():
             raise Impossible("signal %r is not a Python name, so no firmware could import it"
@@ -414,7 +415,7 @@ def pin_module(board, assignments, source, pulled_up=()):
         pad = ((board.get("physical") or {}).get("pad_aliases") or {}).get(entry["pin"], entry["pin"])
         said = ["pad %s" % pad, entry["why"]] + [role_note(board, role)
                                                           for role in entry["roles"]]
-        lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], parts_library.one_line("; ".join(said))))
+        lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], one_line("; ".join(said))))
         if entry["signal"] in pulled_up:
             lines.append('%s%s = "up"  # no resistor: Pin(%s, Pin.IN, Pin.PULL_UP) uses the board\'s internal one'
                          % (entry["signal"], PULL_SUFFIX, entry["signal"]))
@@ -442,7 +443,7 @@ def onboard_lines(written, role, name, record):
     labels = boards.pin_labels(record)
     facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
     level = record.get("active_level")
-    note = parts_library.one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
+    note = one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
     named = []
     if boards.names_pins(record):
         if labels:
@@ -458,7 +459,7 @@ def onboard_lines(written, role, name, record):
     for fact, said in facts.items():
         value = said.get("value") if isinstance(said, dict) else None
         if boards.is_fact_value(value):
-            source = parts_library.one_line(str(said.get("source")))
+            source = one_line(str(said.get("source")))
             named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))
     taken = sorted(written & {each for each, _ in named})

@@ -20,7 +20,7 @@ import emit_footprint
 import matching
 import parts
 import store
-from screen_text import printable
+from text_guards import clean, printable
 
 #: How a need stands against the store (§3).
 MARKS = ("have", "have-unknown", "know", "gap")
@@ -92,7 +92,7 @@ def plan_set(project, items):
             problems.append(parts._problem(need_id, "a pick is set with --pick, which reserves what you own"))
             continue
         before = current.get(need_id)
-        after = dict(before or {}, **{key: (drawer.clean(value) if isinstance(value, str) else value) for key, value in item.items()})
+        after = dict(before or {}, **{key: (clean(value) if isinstance(value, str) else value) for key, value in item.items()})
         problems += [parts._problem(need_id, sentence) for sentence in faults(after)]
         changed = [key for key in NEED_FIELDS if after.get(key) != (before or {}).get(key)]
         if changed:
@@ -392,7 +392,7 @@ def kept_reason(text):
     A passed-over reason as the history keeps it (§5.7, W21; C-17): cleaned as a label is, and with every URL and every price
     taken out — (the reason, whether anything was taken out). The person's words stay; what the history never keeps does not.
     """
-    said = drawer.clean(text)
+    said = clean(text)
     kept = PRICE_IN_WORDS.sub("", URL_IN_WORDS.sub("", said))
     if kept == said:
         return said, False

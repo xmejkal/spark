@@ -198,21 +198,6 @@ ENDS_THE_COMMENT = ("*/", '"')
 NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, digits and - (led-red-5mm): files are named by it, "
                   "and the board names the part after it in code")
 
-#: What a line comment in a generated file cannot hold. A line break ends it: `\n` and `\r` end Python's `#`, and JavaScript's
-#: `//` ends at U+2028 and U+2029 too, and U+0085 is one to editors. Any other control character, such as NUL, stops the file
-#: from compiling. A lone surrogate stops it from being written as UTF-8.
-COMMENT_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029\ud800-\udfff]")
-
-
-def one_line(text):
-    """
-    Words a generated file keeps in a `#` or `//` line comment, on that one line (concern 1, P87's line-comment half): every
-    line break, other control character and lone surrogate a space. The pin map the firmware imports and the footprint the
-    board imports carry a board's name, a role's note, a pad's alias, a board's id; a line break in one ended the comment,
-    and what followed was code.
-    """
-    return COMMENT_UNSAFE.sub(" ", str(text))
-
 
 #: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
 #: here rather than keeping its own, because it had its own and the two disagreed: a servo part
@@ -227,7 +212,7 @@ CAPABILITIES = ("wake", "adc", "pwm")
 from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
 import provenance  # noqa: E402
 import store  # noqa: E402
-from screen_text import printable  # noqa: E402
+from text_guards import printable  # noqa: E402
 
 
 class PartError(Exception):

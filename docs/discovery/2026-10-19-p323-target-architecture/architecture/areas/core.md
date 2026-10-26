@@ -23,7 +23,7 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 | `core/outside.py` | `OutsideWorld`, `Privacy`, `pick` |
 | `core/cli.py` | `run_operation(..., trace=None)`, which masks with `Privacy` and then calls `trace`, `run_cli`, `TextReport`, `JsonEnvelope` |
 | `core/zone_time.py` | the leaf `zone_time`: times with their zone |
-| `core/text_guards.py` | the leaf `text_guards` (today `screen_text`): the guards where text leaves spark |
+| `core/text_guards.py` | the leaf `text_guards` (once `screen_text`, renamed in P418): the guards where text leaves spark |
 
 | Seam | Kind | Who fills it |
 |---|---|---|

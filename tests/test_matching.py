@@ -31,6 +31,10 @@ class TheWordsTest(unittest.TestCase):
 
 
 class TheOfferTest(unittest.TestCase):
+    def test_a_tag_is_cleaned_of_control_and_bidi_characters_and_capped(self):
+        offer = an_offer(tags=["Knob\u202eDial\x00", "x" * 200])
+        self.assertEqual(offer.tags, ["knob dial", "x" * 160])
+
     def test_a_board_does_what_its_kind_says(self):
         offer = matching.Offer.from_record("fb", "board", {"name": "FireBeetle"})
         self.assertEqual(offer.functions, [{"does": "compute", "what": "microcontroller"}])

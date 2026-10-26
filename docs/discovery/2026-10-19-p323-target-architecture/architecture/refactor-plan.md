@@ -1,4 +1,4 @@
-# The refactor plan, version 2: six waves, twenty-two slices
+# The refactor plan, version 2: six waves, twenty-three slices
 
 Version 2, card P385 [#494](https://github.com/xmejkal/spark/issues/494), base commit `d064a65` (the tag
 `pre-refactor-2026-10-25`). Version 1 (card P323 [#413](https://github.com/xmejkal/spark/issues/413), cites at
@@ -10,9 +10,9 @@ function name. A cite then moves only with a name.
 > scripts say one thing in one place, the fixes six councils asked for, and they wait on no decision. Wave 3 builds
 > the core and puts `look` on it. Wave 4 puts the other four bench CLIs on it. Wave 5 moves the bench into one folder.
 > Wave 6 does the other areas. The core is a contract other interfaces can call: a JSON Schema per Operation, no
-> asking or printing inside, one hook for a tracer, masked before anything sees it. The PO decides five things.
-> They are readability first (1), the shape (2), the start of the moves (4), the printed names of the Operations (5)
-> and a yes relayed by another program (6).
+> asking or printing inside, one hook for a tracer, masked before anything sees it. The PO answered all five decisions on 2026-10-26 (epic #94).
+> They are readability first (1) and the shape (2). The others are the start of the moves (4), the printed names (5)
+> and a relayed yes (6). On (6) he chose (b), not the recommended (a).
 
 ## What changed from version 1
 
@@ -21,8 +21,10 @@ function name. A cite then moves only with a name.
 - The plan's units are waves, because "stage" means a build stage (glossary). Version 1 and the cards say "stage"
   for them. A new wave 2, "one core in today's scripts", holds eight slices OC1 to OC8. Version 1's waves 2 to 5 are
   now waves 3 to 6.
-- The slice count is 22, not "sixteen". Every slice id S1 to S13 keeps its name: S1, S2, OC1 to OC8, S3 to S6, S7a,
-  S7b and S8 to S13.
+- The slice count is 23, not "sixteen". Every slice id S1 to S13 keeps its name: S1, S2, OC1 to OC8, S3 to S6, S7a,
+  S7b, S8, S9 and S10 to S13. S9b is new: it builds the relayed yes of decision 6.
+- The PO answered the eight lesson questions on 2026-10-26 (epic #94). Section 10 holds the answers, and a new
+  paragraph there sets the order of work. P418 did OC8, so `screen_text` is now `text_guards`.
 - The council's round (rows 52 to 68 and 71 of the
   [rows file](../../../observations/rows/p385-prune-and-refactor.md)) changed nine things. The gate stays inside
   `DeployService.deploy`. An Operation is a class with `run()`, one module each. The import edges come from `ast`. The
@@ -213,7 +215,7 @@ section 3).
 |---|---|---|---|
 | fact value | `emit_board.fact_value` reads the value at a key path. `boards.is_fact_value` says whether `pins.py` can write a value as a constant. `boards.fact_value_problems` is the shape rule plus that outlet rule | `provenance.read_value(record, *path)`, the one reader of a fact's value. `boards.is_pin_map_constant(value)`. `boards.board_fact_problems(where, fact)` | `emit_board.fact_value` and the hand-read chain in `design.firmware_pulls` call `read_value` (OC7). The two `boards` names are renamed in the records move (wave 6). |
 | power | a part's `power` list of supply pins. A board's `power` block of facts. `power_pads`. The function verb `power` in `parts.VERBS` | the record keys stay. In code, a part's list is `supply_pins` and a board's block is `power_facts`. The pads stay `power_pads`. The verb is a value of `VERBS` | `boards.POWER_FUNCTIONS` becomes `POWER_FACT_FUNCTIONS`, `boards._power_functions` becomes `_power_fact_functions`, `boards.power_problems` becomes `power_fact_problems`. Provisional until P405 [#529](https://github.com/xmejkal/spark/issues/529) reports. |
-| the three text guards | `drawer.clean` (a word to the store), `screen_text.printable` (a word to the screen), `parts.one_line` (a word to a generated file) | one leaf, `text_guards.py`: "the guards where text leaves spark". The three function names stay, because P403 and P389 gave them and their tests use them. `clean` takes its caps `LABEL_MAX`, `TEXT_MAX`, `TAGS_MAX` with it, because `matching` reads them too | `screen_text.py` is renamed `text_guards.py`. `drawer.clean` and `parts.one_line` move into it with `parts.COMMENT_UNSAFE` (OC8). |
+| the three text guards | `drawer.clean` (a word to the store), `screen_text.printable` (a word to the screen), `parts.one_line` (a word to a generated file) | one leaf, `text_guards.py`: "the guards where text leaves spark". The three function names stay, because P403 and P389 gave them and their tests use them. `clean` takes its caps `LABEL_MAX`, `TEXT_MAX`, `TAGS_MAX` with it, because `matching` reads them too | P418 (OC8) renamed `screen_text.py` to `text_guards.py`. It moved `drawer.clean` and `parts.one_line` into it with `parts.COMMENT_UNSAFE`. |
 | board | `scripts/boards.py` reads dev board records. `tools/board.py` reads the team's GitHub board (P381 row 1) | `tools/kanban.py`: one word for the GitHub Projects board. Its subcommands `status` and `close` stay | `tools/board.py` is renamed in the prune PR. `scrum/README.md` and the session hook follow. |
 | the record classes | plan v1 `Records`, `RecordFolders`, `RecordSchema`. P391 `RecordKind`, `Record`, `RecordFinder`, `ShelveRecord`, `scripts/records.py` | `RecordFinder` (a reader says Finder), `RecordKind` (a Strategy: what differs per kind, its version and required keys included), `Record` (Value), `RecordFolders` (Value), `ShelveRecord` (Operation) | `Records` becomes `RecordFinder`. `RecordSchema` folds into `RecordKind.validate`. The "Records role" in `areas/records.md` goes. P391's `scripts/records.py` becomes `records/record_kind.py` and `records/record_finder.py`. |
 | brief | `parts._brief` is a three-key summary of a part. Comment 4's `Brief` is the project's brief, `.spark/project.json` | `Brief` (Value: `prefer`, `sellers`, `from_project(project)`) in `records/brief.py`. `parts._brief` becomes `_part_summary` | `parts.vendor_order` and `parts.sellers` become `Brief.from_project(project).prefer` and `.sellers` (wave 6, sourcing). `init_project` writes the file, so comment 4 called it the setup area. The reader lives in records, so sourcing reaches it along the arrows. |
@@ -256,8 +258,11 @@ call `require_ready` before they ask, so `ask` is never reached and nothing reco
 (`WHY_ANSWERED_NO`). The Operation then returns `problems` with a NextStep `needs_yes` that carries the question and
 that command: `grant.py --minutes N` for live, `deploy.py --token T` for the erase (today's NEXT_DEPLOY path of
 `GateClosedError`). The graph resumes with the next Operation (`look`, or `live`), not with the same one, so no node
-restarts the board twice. A yes stays `typed` or `grant`, as `data.yes.kind` says today. A yes that another program
-collected, `relayed`, is decision 6.
+restarts the board twice. A yes stays `typed` or `grant`, as `data.yes.kind` says today. A third kind, `relayed`, is a yes that another program
+collected. It names `who` and the program. The gate refuses it for the erase. It can make a `live` grant only, never a
+`deploy` grant. So every erase still needs a yes typed in the person's own terminal, or a deploy grant made there.
+Claude never supplies a yes (`docs/guide/agents.md` stays). The PO chose the third kind (decision 6, epic #94,
+2026-10-26). The `live`-only guard is a recorded reading of his answer, and he can change it. Slice S9b builds it.
 
 The `Retriever` Strategy (comment 2's fourth rule) enters in wave 6 with the sourcing move, not in S5. Its
 `search(words, project)` fits `parts.need` today. `scan_datasheet` reads pages, so the datasheet adapter and a vector
@@ -271,14 +276,14 @@ as a LangGraph node and as an MCP tool from the same `OPERATIONS`, traced by Lan
 
 ## 5. The leaves and the named edges
 
-A leaf imports nothing of spark. Today there are three: `zone_time` (times with their zone), `screen_text` (the
-screen guard, renamed `text_guards` in OC8) and `provenance` (what a fact must carry). The rule they came from: no
+A leaf imports nothing of spark. Today there are three. They are `zone_time` (times with their zone), `text_guards` (the
+guards where text leaves spark, once `screen_text`) and `provenance` (what a fact must carry). The rule they came from: no
 module imports upward. `board_facts` needed the time rule that `board_grant` holds. `board_grant` reaches
 `board_look`, and `board_look` reaches `board_facts`. So the rule went into a leaf (comment 5). In the target, `zone_time` and
 `text_guards` sit in core and `provenance` in records.
 
-One test over every leaf, in `tests/test_imports.py`, replaces `test_screen_text_imports_no_spark_module` in
-`tests/test_board_facts.py`: it reads each leaf with `ast` and fails on any spark import (rows 6 and 22: `zone_time`
+One test over every leaf, in `tests/test_imports.py`, replaced the old `screen_text` import test in
+`tests/test_board_facts.py` (P418): it reads each leaf with `ast` and fails on any spark import (rows 6 and 22: `zone_time`
 has no test, and `provenance` has no import test). S3 folds it into `ArchitectureRules`.
 
 An `ast` walk over `scripts/` at `d064a65` finds 242 import edges, 17 of them lazy (inside a function). 32 edges sit
@@ -310,6 +315,11 @@ card of its own and lands before OC1, so OC1 reads one wording from `emit_footpr
 Each fix is one PR in today's scripts. It changes no flag, key or exit code, and the S1 goldens and today's tests prove
 it. These are wave 2. Sizes are estimates.
 
+One rule holds for every slice, from the PO's answer on decision 1 (epic #94, 2026-10-26: *"leta go with a then"*).
+Readable ranks first, and a slice reuses every fact and keeps each module's judgement in that module. For example, the
+onboard roles live once in `boards.ONBOARD_ROLES`. The pin assigner's penalty for an onboard pin stays a named
+constant in `assign_pins.py`.
+
 | Slice | What it changes | What proves it | Size |
 |---|---|---|---|
 | OC1, one refusal order | `emit_board.read_inputs(path, project)` returns `BoardInputs(design, assignments)` or raises `RefusedInputError(stage, why)` in the order design, pins, footprint. `emit_board.main` and `check_spine.run` both call it. The repeated `design.load` and `assign_pins.assign` before the spine's footprint stop go. | one record with an unknown need and a footprint gap. `emit_board.py` and the spine give the same first sentence (row 10 of `p407-no-footprint.md`). The P407 tests stay. The spine's footprint-stop case is the first build golden, taken before OC1 changes `stages[].detail` | 80 |
@@ -319,15 +329,15 @@ it. These are wave 2. Sizes are estimates.
 | OC5, the store side and the look side | `DeployedStore` (Store) in a new `scripts/deployed_store.py` holds `last_deploy(mac)` and `record(facts, verdict, who)`, today `board_facts.read_last_deploy` and `record_deploy`. `LastDeploy` keeps `state`, `why`, `to_dict` and the stored fields. `line()` and `in_question()` become `board_look.last_deploy_line(last)` and `deploy_gate.last_deploy_in_question(last)`. | the look and deploy goldens do not change. `tests/test_board_facts.py` moves its reader tests to `tests/test_deployed_store.py` | 100 |
 | OC6, two meanings of the project name | `store.listed_name(folder)` is the name on the person's list or None (today `project_name`). `store.name_when_listed(folder)` is the name the folder holds or will hold (today `add_project(dry_run=True)`). `add_project` loses `dry_run`. Call sites that need the listed name: `drawer.plan_set`, `breadboard._have`, `parts.note_built`, `parts._record_path`, `parts._op_pick` (its "listed" check), `parts._op_step` (its "listed" check), `parts._op_tally`. Call sites that need the name it will hold: `needs.match` (it hands the name to `_candidate`), `needs.plan_pick`, `parts._op_pick` (the name it writes), `parts._op_step` with `--dry-run`. The calls that write the name stay `add_project(folder)`: `init_project`, and `_op_pick` and `_op_step` when they write. | `--match` and `--pick` on an unlisted folder name the same project (P403's bug). Every old call site is gone by grep | 60 |
 | OC7, one reader of a fact's value | `provenance.read_value(record, *path)` reads a value along a key path through the fact's `value`. `emit_board.fact_value` and the hand-read chain in `design.firmware_pulls` call it. | a board whose `internal_pull_up_ohms` is a bare number and one whose fact has no `value` give the same answer from both callers | 30 |
-| OC8, one home for the text guards | `screen_text.py` becomes `text_guards.py` with `printable`, `clean` and its caps, `one_line` and `COMMENT_UNSAFE`. `drawer`, `parts`, `matching`, `assign_pins`, `needs` and `board_facts` import it. `tests/test_imports.py` reads imports with `ast`: each leaf imports nothing of spark, `matching` imports no `drawer`, and `assign_pins` calls no `parts.one_line`. S3 folds it into the rules test later, and until then it keeps OC8 from regressing. | `tests/test_imports.py` fails on the old code and passes on the new | 80 |
+| OC8, one home for the text guards (done in P418) | The leaf `text_guards.py` (once `screen_text.py`) holds `printable`, `clean` and its caps, `one_line` and `COMMENT_UNSAFE`. `drawer`, `parts`, `matching`, `assign_pins`, `needs`, `board_facts` and `emit_footprint` import it. `tests/test_imports.py` reads imports with `ast`: each leaf imports nothing of spark, `matching` imports no `drawer`, and `assign_pins` calls no `parts.one_line`. S3 folds it into the rules test later, and until then it keeps OC8 from regressing. | `tests/test_imports.py` fails on the old code and passes on the new | 80 |
 
 Three more findings are rules, not slices. `drawer.holders_of` is the one reader of "who holds this stock", and
 `drawer.listing`, `needs.plan_pick` and `needs._candidate` stay its only callers (a U3 entry of S3). `provenance.fact_problems` is the
 shape of a fact for part and board, and `boards.is_pin_map_constant` is the rule of one outlet, `pins.py`. They stay
 apart, so P374 [#479](https://github.com/xmejkal/spark/issues/479) does not pull the second into part records. One role
 is spelled in five tables (`PIN_ROLES`, the `ONBOARD_*` constants, `ONBOARD_ROLES`, `assign_pins.ROLE_PENALTY`,
-`CONFLICTING_ROLES`). The plan waits for P405's finding before it moves the penalty into `OnboardRole`, and lesson 3
-takes the five tables as its worked input.
+`CONFLICTING_ROLES`). The example recorded with the PO's answer settles the penalty, as the plan's reading he can change: it stays a named constant in `assign_pins.py` and does not move into
+`OnboardRole`. Lesson 3 takes the five tables as its worked input.
 
 ## 7. A home for what walk 2 added
 
@@ -347,7 +357,7 @@ the code at `d064a65` under this name.
 | `read_last_deploy`, `record_deploy` | P401 | `records/deployed_store.py` | Store methods `last_deploy`, `record` | exists as two functions |
 | `DeployedStore` | P391, comment 4 | `records/deployed_store.py` | Store | not built yet |
 | `DeployEntry` | comments 4, 5 | none | none | out of the plan |
-| `zone_time`, `screen_text`, `provenance` | P401, P403, P389 | `core/zone_time.py`, `core/text_guards.py`, `records/provenance.py` | leaves | exist (`screen_text` renamed in OC8) |
+| `zone_time`, `text_guards`, `provenance` | P401, P403, P389 | `core/zone_time.py`, `core/text_guards.py`, `records/provenance.py` | leaves | exist (`text_guards` was `screen_text`, renamed in P418) |
 | `why_no_footprint`, `footprint_gaps` | P407 | `design/footprint_emitter.py` | functions | exists |
 | `NO_FOOTPRINT_HINT`, `REFUSED_INPUT_MESSAGE` | P407 | `build/stages.py`, `design/board_emitter.py` | constants | exists |
 | `LookStopError` | plan v1 | `bench/board_look.py` | Error | exists as `LookStop` |
@@ -358,7 +368,7 @@ the code at `d064a65` under this name.
 | `ScenarioSteps.component_ids`, the id check in `ScenarioRun.problem`, `--dry-run` | P399 [#515](https://github.com/xmejkal/spark/issues/515) | `firmware/scenario_steps.py`, `firmware/scenario_run.py` | a method, a check, an argument | not built yet |
 | the must lines a scenario names, and the look's list of unnamed ones | P345 PR 2 [#440](https://github.com/xmejkal/spark/issues/440) | `firmware/scenario_steps.py`, `bench/board_look.py` | a Value field, a line | not built yet |
 | `facts.*` entries in `--fact-set` | P374 | `sourcing/part_facts.py` (`_op_fact_set` and `_set_in_home`) | an Operation's path and the shared writer | not built yet. `--fact-set` exists and writes whole top-level keys (`CHAIN_FACTS`, `drawer.DESCRIBING`). `_set_in_home` also writes `--function-set` and replaces each key whole, so a `facts.*` entry needs a merge into the record's `facts` |
-| `ROLE_PENALTY` as a field of `OnboardRole` | P405 | `records/board_records.py` | a Value field | waits for the finding |
+| `ROLE_PENALTY` | P405 | `design/pin_assigner.py` | a named constant | stays in `assign_pins.py` and moves with it, not into `OnboardRole` (the example recorded with the PO's answer, epic #94, 2026-10-26, a reading he can change) |
 
 ## 8. The MVP marks
 
@@ -374,32 +384,38 @@ what is MVP and what is later in each module, live in the
 
 ## 9. The lessons
 
-One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of the P385 folder. It splits lesson 2 in two and lesson 3 in three, so the PO answers eight questions, one per lesson. The decisions table names each question.
+One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of the P385 folder. It splits lesson 2 in two and lesson 3 in three, so the PO answers eight questions, one per lesson. The decisions table names each question. The PO answered all eight on epic #94 on 2026-10-26.
 
 | # | Lesson | The slices it opens | The questions it asks |
 |---|---|---|---|
-| 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | question 1: which of the verdict groups to take, in which order |
+| 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | question 1: which of the verdict groups to take, in which order (answered: *"quck now, split later"*, so the prune PR does the quick work, and the splits of `boards.py` and `parts.py` wait for wave 6) |
 | 2 | Package layout: `scripts/spark/`, areas, leaves, the move recipe | S4, S11, waves 5 and 6 | question 2 (decision 2, the shape) and question 3 (decision 4, when the moves start) |
 | 3 | The core contract: Operation, result, Finding, the four rules of section 4, consent, the five role tables as its worked input | S3, S5, S6, OC4 | question 4 (decision 6, a relayed yes), question 5 (decision 1, readability first) and question 6 (decision 5, the printed names) |
 | 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | question 7: the fast lane's budget on a push (S13) |
-| 5 | Claude Code forms: command, skill, agent, MCP, and what each gets from one Operation | the frontends, the learning spike | question 8: whether the spike runs before wave 6 |
+| 5 | Claude Code forms: command, skill, agent, MCP, and what each gets from one Operation | the frontends, the learning spike | question 8: when the spike runs (answered: after wave 3) |
 
 ## 10. The waves and their slices
 
 | Wave | What works after it | Slices | Size (est.) | Waits on decision |
 |---|---|---|---|---|
-| 1. The bench net | a golden catches any bench change (done), and the bench prints codes | S1 (done), S2 | 200 | none (3 is answered) |
+| 1. The bench net | a golden catches any bench change (done), and the bench prints codes | S1 (done), S2 | 200 | none |
 | 2. One core in today's scripts | every fact and every refusal has one home, the leaves have one test | OC1 to OC8 | 550 | none (OC1 waits on P411) |
-| 3. One CLI on the core | `look.py` is the worked example, the rules test ratchets, the core has its four rules | S3, S4, S5, S6 | 1,150 | 1, 2 |
-| 4. The bench on the core | five thin bench CLIs, every effect gated, the platform swappable | S7a, S7b, S8, S9 | 1,100 | 2 |
-| 5. The bench in one folder | `scripts/spark/bench/` holds the area, no home path in its output, a map | S10, S11, S12, S13 | 720, 2,266 moved | 4 |
-| 6. The other areas | each area has a net, codes and its folder | 3 PRs per area | 900 per area | 4 |
+| 3. One CLI on the core | `look.py` is the worked example, the rules test ratchets, the core has its four rules | S3, S4, S5, S6 | 1,150 | none |
+| 4. The bench on the core | five thin bench CLIs, every effect gated, the platform swappable, a relayed yes for a live grant | S7a, S7b, S8, S9, S9b | 1,250 | none |
+| 5. The bench in one folder | `scripts/spark/bench/` holds the area, no home path in its output, a map | S10, S11, S12, S13 | 720, 2,266 moved | none |
+| 6. The other areas | each area has a net, codes and its folder | 3 PRs per area | 900 per area | none |
+
+The order of work. The between-cards council set the order after P335. The PO accepted it in chat on 2026-10-26:
+OC8, P333, OC3, S13, OC4, P397, OC7, P399, P374, OC5, P345 PR 2, S2, OC6, OC1 (after P411), OC2. The waves keep
+their slices. S13 runs early because of the PO's answer on question 7 (epic #94, 2026-10-26: *"let's try option a,
+lets see, how t works"*). It is an experiment: a fast lane under 90 s on his Mac, judged at a retro. Today the push
+hook takes 111 to 206 s. Wave 5's closing 90 s check becomes S13's own check.
 
 ```mermaid
 flowchart LR
   ST1["1. the bench net<br/>S1 done, S2"] --> ST3
   ST2["2. one core in today's scripts<br/>OC1 to OC8"] --> ST3["3. one CLI on the core<br/>S3 S4 S5 S6"]
-  ST3 --> ST4["4. the bench on the core<br/>S7a S7b S8 S9"]
+  ST3 --> ST4["4. the bench on the core<br/>S7a S7b S8 S9 S9b"]
   ST4 --> ST5["5. the bench in one folder<br/>S10 S11 S12 S13"]
   ST5 --> ST6["6. the other areas"]
 ```
@@ -412,15 +428,16 @@ measure line. No journey status changes. Each PR runs `tools/factcheck.py` on th
 ### The decisions
 
 Decision 3 is answered. The PO on #413, 2026-10-21: S1 before walk 2, S2 and every later wave after the walk, one PR
-at a time, "I don't want to break the system before MVP." Five stay open.
+at a time, "I don't want to break the system before MVP." The PO answered the other five on epic #94 on 2026-10-26.
+All are answered now. The Recommendation column stays as history, and the Answer column holds the PO's choice.
 
-| # | Decision | Options | Recommendation | Asked by |
-|---|---|---|---|---|
-| 1 | Readability first | (a) v1's rank (N1): readable, testable, exchangeable, reusable, consistent. (b) the order of the PO's 10-23 words: "We do reuse code. It's good: defined interfaces, a good, solid object-oriented programming style, and good, clear naming and understandable code." (c) no rank, each slice names its goal. | (a). A function nobody reads is not reused, and R1's 40 lines apply only to new code in `spark/`, old code pays down by ratchet. The 10-23 words name reuse, interfaces, OO style, names and understandable code. They name neither "testable" nor "exchangeable": those two are v1's, from the council. | question 5 |
-| 2 | The shape | (a) thin CLIs over `scripts/spark/`, one Operation per job, one rules test (v1). (b) Operations inside today's flat `scripts/`, no package. (c) a `src/spark` package with `pyproject`. | (a). The package is what a LangGraph node or an MCP tool imports (section 4), and (b) cannot give one `OPERATIONS` per area without a folder. (c) is on the "not do" list: it installs something, and spark installs nothing heavy. | question 2 |
-| 4 | When the area moves start | (a) a story pulls its area (v1's decision 4). (b) now, the bench first, one PR at a time. (c) all areas in one pass. | (b). The PO pulled the refactor on 10-25, the bench's net exists (S1), and walk 2 ran on the bench. (c) breaks the "one PR at a time" rule of decision 3. | question 3 |
-| 5 | The printed names of the Operations | The standard (P381, rule 4) prints an Operation's words as its `op`: `show-part`. Today 31 ops print: the 29 in `parts.py`'s `OPERATIONS` (`audit` and `need` among them), `look` and `deploy`. A script that prints no envelope (`grant`, `live`, `reach`) prints no `op`. The goldens and command pages pin the spellings. (a) keep every op in a golden or a command page as a named exception, and only a new Operation follows rule 4. (b) rename each op to its class's words (`look-at-board`) in its area's output slice, a public change. | (a). The class names pass the rule now, and a public rename costs every page and habit (glossary, section 3). (b) can follow in a card of its own when the PO wants one spelling everywhere. | question 6 |
-| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | question 4 |
+| # | Decision | Options | Recommendation | Answer | Asked by |
+|---|---|---|---|---|---|
+| 1 | Readability first | (a) v1's rank (N1): readable, testable, exchangeable, reusable, consistent. (b) the order of the PO's 10-23 words: "We do reuse code. It's good: defined interfaces, a good, solid object-oriented programming style, and good, clear naming and understandable code." (c) no rank, each slice names its goal. | (a). A function nobody reads is not reused, and R1's 40 lines apply only to new code in `spark/`, old code pays down by ratchet. The 10-23 words name reuse, interfaces, OO style, names and understandable code. They name neither "testable" nor "exchangeable": those two are v1's, from the council. | (a), in his words *"leta go with a then"* (epic #94, 2026-10-26). One rule for every slice: reuse every fact, and keep each module's judgement in that module. The penalty for an onboard pin stays a named constant in `assign_pins.py` (section 6). | question 5 |
+| 2 | The shape | (a) thin CLIs over `scripts/spark/`, one Operation per job, one rules test (v1). (b) Operations inside today's flat `scripts/`, no package. (c) a `src/spark` package with `pyproject`. | (a). The package is what a LangGraph node or an MCP tool imports (section 4), and (b) cannot give one `OPERATIONS` per area without a folder. (c) is on the "not do" list: it installs something, and spark installs nothing heavy. | (a), in his words *"yes, option a please"* (epic #94, 2026-10-26). | question 2 |
+| 4 | When the area moves start | (a) a story pulls its area (v1's decision 4). (b) now, the bench first, one PR at a time. (c) all areas in one pass. | (b). The PO pulled the refactor on 10-25, the bench's net exists (S1), and walk 2 ran on the bench. (c) breaks the "one PR at a time" rule of decision 3. | (b), back to back, one PR at a time. His words: *"I think for question 3 ideally we'd go all in one, so option c, but if it would take too much time, we can do continuous version"* (epic #94, 2026-10-26). Recorded as (b) because only the bench has a net today (S1's 13 goldens) and (c) goes against decision 3. If he still wants one pass once the nets exist, the last moves can go in one PR. The PO can change this. | question 3 |
+| 5 | The printed names of the Operations | The standard (P381, rule 4) prints an Operation's words as its `op`: `show-part`. Today 31 ops print: the 29 in `parts.py`'s `OPERATIONS` (`audit` and `need` among them), `look` and `deploy`. A script that prints no envelope (`grant`, `live`, `reach`) prints no `op`. The goldens and command pages pin the spellings. (a) keep every op in a golden or a command page as a named exception, and only a new Operation follows rule 4. (b) rename each op to its class's words (`look-at-board`) in its area's output slice, a public change. | (a). The class names pass the rule now, and a public rename costs every page and habit (glossary, section 3). (b) can follow in a card of its own when the PO wants one spelling everywhere. | (a), in his words *"ok leta pick a, if you think its better"* (epic #94, 2026-10-26). Every op that a golden or a command page pins keeps its spelling. Only a new Operation prints its class's words. | question 6 |
+| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | (b), in his words *"question 4 : option b"* (epic #94, 2026-10-26), against the recommended (a). The guard is a recorded reading, and the PO can change it. A relayed yes makes a `live` grant only, never a `deploy` grant (section 4). Slice S9b builds it. | question 4 |
 
 ### Wave 1: the bench net
 
@@ -441,8 +458,8 @@ tests/golden/deploy-*.json` prints nothing.
 
 ### Wave 2: one core in today's scripts
 
-The eight slices of section 6, in the order OC8, OC3, OC7, OC4, OC6, OC5, OC1, OC2. The leaf home comes first because
-OC3 guards through it. OC1 waits for P411, a card, not a decision. Wave 2 removes no cycle (section 5). It is done
+The eight slices of section 6, in the order OC8, OC3, OC4, OC7, OC5, OC6, OC1, OC2. The order of work in section 10
+puts other cards between them. The leaf home comes first because OC3 guards through it. OC1 waits for P411, a card, not a decision. Wave 2 removes no cycle (section 5). It is done
 when `tests/test_imports.py` passes, each OC proof holds, and no golden changed. The Ready cards behind P385 (P397,
 P399, P345 PR 2 and P374, section 7) land in today's scripts during waves 1 and 2, and each marks its span (section 8).
 
@@ -453,7 +470,7 @@ S3, the rules test: `tests/test_architecture.py` (`ArchitectureRules`) and a gen
 becomes a rule. When each planted breach is caught with its rule, the slice is done.
 
 S4, `outcomes` and the two core leaves into the package: `scripts/spark/core/outcomes.py`, `core/zone_time.py` and
-`core/text_guards.py`, with the 36 import lines in 32 files of `scripts/` and `tools/` and the test imports changed.
+`core/text_guards.py`, with the 36 import lines in 32 files of `scripts/` and `tools/` (at `d064a65`) and the test imports changed.
 `provenance` waits for the records move. The slice is done when `scripts/outcomes.py` is gone, `tests/test_outcomes.py`
 imports `spark.core.outcomes`, and no golden changed.
 
@@ -483,9 +500,18 @@ and gated, `--dry-run` fills `board` and `deletes` with refusing stubs. S8, the 
 `board_look.looker` (two) and `board_doctor` (two). `FakeFirmwarePlatform` in `tests/fakes.py` is the base's second
 case (rule T3). What the swap covers: flashing, reading and the ready probe. `DeployService.verify`'s download-mode
 cure and the reset-button places (`download_mode`, `boards.ButtonPlaces`) are MicroPython's and move behind the
-platform when a second one exists. S9, `grant`, `live` and `reach` on the core, `GrantService` built once. Three checks
-close the wave: each bench `main` is at most 15 lines, no golden changed, and no `mock.patch`
-line remains in `tests/test_deploy_gate.py`.
+platform when a second one exists. S9, `grant`, `live` and `reach` on the core, `GrantService` built once.
+
+S9b, the relayed yes (proposed): it builds decision 6's third kind of yes (section 4) on `GrantService`, which S9
+builds once. The gate refuses a `relayed` yes for the erase. `GrantService.issue` accepts it for a `live` grant and
+refuses it for a `deploy` grant. A `relayed` yes names `who` and the program that collected it. This placement after
+S9 is the plan's reading, and the PO can change it. S9b changes a safety rule, so it runs the full council, and the
+PO merges it in every mode. `docs/guide/agents.md` stays true: a relayed yes comes from a program's UI, never from
+Claude. Its size is an estimate of 150 lines.
+
+Four checks close the wave. Each bench `main` is at most 15 lines. No golden changed. No `mock.patch`
+line remains in `tests/test_deploy_gate.py`. S9b's tests show that the gate refuses a `relayed` yes for the erase
+and that `GrantService.issue` refuses it for a `deploy` grant.
 
 ### Wave 5: the bench in one folder
 
@@ -495,13 +521,16 @@ today 2,266 lines that 35 files import. It retargets the 217 mutation rows. It a
 `LookStopError`, `ReadyProbe`, `DoctorProbe`, `DeployPhase`, `ReadingFile`. It moves the Fakes into `tests/fakes.py`.
 `board_facts.py` moves as the bench's `ReadingFile` and the look's line. `deployed_store.py` (OC5) stays in `scripts/`
 until the records move. S12, the map: `tools/map.py` writes `docs/guide/map.md`. When the page is stale, a test fails. S13,
-fast and slow lanes. Two checks close the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing, and the
-fast lane runs under 90 s on the PO's Mac.
+fast and slow lanes. S13 runs early (the order of work in section 10). Its own check is that the fast lane runs
+under 90 s on the PO's Mac. One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing.
 
 ### Wave 6: the other areas
 
 When an area is pulled, it gets three PRs. The order of the areas is firmware, breadboard, checks, design with build,
-records with sourcing. The first PR is its net: goldens, with a fake tool process where one is needed. The second is
+records with sourcing. The moves run back to back, one PR at a time. No story comes between them unless the PO pulls one (decision 4, epic
+#94, 2026-10-26: *"I think for question 3 ideally we'd go all in one, so option c, but if it would take too much time,
+we can do continuous version"*). If he still wants one pass once the nets exist, the last moves can go in one PR.
+The first PR is its net: goldens, with a fake tool process where one is needed. The second is
 its output slice: codes, `fix_step`, `backends`. The third is its move, with the names of its page and no module shim.
 The `firmware` move adds `scenario_steps.py` and takes `stand_in/machine.py` as is. The `records` move adds P391's
 stage 2 (its own word: `RecordKind`, `RecordFinder`, `Record`, `ShelveRecord`). It also adds `DeployedStore`, `Brief`, and the renames of section 3 in `board_records.py`. The `sourcing` move splits `parts.py` by
@@ -531,7 +560,9 @@ P322's `facts.md` is a measurement dated 2026-10-19 and stays as printed (learne
 ## Proposed cards
 
 1. Spike: the core contract is not proven for another interface → `LookAtBoard` runs as a LangGraph node and
-   an MCP tool from the same `OPERATIONS`, with a Langfuse trace, and the core does not change (after wave 3).
+   an MCP tool from the same `OPERATIONS`, with a Langfuse trace, and the core does not change. Filed as P417
+   [#545](https://github.com/xmejkal/spark/issues/545), to run after wave 3 (the PO, epic #94, 2026-10-26:
+   *"question 8: oprtion a"*).
 2. Chore: `PRUNED.md` does not exist → the prune PR lands it at the root with the verdicts of the pruning list, the
    tag `pre-refactor-2026-10-25`, and one restore command per entry.
 

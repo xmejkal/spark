@@ -10,8 +10,8 @@ import json
 import re
 from collections import namedtuple
 
-import drawer
 import parts
+from text_guards import TAGS_MAX, TEXT_MAX, clean
 
 #: The words a need's `what` drops before WordOverlap counts it (P211).
 FILLER = frozenset(("a", "an", "the", "of", "for", "to", "and", "or", "with"))
@@ -49,7 +49,7 @@ def need_words(what):
 
 def _text(value, key):
     """A text an offer shows: cleaned and capped, or None when it is no words."""
-    return drawer.clean(value, drawer.TEXT_MAX[key]) if isinstance(value, str) and value.strip() else None
+    return clean(value, TEXT_MAX[key]) if isinstance(value, str) and value.strip() else None
 
 
 def _first(said, key):
@@ -68,9 +68,9 @@ class Offer:
     def __init__(self, key, kind, functions=(), names=(), about=None, description=None, tags=(), facts=None):
         self.key, self.kind = key, kind
         self.functions = [f for f in functions if isinstance(f, dict)]
-        self.names = [drawer.clean(name) for name in names if isinstance(name, str) and name.strip()]
+        self.names = [clean(name) for name in names if isinstance(name, str) and name.strip()]
         self.about, self.description = _text(about, "about"), _text(description, "description")
-        self.tags = [drawer.clean(tag).lower() for tag in tags if isinstance(tag, str) and tag.strip()][:drawer.TAGS_MAX]
+        self.tags = [clean(tag).lower() for tag in tags if isinstance(tag, str) and tag.strip()][:TAGS_MAX]
         self.facts = dict(facts or {})
 
     @classmethod
@@ -94,12 +94,12 @@ class Offer:
 
     def _doing(self):
         """What the offer does as a chooser reads it: each function's verb and words, cleaned. `describe` and `as_dict` share it."""
-        return [{"does": drawer.clean(f.get("does")), "what": drawer.clean(f.get("what"))} for f in self.functions]
+        return [{"does": clean(f.get("does")), "what": clean(f.get("what"))} for f in self.functions]
 
     def _fact_text(self, key):
         """One fact as a chooser reads it: text, cleaned and capped (a power note runs to kilobytes). `describe` and `as_dict` share it."""
         value = self.facts[key]
-        return drawer.clean(value if isinstance(value, str) else json.dumps(value, ensure_ascii=False), drawer.TEXT_MAX["description"])
+        return clean(value if isinstance(value, str) else json.dumps(value, ensure_ascii=False), TEXT_MAX["description"])
 
     def describe(self):
         """The text a chooser reads (P211): what the offer says of itself, what it does, its names, its power and size.
