@@ -20,7 +20,6 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import boards  # noqa: E402
 import sim_project  # noqa: E402
 from test_boards import kept_definition_board  # noqa: E402
 
