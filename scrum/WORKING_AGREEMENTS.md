@@ -154,7 +154,9 @@ protection on either `main`.
 A count, a hash, a verdict ("the chain runs end to end") goes into a commit message, a card's comment or a status
 update only in a later call than the command that produced it, copied from output that is on the screen — **and
 measured on the tree being committed**: `check_commit.py` archives `HEAD` and runs the suite there
-before every push. A commit's message said 589 OK while the tree it held ran 562 FAILED, because the run was on the
+before every push. The push runs the quick run, which skips the `@slow` tests and says how many; a count that a
+commit, a card or a PR quotes as the suite's is the full run's, `check_commit.py --full`, which runs before a PR is
+marked ready (P425). A commit's message said 589 OK while the tree it held ran 562 FAILED, because the run was on the
 working tree and the file it imported was staged one commit later (close audit C3). The gate measures `HEAD` even when
 another branch is pushed; measuring the ref being pushed is [P106](https://github.com/xmejkal/spark/issues/39), not
 built yet. And a commit is made only when every step before it exited 0 — a chain that commits after a failed edit

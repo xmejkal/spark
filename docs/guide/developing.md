@@ -11,6 +11,25 @@ python3 -m unittest discover -s tests
 The count is whatever that prints. A count written into the README rotted three times in four days, so a count
 appears only inside a dated output, like the push below.
 
+**Two runs of the suite** ([P425](https://github.com/xmejkal/spark/issues/559)). The plain command above is the full
+run: every test. The push hook runs the quick run, which skips the tests marked `@slow`
+([`tests/suite_runs.py`](../../tests/suite_runs.py)) and says how many it skipped. The quick line is not the suite's
+count, and a commit message or a card quotes the full run's. A mark needs more than about 2 s and a reason anyone
+can check: the reason says what the test runs and its measured seconds, with the date. Put the mark on a class or a
+method:
+
+```python
+from suite_runs import slow
+
+@slow("a real tsci build of a hostile part name, 1 test, 6 to 12 s on 2026-10-26")
+def test_the_build_runs_the_name_as_no_code(self): ...
+```
+
+`SPARK_SUITE=quick` makes any run a quick run. `tools/mutate.py` removes it from the environment of its runs, because a
+defect that only a slow test catches must not escape it. The first numbers, measured on 2026-10-26: the full run took
+109 to 127 s, and the quick run took about 55 s less (the measured line is in the rows,
+[`docs/observations/rows/p425-quick-run.md`](../observations/rows/p425-quick-run.md)).
+
 **The rule the tests follow: a test must run the thing, not read it.**
 
 - A test that finds a string in source proves the thing was named, not that it ran, so behaviour is proven by running
@@ -93,7 +112,11 @@ ln -sf ../../tools/pre-push .git/hooks/pre-push
 
 It reports:
 
-- the suite, as committed;
+- the quick run of the suite, as committed: `quick run: Ran N of M tests in S s (K slow tests skipped; the full run is
+  check_commit.py --full)`. The skipped count is only the `@slow` tests, never a real skip such as a missing tool. The
+  seconds are the tests alone; the board check (about 18 s) and the size line come on top, and the gate prints its
+  whole time. No budget fails the push: the time is a number said at every push, and the retro decides any cap
+  (W15b);
 - what the suite left behind ([P172](https://github.com/xmejkal/spark/issues/112)): the suite runs with an empty temp
   folder of the gate's own, and anything left in it fails the push with one line,
   `temp: the suite left N entries behind (…) — P172`. A folder the gate cannot list is could-not-run, which exits 2
@@ -132,6 +155,11 @@ From a push on 2026-10-05 (the gate's wording has changed since; the lines are a
   scripts/: 5,529 code lines (+0 since origin/main)
   backlog: 28 open, the limits hold
 ```
+
+The full run, `python3 tools/check_commit.py --full` (or `python3 tools/check_commit.py <commit> --full`), is the same
+gate with every test, the slow ones too. It prints `<commit> as committed, full run: Ran M tests in S s / OK`. Run it
+before a PR is marked ready and before an auto-mode merge: a defect only a slow test catches sits on the branch after
+a push, and this run closes that gap.
 
 Run the board part yourself — `--help` lists its rules and exit codes — and the status and the day-close beside it
 (`--dry-run` posts nothing):

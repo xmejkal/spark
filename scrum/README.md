@@ -279,7 +279,8 @@ review runs those commands. If an item cannot name one, it does not enter Ready.
 
 Every one of these, for every item. No exceptions, no "mostly".
 
-1. `python3 -m unittest discover -s tests` — green.
+1. The full run, `python3 tools/check_commit.py --full` (every test, on the committed tree) — green. The push hook runs
+   only the quick run, which skips the `@slow` tests (P425).
 2. **Mutation tested, for logic, by the mutation tester.** The council launches it for a change that holds logic. It
    puts the defects that the change prevents back into the changed lines, in a copy of the tree, and reports *N
    planted, M caught*. A fix with no failing-first test is not a fix. A table in `tests/mutations/` is kept only when a
