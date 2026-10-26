@@ -39,7 +39,8 @@ SKIPPED = "skipped"
 #: outside the template because each names its thing first: "last deploy not checked: %s" (board_look.py,
 #: board_envelope.py) and "spark did not read its record of this board: %s" (LastDeploy.in_question). Readers that
 #: still wait: boards.read_simulated_part (P397), breadboard_keep.EarlierDiagram.read and
-#: breadboard_changes.WiringRecord.read (wave 6); project_image.read_run_logs and firmware_platform.record_of refuse by
+#: breadboard_changes.WiringRecord.read (wave 6); sim_project.firmware_in, which returns whatever the JSON parses to and
+#: None for both a missing and an unreadable file (P429); project_image.read_run_logs and firmware_platform.record_of refuse by
 #: design. The rule is tested by READERS in tests/test_outcomes.py, one row per reader that follows it.
 RECORDED, NONE_RECORDED, NOT_CHECKED = "recorded", "none-recorded", "not-checked"
 NOT_CHECKED_MESSAGE = "not checked: %s"
