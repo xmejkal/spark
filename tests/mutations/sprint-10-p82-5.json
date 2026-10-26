@@ -1,6 +1,6 @@
 [
  {"file": "scripts/flash_image.py", "name": "the list's MicroPython build is not used",
-  "find": "    return Path(tools.find(\"firmware-image\").command[0])", "replace": "    return Path(\"micropython.bin\")"},
+  "find": "    return Interpreter(Path(found.command[0]), offset_of(found.entry))", "replace": "    return Interpreter(Path(\"micropython.bin\"), 0)"},
  {"file": "scripts/flash_image.py", "name": "a missing littlefs is a traceback again",
   "find": "        tools.find(\"littlefs\")\n", "replace": ""},
  {"file": "scripts/flash_image.py", "name": "a missing build is a traceback again",

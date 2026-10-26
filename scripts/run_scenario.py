@@ -241,8 +241,7 @@ class ScenarioRun:
             tools.find("littlefs")
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = flash_image.files_under(self.project / "firmware")
-            self.flash = flash_image.image(flash_image.interpreter_path(self.micropython, self.project).read_bytes(),
-                                           self.files)
+            self.flash = flash_image.interpreter_for(self.micropython, self.project).image(self.files)
         except (OSError, ValueError, tools.ToolProblem) as cannot:
             return "%s: %s" % (self.scenario.name, cannot)
         if self.sim.resolve() not in self.image.resolve().parents:

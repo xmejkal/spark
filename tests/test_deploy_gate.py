@@ -932,7 +932,8 @@ class TheNoSimulationDeployTest(GateCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher = mock.patch.object(flash_image, "interpreter_for",
+                                    side_effect=lambda given, project=None: flash_image.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.build_image()

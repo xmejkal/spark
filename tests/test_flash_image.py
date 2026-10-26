@@ -25,6 +25,18 @@ MICROPYTHON_LITTLEFS = dict(               # how MicroPython itself mounts that 
     block_size=4096,                       # ports/esp32/esp32_partition.c: NATIVE_BLOCK_SIZE_BYTES (4096)
     read_size=32, prog_size=32, lookahead_size=32,   # extmod/vfs_lfs.c: readsize/progsize/lookahead default 32
     cache_size=128, block_cycles=100)      # extmod/vfs_lfsx.c: MIN(block, 4 * MAX(read, prog)); block_cycles = 100
+#: Where the original ESP32's interpreter starts (P335): micropython.org/download/ESP32_GENERIC/ says
+#: "esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 board-20210902-v1.17.bin", read on 2026-10-26.
+ESP32_INTERPRETER_OFFSET = 0x1000
+
+
+def mounted(flash):
+    """The image's filesystem, mounted the way MicroPython mounts it, where MicroPython looks."""
+    from littlefs import LittleFS
+    fs = LittleFS(block_count=(MICROPYTHON_FLASH_SIZE - MICROPYTHON_VFS_OFFSET) // 4096, mount=False, **MICROPYTHON_LITTLEFS)
+    fs.context.buffer = bytearray(flash[MICROPYTHON_VFS_OFFSET:])
+    fs.mount()
+    return fs
 
 
 class TheImageTest(unittest.TestCase):
@@ -53,6 +65,27 @@ class TheImageTest(unittest.TestCase):
             self.assertEqual(handle.read(), b"x = 1\n")
         with fs.open("/config.json", "rb") as handle:
             self.assertEqual(json.loads(handle.read()), {"T": 40})
+
+    def test_the_original_esp32_s_interpreter_sits_at_0x1000_with_0xff_before_it(self):
+        interpreter = (self.root / "micropython.bin").read_bytes()
+        flash = flash_image.image(interpreter, flash_image.files_under(self.root / "fw"), offset=ESP32_INTERPRETER_OFFSET)
+        self.assertEqual(len(flash), MICROPYTHON_FLASH_SIZE)
+        self.assertEqual(flash[:ESP32_INTERPRETER_OFFSET], b"\xff" * ESP32_INTERPRETER_OFFSET)
+        self.assertEqual(flash[ESP32_INTERPRETER_OFFSET:ESP32_INTERPRETER_OFFSET + len(interpreter)], interpreter)
+        with mounted(flash).open("/main.py", "rb") as handle:
+            self.assertEqual(handle.read(), b"print('hi')\n")
+
+    def test_an_interpreter_that_ends_where_the_filesystem_starts_fits_and_one_byte_more_is_refused(self):
+        fits = b"\xe9" * (MICROPYTHON_VFS_OFFSET - ESP32_INTERPRETER_OFFSET)
+        self.assertEqual(len(flash_image.image(fits, [], offset=ESP32_INTERPRETER_OFFSET)), MICROPYTHON_FLASH_SIZE)
+        with self.assertRaises(ValueError) as refused:
+            flash_image.image(fits + b"\x00", [], offset=ESP32_INTERPRETER_OFFSET)
+        self.assertIn("MicroPython at 0x1000 is %d bytes and would pass 0x200000" % (len(fits) + 1), str(refused.exception))
+
+    def test_the_chosen_interpreter_builds_its_image_at_its_offset(self):
+        chosen = flash_image.Interpreter(self.root / "micropython.bin", ESP32_INTERPRETER_OFFSET)
+        flash = chosen.image(flash_image.files_under(self.root / "fw"))
+        self.assertEqual(flash[ESP32_INTERPRETER_OFFSET:ESP32_INTERPRETER_OFFSET + 1], b"\xe9")
 
     def test_an_interpreter_too_large_for_its_slot_is_refused(self):
         with self.assertRaises(ValueError):
@@ -110,7 +143,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         import tools
         found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
         with mock.patch.object(tools, "find", return_value=found) as asked:
-            self.assertEqual(flash_image.interpreter_path(None), Path("/downloads/mp.bin"))
+            self.assertEqual(flash_image.interpreter_for(None), (Path("/downloads/mp.bin"), 0))
         self.assertEqual(asked.call_args[0][0], "firmware-image")
 
     def project_on(self, board):
@@ -129,7 +162,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
         with mock.patch.object(tools, "merged", return_value=self.two_builds()), \
                 mock.patch.object(tools, "find", return_value=found) as asked:
-            self.assertEqual(flash_image.interpreter_path(None, self.project_on("xiao-esp32-c6")), Path("/downloads/c6.bin"))
+            self.assertEqual(flash_image.interpreter_for(None, self.project_on("xiao-esp32-c6")), (Path("/downloads/c6.bin"), 0))
         self.assertEqual(asked.call_args[0][0], "micropython-xiao-esp32c6")
 
     def test_a_board_whose_build_no_tool_holds_is_refused_by_name(self):
@@ -137,13 +170,13 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         lists = self.two_builds()
         del lists["tools"]["micropython-xiao-esp32c6"]
         with mock.patch.object(tools, "merged", return_value=lists), self.assertRaises(tools.ToolProblem) as said:
-            flash_image.interpreter_path(None, self.project_on("xiao-esp32-c6"))
+            flash_image.interpreter_for(None, self.project_on("xiao-esp32-c6"))
         self.assertIn("SEEED_XIAO_ESP32C6", str(said.exception))
 
     def test_a_named_board_with_no_build_in_its_record_is_refused_not_given_the_default(self):
         import tools
         with mock.patch.object(tools, "merged", return_value=self.two_builds()), self.assertRaises(tools.ToolProblem) as said:
-            flash_image.interpreter_path(None, self.project_on("no-such-board"))
+            flash_image.interpreter_for(None, self.project_on("no-such-board"))
         self.assertIn("no-such-board", str(said.exception))
 
     def test_the_build_s_tool_is_found_in_the_project_s_lists(self):
@@ -152,7 +185,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
         with mock.patch.object(tools, "merged", return_value=self.two_builds()) as lists, \
                 mock.patch.object(tools, "find", return_value=found) as asked:
-            flash_image.interpreter_path(None, project)
+            flash_image.interpreter_for(None, project)
         self.assertEqual(asked.call_args, mock.call("micropython-xiao-esp32c6", project))
         self.assertEqual(lists.call_args, mock.call(project))
 
@@ -163,7 +196,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
         with mock.patch.object(tools, "merged", return_value=lists), \
                 mock.patch.object(tools, "find", return_value=found) as asked:
-            flash_image.interpreter_path(None, self.project_on("xiao-esp32-c6"))
+            flash_image.interpreter_for(None, self.project_on("xiao-esp32-c6"))
         self.assertEqual(asked.call_args[0][0], "micropython-xiao-esp32c6")
 
     def test_a_broken_requirements_file_is_refused_not_given_the_default(self):
@@ -171,7 +204,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         project = Path(tempfile.mkdtemp())
         (project / "requirements.json").write_text("{not json")
         with self.assertRaises(tools.ToolProblem) as said:
-            flash_image.interpreter_path(None, project)
+            flash_image.interpreter_for(None, project)
         self.assertIn("requirements.json", str(said.exception))
 
     def image_from_main(self, project, argv, cwd=None):
@@ -212,8 +245,87 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         import tools
         found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
         with mock.patch.object(tools, "find", return_value=found) as asked:
-            self.assertEqual(flash_image.interpreter_path(None, Path(tempfile.mkdtemp())), Path("/downloads/mp.bin"))
+            self.assertEqual(flash_image.interpreter_for(None, Path(tempfile.mkdtemp())), (Path("/downloads/mp.bin"), 0))
         self.assertEqual(asked.call_args[0][0], "firmware-image")
+
+    def with_the_esp32(self):
+        """The two builds and the original ESP32's, whose entry says where its interpreter starts (P335)."""
+        lists = self.two_builds()
+        lists["tools"]["micropython-esp32"] = {"micropython_port": "ESP32_GENERIC", "meets": ["micropython-esp32-bin"],
+                                               "kind": "download", "flash_offset": "0x1000"}
+        return lists
+
+    def chosen_for(self, build, given=None, find=None):
+        import tools
+        found = tools.Tool("micropython-esp32", None, {}, ["/downloads/esp32.bin"])
+        with mock.patch.object(flash_image, "board_build", return_value=build), \
+                mock.patch.object(tools, "merged", return_value=self.with_the_esp32()), \
+                mock.patch.object(tools, "find", side_effect=find or (lambda name, *rest: found)):
+            return flash_image.interpreter_for(given, Path(tempfile.mkdtemp()))
+
+    def test_an_esp32_board_s_build_starts_at_its_entry_s_offset(self):
+        self.assertEqual(self.chosen_for("ESP32_GENERIC"), (Path("/downloads/esp32.bin"), ESP32_INTERPRETER_OFFSET))
+
+    def test_an_s3_board_s_build_starts_at_0(self):
+        self.assertEqual(self.chosen_for("ESP32_GENERIC_S3").offset, 0)
+
+    def test_a_given_file_keeps_the_board_s_offset_while_its_download_is_not_in_the_store(self):
+        import tools
+
+        def not_installed(name, *rest):
+            raise tools.ToolProblem("%s is not installed" % name)
+        given = self.root / "micropython.bin"
+        self.assertEqual(self.chosen_for("ESP32_GENERIC", given, not_installed), (given, ESP32_INTERPRETER_OFFSET))
+
+    def test_a_given_file_for_a_board_whose_build_no_entry_holds_starts_at_0(self):
+        given = self.root / "micropython.bin"
+        self.assertEqual(self.chosen_for("ESP32_GENERIC_C3", given), (given, 0))
+
+    def test_a_given_file_with_a_broken_requirements_file_is_refused(self):
+        import tools
+        project = Path(tempfile.mkdtemp())
+        (project / "requirements.json").write_text("{not json")
+        with self.assertRaises(tools.ToolProblem) as said:
+            flash_image.interpreter_for(self.root / "micropython.bin", project)
+        self.assertIn("requirements.json", str(said.exception))
+
+    def test_a_project_with_no_board_takes_the_role_entry_s_offset(self):
+        import tools
+        found = tools.Tool("micropython-esp32", "firmware-image", {"kind": "download", "flash_offset": "0x1000"},
+                           ["/downloads/esp32.bin"])
+        with mock.patch.object(tools, "find", return_value=found):
+            self.assertEqual(flash_image.interpreter_for(None, Path(tempfile.mkdtemp())).offset, ESP32_INTERPRETER_OFFSET)
+
+    def test_a_broken_flash_offset_is_a_tool_problem_on_every_path(self):
+        import tools
+        for broken in (4096, "-0x10", "zero"):
+            with self.subTest(broken=broken):
+                with self.assertRaises(tools.ToolProblem) as said:
+                    flash_image.offset_of({"kind": "download", "flash_offset": broken})
+                self.assertIn("flash_offset", str(said.exception))
+
+    def test_the_command_says_could_not_run_for_a_broken_flash_offset(self):
+        import contextlib
+        import io
+        import tools
+        found = tools.Tool("micropython-esp32", "firmware-image", {"kind": "download", "flash_offset": "zero"},
+                           [str(self.root / "micropython.bin")])
+        real = tools.find
+        err = io.StringIO()
+        with mock.patch.object(tools, "find", side_effect=lambda name, *rest: found if name == "firmware-image" else real(name, *rest)), \
+                contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            code = flash_image.main(["--project", str(Path(tempfile.mkdtemp())), "--files", str(self.root / "fw"),
+                                     "-o", str(self.root / "out.bin")])
+        self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
+        self.assertIn("flash_offset", err.getvalue())
+
+    def test_the_shipped_list_holds_the_original_esp32_s_build_at_0x1000(self):
+        import re
+        import tools
+        entry = tools.merged()["tools"]["micropython-esp32"]
+        self.assertEqual((entry["micropython_port"], int(entry["flash_offset"], 0)), ("ESP32_GENERIC", ESP32_INTERPRETER_OFFSET))
+        self.assertIsNone(tools.entry_problem(entry))
+        self.assertRegex(entry["sha256"], re.compile(r"^[0-9a-f]{64}$"))
 
     def test_the_shipped_list_holds_a_build_for_each_shipped_board(self):
         import tools
@@ -224,7 +336,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
                 self.assertIn(port, held, record.name)
 
     def test_a_given_build_is_used_as_given(self):
-        self.assertEqual(flash_image.interpreter_path(self.root / "micropython.bin"), self.root / "micropython.bin")
+        self.assertEqual(flash_image.interpreter_for(self.root / "micropython.bin"), (self.root / "micropython.bin", 0))
 
     def test_no_littlefs_is_could_not_run_with_its_install(self):
         code, said = self.run_main(["--micropython", str(self.root / "micropython.bin")], failing="littlefs")

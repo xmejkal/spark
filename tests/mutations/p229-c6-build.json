@@ -1,10 +1,10 @@
 [
- {"file": "scripts/run_scenario.py", "name": "run_scenario drops the project", "find": "interpreter_path(self.micropython, self.project)", "replace": "interpreter_path(self.micropython)"},
- {"file": "scripts/flash_image.py", "name": "main drops its project", "find": "interpreter_path(args.micropython, args.project or project_here())", "replace": "interpreter_path(args.micropython)"},
- {"file": "scripts/flash_image.py", "name": "main ignores --project", "find": "interpreter_path(args.micropython, args.project or project_here())", "replace": "interpreter_path(args.micropython, project_here())"},
+ {"file": "scripts/run_scenario.py", "name": "run_scenario drops the project", "find": "interpreter_for(self.micropython, self.project)", "replace": "interpreter_for(self.micropython)"},
+ {"file": "scripts/flash_image.py", "name": "main drops its project", "find": "interpreter_for(args.micropython, args.project or project_here())", "replace": "interpreter_for(args.micropython)"},
+ {"file": "scripts/flash_image.py", "name": "main ignores --project", "find": "interpreter_for(args.micropython, args.project or project_here())", "replace": "interpreter_for(args.micropython, project_here())"},
  {"file": "scripts/flash_image.py", "name": "the project is not found from a folder inside it", "find": "        return boards.project_root()", "replace": "        return Path(\".\")"},
  {"file": "scripts/flash_image.py", "name": "skip the meets check", "find": " and \"micropython-esp32-bin\" in (entry.get(\"meets\") or [])", "replace": ""},
- {"file": "scripts/flash_image.py", "name": "fall back to firmware-image instead of raising", "find": "    raise tools.ToolProblem(\"no tool on the tools list", "replace": "    return Path(tools.find(\"firmware-image\", project).command[0])\n    raise tools.ToolProblem(\"no tool on the tools list"},
+ {"file": "scripts/flash_image.py", "name": "fall back to firmware-image instead of raising", "find": "        raise tools.ToolProblem(\"no tool on the tools list", "replace": "        return Interpreter(Path(tools.find(\"firmware-image\", project).command[0]), 0)\n        raise tools.ToolProblem(\"no tool on the tools list"},
  {"file": "scripts/flash_image.py", "name": "a broken requirements file falls back to the default", "find": "        raise tools.ToolProblem(\"%s cannot be read", "replace": "        return None\n        raise tools.ToolProblem(\"%s cannot be read"},
  {"file": "scripts/flash_image.py", "name": "a named board with no build falls back to the default", "find": "        raise tools.ToolProblem(\"the board %s names", "replace": "        return None\n        raise tools.ToolProblem(\"the board %s names"},
  {"file": "scripts/flash_image.py", "name": "board_build always none", "find": "return boards.get(Path(project), \"micropython_port\", board)", "replace": "return None"},
@@ -12,7 +12,7 @@
  {"file": "scripts/flash_image.py", "name": "compare the wrong tool field", "find": "entry.get(\"micropython_port\") == build", "replace": "entry.get(\"file\", \"\").startswith(build[:5])"},
  {"file": "scripts/flash_image.py", "name": "read the board from the wrong file", "find": "Path(project) / \"requirements.json\"", "replace": "Path(project) / \"project.json\""},
  {"file": "scripts/flash_image.py", "name": "the build-found branch is never taken", "find": "    if not build:\n", "replace": "    if True:\n"},
- {"file": "scripts/flash_image.py", "name": "the build's tool is looked up without the project", "find": "return Path(tools.find(name, project).command[0])", "replace": "return Path(tools.find(name).command[0])"},
+ {"file": "scripts/flash_image.py", "name": "the build's tool is looked up without the project", "find": "Path(tools.find(name, project).command[0])", "replace": "Path(tools.find(name).command[0])"},
  {"file": "scripts/flash_image.py", "name": "the lists are read without the project", "find": "tools.merged(project)[\"tools\"]", "replace": "tools.merged()[\"tools\"]"},
  {"file": "data/tools.json", "name": "the XIAO C6 entry names no build", "find": "\"micropython_port\": \"SEEED_XIAO_ESP32C6\",", "replace": ""}
 ]

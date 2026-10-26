@@ -112,6 +112,21 @@ class FindingAToolTest(unittest.TestCase):
             tools.find("mystery", None, personal)
         self.assertIn("no way to find it", str(refused.exception))
 
+    def test_a_flash_offset_is_a_string_with_a_number_on_a_download_only(self):
+        download = {"kind": "download", "file": "mp.bin", "url": "https://example.org/mp.bin", "sha256": "00"}
+        self.assertIsNone(tools.entry_problem({**download, "flash_offset": "0x1000"}))
+        for broken in (4096, True, "-0x10", "zero"):
+            with self.subTest(broken=broken):
+                self.assertIn("flash_offset", tools.entry_problem({**download, "flash_offset": broken}))
+        self.assertIn("flash_offset", tools.entry_problem({"kind": "path", "exe": "mp", "flash_offset": "0x1000"}))
+
+    def test_an_entry_with_a_broken_flash_offset_is_refused_by_name(self):
+        personal = layer({"mp": {"kind": "download", "file": "mp.bin", "url": "https://example.org/mp.bin",
+                                 "sha256": "00", "flash_offset": "zero"}})
+        with self.assertRaises(tools.ToolProblem) as refused:
+            tools.find("mp", None, personal)
+        self.assertIn("flash_offset", str(refused.exception))
+
     def test_a_version_other_than_the_list_s_says_so_in_one_line(self):
         personal = layer({"pdftotext": {"version": "26.09.0"}})
         self.assertEqual(tools.version_note("pdftotext", "26.09.0", personal=personal), "")

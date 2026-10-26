@@ -518,7 +518,7 @@ class TheFixReviewFoundTheseTest(ProjectCase):
         self.micropython.write_bytes(b"\xe9" + b"\x00" * (3 * 1024 * 1024))
         status, said, _ = self.run_with()
         self.assertEqual(status, COULD_NOT_RUN)
-        self.assertIn("larger than", said)
+        self.assertIn("would pass 0x200000, where the filesystem starts", said)
         self.assertFalse(self.seen.exists())
 
 

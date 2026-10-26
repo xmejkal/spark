@@ -44,7 +44,8 @@ class LookScriptCase(LookCase):
 
     def build_from_firmware(self):
         """The image of firmware/ with no run, as flash_image.py writes it."""
-        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher = mock.patch.object(flash_image, "interpreter_for",
+                                    side_effect=lambda given, project=None: flash_image.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))

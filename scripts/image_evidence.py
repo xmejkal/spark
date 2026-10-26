@@ -172,8 +172,7 @@ class NoSimulationEvidence(ImageEvidence):
 
     def _why_image_differs(self, image):
         try:
-            built = flash_image.image(flash_image.interpreter_path(None, self.project).read_bytes(),
-                                      flash_image.files_under(self.project / "firmware"))
+            built = flash_image.interpreter_for(None, self.project).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, OSError, ValueError, ImportError) as cannot:
             return "cannot check %s against firmware/: %s" % (image.path.name, cannot)
