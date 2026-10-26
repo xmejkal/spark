@@ -26,7 +26,7 @@ MICROPYTHON_LITTLEFS = dict(               # how MicroPython itself mounts that 
     read_size=32, prog_size=32, lookahead_size=32,   # extmod/vfs_lfs.c: readsize/progsize/lookahead default 32
     cache_size=128, block_cycles=100)      # extmod/vfs_lfsx.c: MIN(block, 4 * MAX(read, prog)); block_cycles = 100
 #: Where the original ESP32's interpreter starts (P335): micropython.org/download/ESP32_GENERIC/ says
-#: "esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 board-20210902-v1.17.bin", read on 2026-10-26.
+#: "Then deploy the firmware to the board, starting at address 0x1000", read on 2026-10-26.
 ESP32_INTERPRETER_OFFSET = 0x1000
 
 
@@ -282,6 +282,12 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
     def test_a_given_file_for_a_board_whose_build_no_entry_holds_starts_at_0(self):
         given = self.root / "micropython.bin"
         self.assertEqual(self.chosen_for("ESP32_GENERIC_C3", given), (given, 0))
+
+    def test_a_given_file_for_a_board_whose_record_names_no_build_is_refused(self):
+        import tools
+        with self.assertRaises(tools.ToolProblem) as said:
+            flash_image.interpreter_for(self.root / "micropython.bin", self.project_on("no-such-board"))
+        self.assertIn("no-such-board", str(said.exception))
 
     def test_a_given_file_with_a_broken_requirements_file_is_refused(self):
         import tools

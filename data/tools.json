@@ -154,7 +154,7 @@
     "file": "ESP32_GENERIC-20260824-v1.29.0.bin",
     "url": "https://micropython.org/resources/firmware/ESP32_GENERIC-20260824-v1.29.0.bin",
     "sha256": "e67ad6015a0a504c1fec9aa9bbf589d0432ed28e62546f4f8dd8a147f8bd95f6",
-    "//flash_offset": "Where this file starts in the flash. https://micropython.org/download/ESP32_GENERIC/ says to write it at 0x1000 (esptool.py --chip esp32 ... write_flash -z 0x1000), read on 2026-10-26; the S3 and C6 builds start at 0x0. flash_image.py puts it there inside the one image that the flasher writes at 0x0 (P335).",
+    "//flash_offset": "Where this file starts in the flash. https://micropython.org/download/ESP32_GENERIC/ says: 'Then deploy the firmware to the board, starting at address 0x1000', read on 2026-10-26. The S3 and C6 pages say 'starting at address 0'. flash_image.py puts it there inside the one image that the flasher writes at 0x0 (P335).",
     "flash_offset": "0x1000",
     "meets": [
       "micropython-esp32-bin"

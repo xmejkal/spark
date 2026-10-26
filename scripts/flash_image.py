@@ -156,7 +156,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--micropython", type=Path, help="the interpreter .bin from micropython.org for the board's chip; "
                         "omitted, the tools list's download for the build the project's board names. It starts where "
-                        "that build's entry says (flash_offset, 0x1000 on the original ESP32), else at 0x0")
+                        "that build's entry says (flash_offset, 0x1000 on the original ESP32), else at 0x0. A board whose record "
+                        "names no build stops a given file too, since its start is not known")
     parser.add_argument("--project", type=Path,
                         help="the project whose requirements.json names the board (default: the nearest folder up from "
                         "here with boards/active.json or .spark/, else here); with no board, the tools list's "
