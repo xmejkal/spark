@@ -96,7 +96,7 @@
   "find": "by=item.get(\"by\", \"person\")))",
   "replace": "by=item.get(\"by\", \"agent\")))"},
  {"file": "scripts/needs.py", "name": "a reason is kept with its control characters",
-  "find": "    said = drawer.clean(text)",
+  "find": "    said = clean(text)",
   "replace": "    said = text"},
  {"file": "scripts/needs.py", "name": "a reasons file that is no list is no reasons",
   "find": "passed_over if isinstance(passed_over, (list, tuple)) else [None]",

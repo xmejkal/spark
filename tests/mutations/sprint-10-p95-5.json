@@ -1,9 +1,9 @@
 [
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/text_guards.py",
   "name": "a label keeps its control characters",
-  "find": "    return CONTROL.sub(\" \", str(text)).strip()[:LABEL_MAX]",
-  "replace": "    return str(text).strip()[:LABEL_MAX]"
+  "find": "    return CONTROL.sub(\" \", str(text)).strip()[:cap]",
+  "replace": "    return str(text).strip()[:cap]"
  },
  {
   "file": "scripts/drawer.py",
