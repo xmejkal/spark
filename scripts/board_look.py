@@ -240,9 +240,21 @@ class LookReport:
     @property
     def status(self):
         """The one outcome. A stop is a problem even when every field is `same` (the image does not fit a flash the
-        record lists), and a look with no token went unchecked, since deploy.py cannot go on without one."""
+        record lists). A look with no token went unchecked, since deploy.py cannot go on without one, and so did a look
+        whose last deploy could not be checked (P416)."""
         return outcomes.status_of([n for n, s in self.fields.items() if s == "differs"] + self.stops,
-                                  list(self.unknown) + (["token"] if self.no_token_reason() else []))
+                                  list(self.unknown) + (["token"] if self.no_token_reason() else [])
+                                  + (["last_deploy"] if self.last_deploy_not_checked() else []))
+
+    def last_deploy_not_checked(self):
+        """True when spark's record of this board's last deploy could not be read: a fact not checked, never a pass."""
+        return self.last_deploy.state == board_facts.NOT_CHECKED
+
+    def last_deploy_fix(self):
+        """What the person does about a last deploy that was not checked."""
+        if self.last_deploy.why == board_facts.WHY_UNREADABLE:
+            return "repair or remove %s, then run look.py again" % board_facts.record_path(self.reading.mac)
+        return "reconnect the board so that its MAC can be read, then run look.py again"
 
     def exit_code(self):
         """What the shell sees: the exit for `status`."""
@@ -284,6 +296,8 @@ def report_lines(report, token=True):
         out.append("%d field%s unknown (%s): deploy.py will ask you to accept it."
                    % (len(report.unknown), "" if len(report.unknown) == 1 else "s",
                       ", ".join("%s: %s" % each for each in report.unknown.items())))
+    if report.last_deploy_not_checked():
+        out.append("last deploy not checked: %s: %s." % (report.last_deploy.why, report.last_deploy_fix()))
     if report.simulation:
         out.append("simulation: %s" % report.simulation)
     out += report.caveats

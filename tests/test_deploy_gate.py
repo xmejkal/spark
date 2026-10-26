@@ -828,6 +828,17 @@ class TheStandingYesTest(GateCase):
                 self.assertIn("the look is not a match", said)
                 self.assertIn("no terminal to ask you in", problems)
 
+    def test_a_last_deploy_that_cannot_be_read_is_not_covered_by_a_deploy_grant(self):
+        self.give()
+        record = store.place("boards") / (store.slug(self.MAC) + ".json")
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text("{not json")
+        code, said, problems = self.deploy("--token", self.token(), grant_service=self.grants)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("spark could not check its record of this board's last deploy", said)
+        self.assertIn("no terminal to ask you in", problems)
+        self.assertNotIn("run this once", said + problems)
+
     def test_a_look_with_a_stop_refuses_whatever_the_grant(self):
         self.give()
         self.board("firebeetle2-esp32s3")

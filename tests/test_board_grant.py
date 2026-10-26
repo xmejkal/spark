@@ -374,9 +374,10 @@ def a_grant(scope="deploy", mac=MAC, minutes=30, since=START, **changes):
     return board_grant.Grant(**dict(fields, **changes))
 
 
-def a_report(verdict="match", mac=MAC):
-    """What consent_for_deploy reads of a look: its verdict and the board's MAC."""
-    return mock.Mock(verdict=verdict, reading=board_look.BoardReading("esp32c6", 4, mac))
+def a_report(verdict="match", mac=MAC, last_deploy_not_checked=False):
+    """What consent_for_deploy reads of a look: its verdict, the board's MAC and whether its last deploy was checked."""
+    return mock.Mock(verdict=verdict, reading=board_look.BoardReading("esp32c6", 4, mac),
+                     **{"last_deploy_not_checked.return_value": last_deploy_not_checked})
 
 
 class GrantScopeTest(unittest.TestCase):
@@ -457,6 +458,11 @@ class ConsentForDeployTest(unittest.TestCase):
         chosen = self.choose(**kw)
         self.assertIs(chosen.consent, self.terminal)
         self.assertEqual(chosen.why, why)
+
+    def test_a_look_whose_last_deploy_was_not_checked_asks_in_the_terminal(self):
+        board_grant.GrantStore().save(a_grant())
+        chosen = self.choose(report=a_report(last_deploy_not_checked=True))
+        self.assertEqual((chosen.consent, chosen.why), (self.terminal, "last deploy not checked"))
 
     def test_a_valid_deploy_grant_and_a_matching_look_give_the_standing_yes(self):
         board_grant.GrantStore().save(a_grant())

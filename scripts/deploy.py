@@ -124,7 +124,7 @@ def choose_consent(args, report, grant_service, evidence, out=None):
     matched and the evidence allows it (a passed run's, with no ignored older run), else a yes typed in this terminal.
     Prints one line that says which, and why not when it is the terminal."""
     line = rerun_line(args, report.port, evidence)
-    if report.verdict == board_look.VERDICT_MATCH and evidence.grant_refusal is None:
+    if board_grant.grant_may_cover(report, evidence):
         line += grant_hint(args, report.port)
     chosen = grant_service.consent_for_deploy(report, evidence, deploy_gate.TerminalConsentStrategy(line, stdout=out))
     if chosen.why not in (None, board_grant.WHY_NO_GRANT):  # a person with no grant is told only by the no-terminal text
@@ -229,7 +229,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         reached.update(refusal=str(shut), next_op=shut.next_op)
         if shut.next_op == deploy_gate.NEXT_DEPLOY:
             reached["run_in_terminal"] = rerun_line(args, report.port, evidence)
-            if report.verdict == board_look.VERDICT_MATCH and evidence.grant_refusal is None:
+            if board_grant.grant_may_cover(report, evidence):
                 reached["grant_argv"] = grant_argv(args, report.port, "60")
         print("deploy.py: %s" % shut, file=sys.stderr)
         return shut.code

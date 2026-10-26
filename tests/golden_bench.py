@@ -37,8 +37,11 @@ LOOK_TOKEN = "{look-token}"
 BOARD_ID = "firebeetle2-esp32s3"
 
 #: Value. One golden: its name (`<op>-<status>[-<scenario>]`, the extension says which output), the script, its
-#: arguments after --project, the files of the canned flash id and device list, and the exit code it must end with.
-Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code")
+#: arguments after --project, the files of the canned flash id and device list, the exit code it must end with, and
+#: `plant`: (path under the store, text) pairs written into the run's store first.
+Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code plant", defaults=((),))
+#: A store record of the canned board's last deploy that cannot be read (P416).
+UNREADABLE_LAST_DEPLOY = (("boards/dc-da-0c-xx-xx-xx.json", "{not json"),)
 CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
@@ -46,6 +49,8 @@ CASES = [
     Case("look-could-not-run-two-boards.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-two.txt", 2),
     Case("look-ok-one-board-two-ports.json", "look.py", ["--json"], "s3-flash-id-16mb.txt",
          "mpremote-devs-one-board-two-ports.txt", 0),
+    Case("look-could-not-run-last-deploy-not-checked.json", "look.py", ["--json"], "s3-flash-id-16mb.txt",
+         "mpremote-devs-one.txt", 2, UNREADABLE_LAST_DEPLOY),
     Case("look-could-not-run-no-simulation.json", "look.py", ["--json", "--no-simulation"], "s3-flash-id-16mb.txt",
          "mpremote-devs-one.txt", 2),
     Case("deploy-ok-dry-run.json", "deploy.py", ["--dry-run", "--json"], "s3-flash-id-16mb.txt",
@@ -102,6 +107,9 @@ def run_script(case, project, store, token=None):
     """(exit code, stdout) of `case`'s script run as a child in `project`, with `store` as its SPARK_HOME. stdin is
     closed and stdout is a pipe, so the script sees no terminal. `token` replaces LOOK_TOKEN in the arguments."""
     argv = [token if arg == LOOK_TOKEN else arg for arg in case.argv]
+    for place, text in case.plant:
+        (Path(store) / place).parent.mkdir(parents=True, exist_ok=True)
+        (Path(store) / place).write_text(text)
     env = {name: value for name, value in os.environ.items() if not name.startswith("SPARK_")}  # ACCEPT_VARIABLE too
     env.update(PYTHONPATH=str(FAKE_MODULES), SPARK_HOME=str(store), TZ="UTC", PYTHONDONTWRITEBYTECODE="1",
                FAKE_ESPTOOL_FLASH_ID_FILE=str(CANNED / case.flash_id_file),
