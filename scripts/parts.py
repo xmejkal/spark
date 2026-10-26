@@ -74,7 +74,8 @@ NEED_MATCHER = "name-contains"
 def function_of(record, board=False):
     """
     What a record does (§5.6): its own `function`, else what its kind says, else nothing. A board also does what its
-    own parts do (`boards.onboard_functions`), each one added once and never to the record's own list.
+    own parts do (`boards.onboard_functions`), each one added once and never to the record's own list. One the record
+    also says (the same `does` and `what`) is the board's own dict, which carries the `role` (P397).
     """
     if record.get("function") and not function_problems(record):
         said = record["function"]
@@ -85,7 +86,11 @@ def function_of(record, board=False):
     if not board:
         return said
     import boards
-    return said + [function for function in boards.onboard_functions(record) if function not in said]
+    onboard = boards.onboard_functions(record)
+    own = {(function["does"], function["what"]): function for function in onboard}
+    named = {(function["does"], function["what"]) for function in said}
+    return [own.get((function["does"], function["what"]), function) for function in said] + [
+        function for function in onboard if (function["does"], function["what"]) not in named]
 
 
 def function_problems(record):
