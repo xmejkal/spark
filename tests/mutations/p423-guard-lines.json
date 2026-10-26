@@ -82,5 +82,41 @@
   "name": "run_scenario prints the tool's sentence without the guard",
   "find": "    print(guard_lines(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\")),",
   "replace": "    print(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\"),"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "the erase question, where the person types yes, is written as it is",
+  "find": "% guard_lines(question))",
+  "replace": "% question)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy.py's standing-yes line prints around the helper",
+  "find": "shown(\"  standing yes: not used: %s\" % said, out, flush=True)",
+  "replace": "print(\"  standing yes: not used: %s\" % said, flush=True, file=out)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy.py's failed read prints its lines around the helper",
+  "find": "shown(\"\\n\".join(lines), sys.stderr)",
+  "replace": "print(\"\\n\".join(lines), file=sys.stderr)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy.py's gate refusal prints around the helper",
+  "find": "shown(\"deploy.py: %s\" % shut, sys.stderr)",
+  "replace": "print(\"deploy.py: %s\" % shut, file=sys.stderr)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy.py's helper does not flush when asked to",
+  "find": "print(guard_lines(text), flush=flush, file=out)",
+  "replace": "print(guard_lines(text), file=out)"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "run_scenario's refusal line is printed without the guard",
+  "find": "print(guard_lines(\"run_scenario.py: %s\" % problem), file=sys.stderr)",
+  "replace": "print(\"run_scenario.py: %s\" % problem, file=sys.stderr)"
  }
 ]

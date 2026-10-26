@@ -589,6 +589,12 @@ class TheCommandTest(ProjectCase):
         self.assertIn("wokwi.com/dashboard/ci", said)
         self.assertFalse(self.seen.exists())
 
+    def test_a_problem_with_an_override_and_a_carriage_return_shows_as_question_marks(self):
+        # P423: the refusal line goes through the guard too
+        code, said = self.command(tool=tools.ToolProblem("simulator is not installed\u202e\r THE LINE"))
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("run_scenario.py: simulator is not installed?? THE LINE", said)
+
     def test_a_missing_tool_could_not_run_with_its_install_line(self):
         code, said = self.command(tool=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE"))
         self.assertEqual(code, EXIT_COULD_NOT_RUN)

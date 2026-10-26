@@ -208,6 +208,17 @@ class TheGateTest(GateCase):
         self.assertEqual((code, self.flashed(), consent.asked), (1, [], []))
         self.assertIn("this board is an esp32c6, the project is for an esp32s3. not flashed.", problems)
 
+    def test_a_stop_that_holds_a_record_s_override_shows_as_a_question_mark_in_the_refusal_on_stderr(self):
+        # P423: the gate's refusal is the stops of the look, which carry the record's text
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        real = boards.load
+        with mock.patch.object(boards, "load", side_effect=lambda project, name: dict(real(project, name), chip="esp32s3\u202e\rx")):
+            token = self.token()
+            code, _, problems = self.deploy("--token", token, consent=FakeConsent(True))
+        self.assertEqual(code, 1)
+        self.assertIn("deploy.py: this board is an esp32c6, the project is for an esp32s3??x. not flashed.", problems)
+
     def test_a_warning_is_named_in_the_question(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -348,6 +359,14 @@ class TheBusyPortTest(GateCase):
         self.assertIn("deploy.py: could not read the board on", problems)
         self.assertIn("next    another program holds the port, often mpremote's console: leave mpremote's console "
                       "with Ctrl-X", problems)
+
+    def test_a_port_with_an_override_shows_as_a_question_mark_in_the_failed_read_on_stderr(self):
+        # P423
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", return_value=None):
+            _, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", "/dev/cu.usb\u202emodem", consent=FakeConsent(True),
+                                         look_fails=True)
+        self.assertTrue(problems.startswith("deploy.py: could not read the board on /dev/cu.usb?modem."), problems)
 
     def test_the_real_doctor_finds_the_lock_and_names_ctrl_x(self):
         real_console = board_console.ConsoleProbe.console
@@ -803,6 +822,14 @@ class TheStandingYesTest(GateCase):
         self.assertEqual(self.record(), who)
         sha256 = hashlib.sha256(self.image.read_bytes()).hexdigest()
         self.assertIn("  image sha256: %s, yes: %s" % (sha256, who), said.splitlines())  # P213, card A
+
+    def test_the_standing_yes_line_shows_an_override_and_a_carriage_return_as_question_marks(self):
+        # P423: the sentence of a refusal reaches the terminal through the guard
+        self.give()
+        self.clock.advance(minutes=30)
+        with mock.patch.dict(board_grant.DEPLOY_MESSAGE_FOR, {board_grant.WHY_EXPIRED: "ended\u202e\rthe grant"}):
+            _, said, _ = self.flash()
+        self.assertIn("  standing yes: not used: ended??the grant", said.splitlines())
 
     def test_a_consent_given_to_main_wins_over_a_valid_grant(self):
         self.give()

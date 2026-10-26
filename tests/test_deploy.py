@@ -321,6 +321,21 @@ class TheGuardedPrintTest(ProjectCase):
         deploy.shown("a\u202eb\nc\x1bd\te", out, flush=True)
         self.assertEqual(out.getvalue(), "a?b\nc?d?e\n")
 
+    def test_shown_flushes_when_asked_to_and_only_then_and_a_service_line_always_does(self):
+        class Recording(io.StringIO):
+            flushed = 0
+
+            def flush(self):
+                self.flushed += 1
+
+        stream = Recording()
+        deploy.shown("a", stream)
+        self.assertEqual(stream.flushed, 0)
+        deploy.shown("b", stream, flush=True)
+        self.assertEqual(stream.flushed, 1)
+        deploy.show_line("c", stream)
+        self.assertEqual((stream.flushed, stream.getvalue()), (2, "a\nb\nc\n"))
+
     def test_the_dry_run_on_stdout_shows_a_right_to_left_override_in_the_port_as_a_question_mark(self):
         self.run_the_scenario()
         code, said, problems, _ = self.deploy("--port", "/dev/cu.usb\u202emodem", "--dry-run")
