@@ -462,7 +462,7 @@ class ConsentForDeployTest(unittest.TestCase):
     def test_a_look_whose_last_deploy_was_not_checked_asks_in_the_terminal(self):
         board_grant.GrantStore().save(a_grant())
         chosen = self.choose(report=a_report(last_deploy_not_checked=True))
-        self.assertEqual((chosen.consent, chosen.why), (self.terminal, board_grant.WHY_LAST_DEPLOY_NOT_CHECKED))
+        self.assertEqual((chosen.consent, chosen.why), (self.terminal, "last deploy not checked"))
 
     def test_a_valid_deploy_grant_and_a_matching_look_give_the_standing_yes(self):
         board_grant.GrantStore().save(a_grant())
