@@ -173,9 +173,9 @@ class PortFinderTest(LookCase):
     def test_two_ports_with_no_serial_stay_two_boards(self):
         for serial in ("None", ""):
             with self.subTest(serial=serial):
-                ports = [board_look.Port(device, serial, "1a86:7523", "USB Serial") for device in ("/dev/cu.a", "/dev/cu.b")]
+                ports = [board_look.Port(device, serial, "1a86:7523", "USB Serial") for device in ("/dev/cu.a", "/dev/cu.usbserial-None")]
                 self.assertEqual([[port.device for port in board] for board in board_look.boards_of(ports)],
-                                 [["/dev/cu.a"], ["/dev/cu.b"]])
+                                 [["/dev/cu.a"], ["/dev/cu.usbserial-None"]])
 
     def test_a_port_named_by_the_person_is_found_on_either_node_of_a_grouped_board(self):
         finder = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-one-board-two-ports.txt")))

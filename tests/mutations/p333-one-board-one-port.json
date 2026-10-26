@@ -31,12 +31,6 @@
  },
  {
   "file": "scripts/board_look.py",
-  "name": "fallback-last",
-  "find": "port.device.endswith(port.serial)), board[0])",
-  "replace": "port.device.endswith(port.serial)), board[-1])"
- },
- {
-  "file": "scripts/board_look.py",
   "name": "also-on-empty",
   "find": "also_on=tuple(port.device for port in board if port is not chosen)",
   "replace": "also_on=()"
