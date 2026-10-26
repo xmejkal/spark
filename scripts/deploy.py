@@ -44,6 +44,7 @@ from firmware_platform import FirmwarePlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from text_guards import guard_lines
 
 #: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
 DEPLOYED_LINE = "image sha256: %s, yes: %s"
@@ -101,6 +102,12 @@ came, 2 it could not run, you answered no, there was no terminal, or ready is un
     NO_SIMULATION_CAVEAT, ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
+def shown(text, out=None, flush=False):
+    """Print `text` as a person reads it (P423): a character a terminal does not print shows as `?`, and the text's own
+    newlines stay. `out` is the stream (None: stdout). `--json` prints through no such helper: it carries the raw text."""
+    print(guard_lines(text), flush=flush, file=out)
+
+
 def rerun_line(args, port, evidence):
     """The line that runs this deploy again, for the person's own terminal."""
     return deploy_gate.format_rerun_line(__file__, board_envelope.deploy_argv(args.project.resolve(), args.token, port,
@@ -130,13 +137,13 @@ def choose_consent(args, report, grant_service, evidence, out=None):
     chosen = grant_service.consent_for_deploy(report, evidence, deploy_gate.TerminalConsentStrategy(line, stdout=out))
     if chosen.why not in (None, board_grant.WHY_NO_GRANT):  # a person with no grant is told only by the no-terminal text
         said = board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]
-        print("  standing yes: not used: %s" % said, flush=True, file=out)
+        shown("  standing yes: not used: %s" % said, out, flush=True)
     return chosen.consent
 
 
 def show_line(line, out=None):
     """How the service's lines reach the person: printed at once, because a step is still running."""
-    print(line, flush=True, file=out)
+    shown(line, out, flush=True)
 
 
 def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_service=None):
@@ -187,7 +194,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     """The deploy main parses for. Every line a person reads goes to `out` (None: stdout). What `--json` reports it puts in
     `reached`. Returns the exit code."""
     def say(line):
-        print(line, file=out)
+        shown(line, out)
 
     service = DeployService(args.project, FirmwarePlatform.micropython(args.project), evidence, run,
                             clock, probe, echo_to=None if out is None else 2)
@@ -195,7 +202,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         planned = service.plan(args.port)
     except (DeployError, tools.ToolProblem) as cannot:
         reached["refusal"] = str(cannot)
-        print("deploy.py: %s" % cannot, file=sys.stderr)
+        shown("deploy.py: %s" % cannot, sys.stderr)
         return EXIT_COULD_NOT_RUN
     reached["plan"] = planned
     for note in planned.notes:
@@ -208,7 +215,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     try:
         reached["stage"] = board_envelope.STAGE_LOOK
         report = reached["report"] = service.look(args.port)
-        print("\n".join(board_look.report_lines(report, token=False)), flush=True, file=out)
+        shown("\n".join(board_look.report_lines(report, token=False)), out, flush=True)
         reached["port"] = report.port
         consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), evidence, out)
         yes_kind = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
@@ -224,7 +231,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         lines = ["deploy.py: %s" % cannot]
         if isinstance(cannot, board_look.LookStop):  # P354: a failed read gets the doctor, a busy port its step
             lines, reached["doctor"] = board_doctor.stop_answer("deploy.py", cannot, args.project, run)
-        print("\n".join(lines), file=sys.stderr)
+        shown("\n".join(lines), sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
         reached.update(refusal=str(shut), next_op=shut.next_op)
@@ -232,7 +239,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
             reached["run_in_terminal"] = rerun_line(args, report.port, evidence)
             if board_grant.grant_may_cover(report, evidence):
                 reached["grant_argv"] = grant_argv(args, report.port, "60")
-        print("deploy.py: %s" % shut, file=sys.stderr)
+        shown("deploy.py: %s" % shut, sys.stderr)
         return shut.code
     reached["stage"] = board_envelope.STAGE_VERIFY
     result = reached["result"] = service.verify(report, planned, lambda line: show_line(line, out))

@@ -36,6 +36,7 @@ import flash_image
 import sim_project
 import tools
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS
+from text_guards import guard_lines
 
 # --- MVP ---
 #: The kinds of wokwi-cli scenario step that this reads by name: the one that sets a control, the one that reads a pin
@@ -353,11 +354,11 @@ def main(argv=None):
         problem = "%s is not set: %s (a run spends Wokwi CI minutes)" % (
             token, simulator.entry.get("needs_account", "get one at wokwi.com/dashboard/ci"))
     if problem:
-        print("run_scenario.py: %s" % problem, file=sys.stderr)
+        print(guard_lines("run_scenario.py: %s" % problem), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     status, sentence, log = run.run(simulator.command)
-    print("%s: %s%s" % (args.scenario.name, sentence, "\nlog: %s" % log if log else ""),
-          file=sys.stdout if status == OK else sys.stderr)
+    print(guard_lines("%s: %s%s" % (args.scenario.name, sentence, "\nlog: %s" % log if log else "")),
+          file=sys.stdout if status == OK else sys.stderr)  # the log file in sim/runs keeps the raw text
     return EXIT_FOR[status]
 
 

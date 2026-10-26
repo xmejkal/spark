@@ -37,7 +37,7 @@
  {"file": "scripts/parts.py", "name": "a dry run of --fetch fetches",
   "find": "    if args.dry_run:\n        home = record_home(args.fetch, project)", "replace": "    if False:\n        home = record_home(args.fetch, project)"},
  {"file": "scripts/store.py", "name": "a control character in a name is not refused, so a NUL byte reaches the operating system",
-  "find": "    if CONTROL_CHARACTER.search(name):\n", "replace": "    if False:\n"},
+  "find": "    if CONTROL.search(name):\n", "replace": "    if False:\n"},
  {"file": "scripts/store.py", "name": "a HEAD reads the document, so a redirect turns a question into a download",
   "find": "            return b\"\" if method == \"HEAD\" else answer.read()\n", "replace": "            return answer.read()\n"},
  {"file": "scripts/store.py", "name": "the door opens any scheme a cited URL names",
@@ -48,7 +48,7 @@
   "find": "            _must_be_web(answer.geturl(), redirected_from=url)\n", "replace": "            pass\n"},
  {"file": "scripts/store.py", "name": "a name too long to be kept is accepted, and fails after the downloads",
   "find": "    if size > FILE_NAME_MAX_BYTES:\n", "replace": "    if False:\n"},
- {"file": "scripts/store.py", "name": "direction marks and line separators pass as ordinary characters of a name",
+ {"file": "scripts/text_guards.py", "name": "direction marks and line separators pass as ordinary characters of a name",
   "find": "\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]", "replace": "]"},
  {"file": "scripts/parts.py", "name": "a dry run of --keep does not ask whether the name can be kept",
   "find": "        return store.keep(payload, name)\n    problem = store.file_name_problem(name)\n", "replace": "        return store.keep(payload, name)\n    problem = None\n"}

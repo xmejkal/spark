@@ -212,7 +212,7 @@ CAPABILITIES = ("wake", "adc", "pwm")
 from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
 import provenance  # noqa: E402
 import store  # noqa: E402
-from text_guards import printable  # noqa: E402
+from text_guards import guard_lines, printable  # noqa: E402
 
 
 class PartError(Exception):
@@ -1807,7 +1807,7 @@ def _op_keep(args, project):
         return Answer(unchecked=[_cannot("--keep: no file at %s" % path)])
     located = path.name.lower().endswith((".jpg", ".jpeg")) and without_location(path.read_bytes())[1]
     if located and not args.json:
-        print("  removed the location (EXIF GPS) from %s before keeping it" % path.name, file=sys.stderr)
+        print("  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name), file=sys.stderr)
     entry = keep_local(path, args.url, dry_run=args.dry_run)
     return Answer({"document": entry, "location_removed": located, "written": not args.dry_run},
                   [json.dumps(entry, indent=2, ensure_ascii=False)])
@@ -2361,12 +2361,12 @@ def _say(op, answer, as_json):
         if not answer.lines:
             for item in list(answer.problems) + list(answer.unchecked):
                 said_here = "parts.py: %s%s" % (item["sentence"], " — " + item["fix"] if item.get("fix") else "")
-                print("\n".join(printable(piece) for piece in said_here.split("\n")), file=sys.stderr)
+                print(guard_lines(said_here), file=sys.stderr)
             answer = answer._replace(problems=(), unchecked=())
         for line in _text_of(answer):
-            # P403: every field, once, at the edge: a control or a right-to-left character shows as `?`. A line's own
+            # P403, P423: every field, once, at the edge: a control or a right-to-left character shows as `?`. A line's own
             # newlines stay. A name that can hold a newline (a holder, a used_in key) is guarded where it is put in.
-            print("\n".join(printable(piece) for piece in line.split("\n")))  # --json stays raw, as data
+            print(guard_lines(line))  # --json stays raw, as data
     return EXIT_FOR[said["status"]]
 
 

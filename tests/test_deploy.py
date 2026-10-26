@@ -313,6 +313,44 @@ class WhatDeployNeedsTest(ProjectCase):
         self.assertIn("note: firmware/main.py changed after this image was made", said)
 
 
+class TheGuardedPrintTest(ProjectCase):
+    """P423 (#556): every text print of deploy.py shows a character a terminal does not print as `?`; --json keeps it raw."""
+
+    def test_shown_guards_each_line_and_keeps_the_newlines_on_the_stream_it_is_given(self):
+        out = io.StringIO()
+        deploy.shown("a\u202eb\nc\x1bd\te", out, flush=True)
+        self.assertEqual(out.getvalue(), "a?b\nc?d?e\n")
+
+    def test_shown_flushes_when_asked_to_and_only_then_and_a_service_line_always_does(self):
+        class Recording(io.StringIO):
+            flushed = 0
+
+            def flush(self):
+                self.flushed += 1
+
+        stream = Recording()
+        deploy.shown("a", stream)
+        self.assertEqual(stream.flushed, 0)
+        deploy.shown("b", stream, flush=True)
+        self.assertEqual(stream.flushed, 1)
+        deploy.show_line("c", stream)
+        self.assertEqual((stream.flushed, stream.getvalue()), (2, "a\nb\nc\n"))
+
+    def test_the_dry_run_on_stdout_shows_a_right_to_left_override_in_the_port_as_a_question_mark(self):
+        self.run_the_scenario()
+        code, said, problems, _ = self.deploy("--port", "/dev/cu.usb\u202emodem", "--dry-run")
+        self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
+        self.assertIn("--port '/dev/cu.usb?modem' erase_flash", said)
+
+    def test_a_refusal_on_stderr_shows_it_and_the_json_keeps_it_raw(self):
+        bad = str(self.project.with_name("a\u202eb"))
+        code, _, problems, _ = self.deploy("--project", bad, "--dry-run")
+        self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
+        self.assertIn("no sim/wokwi.toml in %s/a?b: build" % self.project.parent, problems)
+        _, said, _, _ = self.deploy("--project", bad, "--dry-run", "--json")
+        self.assertIn("/a\u202eb: build", json.loads(said)["unchecked"][0]["sentence"])
+
+
 class TheDeployEnvelopeYesRuleTest(unittest.TestCase):
     """P337 B: the NEXT_DEPLOY step names a deploy grant only where a grant may answer."""
 

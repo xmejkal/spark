@@ -28,6 +28,7 @@ import board_facts  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
 import board_grant  # noqa: E402
+import boards  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import flasher  # noqa: E402
@@ -207,6 +208,17 @@ class TheGateTest(GateCase):
         self.assertEqual((code, self.flashed(), consent.asked), (1, [], []))
         self.assertIn("this board is an esp32c6, the project is for an esp32s3. not flashed.", problems)
 
+    def test_a_stop_that_holds_a_record_s_override_shows_as_a_question_mark_in_the_refusal_on_stderr(self):
+        # P423: the gate's refusal is the stops of the look, which carry the record's text
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        real = boards.load
+        with mock.patch.object(boards, "load", side_effect=lambda project, name: dict(real(project, name), chip="esp32s3\u202e\rx")):
+            token = self.token()
+            code, _, problems = self.deploy("--token", token, consent=FakeConsent(True))
+        self.assertEqual(code, 1)
+        self.assertIn("deploy.py: this board is an esp32c6, the project is for an esp32s3??x. not flashed.", problems)
+
     def test_a_warning_is_named_in_the_question(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -215,6 +227,25 @@ class TheGateTest(GateCase):
         code, _, _ = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
         self.assertEqual(code, 0)
         self.assertIn("the flash differs: 8 MB, the record says 16 or 4", consent.asked[0])
+
+    def test_a_board_record_with_an_override_and_a_carriage_return_cannot_fake_the_question(self):
+        # P423: the warning carries the record's text, and the question is where the person types yes
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        real = boards.load
+
+        def loaded(project, name):
+            return dict(real(project, name), flash_mb="8\u202e\r FAKE")
+
+        shown = Stream()
+        with mock.patch.object(boards, "load", side_effect=loaded):
+            token = self.token(esptool="s3-flash-id-8mb.txt")
+            consent = deploy_gate.TerminalConsentStrategy("x", Stream("no\n"), shown)
+            code, _, problems = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
+        self.assertEqual(code, 2, problems)
+        self.assertIn("you accept: the flash differs: 8 MB, the record says 8?? FAKE. erase ALL of this board's flash ", shown.getvalue())
+        self.assertNotIn("\u202e", shown.getvalue())
+        self.assertNotIn("\r", shown.getvalue())
 
     def test_an_unknown_field_is_named_in_the_question(self):
         self.run_the_scenario()
@@ -328,6 +359,14 @@ class TheBusyPortTest(GateCase):
         self.assertIn("deploy.py: could not read the board on", problems)
         self.assertIn("next    another program holds the port, often mpremote's console: leave mpremote's console "
                       "with Ctrl-X", problems)
+
+    def test_a_port_with_an_override_shows_as_a_question_mark_in_the_failed_read_on_stderr(self):
+        # P423
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", return_value=None):
+            _, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", "/dev/cu.usb\u202emodem", consent=FakeConsent(True),
+                                         look_fails=True)
+        self.assertTrue(problems.startswith("deploy.py: could not read the board on /dev/cu.usb?modem."), problems)
 
     def test_the_real_doctor_finds_the_lock_and_names_ctrl_x(self):
         real_console = board_console.ConsoleProbe.console
@@ -784,6 +823,14 @@ class TheStandingYesTest(GateCase):
         sha256 = hashlib.sha256(self.image.read_bytes()).hexdigest()
         self.assertIn("  image sha256: %s, yes: %s" % (sha256, who), said.splitlines())  # P213, card A
 
+    def test_the_standing_yes_line_shows_an_override_and_a_carriage_return_as_question_marks(self):
+        # P423: the sentence of a refusal reaches the terminal through the guard
+        self.give()
+        self.clock.advance(minutes=30)
+        with mock.patch.object(board_grant, "DEPLOY_MESSAGE_FOR", {"expired": "ended\u202e\rthe grant"}):
+            _, said, _ = self.flash()
+        self.assertIn("  standing yes: not used: ended??the grant", said.splitlines())
+
     def test_a_consent_given_to_main_wins_over_a_valid_grant(self):
         self.give()
         consent = FakeConsent(False)
@@ -1119,6 +1166,12 @@ class TerminalConsentTest(unittest.TestCase):
 
     def test_yes_in_a_terminal_is_the_yes(self):
         self.assertEqual(self.ask("yes\n"), (True, "erase ALL of this board's flash? type yes to go on: "))
+
+    def test_the_question_shows_a_character_a_terminal_does_not_print_as_a_question_mark(self):
+        stdout = Stream()
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout)
+        consent.ask("erase\u202e\r ALL\x1b")
+        self.assertEqual(stdout.getvalue(), "erase?? ALL? type yes to go on: ")
 
     def test_anything_else_is_no(self):
         for typed in ("y\n", "YES please\n", "\n", ""):

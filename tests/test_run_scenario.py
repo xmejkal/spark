@@ -568,6 +568,14 @@ class TheCommandTest(ProjectCase):
         self.assertEqual(code, EXIT_PROBLEMS)
         self.assertIn("failed (wokwi-cli exit 1)", said)
 
+    def test_a_right_to_left_override_in_the_tool_s_error_shows_as_a_question_mark_and_the_log_keeps_it(self):
+        # P423: the line a person reads is guarded; the log file in sim/runs keeps what the tool said
+        code, said = self.command(exit_code=1, FAKE_WOKWI_ERR="Error: GPIO\u202e4")
+        self.assertEqual(code, EXIT_PROBLEMS)
+        self.assertIn("GPIO?4", said)
+        self.assertNotIn("\u202e", said)
+        self.assertIn("GPIO\u202e4", (self.project / "sim" / "runs" / "lights.v2.log").read_text(encoding="utf-8"))
+
     def test_the_flags_reach_the_run(self):
         self.command(str(self.scenario.relative_to(self.project)), "--project", str(self.project), "--micropython",
                      str(self.micropython), "--timeout-ms", "1234")
@@ -580,6 +588,12 @@ class TheCommandTest(ProjectCase):
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("wokwi.com/dashboard/ci", said)
         self.assertFalse(self.seen.exists())
+
+    def test_a_problem_with_an_override_and_a_carriage_return_shows_as_question_marks(self):
+        # P423: the refusal line goes through the guard too
+        code, said = self.command(tool=tools.ToolProblem("simulator is not installed\u202e\r THE LINE"))
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("run_scenario.py: simulator is not installed?? THE LINE", said)
 
     def test_a_missing_tool_could_not_run_with_its_install_line(self):
         code, said = self.command(tool=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE"))
