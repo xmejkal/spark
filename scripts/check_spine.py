@@ -74,6 +74,7 @@ import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from text_guards import guard_lines  # noqa: E402
 
 from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 
@@ -722,7 +723,7 @@ def main(argv=None):
         try:
             parts.note_built(handed)
         except (store.StoreProblem, OSError) as unrecorded:
-            print("  the build was not recorded in your history: %s" % unrecorded, file=sys.stderr)
+            print(guard_lines("  the build was not recorded in your history: %s" % unrecorded), file=sys.stderr)
 
     return report(stages, args, workdir, requirements, tabbed_page.TscircuitExport(toolchain))
 
@@ -992,9 +993,9 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
             said["kept"] = [{key: value for key, value in entry.items() if key != "line"} for entry in kept]
         print(json.dumps(said))
     else:
-        sys.stdout.write(render(stages, code, left_off(requirements)))
+        sys.stdout.write(guard_lines(render(stages, code, left_off(requirements))))
     for entry in kept or []:
-        print("  %s" % entry["line"], file=sys.stderr)
+        print(guard_lines("  %s" % entry["line"]), file=sys.stderr)
     if workdir is not None:
         shutil.rmtree(workdir, ignore_errors=True)
     return code
