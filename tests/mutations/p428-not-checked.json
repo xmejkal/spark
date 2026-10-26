@@ -7,8 +7,8 @@
  },
  {
   "file": "scripts/image_evidence.py",
-  "name": "caveats compares == NONE_RECORDED, so a not-checked log has no caveat",
-  "find": "if steps.state != outcomes.RECORDED:",
+  "name": "caveats treats a not-checked log as none-recorded, so it gets no reason",
+  "find": "if steps.state == outcomes.NOT_CHECKED:",
   "replace": "if steps.state == outcomes.NONE_RECORDED:"
  },
  {
@@ -26,13 +26,19 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "the caveat drops ScenarioSteps.why for the one fixed reason",
-  "find": "(steps.why or NO_COUNTS_WHY)",
-  "replace": "NO_COUNTS_WHY"
+  "find": "outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE",
+  "replace": "outcomes.NOT_CHECKED_MESSAGE % \"the log cannot be read\", UNCOUNTED_ADVICE"
  },
  {
   "file": "scripts/board_facts.py",
   "name": "read_last_deploy raises on a record that is not JSON (READERS never-raises)",
   "find": "    except (OSError, ValueError, RecursionError):\n        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)\n    deploys",
   "replace": "    except (OSError, RecursionError):\n        return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)\n    deploys"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "a none-recorded log is said to be not checked",
+  "find": "        if steps.state == outcomes.NONE_RECORDED:\n            return [OLDER_LOG_CAVEAT]",
+  "replace": "        if steps.state == outcomes.NONE_RECORDED:\n            return [\"%s; %s\" % (outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE)]"
  }
 ]
