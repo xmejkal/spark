@@ -28,6 +28,7 @@ import board_facts  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
 import board_grant  # noqa: E402
+import boards  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import flasher  # noqa: E402
@@ -215,6 +216,25 @@ class TheGateTest(GateCase):
         code, _, _ = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
         self.assertEqual(code, 0)
         self.assertIn("the flash differs: 8 MB, the record says 16 or 4", consent.asked[0])
+
+    def test_a_board_record_with_an_override_and_a_carriage_return_cannot_fake_the_question(self):
+        # P423: the warning carries the record's text, and the question is where the person types yes
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        real = boards.load
+
+        def loaded(project, name):
+            return dict(real(project, name), flash_mb="8\u202e\r FAKE")
+
+        shown = Stream()
+        with mock.patch.object(boards, "load", side_effect=loaded):
+            token = self.token(esptool="s3-flash-id-8mb.txt")
+            consent = deploy_gate.TerminalConsentStrategy("x", Stream("no\n"), shown)
+            code, _, problems = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
+        self.assertEqual(code, 2, problems)
+        self.assertIn("you accept: the flash differs: 8 MB, the record says 8?? FAKE. erase ALL of this board's flash ", shown.getvalue())
+        self.assertNotIn("\u202e", shown.getvalue())
+        self.assertNotIn("\r", shown.getvalue())
 
     def test_an_unknown_field_is_named_in_the_question(self):
         self.run_the_scenario()
@@ -1119,6 +1139,12 @@ class TerminalConsentTest(unittest.TestCase):
 
     def test_yes_in_a_terminal_is_the_yes(self):
         self.assertEqual(self.ask("yes\n"), (True, "erase ALL of this board's flash? type yes to go on: "))
+
+    def test_the_question_shows_a_character_a_terminal_does_not_print_as_a_question_mark(self):
+        stdout = Stream()
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout)
+        consent.ask("erase\u202e\r ALL\x1b")
+        self.assertEqual(stdout.getvalue(), "erase?? ALL? type yes to go on: ")
 
     def test_anything_else_is_no(self):
         for typed in ("y\n", "YES please\n", "\n", ""):

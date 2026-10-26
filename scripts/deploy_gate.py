@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
+from text_guards import guard_lines
 
 #: How the store's record says a yes was given in a terminal: %s is the person's login name.
 TYPED_BY = "typed in a terminal by %s"
@@ -77,7 +78,7 @@ class TerminalConsentStrategy(ConsentStrategy):
 
     def ask(self, question):
         self.require_ready()
-        self.stdout.write("%s type yes to go on: " % question)
+        self.stdout.write("%s type yes to go on: " % guard_lines(question))  # P423: the one place a person types yes
         self.stdout.flush()
         return self.stdin.readline().strip() == "yes"
 
