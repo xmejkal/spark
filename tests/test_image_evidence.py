@@ -233,7 +233,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("cannot check", self.why())
 
     def test_a_very_deep_expression_is_a_sentence_not_a_recursion_error(self):
-        (self.firmware / "deep.py").write_text("x = " + "1+" * 200000 + "1\n")
+        (self.firmware / "deep.py").write_text("x = f" + "()" * 200000 + "\n")  # too deep on 3.9 to 3.13 alike
         why = self.why()
         self.assertIn("firmware/deep.py", why)
         self.assertIn("too deeply nested", why)

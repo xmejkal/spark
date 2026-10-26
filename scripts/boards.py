@@ -30,6 +30,7 @@ import math
 import re
 import sys
 from dataclasses import dataclass
+from typing import Optional
 from pathlib import Path
 
 import provenance
@@ -338,10 +339,10 @@ class OnboardRole:
     """
 
     constant: str
-    scenario_verb: str | None
+    scenario_verb: Optional[str]
     does: str
     what: str
-    not_in_diagram: str | None = None
+    not_in_diagram: Optional[str] = None
 
     def __post_init__(self):
         if bool(self.scenario_verb) == bool(self.not_in_diagram):

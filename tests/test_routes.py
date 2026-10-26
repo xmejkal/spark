@@ -222,7 +222,9 @@ class AStrangerCanBuildTest(unittest.TestCase):
         import subprocess
         steps = self.documented_steps()
         self.assertGreaterEqual(len(steps), 5, steps)
-        environment = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(ROOT))
+        # the documented steps start with `#!/usr/bin/env python3`: the suite's own Python comes first on PATH (P426)
+        environment = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(ROOT),
+                           PATH=str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", ""))
         for line in steps:
             result = subprocess.run(line, shell=True, cwd=str(self.here), capture_output=True, text=True, env=environment)
             with self.subTest(step=line):
