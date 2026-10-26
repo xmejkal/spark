@@ -10,7 +10,7 @@ import re
 # --- MVP ---
 #: A label is shown and matched, never obeyed (§6.4.6): control and bidi characters go, and it stops at 160 characters.
 LABEL_MAX = 160
-CONTROL = re.compile("[\x00-\x1f\x7f-\x9f‎‏‪-‮⁦-⁩]+")
+CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]+")
 
 #: What an entry or a record says of itself for a chooser (P211): one sentence and a paragraph, each capped — data, never obeyed.
 TEXT_MAX = {"about": 200, "description": 1000}
@@ -20,7 +20,7 @@ TAGS_MAX = 12
 #: What a line comment in a generated file cannot hold. A line break ends it: `\n` and `\r` end Python's `#`, and JavaScript's
 #: `//` ends at U+2028 and U+2029 too, and U+0085 is one to editors. Any other control character, such as NUL, stops the file
 #: from compiling. A lone surrogate stops it from being written as UTF-8.
-COMMENT_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f  \ud800-\udfff]")
+COMMENT_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029\ud800-\udfff]")
 
 
 def printable(text):
