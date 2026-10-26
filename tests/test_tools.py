@@ -114,7 +114,8 @@ class FindingAToolTest(unittest.TestCase):
 
     def test_a_flash_offset_is_a_string_with_a_number_on_a_download_only(self):
         download = {"kind": "download", "file": "mp.bin", "url": "https://example.org/mp.bin", "sha256": "00"}
-        self.assertIsNone(tools.entry_problem({**download, "flash_offset": "0x1000"}))
+        for good in ("0x1000", "0x0", "0"):
+            self.assertIsNone(tools.entry_problem({**download, "flash_offset": good}), good)
         for broken in (4096, True, "-0x10", "zero"):
             with self.subTest(broken=broken):
                 self.assertIn("flash_offset", tools.entry_problem({**download, "flash_offset": broken}))

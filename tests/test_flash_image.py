@@ -84,8 +84,10 @@ class TheImageTest(unittest.TestCase):
 
     def test_the_chosen_interpreter_builds_its_image_at_its_offset(self):
         chosen = flash_image.Interpreter(self.root / "micropython.bin", ESP32_INTERPRETER_OFFSET)
-        flash = chosen.image(flash_image.files_under(self.root / "fw"))
+        flash = chosen.image(flash_image.files_under(self.root / "fw"), {"T": 40})
         self.assertEqual(flash[ESP32_INTERPRETER_OFFSET:ESP32_INTERPRETER_OFFSET + 1], b"\xe9")
+        with mounted(flash).open("/config.json", "rb") as handle:
+            self.assertEqual(json.loads(handle.read()), {"T": 40})
 
     def test_an_interpreter_too_large_for_its_slot_is_refused(self):
         with self.assertRaises(ValueError):
@@ -330,7 +332,19 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
                 code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--project", str(self.root),
                                          "--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
                 self.assertEqual(code, flash_image.EXIT_OK)
-                self.assertIn(span, out.getvalue())
+                self.assertIn(span + ", filesystem at 0x200000", out.getvalue())
+
+    def test_the_command_writes_the_original_esp32_s_interpreter_at_0x1000(self):
+        import contextlib
+        import io
+        esp32 = ("ESP32_GENERIC", ("micropython-esp32", self.with_the_esp32()["tools"]["micropython-esp32"]))
+        with mock.patch.object(flash_image, "build_entry", return_value=esp32), contextlib.redirect_stdout(io.StringIO()):
+            code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--project", str(self.root),
+                                     "--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
+        self.assertEqual(code, flash_image.EXIT_OK)
+        written, interpreter = (self.root / "out.bin").read_bytes(), (self.root / "micropython.bin").read_bytes()
+        self.assertEqual(written[:ESP32_INTERPRETER_OFFSET], b"\xff" * ESP32_INTERPRETER_OFFSET)
+        self.assertEqual(written[ESP32_INTERPRETER_OFFSET:ESP32_INTERPRETER_OFFSET + len(interpreter)], interpreter)
 
     def test_the_shipped_list_holds_the_original_esp32_s_build_at_0x1000(self):
         import re
