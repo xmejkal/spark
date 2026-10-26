@@ -16,3 +16,4 @@ Findings from the plan council and the build of P420 (2026-10-26, Prague, auto m
 | 10 | The human pages say the retry | review, refuter | acted | `commands/deploy.md` and `deploy.py`'s help have one sentence each. The README's Bench row is unchanged, because no status changed |
 | 11 | mpremote prints the refusal as spark matches it | refuter | closed | mpremote 1.29.0 raises `TransportError("could not enter raw repl")`, lowercase, and the last stderr line holds it |
 | 12 | The fakes' list handling is safe | review | raised | `uncopied` and `copy_raises` lists are consumed per call, including `fs cat`. Set per test, so no leak today. A class-level list would leak |
+| 13 | The mutation run catches every planted defect | mutation-tester | acted | 9 planted, 8 caught on b979814. The escape, a `BoardCodeError` holding the raw-REPL words, is the clause row 9 dropped. On the final lines: 4 planted, 4 caught (426 s) |
