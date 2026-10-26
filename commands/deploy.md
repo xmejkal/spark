@@ -85,7 +85,8 @@ says where the buttons are (`physical.buttons`, the XIAO ESP32-C6's does), the h
 deploy.py makes one retry of an erase that stopped with exit 2, after 5 s, and prints `retry in 5 s: ...`
 ([P290](https://github.com/xmejkal/spark/issues/347)). Relay that line.
 
-After the flash, deploy.py copies a facts file, `spark.json`, to the board and reads it back. It names spark's
+After the flash, deploy.py copies a facts file, `spark.json`, to the board and reads it back. When the board refuses mpremote's
+raw REPL for that copy, deploy.py tries it once more after 2 s, and the board's log says so ([P420](https://github.com/xmejkal/spark/issues/550)). It names spark's
 version, the project, the board type, the MAC, the image's sha256 and each file's sha256 and `simulation` (`passed` or `none`). The board's log names the
 facts file's sha256, and your store keeps one record for each board by its MAC, `boards/<MAC>.json`, with each
 deploy, its verdict and whose yes it was. Then deploy.py reads the board with mpremote. It hashes each file that the evidence names (the passed run's log, or `firmware/` with `--no-simulation`), on the

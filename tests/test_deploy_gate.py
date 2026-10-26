@@ -62,13 +62,15 @@ class GateCase(LookCase):
     files_on_board = None
     #: The exception mpremote raises when it hashes the board's files, or None.
     unread = None
-    #: The exception mpremote raises when it copies the facts file, or None; what `fs cat` adds to the copy.
+    #: The exception mpremote raises when it copies the facts file (a list: one per call, then none), or None; what
+    #: `fs cat` adds to the copy.
     uncopied, garbled = None, ""
 
     def fs(self, command):
         """mpremote fs cp and fs cat on the fake board, which keeps the copied files in self.copied."""
-        if self.uncopied:
-            raise self.uncopied
+        raises = (self.uncopied.pop(0) if self.uncopied else None) if isinstance(self.uncopied, list) else self.uncopied
+        if raises:
+            raise raises
         if command[-3] == "cp":
             self.copied[command[-1].lstrip(":")] = Path(command[-2]).read_text()
             return done("")
@@ -652,6 +654,15 @@ class TheFactsAfterTheFlashTest(GateCase):
         code, said, _ = self.flash()
         self.assertEqual(code, 0)
         self.assertIn("facts file: not written: mpremote could not copy it", said)
+        self.assertIn("ready seen", said)
+
+    def test_a_facts_copy_the_board_refused_right_after_the_reset_is_written_on_a_retry(self):
+        self.uncopied = [subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote: could not enter raw repl\n")]
+        code, said, _ = self.flash()
+        self.assertEqual(code, 0)
+        self.assertRegex(said, r"facts file spark\.json sha256: [0-9a-f]{64} \(written on a retry after: mpremote could not "
+                               r"copy it: mpremote: could not enter raw repl\)")
+        self.assertIn(2, self.slept)
         self.assertIn("ready seen", said)
 
     def test_a_facts_file_that_reads_back_different_is_not_written(self):

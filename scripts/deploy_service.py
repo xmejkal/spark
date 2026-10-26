@@ -178,8 +178,10 @@ class DeployService:
         """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
         said = board_facts.facts(self.project, self.platform.board_of(), report.reading.mac, image.path, expected, moment,
                                  self.evidence.simulation)
-        why = board_facts.FactsFile(connection).write(said)
+        facts_file = board_facts.FactsFile(connection, self.sleep)
+        why = facts_file.write(said)
         if why:
             return said, "facts file: not written: %s" % why
-        return said, "facts file %s sha256: %s" % (board_facts.FACTS_FILE,
-                                                  hashlib.sha256(board_facts.facts_text(said).encode()).hexdigest())
+        retried = " (written on a retry after: %s)" % facts_file.first_failure if facts_file.first_failure else ""
+        return said, "facts file %s sha256: %s%s" % (board_facts.FACTS_FILE,
+                                                    hashlib.sha256(board_facts.facts_text(said).encode()).hexdigest(), retried)

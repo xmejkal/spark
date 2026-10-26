@@ -11,12 +11,13 @@ import datetime
 import hashlib
 import json
 import tempfile
+import time
 from pathlib import Path
 
 import store
 import zone_time
 from text_guards import printable
-from board_connection import BoardUnreachableError, BoardCodeError
+from board_connection import RAW_REPL_REFUSED, BoardUnreachableError, BoardCodeError
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
 FACTS_FILE = "spark.json"
@@ -36,24 +37,43 @@ def facts_text(said):
     return json.dumps(said, indent=1, sort_keys=True) + "\n"
 
 
-class FactsFile:
-    """The facts file on one board, through its BoardConnection (board_connection.py)."""
+#: How long the facts copy waits before its one retry, when the board refused the raw REPL right after the deploy's
+#: reset (P420, seen on the T-Display and in walk 1). A guess, to be measured on the bench.
+FACTS_RETRY_WAIT_S = 2
 
-    def __init__(self, connection):
-        self.connection = connection
+
+class FactsFile:
+    """The facts file on one board, through its BoardConnection (board_connection.py). `sleep` waits before the retry."""
+
+    def __init__(self, connection, sleep=time.sleep):
+        self.connection, self.sleep, self.first_failure = connection, sleep, None
 
     def write(self, said):
-        """None when the facts file is on the board and reads back the same, else why not."""
+        """None when the facts file is on the board and reads back the same, else why not. When the board refused the raw
+        REPL, the copy and its read-back run once more after FACTS_RETRY_WAIT_S, and `first_failure` keeps why (P420). No
+        other failure is retried: a full flash or a board that does not answer would fail again."""
+        self.first_failure = None
         text = facts_text(said)
         with tempfile.TemporaryDirectory() as scratch:
             local = Path(scratch) / FACTS_FILE
             local.write_text(text)
-            try:
-                self.connection.copy_to_board(local, FACTS_FILE)
-                back = self.connection.read_file(FACTS_FILE)
-            except (BoardUnreachableError, BoardCodeError) as cannot:
-                return "mpremote could not copy it: %s" % cannot
-        return None if back.strip() == text.strip() else "it read back different from what was copied"
+            for retry in (False, True):
+                try:
+                    self.connection.copy_to_board(local, FACTS_FILE)
+                    back = self.connection.read_file(FACTS_FILE)
+                    break
+                except (BoardUnreachableError, BoardCodeError) as cannot:
+                    why = "mpremote could not copy it: %s" % cannot
+                    if retry:
+                        return "%s (the first try: %s)" % (why, self.first_failure)
+                    if RAW_REPL_REFUSED not in str(cannot):
+                        return why
+                    self.first_failure = why
+                    self.sleep(FACTS_RETRY_WAIT_S)
+        if back.strip() == text.strip():
+            return None
+        why = "it read back different from what was copied"
+        return "%s (the first try: %s)" % (why, self.first_failure) if self.first_failure else why
 
 
 def record_deploy(facts, verdict, who):
