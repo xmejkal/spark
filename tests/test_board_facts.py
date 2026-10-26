@@ -68,10 +68,6 @@ class LastDeployCase(unittest.TestCase):
         target.symlink_to(target.parent / "gone.json")
         self.assertEqual(board_facts.read_last_deploy(MAC).state, "not-checked")
 
-    def test_the_state_words_are_outcomes_and_board_facts_keeps_none(self):
-        for name in ("RECORDED", "NONE_RECORDED", "NOT_CHECKED"):
-            self.assertFalse(hasattr(board_facts, name), name)
-
     def test_an_empty_time_is_not_checked(self):
         self.write_deploys([{"project": "p", "verdict": "ready seen", "deployed": " "}])
         self.assertEqual(board_facts.read_last_deploy(MAC).state, "not-checked")
@@ -84,6 +80,10 @@ class LastDeployCase(unittest.TestCase):
 
 
 class ReadLastDeployTest(LastDeployCase):
+    def test_the_state_words_are_outcomes_and_board_facts_keeps_none(self):
+        for name in ("RECORDED", "NONE_RECORDED", "NOT_CHECKED"):
+            self.assertFalse(hasattr(board_facts, name), name)
+
     def test_a_round_trip_gives_the_project_verdict_and_time_that_record_deploy_wrote(self):
         board_facts.record_deploy(said(), "ready seen", "a test")
         last = board_facts.read_last_deploy(MAC)
