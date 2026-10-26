@@ -12,7 +12,7 @@ Summary. Each script in `scripts/` becomes a thin CLI that parses, calls one Ope
 later MCP server all show the same facts. One automatic test checks the code rules, and its list of known breaches
 only shrinks.
 
-## Your call
+## Your answers
 
 The PO answered all five decisions on epic #94 on 2026-10-26. Decision 3 was answered earlier, so the numbers skip it
 (see [the plan](refactor-plan.md#the-decisions)). Everything else the council decided ([notes](notes.md)).
