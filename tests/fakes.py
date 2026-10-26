@@ -7,7 +7,7 @@ import time
 
 class FakeBoardConnection:
     """A fake BoardConnection: run_code and read_file give or raise each of `answers` in turn, and copy_to_board
-    raises `copy_raises` or keeps each copy. reset raises `reset_raises` or counts the reset in `resets`.
+    raises `copy_raises` (or, given a list, its next entry) or keeps each copy. reset raises `reset_raises` or counts the reset in `resets`.
     Raises IndexError when a test asks for more answers than it gave."""
 
     def __init__(self, *answers, copy_raises=None, reset_raises=None):
@@ -28,8 +28,9 @@ class FakeBoardConnection:
         return self._next()
 
     def copy_to_board(self, local, remote):
-        if self.copy_raises:
-            raise self.copy_raises
+        raises = self.copy_raises.pop(0) if isinstance(self.copy_raises, list) else self.copy_raises
+        if raises:
+            raise raises
         self.copied.append((local, remote))
 
     def reset(self):
