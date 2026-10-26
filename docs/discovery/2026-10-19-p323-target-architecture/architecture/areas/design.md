@@ -142,4 +142,4 @@ sequenceDiagram
 - A new part is one record in `parts/`. The design reads its facts and needs no code.
 - A pin map for a second platform is a Renderer of `PinMap`, added with that platform.
 
-`assign_pins.ROLE_PENALTY` moves into `OnboardRole` only after P405 [#529](https://github.com/xmejkal/spark/issues/529) reports.
+`assign_pins.ROLE_PENALTY` stays a named constant in `assign_pins.py` (the PO, epic #94, 2026-10-26: *"leta go with a then"*). The onboard roles live once in `boards.ONBOARD_ROLES`.

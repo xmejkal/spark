@@ -14,20 +14,21 @@ only shrinks.
 
 ## Your call
 
-Five decisions are open, one at a time, in this order. Decision 3 is answered, so the numbers skip it (see
-[the plan](refactor-plan.md#the-decisions)). Everything else the council decided ([notes](notes.md)).
+The PO answered all five decisions on epic #94 on 2026-10-26. Decision 3 was answered earlier, so the numbers skip it
+(see [the plan](refactor-plan.md#the-decisions)). Everything else the council decided ([notes](notes.md)).
 
-1. Readability first. The five goals rank readable, testable, exchangeable, reusable, consistent. Example: when a
-   short function and a reusable one conflict, the short one wins. Yes, or another order?
-2. The shape. Scripts become thin CLIs over one package, one Operation per job, one rules test. Example:
-   `look.main` shrinks from 29 lines to about 15, and its help text, flags, output and exit codes stay. Yes or no?
-4. When the area moves start. Option (b) of the plan: now, the bench first, one PR at a time, because the bench net
-   exists. Example: the bench moves into `scripts/spark/bench/` in wave 5, then the other areas follow. Confirm, or
-   name a date.
-5. The printed names of the Operations. Example: the class `LookAtBoard` prints `op` as `look`. Keep the names that a
-   golden or a command page pins, or rename each to its class's words?
-6. A yes relayed by another program. Example: an MCP client collects the yes for an erase. Allow a third kind of yes,
-   or keep the erase in the person's own terminal?
+1. Readability first. Answer: (a), the rank readable, testable, exchangeable, reusable, consistent. His words: *"leta
+   go with a then"*. One rule for every slice: reuse every fact, and keep each module's judgement in that module.
+2. The shape. Answer: (a), thin CLIs over one package, one Operation per job, one rules test. His words: *"yes, option
+   a please"*.
+4. When the area moves start. Answer: (b), back to back, one PR at a time. His words: *"I think for question 3
+   ideally we'd go all in one, so option c, but if it would take too much time, we can do continuous version"*. The
+   plan records (b) because only the bench has a net today. The PO can change this.
+5. The printed names of the Operations. Answer: (a), keep the names that a golden or a command page pins. His words:
+   *"ok leta pick a, if you think its better"*.
+6. A yes relayed by another program. Answer: (b), a third kind of yes, `relayed`. His words: *"question 4 : option b"*.
+   The plan records a guard as a reading he can change. A relayed yes makes a `live` grant only, never a `deploy`
+   grant. So every erase still needs a yes in the person's own terminal. Slice S9b builds it.
 
 ## The system and its context
 
@@ -171,6 +172,6 @@ sequenceDiagram
 - Level 2 and 3, one page per area: [core](areas/core.md), [records](areas/records.md),
   [sourcing](areas/sourcing.md), [design](areas/design.md), [firmware](areas/firmware.md),
   [breadboard](areas/breadboard.md), [checks](areas/checks.md), [bench](areas/bench.md), [build](areas/build.md).
-- [refactor-plan.md](refactor-plan.md): six waves, twenty-two slices, in order. The bench net came first (done).
+- [refactor-plan.md](refactor-plan.md): six waves, twenty-three slices, in order. The bench net came first (done).
 - [notes.md](notes.md): decisions, conflicts between the papers, the rule reference, what was cut.
 - [glossary.md](glossary.md): the words.

@@ -10,7 +10,7 @@ readability, AI readability, testability, UX and the PO's voice. The chief archi
 and checked every kept claim against `scripts/` and `tests/`. Round 4 changed most: one result shape, one
 collaborator Value, one place for backend choices, readability as goal one, and a test net before any move.
 The refactor plan was reviewed on Fable 5.1 on 2026-10-21, claim by claim against main at `17708e6`, and split into
-five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six waves and 22 slices.
+five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six waves and 23 slices.
 
 ## Decisions
 

@@ -49,7 +49,7 @@ Back to [the architecture](README.md).
 | Record | The Value of one loaded record, with its kind and place. Proposed (P391). |
 | Brief | The Value of the project's brief in `.spark/project.json`: `prefer`, `sellers`. Proposed, in records. |
 | DeployedStore | The Store that reads and records what spark knows of the last deploy to a board. Proposed, in records. |
-| leaf | A module that imports nothing of spark. Three today: `zone_time`, `screen_text` and `provenance`. |
+| leaf | A module that imports nothing of spark. Three today: `zone_time`, `text_guards` and `provenance`. |
 | text guard | A function where text leaves spark: `printable` to the screen, `clean` to the store, `one_line` to a generated file. All three live in `text_guards` (OC8). |
 | kanban | The team's GitHub Projects board. Its tool is `tools/kanban.py` after the rename, today `tools/board.py`. |
 | trace | The one callable that `run_operation` gives an Operation's name, values, result and seconds after each run. Proposed. |
