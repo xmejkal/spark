@@ -190,6 +190,14 @@ class PortFinderTest(LookCase):
         self.assertEqual([[port.device for port in board] for board in board_look.boards_of(clones)],
                          [["/dev/ttyUSB0"], ["/dev/ttyUSB1"]])
 
+    def test_one_serial_with_another_usb_id_or_product_or_a_name_that_only_holds_it_stays_two_boards(self):
+        slab = board_look.Port("/dev/cu.SLAB_USBtoUART", "01A2B3C4", "10c4:ea60", "Silicon Labs CP2104 USB to UART Bridge Controller")
+        for other in (slab._replace(device="/dev/cu.usbserial-01A2B3C4", usb="1a86:7523"),
+                      slab._replace(device="/dev/cu.usbserial-01A2B3C4", product="Silicon Labs CP2102 USB to UART Bridge Controller"),
+                      slab._replace(device="/dev/cu.usbserial-01A2B3C40")):
+            with self.subTest(other=other):
+                self.assertEqual(len(board_look.boards_of([slab, other])), 2)
+
     def test_the_look_says_the_other_node_and_to_unplug_one_if_they_are_two_boards(self):
         lines = board_look.report_lines(self.look(devs="mpremote-devs-one-board-two-ports.txt"))
         self.assertIn("  port   /dev/cu.usbserial-01A2B3C4  (one board on more nodes, also /dev/cu.SLAB_USBtoUART: the same USB "
