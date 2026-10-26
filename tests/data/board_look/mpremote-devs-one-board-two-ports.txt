@@ -1,2 +1,2 @@
-/dev/cu.SLAB_USBtoUART 0206D76B 10c4:ea60 CP2104 USB to UART Bridge Controller
-/dev/cu.usbserial-0206D76B 0206D76B 10c4:ea60 CP2104 USB to UART Bridge Controller
+/dev/cu.SLAB_USBtoUART 01A2B3C4 10c4:ea60 CP2104 USB to UART Bridge Controller
+/dev/cu.usbserial-01A2B3C4 01A2B3C4 10c4:ea60 CP2104 USB to UART Bridge Controller

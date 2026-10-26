@@ -158,17 +158,17 @@ class PortFinderTest(LookCase):
 
     def test_one_board_on_two_ports_is_one_board_on_the_port_that_holds_its_serial(self):
         report = self.look(devs="mpremote-devs-one-board-two-ports.txt")
-        self.assertEqual(report.port, "/dev/cu.usbserial-0206D76B")
+        self.assertEqual((report.port, report.also_on), ("/dev/cu.usbserial-01A2B3C4", ("/dev/cu.SLAB_USBtoUART",)))
 
-    def test_a_grouped_board_with_no_port_named_by_its_serial_uses_the_first_sorted_and_the_stop_lists_the_others(self):
+    def test_a_grouped_board_with_no_port_named_by_its_serial_uses_the_first_listed_and_the_stop_lists_the_others(self):
         finder = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-grouped-and-two-unnamed.txt")))
         with self.assertRaises(board_look.LookStop) as stop:
             finder.require_one_port("look.py")
         said = str(stop.exception)
         self.assertIn("3 boards on USB:", said)
-        self.assertIn("  /dev/cu.SLAB_USBtoUART  0206D76B  CP2104 USB to UART Bridge Controller  (also /dev/cu.wchusbserial-A)", said)
+        self.assertIn("  /dev/cu.wchusbserial-A  01A2B3C4  CP2104 USB to UART Bridge Controller  (also /dev/cu.SLAB_USBtoUART)", said)
         self.assertIn("  /dev/cu.usbserial-1410  None  USB Serial\n  /dev/cu.usbserial-1420  None  USB Serial", said)
-        self.assertIn("look.py --port /dev/cu.SLAB_USBtoUART  (unplug one", said)
+        self.assertIn("look.py --port /dev/cu.wchusbserial-A  (unplug one", said)
 
     def test_two_ports_with_no_serial_stay_two_boards(self):
         for serial in ("None", ""):
@@ -440,7 +440,7 @@ class LookReportToDictTest(LookCase):
         report = self.look()
         as_dict = report.to_dict()
         self.assertEqual(as_dict, {
-            "port": C6_PORT, "chip": "esp32c6", "flash_mb": 4, "mac": C6_MAC, "board": "xiao-esp32-c6",
+            "port": C6_PORT, "also_on": [], "chip": "esp32c6", "flash_mb": 4, "mac": C6_MAC, "board": "xiao-esp32-c6",
             "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
             "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None,
             # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
