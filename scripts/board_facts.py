@@ -127,8 +127,7 @@ class LastDeploy:
     def line(self):
         """The look's line."""
         if self.state == RECORDED:
-            said = "%s, %s, %s (its store record, not read from the board)" % (printable(self.project), printable(self.verdict),
-                                                                                  printable(self.time_said()))
+            said = printable("%s, %s, %s (its store record, not read from the board)" % (self.project, self.verdict, self.time_said()))
         elif self.state == NONE_RECORDED:
             said = "none in its store record (it keeps only its own deploys)"
         else:
@@ -138,8 +137,7 @@ class LastDeploy:
     def in_question(self):
         """The words the deploy question puts in its erase sentence."""
         if self.state == RECORDED:
-            return "spark's store record names %s as its last deploy here, %s, %s" % (printable(self.project), printable(self.time_said()),
-                                                                                     printable(self.verdict))
+            return printable("spark's store record names %s as its last deploy here, %s, %s" % (self.project, self.time_said(), self.verdict))
         if self.state == NONE_RECORDED:
             return "spark's store record names no deploy here"
         return "spark did not read its record of this board: %s" % self.why

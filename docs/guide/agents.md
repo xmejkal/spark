@@ -477,6 +477,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
+**What the text output shows (P423).** In the text output of `parts.py`, `look.py`, `deploy.py`, `check_spine.py` and `run_scenario.py`, a character that a terminal does not print, such as a control character or a right-to-left override, shows as `?`. A text's own line breaks stay. `--json` carries the raw text, so decide on the JSON and not on the screen. `run_scenario.py` has no `--json`, and its log file in `sim/runs/` keeps the raw text. (`grant.py`, `live.py`, `reach.py` and the deploy gate's question do not guard yet.)
+
 ### look.py and deploy.py's envelope
 
 `look.py --json` and `deploy.py --json` ([P213](https://github.com/xmejkal/spark/issues/192)) print one `outcomes.envelope` (`envelope`,
