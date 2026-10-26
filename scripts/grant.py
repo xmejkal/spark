@@ -77,7 +77,8 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
                         "typed for each deploy")
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder whose tools list names mpremote and esptool (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
+    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
+                        "(one board on two nodes named by its serial counts once)")
     parser.add_argument("--json", action="store_true", help="with --check, print one line of JSON")
     args = parser.parse_args(argv)
     if args.json and not args.check:

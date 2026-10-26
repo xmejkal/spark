@@ -70,7 +70,8 @@ def main(argv=None, run=subprocess.run, probe=None):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder whose tools list names mpremote (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
+    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
+                        "(one board on two nodes named by its serial counts once)")
     parser.add_argument("--json", action="store_true", help="print one line of JSON for the bench log")
     parser.add_argument("--cure-first", action="store_true",
                         help="open the port with DTR and RTS off before the only try (the bench's cold arm)")

@@ -76,7 +76,8 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.read_local_t
     parser.add_argument("--code", required=True, help="the code to run on the board, e.g. 'print(1)'")
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder whose boards/active.json names the board and whose tools list names mpremote (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
+    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
+                        "(one board on two nodes named by its serial counts once)")
     parser.add_argument("--json", action="store_true", help="print one line of JSON")
     args = parser.parse_args(argv)
     port = args.port

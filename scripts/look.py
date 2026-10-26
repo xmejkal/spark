@@ -47,7 +47,8 @@ def main(argv=None, run=subprocess.run):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with requirements.json and sim/ (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB")
+    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
+                        "(one board on two nodes named by its serial counts once)")
     which = parser.add_mutually_exclusive_group()
     which.add_argument(IGNORE_OLDER_RUNS_FLAG, action="store_true",
                        help="give a token even when a log in sim/runs/ tested another image (default: no token)")

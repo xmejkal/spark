@@ -74,7 +74,7 @@ class PortFinder:
     def __init__(self, shell, run=subprocess.run):
         self.command, self.run = tools.command_for(shell) + ["devs"], run
 
-    def boards(self):
+    def nodes(self):
         try:
             done = self.run(self.command, capture_output=True, text=True, timeout=LIST_TIMEOUT_S)
         except OSError as cannot:
@@ -96,7 +96,7 @@ class PortFinder:
     def require_one_board(self, script, port=None):
         """The Port row of the one board on USB, or of `port` when it is given. LookStop as require_one_port says, and
         when `port` is not in the list."""
-        found = self.boards()
+        found = self.nodes()
         if port:
             named = [each for each in found if each.device == port]
             if not named:
@@ -115,20 +115,25 @@ class PortFinder:
 
 def boards_of(ports):
     """The boards behind `ports`, each a list of its Port rows, in the order listed (P333). Rows with one USB serial, USB
-    id and product are one board: a CP2104 shows as /dev/cu.SLAB_USBtoUART and /dev/cu.usbserial-<serial>. Two clones that
-    share all three look like one board too, so the look names every node (`also_on`). A row with no serial (mpremote
-    prints `None`) is a board of its own."""
+    id and product are one board only when one of them is named by that serial: macOS shows a CP2104 as
+    /dev/cu.SLAB_USBtoUART and /dev/cu.usbserial-<serial>. Every other row is a board of its own, so two clones that share
+    a serial (/dev/ttyUSB0 and /dev/ttyUSB1, both `0001`) still stop as two boards, and so do rows with no serial
+    (mpremote prints `None`)."""
     grouped = {}
     for port in ports:
         known = port.serial not in ("", NO_SERIAL)
         grouped.setdefault((port.serial, port.usb, port.product) if known else ("device", port.device), []).append(port)
-    return list(grouped.values())
+    return [board for rows in grouped.values() for board in ([rows] if len(rows) > 1 and _named_by_serial(rows) else [[row] for row in rows])]
+
+
+def _named_by_serial(rows):
+    return any(row.device.endswith(row.serial) for row in rows)
 
 
 def port_of(board):
-    """The Port a board is used on: the one whose device name ends with its serial (the node the T-Display was read on),
-    else the first listed. Its `also_on` names the board's other nodes."""
-    chosen = next((port for port in board if port.serial and port.device.endswith(port.serial)), board[0])
+    """The Port a board is used on: the node named by its serial (the one the T-Display was read on), or the board's only
+    node. Its `also_on` names the board's other nodes."""
+    chosen = next((port for port in board if len(board) > 1 and port.device.endswith(port.serial)), board[0])
     return chosen._replace(also_on=tuple(port.device for port in board if port is not chosen))
 
 
@@ -213,8 +218,9 @@ class LookReport:
     warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image.
     `last_deploy` is the board_facts.LastDeploy of the board's MAC, whatever the evidence said."""
 
-    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=()):
-        self.port, self.reading, self.record, self.also_on = port, reading, record, tuple(also_on)
+    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None):
+        self.port, self.reading, self.record = port, reading, record
+        self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.simulation, self.caveats = simulation, list(caveats)
         self.last_deploy = last_deploy
@@ -258,7 +264,7 @@ class LookReport:
 
     def to_dict(self):
         """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id; the image is not in it."""
-        return {"port": self.port, "also_on": list(self.also_on), "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
+        return {"port": self.port, "also_on": None if self.also_on is None else list(self.also_on), "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
                 "board": self.record["id"], "fields": dict(self.fields), "stops": list(self.stops),
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
                 "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason(),
@@ -313,7 +319,7 @@ class LookService:
             why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
         return LookReport(port, reading, record, image, why, simulation, caveats, board_facts.read_last_deploy(reading.mac),
-                          listed.also_on if listed else ())
+                          listed.also_on if listed else None)
 
     @staticmethod
     def record_of(project):
