@@ -568,6 +568,14 @@ class TheCommandTest(ProjectCase):
         self.assertEqual(code, EXIT_PROBLEMS)
         self.assertIn("failed (wokwi-cli exit 1)", said)
 
+    def test_a_right_to_left_override_in_the_tool_s_error_shows_as_a_question_mark_and_the_log_keeps_it(self):
+        # P423: the line a person reads is guarded; the log file in sim/runs keeps what the tool said
+        code, said = self.command(exit_code=1, FAKE_WOKWI_ERR="Error: GPIO\u202e4")
+        self.assertEqual(code, EXIT_PROBLEMS)
+        self.assertIn("GPIO?4", said)
+        self.assertNotIn("\u202e", said)
+        self.assertIn("GPIO\u202e4", (self.project / "sim" / "runs" / "lights.v2.log").read_text(encoding="utf-8"))
+
     def test_the_flags_reach_the_run(self):
         self.command(str(self.scenario.relative_to(self.project)), "--project", str(self.project), "--micropython",
                      str(self.micropython), "--timeout-ms", "1234")

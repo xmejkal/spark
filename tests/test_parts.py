@@ -1249,6 +1249,16 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual(len(kept), len(photo), "nothing else in the file may move")
         self.assertIn("location", said.lower())
 
+    def test_the_photo_s_name_with_an_override_shows_as_a_question_mark_in_the_line_that_says_the_location_went(self):
+        # P423: the name is the person's own; the store refuses it after the line was printed
+        import tempfile
+        photo, _ = self._photo_with_location()
+        local = Path(tempfile.mkdtemp()) / "mod\u202eule.jpg"
+        local.write_bytes(photo)
+        with in_store(self._home()), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            parts.main(["--keep", str(local)])
+        self.assertIn("  removed the location (EXIF GPS) from mod?ule.jpg before keeping it\n", err.getvalue())
+
     def test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged(self):
         photo, _ = self._photo_with_location()
         plain = photo.replace(b"\x25\x88", b"\x0f\x01", 1)  # the GPS pointer becomes the camera maker's tag

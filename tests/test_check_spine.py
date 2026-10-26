@@ -13,6 +13,7 @@ raise?" calls it a pass.
     python3 -m unittest discover -s tests
 """
 
+import argparse
 import contextlib
 import hashlib
 import io
@@ -1696,6 +1697,13 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
                 self.assertIn(str(refusal), complained)
 
 
+    def test_a_reason_with_a_carriage_return_and_an_override_shows_as_question_marks_on_stderr(self):
+        # P423: every text print of the script goes through guard_lines
+        with mock.patch.object(check_spine.parts, "note_built", side_effect=OSError("full\u202e\rdisk")):
+            _, _, complained = self.answer()
+        self.assertIn("  the build was not recorded in your history: full??disk\n", complained)
+
+
 class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
     """
     C-3 (the council on PR #98): a speaker terminal sits across the amplifier's bridged output — its return is the pair's
@@ -1767,6 +1775,24 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
     def test_with_json_the_needs_left_off_are_part_of_the_answer(self):
         code, said = self.answer({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": self.UNSERVED}, "--json")
         self.assertEqual((code, json.loads(said)["unserved"]), (0, self.UNSERVED))
+
+    def test_a_need_with_an_override_and_a_carriage_return_shows_as_question_marks_and_the_json_keeps_it(self):
+        # P423: the verdict's text goes through guard_lines (its own newlines stay); --json carries the raw text
+        unserved = [{"need": "soil\u202e\rx", "why": "no pick", "picks": []}]
+        requirements = {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "unserved": unserved}
+        code, said = self.answer(requirements)
+        self.assertEqual(code, 0)
+        self.assertTrue(said.endswith("  the chain runs end to end — but not every need is on the board: soil??x (no pick)\n"), said)
+        self.assertEqual(json.loads(self.answer(requirements, "--json")[1])["unserved"], unserved)
+
+    def test_a_kept_line_with_an_override_shows_as_a_question_mark_on_stderr(self):
+        stages = [stage("board", check_spine.OK)]
+        args = argparse.Namespace(keep="kept", json=False, requirements=None, sim_dir=None)
+        err = io.StringIO()
+        with mock.patch.object(check_spine, "_kept", return_value=[{"file": "f", "did": "wrote", "why": "w", "line": "wrote a\u202eb"}]), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            check_spine.report(stages, args, workdir=Path(tempfile.mkdtemp()))
+        self.assertEqual(err.getvalue(), "  wrote a?b\n")
 
     def test_a_file_that_leaves_nothing_off_says_the_verdict_alone(self):
         for requirements in ({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]},

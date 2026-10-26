@@ -89,6 +89,15 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertIn("  1 field unknown (flash: the board did not say): deploy.py will ask you to accept it.", said)
         self.assertTrue(said[-1].startswith("  token  "))
 
+    def test_a_port_with_a_newline_and_a_right_to_left_override_shows_as_one_line_with_question_marks(self):
+        # P423: the report's items are guarded one by one, so a newline in a value cannot fake a line of the look
+        self.run_the_scenario()
+        port = "/dev/cu.usb\u202emodem\n  token  FAKE"
+        code, said, _ = self.go("--port", port)
+        self.assertEqual(said[1], "  port   /dev/cu.usb?modem?  token  FAKE")
+        self.assertEqual(len([line for line in said if line.startswith("  token  ")]), 1)
+        self.assertEqual(json.loads(self.go("--port", port, "--json")[1][-1])["data"]["port"], port)  # --json keeps it raw
+
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")

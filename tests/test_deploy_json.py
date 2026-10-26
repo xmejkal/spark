@@ -170,6 +170,15 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertIn("ready seen", said)
         self.assertEqual((code, err), (0, ""))
 
+    def test_the_look_report_of_the_text_run_shows_a_port_with_a_newline_and_an_override_as_one_line(self):
+        # P423: the port is the person's own --port; the report's items are guarded one by one
+        self.run_the_scenario()
+        port = "/dev/cu.usb\u202emodem\n  FAKE"
+        code, said, err = self.deploy("--token", self.token(), "--port", port, consent=FakeConsent(True))
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("  port   /dev/cu.usb?modem?  FAKE", said.splitlines())
+        self.assertNotIn("\u202e", said)
+
     def test_a_standing_grant_is_the_yes_of_kind_grant(self):
         case = test_deploy_gate.TheStandingYesTest("test_a_deploy_grant_erases_with_no_terminal_and_the_record_names_the_standing_yes")
         case.setUp()

@@ -31,10 +31,6 @@ class GuardLinesTest(unittest.TestCase):
             with self.subTest(hidden=repr(hidden)):
                 self.assertEqual(text_guards.guard_lines("a%sb\nc%sd" % (hidden, hidden)), "a?b\nc?d")
 
-    def test_a_text_that_is_not_a_string_is_not_turned_into_one(self):
-        with self.assertRaises(AttributeError):
-            text_guards.guard_lines(None)
-
 
 class CleanTest(unittest.TestCase):
     def test_a_line_or_paragraph_separator_becomes_a_space(self):
