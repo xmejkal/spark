@@ -53,12 +53,20 @@ Every planned version comes before the launch, and spark stays at 0.x until the 
 Refinement decreases with distance (the PO, 2026-10-11: *"only the to of the backlog is really refined t detail and
 the lowe on the backlog the less details"*). v0.10 is planned item by item on the board. The next version is one epic in
 the PO's words, and each later one a line. Detail moves down only when work moves up. The order after v0.13 is
-decided when v0.10 is done. This table is the one place versions are kept current; the replan of 2026-10-11 is where it came from.
+the PO's big scheme of 2026-10-26 below. This table is the one place versions are kept current; the replan of 2026-10-11 is where it came from.
+
+The big scheme (the PO, 2026-10-26): *"finish the MVP make sure it works, do the refactoring and right after it the
+LangGraoh will be next, then RAG fr example."* He wants the refactored version soon, to show spark as a project and
+to try LangGraph on it. He also said: *"it might change the order of things, but hopefully we are going in the right
+direction."* So the order is the MVP working end to end (v0.10), then v0.13's refactor, then a LangGraph spike, then
+a RAG spike. The earliest point for the LangGraph spike is the refactor's wave 3, which his answer to lesson question 8
+named. Each step can move when the work shows a better order.
 
 | version | done when | how much is planned |
 | --- | --- | --- |
 | **v0.10 — the basic journey** (done at v0.10, the walk; v0.11, change and flash again, and v0.12, another board, follow) | from an idea in words, a hobbyist gets a parts list, a breadboard sheet and firmware that passes the simulation and runs once flashed onto their own board, with the PCB and 3D model on request. It is proved by the PO's walk of button-and-LED to a lit LED, and to be kept by `tests/test_journey_basic.py` (v0.10's item 1) | each Ready item in full, the next slice a line each: [the replan](../docs/2026-10-11-replan.md) and the board |
-| **v0.13 candidate — one core** | *"a real object oriented system, a package or module, that then MCP or AI or human through CLI can be acccessed and its calling the same code, so we don't have extra artefacts and code that's not refactored and reused"* (the PO, 2026-10-11) | one epic, [P158](https://github.com/xmejkal/spark/issues/94); its 2026-10-10 design and plan are input, not its plan |
+| **v0.13 candidate — one core** | *"a real object oriented system, a package or module, that then MCP or AI or human through CLI can be acccessed and its calling the same code, so we don't have extra artefacts and code that's not refactored and reused"* (the PO, 2026-10-11) | one epic, [P158](https://github.com/xmejkal/spark/issues/94). Its plan is the refactor plan v2 ([P385](https://github.com/xmejkal/spark/issues/494)), and it runs right after the MVP works |
+| **after v0.13 — LangGraph, then RAG** | spark's core runs as a LangGraph node and an MCP tool with a Langfuse trace, and the core does not change ([P417](https://github.com/xmejkal/spark/issues/545)). Then one RAG case runs beside it ([P419](https://github.com/xmejkal/spark/issues/548)). The PO, 2026-10-26: *"we really need to get to the Langgraph/RRag mvp asap, so I can show it as a project"* | two spikes, each a finding with sources |
 | **later** | the store, shared ([P178](https://github.com/xmejkal/spark/issues/123)) · checks for bigger projects · a board you can order · an enclosure · a stranger's first install · team and QA tooling · one front end for spark ([P199](https://github.com/xmejkal/spark/issues/152)) · interactive system maps ([P198](https://github.com/xmejkal/spark/issues/151)) | one epic each |
 
 ## Not goals
