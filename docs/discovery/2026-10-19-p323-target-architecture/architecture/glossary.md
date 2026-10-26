@@ -13,7 +13,7 @@ Back to [the architecture](README.md).
 | CLI | A script in `scripts/` with a `main()`. It parses arguments, runs one Operation and prints. Replaces "door". |
 | subcommand | One job of a CLI, such as `show` in `parts.py show`. A CLI is one topic, a noun, and has one subcommand per job. The subcommand is the verb alone (P381). |
 | frontend | What a person or Claude talks to: the CLI as text, the CLI with `--json` (Claude's commands, skills and agents), later an MCP server. |
-| Operation | One job, one class with one public method `run()`, named verb + object, such as `ShowPart`. Its module, class and op name use the same words: the module `show_part`, the class `ShowPart`, the op `"show-part"`, and its subcommand is the verb, `parts.py show` (P381). Its name is printed as `op`. Proposed class. |
+| Operation | One job, one class with one public method `run()`, named verb + object, such as `ShowPart`. Its module, class and op name use the same words: the module `show_part`, the class `ShowPart`, the op `"show-part"`, and its subcommand is the verb, `parts.py show` (P381). Its name is printed as `op`. An op in a golden or a command page today keeps its spelling, so `LookAtBoard` prints `look` (plan decision 5). Proposed class. |
 | helper | A class that does one thing for an Operation, with several methods about it. An `-er` noun or a plain noun, such as `BoardReader` or `PortFinder`. A Service, a Store or an Adapter is a helper with its role word (P381). |
 | area | One package folder under `scripts/spark/`, such as `bench`. Proposed. |
 | module | One Python file. Never "library module". |
@@ -26,12 +26,12 @@ Back to [the architecture](README.md).
 | OperationResult | What an Operation returns: data, findings, next steps and lines. Proposed class. |
 | envelope | The JSON form of an OperationResult, version 1 (`outcomes.py:68`). It only gains keys. |
 | NextStep | One action that comes next, JSON `next`. Proposed class over `outcomes.step` (`outcomes.py:84`). |
-| fix | The text that says what to do about a Finding. A string, as today (`board_envelope.py:58`). |
+| fix | The text that says what to do about a Finding. A string, as today (`board_envelope.look_envelope`). |
 | fix_step | The same advice as a NextStep, or null. A new key beside `fix`, so the envelope only gains keys. Proposed. |
 | sentence | The text a person reads in a Finding. |
 | why | The text a person reads in a NextStep. |
 | lines | Text for a person. stdout without `--json`, stderr with it. Replaces the proposed `diagnostics`. |
-| effect | What an Operation does outside: `reads`, `writes`, `runs` (a tool), `network`, `board`, `erases`. `runs` is proposed. |
+| effect | What an Operation does outside: `reads`, `writes`, `runs` (a tool), `network`, `board`, `deletes`. `runs` is proposed. The code and the goldens say `deletes`. |
 | OutsideWorld | The Value that holds the callables for every effect: run, write, fetch, clock, consent, and the `environ` variables the Operation reads. Proposed. |
 | probe | A read-only look at a board or a port: `ConsoleProbe`, `ReadyProbe`, `DoctorProbe`. It changes nothing on the board. A class that changes the port, such as today's `ConsoleProbe.cure`, is no probe: the names pass (P382) splits it. |
 | backend | A swappable outside thing: a tool, the firmware platform, the store or the simulator. |
@@ -44,18 +44,29 @@ Back to [the architecture](README.md).
 | store | The person's folder, `SPARK_HOME`, never the repository. |
 | project | The gadget's folder, with `requirements.json`. |
 | RecordFolders | The Value of the three places a record lives: library, store, project. Proposed. Replaces `Layers`. |
+| RecordKind | The Strategy of what differs per record kind: its `version`, `required` keys and `validate` rules. Proposed. Replaces `RecordSchema`. |
+| RecordFinder | Reads one record kind across the three folders, the nearest wins. Proposed. Replaces `Records`. |
+| Record | The Value of one loaded record, with its kind and place. Proposed (P391). |
+| Brief | The Value of the project's brief in `.spark/project.json`: `prefer`, `sellers`. Proposed, in records. |
+| DeployedStore | The Store that reads and records what spark knows of the last deploy to a board. Proposed, in records. |
+| leaf | A module that imports nothing of spark. Three today: `zone_time`, `screen_text` and `provenance`. |
+| text guard | A function where text leaves spark: `printable` to the screen, `clean` to the store, `one_line` to a generated file. All three live in `text_guards` (OC8). |
+| kanban | The team's GitHub Projects board. Its tool is `tools/kanban.py` after the rename, today `tools/board.py`. |
+| trace | The one callable that `run_operation` gives an Operation's name, values, result and seconds after each run. Proposed. |
 | design | The netlist and pin map derived from the requirements. |
 | build | The chain from requirements to design, breadboard sheet, Wokwi diagram and checks. |
-| stage | One link of the build chain, JSON `stages`. |
+| stage | One link of the build chain, JSON `stages`. The refactor plan's units are waves. |
+| wave | One of the six units of the refactor plan, a set of slices. Version 1 and the cards before 2026-10-26 say "stage" for it. P391's design keeps its own word, stage. |
 | step | An action that comes next (NextStep). A wiring line is a WiringStep. A journey has "journey steps". |
 | platform | The firmware's language family, such as MicroPython (`FirmwarePlatform`). |
 | board | The dev board, as a record or on USB. The circuit file is a "circuit". |
-| port | The board's serial device, `--port`. |
+| port | The board's serial device, `--port`. The "port" of ports and adapters is a seam. |
+| seam | A Strategy base or a Value that a backend fills, so the core sees no tool: `FirmwarePlatform`, `OutsideWorld`. The papers say port. |
 | image | The flash image a passed simulation tested. |
 | check | One `Check` subclass that grades a design, run by `check_all`. |
 | tool | An outside program, one row in `data/tools.json`. In the envelope, `tool` names the CLI that printed it. |
 | gate | The rule that opens or refuses an erase or a board write, with consent. |
-| consent | The person's yes, asked by a `ConsentStrategy`. Never an argument. |
+| consent | The person's yes, asked by a `ConsentStrategy`, or given by a stored grant. In a graph, `DeferringConsentStrategy` (proposed) never asks: its `require_ready` raises with the next step, and the Operation returns a `needs_yes` step with the command for the person's own terminal. Never a CLI flag: a Strategy in `OutsideWorld`, or the token. |
 | rule | One line of the code standard, checked by `ArchitectureRules`. Proposed. |
 | baseline | The list of today's rule breaches. It only shrinks. |
 | golden | A file with the expected `--json` and exit code of one Operation on one fixture project. Proposed. |
@@ -71,20 +82,27 @@ Back to [the architecture](README.md).
 | outcome / status | design.md 2.4 "outcome, printed as status". The code has `status_of`, `STATUS_FOR`. | status, four words. The module `outcomes.py` keeps its name. |
 | code | problem code, exit code (`board_envelope.py`), Python for a board (`BoardCodeError`, `board_connection.py:41`) | code is a problem code. New code says `exit_code` and `source`. |
 | verdict | exit code (`check_spine.py`), status (`check_all.py`), a look's stop or warning | private functions become `exit_code_of`, `overall_status`. JSON keys stay. |
-| person text | `sentence`, `why`, `reason` (`check_all.py`), `message` (`emit_footprint.py:236`), `detail` (`check_spine.py`) | new JSON uses only `sentence` and `why`. |
-| finding / problem / failure | `Finding` twice (`check_footprints.py:54`, `check_physics.py:93`), `Failure` (`compare_design.py:44`), `parts._problem` (`parts.py:238`) | one `Finding` in core. The three classes fold into it at the checks move. |
-| answer | `outcomes.answer` (`outcomes.py:49`), `parts.Answer` (`parts.py:230`) | `OperationResult`. "answer" is not a class name. |
-| check | `Check` (`check_all.py:63`), `BoardCheckStrategy` (`board_doctor.py:74`), `ReadyCheck` (`ready_check.py:43`) | `DoctorProbe`, `ReadyProbe`, both proposed, in the bench move. "Step" keeps one meaning, and both look without changing. |
-| stage | build stages, deploy's `STAGE_*` (`board_envelope.py:23`) | build only. `DeployPhase` in code, proposed. JSON `stage` stays. |
+| person text | `sentence`, `why`, `reason` (`check_all.py`), `message` (`emit_footprint._report`), `detail` (`check_spine.py`) | new JSON uses only `sentence` and `why`. |
+| finding / problem / failure | `Finding` twice (`check_footprints.py:54`, `check_physics.py:93`), `Failure` (`compare_design.py:44`), `parts._problem` | one `Finding` in core. The three classes fold into it at the checks move. |
+| answer | `outcomes.answer` (`outcomes.py:49`), `parts.Answer` | `OperationResult`. "answer" is not a class name. |
+| check | `Check` (`check_all.py:63`), `BoardCheckStrategy` (`board_doctor.py`), `ReadyCheck` (`ready_check.py:43`) | `DoctorProbe`, `ReadyProbe`, both proposed, in the bench move. "Step" keeps one meaning, and both look without changing. |
+| stage | build stages, deploy's `STAGE_*` (`board_envelope.py`) | build only. `DeployPhase` in code, proposed. JSON `stage` stays. |
 | step | next action, wiring `Step` (`breadboard_steps.py:34`) | `NextStep`, `WiringStep` (proposed, breadboard move). |
 | record | fact file, `WiringRecord` (`breadboard_changes.py:103`) | `WiringLog` (proposed). A simulation log is a `RunLog` (proposed). |
-| facts | record fields, `FactsFile` that holds a reading (`board_facts.py:35`) | `ReadingFile` (proposed, bench move). |
+| facts | record fields, `FactsFile` that holds a reading (`board_facts.py`) | `ReadingFile` (proposed, bench move, S11). |
+| clock | `SystemClock` (monotonic, sleep), `board_grant.read_local_time` (the wall time), `FakeClock`, `FakeLocalClock` | `SystemClock` is the one clock with `now`, `monotonic`, `sleep`. One `FakeClock` (S7a). |
+| Operation | a class with `run()` (this page, the standard), a Value holding a function (`core.md`, v1) | a class with `run()`, one module each, `OPERATIONS` in the area's `__init__.py`. |
 | board | dev board, `Board` circuit class (`check_physics.py:114`) | `CircuitBoard` (proposed, checks move). Script names stay. |
 | Layers | design.md 2.3's folder Value, and architecture layers | `RecordFolders`. |
 | catalog | `parts.py --catalog`, a central Operation list | "operation registry" for the list. The flag stays. |
 | parts | the record folder, `parts.py`, the area | the area is `sourcing`. The folder and the CLI keep `parts`. |
 | needs | a goal's needs (`needs.py`), a check's inputs (`check_all.py:63`) | `Check.inputs` (proposed, checks move). |
-| describe / render | person text in `render` (`check_all.py:434`) and `describe` (`board_doctor.py:188`) | `render` returns person text. `describe` is only the machine description. |
+| describe / render | person text in `render` (`check_all.py:434`) and `describe` (`board_doctor.py`) | `render` returns person text. `describe` is only the machine description. |
+| fact value | `emit_board.fact_value`, `boards.is_fact_value`, `boards.fact_value_problems` | `provenance.read_value`, `boards.is_pin_map_constant`, `boards.board_fact_problems`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
+| power | a part's `power` list, a board's `power` block, `power_pads`, the verb `power` | `supply_pins` and `power_facts` in code. The record keys stay. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
+| board (Kanban) | `scripts/boards.py` reads dev board records, `tools/board.py` reads the team's GitHub board | `tools/kanban.py`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
+| brief | `parts._brief` (a part's three-key summary), the project's brief | `_part_summary` and `Brief`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
+| not checked | `LastDeploy.state` with `why`, `ScenarioSteps.unread`, `None` from a reader | one shape, `state` and `why` (OC4). Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
 
 ## 3. Public names that stay, each with one meaning
 
@@ -103,5 +121,5 @@ so each stays and the glossary fixes its meaning.
 | `needs_person` | the step needs a hand on the bench, such as plugging USB. Proposed key. |
 | `stage`, `stages`, `verdict` | the JSON keys keep their spelling. Code names follow section 2. |
 | `micropython_port` | the MicroPython build a board record names. A fact the platform reads. |
-| `platform` | the requirements key that picks the firmware platform, default `micropython`. Proposed key: `deploy.py:171` hard-codes MicroPython today. |
+| `platform` | the requirements key that picks the firmware platform, default `micropython`. Proposed key: `deploy.main` builds `FirmwarePlatform.micropython` today. |
 | every script name | `emit_board.py`, `check_spine.py`, `look.py` and the rest keep their names. |

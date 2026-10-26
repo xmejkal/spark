@@ -1,7 +1,7 @@
 # Area: design
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-design).
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `PinAssigner`, `PinMap`, `BoardEmitter`, `NeedsService`, `ImpossibleError`, the modules
 `loader`, `pin_assigner`, `board_emitter`, `footprint_emitter`, `operations`, and the Operation names below.
@@ -35,12 +35,12 @@ into records and sourcing would be a parameter with one value.
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is |
 | `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` |
 | `design/netlist.py` | `Netlist`, moved as is |
-| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1172 lines) |
-| `design/footprint_emitter.py` | the footprint writer and `footprint_stop`, moved from `emit_footprint.py` and `boards.py:236` |
+| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `RefusedInputError` and `REFUSED_INPUT_MESSAGE` |
+| `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
-| `design/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `design/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-### Its ports
+### Its seams
 
 Design runs no outside program, so it has no Adapter. Its only effect is `OutsideWorld.write`. It reads part and
 board records through records, and offers through sourcing's `Matcher`.
@@ -103,10 +103,10 @@ classDiagram
   NeedsService ..> Design
 ```
 
-`Design` exists as a namedtuple (`design.py:45`). `ImpossibleError` is today's `Impossible` (`assign_pins.py:113`), and its class
+`Design` exists as a namedtuple (`design.py:45`). `ImpossibleError` is today's `Impossible` (in `assign_pins.py`), and its class
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
-The pin map is written as MicroPython's `pins.py` today (`assign_pins.py:392`). It stays in design until a second
+The pin map is written as MicroPython's `pins.py` today (`assign_pins.pin_module`). It stays in design until a second
 platform exists. Then the text form moves behind a Renderer per platform, chosen by `Backends.platform`.
 
 ### The main flow: requirements to board file
@@ -134,11 +134,12 @@ sequenceDiagram
 - `PinAssigner` and `BoardEmitter` are pure: a `Design` in, a value or a text out. They need no Fake.
 - The goldens of `assign_pins.py --json` and `emit_board.py` on fixture projects stay unchanged through the move.
 - `no_board` (D16): only when neither the requirements nor `boards/active.json` names a board. Its callers are
-  `live.py:91`, `check_all.py:406`, `emit_footprint.py:208` and `design.py:377`.
+  `live.py:91`, `emit_footprint.main` and `design.py:377`.
 
 ### How a new implementation is added
 
-- A new board is one JSON record in `boards/`. `RecordSchema("board")` checks it.
+- A new board is one JSON record in `boards/`. `RecordKind` for boards checks it.
 - A new part is one record in `parts/`. The design reads its facts and needs no code.
 - A pin map for a second platform is a Renderer of `PinMap`, added with that platform.
 
+`assign_pins.ROLE_PENALTY` moves into `OnboardRole` only after P405 [#529](https://github.com/xmejkal/spark/issues/529) reports.

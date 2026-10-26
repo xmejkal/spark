@@ -1,7 +1,7 @@
 # Area: sourcing
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-sourcing).
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): the area name `sourcing` (`parts` already names the record folder and the CLI `parts.py`),
 `DrawerService`, `DatasheetService`, `RunCostService`, `UnknownMatcherError`, `NoTranscriptError`,
@@ -14,7 +14,7 @@ the offers that match a need. It also tallies what a project's run cost, read fr
 
 ### Its operations
 
-`parts.py` runs 29 Operations today (`parts.py:1581`, counted with `ast`). Sourcing owns these:
+`parts.py` runs 29 Operations today (`parts.OPERATIONS`, counted with `ast`). Sourcing owns these:
 
 | Group | Operations | Effects |
 |---|---|---|
@@ -26,7 +26,7 @@ the offers that match a need. It also tallies what a project's run cost, read fr
 
 The goal Operations of `parts.py` (`need`, `needs`, `needs-set`, `match`, `offer`, `pick`, `requirements`) live in
 design, because `needs.py` imports `design`, `emit_board` and `emit_footprint`. `audit` lives in design too: it asks
-`emit_footprint.footprint_gaps` whether a board stops the chain (`parts.audit`, `parts.py:130`, the call at `:165`). `parts.py` imports both areas'
+`emit_footprint.footprint_gaps` whether a board stops the chain (`parts.audit`). `parts.py` imports both areas'
 `OPERATIONS`, so its flags stay as they are.
 
 ### Its components
@@ -38,18 +38,21 @@ design, because `needs.py` imports `design`, `emit_board` and `emit_footprint`. 
 | `sourcing/datasheets.py` | fetching, keeping and reading a datasheet, moved out of `parts.py` |
 | `sourcing/part_facts.py` | setting facts on a part record, moved out of `parts.py` |
 | `sourcing/run_cost.py` | the transcript tally, moved from `cost.py`, which stays the CLI |
-| `sourcing/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `sourcing/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake |
+| Seam | Real adapter | Fake |
 |---|---|---|
 | `Matcher` Strategy, chosen by `--matcher` | `SameWords`, `NameContains`, `WordOverlap` (`matching.py:166-195`) | a Matcher subclass in the test |
-| part records | `Records("part")` from records | `RecordFolders(tmp)` over `tests/data/` |
+| part records | `RecordFinder("part")` from records | `RecordFolders(tmp)` over `tests/data/` |
+| `Retriever` Strategy: `search(words, project)`, proposed with the sourcing move | today's `parts.need` with the `Matcher` registry. The datasheet reader and a vector store come with the learning spike, where a second real adapter exists | a Retriever subclass in the test |
+| the project's brief | `Brief` from records (`prefer`, `sellers`), which replaces `parts.vendor_order` and `parts.sellers` | a `Brief` built in the test |
 | network | `OutsideWorld.fetch` | a dict from URL to bytes |
 | transcripts | a reader of the harness's files, the session from `OutsideWorld.environ` | transcript files in `tests/data/` |
 
-Sourcing imports records and core.
+Sourcing imports records and core. `matching` imports `text_guards` (core) and no longer `drawer`, because `clean` and
+its caps leave `drawer` (OC8).
 
 ## Level 3: how sourcing is built
 
@@ -121,7 +124,7 @@ sequenceDiagram
 - `RecordFolders(tmp)` over the part records in `tests/data/`, no `SPARK_HOME`.
 - A `MatcherContract` test that every Matcher passes, as `FlasherContract` does for flashers (both proposed).
 - `fetch` is a dict, so no test opens the network.
-- The goldens of S15 run every `parts.py` Operation once on a fixture project. The `fetch` goldens run
+- The goldens of stage 6 run every `parts.py` Operation once on a fixture project. The `fetch` goldens run
   through `main(argv)`, so `store.fetch` takes `file:` URLs (`store.py:339`) and no golden needs the network.
 
 ### How a new implementation is added

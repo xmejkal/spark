@@ -5,7 +5,7 @@ Round 4 synthesis, 2026-10-21. It replaces [design.md](../design.md), which keep
 
 > TL;DR. spark becomes one small system that every script only calls. A person and Claude get the same answer,
 > as text or as JSON. Each outside tool sits behind one swappable part, chosen in one place. We first record today's
-> outputs as tests that never change, then move the code area by area, the bench first for walk 2.
+> outputs as tests that never change, then move the code area by area, the bench first, because its net exists.
 
 Summary. Each script in `scripts/` becomes a thin CLI that parses, calls one Operation in a package under
 `scripts/spark/`, and prints. Every Operation returns one result shape, so the text, the `--json` envelope and a
@@ -14,23 +14,25 @@ only shrinks.
 
 ## Your call
 
-Four decisions, one at a time, in this order. Everything else the council decided ([notes](notes.md)).
+Five decisions are open, one at a time, in this order. Decision 3 is answered, so the numbers skip it (see
+[the plan](refactor-plan.md#the-decisions)). Everything else the council decided ([notes](notes.md)).
 
 1. Readability first. The five goals rank readable, testable, exchangeable, reusable, consistent. Example: when a
    short function and a reusable one conflict, the short one wins. Yes, or another order?
 2. The shape. Scripts become thin CLIs over one package, one Operation per job, one rules test. Example:
    `look.main` shrinks from 29 lines to about 15, and its help text, flags, output and exit codes stay. Yes or no?
-3. Slices S1 and S2 before walk 2, or after it. Walk 2 is due 2026-10-27. (a) S1, about 350 lines of tests with
-   no output change, and S2, about 200 lines that add codes and next steps to the bench envelope, both merge by
-   2026-10-23. Claude then reads codes on the bench, and the goldens catch any other change. (b) Walk 2 first, on
-   today's envelope, and both follow. The plan proposes (a) only if S1 merges by 2026-10-22.
-4. When the area moves start. Until v0.13 only a story pulls its area (D13). Example: walk 2 finds a `deploy` gap,
-   so that story moves the bench area. Confirm, or name a date.
+4. When the area moves start. Option (b) of the plan: now, the bench first, one PR at a time, because the bench net
+   exists. Example: the bench moves into `scripts/spark/bench/` in wave 5, then the other areas follow. Confirm, or
+   name a date.
+5. The printed names of the Operations. Example: the class `LookAtBoard` prints `op` as `look`. Keep the names that a
+   golden or a command page pins, or rename each to its class's words?
+6. A yes relayed by another program. Example: an MCP client collects the yes for an erase. Allow a third kind of yes,
+   or keep the erase in the person's own terminal?
 
 ## The system and its context
 
-Frontends sit on the left, backends on the right. The core in the middle knows neither: it sees only ports, which
-are Python base classes and Values. This shape is called ports and adapters.
+Frontends sit on the left, backends on the right. The core in the middle knows neither: it sees only seams, which
+are Python base classes and Values. This shape is called seams and adapters.
 
 ```mermaid
 flowchart LR
@@ -46,7 +48,7 @@ flowchart LR
   subgraph SYS["scripts/spark: the system"]
     RO --> OPS["Operations, one per job"]
     OPS --> AREAS["areas: Services over Strategies"]
-    AREAS --> PORTS["ports: Strategy bases and Values"]
+    AREAS --> PORTS["seams: Strategy bases and Values"]
   end
   CFG["Backends, built once from tools.json layers, requirements platform, SPARK_HOME"] --> OPS
   PORTS --> AD["Adapters"]
@@ -56,12 +58,13 @@ flowchart LR
   AD --> SIM["simulator: Wokwi"]
 ```
 
-A frontend never decides. A backend is never named outside its area's `operations.py`. Swapping either one touches
+A frontend never decides. A backend is never named outside its area's Operation modules. Swapping either one touches
 no Operation.
 
 ## The area map
 
-Nine areas. An area imports only the areas it reaches along the arrows (rule U1), so bench imports design through
+Nine areas and three leaves. A leaf is a module that imports nothing of spark. It sits at the bottom of its area, so
+any module reaches it without a cycle. An area imports only the areas it reaches along the arrows (rule U1), so bench imports design through
 firmware. Nothing imports upward, and every area imports `core`. Each area page names its direct imports.
 
 ```mermaid
@@ -73,9 +76,9 @@ flowchart TB
   CHK["checks"] --> DES
   FW --> DES
   DES --> SRC["sourcing"]
-  SRC --> REC["records"]
+  SRC --> REC["records<br/>+ provenance (leaf)"]
   BENCH --> REC
-  REC --> CORE["core"]
+  REC --> CORE["core<br/>+ zone_time, text_guards (leaves)"]
 ```
 
 | Area | Its job in one line | Page |
@@ -90,7 +93,8 @@ flowchart TB
 | bench | the board on USB: look, grant, deploy, live, reach | [bench](areas/bench.md) |
 | build | runs the build chain stage by stage, sets up a project | [build](areas/build.md) |
 
-Four upward edges exist today, and the move of the lower area removes each ([plan](refactor-plan.md)).
+The import edges that cross the map today, each kept or removed, are named in
+[section 5 of the plan](refactor-plan.md#5-the-leaves-and-the-named-edges).
 
 ## The one interface contract
 
@@ -98,11 +102,11 @@ Every Operation returns an `OperationResult` (proposed). Every frontend renders 
 
 | Part | Shape |
 |---|---|
-| result | `data`, `findings`, `next`, `lines`. `status` comes from `status_of` (`outcomes.py:35`), never declared. |
-| envelope | v1 keys stay: `envelope`, `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated` (`outcomes.py:68`). It only gains keys. |
+| result | `data`, `findings`, `next`, `lines`. `status` comes from `outcomes.status_of`, never declared. |
+| envelope | v1 keys stay: `envelope`, `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated` (`outcomes.envelope`). It only gains keys. |
 | Finding | `severity`, `subject`, `code`, `sentence`, `fix` (a string, as today), `fix_step` (a NextStep or null, proposed). Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
-| effects | `reads`, `writes`, `runs` (a tool, proposed), `network`, `board`, `erases`. An Operation gets only the outside callables its effects declare. |
-| status words | `ok`, `problems`, `could-not-run`. A check or stage also has `skipped` (`outcomes.py:21-26`). Nothing else under `status`. |
+| effects | `reads`, `writes`, `runs` (a tool, proposed), `network`, `board`, `deletes`. An Operation gets only the outside callables its effects declare. |
+| status words | `ok`, `problems`, `could-not-run`. A check or stage also has `skipped` (`outcomes.SKIPPED`). Nothing else under `status`. |
 | exit codes | 0 ok, 1 problems, 2 could-not-run, only from `EXIT_FOR`. A crash is `could-not-run`, code `crash`, exit 2. |
 | codes | snake_case constants in the area's `codes.py`, or `core/codes.py` when two areas use one. Starters: `tool_missing`, `no_project`, `no_board`, `no_port`, `port_busy`, `image_stale`, `sim_failed`, `crash`. |
 | next steps | `op`, `argv`, `why`, `effects`, `needs_yes` (consent), `needs_person` (a hand on the bench, proposed) |
@@ -118,7 +122,7 @@ test that reads the code with Python's `ast` module. A breach that exists today 
 |---|---|---|
 | 1. Readable | R1 short functions (40 lines in `spark/`), R2 nesting at most 3, R3 at most 5 parameters, R4 public code first, R5 short comments, R6 role word first in a docstring, R7 sentences as constants | `ArchitectureRules` counts R1 to R6. `test_no_magic_strings.py` and review cover R7. |
 | 2. Testable | T1 only Adapters touch the outside, T2 no new `mock.patch`, T3 a contract test per Strategy, T4 no hidden test mode, T5 goldens per Operation | AST for T1 to T4. The golden test for T5. |
-| 3. Exchangeable | X1 a backend is picked only from Backends in `operations.py`, X2 a frontend only parses and renders, X3 one registry form | AST, plus a parity test: text and `--json` carry the same codes. |
+| 3. Exchangeable | X1 a backend is picked only from Backends in an Operation module, X2 a frontend only parses and renders, X3 one registry form | AST, plus a parity test: text and `--json` carry the same codes. |
 | 4. Reusable | U1 an area imports only areas it reaches along the map's arrows, U2 import modules, never private names, U3 one home per shared flag, code and shape | AST, plus the contract test of allowed keys. |
 | 5. Consistent | C1 the glossary's words, C2 one envelope from every Operation, C3 exit codes only from `EXIT_FOR`, C4 effects declared and gated | AST and the contract test. |
 
@@ -127,8 +131,8 @@ The glossary is [glossary.md](glossary.md): one word per thing, and the public n
 ## How a person or an agent finds code
 
 1. Start at the CLI, such as `scripts/look.py`. Its docstring names its Operation and its Service.
-2. Open the area's `operations.py`. Its docstring lists the area's Operations, and each `Operation(...)` sits right
-   under its function, so one screen holds the flags and the code they reach.
+2. Open the area's `__init__.py`. Its `OPERATIONS` lists the area's Operations. Each Operation is a class with one
+   `run()` method in its own module, so one screen holds the flags and the code they reach.
 3. Follow the Service. Its `__init__` lists every collaborator, so its whole outside world is one signature.
 4. For one backend, open the Strategy base. Its contract test shows what every Adapter must do.
 
@@ -146,15 +150,15 @@ sequenceDiagram
   participant CLI as look.py (CLI)
   participant RC as run_cli
   participant RO as run_operation
-  participant O as look Operation
+  participant O as LookAtBoard (Operation)
   participant S as LookService
   P->>CLI: look.py --project p
   C->>CLI: look.py --project p --json
   CLI->>RC: run_cli(prog, OPERATIONS, argv, build_outside, outside)
   RC->>RC: parse, build OutsideWorld and Backends
-  RC->>RO: run_operation(look, values, outside, backends)
-  RO->>O: look(project, port, ignore_older_runs, outside, backends)
-  O->>S: run(port)
+  RC->>RO: run_operation(LookAtBoard, values, outside, backends)
+  RO->>O: run(project, port, ...)
+  O->>S: run(project, port, evidence)
   S-->>O: LookReport
   O-->>RO: OperationResult(data, findings, next, lines)
   RO-->>RC: OperationResult
@@ -167,6 +171,6 @@ sequenceDiagram
 - Level 2 and 3, one page per area: [core](areas/core.md), [records](areas/records.md),
   [sourcing](areas/sourcing.md), [design](areas/design.md), [firmware](areas/firmware.md),
   [breadboard](areas/breadboard.md), [checks](areas/checks.md), [bench](areas/bench.md), [build](areas/build.md).
-- [refactor-plan.md](refactor-plan.md): five stages and their slices in order, the bench net first.
+- [refactor-plan.md](refactor-plan.md): six waves, twenty-two slices, in order. The bench net came first (done).
 - [notes.md](notes.md): decisions, conflicts between the papers, the rule reference, what was cut.
 - [glossary.md](glossary.md): the words.

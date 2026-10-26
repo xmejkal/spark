@@ -1,7 +1,7 @@
 # Area: breadboard
 
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
-[refactor plan](../refactor-plan.md#into-breadboard).
+[refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `WiringStep`, `WiringLog`, `NotBuiltError`, `NotDrawnError`, `Layout`, the modules `wiring_steps`, `drawing`, `kept_moves`, `bench_changes`, `drawing_match`, `sheet`, `operations`, and the Operation name `breadboard`.
 
@@ -30,13 +30,13 @@ The build runs the same Service as its breadboard stage.
 | `breadboard/part_pictures.py` | `PartPictures`, moved as is |
 | `breadboard/tabbed_page.py` | `TabbedHtmlPage`, `TscircuitExport`, moved as is |
 | `breadboard/sheet.py` | the sheet flow, moved from `breadboard.py` |
-| `breadboard/operations.py` | the area's `OPERATIONS` and its index docstring |
+| `breadboard/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
 No module name repeats the area's name (rule C1).
 
-### Its ports and adapters
+### Its seams and adapters
 
-| Port | Real adapter | Fake | Registry |
+| Seam | Real adapter | Fake | Registry |
 |---|---|---|---|
 | `PartPlacement` Strategy | `FirstFitPartPlacement`, `KeepMovesFirstFitPartPlacement` | none needed, both are pure | none, the Service picks by "is there an earlier drawing" |
 | `JumperPlacement` Strategy | `JumperPlacement`, `KeepMovesJumperPlacement` | none needed | as above |
@@ -132,7 +132,7 @@ sequenceDiagram
 
 ### How a new implementation is added
 
-- A new drawing is one Renderer class with its `name` and one entry in `DRAWING_RENDERERS`. `operations.py` builds
+- A new drawing is one Renderer class with its `name` and one entry in `DRAWING_RENDERERS`. The Operation module builds
   it with its arguments, since the registry holds classes, not instances (rule X3).
 - A new picture source, such as pictures from online, is one `PartPictures` subclass.
 - A new placement rule is one `PartPlacement` subclass, picked by the Service.
