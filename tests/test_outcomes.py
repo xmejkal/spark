@@ -121,9 +121,10 @@ READERS = {
 
 class ThreeStatesTest(unittest.TestCase):
     def test_the_three_words_and_the_sentence_that_says_one(self):
-        self.assertEqual((outcomes.RECORDED, outcomes.NONE_RECORDED, outcomes.NOT_CHECKED),
-                         ("recorded", "none-recorded", "not-checked"))
-        self.assertEqual(outcomes.NOT_CHECKED_MESSAGE % "no mac", "not checked: no mac")
+        names = ("RECORDED", "NONE_RECORDED", "NOT_CHECKED", "NOT_CHECKED_MESSAGE")  # read by name: the words are serialized, so the literals below are the pin
+        self.assertEqual({name: vars(outcomes)[name] for name in names},
+                         {"RECORDED": "recorded", "NONE_RECORDED": "none-recorded", "NOT_CHECKED": "not-checked",
+                          "NOT_CHECKED_MESSAGE": "not checked: %s"})
 
     def test_each_reader_gives_its_state_and_never_raises(self):
         for name, (read, inputs) in READERS.items():
