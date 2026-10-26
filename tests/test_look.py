@@ -15,6 +15,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_doctor  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
 import tools  # noqa: E402
@@ -97,6 +98,14 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(said[1], "  port   /dev/cu.usb?modem?  token  FAKE")
         self.assertEqual(len([line for line in said if line.startswith("  token  ")]), 1)
         self.assertEqual(json.loads(self.go("--port", port, "--json")[1][-1])["data"]["port"], port)  # --json keeps it raw
+
+    def test_a_port_with_an_override_shows_as_a_question_mark_in_the_stop_on_stderr(self):
+        # P423: the failed read's lines go through guard_lines too
+        self.run_the_scenario()
+        with mock.patch.object(board_doctor, "after_esptool", return_value=None):
+            code, _, problems = self.go("--port", "/dev/cu.usb\u202emodem", fail=True)
+        self.assertEqual(code, 2)
+        self.assertTrue(problems.startswith("look.py: could not read the board on /dev/cu.usb?modem."), problems)
 
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()

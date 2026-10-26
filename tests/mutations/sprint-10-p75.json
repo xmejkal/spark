@@ -26,7 +26,7 @@
  {
   "file": "scripts/parts.py",
   "name": "--keep removes the location and says nothing",
-  "find": "        print(\"  removed the location (EXIF GPS) from %s before keeping it\" % path.name, file=sys.stderr)",
+  "find": "        print(\"  removed the location (EXIF GPS) from %s before keeping it\" % printable(path.name), file=sys.stderr)",
   "replace": "        pass"
  }
 ]

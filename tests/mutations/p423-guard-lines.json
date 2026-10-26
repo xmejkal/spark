@@ -1,0 +1,86 @@
+[
+ {
+  "file": "scripts/text_guards.py",
+  "name": "guard_lines prints the text as it is, so a control character in a printed line reaches the terminal",
+  "find": "    return \"\\n\".join(printable(line) for line in text.split(\"\\n\"))",
+  "replace": "    return text"
+ },
+ {
+  "file": "scripts/text_guards.py",
+  "name": "clean keeps the line and paragraph separators U+2028 and U+2029, in a label and in a file name",
+  "find": "\\u200f\\u2028\\u2029\\u202a",
+  "replace": "\\u200f\\u202a"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "parts says a problem on stderr without the guard",
+  "find": "print(guard_lines(said_here), file=sys.stderr)",
+  "replace": "print(said_here, file=sys.stderr)"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "parts prints its lines without the guard",
+  "find": "print(guard_lines(line))  # --json stays raw, as data",
+  "replace": "print(line)  # --json stays raw, as data"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "--keep prints the photo's name as it is",
+  "find": "% printable(path.name), file=sys.stderr)",
+  "replace": "% path.name, file=sys.stderr)"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "the look's report lines are not guarded one by one, in look.py and in deploy.py",
+  "find": "return [\"  \" + printable(line) for line in out]",
+  "replace": "return [\"  \" + line for line in out]"
+ },
+ {
+  "file": "scripts/look.py",
+  "name": "the look's failed read prints its lines without the guard",
+  "find": "print(guard_lines(\"\\n\".join(lines)), file=sys.stderr)",
+  "replace": "print(\"\\n\".join(lines), file=sys.stderr)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy.py's one print helper prints the text as it is",
+  "find": "print(guard_lines(text), flush=flush, file=out)",
+  "replace": "print(text, flush=flush, file=out)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy.py's plan refusal prints around the helper",
+  "find": "shown(\"deploy.py: %s\" % cannot, sys.stderr)",
+  "replace": "print(\"deploy.py: %s\" % cannot, file=sys.stderr)"
+ },
+ {
+  "file": "scripts/deploy.py",
+  "name": "deploy.py's dry run prints around the helper",
+  "find": "    def say(line):\n        shown(line, out)",
+  "replace": "    def say(line):\n        print(line, file=out)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "check_spine prints its verdict without the guard",
+  "find": "sys.stdout.write(guard_lines(render(stages, code, left_off(requirements))))",
+  "replace": "sys.stdout.write(render(stages, code, left_off(requirements)))"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "check_spine says what it kept without the guard",
+  "find": "print(guard_lines(\"  %s\" % entry[\"line\"]), file=sys.stderr)",
+  "replace": "print(\"  %s\" % entry[\"line\"], file=sys.stderr)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "check_spine says the history was not written without the guard",
+  "find": "print(guard_lines(\"  the build was not recorded in your history: %s\" % unrecorded), file=sys.stderr)",
+  "replace": "print(\"  the build was not recorded in your history: %s\" % unrecorded, file=sys.stderr)"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "run_scenario prints the tool's sentence without the guard",
+  "find": "    print(guard_lines(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\")),",
+  "replace": "    print(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\"),"
+ }
+]
