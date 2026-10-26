@@ -1,0 +1,80 @@
+[
+ {
+  "file": "scripts/board_look.py",
+  "name": "key-drops-usb",
+  "find": "(port.serial, port.usb, port.product) if known",
+  "replace": "(port.serial, port.product) if known"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "key-drops-product",
+  "find": "(port.serial, port.usb, port.product) if known",
+  "replace": "(port.serial, port.usb) if known"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "none-serials-grouped",
+  "find": "port.serial not in (\"\", NO_SERIAL)",
+  "replace": "port.serial not in (\"\",)"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "empty-serials-grouped",
+  "find": "port.serial not in (\"\", NO_SERIAL)",
+  "replace": "port.serial != NO_SERIAL"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "endswith-to-in",
+  "find": "row.device.endswith(row.serial)",
+  "replace": "row.serial in row.device"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "also-on-empty",
+  "find": "also_on=tuple(port.device for port in board if port is not chosen)",
+  "replace": "also_on=()"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "to-dict-drops-also-on",
+  "find": "\"also_on\": None if self.also_on is None else list(self.also_on),",
+  "replace": ""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "port-line-drops-also-on",
+  "find": "ALSO_ON % \", \".join(report.also_on) if report.also_on else \"\"",
+  "replace": "\"\""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "count-rows-not-boards",
+  "find": "on_usb = boards_of(found)",
+  "replace": "on_usb = [[each] for each in found]"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "listed-drops-also",
+  "find": "\"  (also %s)\" % \", \".join(port.also_on) if port.also_on else \"\"",
+  "replace": "\"\""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "usb-c-dropped",
+  "find": "power only. \"\n                           \"If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.\")",
+  "replace": "power only.\")"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "run-drops-also-on",
+  "find": "listed.also_on if listed else None)",
+  "replace": "None)"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "a group needs no node named by its serial, so two Linux clones are one board",
+  "find": "if len(rows) > 1 and _named_by_serial(rows) else",
+  "replace": "if len(rows) > 1 else"
+ }
+]

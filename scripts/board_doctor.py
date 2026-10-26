@@ -92,7 +92,7 @@ class PortListedBoardCheck(BoardCheckStrategy):
 
     def run(self, port, silent_step):
         try:
-            boards = self.finder.boards()
+            boards = self.finder.nodes()
         except LookStop as cannot:
             return CheckResult(self.name, False, "could not list the boards: %s" % cannot, None)
         listed = [board for board in boards if board.device == port]

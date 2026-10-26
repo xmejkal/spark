@@ -29,7 +29,7 @@ class FakeFinder:
     def __init__(self, *boards, raises=None):
         self.listed, self.raises = list(boards), raises
 
-    def boards(self):
+    def nodes(self):
         if self.raises:
             raise self.raises
         return self.listed

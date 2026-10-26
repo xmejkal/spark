@@ -44,6 +44,8 @@ CASES = [
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-problems.json", "look.py", ["--json"], "s3-flash-id-8mb.txt", "mpremote-devs-one.txt", 1),
     Case("look-could-not-run-two-boards.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-two.txt", 2),
+    Case("look-ok-one-board-two-ports.json", "look.py", ["--json"], "s3-flash-id-16mb.txt",
+         "mpremote-devs-one-board-two-ports.txt", 0),
     Case("look-could-not-run-no-simulation.json", "look.py", ["--json", "--no-simulation"], "s3-flash-id-16mb.txt",
          "mpremote-devs-one.txt", 2),
     Case("deploy-ok-dry-run.json", "deploy.py", ["--dry-run", "--json"], "s3-flash-id-16mb.txt",

@@ -30,7 +30,11 @@ import tools
 
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"
-Port = namedtuple("Port", "device serial usb product")
+#: What mpremote devs prints in the serial column of a board that reports no USB serial.
+NO_SERIAL = "None"
+#: The look's port line when the board shows on more than one node (P333).
+ALSO_ON = "  (one board on more nodes, also %s: the same USB serial. If these are two boards, unplug one)"
+Port = namedtuple("Port", "device serial usb product also_on", defaults=((),))
 #: What esptool said, each field None when it could not be parsed. flash_mb is a number of MB.
 BoardReading = namedtuple("BoardReading", "chip flash_mb mac")
 MB = 1024 * 1024
@@ -70,7 +74,7 @@ class PortFinder:
     def __init__(self, shell, run=subprocess.run):
         self.command, self.run = tools.command_for(shell) + ["devs"], run
 
-    def boards(self):
+    def nodes(self):
         try:
             done = self.run(self.command, capture_output=True, text=True, timeout=LIST_TIMEOUT_S)
         except OSError as cannot:
@@ -92,19 +96,50 @@ class PortFinder:
     def require_one_board(self, script, port=None):
         """The Port row of the one board on USB, or of `port` when it is given. LookStop as require_one_port says, and
         when `port` is not in the list."""
-        found = self.boards()
+        found = self.nodes()
         if port:
             named = [each for each in found if each.device == port]
             if not named:
                 raise LookStop("no board on %s: mpremote devs does not list it." % port)
             return named[0]
-        if not found:
-            raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only.")
-        if len(found) > 1:
-            lines = ["  %s  %s  %s" % (each.device, each.serial, each.product) for each in found]
+        on_usb = boards_of(found)
+        if not on_usb:
+            raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
+                           "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.")
+        if len(on_usb) > 1:
+            lines = [_listed(board) for board in on_usb]
             raise LookStop("%d boards on USB:\n%s\n%s --port %s  (unplug one to tell them apart)"
-                           % (len(found), "\n".join(lines), script, found[0].device))
-        return found[0]
+                           % (len(on_usb), "\n".join(lines), script, port_of(on_usb[0]).device))
+        return port_of(on_usb[0])
+
+
+def boards_of(ports):
+    """The boards behind `ports`, each a list of its Port rows, in the order listed (P333). Rows with one USB serial, USB
+    id and product are one board only when one of them is named by that serial: macOS shows a CP2104 as
+    /dev/cu.SLAB_USBtoUART and /dev/cu.usbserial-<serial>. Every other row is a board of its own, so two clones that share
+    a serial (/dev/ttyUSB0 and /dev/ttyUSB1, both `0001`) still stop as two boards, and so do rows with no serial
+    (mpremote prints `None`)."""
+    grouped = {}
+    for port in ports:
+        known = port.serial not in ("", NO_SERIAL)
+        grouped.setdefault((port.serial, port.usb, port.product) if known else ("device", port.device), []).append(port)
+    return [board for rows in grouped.values() for board in ([rows] if len(rows) > 1 and _named_by_serial(rows) else [[row] for row in rows])]
+
+
+def _named_by_serial(rows):
+    return any(row.device.endswith(row.serial) for row in rows)
+
+
+def port_of(board):
+    """The Port a board is used on: the node named by its serial (the one the T-Display was read on), or the board's only
+    node. Its `also_on` names the board's other nodes."""
+    chosen = next((port for port in board if len(board) > 1 and port.device.endswith(port.serial)), board[0])
+    return chosen._replace(also_on=tuple(port.device for port in board if port is not chosen))
+
+
+def _listed(board):
+    port = port_of(board)
+    return "  %s  %s  %s%s" % (port.device, port.serial, port.product, "  (also %s)" % ", ".join(port.also_on) if port.also_on else "")
 
 
 class BoardReader:
@@ -183,8 +218,9 @@ class LookReport:
     warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image.
     `last_deploy` is the board_facts.LastDeploy of the board's MAC, whatever the evidence said."""
 
-    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy):
+    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None):
         self.port, self.reading, self.record = port, reading, record
+        self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.simulation, self.caveats = simulation, list(caveats)
         self.last_deploy = last_deploy
@@ -228,7 +264,7 @@ class LookReport:
 
     def to_dict(self):
         """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id; the image is not in it."""
-        return {"port": self.port, "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
+        return {"port": self.port, "also_on": None if self.also_on is None else list(self.also_on), "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
                 "board": self.record["id"], "fields": dict(self.fields), "stops": list(self.stops),
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
                 "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason(),
@@ -239,7 +275,7 @@ def report_lines(report, token=True):
     """The lines a person reads, for a LookReport. deploy.py prints them without the token line."""
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
-    out = [RESTART_NOTICE, "port   %s" % report.port, "mac    %s" % (reading.mac or "not read"),
+    out = [RESTART_NOTICE, "port   %s%s" % (report.port, ALSO_ON % ", ".join(report.also_on) if report.also_on else ""), "mac    %s" % (reading.mac or "not read"),
            report.last_deploy.line()]
     out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
     out += ["%s: deploy.py will refuse." % stop for stop in report.stops]
@@ -268,7 +304,8 @@ class LookService:
     def run(self, project, port, evidence):
         """A LookReport. LookStop says why not: no record, no board, two boards without a port, a read that failed."""
         record = self.record_of(project)
-        port = port or self.only_port()
+        listed = None if port else self.finder.require_one_board("look.py")
+        port = port or listed.device
         reading = self.reader.read(port)
         image, why, simulation, caveats = None, None, None, []
         try:
@@ -281,7 +318,8 @@ class LookService:
         except project_image.DeployError as cannot:
             why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
-        return LookReport(port, reading, record, image, why, simulation, caveats, board_facts.read_last_deploy(reading.mac))
+        return LookReport(port, reading, record, image, why, simulation, caveats, board_facts.read_last_deploy(reading.mac),
+                          listed.also_on if listed else None)
 
     @staticmethod
     def record_of(project):
@@ -296,9 +334,6 @@ class LookService:
             return boards.load(project, name)
         except boards.BoardError:
             raise LookStop("no board record for %s: P230 will research one." % name)
-
-    def only_port(self):
-        return self.finder.require_one_port("look.py")
 
 
 def looker(project, run=subprocess.run):

@@ -485,9 +485,9 @@ the exit code's: `ok` 0, `problems` 1, `could-not-run` 2. With `--json`, deploy.
 the flash tool's own output, on **stderr**, so stdout holds the envelope alone. An argument error prints usage and no envelope.
 A raise after the flash (a traceback) prints no envelope either; read the exit code and stderr.
 
-- `look.py` `data`: `port`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
+- `look.py` `data`: `port`, `also_on`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
   `status`, `token`, `no_token_reason`, `simulation`, `caveats`, `last_deploy`. `simulation` is `passed`, or `none` with `--no-simulation`, or
-  null when the evidence refuses the image. `caveats` is a list of sentences (P345). `last_deploy` ([P401](https://github.com/xmejkal/spark/issues/518)) is what spark's store says of this board, read by its MAC: `state`, `why`, `project`, `verdict` and `deployed`, null where absent.
+  null when the evidence refuses the image. `also_on` lists the board's other device nodes: rows of `mpremote devs` with one USB serial, USB id and product are one board when one node's name ends with that serial, as macOS names a CP2104 ([P333](https://github.com/xmejkal/spark/issues/427)), and the look uses that node. Relay `also_on` to the person, because two clones can still share a serial. `also_on` is null when `--port` was given, because no node list was read. `caveats` is a list of sentences (P345). `last_deploy` ([P401](https://github.com/xmejkal/spark/issues/518)) is what spark's store says of this board, read by its MAC: `state`, `why`, `project`, `verdict` and `deployed`, null where absent.
   The state `recorded` holds the newest deploy as stored, so `verdict` is `ready seen` and not `passed`. The state `none-recorded` means the store holds no deploy of this MAC,
   and spark records only its own. The state `not-checked` has a `why`: the MAC was not read, or the record cannot be read. `not-checked` is never "no deploy".
   A stored time with no zone is printed as stored, with "(zone not stored)". The look reads it also when the image is refused. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).

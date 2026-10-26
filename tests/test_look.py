@@ -26,7 +26,8 @@ MAC = "8c:bf:ea:xx:xx:xx"
 SIMULATION = "  simulation: passed"
 CAVEAT = ("  the passed run's scenario has no set-control step (the step that presses a button or sets a sensor) and no "
           "expect-pin step (the step that reads a pin)")
-NO_BOARD = "no board found. Plug it straight into the computer with a data cable, not a hub that gives power only."
+NO_BOARD = ("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
+            "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.")
 
 
 class LookScriptCase(LookCase):

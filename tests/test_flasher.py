@@ -81,7 +81,7 @@ class TheEsptoolFlasherTest(unittest.TestCase):
         def timed_out(argv, **kw):
             raise subprocess.TimeoutExpired(argv, 15)
         with self.assertRaises(board_look.LookStop) as stop:
-            board_look.PortFinder(ESPTOOL, timed_out).boards()
+            board_look.PortFinder(ESPTOOL, timed_out).nodes()
         self.assertIn(flasher.EsptoolFlasher(ESPTOOL, "esp32s3").boot_hint, str(stop.exception))
 
     def test_the_prefix_puts_chip_before_port_and_both_are_optional(self):

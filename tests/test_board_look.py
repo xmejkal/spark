@@ -91,12 +91,12 @@ class PortFinderTest(LookCase):
 
     def test_bluetooth_and_debug_console_rows_are_dropped(self):
         shell = FOUND["board-shell"]
-        ports = board_look.PortFinder(shell, lambda argv, **kw: done(data("mpremote-devs-with-bluetooth.txt"))).boards()
+        ports = board_look.PortFinder(shell, lambda argv, **kw: done(data("mpremote-devs-with-bluetooth.txt"))).nodes()
         self.assertEqual([p.device for p in ports], [C6_PORT])
         self.assertEqual(ports[0].usb, "303a:1001")
 
     def test_a_ch340_board_is_kept_and_its_product_has_spaces(self):
-        ports = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-two.txt"))).boards()
+        ports = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-two.txt"))).nodes()
         self.assertEqual([(p.device, p.serial, p.product) for p in ports],
                          [(C6_PORT, "8c:bf:ea:xx:xx:xx", "Espressif USB JTAG/serial debug unit"),
                           ("/dev/cu.usbserial-1410", "None", "USB Serial")])
@@ -104,7 +104,7 @@ class PortFinderTest(LookCase):
     def test_a_failed_mpremote_stops_with_the_last_line_of_its_stderr(self):
         failed = subprocess.CompletedProcess([], 1, "", "Traceback\nmpremote: no such command\n")
         with self.assertRaises(board_look.LookStop) as stop:
-            board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: failed).boards()
+            board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: failed).nodes()
         self.assertEqual(str(stop.exception), "could not list the boards on USB: mpremote: no such command")
 
     def test_one_port_is_required_and_the_stop_names_the_script_that_asked(self):
@@ -123,13 +123,13 @@ class PortFinderTest(LookCase):
     def test_both_commands_have_a_timeout_and_a_timeout_stops_with_the_boot_hint(self):
         seen = []
         self.look()
-        board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: seen.append(kw["timeout"]) or done("")).boards()
+        board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: seen.append(kw["timeout"]) or done("")).nodes()
         board_look.EsptoolReader(FOUND["flasher"], lambda argv, **kw: seen.append(kw["timeout"]) or done(data("c6-flash-id.txt"))).read(C6_PORT)
         self.assertEqual(seen, [15, 60])
 
         def stalled(argv, **kw):
             raise subprocess.TimeoutExpired(argv, kw["timeout"])
-        for call in (lambda: board_look.PortFinder(FOUND["board-shell"], stalled).boards(),
+        for call in (lambda: board_look.PortFinder(FOUND["board-shell"], stalled).nodes(),
                      lambda: board_look.EsptoolReader(FOUND["flasher"], stalled).read(C6_PORT)):
             with self.assertRaises(board_look.LookStop) as stop:
                 call()
@@ -154,6 +154,54 @@ class PortFinderTest(LookCase):
         with self.assertRaises(board_look.LookStop) as stop:
             self.look(devs="mpremote-devs-none.txt")
         self.assertIn("no board found", str(stop.exception))
+        self.assertIn("If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.", str(stop.exception))
+
+    def test_one_board_on_two_ports_is_one_board_on_the_port_that_holds_its_serial(self):
+        report = self.look(devs="mpremote-devs-one-board-two-ports.txt")
+        self.assertEqual((report.port, report.also_on), ("/dev/cu.usbserial-01A2B3C4", ("/dev/cu.SLAB_USBtoUART",)))
+
+    def test_a_grouped_board_listed_second_by_its_serial_is_used_on_that_node_and_the_stop_lists_the_other(self):
+        finder = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-grouped-and-two-without-serial.txt")))
+        with self.assertRaises(board_look.LookStop) as stop:
+            finder.require_one_port("look.py")
+        said = str(stop.exception)
+        self.assertIn("3 boards on USB:", said)
+        self.assertIn("  /dev/cu.usbserial-01A2B3C4  01A2B3C4  Silicon Labs CP2104 USB to UART Bridge Controller  (also /dev/cu.SLAB_USBtoUART)", said)
+        self.assertIn("  /dev/cu.usbserial-1410  None  USB Serial\n  /dev/cu.usbserial-1420  None  USB Serial", said)
+        self.assertIn("look.py --port /dev/cu.usbserial-01A2B3C4  (unplug one", said)
+
+    def test_two_ports_with_no_serial_stay_two_boards(self):
+        for serial in ("None", ""):
+            with self.subTest(serial=serial):
+                ports = [board_look.Port(device, serial, "1a86:7523", "USB Serial") for device in ("/dev/cu.a", "/dev/cu.usbserial-None")]
+                self.assertEqual([[port.device for port in board] for board in board_look.boards_of(ports)],
+                                 [["/dev/cu.a"], ["/dev/cu.usbserial-None"]])
+
+    def test_a_port_named_by_the_person_is_found_on_either_node_of_a_grouped_board(self):
+        finder = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-one-board-two-ports.txt")))
+        named = finder.require_one_board("look.py", "/dev/cu.SLAB_USBtoUART")
+        self.assertEqual((named.device, named.also_on), ("/dev/cu.SLAB_USBtoUART", ()))
+        report = self.look(devs="mpremote-devs-one-board-two-ports.txt", port="/dev/cu.SLAB_USBtoUART")
+        self.assertIsNone(report.to_dict()["also_on"])
+
+    def test_two_clones_with_one_serial_and_no_node_named_by_it_stay_two_boards(self):
+        clones = [board_look.Port(device, "0001", "10c4:ea60", "Silicon Labs CP2102 USB to UART Bridge Controller")
+                  for device in ("/dev/ttyUSB0", "/dev/ttyUSB1")]
+        self.assertEqual([[port.device for port in board] for board in board_look.boards_of(clones)],
+                         [["/dev/ttyUSB0"], ["/dev/ttyUSB1"]])
+
+    def test_one_serial_with_another_usb_id_or_product_or_a_name_that_only_holds_it_stays_two_boards(self):
+        slab = board_look.Port("/dev/cu.SLAB_USBtoUART", "01A2B3C4", "10c4:ea60", "Silicon Labs CP2104 USB to UART Bridge Controller")
+        for other in (slab._replace(device="/dev/cu.usbserial-01A2B3C4", usb="1a86:7523"),
+                      slab._replace(device="/dev/cu.usbserial-01A2B3C4", product="Silicon Labs CP2102 USB to UART Bridge Controller"),
+                      slab._replace(device="/dev/cu.usbserial-01A2B3C40")):
+            with self.subTest(other=other):
+                self.assertEqual(len(board_look.boards_of([slab, other])), 2)
+
+    def test_the_look_says_the_other_node_and_to_unplug_one_if_they_are_two_boards(self):
+        lines = board_look.report_lines(self.look(devs="mpremote-devs-one-board-two-ports.txt"))
+        self.assertIn("  port   /dev/cu.usbserial-01A2B3C4  (one board on more nodes, also /dev/cu.SLAB_USBtoUART: the same USB "
+                      "serial. If these are two boards, unplug one)", lines)
 
     def test_nothing_ever_runs_code_on_the_board(self):
         self.look()
@@ -414,7 +462,7 @@ class LookReportToDictTest(LookCase):
         report = self.look()
         as_dict = report.to_dict()
         self.assertEqual(as_dict, {
-            "port": C6_PORT, "chip": "esp32c6", "flash_mb": 4, "mac": C6_MAC, "board": "xiao-esp32-c6",
+            "port": C6_PORT, "also_on": [], "chip": "esp32c6", "flash_mb": 4, "mac": C6_MAC, "board": "xiao-esp32-c6",
             "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
             "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None,
             # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
