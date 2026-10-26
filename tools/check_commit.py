@@ -2,30 +2,39 @@
 """
 The suite, on the tree as COMMITTED — not the working tree.
 
-    tools/check_commit.py            # HEAD
-    tools/check_commit.py fd25f15    # any commit
+    tools/check_commit.py                    # HEAD, the quick run: what the push hook runs
+    tools/check_commit.py fd25f15            # any commit
+    tools/check_commit.py [commit] --full    # the full run: every test, slow ones too
 
 A commit's message said "Ran 589 tests, OK" while the commit as committed ran 562 FAILED: the
 run was on the working tree, and the file it imported was staged one commit later (sprint-4 close
 audit, C3). A number a message carries must be measured on what the message describes, so this
-archives the commit into a scratch directory and measures there. Run before every push.
+archives the commit into a scratch directory and measures there. The push hook runs it.
+
+The quick run (P425) skips the tests marked `@slow` in tests/suite_runs.py and says how many it skipped; it is not the
+suite count. The full run, `--full`, runs every test: before a PR is marked ready and before an auto-mode merge.
 
 The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
 left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
 """
 
+import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 #: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wanted, and no test helper may shadow a module
 
 from outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
+from suite_runs import SLOW_PREFIX  # noqa: E402
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
 NAMES_SHOWN = 3
@@ -124,52 +133,83 @@ def temp_line(left):
     return "temp: the suite left {:,} {} behind ({}) — P172".format(len(left), "entry" if len(left) == 1 else "entries", shown)
 
 
-def measure(tree):
+def suite_line(said, quick, slow_skipped):
+    """
+    The suite's verdict line from the lines the runner said: "quick run: Ran N of M tests in S s (K slow tests skipped;
+    the full run is check_commit.py --full) / OK", or "full run: Ran M tests in S s / OK". The quick line is built so
+    that it cannot be quoted as the suite's count: it names what it left out.
+    """
+    ran = next((re.match(r"Ran (\d+) tests? in ([\d.]+)s", line) for line in said if line.startswith("Ran ")), None)
+    verdict = [line for line in said if not line.startswith("Ran ")]
+    if ran is None:
+        return " / ".join(["quick run" if quick else "full run"] + said)
+    total, seconds = int(ran.group(1)), float(ran.group(2))
+    if quick:
+        counted = "Ran {:,} of {:,} tests in {:.1f} s ({:,} slow {} skipped; the full run is check_commit.py --full)".format(
+            total - slow_skipped, total, seconds, slow_skipped, "test" if slow_skipped == 1 else "tests")
+        return " / ".join(["quick run: " + counted] + verdict)
+    return " / ".join(["full run: Ran {:,} tests in {:.1f} s".format(total, seconds)] + verdict)
+
+
+def measure(tree, full=False):
     """
     (suite verdict line, ok, left) for the tree at `tree`. `left` is what the suite left in
     the empty temp folder it was given (P172), None when that could not be listed; the folder goes once counted.
+    The quick run (P425) sets SPARK_SUITE=quick, so the tests marked slow skip; `full` runs every test.
     """
     lend_node_modules(tree)
     temp = tempfile.mkdtemp(prefix="spark-commit-temp-")
     try:
-        suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"],
-                               cwd=str(tree), capture_output=True, text=True, env=dict(without_git_variables(), TMPDIR=temp))
+        env = {name: value for name, value in without_git_variables().items() if name != "SPARK_SUITE"}
+        env.update(TMPDIR=temp)
+        if not full:
+            env["SPARK_SUITE"] = "quick"
+        suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"] + ([] if full else ["-v"]),
+                               cwd=str(tree), capture_output=True, text=True, env=env)
         left = leftovers(temp)
     finally:
         shutil.rmtree(temp, ignore_errors=True)  # a plain rmtree: it never chmods and never follows a link
-    suite_said = [line for line in (suite.stderr + suite.stdout).splitlines()
-                  if line.startswith(("Ran ", "OK", "FAILED"))]
+    suite_said = [line for line in (suite.stderr + suite.stdout).splitlines() if line.startswith(("Ran ", "OK", "FAILED"))]
+    slow_skipped = sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line)
     # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
     # longer blocks a push.
-    return " / ".join(suite_said), suite.returncode == 0, left
+    return suite_line(suite_said, not full, slow_skipped), suite.returncode == 0, left
 
 
 def main(argv=None):
-    commit = (argv or sys.argv[1:] or ["HEAD"])[0]
+    parser = argparse.ArgumentParser(description="The suite on the tree as committed: the quick run by default.")
+    parser.add_argument("commit", nargs="?", default="HEAD", help="the commit to measure (default HEAD)")
+    parser.add_argument("--full", action="store_true",
+                        help="the full run: every test, the slow ones too; before a PR is marked ready and before an auto-mode merge")
+    given = parser.parse_args(sys.argv[1:] if argv is None else argv)
     scratch = Path(tempfile.mkdtemp(prefix="spark-commit-"))
     try:
-        return gate(ROOT, commit, scratch)
+        return gate(ROOT, given.commit, scratch, given.full)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)  # the archive, 6.2 MB a push (P172); a link in it is unlinked, never followed
 
 
-def gate(root, commit, scratch):
+def gate(root, commit, scratch, full=False):
     """Archive `commit` into `scratch`, measure it, say the lines; the exit code."""
+    began = time.monotonic()
     try:
         archive(root, commit, scratch)
     except (ValueError, subprocess.CalledProcessError) as broken:
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    suite, ok, left = measure(scratch)
+    suite, ok, left = measure(scratch, full=full)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
-    print("%s as committed: %s" % (short, suite))
+    print("%s as committed, %s" % (short, suite))
     if left != []:
         print("  " + temp_line(left))
     print("  " + size_line(root, commit))
     sys.path.insert(0, str(ROOT / "tools"))
     import check_backlog
     backlog = check_backlog.main()
+    if not full:
+        print("  quick run: the seconds above are the tests alone; the board check and the size line come on top, "
+              "{:.0f} s for the whole gate".format(time.monotonic() - began))
     return EXIT_FOR[status_of(problems=not ok or backlog != 0 or bool(left), unchecked=left is None)]
 
 
