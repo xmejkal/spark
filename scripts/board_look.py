@@ -30,7 +30,9 @@ import tools
 
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"
-Port = namedtuple("Port", "device serial usb product")
+#: What mpremote devs prints in the serial column of a board that reports no USB serial.
+NO_SERIAL = "None"
+Port =namedtuple("Port", "device serial usb product")
 #: What esptool said, each field None when it could not be parsed. flash_mb is a number of MB.
 BoardReading = namedtuple("BoardReading", "chip flash_mb mac")
 MB = 1024 * 1024
@@ -98,13 +100,38 @@ class PortFinder:
             if not named:
                 raise LookStop("no board on %s: mpremote devs does not list it." % port)
             return named[0]
-        if not found:
-            raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only.")
-        if len(found) > 1:
-            lines = ["  %s  %s  %s" % (each.device, each.serial, each.product) for each in found]
+        on_usb = boards_of(found)
+        if not on_usb:
+            raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
+                           "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.")
+        if len(on_usb) > 1:
+            lines = [_listed(board) for board in on_usb]
             raise LookStop("%d boards on USB:\n%s\n%s --port %s  (unplug one to tell them apart)"
-                           % (len(found), "\n".join(lines), script, found[0].device))
-        return found[0]
+                           % (len(on_usb), "\n".join(lines), script, port_of(on_usb[0]).device))
+        return port_of(on_usb[0])
+
+
+def boards_of(ports):
+    """The boards behind `ports`, each a list of its Port rows, in the order listed (P333). Rows with one USB serial are
+    one board: a CP2104 shows as /dev/cu.SLAB_USBtoUART and /dev/cu.usbserial-<serial>. A row with no serial (mpremote
+    prints `None`) is a board of its own, because two such boards cannot be told apart."""
+    grouped = {}
+    for port in ports:
+        known = port.serial not in ("", NO_SERIAL)
+        grouped.setdefault(port.serial if known else ("device", port.device), []).append(port)
+    return list(grouped.values())
+
+
+def port_of(board):
+    """The Port a board is used on: the one whose device names its serial (the node the T-Display was read on), else
+    the first by device name."""
+    return next((port for port in board if port.serial in port.device), min(board, key=lambda port: port.device))
+
+
+def _listed(board):
+    port = port_of(board)
+    others = sorted(each.device for each in board if each is not port)
+    return "  %s  %s  %s%s" % (port.device, port.serial, port.product, "  (also %s)" % ", ".join(others) if others else "")
 
 
 class BoardReader:

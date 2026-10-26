@@ -154,6 +154,32 @@ class PortFinderTest(LookCase):
         with self.assertRaises(board_look.LookStop) as stop:
             self.look(devs="mpremote-devs-none.txt")
         self.assertIn("no board found", str(stop.exception))
+        self.assertIn("If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.", str(stop.exception))
+
+    def test_one_board_on_two_ports_is_one_board_on_the_port_that_holds_its_serial(self):
+        report = self.look(devs="mpremote-devs-one-board-two-ports.txt")
+        self.assertEqual(report.port, "/dev/cu.usbserial-0206D76B")
+
+    def test_a_grouped_board_with_no_port_named_by_its_serial_uses_the_first_sorted_and_the_stop_lists_the_others(self):
+        finder = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-grouped-and-two-unnamed.txt")))
+        with self.assertRaises(board_look.LookStop) as stop:
+            finder.require_one_port("look.py")
+        said = str(stop.exception)
+        self.assertIn("3 boards on USB:", said)
+        self.assertIn("  /dev/cu.SLAB_USBtoUART  0206D76B  CP2104 USB to UART Bridge Controller  (also /dev/cu.wchusbserial-A)", said)
+        self.assertIn("  /dev/cu.usbserial-1410  None  USB Serial\n  /dev/cu.usbserial-1420  None  USB Serial", said)
+        self.assertIn("look.py --port /dev/cu.SLAB_USBtoUART  (unplug one", said)
+
+    def test_two_ports_with_no_serial_stay_two_boards(self):
+        for serial in ("None", ""):
+            with self.subTest(serial=serial):
+                ports = [board_look.Port(device, serial, "1a86:7523", "USB Serial") for device in ("/dev/cu.a", "/dev/cu.b")]
+                self.assertEqual([[port.device for port in board] for board in board_look.boards_of(ports)],
+                                 [["/dev/cu.a"], ["/dev/cu.b"]])
+
+    def test_a_port_named_by_the_person_is_found_on_either_node_of_a_grouped_board(self):
+        finder = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-one-board-two-ports.txt")))
+        self.assertEqual(finder.require_one_board("look.py", "/dev/cu.SLAB_USBtoUART").device, "/dev/cu.SLAB_USBtoUART")
 
     def test_nothing_ever_runs_code_on_the_board(self):
         self.look()

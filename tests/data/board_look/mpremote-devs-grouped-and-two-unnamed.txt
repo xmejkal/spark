@@ -1,0 +1,4 @@
+/dev/cu.wchusbserial-A 0206D76B 10c4:ea60 CP2104 USB to UART Bridge Controller
+/dev/cu.SLAB_USBtoUART 0206D76B 10c4:ea60 CP2104 USB to UART Bridge Controller
+/dev/cu.usbserial-1410 None 1a86:7523 USB Serial
+/dev/cu.usbserial-1420 None 1a86:7523 USB Serial
