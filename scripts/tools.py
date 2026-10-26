@@ -536,6 +536,9 @@ def entry_problem(entry):
     for file in files:
         if not isinstance(file, str) or Path(file).name != file or file in (".", ".."):
             return "%r must be a plain file name — spark keeps every download in %s" % (file, DOWNLOADS)
+    offset = flash_offset_problem(entry)
+    if offset:
+        return offset
     for manager, line in (entry.get("install") or {}).items():
         try:
             unknown = [field for _, field, _, _ in string.Formatter().parse(str(line)) if field not in (None, "version", "core")]
@@ -544,6 +547,24 @@ def entry_problem(entry):
         if unknown:
             return "its %s install line names {%s}; only {version} and {core} are filled" % (manager, unknown[0])
     return None
+
+
+# --- MVP ---
+def flash_offset_problem(entry):
+    """
+    None when the entry has no `flash_offset` or a good one: a string such as "0x1000", 0 or more, on a download. It
+    says where a MicroPython build starts in the flash (P335). The image builder refuses one that runs into the files.
+    """
+    if "flash_offset" not in entry:
+        return None
+    value = entry["flash_offset"]
+    if entry.get("kind", "path") != "download":
+        return "its flash_offset belongs on a download entry, where the interpreter file is"
+    try:
+        good = isinstance(value, str) and int(value, 0) >= 0
+    except ValueError:
+        good = False
+    return None if good else "its flash_offset %r must be a string with a number of 0 or more, such as \"0x1000\"" % (value,)
 
 
 new_entry_problem = entry_problem  # what `--new` checks is what every step checks

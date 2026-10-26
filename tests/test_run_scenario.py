@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
+import flash_image  # noqa: E402
 import tools  # noqa: E402
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402
 
@@ -518,7 +519,7 @@ class TheFixReviewFoundTheseTest(ProjectCase):
         self.micropython.write_bytes(b"\xe9" + b"\x00" * (3 * 1024 * 1024))
         status, said, _ = self.run_with()
         self.assertEqual(status, COULD_NOT_RUN)
-        self.assertIn("larger than", said)
+        self.assertIn("would pass 0x200000, where the filesystem starts", said)
         self.assertFalse(self.seen.exists())
 
 
@@ -539,6 +540,19 @@ class TheRunLeavesAnOriginalScenarioAndALogTest(ProjectCase):
                                                               timeout_ms=1).run(FAKE_CLI)
         self.assertEqual(status, COULD_NOT_RUN)
         self.assertIn("did not finish", log.read_text())
+
+
+class TheOriginalEsp32sImageTest(ProjectCase):
+    """P335: the image a run hands the simulator holds the interpreter where its entry says it starts."""
+
+    def test_the_run_s_image_holds_the_interpreter_at_0x1000(self):
+        chosen = flash_image.Interpreter(self.micropython, 0x1000)  # micropython.org/download/ESP32_GENERIC/: write_flash 0x1000
+        with mock.patch.object(flash_image, "interpreter_for", return_value=chosen):
+            status, said, _ = self.run_with()
+        self.assertEqual(status, OK, said)
+        image = (self.project / "sim" / "flash-with-firmware.bin").read_bytes()
+        self.assertEqual(image[:0x1000], b"\xff" * 0x1000)
+        self.assertEqual(image[0x1000:0x1000 + 1000], self.micropython.read_bytes())
 
 
 class TheCommandTest(ProjectCase):

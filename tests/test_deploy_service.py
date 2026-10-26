@@ -108,7 +108,8 @@ class TheNoSimulationServiceTest(ServiceCase):
                                             image_evidence.NoSimulationEvidence(self.project), run=self.fake_run, **kwargs)
 
     def build(self):
-        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=lambda given, project=None: self.micropython)
+        patcher = mock.patch.object(flash_image, "interpreter_for",
+                                    side_effect=lambda given, project=None: flash_image.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         for log in (self.project / "sim" / "runs").glob("*.log"):

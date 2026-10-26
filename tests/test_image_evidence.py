@@ -166,19 +166,21 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.firmware = self.project / "firmware"
         self.firmware.mkdir()
         (self.firmware / "main.py").write_text("import machine\nmachine.PWM(machine.Pin(1))\nprint('ready')\n")
-        patcher = mock.patch.object(flash_image, "interpreter_path", side_effect=self.find_interpreter)
+        patcher = mock.patch.object(flash_image, "interpreter_for", side_effect=self.find_interpreter)
         patcher.start()
         self.addCleanup(patcher.stop)
+        self.offset = 0
         self.interpreter = self.project / "micropython.bin"
         self.interpreter.write_bytes(self.INTERPRETER)
         self.build()
 
     def find_interpreter(self, given, project=None):
-        return self.interpreter
+        return flash_image.Interpreter(self.interpreter, self.offset)
 
-    def build(self):
+    def build(self, offset=None):
         (self.project / "sim" / "flash-with-firmware.bin").write_bytes(
-            flash_image.image(self.INTERPRETER, flash_image.files_under(self.firmware)))
+            flash_image.image(self.INTERPRETER, flash_image.files_under(self.firmware),
+                              offset=self.offset if offset is None else offset))
         self.image = ProjectImage(self.project)
 
     def why(self):
@@ -189,6 +191,13 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_firmware_that_uses_pwm_and_an_image_of_it_are_ready_with_no_run_log(self):
         self.assertIsNone(self.why())
+
+    def test_an_image_with_the_esp32_s_offset_is_ready_and_one_built_at_0_is_not(self):
+        self.offset = 0x1000  # the original ESP32's build starts there (P335)
+        self.build()
+        self.assertIsNone(self.why())
+        self.build(offset=0)
+        self.assertIn("does not hold firmware/ as it is now", self.why())
 
     def test_a_file_changed_after_the_image_refuses_and_names_the_build_command(self):
         (self.firmware / "main.py").write_text("print('ready')\nprint(2)\n")
@@ -212,7 +221,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("no firmware/main.py", self.why())
 
     def test_no_interpreter_is_a_sentence_not_a_traceback(self):
-        with mock.patch.object(flash_image, "interpreter_path", side_effect=tools.ToolProblem("no tool holds it")):
+        with mock.patch.object(flash_image, "interpreter_for", side_effect=tools.ToolProblem("no tool holds it")):
             self.assertEqual(self.why(), "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
 
     def test_a_missing_littlefs_is_a_sentence_too(self):

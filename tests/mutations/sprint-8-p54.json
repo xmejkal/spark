@@ -20,7 +20,7 @@
  {
   "file": "scripts/flash_image.py",
   "name": "an interpreter that overwrites the filesystem is accepted",
-  "find": "    if len(interpreter) > FILESYSTEM_OFFSET:",
+  "find": "    if offset + len(interpreter) > FILESYSTEM_OFFSET:",
   "replace": "    if False:"
  },
  {

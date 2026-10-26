@@ -247,10 +247,12 @@ simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which th
 and a `firmware/main.py`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
 into one flash image, so a run never tests an older firmware. The interpreter is the MicroPython v1.29.0 build that the
 board's record names in `micropython_port`, taken from the tools list and fetched and checked by `/spark:setup`. The
-list holds the ESP32-S3 and ESP32-C6 builds and Seeed's XIAO ESP32-C6 build. A board whose build is not on the list, or whose record
-names no build, stops with its name. With no board
+list holds the original ESP32, ESP32-S3 and ESP32-C6 builds and Seeed's XIAO ESP32-C6 build. The original ESP32's build starts at 0x1000
+inside the image, where its entry's `flash_offset` says, and the image is still written at 0x0 ([P335](https://github.com/xmejkal/spark/issues/429)).
+A board whose build is not on the list, or whose record names no build, stops with its name. With no board
 in `requirements.json`, the interpreter is the tools list's `firmware-image`, the S3 build. To use another build, add
-`--micropython <its .bin from micropython.org>`. It writes `sim/runs/<name>.log`: the date, the verdict, the sha256 of the image it tested,
+`--micropython <its .bin from micropython.org>`. It starts where the board's build entry says, and a board whose record
+names no build stops it too, because its start is not known (P335). It writes `sim/runs/<name>.log`: the date, the verdict, the sha256 of the image it tested,
 the sha256 of each file in that image, the scenario as run, and what wokwi-cli printed. The header also counts the scenario's steps by kind (`step counts: expect-pin 0, set-control 0, wait-serial 1`, P345), and the date carries its time zone. When `sim/WHAT-THIS-CANNOT-SHOW.md` exists, the log holds its text after the header. It exits 0 when the scenario passed, 1 when it failed, and 2 when it could not run. A run spends Wokwi
 CI minutes. Ask the person before each run and say that it spends minutes, even when your permissions would let it
 run: this command's allowed-tools leave it out, but an allow rule of theirs or auto mode would not stop it. Every check

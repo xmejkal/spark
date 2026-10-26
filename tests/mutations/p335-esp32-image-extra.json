@@ -1,0 +1,13 @@
+[
+ {"file": "scripts/flash_image.py", "name": "main drops the offset when it builds the image",
+  "find": "json.loads(args.config) if args.config else None, interpreter.offset)", "replace": "json.loads(args.config) if args.config else None)"},
+ {"file": "scripts/flash_image.py", "name": "main prints a wrong filesystem start",
+  "find": "interpreter.offset + len(micropython), FILESYSTEM_OFFSET))", "replace": "interpreter.offset + len(micropython), 0))"},
+ {"file": "scripts/flash_image.py", "name": "Interpreter.image drops the config overrides",
+  "find": "return image(self.path.read_bytes(), files, overrides, self.offset)", "replace": "return image(self.path.read_bytes(), files, None, self.offset)"},
+ {"file": "scripts/tools.py", "name": "a zero offset is refused",
+  "find": "int(value, 0) >= 0", "replace": "int(value, 0) > 0"},
+ {"file": "scripts/run_scenario.py", "name": "the scenario run builds at offset 0",
+  "find": "self.flash = flash_image.interpreter_for(self.micropython, self.project).image(self.files)",
+  "replace": "self.flash = flash_image.image(flash_image.interpreter_for(self.micropython, self.project).path.read_bytes(), self.files)"}
+]
