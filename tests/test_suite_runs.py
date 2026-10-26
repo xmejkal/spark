@@ -122,7 +122,7 @@ class TheSlowMarkTest(unittest.TestCase):
             ("test_mutate.py", "NearTestsFirstTest"),
             ("test_mutate.py", "StaleBytecodeTest"),
             ("test_needs.py", "test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert"),
-            ("test_tabbed_page.py", "TscircuitExportTest"),
+            ("test_tabbed_page.py", "test_the_real_tsci_exports_a_circuit"),
             ("test_xiao_record.py", "TheLibraryXiaoBuildsAButtonAndAnLedTest"),
         ])
         for file, name, reason in marks:
@@ -163,6 +163,17 @@ class TheQuickRunAndTheFullRunSayWhatTheyRanTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(line.startswith("quick run: Ran 4 of 5 tests in "), line)
         self.assertTrue(line.endswith("/ FAILED (failures=1, skipped=2)"), line)
+
+    def test_a_failure_that_quotes_a_slow_skip_does_not_raise_the_count(self):
+        # A traceback can hold a child run's -v lines. The verdict's own skipped=N says there was no skip at all.
+        tree = tiny_tree({"tests/test_t.py": (
+            "import unittest\n\n\nclass T(unittest.TestCase):\n"
+            "    def test_a(self): pass\n"
+            "    def test_quotes(self): self.fail(\"a child said ... skipped 'slow: a pretend build\")\n")})
+        line, ok, left = check_commit.measure(tree)
+        self.assertFalse(ok)
+        self.assertEqual(seconds_hidden(line), "quick run: Ran 2 of 2 tests in S s "
+                         "(0 slow tests skipped; the full run is check_commit.py --full) / FAILED (failures=1)")
 
 
 def gate_said(argv, left=()):

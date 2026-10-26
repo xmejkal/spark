@@ -170,7 +170,9 @@ def measure(tree, full=False):
     finally:
         shutil.rmtree(temp, ignore_errors=True)  # a plain rmtree: it never chmods and never follows a link
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines() if line.startswith(("Ran ", "OK", "FAILED"))]
-    slow_skipped = sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line)
+    # The verdict's own `skipped=N` caps the count: a failure's traceback can embed a child's -v lines.
+    skipped_in_all = sum(int(count) for line in suite_said for count in re.findall(r"skipped=(\d+)", line))
+    slow_skipped = min(skipped_in_all, sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line))
     # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
     # longer blocks a push.
     return suite_line(suite_said, not full, slow_skipped), suite.returncode == 0, left

@@ -64,7 +64,6 @@ class TabbedHtmlPageTest(unittest.TestCase):
         self.assertEqual(TabbedHtmlPage().text(three_tabs()), TabbedHtmlPage().text(three_tabs()))
 
 
-@slow("the tsci export of a circuit, 7 tests, 2.1 s on 2026-10-26")
 class TscircuitExportTest(unittest.TestCase):
     def run_with(self, returncode=0, writes="<svg/>", stderr="", side_effect=None):
         def fake_run(command, **kwargs):
@@ -108,6 +107,7 @@ class TscircuitExportTest(unittest.TestCase):
         result = self.run_with(side_effect=subprocess.TimeoutExpired("tsci", 60))
         self.assertEqual("tsci export -f pcb-svg took over 60 s", result.why_missing)
 
+    @slow("the real tsci exports a circuit to SVG, 1 test, 2.4 s on 2026-10-26")
     @unittest.skipUnless(shutil.which("tsci"), "tsci is not installed")
     def test_the_real_tsci_exports_a_circuit(self):
         with tempfile.TemporaryDirectory() as scratch:
