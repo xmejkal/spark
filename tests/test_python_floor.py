@@ -22,6 +22,15 @@ def sources():
     return sorted(ROOT.glob("scripts/**/*.py")) + sorted(ROOT.glob("tools/*.py"))
 
 
+def floor_problem(text, name):
+    """`name:line why` when `text` does not parse as Python FLOOR, else None."""
+    try:
+        ast.parse(text, name, feature_version=FLOOR)
+    except SyntaxError as newer:
+        return "%s:%s %s" % (name, newer.lineno, newer.msg)
+    return None
+
+
 def union_annotations(tree):
     """The lines of each `X | Y` annotation, in a module without `from __future__ import annotations`."""
     if any(isinstance(node, ast.ImportFrom) and node.module == "__future__" and any(a.name == "annotations" for a in node.names)
@@ -35,13 +44,12 @@ def union_annotations(tree):
 
 class PythonFloorTest(unittest.TestCase):
     def test_every_script_and_tool_parses_as_python_3_9(self):
-        refused = []
-        for source in sources():
-            try:
-                ast.parse(source.read_text(), str(source), feature_version=FLOOR)
-            except SyntaxError as newer:
-                refused.append("%s:%s %s" % (source.relative_to(ROOT), newer.lineno, newer.msg))
-        self.assertEqual(refused, [])
+        refused = [floor_problem(source.read_text(), str(source.relative_to(ROOT))) for source in sources()]
+        self.assertEqual([one for one in refused if one], [])
+
+    def test_the_parse_refuses_a_match_statement_and_passes_3_9_code(self):
+        self.assertRegex(floor_problem("match a:\n    case 1:\n        pass\n", "s") or "", r"^s:[0-9]+ ")
+        self.assertIsNone(floor_problem("x = {**a, **b}\n", "s"))
 
     def test_no_annotation_needs_python_3_10(self):
         found = ["%s:%d" % (source.relative_to(ROOT), line) for source in sources()
