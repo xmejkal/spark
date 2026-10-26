@@ -22,6 +22,7 @@ import firmware_platform  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
 import outcomes  # noqa: E402
+import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe  # noqa: E402
 from test_board_look import FOUND, done, found  # noqa: E402
 import test_deploy_gate  # noqa: E402
@@ -86,6 +87,19 @@ class LookJsonTest(JsonCase, LookScriptCase):
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"], said["problems"]), (2, "could-not-run", []))
         self.assertIn("flash", said["unchecked"][0]["sentence"])
+        self.assertEqual(said["next"][0]["op"], "deploy")
+
+    def test_a_last_deploy_that_cannot_be_read_is_unchecked_not_ok_and_keeps_its_token_and_step(self):
+        self.run_the_scenario()
+        record = store.place("boards") / (store.slug("8c:bf:ea:xx:xx:xx") + ".json")
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text("{not json")
+        code, said, _ = self.go("--json")
+        said = self.one(code, said, "look", "look")
+        self.assertEqual((code, said["status"], said["problems"]), (2, "could-not-run", []))
+        self.assertEqual(said["unchecked"], [{"sentence": "last deploy not checked: spark's record of it cannot be read",
+                                              "fix": "repair or remove %s, then run look.py again" % record}])
+        self.assertTrue(said["data"]["token"])
         self.assertEqual(said["next"][0]["op"], "deploy")
 
     def test_no_token_is_unchecked_and_has_no_deploy_step(self):

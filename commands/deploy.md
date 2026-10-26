@@ -49,11 +49,11 @@ order: the look, its token, then the person's yes.
    2026-10-19T09:24:50+02:00, ready seen`. Relay it. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
    A flash made outside spark leaves no trace, and a flash that failed after the erase writes no record. `none in its store record` is not an empty board.
    `not checked` means spark did not read its record: the MAC was not read, or the record cannot be read. It never
-   means that no deploy happened.
+   means that no deploy happened. The look then exits 2 (`could-not-run`) and names what to repair.
 3. If the person wants you to deploy without a yes each time, offer the deploy grant line that deploy.py printed:
    `grant.py --scope deploy --minutes N`. Say first that it lets you erase ALL of the board's flash and write any passed
    image of any project for N minutes (1 to 1440). Never run it yourself, and never write a grant file: it is the person's yes in their own terminal.
-   A deploy grant covers only a look with no warning, no unknown field and no stop, and never `--ignore-older-runs`;
+   A deploy grant covers only a look with no warning, no unknown field, no stop and a last deploy it could check, and never `--ignore-older-runs`;
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
 4. When deploy.py prints "press the board's RESET ... once", relay that line to the person at once: only a hand
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you

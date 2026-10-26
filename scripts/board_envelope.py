@@ -61,7 +61,7 @@ def deploy_step(project, token, port, evidence, why):
 
 def look_envelope(report, project, evidence):
     """The envelope of a LookReport. `problems` are its stops and its warnings (a field that differs), `unchecked` its
-    unknown fields and a missing token: the lists LookReport.status counts. A token, whatever the status, brings the
+    unknown fields, a missing token and a last deploy that was not checked: the lists LookReport.status counts. A token, whatever the status, brings the
     deploy step."""
     problems = [{"subject": "stop", "sentence": stop, "fix": "deploy.py will refuse"} for stop in report.stops]
     problems += [{"subject": "flash", "sentence": warning, "fix": "deploy.py asks the person to accept it"}
@@ -70,6 +70,8 @@ def look_envelope(report, project, evidence):
                  for each in report.unknown.items()]
     if report.no_token_reason():
         unchecked.append({"sentence": "no token: %s" % report.no_token_reason(), "fix": "fix that, then run look.py again"})
+    if report.last_deploy_not_checked():
+        unchecked.append({"sentence": "last deploy not checked: %s" % report.last_deploy.why, "fix": report.last_deploy_fix()})
     token = report.token()
     following = [deploy_step(project, token, report.port, evidence,
                              "erases ALL of the flash, then writes the image. Relay the warnings first. " + yes_rule(evidence))] if token else []

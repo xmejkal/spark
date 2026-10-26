@@ -591,6 +591,15 @@ class ReportLinesTest(LookCase):
         self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 1], "  spark's last deploy here: blink-c6, ready seen, "
                          "2026-10-19T09:24:50+02:00 (its store record, not read from the board)")
 
+    def test_a_last_deploy_that_cannot_be_read_says_so_and_what_to_do(self):
+        self.run_the_scenario()
+        record = board_facts.record_path(C6_MAC)
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text("{not json")
+        lines = board_look.report_lines(self.look(), token=False)
+        self.assertIn("  last deploy not checked: spark's record of it cannot be read: repair or remove %s, then run "
+                      "look.py again." % record, lines)
+
     def test_a_board_whose_mac_was_not_read_is_not_checked_and_never_no_deploy(self):
         self.run_the_scenario()
         self.record_a_deploy()

@@ -65,7 +65,7 @@ def record_deploy(facts, verdict, who):
     deploy = {"project": facts["project"], "image_sha256": facts["image_sha256"], "deployed": facts["deployed"],
               "verdict": verdict, "simulation": facts["simulation"], "yes": who}
     with store.locked():
-        path = store.place("boards") / (key + ".json")
+        path = record_path(facts["mac"])
         try:
             record = json.loads(path.read_text()) if path.is_file() else {"mac": facts["mac"], "deploys": []}
         except ValueError:
@@ -129,12 +129,17 @@ class LastDeploy:
                 "deployed": self.deployed}
 
 
+def record_path(mac):
+    """The path of the store's record of the board with this MAC: what record_deploy writes and read_last_deploy reads."""
+    return store.place("boards") / (store.slug(mac) + ".json")
+
+
 def read_last_deploy(mac):
     """The LastDeploy of the board with this `mac`, from the record `record_deploy` writes. It never raises: what it cannot
     read is NOT_CHECKED with the reason, and never a missing deploy."""
     if not mac:
         return LastDeploy(NOT_CHECKED, why=WHY_NO_MAC)
-    path = store.place("boards") / (store.slug(mac) + ".json")
+    path = record_path(mac)
     try:
         if not path.exists() and not path.is_symlink():  # a folder or a broken link in its place is no "none"
             return LastDeploy(NONE_RECORDED)

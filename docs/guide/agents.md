@@ -119,7 +119,7 @@ These only read:
 - `tools.py --status`, `boards.py --list`, `check_vendor_pins.py --offline`;
 - `look.py`. It writes nothing and changes no flash, but **the board on USB restarts**, because esptool resets it to read it: a running
   program stops and starts again, so say so before you run it. Run it with `--json` ([P213](https://github.com/xmejkal/spark/issues/175)): one envelope on stdout, described under "look.py and deploy.py's envelope". The exit code is the same as the text run's.
-  **A field `unknown` is not a pass**, and neither is a look with no token: the exit is 2 and the line says what went unchecked.
+  **A field `unknown` is not a pass**, and neither is a look with no token or a last deploy it could not check ([P416](https://github.com/xmejkal/spark/issues/543)): the exit is 2 and the line says what went unchecked. A deploy grant does not cover a look whose last deploy was not checked: the person types yes.
   Exit 1 is a stop (deploy.py will refuse, no token) or a field that differs but that the person can accept (with a token):
   the stop line or the token line tells them apart. The token is not the person's yes;
 - `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. It says whether the board on USB has
@@ -491,7 +491,7 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   The state `recorded` holds the newest deploy as stored, so `verdict` is `ready seen` and not `passed`. The state `none-recorded` means the store holds no deploy of this MAC,
   and spark records only its own. The state `not-checked` has a `why`: the MAC was not read, or the record cannot be read. `not-checked` is never "no deploy".
   A stored time with no zone is printed as stored, with "(zone not stored)". The look reads it also when the image is refused. `problems` are the stops and a differing flash (`subject` `stop` or `flash`).
-  `unchecked` are the unknown fields and a missing token. A look that could not run has `data: null` (or `data.doctor` after a failed read). When there is a
+  `unchecked` are the unknown fields, a missing token and a `last_deploy` in state `not-checked`. A look that could not run has `data: null` (or `data.doctor` after a failed read). When there is a
   token, `next` holds a `deploy` step, whatever the status. A warning or an unknown field is not a pass: relay it.
 - `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),

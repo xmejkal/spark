@@ -70,6 +70,7 @@ WHY_NO_GRANT, WHY_EXPIRED, WHY_NO_ZONE, WHY_NOT_A_GRANT = "no grant", "expired",
 WHY_SERIAL_NOT_MAC, WHY_NO_MAC, WHY_BAD_MINUTES, WHY_ANSWERED_NO = "serial not mac", "no mac", "bad minutes", "answered no"
 #: Why a deploy asks for a typed yes though a deploy grant may exist: the look is no match, --ignore-older-runs or --no-simulation.
 WHY_LOOK_NOT_MATCH, WHY_IGNORE_OLDER_RUNS = "look not a match", "ignore older runs"
+WHY_LAST_DEPLOY_NOT_CHECKED = "last deploy not checked"
 WHY_NO_SIMULATION = "no simulation"
 WHY_BAD_SCOPE = "bad scope"
 #: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
@@ -97,6 +98,8 @@ MESSAGE_FOR = {
     WHY_ANSWERED_NO: "no grant: the person answered no",
     WHY_LOOK_NOT_MATCH: "the look is not a match (a warning, an unknown field or a stop), so a deploy grant does not "
                         "cover this deploy: the person types yes",
+    WHY_LAST_DEPLOY_NOT_CHECKED: "spark could not check its record of this board's last deploy, so a deploy grant does "
+                                 "not cover this deploy: the person types yes",
     WHY_IGNORE_OLDER_RUNS: "--ignore-older-runs is never covered by a deploy grant: the person types yes",
     WHY_NO_SIMULATION: "--no-simulation is never covered by a deploy grant: the person types yes",
 }
@@ -246,6 +249,8 @@ class GrantService:
             return DeployConsentResult(fallback, WHY_NO_GRANT)
         if report.verdict != board_look.VERDICT_MATCH:
             return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)
+        if report.last_deploy_not_checked():
+            return DeployConsentResult(fallback, WHY_LAST_DEPLOY_NOT_CHECKED)
         if evidence.grant_refusal:
             return DeployConsentResult(fallback, evidence.grant_refusal)
         why = grant.why_not_valid(self.now())
