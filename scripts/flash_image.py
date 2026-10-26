@@ -104,7 +104,7 @@ def project_here():
 
 
 class Interpreter(namedtuple("Interpreter", "path offset")):
-    """The MicroPython build chosen for a project, and where it starts in the flash (P335)."""
+    """Value: the MicroPython build chosen for a project, and where it starts in the flash (P335)."""
 
     def image(self, files, overrides=None):
         """The whole flash with this build at its offset."""

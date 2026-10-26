@@ -319,6 +319,19 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
         self.assertIn("flash_offset", err.getvalue())
 
+    def test_the_command_says_where_the_interpreter_starts_and_ends(self):
+        import contextlib
+        import io
+        esp32 = ("ESP32_GENERIC", ("micropython-esp32", self.with_the_esp32()["tools"]["micropython-esp32"]))
+        for held, span in ((esp32, "MicroPython at 0x1000-0x13e8"), (("ESP32_GENERIC_C3", None), "MicroPython at 0x0-0x3e8")):
+            out = io.StringIO()
+            with self.subTest(build=held[0]), mock.patch.object(flash_image, "build_entry", return_value=held), \
+                    contextlib.redirect_stdout(out):
+                code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--project", str(self.root),
+                                         "--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
+                self.assertEqual(code, flash_image.EXIT_OK)
+                self.assertIn(span, out.getvalue())
+
     def test_the_shipped_list_holds_the_original_esp32_s_build_at_0x1000(self):
         import re
         import tools
