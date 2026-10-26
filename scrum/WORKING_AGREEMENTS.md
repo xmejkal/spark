@@ -124,7 +124,7 @@ set since 2026-10-09, on his answer *"Ruleset + auto-delete (Recommended)"*
   ruleset asks for no approval, so it does not decide who merges: that the PO merges is this agreement, not a
   setting.
 - **GitHub deletes a merged pull request's branch** on both repositories ("automatically delete head branches").
-  Nobody has to push a deletion (`git push origin --delete`), which would run the pre-push gate's whole suite for
+  Nobody has to push a deletion (`git push origin --delete`), which would run the pre-push gate's quick run for
   nothing. The local branch stays until `git branch -d` removes it; removing it automatically is the idea
   [P171](https://github.com/xmejkal/spark/issues/111), in Idea.
 

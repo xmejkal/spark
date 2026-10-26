@@ -26,7 +26,7 @@ def test_the_build_runs_the_name_as_no_code(self): ...
 ```
 
 `SPARK_SUITE=quick` makes any run a quick run. `tools/mutate.py` removes it from the environment of its runs, because a
-defect that only a slow test catches must not escape it. The first numbers, measured on 2026-10-26: the full run took 124.8 s, and the quick run took 77.0 s of tests and 94 s for the whole gate (the rows have the numbers,
+defect that only a slow test catches must not escape it. The first numbers, measured on 2026-10-26: the full run took 124.8 s, and the quick run took 77.0 s of tests and 94 to 100 s for the whole gate (the rows have the numbers,
 [`docs/observations/rows/p425-quick-run.md`](../observations/rows/p425-quick-run.md)).
 
 **The rule the tests follow: a test must run the thing, not read it.**
@@ -114,8 +114,9 @@ It reports:
 - the quick run of the suite, as committed: `quick run: Ran N of M tests in S s (K slow tests skipped; the full run is
   check_commit.py --full)`. The skipped count is only the `@slow` tests, never a real skip such as a missing tool. The
   seconds are the tests alone; the board check (about 18 s) and the size line come on top, and the gate prints its
-  whole time. No budget fails the push: the time is a number said at every push, and the retro decides any cap
-  (W15b);
+  whole time. No budget fails the push: the time is printed and not capped, as the size line is
+  ([W15b](../../scrum/WORKING_AGREEMENTS.md#w15b--the-size-is-said-at-every-push-with-its-reason-refactor-before-growing)),
+  and the retro decides any cap. The whole push takes the tests' seconds plus about 18 s;
 - what the suite left behind ([P172](https://github.com/xmejkal/spark/issues/112)): the suite runs with an empty temp
   folder of the gate's own, and anything left in it fails the push with one line,
   `temp: the suite left N entries behind (…) — P172`. A folder the gate cannot list is could-not-run, which exits 2
