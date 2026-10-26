@@ -136,23 +136,25 @@ class PassedRunEvidenceTest(unittest.TestCase):
                     "the passed run's scenario has no set-control step (the step that presses a button or sets a "
                     "sensor) and no expect-pin step (the step that reads a pin)"])
 
-    def test_a_log_that_does_not_count_its_steps_is_said_to_be_unread_and_never_to_lack_a_step(self):
-        for line in (None, "step counts: not read", "step counts: nonsense"):
+    def test_a_log_that_does_not_count_its_steps_is_not_checked_with_its_reason_and_never_lacks_a_step(self):
+        for line, why in ((None, "the passed run's log does not count its steps"),
+                          ("step counts: not read", "the log says its steps were not counted"),
+                          ("step counts: nonsense", "the log's step counts line is malformed")):
             self.counted(line)
             with self.subTest(line=line):
                 self.assertEqual(PassedRunEvidence().caveats(self.image), [
-                    "the passed run's log does not count its steps: "
-                    "run its scenario again to count them"])
+                    "not checked: %s: run its scenario again to count them" % why])
 
     def test_only_the_log_that_passed_on_this_image_is_counted(self):
         write_log(self.project, "a.log", "passed", "0")  # another image: not this run
         self.counted("step counts: expect-pin 1, set-control 1, wait-serial 1", "b.log")
         self.assertEqual(PassedRunEvidence(ignore_older_runs=True).caveats(self.image), [])
 
-    def test_a_log_that_cannot_be_read_counts_as_unread(self):
+    def test_a_log_that_cannot_be_read_is_not_checked_with_its_reason(self):
         self.counted("step counts: expect-pin 1, set-control 1, wait-serial 1")
         with mock.patch.object(ProjectImage, "find_passed_log", return_value=self.project / "gone.log"):
-            self.assertEqual(len(PassedRunEvidence().caveats(self.image)), 1)
+            self.assertEqual(PassedRunEvidence().caveats(self.image), [
+                "not checked: the log cannot be read: run its scenario again to count them"])
 
     def test_no_passed_run_gives_no_caveat(self):
         self.assertEqual(PassedRunEvidence().caveats(self.image), [])

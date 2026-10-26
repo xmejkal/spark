@@ -11,6 +11,7 @@ from pathlib import Path
 
 import board_grant
 import flash_image
+import outcomes
 import tools
 from run_scenario import EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, ScenarioSteps, file_hashes
 
@@ -20,8 +21,9 @@ SIMULATION_PASSED, SIMULATION_NONE = "passed", "none"
 NO_SIMULATION_CAVEAT = "no simulation tested this image"
 # --- MVP ---
 #: What the person reads when a passed run's log cannot say what its scenario did, or its scenario did less than a person expects.
-UNREAD_STEPS_CAVEAT = ("the passed run's log does not count its steps: "
-                       "run its scenario again to count them")
+#: Its words are the reason (the log has no counts line, or ScenarioSteps.why), then the advice.
+NO_COUNTS_WHY = "the passed run's log does not count its steps"
+UNCOUNTED_ADVICE = "run its scenario again to count them"
 NO_CONTROL_CAVEAT = "the passed run's scenario has no set-control step (the step that presses a button or sets a sensor)"
 NO_CONTROL_NO_PIN_CAVEAT = ("the passed run's scenario has no set-control step (the step that presses a button or sets a "
                             "sensor) and no expect-pin step (the step that reads a pin)")
@@ -92,8 +94,8 @@ class PassedRunEvidence(ImageEvidence):
         if passed is None:
             return []
         steps = ScenarioSteps.from_log(passed)
-        if steps.unread:
-            return [UNREAD_STEPS_CAVEAT]
+        if steps.state != outcomes.RECORDED:
+            return ["%s: %s" % (outcomes.NOT_CHECKED_MESSAGE % (steps.why or NO_COUNTS_WHY), UNCOUNTED_ADVICE)]
         if steps.count(SET_CONTROL):
             return []
         return [NO_CONTROL_CAVEAT if steps.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT]

@@ -78,12 +78,12 @@ class TheStepCountsTest(unittest.TestCase):
                              '- wait-serial: "on"', "- expect-pin: { part-id: led, pin: A, value: 1 }",
                              "- set-control: { part-id: b, name: pressed, value: 0 }")
         self.assertEqual(steps.counts, {"wait-serial": 2, "set-control": 2, "expect-pin": 1})
-        self.assertFalse(steps.unread)
+        self.assertEqual((steps.state, steps.why), ("recorded", None))
         self.assertEqual(steps.line(), "step counts: expect-pin 1, set-control 2, wait-serial 2")
 
-    def test_a_kind_this_does_not_name_is_counted_and_a_log_with_only_a_delay_is_not_unread(self):
+    def test_a_kind_this_does_not_name_is_counted_and_a_log_with_only_a_delay_is_recorded(self):
         steps = self.counted("- delay: 500ms", '- wait-serial: "ready"')
-        self.assertEqual((steps.count("delay"), steps.unread), (1, False))
+        self.assertEqual((steps.count("delay"), steps.state), (1, "recorded"))
         self.assertEqual(steps.line(), "step counts: delay 1, expect-pin 0, set-control 0, wait-serial 1")
 
     def test_the_flow_form_and_a_quoted_key_are_counted(self):
@@ -101,7 +101,7 @@ class TheStepCountsTest(unittest.TestCase):
     def test_a_nested_list_item_is_no_step(self):
         scenario = self.steps("- set-control:", "    part-id: b", "    values:", "      - 1", "      - 2", "- wait-serial: x")
         steps = run_scenario.ScenarioSteps.from_text(scenario)
-        self.assertEqual((steps.counts, steps.unread), ({"set-control": 1, "wait-serial": 1}, False))
+        self.assertEqual((steps.counts, steps.state), ({"set-control": 1, "wait-serial": 1}, "recorded"))
 
     def test_a_step_name_is_its_label_and_the_next_key_is_its_kind(self):
         # wokwi-cli lets a step carry `name:`, which it prints (TestScenario.ts, validStepKeys = ['name']).
@@ -110,50 +110,67 @@ class TheStepCountsTest(unittest.TestCase):
         for item in ("- { name: press, set-control: { part-id: b } }", "- {name: press, expect-pin: {part-id: led}}"):
             with self.subTest(item=item):
                 self.assertEqual(self.counted(item).count("name"), 0)
-                self.assertFalse(self.counted(item).unread)
+                self.assertEqual(self.counted(item).state, "recorded")
 
-    def test_a_step_with_only_a_name_is_unread(self):
-        self.assertTrue(self.counted("- name: nothing else").unread)
+    def test_a_step_with_only_a_name_is_not_checked(self):
+        steps = self.counted("- name: nothing else")
+        self.assertEqual((steps.state, steps.why), ("not-checked", "a step of the scenario has no kind"))
 
     def test_the_steps_end_at_a_key_of_the_scenario_at_their_own_indent(self):
         scenario = "name: x\nsteps:\n  - wait-serial: a\n  - set-control: {part-id: b}\nafter: 1\n  - expect-pin: c\n"
         self.assertEqual(run_scenario.ScenarioSteps.from_text(scenario).counts, {"wait-serial": 1, "set-control": 1})
 
-    def test_an_item_with_no_key_makes_the_counts_unread(self):
+    def test_an_item_with_no_key_makes_the_counts_not_checked(self):
         for item in ("- just-a-word", "- [a, b]", '- "two words": x', "- : x", "-"):
             with self.subTest(item=item):
                 steps = self.counted('- wait-serial: "ready"', item)
-                self.assertTrue(steps.unread)
+                self.assertEqual((steps.state, steps.why, steps.counts), ("not-checked", "a step of the scenario has no kind", {}))
                 self.assertEqual(steps.line(), "step counts: not read")
 
-    def test_a_text_with_no_steps_is_unread(self):
+    def test_a_text_with_no_steps_is_none_recorded(self):
         for text in ("", "name: x\n", "steps:\n"):
             with self.subTest(text=text):
-                self.assertTrue(run_scenario.ScenarioSteps.from_text(text).unread)
+                steps = run_scenario.ScenarioSteps.from_text(text)
+                self.assertEqual((steps.state, steps.why, steps.line()), ("none-recorded", None, "step counts: not read"))
 
     def test_the_line_round_trips_through_a_log_header(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
-        for steps in (self.counted("- delay: 1s", '- wait-serial: "ready"'), self.counted("- just-a-word")):
+        for steps, state in ((self.counted("- delay: 1s", '- wait-serial: "ready"'), "recorded"),
+                             (self.counted("- just-a-word"), "not-checked"), (self.counted(""), "not-checked")):
             log.write_text("# a, run 2026-10-24T10:00:00+02:00, timeout 1 ms\nverdict: passed\n%s\n\nbody\n" % steps.line())
-            with self.subTest(line=steps.line()):
+            with self.subTest(line=steps.line(), written=steps.state):
                 read = run_scenario.ScenarioSteps.from_log(log)
-                self.assertEqual((read.line(), read.unread), (steps.line(), steps.unread))
+                self.assertEqual((read.line(), read.state), (steps.line(), state))  # the log keeps no difference between the two non-recorded states
 
-    def test_a_log_with_no_counts_line_a_malformed_one_or_no_file_is_unread(self):
+    def test_a_log_with_no_counts_line_is_none_recorded(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\nbody\n")
+        steps = run_scenario.ScenarioSteps.from_log(log)
+        self.assertEqual((steps.state, steps.why, steps.counts), ("none-recorded", None, {}))
+
+    def test_a_log_that_says_not_read_is_not_checked_with_its_reason(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\nstep counts: not read\n\nbody\n")
+        steps = run_scenario.ScenarioSteps.from_log(log)
+        self.assertEqual((steps.state, steps.why), ("not-checked", "the log says its steps were not counted"))
+
+    def test_a_malformed_counts_line_or_no_file_is_not_checked_with_its_reason(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         header = "# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n"
-        for text in (header + "\nbody\n", header + "step counts: \n\n", header + "step counts: wait-serial\n\n",
+        for text in (header + "step counts: \n\n", header + "step counts: wait-serial\n\n",
                      header + "step counts: wait-serial x\n\n", header + "step counts: wait-serial 1; delay 2\n\n",
                      header + "step counts: set-control 1, set-control 2\n\n"):
             log.write_text(text)
             with self.subTest(text=text):
-                self.assertTrue(run_scenario.ScenarioSteps.from_log(log).unread)
-        self.assertTrue(run_scenario.ScenarioSteps.from_log(log.with_name("none.log")).unread)
+                steps = run_scenario.ScenarioSteps.from_log(log)
+                self.assertEqual((steps.state, steps.why), ("not-checked", "the log's step counts line is malformed"))
+        steps = run_scenario.ScenarioSteps.from_log(log.with_name("none.log"))
+        self.assertEqual((steps.state, steps.why), ("not-checked", "the log cannot be read"))
 
     def test_a_counts_line_after_the_header_is_not_read(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\nstep counts: set-control 3\n")
-        self.assertTrue(run_scenario.ScenarioSteps.from_log(log).unread)
+        self.assertEqual(run_scenario.ScenarioSteps.from_log(log).state, "none-recorded")
 
 
 class TheVerdictTest(unittest.TestCase):
@@ -369,7 +386,7 @@ class TheLogCountsTheStepsTest(ProjectCase):
     def test_the_log_reads_back_as_the_counts_it_wrote(self):
         _, _, log = self.run_with("ready\n")
         steps = run_scenario.ScenarioSteps.from_log(log)
-        self.assertEqual((steps.counts, steps.unread), ({"expect-pin": 0, "set-control": 1, "wait-serial": 2}, False))
+        self.assertEqual((steps.counts, steps.state), ({"expect-pin": 0, "set-control": 1, "wait-serial": 2}, "recorded"))
 
     def test_a_limits_note_that_cannot_be_read_leaves_the_verdict_written(self):
         note = self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md"
