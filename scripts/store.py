@@ -242,29 +242,40 @@ def projects():
     return {name: Path(folder) for name, folder in listed.items()}
 
 
-def project_name(folder):
-    """The name a project's folder has on the person's list (§5.5), or None when it is not on it."""
+# --- MVP --- P431 (OC6): a project's name is two things, the one on the list and the one it will have
+def find_listed_name(folder):
+    """The name a project's folder has on the person's list (§5.5), or None when it is not on it. It reads the list only."""
     folder = Path(folder).resolve()
     return next((name for name, where in projects().items() if where.resolve() == folder), None)
 
 
-def add_project(folder, dry_run=False):
+def plan_listed_name(folder):
     """
-    Put a project on the list under its folder's name — `name-2` when another folder that still exists has it. A folder
-    already on the list keeps its name, however its path is spelled. Returns the name; a dry run only says it.
+    The name the project's folder holds on the list, or will hold once `add_project` lists it — `name-2` when another
+    folder that still exists has the folder's name. A folder already on the list keeps its name, however its path is
+    spelled. It says the name and writes nothing, as `plan_set` and `plan_pick` say what they would write.
     """
     folder = Path(folder).resolve()
-    named = project_name(folder)
+    named = find_listed_name(folder)
     if named:
         return named
     listed = {name: str(where) for name, where in projects().items()}
     name, number = folder.name, 2
     while name in listed and Path(listed[name]).is_dir():
         name, number = "%s-%d" % (folder.name, number), number + 1
-    listed[name] = str(folder)
-    if not dry_run:
+    return name
+
+
+def add_project(folder):
+    """Put a project on the list under the name `plan_listed_name` gives, and return that name. A folder already on it is not written again."""
+    folder = Path(folder).resolve()
+    name = plan_listed_name(folder)
+    listed = {listed_name: str(where) for listed_name, where in projects().items()}
+    if name not in listed or Path(listed[name]).resolve() != folder:
+        listed[name] = str(folder)
         write_json("projects", None, listed)
     return name
+# --- end MVP ---
 
 
 #: What makes two history lines one event (§5.7): a line whose key fields equal an earlier one's is not written again.

@@ -730,13 +730,38 @@ class TheProjectsListTest(unittest.TestCase):
         self.assertEqual(store.add_project(folder), "plant-alarm")
         self.assertEqual(json.loads((self.home / "projects.json").read_text()), {"plant-alarm": str(link)})
 
-    def test_a_dry_run_says_the_name_and_lists_nothing(self):
+    def test_plan_listed_name_says_the_name_and_lists_nothing(self):
         first, second = (Path(tempfile.mkdtemp()) / "bin" for _ in range(2))
         first.mkdir()
         second.mkdir()
         store.add_project(first)
-        self.assertEqual(store.add_project(second, dry_run=True), "bin-2")
+        self.assertEqual(store.plan_listed_name(second), "bin-2")
         self.assertEqual(store.projects(), {"bin": first.resolve()})
+
+    def test_find_listed_name_is_none_off_the_list(self):
+        folder = Path(tempfile.mkdtemp()) / "plant-alarm"
+        folder.mkdir()
+        self.assertIsNone(store.find_listed_name(folder))
+        self.assertEqual(store.projects(), {})
+        store.add_project(folder)
+        self.assertEqual(store.find_listed_name(folder), "plant-alarm")
+
+    def test_plan_listed_name_is_what_add_project_then_writes(self):
+        first, second, third = (Path(tempfile.mkdtemp()) / "bin" for _ in range(3))
+        for folder in (first, second, third):
+            folder.mkdir()
+        for folder in (first, second, third, second):
+            planned = store.plan_listed_name(folder)
+            self.assertEqual(store.add_project(folder), planned)
+            self.assertEqual(store.find_listed_name(folder), planned)
+        self.assertEqual(store.projects(), {"bin": first.resolve(), "bin-2": second.resolve(), "bin-3": third.resolve()})
+
+    def test_a_listed_folder_whose_old_path_is_gone_is_listed_again_under_its_name(self):
+        gone, folder = (Path(tempfile.mkdtemp()) / "bin" for _ in range(2))
+        folder.mkdir()
+        (self.home / "projects.json").write_text(json.dumps({"bin": str(gone)}))
+        self.assertEqual(store.add_project(folder), "bin")
+        self.assertEqual(store.projects(), {"bin": folder.resolve()})
 
     def test_a_list_that_is_not_json_is_named(self):
         (self.home / "projects.json").write_text("{")

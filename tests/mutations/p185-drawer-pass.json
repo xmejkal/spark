@@ -32,7 +32,7 @@
  {
   "file": "scripts/drawer.py",
   "name": "the shelf copy names the layer 'project' instead of the project's name on the list (review P1)",
-  "find": "named, seen = store.project_name(project) or \"\"",
+  "find": "named, seen = store.find_listed_name(project) or \"\"",
   "replace": "named, seen = \"project\""
  },
  {

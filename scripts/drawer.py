@@ -264,7 +264,7 @@ def plan_set(items, project=None):
     # person's list names it, or not at all ("") when the folder is on no list (P185 review, P1).
     known = linkable()
     if project:
-        named, seen = store.project_name(project) or "", {row[:2] for row in known}
+        named, seen = store.find_listed_name(project) or "", {row[:2] for row in known}
         known = [row[:2] + (named,) + row[3:] for row in linkable(project)
                  if row[2] == "project" and row[:2] not in seen] + known
     current, changes, questions, problems = entries(), [], [], []

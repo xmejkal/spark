@@ -443,7 +443,7 @@ class TheMatcherTest(unittest.TestCase):
     def test_an_unlisted_project_is_not_named_as_holding_its_own_board(self):
         # a moved or renamed folder leaves projects.json without it, and --pick still holds under the folder's name
         (self.home / "projects.json").write_text("{}")
-        own = store.add_project(self.project, dry_run=True)
+        own = store.plan_listed_name(self.project)
         (self.home / "drawer" / "xiao.json").write_text(json.dumps({
             "schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}, "used_in": {own: 1}}))
         self.assertEqual(self.xiao()["held_by"], [])
