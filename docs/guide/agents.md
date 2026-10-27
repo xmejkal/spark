@@ -535,7 +535,9 @@ For firmware that no simulation can test (P337). Three steps, then the person's 
 
 1. `flash_image.py --project <p> --files firmware -o <image>`, where `<image>` is the file `sim/wokwi.toml` names.
 2. `look.py --project <p> --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file
-   under `firmware/` compiles, no run in `sim/runs/` failed on the image, and the image holds `firmware/` as it is now.
+   under `firmware/` compiles, no run in `sim/runs/` failed on the image, and the image holds `firmware/` as it is now. The compile runs in one child process for all the files. A source that
+   kills the compiler, or one that takes longer than 30 s, is a refusal that names the last file the child began, for example
+   "firmware/main.py could not be compiled: the compiler stopped (signal 11)" or "firmware/main.py did not compile in 30 s".
 3. `deploy.py --project <p> --no-simulation --token <token>`. The question starts with "no simulation tested this image".
 
 The person types the yes in their own terminal. A deploy grant never answers it, and the `next` step's `why` omits the
