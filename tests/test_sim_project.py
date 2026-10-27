@@ -20,11 +20,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import boards  # noqa: E402
 import sim_project  # noqa: E402
-from test_boards import DEFINITION, kept_definition_board  # noqa: E402
+from test_boards import kept_definition_board  # noqa: E402
 
-DEFINITION_CHANGED = DEFINITION + "\n"
 
 FakeDesign = namedtuple("FakeDesign", "parts project board", defaults=(None,))
 
@@ -268,106 +266,13 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
 
     BUTTON = ("ONBOARD_BUTTON (GPIO9)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9, so spark knows no "
                                         "way for a scenario to press it. Test it on the board.")
-
-    def test_the_button_with_no_pin_is_a_limit_and_the_led_with_one_is_not(self):
-        self.assertEqual(sim_project.onboard_limits(kept_definition_board()), [self.BUTTON])
-
-    def test_an_led_with_no_pin_is_one_no_scenario_can_read(self):
-        board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_LED]["gpio"] = [3]
-        self.assertIn(("ONBOARD_LED (GPIO3)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark "
-                                              "knows no way for a scenario to read it. Test it on the board."),
-                      sim_project.onboard_limits(board))
-
-    def test_a_record_that_names_no_definition_says_not_checked(self):
-        board = kept_definition_board()
-        del board["documents"][boards.WOKWI_DEFINITION]
-        self.assertEqual(sim_project.onboard_limits(board),
-                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
-
-    def test_a_definition_the_store_lacks_says_not_checked(self):
-        board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
-        self.assertEqual(sim_project.onboard_limits(board),
-                         [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
-                                            "record names, its sha256 differs, or it does not parse")])
-
-    def test_a_definition_whose_bytes_changed_says_not_checked(self):
-        from test_boards import kept_path
-        board = kept_definition_board(DEFINITION_CHANGED)
-        kept_path(board).write_text(DEFINITION_CHANGED + " ")
-        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)], ["onboard GPIOs"])
-
-    def test_each_gpio_of_a_role_with_no_pin_is_its_own_limit(self):
-        board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = [9, 3]
-        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)],
-                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_BUTTON (GPIO3)"])
-
-    def test_a_gpio_that_is_not_a_number_is_skipped_never_raised(self):
-        board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = ["9", None, True]
-        self.assertEqual(sim_project.onboard_limits(board), [])
-
-    def test_a_board_with_no_onboard_role_says_nothing(self):
-        board = kept_definition_board()
-        for role in (boards.ONBOARD_LED, boards.ONBOARD_BUTTON):
-            del board["pin_roles"][role]
-        del board["documents"][boards.WOKWI_DEFINITION]
-        self.assertEqual(sim_project.onboard_limits(board), [])
-
     DISPLAY = ("ONBOARD_DISPLAY", "spark adds no part to the diagram for the board's own display, so a passed run does not "
                                   "test what it shows. Test it on the board.")
-    BATTERY = ("ONBOARD_BATTERY_SENSE", "spark adds no battery to the diagram, so a passed run does not test what the board "
-                                        "reads on this pin. Test it on the board.")
-    TDISPLAY = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
-
-    def test_the_display_is_one_limit_after_the_gpio_lines_whatever_its_gpios_are(self):
-        for gpio in ([3], [15], [], "x"):
-            with self.subTest(gpio=gpio):
-                board = kept_definition_board()
-                board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": gpio, "note": "the screen"}
-                self.assertEqual(sim_project.onboard_limits(board), [self.BUTTON, self.DISPLAY])
-
-    def test_the_t_displays_record_names_no_definition_a_screen_and_a_battery_pin(self):
-        self.assertEqual(sim_project.onboard_limits(json.loads(self.TDISPLAY.read_text())),
-                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition"), self.DISPLAY, self.BATTERY])
-
-    def test_the_battery_level_pin_is_one_limit_after_the_gpio_lines_whatever_its_gpio_is(self):
-        for gpio in ([34], [], "x"):
-            with self.subTest(gpio=gpio):
-                board = kept_definition_board()
-                board["pin_roles"][boards.ONBOARD_BATTERY_SENSE] = {"gpio": gpio, "note": "the divider"}
-                self.assertEqual(sim_project.onboard_limits(board), [self.BUTTON, self.BATTERY])
-
-    def test_a_board_with_only_a_display_gets_that_line_and_no_not_checked_line(self):
-        board = json.loads(self.TDISPLAY.read_text())
-        del board["pin_roles"][boards.ONBOARD_BUTTON]
-        del board["pin_roles"][boards.ONBOARD_BATTERY_SENSE]
-        self.assertEqual(sim_project.onboard_limits(board), [self.DISPLAY])
-
-    def test_a_definition_the_store_lacks_still_leaves_the_display_line_after_the_not_checked_one(self):
-        board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
-        board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": [3], "note": "the screen"}
-        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)], ["onboard GPIOs", "ONBOARD_DISPLAY"])
-
-    def test_a_board_that_names_every_onboard_part_has_a_sentence_for_each_part_no_scenario_reaches(self):
-        board = kept_definition_board()
-        for role in boards.ONBOARD_ROLES:
-            board["pin_roles"].setdefault(role, {"gpio": [3], "note": "x"})
-        self.assertEqual([component for component, _ in sim_project.onboard_limits(board)],
-                         ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_DISPLAY", "ONBOARD_BATTERY_SENSE"])
 
     def test_the_note_says_that_it_also_holds_what_spark_leaves_out(self):
         note = sim_project.limits_note([self.DISPLAY])
         self.assertIn("The rest say what spark did not check or leaves out of the diagram.", note)
         self.assertIn("- **ONBOARD_DISPLAY** — spark adds no part to the diagram", note)
-
-    def test_a_role_with_no_gpio_list_says_nothing(self):
-        board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_BUTTON] = {"note": "somewhere"}
-        self.assertEqual(sim_project.onboard_limits(board), [])
 
     def test_the_note_holds_the_records_lines_and_the_boards(self):
         work = Path(tempfile.mkdtemp())
@@ -383,12 +288,6 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         # No test reaches the full build's simulation stage, so a call that drops the board must fail at once (P396).
         with self.assertRaises(TypeError):
             sim_project.write_limits(Path(tempfile.mkdtemp()), None)
-
-    def test_documents_that_are_not_a_table_name_no_definition(self):
-        board = kept_definition_board()
-        board["documents"] = ["wokwi-board"]
-        self.assertEqual(sim_project.onboard_limits(board),
-                         [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
 
     def test_with_no_design_the_note_holds_the_boards_lines(self):
         work = Path(tempfile.mkdtemp())

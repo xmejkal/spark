@@ -32,7 +32,7 @@ areas' `OPERATIONS`, as `parts.py` does.
 | `records/record_folders.py` | `RecordFolders`: the library, store and project folders, built once |
 | `records/record_finder.py` | `RecordFinder`: one record kind read across the three folders, the nearest wins |
 | `records/record_kind.py` | `RecordKind`: a record kind's `version`, `required` keys and rules, `validate`, `stops_at`, `shelf_copy`, `digest` |
-| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION` and the readers of the role table, moved from `boards.py` |
+| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION`, `onboard_limits`, `gpio_limits` and the readers of the role table, moved from `boards.py` |
 | `records/brief.py` | `Brief`: the project's `prefer` and `sellers`, from `.spark/project.json` |
 | `records/deployed_store.py` | `DeployedStore` and `LastDeploy`: what the store says of the board on USB |
 | `records/provenance.py` | the leaf `provenance`: what a fact must carry |

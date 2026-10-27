@@ -43,8 +43,10 @@ class TheOfferTest(unittest.TestCase):
         record = {"name": "XIAO", "pin_roles": {"onboard_led": {"gpio": [15], "note": "x"}, "onboard_button": {"gpio": [9], "note": "x"}}}
         offer = matching.Offer.from_record("xiao", "board", record)
         self.assertEqual(offer.functions, [{"does": "compute", "what": "microcontroller"},
-                                           {"does": "indicate", "what": "onboard LED light"},
-                                           {"does": "input", "what": "onboard button"}])
+                                           {"does": "indicate", "what": "onboard LED light", "role": "onboard_led"},
+                                           {"does": "input", "what": "onboard button", "role": "onboard_button"}])
+        self.assertNotIn("role", json.dumps(offer.as_dict()), "the role is for the pick (P397), never for a chooser or a JSON")
+        self.assertNotIn("role", offer.describe())
         for what in ("light", "led", "onboard LED light"):
             with self.subTest(what=what):
                 self.assertTrue(matching.same_words({"does": "indicate", "what": what}, offer))

@@ -15,7 +15,6 @@ from pathlib import Path
 
 import boards
 import emit_board
-import outcomes
 import parts as parts_library
 import tools
 
@@ -119,61 +118,13 @@ def limits_note(limits):
     return "\n".join(lines) + "\n"
 
 
-# --- MVP ---
-#: The component of a limit about the board's own GPIOs as a whole, and the two reasons they were not compared.
-ONBOARD_GPIOS = "onboard GPIOs"
-NO_DEFINITION_NAMED = outcomes.NOT_CHECKED_MESSAGE % "the board record names no Wokwi definition"
-DEFINITION_NOT_KEPT = outcomes.NOT_CHECKED_MESSAGE % ("spark's store lacks the Wokwi definition that the board record "
-                                                      "names, its sha256 differs, or it does not parse")
-
-
-def gpio_limits(board, checked):
-    """
-    The GPIOs of the `checked` entries, (OnboardRole, entry) pairs, that the board's Wokwi definition gives no pin, as
-    (component, sentence) limits. No pair gives []. A record that cannot be compared gives its one "not checked" line.
-    """
-    if not checked:
-        return []
-    documents = board.get("documents") if isinstance(board.get("documents"), dict) else {}
-    if boards.WOKWI_DEFINITION not in documents:
-        return [(ONBOARD_GPIOS, NO_DEFINITION_NAMED)]
-    part = boards.read_simulated_part(board)
-    if part is None:
-        return [(ONBOARD_GPIOS, DEFINITION_NOT_KEPT)]
-    said = []
-    for spec, entry in checked:
-        gpios = entry.get("gpio") if isinstance(entry.get("gpio"), list) else []
-        for gpio in (gpio for gpio in gpios if isinstance(gpio, int) and not isinstance(gpio, bool)):
-            why = part.why_not_simulated(gpio)
-            if why:
-                said.append(("%s (GPIO%d)" % (spec.constant, gpio),
-                             "%s, so spark knows no way for a scenario to %s it. Test it on the board."
-                             % (why, spec.scenario_verb)))
-    return said
-
-
-def onboard_limits(board):
-    """
-    What a passed run does not test of the board's own parts, as (component, sentence) limits (P396, P389). An LED or
-    button that its Wokwi definition gives no pin: spark knows no way for a scenario to reach it. A record that cannot be
-    compared says "not checked", in the list and never as a failure: it is what the build did not look at, as a
-    stand-in's sentence is what the simulation cannot show (P37). A part no scenario reaches (the display, the
-    battery-level pin) gives its `not_in_diagram` sentence whatever the definition holds, after the GPIO lines. A board with
-    no such part gives [].
-    """
-    entries = boards.onboard_entries(board)
-    said = gpio_limits(board, [(spec, entry) for _, spec, entry in entries if spec.scenario_verb])
-    return said + [(spec.constant, spec.not_in_diagram) for _, spec, _ in entries if spec.not_in_diagram]
-# --- end MVP ---
-
-
 def write_limits(sim_dir, design, board):
     """
     Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
     board's own GPIOs both count (P396), and a board-only build passes no design. `board` has no default: no test reaches
     the full build's simulation stage (`check_spine.simulation_detail`), so a call that drops it fails at once.
     """
-    limits = (limits_of(design) if design is not None else []) + onboard_limits(board)
+    limits = (limits_of(design) if design is not None else []) + boards.onboard_limits(board)
     if limits:
         (Path(sim_dir) / "WHAT-THIS-CANNOT-SHOW.md").write_text(limits_note(limits))
     return limits

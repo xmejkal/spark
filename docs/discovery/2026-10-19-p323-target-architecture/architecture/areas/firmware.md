@@ -29,7 +29,7 @@ The build calls the simulation project step (`sim_project.py`) as one of its sta
 | `firmware/image_builder.py` | the image of MicroPython plus the project's files, moved from `flash_image.py` |
 | `firmware/import_probe.py` | imports each firmware module on the computer without `main.py`, moved from `import_firmware.py` |
 | `firmware/project_image.py` | `ProjectImage` and the run logs that tested it, moved as is |
-| `firmware/sim_project.py` | the Wokwi project a design implies: the part mapping, the limits (`onboard_limits`, `write_limits`), the chips, `wokwi.toml` |
+| `firmware/sim_project.py` | the Wokwi project a design implies: the part mapping, the limits note (`write_limits`), the chips, `wokwi.toml` |
 | `firmware/scenario_run.py` | `ScenarioRun` and `RunLog`, moved from `run_scenario.py` |
 | `firmware/scenario_steps.py` | `ScenarioSteps`, the step constants, and `component_ids` after P399, moved from `run_scenario.py` |
 | `firmware/simulation_engine.py` | `SimulationEngine`, `WokwiCliEngine`, `ENGINES` |

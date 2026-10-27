@@ -128,6 +128,7 @@ ONBOARD_BATTERY_SENSE = "onboard_battery_sense"
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
 GPIO_MIN, GPIO_MAX = 0, 63
 
+import outcomes  # noqa: E402
 from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
 
 
@@ -408,8 +409,12 @@ def _power_functions(board):
 
 
 def onboard_functions(board):
-    """What the board offers a need through its own parts: one {"does", "what"} per entry of `onboard_entries` that names its pins, then one per power fact."""
-    return [{"does": spec.does, "what": spec.what} for _, spec, entry in onboard_entries(board) if names_pins(entry)] + _power_functions(board)
+    """
+    What the board offers a need through its own parts: one {"does", "what", "role"} per entry of `onboard_entries` that
+    names its pins (`role` is its key in PIN_ROLES, P397), then one {"does", "what"} per power fact, which has no role.
+    """
+    return ([{"does": spec.does, "what": spec.what, "role": role} for role, spec, entry in onboard_entries(board) if names_pins(entry)]
+            + _power_functions(board))
 
 
 #: The `documents` entry of a board record that holds its Wokwi definition: the JSON of the Wokwi part type.
@@ -417,52 +422,133 @@ WOKWI_DEFINITION = "wokwi-board"
 
 _COMMENT = re.compile(r"/\*.*?\*/", re.S)
 _GPIO = re.compile(r"GPIO([0-9]+)")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+#: The component of a limit about the board's own GPIOs as a whole, and the two sentences for a definition spark could
+#: not compare: the record names none, or the store does not hold it (one sentence for three causes, P397 row).
+ONBOARD_GPIOS = "onboard GPIOs"
+NO_DEFINITION_NAMED = outcomes.NOT_CHECKED_MESSAGE % "the board record names no Wokwi definition"
+WHY_NOT_KEPT = ("spark's store lacks the Wokwi definition that the board record names, its sha256 differs, or it does "
+                "not parse")
 
 
 @dataclass(frozen=True)
 class SimulatedPart:
-    """Value: what a simulator models of one part type, a board included: the GPIOs that its pins target (P396)."""
+    """
+    Value: what a simulator models of one part type, a board included: the GPIOs that its pins target (P396). `state` is
+    one of the three words of `outcomes` (the reader rule, OC4): `gpios` holds the pins only when it is RECORDED, and
+    `why` says what stopped the reader only when it is NOT_CHECKED.
+    """
 
+    state: str
     board_id: str
-    gpios: frozenset
+    gpios: frozenset = frozenset()
+    why: Optional[str] = None
+
+    def why_not_read(self):
+        """The sentence for a definition spark could not compare with the GPIOs, or None when it was read (RECORDED)."""
+        if self.state == outcomes.NOT_CHECKED:
+            return outcomes.NOT_CHECKED_MESSAGE % self.why
+        if self.state == outcomes.NONE_RECORDED:
+            return NO_DEFINITION_NAMED
+        return None
 
     def why_not_simulated(self, gpio):
-        """Why a scenario cannot reach this GPIO, or None when a pin of the definition targets it."""
-        if gpio in self.gpios:
-            return None
-        return "the Wokwi definition of %s has no pin on GPIO%d" % (self.board_id, gpio)
+        """
+        Why a scenario cannot reach this GPIO, or None when a pin of the definition targets it. When spark could not
+        look, that is the answer, never a claim that the definition has no pin.
+        """
+        return self.why_not_read() or (None if gpio in self.gpios else
+                                           "the Wokwi definition of %s has no pin on GPIO%d" % (self.board_id, gpio))
+
+
+def _names_a_kept_file(entry):
+    """
+    True when a `documents` entry is a table whose `sha256` is 64 lowercase hex characters and whose `file` is a plain
+    name (`store.file_name_problem`, and no backslash and no `..`): the only entries that name a place under the store's
+    `sources`. Any other would be joined into a path that leaves it (an absolute `sha256`) or opens something else.
+    """
+    if not isinstance(entry, dict) or not isinstance(entry.get("sha256"), str) or not isinstance(entry.get("file"), str):
+        return False
+    name = entry["file"]
+    return bool(_SHA256.fullmatch(entry["sha256"])) and not store.file_name_problem(name) and "\\" not in name and ".." not in name
 
 
 def read_simulated_part(board):
     """
-    The board's Wokwi definition, kept in the store under the sha256 its record names, as a SimulatedPart. None when the
-    file is missing, its bytes changed, or it does not parse as a definition with `pins`: never a guess that it has no
-    pin. The caller asks first whether the record names one.
+    The board's Wokwi definition, kept in the store under the sha256 its record names, as a SimulatedPart. Never None,
+    never raises (the reader rule in outcomes.py). A record that is no table, no `documents` table, or no entry for the
+    definition: NONE_RECORDED. An entry the store cannot back (the entry names no 64-hex `sha256` and plain `file`, the
+    file is missing, its bytes changed, it does not parse as a definition with `pins`): NOT_CHECKED with WHY_NOT_KEPT,
+    never a guess that it has no pin.
     Wokwi's own files hold `/* */` comments, so they are cut only when strict JSON fails: a string may hold a `/*`.
     """
+    if not isinstance(board, dict):
+        return SimulatedPart(outcomes.NONE_RECORDED, "")
+    board_id = board.get("id") or ""
     documents = board.get("documents")
-    entry = documents.get(WOKWI_DEFINITION) if isinstance(documents, dict) else None
+    if not isinstance(documents, dict) or WOKWI_DEFINITION not in documents:
+        return SimulatedPart(outcomes.NONE_RECORDED, board_id)
+    not_kept = SimulatedPart(outcomes.NOT_CHECKED, board_id, why=WHY_NOT_KEPT)
+    entry = documents[WOKWI_DEFINITION]
+    if not _names_a_kept_file(entry):
+        return not_kept
     try:
         payload = (store.place("sources") / entry["sha256"] / entry["file"]).read_bytes()
-    except (KeyError, TypeError, OSError):  # no entry, a field missing or of the wrong type, no file
-        return None
-    if hashlib.sha256(payload).hexdigest() != entry["sha256"]:
-        return None
-    text = payload.decode("utf-8", "replace")
-    try:
-        definition = json.loads(text)
-    except (ValueError, RecursionError):
+        if hashlib.sha256(payload).hexdigest() != entry["sha256"]:
+            return not_kept
+        text = payload.decode("utf-8", "replace")
         try:
-            definition = json.loads(_COMMENT.sub("", text))
+            definition = json.loads(text)
         except (ValueError, RecursionError):
-            return None
-    pins = definition.get("pins") if isinstance(definition, dict) else None
-    if not isinstance(pins, dict):
-        return None
-    targets = [pin.get("target") for pin in pins.values() if isinstance(pin, dict)]
-    gpios = frozenset(int(match.group(1)) for match in (_GPIO.fullmatch(target) for target in targets
-                                                        if isinstance(target, str)) if match)
-    return SimulatedPart(board.get("id") or "", gpios)
+            definition = json.loads(_COMMENT.sub("", text))
+        pins = definition.get("pins") if isinstance(definition, dict) else None
+        if not isinstance(pins, dict):
+            return not_kept
+        targets = [pin.get("target") for pin in pins.values() if isinstance(pin, dict)]
+        gpios = frozenset(int(match.group(1)) for match in (_GPIO.fullmatch(target) for target in targets
+                                                            if isinstance(target, str)) if match)
+    except (KeyError, TypeError, ValueError, RecursionError, OSError):
+        # no file, a digit run too long for int(), what else the JSON or the path holds that raises
+        return not_kept
+    return SimulatedPart(outcomes.RECORDED, board_id, gpios)
+
+
+def gpio_limits(board, checked):
+    """
+    The GPIOs of the `checked` entries, (spec, entry) pairs, that the board's Wokwi definition gives no pin, as
+    (component, sentence) limits. No pair gives []. A record that cannot be compared gives its one "not checked" line.
+    """
+    if not checked:
+        return []
+    part = read_simulated_part(board)
+    if part.state != outcomes.RECORDED:
+        return [(ONBOARD_GPIOS, part.why_not_read())]
+    said = []
+    for spec, entry in checked:
+        gpios = entry.get("gpio") if isinstance(entry.get("gpio"), list) else []
+        for gpio in (gpio for gpio in gpios if isinstance(gpio, int) and not isinstance(gpio, bool)):
+            why = part.why_not_simulated(gpio)
+            if why:
+                said.append(("%s (GPIO%d)" % (spec.constant, gpio),
+                             "%s, so spark knows no way for a scenario to %s it. Test it on the board."
+                             % (why, spec.scenario_verb)))
+    return said
+
+
+def onboard_limits(board):
+    """
+    What a passed run does not test of the board's own parts, as (component, sentence) limits (P396, P389). An LED or
+    button that its Wokwi definition gives no pin: spark knows no way for a scenario to reach it. A record that cannot be
+    compared says "not checked", in the list and never as a failure: it is what the build did not look at, as a
+    stand-in's sentence is what the simulation cannot show (P37). A part no scenario reaches (the display, the
+    battery-level pin) gives its `not_in_diagram` sentence whatever the definition holds, after the GPIO lines. A board with
+    no such part gives [].
+    """
+    entries = onboard_entries(board)
+    said = gpio_limits(board, [(spec, entry) for _, spec, entry in entries if spec.scenario_verb])
+    return said + [(spec.constant, spec.not_in_diagram) for _, spec, _ in entries if spec.not_in_diagram]
 # --- end MVP ---
 
 

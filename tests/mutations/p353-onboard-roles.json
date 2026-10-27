@@ -17,7 +17,7 @@
 {"file":"scripts/boards.py","name":"power-check-not-called","find":"    problems += power_problems(board)\n","replace":""},
 {"file":"scripts/boards.py","name":"power-fact-offered-with-no-value-check","find":"if isinstance(power.get(fact), dict) and is_fact_value(power[fact].get(\"value\"))]","replace":"if isinstance(power.get(fact), dict)]"},
 {"file":"scripts/boards.py","name":"battery-level-words-changed","find":"\"sense\", \"onboard battery level\"","replace":"\"sense\", \"onboard battery power\""},
-{"file":"scripts/sim_project.py","name":"not-in-diagram-sentence-dropped","find":"if spec.not_in_diagram]","replace":"if False]"},
+{"file":"scripts/boards.py","name":"not-in-diagram-sentence-dropped","find":"if spec.not_in_diagram]","replace":"if False]"},
 {"file":"scripts/assign_pins.py","name":"battery-sense-not-priced","find":"    \"onboard_battery_sense\": 20,","replace":"    \"onboard_battery_sense\": 1,"},
 {"file":"scripts/assign_pins.py","name":"battery-sense-not-conflicting","find":"boards.ONBOARD_DISPLAY,\n                     boards.ONBOARD_BATTERY_SENSE)","replace":"boards.ONBOARD_DISPLAY)"},
 {"file":"scripts/boards.py","name":"role-row-check-none-only","find":"        if bool(self.scenario_verb) == bool(self.not_in_diagram):\n","replace":"        if (self.scenario_verb is None) == (self.not_in_diagram is None):\n"},
