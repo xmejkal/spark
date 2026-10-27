@@ -1446,9 +1446,10 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         (self.project / "boards").mkdir(parents=True, exist_ok=True)
         shutil.copy(self.TDISPLAY, self.project / "boards" / "lilygo-t-display.json")
 
-    def own(self, entry, part_id, simulated=True, **fields):
-        """A button part in the project, owned in the drawer under `entry`, with a Wokwi stand-in unless `simulated` is False."""
+    def own(self, entry, part_id, simulated=True, function=None, **fields):
+        """A button part (or the `function` given) in the project, owned in the drawer under `entry`, with a Wokwi stand-in unless `simulated` is False."""
         record = {"schema": 1, "id": part_id, "name": "A button " + part_id, "kind": "button"}
+        record.update({"function": function} if function else {})
         record.update({"simulation": {"wokwi": {"part": "wokwi-pushbutton", "pins": {"A": "1.l", "B": "2.l"}, "stand_in": "x"}}} if simulated else {})
         (self.project / "parts").mkdir(parents=True, exist_ok=True)
         (self.project / "parts" / (part_id + ".json")).write_text(json.dumps(record))
@@ -1539,6 +1540,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
 
     def test_a_display_need_gets_the_display_sentence_alone_and_a_power_need_gets_none(self):
         self.keep_the_t_display()
+        self.own("screens", "x-screen", function=[{"does": "indicate", "what": "display"}])
         self.assertEqual(self.pick("show=lilygo-t-display", "charge=lilygo-t-display"),
                          {"board lilygo-t-display for show": self.DISPLAY})
         self.assertEqual(self.matched("show", "lilygo-t-display")["limits"], [self.DISPLAY])

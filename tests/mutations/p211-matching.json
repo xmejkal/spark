@@ -23,5 +23,5 @@
   {"file": "scripts/needs.py", "name": "candidate: what lists every verb's functions", "find": "what=sorted({f[\"what\"] for f in offer.functions if f.get(\"does\") == need[\"does\"]}),", "replace": "what=sorted({f[\"what\"] for f in offer.functions}),"},
   {"file": "scripts/needs.py", "name": "candidate: what_matches follows the score, not SameWords", "find": "what_matches=fit.exact, score=fit.score", "replace": "what_matches=fit.score > 0, score=fit.score"},
   {"file": "scripts/needs.py", "name": "candidates: the score does not order", "find": "(c[\"owned\"] == 0, -c[\"score\"],", "replace": "(c[\"owned\"] == 0,"},
-  {"file": "scripts/needs.py", "name": "match: the matcher is not passed on", "find": "candidates=candidates(need, known, entries, mine, matcher)))", "replace": "candidates=candidates(need, known, entries, mine)))"}
+  {"file": "scripts/needs.py", "name": "match: the matcher is not passed on", "find": "candidates=candidates(need, known, entries, mine, matcher, definitions)))", "replace": "candidates=candidates(need, known, entries, mine, None, definitions)))"}
 ]
