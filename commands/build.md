@@ -209,6 +209,13 @@ The generator refuses rather than guess, and each refusal says what to record:
 A rail nothing sources (a motor rail with no connector) is not a refusal: the file says so and the
 build stops on a net with one member. Add the connector to the parts list.
 
+What the one command prints on stderr changed with P432, where the refusals now come in one order (the requirements, the
+pins, the footprint): the `wrote <path> (N pads, … mm holes)` line of the footprint step is gone, so the stage list's
+`footprint` line is the only word of it. A project rule of the wrong kind (a drill step written as text) stops the footprint
+stage in the sentence `the board definition disagrees with itself: …`, where it said `emit_footprint.py exited 1 for <board>`.
+`emit_board.py` run alone prints the library note (`no project up from the requirements file …`) after it has checked the
+input, so a refused input prints only its refusal.
+
 ## See it
 
 **The board, live** — tscircuit's own viewer, which every spark project already has (`init` writes
