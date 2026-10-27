@@ -965,6 +965,88 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertIn("cannot emit a board: led-red-5mm needs 3.4 V forward, and a 3.3 V pin cannot push current through it", err)
 
 
+# --- MVP --- (P432, OC1)
+class ReadInputsTest(unittest.TestCase):
+    """One order in which the input is refused, for `main` and the spine: the requirements, then the pins, then the footprint."""
+
+    def project(self, requirements):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps(requirements))
+        return root
+
+    def test_read_inputs_gives_the_design_and_its_assignments(self):
+        root = self.project({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
+        inputs = emit_board.read_inputs(root / "requirements.json", root)
+        self.assertEqual(inputs.design.board["id"], "firebeetle2-esp32s3")
+        expected, _ = assign_pins.assign(inputs.design.board, inputs.design.signals)
+        self.assertEqual(inputs.assignments, expected)
+        self.assertIn("MOTOR_IA", [entry["signal"] for entry in inputs.assignments])
+
+    def test_an_unknown_need_is_refused_under_schematic(self):
+        root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"],
+                             "signals": [{"name": "X", "needs": ["teleport"]}]})
+        with self.assertRaises(emit_board.RefusedInput) as caught:
+            emit_board.read_inputs(root / "requirements.json", root)
+        self.assertEqual(caught.exception.stage, "schematic")
+        self.assertTrue(str(caught.exception).startswith("cannot emit a board: "), str(caught.exception))
+        self.assertIn("X asks for teleport", str(caught.exception))
+        self.assertEqual(str(caught.exception), "cannot emit a board: " + caught.exception.why)
+
+    def test_a_footprint_gap_is_refused_under_footprint_in_its_own_words(self):
+        from board_library import board_missing
+        root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]})
+        with board_missing("physical.header_order"), self.assertRaises(emit_board.RefusedInput) as caught:
+            emit_board.read_inputs(root / "requirements.json", root)
+        self.assertEqual(caught.exception.stage, "footprint")
+        self.assertEqual(str(caught.exception),
+                         "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them "
+                         "can be derived from the rest:\n  physical.header_order (which label is on which pad — not derivable)")
+
+    def test_a_fault_in_the_design_is_said_before_the_footprint_gap(self):
+        from board_library import board_missing
+        root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"],
+                             "signals": [{"name": "X", "needs": ["teleport"]}]})
+        with board_missing("physical.header_order"), self.assertRaises(emit_board.RefusedInput) as caught:
+            emit_board.read_inputs(root / "requirements.json", root)
+        self.assertEqual(caught.exception.stage, "schematic")
+
+    def test_a_design_with_a_malformed_file_is_refused_under_schematic(self):
+        root = self.project({})
+        (root / "requirements.json").write_text("{not json")
+        with self.assertRaises(emit_board.RefusedInput) as caught:
+            emit_board.read_inputs(root / "requirements.json", root)
+        self.assertEqual(caught.exception.stage, "schematic")
+        self.assertIn("not JSON", str(caught.exception))
+
+    def main_on_a_loose_file(self, requirements):
+        """`main` on a requirements file in no project, so the plugin's library is the project: (code, stderr)."""
+        path = Path(tempfile.mkdtemp()) / "loose.json"
+        path.write_text(json.dumps(requirements))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = emit_board.main([str(path)])
+        return code, err.getvalue()
+
+    def test_a_design_built_from_nowhere_is_told_so(self):
+        code, err = self.main_on_a_loose_file({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
+        self.assertEqual(code, emit_board.EXIT_OK)
+        self.assertIn("no project up from the requirements file", err)
+
+    def test_a_refused_design_from_nowhere_is_refused_before_it_is_told_so(self):
+        # P432: the note comes after the refusal check, so the refusal is the whole of stderr
+        code, err = self.main_on_a_loose_file({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"],
+                                               "signals": [{"name": "X", "needs": ["teleport"]}]})
+        self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
+        self.assertTrue(err.startswith("cannot emit a board: "), err)
+        self.assertNotIn("no project up from the requirements file", err)
+
+    def test_it_prints_nothing(self):
+        root = self.project({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            emit_board.read_inputs(root / "requirements.json", root)
+        self.assertEqual((out.getvalue(), err.getvalue()), ("", ""))
+
+
 class EachSectionStandsAloneTest(unittest.TestCase):
     """
     `emit()` was one 186-line function with ten sections and 39 branches (sprint audit A5), where
