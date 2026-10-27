@@ -206,12 +206,85 @@ class WhatItWillNotInventTest(unittest.TestCase):
         self.assertEqual(emit_footprint.footprint_gaps(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())), [])
 
 
+class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
+    """
+    P411: the same gaps are said as a list (the build, emit_board, the `stops_why` of --match and --audit) and as a line (one
+    row among many), and a board whose parts disagree is told so in one sentence from one helper.
+    """
+
+    def test_a_board_that_is_no_object_lacks_all_of_it(self):
+        self.assertEqual(emit_footprint.footprint_gaps([]), ["physical.header (no header geometry at all)"])
+        self.assertEqual(emit_footprint.footprint_gaps(None), ["physical.header (no header geometry at all)"])
+
+    def test_the_list_names_the_board_and_each_gap_with_its_note(self):
+        board = firebeetle()
+        del board["physical"]["header_order"], board["physical"]["width_mm"]
+        self.assertEqual(emit_footprint.why_no_footprint(board),
+                         "firebeetle2-esp32s3 cannot have a footprint generated — these are not recorded, and none of them can be "
+                         "derived from the rest:\n  physical.width_mm\n  physical.header_order (which label is on which pad — not derivable)")
+        self.assertIsNone(emit_footprint.why_no_footprint(firebeetle()))
+
+    def test_the_line_names_the_one_field_that_is_missing_without_its_note(self):
+        board = firebeetle()
+        del board["physical"]["header"]
+        self.assertEqual(emit_footprint.footprint_stop_line(board),
+                         "stops at the footprint stage (P121): its board file lacks physical.header")
+
+    def test_the_line_counts_the_fields_and_names_the_first_when_more_are_missing(self):
+        board = firebeetle()
+        del board["physical"]["header_order"], board["physical"]["width_mm"]
+        self.assertEqual(emit_footprint.footprint_stop_line(board),
+                         "stops at the footprint stage (P121): its board file lacks 2 fields (first: physical.width_mm)")
+
+    def test_the_line_is_none_for_a_board_that_builds_and_says_the_stage_for_no_board(self):
+        self.assertIsNone(emit_footprint.footprint_stop_line(firebeetle()))
+        self.assertEqual(emit_footprint.footprint_stop_line("not a board"),
+                         "stops at the footprint stage (P121): its board file lacks physical.header")
+
+    def test_a_pad_order_that_does_not_fit_the_pin_counts_is_a_disagreement(self):
+        board = firebeetle()
+        board["physical"]["header"]["pins"] = [18]
+        self.assertEqual(emit_footprint.why_header_disagrees(board),
+                         "the board definition disagrees with itself: physical.header.pins lists 1 rows and header_order has 2 (%s)"
+                         % ", ".join(key for key in board["physical"]["header_order"] if not key.startswith("//")))
+        self.assertIsNone(emit_footprint.why_header_disagrees(firebeetle()))
+
+    def test_a_value_of_the_wrong_kind_is_a_disagreement_not_a_traceback(self):
+        # boards.validate checks no header geometry: a pitch written as text reached `pads` and raised a TypeError
+        for field, value, said in (("pitch_mm", "2.54", "unsupported operand type(s) for -: 'float' and 'str'"),
+                                   ("pins", 18, "object of type 'int' has no len()")):
+            with self.subTest(field=field):
+                board = firebeetle()
+                board["physical"]["header"][field] = value
+                self.assertEqual(emit_footprint.why_header_disagrees(board), "the board definition disagrees with itself: " + said)
+        board = firebeetle()
+        board["physical"]["header_order"] = {"left": 5, "right": 5}
+        self.assertEqual(emit_footprint.why_header_disagrees(board),
+                         "the board definition disagrees with itself: object of type 'int' has no len()")
+
+
 class TheCommandLineTest(unittest.TestCase):
     def test_a_board_that_cannot_be_generated_exits_could_not_run(self):
         from board_library import library_without
         library = library_without("physical.header")
         self.assertEqual(emit_footprint.main(["--board", "xiao-esp32-c6", "--json", "--project", str(library.parent)]),
                          emit_footprint.EXIT_COULD_NOT_RUN)
+
+    def test_a_board_that_disagrees_with_itself_exits_problems_in_its_own_words(self):
+        # P411: a pitch written as text was a TypeError out of `main`, and the spine ran on to say nothing of why
+        import contextlib
+        import io
+        from board_library import library_without
+        library = library_without("physical.header.drill_mm")  # a copy of the library; the file is whole but for a fact `render` only quotes
+        file = library / "xiao-esp32-c6.json"
+        board = json.loads(file.read_text())
+        board["physical"]["header"]["pins"] = 7
+        file.write_text(json.dumps(board))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(library.parent)])
+        self.assertEqual((code, err.getvalue()), (emit_footprint.EXIT_PROBLEMS,
+                                                  "problems: the board definition disagrees with itself: object of type 'int' has no len()\n"))
 
     def test_a_missing_board_exits_could_not_run(self):
         self.assertEqual(emit_footprint.main(["--board", "no-such-board", "--json"]),

@@ -740,6 +740,14 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
         code, lines = self.listed(root)
         self.assertEqual((code, "    half-board (project)" in lines), (0, True), lines)
 
+    def test_the_line_comes_from_the_footprint_module_and_asks_nothing_of_parts(self):
+        # P411: footprint_stop imported `parts` for a sentence that now lives in emit_footprint; the edge to parts that remains is validate's
+        from board_library import board_missing
+        with board_missing("physical.header_order"), mock.patch.dict(sys.modules, {"parts": None}):
+            self.assertEqual(boards.footprint_stop("xiao-esp32-c6", project()),
+                             "stops at the footprint stage (P121): its board file lacks physical.header_order")
+            self.assertEqual(boards.footprint_stop("firebeetle2-esp32s3", project()), "")
+
 
 class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
     """

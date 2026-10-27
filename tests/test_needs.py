@@ -871,6 +871,9 @@ class ThePicksTest(unittest.TestCase):
         said = self.text(["--pick", str(self.project), "board=xiao-esp32-c6"])
         self.assertIn("  board xiao-esp32-c6: stops at the footprint stage (P121): its board file lacks physical.header",
                       said.splitlines())
+        said, _ = run(["--pick", str(self.project), "board=xiao-esp32-c6", "--dry-run"])
+        self.assertIn({"subject": "board xiao-esp32-c6", "sentence": "stops at the footprint stage (P121): its board file lacks physical.header"},
+                      said["notes"])  # P411: the colon of the line must not cut the note at the wrong place
         self.assertEqual(self.picks()["board"], [{"board": "xiao-esp32-c6"}])
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
         self.assertNotIn("stops at", self.text(["--pick", str(self.project), "board=firebeetle2-esp32s3"]))
@@ -2082,6 +2085,29 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n  fix for beetle-c6: %s\n"  # P124: with its fix
                          % (sentence, said["problems"][0]["fix"]))
         self.assertFalse((project / "requirements.json").exists())
+
+    def test_each_board_that_stops_is_named_with_its_own_gaps(self):
+        # P411: one sentence for "these stop" said no more than "no header geometry"; each says what its own file lacks
+        home, project = self.project([])
+        library = Path(tempfile.mkdtemp())
+        (library / "x-lib-board.json").write_text(json.dumps(dict(json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text()),
+                                                                  id="x-lib-board")))
+        cut = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        del cut["physical"]["header_order"], cut["physical"]["width_mm"]
+        (project / "boards").mkdir()
+        (project / "boards" / "x-cut-board.json").write_text(json.dumps(dict(cut, id="x-cut-board")))
+        (project / "boards" / "x-bare-board.json").write_text(json.dumps({"id": "x-bare-board"}))
+        (project / "boards" / "active.json").write_text(json.dumps({"board": "x-bare-board"}))
+        self.owned(home, "beetle-c6", {"label": "Beetle ESP32 C6 Mini", "count": 3})
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle-c6"}]}]}))
+        with mock.patch.object(boards, "LIBRARY", library):
+            said, _ = run(["--requirements", str(project)])
+        self.assertEqual(said["problems"][0]["sentence"],
+                         "picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, "
+                         "and it has none; spark has one that builds for x-lib-board; "
+                         "x-bare-board stops at the footprint stage (P121): its board file lacks physical.header; "
+                         "x-cut-board stops at the footprint stage (P121): its board file lacks 2 fields (first: physical.width_mm)")
 
     @board_missing("physical.header")
     def test_a_board_that_stops_at_the_footprint_is_never_suggested(self):
