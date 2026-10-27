@@ -398,7 +398,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # gives (P407, P432): a fault in the requirements is said before a gap in the board record, and the schematic imports
     # the board's footprint, so a record that cannot give one stops here, before emit_board is asked.
     try:
-        emit_board.read_inputs(workdir / "requirements.json", project)
+        inputs = emit_board.read_inputs(workdir / "requirements.json", project)
     except emit_board.RefusedInput as refused:
         hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == emit_board.FOOTPRINT_STAGE else ""
         return stages + [Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint)]
@@ -424,14 +424,15 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         stages.append(Stage("schematic-notes", PROBLEMS, emitted.stderr.strip()))
 
     # --- the footprint the schematic imports ---
+    # --- MVP --- rendered here, in this process, with the rules the design came with (P432, OC2): the child that wrote the
+    # footprint printed a line of its own to this build's stderr and said only what exited. `read_inputs` has read the rules,
+    # and a rules file that cannot be read was refused with the schematic.
     export = (board.get("physical") or {}).get("footprint_export")
-    footprint = emit_footprint.main(
-        ["--board", board["id"], "--project", str(project),
-         "-o", str(workdir / ("%s.tsx" % export))])
-    if footprint != emit_footprint.EXIT_OK:
-        # nothing is missing here (the stop above), so the board disagrees with itself; the fallback is for what else exits
-        return stages + [Stage("footprint", COULD_NOT_RUN, emit_footprint.why_header_disagrees(board) or
-                               "emit_footprint.py exited %d for %s" % (footprint, board["id"]))]
+    rules = inputs.design.rules
+    disagreement = emit_footprint.why_header_disagrees(board, rules)
+    if disagreement:
+        return stages + [Stage("footprint", COULD_NOT_RUN, disagreement)]
+    (workdir / ("%s.tsx" % export)).write_text(emit_footprint.render(board, rules))
     stages.append(Stage("footprint", OK, "%s.tsx" % export))
 
     # --- the build, which is the only stage that can prove any of the above ---
