@@ -266,7 +266,7 @@ def match(project, matcher=None):
     MATCHER's unless one is given (P211)."""
     # the name a pick holds under, as plan_pick takes it: an unlisted project still holds as its folder (P403 refuter)
     known, entries, matched, problems, mine = (drawer.linkable(project), drawer.entries(), [], [],
-                                               store.add_project(project, dry_run=True))
+                                               store.plan_listed_name(project))
     definitions = {}  # P397: each board's Wokwi definition, read once for every need
     for need in read(project):
         if need.get("does") not in parts.VERBS:
@@ -393,7 +393,7 @@ def plan_pick(project, given, passed_over=()):
     own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
     words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
     """
-    name, current, entries = store.add_project(project, dry_run=True), read(project), drawer.entries()
+    name, current, entries = store.plan_listed_name(project), read(project), drawer.entries()
     rows = drawer.linkable(project)
     known, ids, problems, picked = {row[:2]: row[2] for row in rows}, {need["id"] for need in current}, [], {}
     notes = []

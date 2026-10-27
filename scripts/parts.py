@@ -986,7 +986,7 @@ def note_built(design):
     A `built` line in the history when a listed project's board runs end to end (§5.7, §8 T): the board's and each part's
     digest, so a proof of an old pin order never vouches for a corrected one. A project not on the list keeps no history.
     """
-    name = store.project_name(design.project)
+    name = store.find_listed_name(design.project)
     if name is None:
         return False
     with store.locked():
@@ -1945,7 +1945,7 @@ def _record_path(part_id, project):
         folder = store.projects().get(named) if named else None
         home = folder / "parts" / path.name if folder is not None else None
         return (home, named) if home is not None and home.is_file() else (path, None)
-    named = store.project_name(project) if where == "project" else None
+    named = store.find_listed_name(project) if where == "project" else None
     return path, named if named and _shelved_from(store.place("shelf") / path.name) == named else None
 
 
@@ -2144,7 +2144,7 @@ def _op_pick(args, project):
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
     history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
-    listed, keys_before = store.project_name(target) is not None, needs.entry_keys(needs.read(target))
+    listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
     after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
     if not problems and not args.dry_run:
         store.add_project(target)
@@ -2153,7 +2153,7 @@ def _op_pick(args, project):
             store.append_event(event)
         # the project's own file last: a store that refuses leaves it as it was, and the same pick, retried, finishes the rest
         needs.write(target, after)
-    asked, name = dict(pairs), store.add_project(target, dry_run=True)
+    asked, name = dict(pairs), store.plan_listed_name(target)
     picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
     said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]
     released = _released(changes, name)
@@ -2260,8 +2260,8 @@ def _op_step(args, project):
     target, step = args.step
     if step not in cost.STEPS:
         return Answer(unchecked=[_cannot("a step is one of %s (the spine, §2 of the store design)" % ", ".join(cost.STEPS))])
-    listed = store.project_name(target) is not None
-    event = cost.step_event(store.add_project(target, dry_run=args.dry_run), step)
+    listed = store.find_listed_name(target) is not None
+    event = cost.step_event(store.plan_listed_name(target) if args.dry_run else store.add_project(target), step)
     if not args.dry_run:
         store.append_event(event)
     # C-17: what a step writes is said — a line in the person's history, with the session's id, and the project on their list
@@ -2276,7 +2276,7 @@ def _op_tally(args, project):
     import cost
     import drawer
     import needs
-    name = store.project_name(args.tally)
+    name = store.find_listed_name(args.tally)
     if name is None:
         return Answer(unchecked=[_cannot("%s is not on your list of projects, so no step of it was marked" % args.tally,
                                          "mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list")])

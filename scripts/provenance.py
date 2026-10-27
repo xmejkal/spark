@@ -10,6 +10,17 @@ their facts by one rule. A fact is {value, verified, source}, and an unverified 
 REQUIRED_FACT_KEYS = ("value", "verified", "source")
 
 
+def read_value(record, *path):
+    """
+    The one reader of a fact's value. It walks `path` through the dicts of `record` and returns the `value` of the
+    fact it reaches. A bare value where a fact belongs (a number, not {value, verified, source}) is read as the value.
+    A missing key, a path through no dict, or no record gives None. It never raises.
+    """
+    for key in path:
+        record = record.get(key) if isinstance(record, dict) else None
+    return record.get("value") if isinstance(record, dict) else record
+
+
 def fact_problems(where, fact):
     """
     Every way `fact` breaks the rule, as sentences that start with `where` (the caller's name for it). A fact that is

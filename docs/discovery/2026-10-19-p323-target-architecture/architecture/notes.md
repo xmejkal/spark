@@ -18,7 +18,7 @@ five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six 
 |---|---|---|
 | N1 | The five goals rank readable, testable, exchangeable, reusable, consistent. | The PO named readability "most of all". |
 | N2 | One result shape, `OperationResult(data, findings, next, lines)`. | Six shapes cross boundaries today, and a reader learns one. |
-| N3 | One `Finding(severity, subject, code, sentence, fix, fix_step)`. `fix` stays a string. | Five problem shapes today, and `fix_step` adds the step without changing a key's type (`board_envelope.look_envelope`). |
+| N3 | One `Finding(severity, subject, code, sentence, fix)`. `fix` stays a string. | Five problem shapes today, and one class holds them without changing a key's type (`board_envelope.look_envelope`). `fix_step` was dropped on 2026-10-27: it would be null at every look site. |
 | N4 | One `OutsideWorld(run, write, fetch, clock, consent, environ)`, with only the declared effects filled. `runs` gates `run`. | Dry run, consent and the test seams become one mechanism, and every effect is gated. |
 | N5 | `Backends` holds choices, and each area's registry turns a choice into a Strategy, with the area's own default (`DEFAULT_PLATFORM` in bench). | records sits at the bottom and names no backend, so it cannot build a bench or firmware object. |
 | N6 | An Operation is a class with one public method `run()`, whose keyword parameters are its arguments' `dest` names, not a `values` bag (v2: the class, from the standard). | A typo in a flag name fails at load, and a reader sees the inputs. |
@@ -31,7 +31,7 @@ five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six 
 | N13 | A tool's MCP version enters as an input file that Claude passes. | spark has no MCP client (`tools.py:162`). |
 | N14 | `SparkError.status` is an instance field with the class default `could-not-run` (v2). | `GateClosedError` carries 1 or 2 per instance today, and `ImpossibleError` defaults to `problems`. |
 | N15 | Pin map text and image building stay out of `FirmwarePlatform`. | They would add upward edges from design and firmware to bench. |
-| N16 | The envelope gains `code`, `fix_step`, `needs_person` and `backends`, only in output slices. | Claude branches on codes and sees which backend ran, and no move changes a golden. |
+| N16 | The envelope gains `code` and `needs_person` (S2) and `backends` (S8), only in output slices. | Claude branches on codes and sees which backend ran, and no move changes a golden. |
 | N17 | After the refuter's trims, area pages run about 130 to 160 lines, and the file moves sit in the plan. | Each page keeps a class and a sequence diagram. The prose stays within the budget. |
 | N18 | A golden changes only in an output slice, never in a move. Each area has an output slice before its move. | One exact rule, and the moves stay provably silent. |
 | N19 | `audit` and `board-list` move to design. | Both ask a design fact (`footprint_gaps`, `footprint_stop`), and a callback passed down is a parameter with one value. |

@@ -22,8 +22,8 @@ import subprocess
 from collections import namedtuple
 
 import board_codes
-import board_facts
 import boards
+import deploy_record_store
 import flasher
 import outcomes
 import project_image
@@ -230,7 +230,7 @@ VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 class LookReport:
     """Value. What the look found. `stops` are Stops (a code and a sentence), `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
     warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image.
-    `last_deploy` is the board_facts.LastDeploy of the board's MAC, whatever the evidence said."""
+    `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said."""
 
     def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None,
                  image_code=board_codes.EVIDENCE_REFUSES):
@@ -269,8 +269,8 @@ class LookReport:
 
     def last_deploy_fix(self):
         """What the person does about a last deploy that was not checked."""
-        if self.last_deploy.why == board_facts.WHY_UNREADABLE:
-            return "repair or remove %s, then run look.py again" % board_facts.record_path(self.reading.mac)
+        if self.last_deploy.why == deploy_record_store.WHY_UNREADABLE:
+            return "repair or remove %s, then run look.py again" % deploy_record_store.DeployRecordStore().find_path(self.reading.mac)
         return "reconnect the board so that its MAC can be read, then run look.py again"
 
     def exit_code(self):
@@ -301,12 +301,26 @@ class LookReport:
                 "simulation": self.simulation, "caveats": list(self.caveats), "last_deploy": self.last_deploy.to_dict()}
 
 
+# --- MVP ---
+def say_last_deploy(last):
+    """The look's line for `last`, a deploy_record_store.LastDeploy. `deploy_gate.say_last_deploy_in_question` says the same
+    deploy in the deploy question's words."""
+    if last.state == outcomes.RECORDED:
+        said = printable("%s, %s, %s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said()))
+    elif last.state == outcomes.NONE_RECORDED:
+        said = "none in its store record (it keeps only its own deploys)"
+    else:
+        said = outcomes.NOT_CHECKED_MESSAGE % last.why
+    return "spark's last deploy here: " + said
+# --- end MVP ---
+
+
 def report_lines(report, token=True):
     """The lines a person reads, for a LookReport, each through `printable`. deploy.py prints them without the token line."""
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
     out = [RESTART_NOTICE, "port   %s%s" % (report.port, ALSO_ON % ", ".join(report.also_on) if report.also_on else ""), "mac    %s" % (reading.mac or "not read"),
-           report.last_deploy.line()]
+           say_last_deploy(report.last_deploy)]
     out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
     out += ["%s: deploy.py will refuse." % stop.sentence for stop in report.stops]
     out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings]
@@ -350,7 +364,7 @@ class LookService:
         except project_image.DeployError as cannot:
             why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
-        return LookReport(port, reading, record, image, why, simulation, caveats, board_facts.read_last_deploy(reading.mac),
+        return LookReport(port, reading, record, image, why, simulation, caveats, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
                           listed.also_on if listed else None, code)
 
     @staticmethod

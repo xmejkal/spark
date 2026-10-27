@@ -21,7 +21,7 @@ The PO answered all five decisions on epic #94 on 2026-10-26. Decision 3 was ans
    go with a then"*. One rule for every slice: reuse every fact, and keep each module's judgement in that module.
 2. The shape. Answer: (a), thin CLIs over one package, one Operation per job, one rules test. His words: *"yes, option
    a please"*.
-4. When the area moves start. Answer: (b), back to back, one PR at a time. His words: *"I think for question 3
+4. When the area moves start. Answer: (b), back to back, a PR for each kind of slice (decision 3, changed on 2026-10-27). His words: *"I think for question 3
    ideally we'd go all in one, so option c, but if it would take too much time, we can do continuous version"*. The
    plan records (b) because only the bench has a net today. The PO can change this.
 5. The printed names of the Operations. Answer: (a), keep the names that a golden or a command page pins. His words:
@@ -105,7 +105,7 @@ Every Operation returns an `OperationResult` (proposed). Every frontend renders 
 |---|---|
 | result | `data`, `findings`, `next`, `lines`. `status` comes from `outcomes.status_of`, never declared. |
 | envelope | v1 keys stay: `envelope`, `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated` (`outcomes.envelope`). It only gains keys. |
-| Finding | `severity`, `subject`, `code`, `sentence`, `fix` (a string, as today), `fix_step` (a NextStep or null, proposed). Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
+| Finding | `severity`, `subject`, `code`, `sentence`, `fix` (a string, as today). Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
 | effects | `reads`, `writes`, `runs` (a tool, proposed), `network`, `board`, `deletes`. An Operation gets only the outside callables its effects declare. |
 | status words | `ok`, `problems`, `could-not-run`. A check or stage also has `skipped` (`outcomes.SKIPPED`). Nothing else under `status`. |
 | exit codes | 0 ok, 1 problems, 2 could-not-run, only from `EXIT_FOR`. A crash is `could-not-run`, code `crash`, exit 2. |

@@ -209,7 +209,7 @@ HAVE_YOURS, HAVE_IN_DRAWER, HAVE_TO_GET = "yours", "in your drawer", "to get"
 
 def _have(requirements_path, record_ids):
     """{record id: yours | in your drawer | to get}, from the drawer; None when the project is not on the list."""
-    name = store.project_name(requirements_path.resolve().parent)
+    name = store.find_listed_name(requirements_path.resolve().parent)
     if not name:
         return None
     said = {record_id: HAVE_TO_GET for record_id in record_ids}

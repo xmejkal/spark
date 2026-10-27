@@ -66,7 +66,7 @@
   "find": "    shelf_copy = _refresh_shelf_copy(path, after, source, dry_run) if source else None",
   "replace": "    shelf_copy = _refresh_shelf_copy(path, after, source, dry_run) if source and changes else None"},
  {"file": "scripts/parts.py", "name": "a record reached through its project names no shelf copy to follow it (final 4)",
-  "find": "    named = store.project_name(project) if where == \"project\" else None",
+  "find": "    named = store.find_listed_name(project) if where == \"project\" else None",
   "replace": "    named = None"},
  {"file": "scripts/parts.py", "name": "a shelf copy follows any project's record of its id (final 4)",
   "find": "    return path, named if named and _shelved_from(store.place(\"shelf\") / path.name) == named else None",

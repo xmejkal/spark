@@ -437,6 +437,33 @@ class TheBoardsOwnPullUpTest(unittest.TestCase):
         self.assertEqual(len(part["host_parts"]), 2)
         self.assertNotIn("_firmware_pulls", part)
 
+    def test_a_bare_pull_up_number_leaves_the_pull_to_the_firmware(self):
+        # P431: a number where a fact belongs reads as the pull, as a bare `io_volts` does. On main it raised AttributeError.
+        part = design.firmware_pulls(self.button(), {"power": {"internal_pull_up_ohms": 10000}})
+        self.assertEqual(part["_firmware_pulls"], ["A"])
+
+    def test_a_bare_value_that_is_no_positive_number_keeps_the_resistor(self):
+        # P431: a bare value is read as the pull only when it is a number above zero, never "unknown", true, a list or NaN.
+        for bare in ("unknown", "null", True, [0], 0, -5, float("nan"), float("inf"), None):
+            with self.subTest(bare=bare):
+                part = design.firmware_pulls(self.button(), {"power": {"internal_pull_up_ohms": bare}})
+                self.assertEqual([host["kind"] for host in part["host_parts"]], ["pullup", "series"])
+                self.assertNotIn("_firmware_pulls", part)
+
+    def test_a_fact_whose_value_is_no_positive_number_keeps_the_resistor(self):
+        for value in ("unknown", True, 0, None):
+            with self.subTest(value=value):
+                board = {"power": {"internal_pull_up_ohms": {"value": value, "verified": False, "source": "test"}}}
+                self.assertEqual(len(design.firmware_pulls(self.button(), board)["host_parts"]), 2)
+
+    def test_a_400_digit_pull_up_number_does_not_crash_the_design(self):
+        # P431 refuter: json.loads gives a Python int of any size, and math.isfinite raised OverflowError on it.
+        huge = 10 ** 400
+        for stated in (huge, {"value": huge, "verified": False, "source": "test"}):
+            with self.subTest(stated=type(stated).__name__):
+                part = design.firmware_pulls(self.button(), {"power": {"internal_pull_up_ohms": stated}})
+                self.assertEqual(part["_firmware_pulls"], ["A"])
+
     def test_a_board_that_states_no_internal_pull_up_keeps_every_resistor(self):
         self.assertEqual(design.firmware_pulls(self.button(), {"power": {}}), self.button())
         self.assertEqual(design.firmware_pulls(self.button(), None), self.button())

@@ -2,7 +2,7 @@
  {
   "file": "scripts/design.py",
   "name": "a board that states no internal pull-up loses its resistors too",
-  "find": "    if not (((board or {}).get(\"power\") or {}).get(\"internal_pull_up_ohms\") or {}).get(\"value\"):\n        return part\n",
+  "find": "    if isinstance(pull, bool) or not isinstance(pull, (int, float)) or not 0 < pull < math.inf:\n        return part\n",
   "replace": "    if False:\n        return part\n"
  },
  {

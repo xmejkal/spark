@@ -18,6 +18,7 @@ import boards
 import board_grant
 import board_look
 import deploy_gate
+import deploy_record_store
 import download_mode
 import ready_check
 from project_image import DeployError, ProjectImage
@@ -171,7 +172,7 @@ class DeployService:
     def record(result, consent):
         """Keep this deploy in the store's record of the board and return its path. OSError and store.StoreProblem say
         why it was not written. Whose yes it was is read here, as the old main read it."""
-        return board_facts.record_deploy(result.facts, result.ready.verdict, consent.who)
+        return deploy_record_store.DeployRecordStore().write_deploy(result.facts, result.ready.verdict, consent.who)
 
     def _read_board(self, image, report, connection, expected, moment):
         """(the facts, the facts line, a ReadyResult) after a flash: the facts, then ready."""

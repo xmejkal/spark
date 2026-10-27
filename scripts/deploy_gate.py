@@ -15,8 +15,9 @@ import sys
 from pathlib import Path
 
 import board_codes
+import outcomes
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
-from text_guards import guard_lines
+from text_guards import guard_lines, printable
 
 #: How the store's record says a yes was given in a terminal: %s is the person's login name.
 TYPED_BY = "typed in a terminal by %s"
@@ -88,6 +89,18 @@ class TerminalConsentStrategy(ConsentStrategy):
         return self.stdin.readline().strip() == "yes"
 
 
+# --- MVP ---
+def say_last_deploy_in_question(last):
+    """The words the deploy question puts in its erase sentence, for `last`, a deploy_record_store.LastDeploy.
+    `board_look.say_last_deploy` says the same deploy in the look's words."""
+    if last.state == outcomes.RECORDED:
+        return printable("spark's store record names %s as its last deploy here, %s, %s" % (last.project, last.time_said(), last.verdict))
+    if last.state == outcomes.NONE_RECORDED:
+        return "spark's store record names no deploy here"
+    return "spark did not read its record of this board: %s" % last.why
+# --- end MVP ---
+
+
 def require_open_gate(report, token, consent, image, caveats):
     """Returns None when the person said yes to erasing this board for `image`. Raises GateClosedError, which says why
     not. It never erases or writes. The `caveats` (LookReport.caveats) come first in the question."""
@@ -107,7 +120,7 @@ def require_open_gate(report, token, consent, image, caveats):
         raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed), next_op=NEXT_LOOK,
                               reason=board_codes.TOKEN_STALE)
     accepted = report.warnings + ["%s unknown (%s)" % each for each in report.unknown.items()]
-    question = "erase ALL of this board's flash (%s) and write %s?" % (report.last_deploy.in_question(), image)
+    question = "erase ALL of this board's flash (%s) and write %s?" % (say_last_deploy_in_question(report.last_deploy), image)
     if accepted:
         question = "you accept: %s. %s" % ("; ".join(accepted), question)
     for caveat in reversed(caveats):

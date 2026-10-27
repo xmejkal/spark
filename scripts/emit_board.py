@@ -41,6 +41,7 @@ import copper  # noqa: E402
 import design as design_library  # noqa: E402
 import emit_footprint  # noqa: E402
 import parts as parts_library  # noqa: E402
+import provenance  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
@@ -663,13 +664,6 @@ def host_part_names(part, host_part):
 E12 = (1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2)
 
 
-def fact_value(record, *keys):
-    """A fact's value from a record, by its path — `power.io_volts`, `facts.forward_voltage_v` — or None."""
-    for key in keys:
-        record = record.get(key) if isinstance(record, dict) else None
-    return record.get("value") if isinstance(record, dict) else record
-
-
 def series_ohms(part, host_part, board):
     """
     A series resistor's value, and the arithmetic when it was computed (P78). Given `ohms`, that.
@@ -678,7 +672,8 @@ def series_ohms(part, host_part, board):
     """
     if host_part.get("ohms"):
         return host_part["ohms"], None
-    supply, forward = fact_value(board or {}, "power", "io_volts"), fact_value(part, "facts", "forward_voltage_v")
+    supply = provenance.read_value(board, "power", "io_volts")
+    forward = provenance.read_value(part, "facts", "forward_voltage_v")
     if not isinstance(supply, (int, float)) or not isinstance(forward, (int, float)):
         raise ValueError("%s asks for %g mA through a series resistor, but %s — nothing to compute it from"
                          % (part.get("id"), host_part["for_current_ma"],
