@@ -2110,6 +2110,7 @@ def _op_match(args, project):
                                                                           "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
                          + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
             lines += ["          " + c["about"]] if c["about"] else []
+            lines += ["          " + sentence for sentence in c["limits"]]  # P397: the JSON keeps them as data
             del c["about"]  # the text shows it; the JSON gains only `score` and `why`
         hidden = "none with the need's words" if chosen.name == needs.MATCHER else "each scoring under %s" % matching.MIN_SHOWN
         lines += ["      … %d more, %s" % (need["more"], hidden)] if need["more"] else []

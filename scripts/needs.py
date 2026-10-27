@@ -179,6 +179,41 @@ def offer(key, project=None):
     return next((found for found, _ in offers(rows, entries) if (found.kind, found.key) == wanted), None)
 
 
+#: What the pick's note says after the limits of a board (P397): the part to wire to a header pad, or why none is named.
+OTHER_CHOICE = "The other choice: %s on a header pad, which the simulation can reach."
+ALL_HELD = "Every other candidate for %s is held by another project."
+
+Limits = collections.namedtuple("Limits", "sentences no_pin")
+Limits.__doc__ = "What a passed run does not test of a board's parts that serve one need: plain sentences, and whether one says a pin is missing."
+
+
+def serving_roles(need, functions):
+    """
+    The `role` of each of a board's `functions` (`boards.onboard_functions`) that serves the need, as WordOverlap admits a
+    board: the need's verb and any word of `matching.need_words` that the function's `what` shares, so `press button`,
+    `input button`, `boot button` and `status led` meet the board's own button and LED. A function with no role is a
+    power fact, which no limit is about.
+    """
+    wanted = set(matching.need_words(need.get("what")))
+    return [function["role"] for function in functions if function.get("role") and function.get("does") == need.get("does")
+            and wanted & set(matching.need_words(function.get("what")))]
+
+
+def board_limits(need, record, functions, read=None):
+    """
+    The Limits of the board `record` for the need (P397): the sentences of `boards.role_limits` for the roles that serve it
+    (`onboard_limits` returns (component, sentence) pairs; this keeps the sentences). A sentence about a definition spark did not
+    compare says "not checked" and then the bench, which the build's own text leaves to the reader. `no_pin` is true when a
+    part a scenario could reach has no pin in the definition: the only limit that a part on a header pad would lift.
+    """
+    said = boards.role_limits(record, serving_roles(need, functions), read)
+    pairs = [(component, sentence) for pairs in said.values() for component, sentence in pairs]
+    sentences = [sentence + (" " + boards.BENCH if component == boards.ONBOARD_GPIOS else "") for component, sentence in pairs]
+    no_pin = any(boards.ONBOARD_ROLES[role].scenario_verb and pairs and pairs[0][0] != boards.ONBOARD_GPIOS
+                 for role, pairs in said.items())
+    return Limits(list(dict.fromkeys(sentences)), no_pin)
+
+
 def _candidate(need, fit, context, mine=None):
     """One candidate (§6.2): where it lives and what it owes, what its verb's functions say, its counts and its fit."""
     offer, record = fit.offer, context["record"]
@@ -192,24 +227,36 @@ def _candidate(need, fit, context, mine=None):
                 if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
             said["stops_at"] = "footprint" if stops_at_footprint(record) else None
-    return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": []}, **said,
+    return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
                 what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
                 what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about,
                 held_by=drawer.holders_of(context["holding"], mine), owned=owned, free=free, unsure=unsure)
 
 
-def candidates(need, known, entries, mine=None, matcher=None):
-    """
-    The store's candidates for one need (§6.2's code half): every offer the matcher admits, owned first, then the best
-    score, then nearest. The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
-    `mine`, the asking project, holds is free to it.
-    """
-    built = offers(known, entries)
+def _rank(need, built, mine=None, matcher=None):
+    """The candidates for one need from the offers `built`, ranked: owned first, then the best score, then nearest. No limits yet."""
     context = {(offer.kind, offer.key): said for offer, said in built}
     ranked = (matcher or matching.matcher(MATCHER, "match")).rank(need, [offer for offer, _ in built])
     found = [_candidate(need, fit, context[(fit.offer.kind, fit.offer.key)], mine) for fit in ranked]
     return sorted(found, key=lambda c: (c["owned"] == 0, -c["score"],
                                         LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS), c["id"] or c["entry"]))
+
+
+def candidates(need, known, entries, mine=None, matcher=None, read=None):
+    """
+    The store's candidates for one need (§6.2's code half): every offer the matcher admits, owned first, then the best
+    score, then nearest. The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
+    `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397); `read` is the dict that
+    `boards.role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.
+    """
+    built = offers(known, entries)
+    found = _rank(need, built, mine, matcher)
+    seen = {(offer.kind, offer.key): (offer, said["record"]) for offer, said in built}
+    for one in found:
+        if one["kind"] == "board":
+            offer, record = seen[("board", one["id"])]
+            one["limits"] = board_limits(need, record, offer.functions, read).sentences
+    return found
 
 
 def match(project, matcher=None):
@@ -218,6 +265,7 @@ def match(project, matcher=None):
     # the name a pick holds under, as plan_pick takes it: an unlisted project still holds as its folder (P403 refuter)
     known, entries, matched, problems, mine = (drawer.linkable(project), drawer.entries(), [], [],
                                                store.add_project(project, dry_run=True))
+    definitions = {}  # P397: each board's Wokwi definition, read once for every need
     for need in read(project):
         if need.get("does") not in parts.VERBS:
             problems.append(parts._problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))
@@ -226,7 +274,7 @@ def match(project, matcher=None):
             problems.append(parts._problem(need["id"], "a need with no `what` cannot be matched — set it with --needs-set"))
             continue
         matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"],
-                            candidates=candidates(need, known, entries, mine, matcher)))
+                            candidates=candidates(need, known, entries, mine, matcher, definitions)))
     return matched, problems
 
 
@@ -283,6 +331,50 @@ def _unfiled_boards(needs, known, entries):
                    for kind, key in [next(iter(_as_record(pick, known, entries).items()))] if kind == "entry"})
 
 
+def _holds_wokwi(record):
+    """Whether a record gives the simulation a stand-in or a chip for the part (`simulation.wokwi`), as a table."""
+    return isinstance(record, dict) and isinstance(record.get("simulation"), dict) and isinstance(record["simulation"].get("wokwi"), dict)
+
+
+def _other_choice(need, built, mine, board_key):
+    """
+    The sentence that closes a board's limits when a part on a header pad would lift them (P397): the first candidate for the
+    need, other than the board, that is a part the person owns with free stock and whose record the simulation can reach.
+    Spark looks in what the person owns first, so a part to get is never named. When every other candidate is owned and held
+    by another project, it says so. With none owned, and with any other candidate left, it says nothing.
+    """
+    records = {(offer.kind, offer.key): said["record"] for offer, said in built}
+    others = [c for c in _rank(need, built, mine) if (c["kind"], c["id"]) != ("board", board_key)]
+    named = next((c for c in others if c["kind"] == "part" and c["owned"] != 0 and c["free"] != 0
+                  and _holds_wokwi(records[("part", c["id"])])), None)
+    if named:
+        return OTHER_CHOICE % named["id"]
+    return ALL_HELD % need["id"] if others and all(c["owned"] != 0 and c["free"] == 0 for c in others) else ""
+
+
+def _limits_notes(after, picked, rows, entries, mine):
+    """
+    One note for each board this pick gives to a need that the board's own parts serve, when the board has limits (P397):
+    `board <key> for <need>: <the limits>`, the sentences of the build's own text, then the other choice when a missing pin
+    is the limit. It sits after the F12 note. The Wokwi definition is read once per board.
+    """
+    asked = sorted(((key, need) for need in after if need["id"] in picked for pick in picked[need["id"]]
+                    for kind, key in pick.items() if kind == "board"), key=lambda asked: (asked[0], asked[1]["id"]))
+    if not asked:
+        return []
+    built, read, notes = offers(rows, entries), {}, []
+    boards_built = {offer.key: (offer, said["record"]) for offer, said in built if offer.kind == "board"}
+    for key, need in asked:
+        if key not in boards_built:
+            continue
+        offer, record = boards_built[key]
+        limits = board_limits(need, record, offer.functions, read)
+        if limits.sentences:
+            other = _other_choice(need, built, mine, key) if limits.no_pin else ""
+            notes.append("board %s for %s: %s" % (key, need["id"], " ".join(limits.sentences + ([other] if other else []))))
+    return notes
+
+
 def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
@@ -295,7 +387,8 @@ def plan_pick(project, given, passed_over=()):
     words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
     """
     name, current, entries = store.add_project(project, dry_run=True), read(project), drawer.entries()
-    known, ids, problems, picked = {row[:2]: row[2] for row in drawer.linkable(project)}, {need["id"] for need in current}, [], {}
+    rows = drawer.linkable(project)
+    known, ids, problems, picked = {row[:2]: row[2] for row in rows}, {need["id"] for need in current}, [], {}
     notes = []
     for need_id, pick_id in given:
         pick = _resolve(pick_id, known, entries)
@@ -344,6 +437,7 @@ def plan_pick(project, given, passed_over=()):
     for key in sorted({key for need_id in picked for pick in picked[need_id] for kind, key in pick.items() if kind == "board"}):
         stop = boards.footprint_stop(key, project)
         notes += ["board %s %s" % (key, stop)] if stop else []
+    notes += _limits_notes(after, picked, rows, entries, name)
     changes = []
     for entry_id, entry in sorted(entries.items()):
         used_in = {who: n for who, n in (entry.get("used_in") or {}).items() if who != name}
