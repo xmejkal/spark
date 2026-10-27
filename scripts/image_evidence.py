@@ -7,11 +7,17 @@ today's evidence, a run in sim/runs/ that passed on the image's sha256. It write
 
 import abc
 import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 
 import board_grant
 import flash_image
 import outcomes
+import text_guards
 import tools
 from run_scenario import EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, ScenarioSteps, file_hashes
 
@@ -35,6 +41,111 @@ IGNORE_OLDER_RUNS_FLAG = "--ignore-older-runs"
 #: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
 OLDER_RUNS_WAY_OUT = (". If a log's scenario is gone, delete the log after the person says yes. To flash anyway, pass "
                       "%s, and deploy.py names the log in a note" % IGNORE_OLDER_RUNS_FLAG)
+#: How long the child may compile every .py file under firmware/ (P427). A guess: the worst compile measured was 1.9 s for 4 MB.
+COMPILE_TIMEOUT_S = 30
+#: What the child says about the first file that fails, as "kind" (the other line is {"checking": name}, before each file).
+SYNTAX, TOO_DEEP, BYTES, UNREADABLE = "syntax", "too_deep", "bytes", "unreadable"
+#: The sentences for a file that does not compile (P337; their words are pinned by tests/test_image_evidence.py).
+SYNTAX_REASON = "%s, line %s does not compile: %s"
+TOO_DEEP_REASON = "%s is too deeply nested or too big to compile"
+BYTES_REASON = "%s does not compile: %s"
+UNREADABLE_REASON = "cannot read %s: %s"
+#: The sentences for a compiler that did not answer (P427): it stopped, or it ran too long. The file is the last one it began.
+STOPPED_REASON = "%s could not be compiled: the compiler stopped (%s)"
+SIGNAL_DETAIL, EXIT_DETAIL = "signal %d", "exit code %d"
+TIMEOUT_REASON = "%s did not compile in %g s"
+#: Named when the compiler stopped before it began a file.
+NO_FILE_YET = "firmware/"
+#: What each compile child runs (P427): read [name, path] pairs from stdin; say {"checking": name} before each file, then one
+#: line for the first file that fails, or {"ok": true}. A JSON line holds no raw newline, so no file name can fake a line.
+COMPILE_CHILD = """\
+import json, sys
+
+def say(**fields):
+    print(json.dumps(fields), flush=True)
+
+def failure(name, path):
+    try:
+        with open(path, "rb") as opened:
+            code = opened.read()
+    except OSError as cannot:
+        return dict(name=name, kind="%s", msg=str(cannot))
+    try:
+        compile(code, path, "exec")
+    except SyntaxError as broken:
+        return dict(name=name, kind="%s", line=broken.lineno, msg=broken.msg)
+    except (RecursionError, MemoryError):
+        return dict(name=name, kind="%s")
+    except ValueError as broken:  # a source with a null byte
+        return dict(name=name, kind="%s", msg=str(broken))
+    return None
+
+for name, path in json.loads(sys.stdin.read()):
+    say(checking=name)
+    found = failure(name, path)
+    if found:
+        say(**found)
+        sys.exit(0)
+say(ok=True)
+""" % (UNREADABLE, SYNTAX, TOO_DEEP, BYTES)
+
+
+class CompileCheck:
+    """
+    The .py files compiled in one child process, so that a source which kills the compiler (a stack overflow, signal 11)
+    kills the child and not spark (P427). `why_not` is None, or one sentence. It started like import_firmware.import_one:
+    this interpreter with -I -B, in a folder that is not firmware/.
+    """
+
+    def __init__(self, files):
+        """`files`: [(name shown, path)] in the order to compile."""
+        self.files = [[str(name), os.path.abspath(path)] for name, path in files]
+
+    def why_not(self):
+        command = [sys.executable, "-I", "-B", "-c", COMPILE_CHILD]
+        try:
+            done = subprocess.run(command, input=json.dumps(self.files), capture_output=True, text=True, errors="replace",
+                                  cwd=tempfile.gettempdir(), timeout=COMPILE_TIMEOUT_S)
+        except subprocess.TimeoutExpired as late:
+            said = late.stdout.decode(errors="replace") if isinstance(late.stdout, bytes) else late.stdout
+            return TIMEOUT_REASON % (text_guards.printable(self._read(said)[0] or NO_FILE_YET), COMPILE_TIMEOUT_S)
+        checking, result = self._read(done.stdout)
+        if result is None:
+            detail = SIGNAL_DETAIL % -done.returncode if done.returncode < 0 else EXIT_DETAIL % done.returncode
+            return STOPPED_REASON % (text_guards.printable(checking or NO_FILE_YET), detail)
+        return self._sentence(result)
+
+    @staticmethod
+    def _read(said):
+        """(the last name the child began, its answer) from the complete JSON lines in `said`; a cut last line is dropped."""
+        checking, result = None, None
+        for line in (said or "").split("\n")[:-1]:
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(entry, dict):
+                continue
+            if "checking" in entry:
+                checking = str(entry["checking"])
+            elif "ok" in entry or "kind" in entry:
+                result = entry
+                break
+        return checking, result
+
+    @staticmethod
+    def _sentence(result):
+        if result.get("ok"):
+            return None
+        name = text_guards.printable(str(result.get("name")))
+        kind = result.get("kind")
+        if kind == SYNTAX:
+            return SYNTAX_REASON % (name, result.get("line"), result.get("msg"))
+        if kind == TOO_DEEP:
+            return TOO_DEEP_REASON % name
+        if kind == UNREADABLE:
+            return UNREADABLE_REASON % (name, result.get("msg"))
+        return BYTES_REASON % (name, result.get("msg"))
 
 
 class ImageEvidence(abc.ABC):
@@ -149,23 +260,10 @@ class NoSimulationEvidence(ImageEvidence):
         return None
 
     def _why_not_compiling(self):
-        for source in sorted((self.project / "firmware").rglob("*.py")):
-            if "__pycache__" in source.parts:
-                continue
-            name = source.relative_to(self.project)
-            try:
-                code = source.read_bytes()
-            except OSError as cannot:
-                return "cannot read %s: %s" % (name, cannot)
-            try:
-                compile(code, str(source), "exec")
-            except SyntaxError as broken:
-                return "%s, line %s does not compile: %s" % (name, broken.lineno, broken.msg)
-            except (RecursionError, MemoryError):
-                return "%s is too deeply nested or too big to compile" % name
-            except ValueError as broken:  # a source with a null byte
-                return "%s does not compile: %s" % (name, broken)
-        return None
+        firmware = self.project / "firmware"
+        files = [(source.relative_to(self.project), source) for source in sorted(firmware.rglob("*.py"))
+                 if "__pycache__" not in source.parts]
+        return CompileCheck(files).why_not() if files else None
 
     def _why_run_failed(self, image):
         """A run that did not pass on this image refuses here too: a passed run is not needed, a failed one still counts."""

@@ -2,7 +2,9 @@
 firmware/ in place of a run (B)."""
 
 import hashlib
+import json
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -22,6 +24,20 @@ from project_image import DeployError, ProjectImage  # noqa: E402
 from test_project_image import project_with_image, write_log  # noqa: E402
 
 FAILED = "failed (wokwi-cli exit 1)"
+
+
+def crashing_source():
+    """A source that kills the compiler of the Python that runs the test, measured per version (P427, in a child as spark starts it)."""
+    if sys.version_info[:2] == (3, 9):
+        return "x=" + "1+" * 2000000 + "1\n"  # signal 11 on 3.9; a RecursionError on 3.10
+    if sys.version_info[:2] == (3, 10):
+        return "x = " + "not " * 200000 + "1\n"  # signal 11 on 3.10; compiles on 3.9
+    raise unittest.SkipTest("no input is measured to kill the compiler of Python %d.%d" % sys.version_info[:2])
+
+
+def answered(stdout, returncode=0):
+    """What subprocess.run gives back, with a child's stdout."""
+    return subprocess.CompletedProcess([], returncode, stdout=stdout, stderr="")
 
 
 class PassedRunEvidenceTest(unittest.TestCase):
@@ -250,10 +266,42 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("cannot check", self.why())
 
     def test_a_very_deep_expression_is_a_sentence_not_a_recursion_error(self):
-        (self.firmware / "deep.py").write_text("x = f" + "()" * 200000 + "\n")  # too deep on 3.9 to 3.13 alike
+        (self.firmware / "deep.py").write_text("x = f" + "()" * 200000 + "\n")  # a RecursionError, not a crash, on 3.9 and 3.10
         why = self.why()
         self.assertIn("firmware/deep.py", why)
         self.assertIn("too deeply nested", why)
+
+    def test_a_source_that_kills_the_compiler_is_a_sentence_naming_the_last_file_it_began(self):
+        (self.firmware / "a_good.py").write_text("a = 1\n")
+        (self.firmware / "zcrash.py").write_text(crashing_source())
+        (self.firmware / "zz_never.py").write_text("z = 1\n")
+        self.assertEqual(self.why(), "firmware/zcrash.py could not be compiled: the compiler stopped (signal 11)")
+
+    def test_a_file_name_with_a_newline_and_a_json_line_does_not_fake_the_childs_answer(self):
+        (self.firmware / 'z\n{"ok": true}.py').write_text(crashing_source())
+        self.assertEqual(self.why(), 'firmware/z?{"ok": true}.py could not be compiled: the compiler stopped (signal 11)')
+
+    def test_one_compile_child_runs_for_every_file_of_one_question(self):
+        for number in range(3):
+            (self.firmware / ("more%d.py" % number)).write_text("n = %d\n" % number)
+        self.build()
+        with mock.patch.object(subprocess, "run", wraps=subprocess.run) as run:
+            self.assertIsNone(self.why())
+        self.assertEqual(run.call_count, 1)
+
+    def test_the_child_does_not_import_a_json_py_from_the_folder_it_runs_in(self):
+        decoy = self.project / "decoy"
+        decoy.mkdir()
+        marker = self.project / "decoy-ran"
+        (decoy / "json.py").write_text("open(%r, 'w').close()\nraise SystemExit(3)\n" % str(marker))
+        with mock.patch.object(image_evidence.tempfile, "gettempdir", return_value=str(decoy)):
+            self.assertIsNone(self.why())
+        self.assertFalse(marker.exists())
+
+    def test_a_compiler_that_does_not_finish_in_time_is_a_sentence_naming_the_file(self):
+        slow = ("import json, time\nprint(json.dumps({'checking': 'firmware/slow.py'}), flush=True)\ntime.sleep(60)\n")
+        with mock.patch.object(image_evidence, "COMPILE_CHILD", slow), mock.patch.object(image_evidence, "COMPILE_TIMEOUT_S", 1):
+            self.assertEqual(self.why(), "firmware/slow.py did not compile in 1 s")
 
     def test_a_file_too_big_for_the_image_is_a_sentence_not_a_littlefs_error(self):
         (self.firmware / "big.bin").write_bytes(os.urandom(2200 * 1024))
@@ -282,6 +330,68 @@ class NoSimulationEvidenceTest(unittest.TestCase):
                          ("none", ["no simulation tested this image"], ["--no-simulation"], []))
         self.assertEqual(evidence.grant_refusal, "no simulation")
         self.assertEqual(evidence.way_out(self.image), "")
+
+
+class CompileCheckTest(unittest.TestCase):
+    """What the parent makes of the child's answer, with the child's stdout and exit code given (P427)."""
+
+    def why(self, stdout="", returncode=0, **raised):
+        with mock.patch.object(subprocess, "run", return_value=answered(stdout, returncode), **raised) as run:
+            why = image_evidence.CompileCheck([("firmware/a.py", "/p/firmware/a.py"), ("firmware/b.py", "/p/firmware/b.py")]).why_not()
+        self.run = run
+        return why
+
+    def lines(self, *entries):
+        return "".join(json.dumps(entry) + "\n" for entry in entries)
+
+    def test_the_child_gets_the_names_and_paths_as_json_on_stdin_and_runs_isolated_for_30_s(self):
+        self.why(self.lines({"ok": True}))
+        command = self.run.call_args[0][0]
+        self.assertEqual((command[0], command[1:3]), (sys.executable, ["-I", "-B"]))
+        self.assertEqual(self.run.call_args[1]["input"], '[["firmware/a.py", "/p/firmware/a.py"], ["firmware/b.py", "/p/firmware/b.py"]]')
+        self.assertEqual(self.run.call_args[1]["timeout"], 30)
+
+    def test_an_ok_answer_is_none(self):
+        self.assertIsNone(self.why(self.lines({"checking": "firmware/a.py"}, {"checking": "firmware/b.py"}, {"ok": True})))
+
+    def test_a_child_killed_by_a_signal_names_the_last_file_it_began(self):
+        said = self.lines({"checking": "firmware/a.py"}, {"checking": "firmware/b.py"})
+        self.assertEqual(self.why(said, -9), "firmware/b.py could not be compiled: the compiler stopped (signal 9)")
+
+    def test_a_line_cut_in_the_middle_is_not_read(self):
+        said = self.lines({"checking": "firmware/a.py"}) + '{"checking": "firmware/b.p'
+        self.assertEqual(self.why(said, -11), "firmware/a.py could not be compiled: the compiler stopped (signal 11)")
+
+    def test_a_child_that_died_before_its_first_file_names_the_folder(self):
+        self.assertEqual(self.why("", -11), "firmware/ could not be compiled: the compiler stopped (signal 11)")
+
+    def test_a_child_that_exited_with_no_answer_says_its_exit_code(self):
+        said = self.lines({"checking": "firmware/a.py"})
+        self.assertEqual(self.why(said, 1), "firmware/a.py could not be compiled: the compiler stopped (exit code 1)")
+
+    def test_a_timeout_names_the_last_file_the_child_began_from_bytes_or_text(self):
+        said = self.lines({"checking": "firmware/a.py"}, {"checking": "firmware/b.py"})
+        for output in (said.encode(), said):
+            why = self.why(side_effect=subprocess.TimeoutExpired([], 30, output=output))
+            self.assertEqual(why, "firmware/b.py did not compile in 30 s")
+
+    def test_a_timeout_before_any_file_names_the_folder(self):
+        self.assertEqual(self.why(side_effect=subprocess.TimeoutExpired([], 30, output=None)), "firmware/ did not compile in 30 s")
+
+    def test_each_failure_kind_has_its_own_sentence(self):
+        for entry, sentence in (
+                ({"name": "firmware/a.py", "kind": "syntax", "line": 3, "msg": "invalid syntax"},
+                 "firmware/a.py, line 3 does not compile: invalid syntax"),
+                ({"name": "firmware/a.py", "kind": "too_deep"}, "firmware/a.py is too deeply nested or too big to compile"),
+                ({"name": "firmware/a.py", "kind": "bytes", "msg": "a null byte"}, "firmware/a.py does not compile: a null byte"),
+                ({"name": "firmware/a.py", "kind": "unreadable", "msg": "gone"}, "cannot read firmware/a.py: gone")):
+            self.assertEqual(self.why(self.lines({"checking": "firmware/a.py"}, entry)), sentence)
+
+    def test_a_name_with_a_control_character_is_printed_with_a_question_mark(self):
+        said = self.lines({"checking": "firmware/a\x07b.py"})
+        self.assertEqual(self.why(said, -11), "firmware/a?b.py could not be compiled: the compiler stopped (signal 11)")
+        entry = {"name": "firmware/a\x07b.py", "kind": "too_deep"}
+        self.assertEqual(self.why(self.lines(entry)), "firmware/a?b.py is too deeply nested or too big to compile")
 
 
 if __name__ == "__main__":
